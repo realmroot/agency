@@ -22,6 +22,7 @@ import {
   sessions,
   workItems,
 } from '../../db/schema'
+import { persistedSessionState } from '../../db/session-state'
 
 type Db = ReturnType<typeof drizzle>
 type LeaseRow = typeof leases.$inferSelect
@@ -628,7 +629,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           const sessionUpdate = (
             input.state === 'cancelled'
               ? {
-                  state: 'closed',
+                  state: persistedSessionState('closed'),
                   stateReason: 'runner-cancelled',
                   closedAt: timestamp,
                   updatedAt: timestamp,

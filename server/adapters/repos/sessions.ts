@@ -18,6 +18,7 @@ import type { drizzle } from 'drizzle-orm/d1'
 import type { RuntimeName } from '../../contracts/environment-contracts'
 import { leases, runners, sessionApprovals, sessionEvents, sessionMessages, sessions, workItems } from '../../db/schema'
 import { insertCanonicalSessionEvent } from '../../db/session-event-store'
+import { domainSessionState, persistedSessionState } from '../../db/session-state'
 import { runtimePlacement } from '../../domain/runtime/driver'
 import {
   type ApprovalState,
@@ -61,8 +62,9 @@ function snapshotRuntime(metadata: Record<string, unknown>): RuntimeName {
 }
 
 function sessionState(value: string): SessionState {
-  if (value === 'pending' || value === 'running' || value === 'idle' || value === 'closed' || value === 'error') {
-    return value
+  const state = domainSessionState(value)
+  if (state === 'pending' || state === 'running' || state === 'idle' || state === 'closed' || state === 'error') {
+    return state
   }
   throw new Error(`Invalid session state: ${value}`)
 }
@@ -294,7 +296,7 @@ export function createSessionRepo(db: Db): SessionRepo {
       const filters = [
         eq(sessions.projectId, query.projectId),
         query.archived ? isNotNull(sessions.archivedAt) : isNull(sessions.archivedAt),
-        query.state ? eq(sessions.state, query.state as SessionRow['state']) : undefined,
+        query.state ? eq(sessions.state, persistedSessionState(query.state)) : undefined,
         query.search ? like(sessions.agentId, `%${query.search}%`) : undefined,
         ...labelSelectorFilters(query.labelSelector),
         query.createdFrom ? gte(sessions.createdAt, query.createdFrom) : undefined,

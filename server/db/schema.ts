@@ -416,7 +416,7 @@ export const sessions = sqliteTable(
     modelProvider: text('model_provider'),
     modelConfig: text('model_config'),
     // Mirrors SESSION_STATES (server/domain/session.ts).
-    state: text('state', { enum: ['pending', 'running', 'idle', 'closed', 'error'] }).notNull(),
+    state: text('state', { enum: ['pending', 'running', 'idle', 'stopped', 'error'] }).notNull(),
     stateReason: text('state_reason'),
     // Per-session turn lease. The multi-state CAS in updateSessionWhenState is not
     // a mutex (it succeeds on running→running), so a concurrent prompt could race
@@ -441,7 +441,7 @@ export const sessions = sqliteTable(
     // Supports the watchdog isNotNull(sandboxId) sweeps (leakedSandboxSessions /
     // markStalledCloudSessions) without splitting the runtime columns into a side table.
     index('idx_sessions_sandbox').on(table.sandboxId),
-    check('ck_sessions_state', sql`${table.state} in ('pending','running','idle','closed','error')`),
+    check('ck_sessions_state', sql`${table.state} in ('pending','running','idle','stopped','error')`),
   ],
 )
 

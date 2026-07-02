@@ -34,6 +34,7 @@ import {
   vaultCredentialVersions,
   workItems,
 } from '../../db/schema'
+import { domainSessionState, persistedSessionState, persistedSessionStates } from '../../db/session-state'
 import { type ConnectorCatalogEntry, DEFAULT_CONNECTORS } from '../../domain/connector'
 import { amaMemoryRef, memoryStoreMountPath } from '../../domain/memory-store'
 
@@ -98,10 +99,18 @@ function staticConnectorRecordFrom(connector: ConnectorCatalogEntry): ConnectorR
   }
 }
 
+function domainSessionRow<T extends SessionRow | null>(row: T): T {
+  return row ? ({ ...row, state: domainSessionState(row.state) } as T) : row
+}
+
+function persistedSessionWrite<T extends SessionInsert | SessionUpdate>(fields: T): T {
+  return typeof fields.state === 'string' ? ({ ...fields, state: persistedSessionState(fields.state) } as T) : fields
+}
+
 function sessionStateGuard(expected: string | string[]) {
   return Array.isArray(expected)
-    ? or(...expected.map((state) => eq(sessions.state, state as SessionStateColumn)))
-    : eq(sessions.state, expected as SessionStateColumn)
+    ? or(...persistedSessionStates(expected).map((state) => eq(sessions.state, state as SessionStateColumn)))
+    : eq(sessions.state, persistedSessionState(expected) as SessionStateColumn)
 }
 
 // Runtime-internal persistence boundary. The env-bound session execution engine
@@ -121,23 +130,23 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
 
     // ── session reads ─────────────────────────────────────────────────────
     async findSession(projectId: string, sessionId: string): Promise<SessionRow | null> {
-      return (
+      return domainSessionRow(
         (await db
           .select()
           .from(sessions)
           .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
-          .get()) ?? null
+          .get()) ?? null,
       )
     },
 
     async sessionState(projectId: string, sessionId: string): Promise<{ state: string } | null> {
-      return (
+      const row =
         (await db
           .select({ state: sessions.state })
           .from(sessions)
           .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
           .get()) ?? null
-      )
+      return row ? { state: domainSessionState(row.state) } : null
     },
 
     async sessionMetadata(projectId: string, sessionId: string): Promise<{ metadata: string | null } | null> {
@@ -152,13 +161,13 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
 
     // ── session writes ────────────────────────────────────────────────────
     async insertSession(row: SessionInsert): Promise<void> {
-      await db.insert(sessions).values(row as SessionInsertColumns)
+      await db.insert(sessions).values(persistedSessionWrite(row) as SessionInsertColumns)
     },
 
     async updateSession(projectId: string, sessionId: string, fields: SessionUpdate): Promise<void> {
       await db
         .update(sessions)
-        .set(fields as SessionUpdateColumns)
+        .set(persistedSessionWrite(fields) as SessionUpdateColumns)
         .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
     },
 
@@ -172,7 +181,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const stateGuard = sessionStateGuard(expected)
       const updated = await db
         .update(sessions)
-        .set(fields as SessionUpdateColumns)
+        .set(persistedSessionWrite(fields) as SessionUpdateColumns)
         .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), stateGuard))
         .returning({ id: sessions.id })
         .get()
@@ -192,7 +201,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const [updated, inserted] = await db.batch([
         db
           .update(sessions)
-          .set(fields as SessionUpdateColumns)
+          .set(persistedSessionWrite(fields) as SessionUpdateColumns)
           .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), sessionStateGuard(expected)))
           .returning({ id: sessions.id }),
         db
@@ -224,7 +233,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
                 and(
                   eq(sessions.id, sessionId),
                   eq(sessions.projectId, projectId),
-                  eq(sessions.state, fields.state as SessionStateColumn),
+                  eq(sessions.state, persistedSessionState(fields.state) as SessionStateColumn),
                   eq(sessions.updatedAt, fields.updatedAt),
                 ),
               ),
@@ -290,7 +299,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
     ): Promise<boolean> {
       const updated = await db
         .update(sessions)
-        .set({ ...fields, activeTurnId: null, turnLeaseExpiresAt: null } as SessionUpdateColumns)
+        .set({ ...persistedSessionWrite(fields), activeTurnId: null, turnLeaseExpiresAt: null } as SessionUpdateColumns)
         .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), eq(sessions.activeTurnId, turnId)))
         .returning({ id: sessions.id })
         .get()
@@ -728,7 +737,10 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         .from(sessions)
         .where(
           and(
-            or(inArray(sessions.state, terminalStates as SessionStateColumn[]), isNotNull(sessions.archivedAt)),
+            or(
+              inArray(sessions.state, persistedSessionStates(terminalStates) as SessionStateColumn[]),
+              isNotNull(sessions.archivedAt),
+            ),
             isNotNull(sessions.sandboxId),
             notLike(sessions.metadata, '%"sandboxBackend":"runner-sandbox"%'),
             notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
@@ -766,13 +778,13 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       projectId: string,
       sessionId: string,
     ): Promise<{ state: string; stateReason: string | null } | null> {
-      return (
+      const row =
         (await db
           .select({ state: sessions.state, stateReason: sessions.stateReason })
           .from(sessions)
           .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
           .get()) ?? null
-      )
+      return row ? { state: domainSessionState(row.state), stateReason: row.stateReason } : null
     },
 
     async channelWorkItem(projectId: string, workItemId: string): Promise<WorkItemRow | null> {
