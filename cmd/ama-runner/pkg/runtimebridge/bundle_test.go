@@ -65,3 +65,15 @@ func TestBytesReturnsCopy(t *testing.T) {
 		t.Fatal("expected Bytes to return a copy")
 	}
 }
+
+func TestEmbeddedBundleUsesCanonicalWorkspaceHomeEnv(t *testing.T) {
+	bundle := string(Bytes())
+	for _, expected := range []string{"AMA_WORKSPACE_HOME", "GH_CONFIG_DIR", "GIT_CONFIG_GLOBAL"} {
+		if !strings.Contains(bundle, expected) {
+			t.Fatalf("expected embedded bridge bundle to contain %q", expected)
+		}
+	}
+	if strings.Contains(bundle, "AMA_RUNTIME_BRIDGE_SESSION_HOME") {
+		t.Fatal("embedded bridge bundle still contains deprecated session home env")
+	}
+}

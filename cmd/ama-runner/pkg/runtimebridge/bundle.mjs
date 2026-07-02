@@ -18285,9 +18285,16 @@ function hostHome(env2) {
 }
 function sdkEnv(request3) {
   const home = hostHome(request3.env);
+  const sessionHome = request3.env.HOME;
   return {
     ...request3.env,
-    ...home ? { HOME: home, AMA_RUNTIME_BRIDGE_SESSION_HOME: request3.env.HOME } : {}
+    ...home ? {
+      HOME: home,
+      AMA_WORKSPACE_HOME: sessionHome,
+      GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
+      GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
+      GIT_CONFIG_NOSYSTEM: "1"
+    } : {}
   };
 }
 function resolveCliPath(bin) {

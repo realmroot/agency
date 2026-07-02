@@ -19,9 +19,18 @@ export function hostHome(env: Record<string, string>): string | undefined {
  */
 export function sdkEnv(request: RuntimeProviderRequest): Record<string, string> {
   const home = hostHome(request.env)
+  const sessionHome = request.env.HOME
   return {
     ...request.env,
-    ...(home ? { HOME: home, AMA_WORKSPACE_HOME: request.env.HOME } : {}),
+    ...(home
+      ? {
+          HOME: home,
+          AMA_WORKSPACE_HOME: sessionHome,
+          GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
+          GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
+          GIT_CONFIG_NOSYSTEM: '1',
+        }
+      : {}),
   }
 }
 

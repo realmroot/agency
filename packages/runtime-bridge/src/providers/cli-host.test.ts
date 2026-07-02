@@ -41,6 +41,9 @@ describe('sdkEnv', () => {
     const env = sdkEnv(request({ HOME: '/sandbox', AMA_RUNTIME_BRIDGE_HOST_HOME: '/host', FOO: 'bar' }))
     expect(env.HOME).toBe('/host')
     expect(env.AMA_WORKSPACE_HOME).toBe('/sandbox')
+    expect(env.GH_CONFIG_DIR).toBe('/sandbox/.config/gh')
+    expect(env.GIT_CONFIG_GLOBAL).toBe('/sandbox/.gitconfig')
+    expect(env.GIT_CONFIG_NOSYSTEM).toBe('1')
     expect(env.FOO).toBe('bar')
   })
 
@@ -48,6 +51,9 @@ describe('sdkEnv', () => {
     const env = sdkEnv(request({ HOME: '/sandbox' }))
     expect(env.HOME).toBe('/sandbox')
     expect(env.AMA_WORKSPACE_HOME).toBeUndefined()
+    expect(env.GH_CONFIG_DIR).toBeUndefined()
+    expect(env.GIT_CONFIG_GLOBAL).toBeUndefined()
+    expect(env.GIT_CONFIG_NOSYSTEM).toBeUndefined()
   })
 })
 
