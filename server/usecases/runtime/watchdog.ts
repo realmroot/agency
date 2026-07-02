@@ -12,7 +12,7 @@ import type { CloudRuntimeLifecycle, SessionOrchestrationStore } from '../ports'
 
 const STALLED_THRESHOLD_MS = 20 * 60_000
 
-const TERMINAL_STATES = ['stopped', 'error']
+const ENDED_RUNTIME_STATES = ['closed', 'error']
 
 type WatchdogDeps = {
   sessionOrchestration: SessionOrchestrationStore
@@ -29,11 +29,11 @@ export async function markStalledCloudSessions(deps: WatchdogDeps): Promise<void
 }
 
 // Sandboxes of ended sessions occupy container instances (max_instances is a
-// hard cap) when teardown was skipped — e.g. a stop while an exec was hung.
+// hard cap) when teardown was skipped — e.g. a close while an exec was hung.
 // Destroy them and stamp the session so each sandbox is cleaned exactly once.
 async function destroyLeakedSandboxes(deps: WatchdogDeps): Promise<void> {
   // archived is lifecycle (archivedAt), not a state value
-  const rows = await deps.sessionOrchestration.leakedSandboxSessions(TERMINAL_STATES, 20)
+  const rows = await deps.sessionOrchestration.leakedSandboxSessions(ENDED_RUNTIME_STATES, 20)
   for (const row of rows) {
     if (!row.sandboxId) continue
     try {

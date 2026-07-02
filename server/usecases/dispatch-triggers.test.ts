@@ -11,7 +11,8 @@ import type { AuthScope, ClaimedRun, DueTrigger } from './ports'
 // gateway.
 vi.mock('./runtime/sessions', () => ({
   createSession: vi.fn(),
-  stopSession: vi.fn(),
+  closeSession: vi.fn(),
+  reopenSession: vi.fn(),
   archiveSession: vi.fn(),
   unarchiveSession: vi.fn(),
   dispatchPrompt: vi.fn(),
@@ -174,7 +175,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
         protocol: null,
       },
       startedAt: null,
-      stoppedAt: null,
+      closedAt: null,
     },
     ...overrides,
   }

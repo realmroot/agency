@@ -15,12 +15,12 @@ describe('[spec: sessions/state-rules] session state rules', () => {
     expect(sessionAcceptsPrompts('idle')).toBe(true)
     expect(sessionAcceptsPrompts('running')).toBe(true)
     expect(sessionAcceptsPrompts('pending')).toBe(false)
-    expect(sessionAcceptsPrompts('stopped')).toBe(false)
+    expect(sessionAcceptsPrompts('closed')).toBe(false)
     expect(sessionAcceptsPrompts('error')).toBe(false)
   })
 
-  it('marks stopped and error as terminal', () => {
-    expect(sessionIsTerminal('stopped')).toBe(true)
+  it('marks only error as terminal', () => {
+    expect(sessionIsTerminal('closed')).toBe(false)
     expect(sessionIsTerminal('error')).toBe(true)
     expect(sessionIsTerminal('idle')).toBe(false)
   })

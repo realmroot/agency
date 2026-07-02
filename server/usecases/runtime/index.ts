@@ -39,9 +39,10 @@ export {
 } from './session-create'
 export {
   archiveSession,
+  type CloseSessionResult,
+  closeSession,
   markExpiredPendingSessions,
-  type StopSessionResult,
-  stopSession,
+  reopenSession,
   unarchiveSession,
 } from './session-lifecycle'
 export {
@@ -51,11 +52,12 @@ export {
 } from './session-prompt'
 export {
   archiveSession as archiveRuntimeSession,
+  closeSession as closeRuntimeSession,
   createSession as createRuntimeSession,
   decideApproval as decideRuntimeApproval,
   dispatchPrompt as dispatchRuntimePrompt,
   markExpiredPending as markRuntimeExpiredPending,
-  stopSession as stopRuntimeSession,
+  reopenSession as reopenRuntimeSession,
   unarchiveSession as unarchiveRuntimeSession,
 } from './sessions'
 export {

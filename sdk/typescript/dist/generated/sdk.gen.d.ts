@@ -282,7 +282,7 @@ export declare const readSession: <ThrowOnError extends boolean = false>(options
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, the stop transition (state: "stopped"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
  */
 export declare const updateSession: <ThrowOnError extends boolean = false>(options: Options<UpdateSessionData, ThrowOnError>) => RequestResult<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError>;
 /**

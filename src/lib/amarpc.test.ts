@@ -503,7 +503,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
         },
         placement: null,
         startedAt: null,
-        stoppedAt: null,
+        closedAt: null,
       },
     }
 
@@ -531,14 +531,24 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(result.metadata.uid).toBe('sess_1')
     })
 
-    it('stopSession patches with state:stopped', async () => {
+    it('closeSession patches with state:closed', async () => {
       const fetchMock = makeJsonFetch({
         ...sessionFixture,
-        status: { ...sessionFixture.status, phase: 'stopped' as const },
+        status: { ...sessionFixture.status, phase: 'closed' as const },
       })
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.stopSession('sess_1')
-      expect(result.status.phase).toBe('stopped')
+      const result = await api.closeSession('sess_1')
+      expect(result.status.phase).toBe('closed')
+    })
+
+    it('reopenSession patches with state:idle', async () => {
+      const fetchMock = makeJsonFetch({
+        ...sessionFixture,
+        status: { ...sessionFixture.status, phase: 'idle' as const },
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      const result = await api.reopenSession('sess_1')
+      expect(result.status.phase).toBe('idle')
     })
 
     it('archiveSession patches with archived:true', async () => {

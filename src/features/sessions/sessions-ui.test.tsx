@@ -298,7 +298,8 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState({ messages: [], tools: [], sessionEvents: [], error: null })}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
@@ -343,7 +344,8 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState({ messages: [], tools: [], sessionEvents: [], error: null })}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""

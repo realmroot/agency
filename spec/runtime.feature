@@ -68,10 +68,10 @@ Feature: Runtime
     Then tools absent from a non-empty allow-list are rejected
     And an agent with no explicit allow-list is granted the full sandbox toolset
 
-  # ── Session lifecycle over AMA endpoints (api: cooperative stop) ──
+  # ── Session lifecycle over AMA endpoints (api: cooperative close) ──
 
-  @runtime/stop @api
-  Scenario: Stop a running session cooperatively over the API
+  @runtime/close @api
+  Scenario: Close a running session cooperatively over the API
     Given a session is running through the AMA runtime endpoint
-    When the user stops the session through the sessions API
-    Then the status becomes stopped and no successful completion events are written after cancellation
+    When the user closes the session through the sessions API
+    Then the status becomes closed and no successful completion events are written after cancellation

@@ -80,7 +80,7 @@ export function SessionsPage() {
         setBatchOutcome({ archived, failed, unprocessed })
         // The failed and unprocessed items stay selected for a precise retry.
         setSelectedIds([id, ...unprocessed])
-        toast.error(`Batch archive stopped: ${failed.name} failed`)
+        toast.error(`Batch archive halted: ${failed.name} failed`)
         void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
         return
       }
@@ -105,7 +105,7 @@ export function SessionsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Sessions"
-        description="Inspect runtime sessions and open a session to send messages, review events, or stop active work."
+        description="Inspect runtime sessions and open a session to send messages, review events, or close active work."
         actions={
           <Button type="button" onClick={() => setCreating(true)}>
             <MessageSquare data-icon="inline-start" />
@@ -129,7 +129,7 @@ export function SessionsPage() {
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">All statuses</SelectItem>
-              {['pending', 'running', 'idle', 'stopped', 'error', 'archived'].map((value) => (
+              {['pending', 'running', 'idle', 'closed', 'error', 'archived'].map((value) => (
                 <SelectItem key={value} value={value}>
                   {value}
                 </SelectItem>

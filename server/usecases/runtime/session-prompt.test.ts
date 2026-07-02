@@ -55,7 +55,7 @@ function selfHostedSession(overrides: Partial<SessionRow> = {}): SessionRow {
     continuationDepth: 0,
     metadata: JSON.stringify({ runtime: 'codex' }),
     startedAt: timestamp,
-    stoppedAt: null,
+    closedAt: null,
     archivedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,

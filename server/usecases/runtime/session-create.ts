@@ -735,7 +735,7 @@ export async function createSessionForAgent(
         : {}),
     }),
     startedAt: null,
-    stoppedAt: null,
+    closedAt: null,
     archivedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,

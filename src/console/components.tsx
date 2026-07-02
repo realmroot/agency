@@ -79,7 +79,7 @@ export function StatusBadge({ value, detail }: { value: string; detail?: string 
     value === 'error' || value === 'missing' || value === 'blocked'
       ? 'destructive'
       : value === 'archived' ||
-          value === 'stopped' ||
+          value === 'closed' ||
           value === 'disabled' ||
           value === 'deleted' ||
           value === 'disconnected'

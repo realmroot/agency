@@ -172,6 +172,7 @@ export async function startSessionRuntimeForRow(
       state: 'idle',
       metadata: stringify(metadata),
       startedAt,
+      closedAt: null,
       updatedAt: startedAt,
     }
     const recorded = await store.updateSessionWhenState(auth.project.id, sessionId, 'pending', started)
@@ -194,7 +195,7 @@ export async function startSessionRuntimeForRow(
       await dispatchPrompt(
         deps,
         auth,
-        { ...pending, ...started, stateReason: null, stoppedAt: null, archivedAt: null },
+        { ...pending, ...started, stateReason: null, closedAt: null, archivedAt: null },
         prompt,
       )
     }

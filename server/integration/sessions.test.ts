@@ -390,7 +390,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('creates, reads, lists, connects, messages, stops, archives, and records events for a cloud session [spec: sessions/create] [spec: sessions/prompt] [spec: sessions/stop] [spec: sessions/archive] [spec: sessions/connection] [spec: sessions/events-query] [spec: sessions/tool-result-redaction]', async () => {
+  it('creates, reads, lists, connects, messages, stops, archives, and records events for a cloud session [spec: sessions/create] [spec: sessions/prompt] [spec: sessions/close] [spec: sessions/archive] [spec: sessions/connection] [spec: sessions/events-query] [spec: sessions/tool-result-redaction]', async () => {
     const authorization = await signIn()
     const githubCredential = await connectMcp(authorization, 'github')
     await connectMcp(authorization, 'linear')
@@ -560,14 +560,36 @@ describe('[CF] /api/v1/sessions', () => {
       status: { phase: 'idle' },
     })
 
-    const stopRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
+    const closeRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'stopped' }),
+      body: JSON.stringify({ state: 'closed' }),
     })
-    expect(stopRes.status).toBe(200)
-    const stopped = (await stopRes.json()) as { status: { phase: string; stoppedAt: string } }
-    expect(stopped.status.phase).toBe('stopped')
-    expect(stopped.status.stoppedAt).toEqual(expect.any(String))
+    expect(closeRes.status).toBe(200)
+    const closed = (await closeRes.json()) as { status: { phase: string; closedAt: string } }
+    expect(closed.status.phase).toBe('closed')
+    expect(closed.status.closedAt).toEqual(expect.any(String))
+
+    const rejectedWhileClosed = await jsonFetch(`/api/v1/sessions/${createdId}/messages`, authorization, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'prompt', content: 'This should wait for reopen' }),
+    })
+    expect(rejectedWhileClosed.status).toBe(409)
+
+    const reopenRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'idle' }),
+    })
+    expect(reopenRes.status).toBe(200)
+    await expect(reopenRes.json()).resolves.toMatchObject({
+      metadata: { uid: createdId },
+      status: { phase: 'idle', closedAt: null },
+    })
+
+    const reopenedMessageRes = await jsonFetch(`/api/v1/sessions/${createdId}/messages`, authorization, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'prompt', content: 'Continue after reopen' }),
+    })
+    expect(reopenedMessageRes.status).toBe(201)
 
     const eventsRes = await jsonFetch(`/api/v1/sessions/${createdId}/events`, authorization)
     expect(eventsRes.status).toBe(200)
@@ -675,7 +697,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(archiveRes.status).toBe(200)
     const archived = (await archiveRes.json()) as { status: { phase: string }; metadata: { archivedAt: string | null } }
-    expect(archived.status.phase).toBe('stopped')
+    expect(archived.status.phase).toBe('closed')
     expect(archived.metadata.archivedAt).toEqual(expect.any(String))
 
     const liveListRes = await jsonFetch('/api/v1/sessions', authorization)
@@ -1447,7 +1469,7 @@ describe('[CF] /api/v1/sessions', () => {
 
     const stopRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'stopped' }),
+      body: JSON.stringify({ state: 'closed' }),
     })
     expect(stopRes.status).toBe(200)
 
@@ -1633,7 +1655,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('keeps a stopped session from writing successful completion events after cancellation [spec: sessions/stop] [spec: runtime/stop]', async () => {
+  it('keeps a closed session from writing successful completion events after cancellation [spec: sessions/close] [spec: runtime/close]', async () => {
     const authorization = await signIn()
     await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization)
@@ -1662,17 +1684,17 @@ describe('[CF] /api/v1/sessions', () => {
 
     const stopRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'stopped' }),
+      body: JSON.stringify({ state: 'closed' }),
     })
     const stopBody = await stopRes.clone().json()
     expect(stopRes.status, JSON.stringify(stopBody)).toBe(200)
-    expect(stopBody).toMatchObject({ metadata: { uid: createdId }, status: { phase: 'stopped' } })
+    expect(stopBody).toMatchObject({ metadata: { uid: createdId }, status: { phase: 'closed' } })
 
     const runtimeRes = await runtimeRequest
     expect([200, 201, 409]).toContain(runtimeRes.status)
 
     const readRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization)
-    await expect(readRes.json()).resolves.toMatchObject({ metadata: { uid: createdId }, status: { phase: 'stopped' } })
+    await expect(readRes.json()).resolves.toMatchObject({ metadata: { uid: createdId }, status: { phase: 'closed' } })
 
     const eventsRes = await jsonFetch(`/api/v1/sessions/${createdId}/events`, authorization)
     expect(eventsRes.status).toBe(200)
@@ -1940,7 +1962,7 @@ describe('[CF] /api/v1/sessions', () => {
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}/messages`, otherCookie),
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie, {
         method: 'PATCH',
-        body: JSON.stringify({ state: 'stopped' }),
+        body: JSON.stringify({ state: 'closed' }),
       }),
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie, {
         method: 'PATCH',

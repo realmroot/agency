@@ -320,7 +320,7 @@ describe('QuickstartPage loaded — step navigation', () => {
         providers: [buildProvider()],
         agents: [buildAgent()],
         environments: [buildEnvironment()],
-        sessions: [buildSession({ phase: 'stopped' })],
+        sessions: [buildSession({ phase: 'closed' })],
       }),
     )
     renderPage('/quickstart?step=integration')
@@ -476,7 +476,7 @@ describe('QuickstartPage integration step — integration examples', () => {
         providers: [buildProvider()],
         agents: [buildAgent()],
         environments: [buildEnvironment()],
-        sessions: [buildSession({ phase: 'stopped' })],
+        sessions: [buildSession({ phase: 'closed' })],
       }),
     )
     renderPage('/quickstart?step=integration')

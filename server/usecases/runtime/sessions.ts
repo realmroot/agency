@@ -1,7 +1,7 @@
 // Session runtime usecases — deps-first.
 //
-// These thin wrappers run a mutating runtime orchestration op (create / stop /
-// archive / unarchive / prompt / approval) and then re-read the affected row
+// These thin wrappers run a mutating runtime orchestration op (create / close /
+// reopen / archive / unarchive / prompt / approval) and then re-read the affected row
 // through the REST SessionRepo (deps.sessions) so the DTO crossing the boundary
 // is the one canonical serialization the read endpoints produce. The callers
 // (http/sessions, dispatch-triggers, usecases/sessions) invoke these directly;
@@ -23,8 +23,9 @@ import { decideSessionApproval } from './session-approval'
 import { createSessionForAgent } from './session-create'
 import {
   archiveSession as archiveSessionRuntime,
+  closeSession as closeSessionRuntime,
   markExpiredPendingSessions,
-  stopSession as stopSessionRuntime,
+  reopenSession as reopenSessionRuntime,
   unarchiveSession as unarchiveSessionRuntime,
 } from './session-lifecycle'
 import { dispatchSessionPrompt } from './session-prompt'
@@ -65,14 +66,27 @@ export async function createSession(
   return { ok: true, value: await reread(deps, auth.project.id, result.session.id) }
 }
 
-export async function stopSession(
+export async function closeSession(
   deps: Deps,
   auth: AuthScope,
   session: RuntimeSessionHandle,
   requestId: string | null,
   reason?: string,
 ): Promise<SessionRuntimeOutcome<Session>> {
-  const result = await stopSessionRuntime(deps, auth, session.id, requestId, reason)
+  const result = await closeSessionRuntime(deps, auth, session.id, requestId, reason)
+  if (!result.ok) {
+    return result
+  }
+  return { ok: true, value: await reread(deps, auth.project.id, session.id) }
+}
+
+export async function reopenSession(
+  deps: Deps,
+  auth: AuthScope,
+  session: RuntimeSessionHandle,
+  requestId: string | null,
+): Promise<SessionRuntimeOutcome<Session>> {
+  const result = await reopenSessionRuntime(deps, auth, session.id, requestId)
   if (!result.ok) {
     return result
   }

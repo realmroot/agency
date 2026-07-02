@@ -54,8 +54,10 @@ export const sessionsApi = {
   createSession: (input: SessionInput) =>
     rpcRequest<Session>(v1.sessions.$post(jsonArg<typeof v1.sessions.$post>(input))),
   readSession: (id: string) => rpcRequest<Session>(v1.sessions[':sessionId'].$get({ param: { sessionId: id } })),
-  stopSession: (id: string) =>
-    rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { state: 'stopped' } })),
+  closeSession: (id: string) =>
+    rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { state: 'closed' } })),
+  reopenSession: (id: string) =>
+    rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { state: 'idle' } })),
   archiveSession: (id: string) =>
     rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { archived: true } })),
   sendSessionMessage: (id: string, content: string) =>

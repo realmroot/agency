@@ -199,10 +199,10 @@ afterEach(() => {
 })
 
 // ---------------------------------------------------------------------------
-// Tests — null / stopped session
+// Tests — null / closed session
 // ---------------------------------------------------------------------------
 
-describe('useSessionRuntimeSession — null/stopped session', () => {
+describe('useSessionRuntimeSession — null/closed session', () => {
   it('reports closed when session is null', async () => {
     const cbRef = makeCallbackRef()
     const queryClient = makeQueryClient()
@@ -216,7 +216,7 @@ describe('useSessionRuntimeSession — null/stopped session', () => {
     await waitFor(() => expect(screen.getByTestId('connection').textContent).toBe('closed'), { timeout: 5000 })
   })
 
-  it('connects a stopped session socket and dispatches backfilled message.completed events', async () => {
+  it('connects a closed session socket and dispatches backfilled message.completed events', async () => {
     const events: SessionEvent[] = [
       buildEvent(),
       buildEvent({ id: 'event_2', sequence: 2, type: 'turn.completed', payload: { type: 'turn.completed' } }),
@@ -226,7 +226,7 @@ describe('useSessionRuntimeSession — null/stopped session', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <RuntimeHarness session={buildSession({ phase: 'stopped' })} onEventsChangedRef={cbRef} />
+          <RuntimeHarness session={buildSession({ phase: 'closed' })} onEventsChangedRef={cbRef} />
         </MemoryRouter>
       </QueryClientProvider>,
     )
@@ -494,7 +494,7 @@ describe('useSessionRuntimeSession — session change (reset)', () => {
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     // Re-render with session_2 — this triggers the sessionIdRef !== check
-    const session2 = buildSession({ id: 'session_2', phase: 'stopped' })
+    const session2 = buildSession({ id: 'session_2', phase: 'closed' })
     rerender(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>

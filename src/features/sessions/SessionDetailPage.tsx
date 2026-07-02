@@ -64,7 +64,8 @@ export function SessionDetailPage() {
         agentName={agentQuery.data?.metadata.name}
         environmentName={environmentQuery.data?.metadata.name}
         runtime={runtime.state}
-        onStop={actions.stopSession}
+        onClose={actions.closeSession}
+        onReopen={actions.reopenSession}
         onArchive={actions.archiveSession}
         onReconnectRuntime={runtime.reconnect}
         chatMessage={message}

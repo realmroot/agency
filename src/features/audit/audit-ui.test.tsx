@@ -229,7 +229,7 @@ describe('[spec: audit/console-detail] AuditRecordPage', () => {
 
   it('renders None for null optional record fields and falls back to actorType when actorUserId is null', async () => {
     const record = buildRecord({
-      action: 'session.stop',
+      action: 'session.close',
       actorUserId: null,
       requestId: null,
       correlationId: null,
@@ -241,7 +241,7 @@ describe('[spec: audit/console-detail] AuditRecordPage', () => {
 
     renderRecordPage()
 
-    expect(await screen.findByRole('heading', { name: 'session.stop' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'session.close' })).toBeInTheDocument()
     expect(screen.getAllByText('user').length).toBeGreaterThan(0)
     expect(screen.getAllByText('None').length).toBeGreaterThan(0)
   })

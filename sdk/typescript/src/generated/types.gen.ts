@@ -1583,13 +1583,13 @@ export type SessionSpec = {
 };
 
 export type SessionStatus = {
-    phase: 'pending' | 'running' | 'idle' | 'stopped' | 'error';
+    phase: 'pending' | 'running' | 'idle' | 'closed' | 'error';
     reason: string | null;
     conditions: Array<SessionCondition>;
     bindings: SessionBindings;
     placement: SessionPlacement;
     startedAt: string | null;
-    stoppedAt: string | null;
+    closedAt: string | null;
 };
 
 export type SessionCondition = {
@@ -1696,7 +1696,7 @@ export type SessionListResponse = {
 
 export type UpdateSessionRequest = {
     metadata?: SessionUpdateMetadata;
-    state?: 'stopped';
+    state?: 'closed' | 'idle';
     archived?: boolean;
 };
 
@@ -3986,7 +3986,7 @@ export type ListSessionsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
-        state?: 'pending' | 'running' | 'idle' | 'stopped' | 'error';
+        state?: 'pending' | 'running' | 'idle' | 'closed' | 'error';
         labelSelector?: string;
     };
     url: '/api/v1/sessions';

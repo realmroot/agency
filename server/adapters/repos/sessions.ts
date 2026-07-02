@@ -61,7 +61,7 @@ function snapshotRuntime(metadata: Record<string, unknown>): RuntimeName {
 }
 
 function sessionState(value: string): SessionState {
-  if (value === 'pending' || value === 'running' || value === 'idle' || value === 'stopped' || value === 'error') {
+  if (value === 'pending' || value === 'running' || value === 'idle' || value === 'closed' || value === 'error') {
     return value
   }
   throw new Error(`Invalid session state: ${value}`)
@@ -174,7 +174,7 @@ function serializeSession(row: SessionRow): Session {
         protocol: placement.protocol,
       },
       startedAt: row.startedAt,
-      stoppedAt: row.stoppedAt,
+      closedAt: row.closedAt,
     },
   }
 }

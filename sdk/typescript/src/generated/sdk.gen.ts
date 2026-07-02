@@ -648,7 +648,7 @@ export const readSession = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, the stop transition (state: "stopped"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
  */
 export const updateSession = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionData, ThrowOnError>): RequestResult<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

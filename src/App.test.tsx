@@ -505,9 +505,14 @@ function mockConsoleApi(seed?: {
         state.sessions = [archived]
         return jsonResponse(archived)
       }
-      const stopped = session({ phase: 'stopped', stoppedAt: now })
-      state.sessions = [stopped]
-      return jsonResponse(stopped)
+      if (body.state === 'idle') {
+        const reopened = session({ phase: 'idle', closedAt: null })
+        state.sessions = [reopened]
+        return jsonResponse(reopened)
+      }
+      const closed = session({ phase: 'closed', closedAt: now })
+      state.sessions = [closed]
+      return jsonResponse(closed)
     }
     if (path.startsWith('/api/v1/sessions/') && method === 'GET') {
       const found = [...state.detailSessions, ...state.sessions].find(
@@ -710,7 +715,7 @@ describe('App', () => {
         session({
           id: 'session_archived',
           name: 'session_archived',
-          phase: 'stopped',
+          phase: 'closed',
           archivedAt: now,
         }),
         session({
@@ -820,14 +825,14 @@ describe('App', () => {
     ])
   })
 
-  it('shows error, stopped, and archived session states [spec: web-console/destructive-ops]', async () => {
+  it('shows error, closed, and archived session states [spec: web-console/destructive-ops]', async () => {
     mockConsoleApi({
       environments: [environment()],
       agents: [agent()],
       sessions: [
         session({ name: 'First run workflow', phase: 'error', reason: 'Runtime crashed' }),
-        session({ id: 'session_stopped', name: 'Stopped workflow', phase: 'stopped', stoppedAt: now }),
-        session({ id: 'session_archived', name: 'Archived workflow', phase: 'stopped', archivedAt: now }),
+        session({ id: 'session_stopped', name: 'Closed workflow', phase: 'closed', closedAt: now }),
+        session({ id: 'session_archived', name: 'Archived workflow', phase: 'closed', archivedAt: now }),
       ],
       events: [event({ type: 'runtime.error', payload: { message: 'Runtime crashed' } })],
     })
@@ -839,16 +844,16 @@ describe('App', () => {
     fireEvent.click(primaryNav().getByRole('link', { name: 'Sessions' }))
     expect(await screen.findByLabelText('error: Runtime crashed')).toBeTruthy()
     expect(screen.queryByText('Runtime crashed')).toBeNull()
-    expect(screen.getAllByText('stopped').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
     // Archived sessions render their persisted state but expose no Archive action,
-    // unlike the active error/stopped rows which each keep one.
+    // unlike the active error/closed rows which each keep one.
     expect(screen.getAllByRole('button', { name: 'Archive' })).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('link', { name: 'First run workflow' }))
     expect(await screen.findByRole('tab', { name: 'Transcript' })).toBeTruthy()
-    await confirmAction('Stop session')
-    expectToast(await screen.findByText('Session stopped'))
-    expect(screen.getAllByText('stopped').length).toBeGreaterThan(0)
+    await confirmAction('Close session')
+    expectToast(await screen.findByText('Session closed'))
+    expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
 
     await confirmAction('Archive session')
     expectToast(await screen.findByText('Session archived'))

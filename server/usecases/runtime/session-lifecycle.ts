@@ -1,9 +1,9 @@
-// Session stop / archive / expiry lifecycle — deps-first.
+// Session close / reopen / archive / expiry lifecycle — deps-first.
 //
-// This cluster owns runtime teardown: stopping cloud sessions (tearing down the
+// This cluster owns runtime teardown: closing cloud sessions (tearing down the
 // sandbox runtime) and self-hosted sessions (cancelling work items, leases, and
-// runner load), archiving / unarchiving, and expiring pending cloud sessions
-// whose startup window elapsed.
+// runner load), reopening sessions, archiving / unarchiving, and expiring pending
+// cloud sessions whose startup window elapsed.
 //
 // Deps-first: the store, audit, cloud runtime lifecycle, runtime workspace
 // reader, and runner channel arrive as ports on `deps`; runtime events go
@@ -11,29 +11,25 @@
 
 import { memoryStoreIdFromRef } from '@server/domain/memory-store'
 import {
+  type EnvFromEntry,
   isMemoryVolume,
   type MemoryVolume,
   type Volume,
   type VolumeMount,
 } from '@server/domain/runtime/execution-inputs'
+import {
+  type createEnvironmentSnapshot,
+  normalizeEnvironmentSnapshot,
+  parseAgentSnapshot,
+  parseJson,
+} from '@server/domain/runtime/session-snapshot'
 import { now, RUNTIME_START_TIMEOUT_MS, requestIdFrom, stringify } from '@server/domain/runtime/util'
+import { sessionRuntimeConfig, sessionRuntimeFromMetadata } from '@server/domain/runtime-session'
 import { safeRuntimeError } from '@server/runtime-error'
-import type {
-  AuditPort,
-  AuthScope,
-  CloudRuntimeLifecycle,
-  EventStore,
-  RunnerChannel,
-  RuntimeWorkspaceReader,
-  SessionOrchestrationStore,
-  SessionRow,
-} from '../ports'
+import type { AuthScope, RunnerChannel, RuntimeWorkspaceReader, SessionRow } from '../ports'
+import { type CloudTurnDeps, startSessionRuntimeForRow } from './cloud-turn'
 
-type LifecycleDeps = {
-  sessionOrchestration: SessionOrchestrationStore
-  sessionEventStore: EventStore
-  audit: AuditPort
-  cloudRuntime: CloudRuntimeLifecycle
+type LifecycleDeps = CloudTurnDeps & {
   runtimeWorkspace: RuntimeWorkspaceReader
   runnerChannel: RunnerChannel
 }
@@ -46,39 +42,39 @@ type SessionRuntimeError = {
   detail?: Record<string, unknown>
 }
 
-export type StopSessionResult = { ok: true; session: SessionRow } | { ok: false; error: SessionRuntimeError }
+export type CloseSessionResult = { ok: true; session: SessionRow } | { ok: false; error: SessionRuntimeError }
 
-export async function stopSession(
+export async function closeSession(
   deps: LifecycleDeps,
   auth: AuthScope,
   sessionId: string,
   requestId: string | null,
   reason = 'user_requested',
-): Promise<StopSessionResult> {
+): Promise<CloseSessionResult> {
   const session = await deps.sessionOrchestration.findSession(auth.project.id, sessionId)
   if (!session) {
     return { ok: false, error: { status: 404, code: 'not_found', message: 'Session not found' } }
   }
-  return await stopSessionRow(deps, auth, session, requestId, reason)
+  return await closeSessionRow(deps, auth, session, requestId, reason)
 }
 
-async function stopSessionRow(
+async function closeSessionRow(
   deps: LifecycleDeps,
   auth: AuthScope,
   session: SessionRow,
   requestId: string | null,
   reason = 'user_requested',
-): Promise<StopSessionResult> {
-  if (session.state === 'stopped') {
+): Promise<CloseSessionResult> {
+  if (session.state === 'closed') {
     return { ok: true, session }
   }
   if (sessionSandboxBackend(session) === 'runner-sandbox' || !session.sandboxId) {
-    return await stopSelfHostedSession(deps, auth, session, requestId, reason)
+    return await closeSelfHostedSession(deps, auth, session, requestId, reason)
   }
 
   const store = deps.sessionOrchestration
-  const stoppingAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'stopped', updatedAt: stoppingAt })
+  const closingAt = now()
+  await store.updateSession(auth.project.id, session.id, { state: 'closed', updatedAt: closingAt })
 
   try {
     await syncWritableMemoryStores(deps, auth, session)
@@ -92,7 +88,7 @@ async function stopSessionRow(
       updatedAt: failedAt,
     })
     await deps.audit.record(auth, {
-      action: 'session.stop',
+      action: 'session.close',
       resourceType: 'session',
       resourceId: session.id,
       outcome: 'failure',
@@ -105,16 +101,16 @@ async function stopSessionRow(
       error: {
         status: 409,
         code: 'conflict',
-        message: 'Session runtime could not be stopped',
+        message: 'Session runtime could not be closed',
         detail: { runtime: safeError },
       },
     }
   }
 
-  const stoppedAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'stopped', stoppedAt, updatedAt: stoppedAt })
+  const closedAt = now()
+  await store.updateSession(auth.project.id, session.id, { state: 'closed', closedAt, updatedAt: closedAt })
   await deps.audit.record(auth, {
-    action: 'session.stop',
+    action: 'session.close',
     resourceType: 'session',
     resourceId: session.id,
     outcome: 'success',
@@ -123,11 +119,11 @@ async function stopSessionRow(
     metadata: { reason, sandboxId: session.sandboxId, piRuntimeId: session.piRuntimeId },
   })
   await archiveTerminalSession(deps, auth, session.id)
-  const stopped = await store.findSession(auth.project.id, session.id)
-  if (!stopped) {
-    throw new Error('Stopped session row is required')
+  const closed = await store.findSession(auth.project.id, session.id)
+  if (!closed) {
+    throw new Error('Closed session row is required')
   }
-  return { ok: true, session: stopped }
+  return { ok: true, session: closed }
 }
 
 async function syncWritableMemoryStores(deps: LifecycleDeps, auth: AuthScope, session: SessionRow) {
@@ -163,9 +159,9 @@ function sessionSandboxBackend(session: SessionRow): string | null {
   return typeof metadata.sandboxBackend === 'string' ? metadata.sandboxBackend : null
 }
 
-// On terminal stop, snapshot a cloud (ama) session's Session DO event log to its
+// On close, snapshot a cloud (ama) session's Session DO event log to its
 // R2 archive object. Best-effort: the DO keeps the hot rows, so a transient R2
-// failure must not strand the stop. No-op for D1-backed sessions (the router
+// failure must not strand the close. No-op for D1-backed sessions (the router
 // only archives DO-stored ones).
 async function archiveTerminalSession(deps: LifecycleDeps, auth: AuthScope, sessionId: string) {
   try {
@@ -179,15 +175,15 @@ async function archiveTerminalSession(deps: LifecycleDeps, auth: AuthScope, sess
   }
 }
 
-async function stopSelfHostedSession(
+async function closeSelfHostedSession(
   deps: LifecycleDeps,
   auth: AuthScope,
   session: SessionRow,
   requestId: string | null,
   reason: string,
-): Promise<StopSessionResult> {
+): Promise<CloseSessionResult> {
   const store = deps.sessionOrchestration
-  const stoppedAt = now()
+  const closedAt = now()
   if (sessionSandboxBackend(session) === 'runner-sandbox') {
     await deps.runnerChannel.stopSandbox(session.id).catch(() => undefined)
   } else {
@@ -205,28 +201,28 @@ async function stopSelfHostedSession(
     await store.cancelWorkItems(
       auth.project.id,
       workItemIds,
-      stringify({ message: `Session stopped: ${reason}` }),
-      stoppedAt,
+      stringify({ message: `Session closed: ${reason}` }),
+      closedAt,
     )
 
     if (leaseIds.length) {
-      await store.cancelLeases(auth.project.id, leaseIds, stoppedAt)
+      await store.cancelLeases(auth.project.id, leaseIds, closedAt)
     }
 
     for (const runnerId of runnerIds) {
-      await store.decrementRunnerLoad(auth.project.id, runnerId, stoppedAt)
+      await store.decrementRunnerLoad(auth.project.id, runnerId, closedAt)
     }
   }
 
   await store.updateSession(auth.project.id, session.id, {
-    state: 'stopped',
+    state: 'closed',
     stateReason: 'runner-cancelled',
-    stoppedAt,
-    updatedAt: stoppedAt,
+    closedAt,
+    updatedAt: closedAt,
   })
 
   await deps.audit.record(auth, {
-    action: 'session.stop',
+    action: 'session.close',
     resourceType: 'session',
     resourceId: session.id,
     outcome: 'success',
@@ -236,11 +232,85 @@ async function stopSelfHostedSession(
   })
   await archiveTerminalSession(deps, auth, session.id)
 
-  const stopped = await store.findSession(auth.project.id, session.id)
-  if (!stopped) {
-    throw new Error('Stopped self-hosted session row is required')
+  const closed = await store.findSession(auth.project.id, session.id)
+  if (!closed) {
+    throw new Error('Closed self-hosted session row is required')
   }
-  return { ok: true, session: stopped }
+  return { ok: true, session: closed }
+}
+
+export async function reopenSession(
+  deps: LifecycleDeps,
+  auth: AuthScope,
+  sessionId: string,
+  requestId: string | null,
+): Promise<CloseSessionResult> {
+  const store = deps.sessionOrchestration
+  const session = await store.findSession(auth.project.id, sessionId)
+  if (!session) {
+    return { ok: false, error: { status: 404, code: 'not_found', message: 'Session not found' } }
+  }
+  if (session.state !== 'closed') {
+    return { ok: false, error: { status: 409, code: 'conflict', message: 'Only closed sessions can be reopened' } }
+  }
+  const reopenedAt = now()
+  if (sessionSandboxBackend(session) === 'runner-sandbox' || !session.sandboxId) {
+    await store.updateSession(auth.project.id, session.id, {
+      state: 'idle',
+      stateReason: null,
+      startedAt: reopenedAt,
+      closedAt: null,
+      updatedAt: reopenedAt,
+    })
+  } else {
+    const metadata = parseJson<Record<string, unknown>>(session.metadata) ?? {}
+    const agentSnapshot = parseAgentSnapshot(session.agentSnapshot)
+    if (!agentSnapshot) {
+      return {
+        ok: false,
+        error: { status: 409, code: 'conflict', message: 'Session agent snapshot is required' },
+      }
+    }
+    const pending = await store.updateSessionWhenState(auth.project.id, session.id, 'closed', {
+      state: 'pending',
+      stateReason: null,
+      closedAt: null,
+      updatedAt: reopenedAt,
+    })
+    if (!pending) {
+      return {
+        ok: false,
+        error: { status: 409, code: 'conflict', message: 'Session runtime is no longer closed' },
+      }
+    }
+    await startSessionRuntimeForRow(deps, auth, {
+      pending: { ...session, state: 'pending', stateReason: null, closedAt: null, updatedAt: reopenedAt },
+      agentSnapshot,
+      environmentSnapshot: normalizeEnvironmentSnapshot(
+        parseJson<ReturnType<typeof createEnvironmentSnapshot>>(session.environmentSnapshot),
+      ),
+      runtime: sessionRuntimeFromMetadata(metadata),
+      runtimeConfig: sessionRuntimeConfig(metadata),
+      env: parseJson<Record<string, string>>(session.env) ?? {},
+      envFrom: parseJson<EnvFromEntry[]>(session.envFrom) ?? [],
+      volumes: parseJson<Volume[]>(session.volumes) ?? [],
+      volumeMounts: parseJson<VolumeMount[]>(session.volumeMounts) ?? [],
+    })
+  }
+  await deps.audit.record(auth, {
+    action: 'session.reopen',
+    resourceType: 'session',
+    resourceId: session.id,
+    outcome: 'success',
+    requestId: requestIdFrom(requestId),
+    sessionId: session.id,
+    metadata: {},
+  })
+  const reopened = await store.findSession(auth.project.id, session.id)
+  if (!reopened) {
+    throw new Error('Reopened session row is required')
+  }
+  return { ok: true, session: reopened }
 }
 
 export async function archiveSession(
@@ -248,16 +318,16 @@ export async function archiveSession(
   auth: AuthScope,
   sessionId: string,
   requestId: string | null,
-): Promise<StopSessionResult> {
+): Promise<CloseSessionResult> {
   const store = deps.sessionOrchestration
   const session = await store.findSession(auth.project.id, sessionId)
   if (!session) {
     return { ok: false, error: { status: 404, code: 'not_found', message: 'Session not found' } }
   }
-  if ((session.sandboxId || sessionSandboxBackend(session) === 'runner-sandbox') && session.state !== 'stopped') {
-    const stopped = await stopSessionRow(deps, auth, session, requestId)
-    if (!stopped.ok) {
-      return stopped
+  if ((session.sandboxId || sessionSandboxBackend(session) === 'runner-sandbox') && session.state !== 'closed') {
+    const closed = await closeSessionRow(deps, auth, session, requestId)
+    if (!closed.ok) {
+      return closed
     }
   }
 

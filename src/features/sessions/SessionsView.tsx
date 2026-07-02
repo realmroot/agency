@@ -118,7 +118,7 @@ export function SessionsView({
             </TableCell>
             <TableCell className="min-w-0">
               <span className="block truncate">
-                {formatDuration(session.status.startedAt, session.status.stoppedAt)}
+                {formatDuration(session.status.startedAt, session.status.closedAt)}
               </span>
             </TableCell>
             <TableCell>

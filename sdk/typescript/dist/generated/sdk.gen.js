@@ -568,7 +568,7 @@ export const readSession = (options) => (options.client ?? client).get({
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, the stop transition (state: "stopped"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
  */
 export const updateSession = (options) => (options.client ?? client).patch({
     security: [{ scheme: 'bearer', type: 'http' }],

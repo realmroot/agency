@@ -35,7 +35,7 @@ class SessionStatus:
             bindings (SessionBindings):
             placement (None | SessionPlacementType0):
             started_at (datetime.datetime | None):
-            stopped_at (datetime.datetime | None):
+            closed_at (datetime.datetime | None):
      """
 
     phase: SessionStatusPhase
@@ -44,7 +44,7 @@ class SessionStatus:
     bindings: SessionBindings
     placement: None | SessionPlacementType0
     started_at: datetime.datetime | None
-    stopped_at: datetime.datetime | None
+    closed_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -81,11 +81,11 @@ class SessionStatus:
         else:
             started_at = self.started_at
 
-        stopped_at: None | str
-        if isinstance(self.stopped_at, datetime.datetime):
-            stopped_at = self.stopped_at.isoformat()
+        closed_at: None | str
+        if isinstance(self.closed_at, datetime.datetime):
+            closed_at = self.closed_at.isoformat()
         else:
-            stopped_at = self.stopped_at
+            closed_at = self.closed_at
 
 
         field_dict: dict[str, Any] = {}
@@ -97,7 +97,7 @@ class SessionStatus:
             "bindings": bindings,
             "placement": placement,
             "startedAt": started_at,
-            "stoppedAt": stopped_at,
+            "closedAt": closed_at,
         })
 
         return field_dict
@@ -174,22 +174,22 @@ class SessionStatus:
         started_at = _parse_started_at(d.pop("startedAt"))
 
 
-        def _parse_stopped_at(data: object) -> datetime.datetime | None:
+        def _parse_closed_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                stopped_at_type_0 = datetime.datetime.fromisoformat(data)
+                closed_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
-                return stopped_at_type_0
+                return closed_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(datetime.datetime | None, data)
 
-        stopped_at = _parse_stopped_at(d.pop("stoppedAt"))
+        closed_at = _parse_closed_at(d.pop("closedAt"))
 
 
         session_status = cls(
@@ -199,7 +199,7 @@ class SessionStatus:
             bindings=bindings,
             placement=placement,
             started_at=started_at,
-            stopped_at=stopped_at,
+            closed_at=closed_at,
         )
 
 

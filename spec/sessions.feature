@@ -1,7 +1,7 @@
 Feature: Sessions
   A session is a tenant-scoped run of an agent version in a selected runtime.
   It snapshots its agent and environment, owns canonical events, and exposes a
-  lifecycle (create, prompt, stop, archive) behind AMA endpoints only.
+  lifecycle (create, prompt, close, reopen, archive) behind AMA endpoints only.
 
   # ── State rules (domain: pure, no runtime) ──
 
@@ -9,7 +9,7 @@ Feature: Sessions
   Scenario: Session state governs prompts and terminality
     Given a session in a given state
     Then prompts are accepted only while the runtime is live
-    And stopped and error are terminal states
+    And error is terminal while closed can be reopened
 
   @sessions/workspace-safety @domain
   Scenario: Reject unsafe workspace and secret-bearing inputs
@@ -67,12 +67,13 @@ Feature: Sessions
     And the session returns to idle with a result or moves to error with a safe reason
     And self-hosted prompt resumption persists the queued work item and pending session state atomically
 
-  @sessions/stop @api
-  Scenario: Stop a running session cooperatively
+  @sessions/close @api
+  Scenario: Close and reopen a running session cooperatively
     Given a session is running
-    When the user stops the session
+    When the user closes the session
     Then cloud-owned runtime work is cancelled and no new work starts after the cancellation boundary
-    And the status becomes stopped with stop lifecycle and audit records
+    And the status becomes closed with close lifecycle and audit records
+    And the user can reopen the same session without a prompt and send follow-up work
     And no successful completion events are written after cancellation
 
 	  @sessions/archive @api
@@ -140,7 +141,7 @@ Feature: Sessions
     Given sessions exist with agent and environment snapshots
     When the user opens the sessions list and a session detail
     Then rows and detail facts come from agent provider/model, hosting snapshots, and session runtime
-    And error, stopped, and archived states are surfaced without leaking detail onto table rows
+    And error, closed, and archived states are surfaced without leaking detail onto table rows
 
   @sessions/console-transcript @web
   Scenario: Render canonical events as transcript, debug, and tool trace

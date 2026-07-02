@@ -8,7 +8,7 @@ import type { AmaEvent } from '@shared/session-events'
 import { createDeps } from '../composition'
 import type { Env } from '../env'
 import type { AuthScope, EventPage, EventQuery } from '../usecases/ports'
-import { dispatchSessionPrompt, stopSession } from '../usecases/runtime'
+import { closeSession, dispatchSessionPrompt } from '../usecases/runtime'
 import {
   appendCanonicalEventToSql,
   countSessionEvents,
@@ -267,7 +267,7 @@ export class SessionObject implements DurableObject {
     message: Extract<SessionSocketClientMessage, { type: 'abort' }>,
   ): Promise<void> {
     const requestId = requestIdFor(message)
-    const outcome = await stopSession(
+    const outcome = await closeSession(
       createDeps(this.env),
       browserAuthScope(scope),
       scope.sessionId,

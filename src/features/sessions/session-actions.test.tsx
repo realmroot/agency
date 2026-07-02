@@ -1,6 +1,6 @@
 /**
  * Tests for use-session-actions hook — covers the mutation callbacks (onSuccess,
- * onError) for stopSession and archiveSession.
+ * onError) for closeSession and archiveSession.
  *
  * Uses MSW + the REAL api client. No vi.spyOn / vi.mock of @/lib/amarpc.
  */
@@ -16,11 +16,11 @@ import { useSessionActions } from './use-session-actions'
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function buildStoppedSession() {
+function buildClosedSession() {
   return buildTestSession({
     id: 'session_1',
-    phase: 'stopped',
-    stoppedAt: '2026-05-23T00:00:01.000Z',
+    phase: 'closed',
+    closedAt: '2026-05-23T00:00:01.000Z',
     updatedAt: '2026-05-23T00:00:01.000Z',
   })
 }
@@ -29,7 +29,7 @@ function buildArchivedSession() {
   return buildTestSession({
     id: 'session_1',
     phase: 'idle',
-    stoppedAt: null,
+    closedAt: null,
     archivedAt: '2026-05-23T00:00:02.000Z',
     updatedAt: '2026-05-23T00:00:02.000Z',
   })
@@ -49,13 +49,17 @@ function ActionsHarness() {
   const actions = useSessionActions()
   return (
     <div>
-      <button type="button" onClick={() => actions.stopSession('session_1')}>
-        Stop
+      <button type="button" onClick={() => actions.closeSession('session_1')}>
+        Close
       </button>
       <button type="button" onClick={() => actions.archiveSession('session_1')}>
         Archive
       </button>
-      {actions.stopSessionPending && <span>stop-pending</span>}
+      <button type="button" onClick={() => actions.reopenSession('session_1')}>
+        Reopen
+      </button>
+      {actions.closeSessionPending && <span>close-pending</span>}
+      {actions.reopenSessionPending && <span>reopen-pending</span>}
       {actions.archiveSessionPending && <span>archive-pending</span>}
     </div>
   )
@@ -74,32 +78,47 @@ function renderHarness() {
 }
 
 // ---------------------------------------------------------------------------
-// stopSession
+// closeSession
 // ---------------------------------------------------------------------------
 
-describe('useSessionActions — stopSession', () => {
-  it('calls PATCH /api/v1/sessions/:id and resolves with stopped session', async () => {
-    server.use(http.patch('*/api/v1/sessions/session_1', () => HttpResponse.json(buildStoppedSession())))
+describe('useSessionActions — closeSession', () => {
+  it('calls PATCH /api/v1/sessions/:id and resolves with closed session', async () => {
+    server.use(http.patch('*/api/v1/sessions/session_1', () => HttpResponse.json(buildClosedSession())))
 
     renderHarness()
-    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
     // If the mutation resolves without throwing, the api was called correctly.
-    await waitFor(() => expect(screen.queryByText('stop-pending')).toBeNull(), { timeout: 3000 })
+    await waitFor(() => expect(screen.queryByText('close-pending')).toBeNull(), { timeout: 3000 })
   })
 
   it('does not crash when PATCH /sessions/:id returns 500', async () => {
     server.use(
       http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json({ error: { type: 'internal', message: 'Stop failed' } }, { status: 500 }),
+        HttpResponse.json({ error: { type: 'internal', message: 'Close failed' } }, { status: 500 }),
       ),
     )
 
     renderHarness()
-    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
     // Hook handles error via onError callback (shows toast) — component must not crash.
-    await waitFor(() => expect(screen.queryByText('stop-pending')).toBeNull(), { timeout: 3000 })
+    await waitFor(() => expect(screen.queryByText('close-pending')).toBeNull(), { timeout: 3000 })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// reopenSession
+// ---------------------------------------------------------------------------
+
+describe('useSessionActions — reopenSession', () => {
+  it('calls PATCH /api/v1/sessions/:id and resolves with idle session', async () => {
+    server.use(http.patch('*/api/v1/sessions/session_1', () => HttpResponse.json(buildTestSession())))
+
+    renderHarness()
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen' }))
+
+    await waitFor(() => expect(screen.queryByText('reopen-pending')).toBeNull(), { timeout: 3000 })
   })
 })
 

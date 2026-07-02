@@ -41,8 +41,8 @@ Feature: Web console
 
   @web-console/destructive-ops @web
   Scenario: Confirm destructive actions through the shared dialog
-    Given a session can be stopped and archived
-    When the user triggers a stop or archive from the console
+    Given a session can be closed and archived
+    When the user triggers a close or archive from the console
     Then a confirmation dialog names the resource and consequence before the action runs
     And archived resources expose no further destructive action
 

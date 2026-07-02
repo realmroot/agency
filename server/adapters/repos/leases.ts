@@ -628,9 +628,9 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           const sessionUpdate = (
             input.state === 'cancelled'
               ? {
-                  state: 'stopped',
+                  state: 'closed',
                   stateReason: 'runner-cancelled',
-                  stoppedAt: timestamp,
+                  closedAt: timestamp,
                   updatedAt: timestamp,
                 }
               : {

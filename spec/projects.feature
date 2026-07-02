@@ -40,7 +40,7 @@ Feature: Projects
   @projects/external-control @e2e
   Scenario: External product controls a running session only through AMA endpoints
     Given an external product created an AMA session
-    When the external product sends a follow-up message, stop request, or resume request
+    When the external product sends a follow-up message, close request, or resume request
     Then AMA routes the command to the selected runtime or owning self-hosted runner
     And AMA records the command result as canonical session events
     And the external product never connects to a sandbox-local, runner-local, or official-runtime-local endpoint

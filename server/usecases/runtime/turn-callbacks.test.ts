@@ -109,7 +109,7 @@ describe('[spec: runtime/turn] buildSessionTurnCallbacks (shared turn-driver sea
   })
 
   it('throws RuntimeTurnCancelled from ensureActive when the session is no longer running', async () => {
-    store.sessionState.mockResolvedValue({ state: 'stopped' })
+    store.sessionState.mockResolvedValue({ state: 'closed' })
     const callbacks = build()
     await expect(callbacks.ensureActive()).rejects.toThrow()
   })

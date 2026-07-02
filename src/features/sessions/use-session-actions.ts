@@ -7,11 +7,20 @@ import { queryKeys } from '@/lib/query-keys'
 export function useSessionActions() {
   const queryClient = useQueryClient()
 
-  const stopSession = useMutation({
-    mutationFn: api.stopSession,
+  const closeSession = useMutation({
+    mutationFn: api.closeSession,
     onSuccess: (session: Session) => {
       queryClient.setQueryData(queryKeys.sessions.detail(session.metadata.uid), session)
-      toast.success('Session stopped')
+      toast.success('Session closed')
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+  const reopenSession = useMutation({
+    mutationFn: api.reopenSession,
+    onSuccess: (session: Session) => {
+      queryClient.setQueryData(queryKeys.sessions.detail(session.metadata.uid), session)
+      toast.success('Session reopened')
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -26,9 +35,11 @@ export function useSessionActions() {
   })
 
   return {
-    stopSession: (id: string) => stopSession.mutate(id),
+    closeSession: (id: string) => closeSession.mutate(id),
+    reopenSession: (id: string) => reopenSession.mutate(id),
     archiveSession: (id: string) => archiveSession.mutate(id),
-    stopSessionPending: stopSession.isPending,
+    closeSessionPending: closeSession.isPending,
+    reopenSessionPending: reopenSession.isPending,
     archiveSessionPending: archiveSession.isPending,
   }
 }

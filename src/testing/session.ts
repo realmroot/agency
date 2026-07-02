@@ -12,7 +12,7 @@ type SessionFixtureFields = {
   phase: SessionState
   reason: string | null
   startedAt: string | null
-  stoppedAt: string | null
+  closedAt: string | null
   archivedAt: string | null
   createdAt: string
   updatedAt: string
@@ -44,7 +44,7 @@ export type TestSessionOverrides = SessionShapeOverrides &
       | 'phase'
       | 'reason'
       | 'startedAt'
-      | 'stoppedAt'
+      | 'closedAt'
       | 'archivedAt'
       | 'createdAt'
       | 'updatedAt'
@@ -62,7 +62,7 @@ export function buildTestSession(overrides: TestSessionOverrides = {}): Session 
   const phase = overrides.phase ?? overrides.status?.phase ?? 'idle'
   const reason = overrides.reason ?? overrides.status?.reason ?? null
   const startedAt = overrides.startedAt !== undefined ? overrides.startedAt : (overrides.status?.startedAt ?? now)
-  const stoppedAt = overrides.stoppedAt !== undefined ? overrides.stoppedAt : (overrides.status?.stoppedAt ?? null)
+  const closedAt = overrides.closedAt !== undefined ? overrides.closedAt : (overrides.status?.closedAt ?? null)
   const archivedAt =
     overrides.archivedAt !== undefined ? overrides.archivedAt : (overrides.metadata?.archivedAt ?? null)
   const createdAt = overrides.createdAt ?? overrides.metadata?.createdAt ?? now
@@ -132,7 +132,7 @@ export function buildTestSession(overrides: TestSessionOverrides = {}): Session 
       reason,
       conditions: [],
       startedAt,
-      stoppedAt,
+      closedAt,
       ...overrides.status,
       bindings,
       placement: overrides.status?.placement ?? placement,

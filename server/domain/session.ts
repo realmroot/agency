@@ -18,7 +18,7 @@ export type { SessionEvent }
 // and runtime layers share one source of truth that is unit-testable in
 // milliseconds.
 
-export const SESSION_STATES = ['pending', 'running', 'idle', 'stopped', 'error'] as const
+export const SESSION_STATES = ['pending', 'running', 'idle', 'closed', 'error'] as const
 export type SessionState = (typeof SESSION_STATES)[number]
 
 export const MESSAGE_DELIVERIES = ['live', 'queued'] as const
@@ -66,7 +66,7 @@ export interface SessionStatus {
   bindings: SessionBindings
   placement: SessionPlacement | null
   startedAt: string | null
-  stoppedAt: string | null
+  closedAt: string | null
 }
 
 export interface SessionCondition {
@@ -164,9 +164,9 @@ export function sessionAcceptsPrompts(state: SessionState): boolean {
   return state === 'idle' || state === 'running'
 }
 
-// A session is terminal once it has stopped or errored.
+// A session is terminal once it has errored. Closed sessions can be reopened.
 export function sessionIsTerminal(state: SessionState): boolean {
-  return state === 'stopped' || state === 'error'
+  return state === 'error'
 }
 
 // Self-hosted sessions never own a sandbox; cloud sessions always do. The

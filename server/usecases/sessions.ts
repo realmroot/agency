@@ -7,20 +7,20 @@ import {
   type SessionRuntimeError,
   SessionValidationError,
 } from './ports'
-import { archiveSession, dispatchPrompt, stopSession, unarchiveSession } from './runtime/sessions'
+import { archiveSession, closeSession, dispatchPrompt, reopenSession, unarchiveSession } from './runtime/sessions'
 
 export type SessionWriteOutcome<T> = { ok: true; value: T } | { ok: false; error: SessionRuntimeError }
 
 export interface UpdateSessionPatch {
   name?: string | null
   metadata?: Record<string, unknown>
-  state?: 'stopped'
+  state?: 'closed' | 'idle'
   archived?: boolean
 }
 
 // Orchestrates the session PATCH decision tree: archived sessions only accept
-// an unarchive; otherwise apply name/metadata edits, then the stop transition,
-// then archiving — in that order, since a stop+archive request must stop the
+// an unarchive; otherwise apply name/metadata edits, then close/reopen transitions,
+// then archiving — in that order, since a close+archive request must close the
 // live runtime before lifecycle archiving.
 export async function updateSession(
   deps: Deps,
@@ -71,14 +71,26 @@ export async function updateSession(
     current = reread
   }
 
-  if (patch.state === 'stopped') {
-    const stopped = await stopSession(deps, auth, current, requestId)
-    if (!stopped.ok || patch.archived !== true) {
-      return stopped
+  if (patch.state === 'closed') {
+    const closed = await closeSession(deps, auth, current, requestId)
+    if (!closed.ok || patch.archived !== true) {
+      return closed
     }
     const reread = await deps.sessions.findRuntimeRow(auth.project.id, session.id)
     if (!reread) {
-      throw new Error('Stopped session row is required')
+      throw new Error('Closed session row is required')
+    }
+    current = reread
+  }
+
+  if (patch.state === 'idle') {
+    const reopened = await reopenSession(deps, auth, current, requestId)
+    if (!reopened.ok) {
+      return reopened
+    }
+    const reread = await deps.sessions.findRuntimeRow(auth.project.id, session.id)
+    if (!reread) {
+      throw new Error('Reopened session row is required')
     }
     current = reread
   }

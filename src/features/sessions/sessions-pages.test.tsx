@@ -545,7 +545,8 @@ describe('SessionDetailView', () => {
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState(runtimeOverrides)}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
@@ -584,7 +585,8 @@ describe('SessionDetailView', () => {
           agentName={undefined}
           environmentName={undefined}
           runtime={buildRuntimeState()}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
@@ -652,7 +654,7 @@ describe('SessionDetailView', () => {
     expect(screen.getByText('Git repositories')).toBeTruthy()
   })
 
-  it('calls onStop after stop action is confirmed', async () => {
+  it('calls onClose after close action is confirmed', async () => {
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
       configurable: true,
@@ -669,7 +671,7 @@ describe('SessionDetailView', () => {
       value: vi.fn(),
       configurable: true,
     })
-    const onStop = vi.fn()
+    const onClose = vi.fn()
     const session = buildSession()
     render(
       <MemoryRouter>
@@ -678,7 +680,8 @@ describe('SessionDetailView', () => {
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState()}
-          onStop={onStop}
+          onClose={onClose}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
@@ -693,11 +696,60 @@ describe('SessionDetailView', () => {
     fireEvent.pointerDown(actionsButton, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
     fireEvent.mouseDown(actionsButton)
     fireEvent.click(actionsButton)
-    const stopItem = await screen.findByText('Stop session')
+    const stopItem = await screen.findByText('Close session')
     fireEvent.click(stopItem)
-    const confirmButton = await screen.findByRole('button', { name: 'Stop session' })
+    const confirmButton = await screen.findByRole('button', { name: 'Close session' })
     fireEvent.click(confirmButton)
-    expect(onStop).toHaveBeenCalledWith('session_1')
+    expect(onClose).toHaveBeenCalledWith('session_1')
+  })
+
+  it('calls onReopen after reopen action is confirmed for a closed session', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+      value: vi.fn(() => false),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    const onReopen = vi.fn()
+    const session = buildSession({ phase: 'closed' })
+    render(
+      <MemoryRouter>
+        <SessionDetailView
+          session={session}
+          agentName="Coding agent"
+          environmentName="Node workspace"
+          runtime={buildRuntimeState()}
+          onClose={vi.fn()}
+          onReopen={onReopen}
+          onArchive={vi.fn()}
+          onReconnectRuntime={vi.fn()}
+          chatMessage=""
+          setChatMessage={vi.fn()}
+          onSendMessage={vi.fn()}
+          onAbortRuntime={vi.fn()}
+        />
+      </MemoryRouter>,
+    )
+
+    const actionsButton = screen.getByRole('button', { name: 'Actions' })
+    fireEvent.pointerDown(actionsButton, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.mouseDown(actionsButton)
+    fireEvent.click(actionsButton)
+    const reopenItem = await screen.findByText('Reopen session')
+    fireEvent.click(reopenItem)
+    const confirmButton = await screen.findByRole('button', { name: 'Reopen session' })
+    fireEvent.click(confirmButton)
+    expect(onReopen).toHaveBeenCalledWith('session_1')
   })
 
   it('calls onArchive after archive action is confirmed', async () => {
@@ -726,7 +778,8 @@ describe('SessionDetailView', () => {
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState()}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={onArchive}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
@@ -769,8 +822,8 @@ describe('SessionDetailView', () => {
     expect(screen.getByText('0')).toBeTruthy()
   })
 
-  it('renders canSend false when session is stopped', () => {
-    const session = buildSession({ phase: 'stopped' })
+  it('renders canSend false when session is closed', () => {
+    const session = buildSession({ phase: 'closed' })
     render(
       <MemoryRouter>
         <SessionDetailView
@@ -778,7 +831,8 @@ describe('SessionDetailView', () => {
           agentName="Coding agent"
           environmentName="Node workspace"
           runtime={buildRuntimeState()}
-          onStop={vi.fn()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
           onArchive={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage="hello"
@@ -1862,7 +1916,7 @@ describe('SessionsPage', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SessionDetailPage — loading / not-found states (safe: null/stopped session = no WebSocket)
+// SessionDetailPage — loading / not-found states (safe: null/closed session = no WebSocket)
 // ---------------------------------------------------------------------------
 
 describe('SessionDetailPage', () => {
@@ -1900,9 +1954,9 @@ describe('SessionDetailPage', () => {
     await waitFor(() => expect(screen.getByText('Session not found')).toBeTruthy(), { timeout: 5000 })
   })
 
-  it('renders session detail view for a stopped session (agentId and environmentId present)', async () => {
+  it('renders session detail view for a closed session (agentId and environmentId present)', async () => {
     stubSessionSocket()
-    const stoppedSession = buildSession({ id: 'session_stopped', phase: 'stopped', stoppedAt: now })
+    const stoppedSession = buildSession({ id: 'session_stopped', phase: 'closed', closedAt: now })
     server.use(sessionDetail(stoppedSession), agentDetail(buildAgent()), environmentDetail(buildEnvironment()))
 
     const queryClient = makeQueryClient()
@@ -1917,12 +1971,12 @@ describe('SessionDetailPage', () => {
     )
 
     await waitFor(() => expect(screen.getByText('Test session')).toBeTruthy(), { timeout: 5000 })
-    expect(screen.getAllByText('stopped').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
   })
 
   it('loads complete session event history through socket backfill pagination', async () => {
     const sockets = stubSessionSocket()
-    const stoppedSession = buildSession({ id: 'session_history', phase: 'stopped', stoppedAt: now })
+    const stoppedSession = buildSession({ id: 'session_history', phase: 'closed', closedAt: now })
     server.use(sessionDetail(stoppedSession), agentDetail(buildAgent()), environmentDetail(buildEnvironment()))
 
     const queryClient = makeQueryClient()
@@ -1960,7 +2014,7 @@ describe('SessionDetailPage', () => {
 
   it('renders view while socket backfill has not arrived yet', async () => {
     stubSessionSocket()
-    const stoppedSession = buildSession({ id: 'session_events_pending', phase: 'stopped', stoppedAt: now })
+    const stoppedSession = buildSession({ id: 'session_events_pending', phase: 'closed', closedAt: now })
     server.use(sessionDetail(stoppedSession), agentDetail(buildAgent()), environmentDetail(buildEnvironment()))
 
     const queryClient = makeQueryClient()
@@ -2000,8 +2054,8 @@ describe('SessionDetailPage', () => {
     stubSessionSocket()
     const minimalSession = buildSession({
       id: 'session_minimal',
-      phase: 'stopped',
-      stoppedAt: now,
+      phase: 'closed',
+      closedAt: now,
       agentId: '',
       environmentId: null,
       environmentVersionId: null,

@@ -44,7 +44,7 @@ import { requestId } from './request-context'
 
 type SessionRoutes = OpenAPIHono<DepsEnv>
 
-const SESSION_STATES = ['pending', 'running', 'idle', 'stopped', 'error'] as const
+const SESSION_STATES = ['pending', 'running', 'idle', 'closed', 'error'] as const
 const MESSAGE_DELIVERIES = ['live', 'queued'] as const
 const MESSAGE_STATES = ['accepted', 'delivered', 'failed'] as const
 const APPROVAL_STATES = ['pending', 'approved', 'denied'] as const
@@ -159,7 +159,7 @@ const SessionStatusSchema = z
     bindings: SessionBindingsSchema,
     placement: SessionPlacementSchema.nullable(),
     startedAt: z.string().datetime().nullable(),
-    stoppedAt: z.string().datetime().nullable(),
+    closedAt: z.string().datetime().nullable(),
   })
   .openapi('SessionStatus')
 
@@ -545,7 +545,7 @@ const CreateSessionSchema = z
 const UpdateSessionSchema = z
   .object({
     metadata: SessionUpdateMetadataSchema.optional(),
-    state: z.literal('stopped').optional().openapi({ example: 'stopped' }),
+    state: z.enum(['closed', 'idle']).optional().openapi({ example: 'closed' }),
     archived: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
@@ -986,7 +986,7 @@ const updateSessionRoute = createRoute({
   tags: ['Sessions'],
   summary: 'Update a session',
   description:
-    'Partial update: name and metadata edits, the stop transition (state: "stopped"), and lifecycle archiving (archived: true|false).',
+    'Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).',
   ...AuthenticatedOperation,
   request: {
     params: ParamsSchema,

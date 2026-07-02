@@ -8,7 +8,8 @@ import { type AuthScope, type RuntimeSessionHandle, SessionValidationError } fro
 // tests drive the runtime outcomes the way they previously drove the gateway.
 vi.mock('./runtime/sessions', () => ({
   createSession: vi.fn(),
-  stopSession: vi.fn(),
+  closeSession: vi.fn(),
+  reopenSession: vi.fn(),
   archiveSession: vi.fn(),
   unarchiveSession: vi.fn(),
   dispatchPrompt: vi.fn(),
@@ -23,7 +24,8 @@ import { sendSessionMessage, updateSession } from './sessions'
 // gateway override surface. Applied onto the mocked module by fakeDeps.
 type RuntimeSessionOverrides = {
   createSession?: typeof runtimeSessions.createSession
-  stopSession?: typeof runtimeSessions.stopSession
+  closeSession?: typeof runtimeSessions.closeSession
+  reopenSession?: typeof runtimeSessions.reopenSession
   archiveSession?: typeof runtimeSessions.archiveSession
   unarchiveSession?: typeof runtimeSessions.unarchiveSession
   dispatchPrompt?: typeof runtimeSessions.dispatchPrompt
@@ -108,7 +110,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
         protocol: null,
       },
       startedAt: null,
-      stoppedAt: null,
+      closedAt: null,
     },
     ...overrides,
   }
@@ -163,9 +165,13 @@ function fakeDeps(
   }
   const runtime: Required<RuntimeSessionOverrides> = {
     createSession: async () => ({ ok: true, value: sessionRecord() }),
-    stopSession: async () => ({
+    closeSession: async () => ({
       ok: true,
-      value: sessionRecord({ status: { ...sessionRecord().status, phase: 'stopped' } }),
+      value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }),
+    }),
+    reopenSession: async () => ({
+      ok: true,
+      value: sessionRecord({ status: { ...sessionRecord().status, phase: 'idle' } }),
     }),
     archiveSession: async () => ({
       ok: true,
@@ -197,7 +203,8 @@ function fakeDeps(
     ...overrides.sessionRuntime,
   }
   vi.mocked(runtimeSessions.createSession).mockImplementation(runtime.createSession)
-  vi.mocked(runtimeSessions.stopSession).mockImplementation(runtime.stopSession)
+  vi.mocked(runtimeSessions.closeSession).mockImplementation(runtime.closeSession)
+  vi.mocked(runtimeSessions.reopenSession).mockImplementation(runtime.reopenSession)
   vi.mocked(runtimeSessions.archiveSession).mockImplementation(runtime.archiveSession)
   vi.mocked(runtimeSessions.unarchiveSession).mockImplementation(runtime.unarchiveSession)
   vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(runtime.dispatchPrompt)
@@ -302,7 +309,7 @@ describe('[spec: sessions/archive] updateSession — archived session', () => {
       fakeDeps(),
       auth,
       sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { state: 'stopped' },
+      { state: 'closed' },
       null,
     )
     expect(result.ok).toBe(false)
@@ -414,42 +421,42 @@ describe('[spec: sessions/archive] updateSession — name and metadata edits', (
   })
 })
 
-describe('[spec: sessions/stop] updateSession — stop transition', () => {
-  it('stops a live session and returns the stopped record', async () => {
-    let stopped = false
+describe('[spec: sessions/close] updateSession — close/reopen transitions', () => {
+  it('closes a live session and returns the closed record', async () => {
+    let closed = false
     const deps = fakeDeps({
       sessionRuntime: {
-        stopSession: async () => {
-          stopped = true
-          return { ok: true, value: sessionRecord({ status: { ...sessionRecord().status, phase: 'stopped' } }) }
+        closeSession: async () => {
+          closed = true
+          return { ok: true, value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }) }
         },
       },
     })
-    const result = await updateSession(deps, auth, sessionRow(), { state: 'stopped' }, 'req_1')
+    const result = await updateSession(deps, auth, sessionRow(), { state: 'closed' }, 'req_1')
     expect(result.ok).toBe(true)
-    expect(stopped).toBe(true)
+    expect(closed).toBe(true)
   })
 
-  it('returns the runtime error when stop fails', async () => {
+  it('returns the runtime error when close fails', async () => {
     const deps = fakeDeps({
       sessionRuntime: {
-        stopSession: async () => ({ ok: false, error: { status: 409, code: 'conflict', message: 'Already stopped' } }),
+        closeSession: async () => ({ ok: false, error: { status: 409, code: 'conflict', message: 'Already closed' } }),
       },
     })
-    const result = await updateSession(deps, auth, sessionRow(), { state: 'stopped' }, null)
+    const result = await updateSession(deps, auth, sessionRow(), { state: 'closed' }, null)
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error.code).toBe('conflict')
     }
   })
 
-  it('archives after stop when both are requested', async () => {
+  it('archives after close when both are requested', async () => {
     let archived = false
     const deps = fakeDeps({
       sessionRuntime: {
-        stopSession: async () => ({
+        closeSession: async () => ({
           ok: true,
-          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'stopped' } }),
+          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }),
         }),
         archiveSession: async () => {
           archived = true
@@ -462,33 +469,51 @@ describe('[spec: sessions/stop] updateSession — stop transition', () => {
         },
       },
       sessions: {
-        findRuntimeRow: async () => sessionRow({ state: 'stopped' }),
+        findRuntimeRow: async () => sessionRow({ state: 'closed' }),
       },
     })
-    const result = await updateSession(deps, auth, sessionRow(), { state: 'stopped', archived: true }, null)
+    const result = await updateSession(deps, auth, sessionRow(), { state: 'closed', archived: true }, null)
     expect(result.ok).toBe(true)
     expect(archived).toBe(true)
   })
 
-  it('throws when findRuntimeRow returns null after stop+archive', async () => {
+  it('throws when findRuntimeRow returns null after close+archive', async () => {
     const deps = fakeDeps({
       sessionRuntime: {
-        stopSession: async () => ({
+        closeSession: async () => ({
           ok: true,
-          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'stopped' } }),
+          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }),
         }),
       },
       sessions: {
         findRuntimeRow: async () => null,
       },
     })
-    await expect(updateSession(deps, auth, sessionRow(), { state: 'stopped', archived: true }, null)).rejects.toThrow(
-      'Stopped session row is required',
+    await expect(updateSession(deps, auth, sessionRow(), { state: 'closed', archived: true }, null)).rejects.toThrow(
+      'Closed session row is required',
     )
+  })
+
+  it('reopens a closed session and returns the idle record', async () => {
+    let reopened = false
+    const deps = fakeDeps({
+      sessionRuntime: {
+        reopenSession: async () => {
+          reopened = true
+          return { ok: true, value: sessionRecord({ status: { ...sessionRecord().status, phase: 'idle' } }) }
+        },
+      },
+      sessions: {
+        findRuntimeRow: async () => sessionRow({ state: 'idle' }),
+      },
+    })
+    const result = await updateSession(deps, auth, sessionRow({ state: 'closed' }), { state: 'idle' }, 'req_1')
+    expect(result.ok).toBe(true)
+    expect(reopened).toBe(true)
   })
 })
 
-describe('[spec: sessions/archive] updateSession — archive without stop', () => {
+describe('[spec: sessions/archive] updateSession — archive without close', () => {
   it('archives a live session when archived:true is the only patch', async () => {
     let archived = false
     const deps = fakeDeps({

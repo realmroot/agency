@@ -6509,7 +6509,7 @@
               "pending",
               "running",
               "idle",
-              "stopped",
+              "closed",
               "error"
             ],
             "example": "idle"
@@ -6535,7 +6535,7 @@
             "nullable": true,
             "format": "date-time"
           },
-          "stoppedAt": {
+          "closedAt": {
             "type": "string",
             "nullable": true,
             "format": "date-time"
@@ -6548,7 +6548,7 @@
           "bindings",
           "placement",
           "startedAt",
-          "stoppedAt"
+          "closedAt"
         ]
       },
       "SessionCondition": {
@@ -6972,9 +6972,10 @@
           "state": {
             "type": "string",
             "enum": [
-              "stopped"
+              "closed",
+              "idle"
             ],
-            "example": "stopped"
+            "example": "closed"
           },
           "archived": {
             "type": "boolean",
@@ -12720,7 +12721,7 @@
                 "pending",
                 "running",
                 "idle",
-                "stopped",
+                "closed",
                 "error"
               ],
               "example": "idle"
@@ -12837,7 +12838,7 @@
           "Sessions"
         ],
         "summary": "Update a session",
-        "description": "Partial update: name and metadata edits, the stop transition (state: \"stopped\"), and lifecycle archiving (archived: true|false).",
+        "description": "Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and lifecycle archiving (archived: true|false).",
         "security": [
           {
             "bearerAuth": []

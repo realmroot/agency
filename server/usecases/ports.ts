@@ -1638,14 +1638,14 @@ export type SessionTurnInput = {
 }
 
 // Starts and tears down cloud-owned AMA session sandboxes. Runner-owned
-// sandboxes are stopped through RunnerChannel because their lifecycle is owned
+// sandboxes are closed through RunnerChannel because their lifecycle is owned
 // by the self-hosted runner channel.
 export interface CloudRuntimeLifecycle {
   startCloudSession(input: SandboxRuntimeStartInput): Promise<SandboxRuntimeStartResult>
   stopCloudSession(sandboxId: string): Promise<void>
 }
 
-// Reads writable runtime workspace resources before a session is stopped.
+// Reads writable runtime workspace resources before a session is closed.
 export interface RuntimeWorkspaceReader {
   readMemoryStoreMemories(input: {
     sessionId: string
@@ -1794,7 +1794,7 @@ export interface SessionOrchestrationStore {
     limit: number,
   ): Promise<{ state: string; payload: string; result: string | null }[]>
 
-  // ── self-hosted stop: active work items + lease/runner accounting ──
+  // ── self-hosted close: active work items + lease/runner accounting ──
   activeSessionWorkItems(
     projectId: string,
     sessionId: string,

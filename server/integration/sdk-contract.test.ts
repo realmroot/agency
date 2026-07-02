@@ -260,11 +260,11 @@ describe('[CF] generated SDK contract', () => {
       type: 'prompt',
       content: `external product follow-up ${runId}`,
     })) as Json
-    const stopped = (await ama.sessions.update(sessionId, { state: 'stopped' })) as Json
+    const closed = (await ama.sessions.update(sessionId, { state: 'closed' })) as Json
 
     // The follow-up is an addressable message routed on AMA-relative channels.
     expect(typeof command.id === 'string' && (command.id as string).length > 0).toBe(true)
-    expect(command.sessionId).toBe(obj(obj(stopped).metadata).uid)
+    expect(command.sessionId).toBe(obj(obj(closed).metadata).uid)
     expect(command.type).toBe('prompt')
     expect(['live', 'queued'].includes(String(command.delivery))).toBe(true)
     expect(['accepted', 'delivered'].includes(String(command.state))).toBe(true)
@@ -276,7 +276,11 @@ describe('[CF] generated SDK contract', () => {
     for (const record of events.data) {
       expect(isAmaSessionEventType(String(record.type)), `non-canonical event type "${record.type}"`).toBe(true)
     }
-    expect(obj(await readSession(ama, sessionId)).status).toMatchObject({ phase: 'stopped' })
+    expect(obj(await readSession(ama, sessionId)).status).toMatchObject({ phase: 'closed' })
+    expect(obj(await ama.sessions.update(sessionId, { state: 'idle' })).status).toMatchObject({
+      phase: 'idle',
+      closedAt: null,
+    })
 
     // The SDK inventory only targets AMA control-plane endpoints; nothing leaks a local endpoint.
     for (const op of operations) {

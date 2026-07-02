@@ -2043,16 +2043,18 @@ func (e SessionSocketSteerMessageType) Valid() bool {
 
 // Defines values for SessionStatusPhase.
 const (
+	SessionStatusPhaseClosed  SessionStatusPhase = "closed"
 	SessionStatusPhaseError   SessionStatusPhase = "error"
 	SessionStatusPhaseIdle    SessionStatusPhase = "idle"
 	SessionStatusPhasePending SessionStatusPhase = "pending"
 	SessionStatusPhaseRunning SessionStatusPhase = "running"
-	SessionStatusPhaseStopped SessionStatusPhase = "stopped"
 )
 
 // Valid indicates whether the value is a known member of the SessionStatusPhase enum.
 func (e SessionStatusPhase) Valid() bool {
 	switch e {
+	case SessionStatusPhaseClosed:
+		return true
 	case SessionStatusPhaseError:
 		return true
 	case SessionStatusPhaseIdle:
@@ -2060,8 +2062,6 @@ func (e SessionStatusPhase) Valid() bool {
 	case SessionStatusPhasePending:
 		return true
 	case SessionStatusPhaseRunning:
-		return true
-	case SessionStatusPhaseStopped:
 		return true
 	default:
 		return false
@@ -2247,13 +2247,16 @@ func (e UpdateRunnerRequestState) Valid() bool {
 
 // Defines values for UpdateSessionRequestState.
 const (
-	UpdateSessionRequestStateStopped UpdateSessionRequestState = "stopped"
+	UpdateSessionRequestStateClosed UpdateSessionRequestState = "closed"
+	UpdateSessionRequestStateIdle   UpdateSessionRequestState = "idle"
 )
 
 // Valid indicates whether the value is a known member of the UpdateSessionRequestState enum.
 func (e UpdateSessionRequestState) Valid() bool {
 	switch e {
-	case UpdateSessionRequestStateStopped:
+	case UpdateSessionRequestStateClosed:
+		return true
+	case UpdateSessionRequestStateIdle:
 		return true
 	default:
 		return false
@@ -2715,16 +2718,18 @@ func (e ListSessionsParamsArchived) Valid() bool {
 
 // Defines values for ListSessionsParamsState.
 const (
+	ListSessionsParamsStateClosed  ListSessionsParamsState = "closed"
 	ListSessionsParamsStateError   ListSessionsParamsState = "error"
 	ListSessionsParamsStateIdle    ListSessionsParamsState = "idle"
 	ListSessionsParamsStatePending ListSessionsParamsState = "pending"
 	ListSessionsParamsStateRunning ListSessionsParamsState = "running"
-	ListSessionsParamsStateStopped ListSessionsParamsState = "stopped"
 )
 
 // Valid indicates whether the value is a known member of the ListSessionsParamsState enum.
 func (e ListSessionsParamsState) Valid() bool {
 	switch e {
+	case ListSessionsParamsStateClosed:
+		return true
 	case ListSessionsParamsStateError:
 		return true
 	case ListSessionsParamsStateIdle:
@@ -2732,8 +2737,6 @@ func (e ListSessionsParamsState) Valid() bool {
 	case ListSessionsParamsStatePending:
 		return true
 	case ListSessionsParamsStateRunning:
-		return true
-	case ListSessionsParamsStateStopped:
 		return true
 	default:
 		return false
@@ -4989,12 +4992,12 @@ type SessionSpec struct {
 // SessionStatus defines model for SessionStatus.
 type SessionStatus struct {
 	Bindings   SessionBindings    `json:"bindings"`
+	ClosedAt   *time.Time         `json:"closedAt"`
 	Conditions []SessionCondition `json:"conditions"`
 	Phase      SessionStatusPhase `json:"phase"`
 	Placement  *SessionPlacement  `json:"placement"`
 	Reason     *string            `json:"reason"`
 	StartedAt  *time.Time         `json:"startedAt"`
-	StoppedAt  *time.Time         `json:"stoppedAt"`
 }
 
 // SessionStatusPhase defines model for SessionStatus.Phase.

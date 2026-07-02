@@ -38,7 +38,7 @@ export interface SessionRow {
   continuationDepth: number
   metadata: string
   startedAt: string | null
-  stoppedAt: string | null
+  closedAt: string | null
   archivedAt: string | null
   createdAt: string
   updatedAt: string
@@ -76,7 +76,7 @@ export interface SessionInsert {
   continuationDepth?: number
   metadata?: string
   startedAt?: string | null
-  stoppedAt?: string | null
+  closedAt?: string | null
   archivedAt?: string | null
   createdAt: string
   updatedAt: string

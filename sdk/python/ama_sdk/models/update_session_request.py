@@ -28,7 +28,7 @@ class UpdateSessionRequest:
     """ 
         Attributes:
             metadata (SessionUpdateMetadata | Unset):
-            state (UpdateSessionRequestState | Unset):  Example: stopped.
+            state (UpdateSessionRequestState | Unset):  Example: closed.
             archived (bool | Unset):  Example: True.
      """
 

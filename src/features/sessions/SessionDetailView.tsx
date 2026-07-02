@@ -1,4 +1,4 @@
-import { Archive, Boxes, ChevronDown, CircleStop, Cloud, GitBranch, Timer } from 'lucide-react'
+import { Archive, Boxes, ChevronDown, CircleStop, Cloud, GitBranch, RotateCcw, Timer } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -18,7 +18,8 @@ export function SessionDetailView({
   agentName: agentDisplayName,
   environmentName: environmentDisplayName,
   runtime,
-  onStop,
+  onClose,
+  onReopen,
   onArchive,
   onReconnectRuntime,
   chatMessage,
@@ -30,7 +31,8 @@ export function SessionDetailView({
   agentName: string | undefined
   environmentName: string | undefined
   runtime: SessionRuntimeState
-  onStop: (id: string) => void
+  onClose: (id: string) => void
+  onReopen: (id: string) => void
   onArchive: (id: string) => void
   onReconnectRuntime: () => void
   chatMessage: string
@@ -38,7 +40,7 @@ export function SessionDetailView({
   onSendMessage: (message: string) => void
   onAbortRuntime: () => void
 }) {
-  const [pendingAction, setPendingAction] = useState<'stop' | 'archive' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'close' | 'reopen' | 'archive' | null>(null)
   const [activeSheet, setActiveSheet] = useState<'agent' | 'environment' | 'volumes' | null>(null)
   const sessionId = session.metadata.uid
   const phase = session.status.phase
@@ -46,7 +48,8 @@ export function SessionDetailView({
   const environmentSnapshot = session.status.bindings.environment.snapshot
   const volumes = session.spec.volumes
   const shortSessionId = `${sessionId.slice(0, 5)}...${sessionId.slice(-7)}`
-  const duration = formatDuration(session.status.startedAt, session.status.stoppedAt)
+  const duration = formatDuration(session.status.startedAt, session.status.closedAt)
+  const isClosed = phase === 'closed'
   const agentName = agentDisplayName || agentSnapshot.systemPrompt || session.spec.agentId
   const environmentName = String(environmentDisplayName ?? session.spec.environmentId ?? 'Environment')
   return (
@@ -70,10 +73,17 @@ export function SessionDetailView({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onSelect={() => setPendingAction('stop')} variant="destructive">
-                    <CircleStop />
-                    Stop session
-                  </DropdownMenuItem>
+                  {isClosed ? (
+                    <DropdownMenuItem onSelect={() => setPendingAction('reopen')}>
+                      <RotateCcw />
+                      Reopen session
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onSelect={() => setPendingAction('close')} variant="destructive">
+                      <CircleStop />
+                      Close session
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onSelect={() => setPendingAction('archive')}>
                     <Archive />
                     Archive session
@@ -227,13 +237,21 @@ export function SessionDetailView({
         </SheetContent>
       </Sheet>
       <ConfirmAction
-        title="Stop session?"
-        description="Stop the selected runtime session. In-flight work may be interrupted."
-        confirmLabel="Stop session"
+        title="Close session?"
+        description="Close the selected runtime session. In-flight work may be interrupted."
+        confirmLabel="Close session"
         destructive
-        open={pendingAction === 'stop'}
+        open={pendingAction === 'close'}
         onOpenChange={(open) => !open && setPendingAction(null)}
-        onConfirm={() => onStop(sessionId)}
+        onConfirm={() => onClose(sessionId)}
+      />
+      <ConfirmAction
+        title="Reopen session?"
+        description="Restart the selected runtime session so it can accept new messages."
+        confirmLabel="Reopen session"
+        open={pendingAction === 'reopen'}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        onConfirm={() => onReopen(sessionId)}
       />
       <ConfirmAction
         title="Archive session?"
