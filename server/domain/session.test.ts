@@ -20,6 +20,8 @@ describe('[spec: sessions/state-rules] session state rules', () => {
   })
 
   it('marks only error as terminal', () => {
+    expect(sessionIsTerminal('pending')).toBe(false)
+    expect(sessionIsTerminal('running')).toBe(false)
     expect(sessionIsTerminal('closed')).toBe(false)
     expect(sessionIsTerminal('error')).toBe(true)
     expect(sessionIsTerminal('idle')).toBe(false)
@@ -91,6 +93,15 @@ describe('mergeSessionUserMetadata', () => {
     expect(
       mergeSessionUserMetadata({}, { labels: { missing: null }, annotations: { missing: null }, ticket: null }),
     ).toEqual({ labels: {}, annotations: {} })
+  })
+
+  it('ignores non-string metadata patch values', () => {
+    expect(
+      mergeSessionUserMetadata(
+        { labels: { keep: 'yes' }, annotations: { keep: 'yes' } },
+        { labels: { ignored: 1 }, annotations: { ignored: false }, ignored: 2 },
+      ),
+    ).toEqual({ labels: { keep: 'yes' }, annotations: { keep: 'yes' } })
   })
 })
 
