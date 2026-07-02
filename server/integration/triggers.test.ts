@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { AMA_RUNNER_SANDBOX_CAPABILITY } from '@server/domain/runtime-catalog'
+import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
 
@@ -764,7 +765,11 @@ describe('[CF] /api/v1/triggers', () => {
     const sessionRes = await jsonFetch(`/api/v1/sessions/${firstRun.status.sessionId}`, authorization)
     expect(sessionRes.status).toBe(200)
     await expect(sessionRes.json()).resolves.toMatchObject({
-      metadata: { labels: { key: 'github:owner/repo:issue:123' } },
+      metadata: {
+        annotations: {
+          [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: 'c54d83738741c7e14509b968123cae0c54ca45e644a54f7f3f863de4ca70e655',
+        },
+      },
     })
   })
 

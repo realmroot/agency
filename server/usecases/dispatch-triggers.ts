@@ -4,6 +4,7 @@ import {
   renderHttpPromptTemplate,
   type Trigger,
 } from '@server/domain/trigger'
+import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
 import type { Deps } from './deps'
 import { type AuthScope, type ClaimedRun, type DueTrigger, TriggerConflictError, TriggerValidationError } from './ports'
 import { createSession } from './runtime/sessions'
@@ -106,6 +107,13 @@ function httpTriggerSessionKey(body: unknown): string | null {
   return typeof key === 'string' && key.trim().length > 0 ? key : null
 }
 
+async function httpTriggerSessionKeyHash(body: unknown): Promise<string | null> {
+  const key = httpTriggerSessionKey(body)
+  if (!key) return null
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
@@ -115,6 +123,13 @@ function mergeLabels(base: unknown, next: unknown): Record<string, unknown> | un
   const nextLabels = recordValue(next)
   if (!baseLabels && !nextLabels) return undefined
   return { ...(baseLabels ?? {}), ...(nextLabels ?? {}) }
+}
+
+function mergeAnnotations(base: unknown, next: unknown): Record<string, unknown> | undefined {
+  const baseAnnotations = recordValue(base)
+  const nextAnnotations = recordValue(next)
+  if (!baseAnnotations && !nextAnnotations) return undefined
+  return { ...(baseAnnotations ?? {}), ...(nextAnnotations ?? {}) }
 }
 
 function httpTriggerBodyMetadata(body: unknown): Record<string, unknown> {
@@ -294,25 +309,27 @@ export async function dispatchHttpTrigger(
   }
 
   const requestMetadata = httpTriggerBodyMetadata(input.context.body)
-  const key = httpTriggerSessionKey(input.context.body)
-  const requestLabels = {
-    ...(recordValue(requestMetadata.labels) ?? {}),
-    ...(key ? { key } : {}),
+  const keyHash = await httpTriggerSessionKeyHash(input.context.body)
+  const labels = mergeLabels(trigger.spec.template.metadata.labels, requestMetadata.labels)
+  const requestAnnotations = {
+    ...(recordValue(requestMetadata.annotations) ?? {}),
+    ...(keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : {}),
   }
-  const labels = mergeLabels(trigger.spec.template.metadata.labels, requestLabels)
+  const annotations = mergeAnnotations(trigger.spec.template.metadata.annotations, requestAnnotations)
   const sessionMetadata = {
     labels: trigger.spec.template.metadata.labels,
     annotations: trigger.spec.template.metadata.annotations,
     ...requestMetadata,
     ...(labels ? { labels } : {}),
+    ...(annotations ? { annotations } : {}),
     source: 'http-trigger',
     httpTriggerId: trigger.metadata.uid,
     httpRunId: run.id,
     triggeredAt,
     correlationId: run.correlationId,
   }
-  const existingSession = key
-    ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, key)
+  const existingSession = keyHash
+    ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
     : null
 
   if (existingSession) {
@@ -390,12 +407,7 @@ export async function dispatchHttpTrigger(
     }
   }
 
-  await deps.triggerDispatch.markRunDispatched(
-    trigger,
-    run,
-    result.value.metadata.uid,
-    sessionMetadata,
-  )
+  await deps.triggerDispatch.markRunDispatched(trigger, run, result.value.metadata.uid, sessionMetadata)
   await recordHttpDispatch(deps, auth, trigger, run, { ok: true, sessionId: result.value.metadata.uid })
   return {
     runId: run.id,

@@ -1,3 +1,4 @@
+import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
 import type {
   EventQuery,
   RuntimeSessionHandle,
@@ -336,7 +337,7 @@ export function createSessionRepo(db: Db): SessionRepo {
       return row ? serializeSession(row) : null
     },
 
-    async findActiveHttpTriggerSession(projectId, triggerId, key) {
+    async findActiveHttpTriggerSession(projectId, triggerId, keyHash) {
       const row = await db
         .select()
         .from(sessions)
@@ -347,7 +348,10 @@ export function createSessionRepo(db: Db): SessionRepo {
             inArray(sessions.state, ['pending', 'idle', 'running']),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
-            eq(sql<string>`json_extract(${sessions.metadata}, '$.labels.key')`, key),
+            eq(
+              sql<string>`json_extract(${sessions.metadata}, ${`$.annotations."${AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION}"`})`,
+              keyHash,
+            ),
           ),
         )
         .orderBy(desc(sessions.createdAt), desc(sessions.id))

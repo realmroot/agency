@@ -1,6 +1,7 @@
 import { resourceMetadata } from '@server/domain/resource'
 import type { Session, SessionMessage } from '@server/domain/session'
 import type { Trigger } from '@server/domain/trigger'
+import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
 import type { AuthScope, ClaimedRun, DueTrigger } from './ports'
@@ -762,6 +763,9 @@ describe('[spec: triggers/dispatch] dispatchDueScheduledTriggers — outer excep
 })
 
 describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
+  const issueKeyHash = 'c54d83738741c7e14509b968123cae0c54ca45e644a54f7f3f863de4ca70e655'
+  const pullKeyHash = '65fb13105a39fcbae2c3444031759996a62b7b4be7251baec618dd9dd3b128dc'
+
   it('creates a session with a prompt rendered from request fields', async () => {
     let prompt: string | undefined
     const deps = fakeDeps({
@@ -860,8 +864,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
 
     expect(sessionMetadata).toMatchObject({
-      annotations: { retained: 'true' },
-      labels: { maintainerId: 'maintainer_1', subject: 'github-issue', key: 'github:owner/repo:issue:123' },
+      annotations: { retained: 'true', [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
+      labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
       github: {
         repository: 'owner/repo',
         type: 'issue',
@@ -883,8 +887,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async (_projectId, _triggerId, key) =>
-          key === 'github:owner/repo:issue:123'
+        findActiveHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
+          keyHash === issueKeyHash
             ? {
                 id: 'sess_existing',
                 projectId: 'project_1',
@@ -892,7 +896,11 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 state: 'idle',
                 archivedAt: null,
                 sandboxId: 'sandbox_1',
-                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', labels: { key } },
+                metadata: {
+                  source: 'http-trigger',
+                  httpTriggerId: 'http_trigger_1',
+                  annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash },
+                },
               }
             : null,
         insertMessage: async (record) => {
@@ -960,7 +968,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(markedMetadata).toMatchObject({
       source: 'http-trigger',
       httpTriggerId: 'http_trigger_1',
-      labels: { key: 'github:owner/repo:pull:456' },
+      annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: pullKeyHash },
       reusedSession: true,
       github: {
         repository: 'owner/repo',
@@ -981,8 +989,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async (_projectId, _triggerId, key) =>
-          key === 'github:owner/repo:issue:123'
+        findActiveHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
+          keyHash === issueKeyHash
             ? {
                 id: 'sess_pending',
                 projectId: 'project_1',
@@ -990,7 +998,11 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 state: 'pending',
                 archivedAt: null,
                 sandboxId: null,
-                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', labels: { key } },
+                metadata: {
+                  source: 'http-trigger',
+                  httpTriggerId: 'http_trigger_1',
+                  annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash },
+                },
               }
             : null,
         insertMessage: async (record) => {
@@ -1041,7 +1053,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           metadata: {
             source: 'http-trigger',
             httpTriggerId: 'http_trigger_1',
-            labels: { key: 'github:owner/repo:issue:123' },
+            annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
           },
         }),
       },
@@ -1138,7 +1150,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(markedMetadata).toMatchObject({
       source: 'http-trigger',
       httpTriggerId: 'http_trigger_1',
-      labels: { key: 'github:owner/repo:issue:123' },
+      annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
     })
   })
 
