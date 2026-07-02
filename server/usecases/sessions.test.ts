@@ -142,7 +142,7 @@ function fakeDeps(
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => sessionRecord(),
     findByOrganization: async () => sessionRecord(),
-    findActiveHttpTriggerSession: async () => null,
+    findReusableHttpTriggerSession: async () => null,
     findRuntimeRow: async () => sessionRow(),
     updateFields: async () => sessionRecord(),
     listMessages: async () => ({ rows: [], hasMore: false }),

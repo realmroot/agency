@@ -7,8 +7,15 @@ import {
 } from '@server/domain/trigger'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type { Deps } from './deps'
-import { type AuthScope, type ClaimedRun, type DueTrigger, TriggerConflictError, TriggerValidationError } from './ports'
-import { createSession } from './runtime/sessions'
+import {
+  type AuthScope,
+  type ClaimedRun,
+  type DueTrigger,
+  type RuntimeSessionHandle,
+  TriggerConflictError,
+  TriggerValidationError,
+} from './ports'
+import { createSession, reopenSession } from './runtime/sessions'
 import { sendSessionMessage } from './sessions'
 
 export interface ScheduleDispatchResult {
@@ -98,6 +105,44 @@ async function recordHttpDispatch(
       ? { runId: run.id, triggeredAt: run.scheduledFor, sessionId: outcome.sessionId }
       : { runId: run.id, triggeredAt: run.scheduledFor, message: outcome.message },
   })
+}
+
+async function dispatchToReusableHttpSession(
+  deps: Deps,
+  auth: AuthScope,
+  session: RuntimeSessionHandle,
+  content: string,
+  requestId: string | null,
+) {
+  let target = session
+  if (target.state === 'closed') {
+    const reopened = await reopenSession(deps, auth, target, requestId)
+    if (!reopened.ok) {
+      return { ok: false as const, message: reopened.error.message }
+    }
+    const refreshed = await deps.sessions.findRuntimeRow(auth.project.id, target.id)
+    if (!refreshed) {
+      return { ok: false as const, message: 'Session runtime is no longer available' }
+    }
+    target = refreshed
+  }
+
+  if (target.state === 'pending') {
+    return {
+      ok: true as const,
+      message: await deps.sessions.insertMessage({
+        organizationId: auth.organization.id,
+        projectId: auth.project.id,
+        sessionId: target.id,
+        content,
+        delivery: 'queued',
+        state: 'accepted',
+        createdAt: new Date().toISOString(),
+      }),
+    }
+  }
+
+  return await sendSessionMessage(deps, auth, target, content)
 }
 
 function httpTriggerRoutingKey(body: unknown): string | null {
@@ -293,7 +338,7 @@ export async function dispatchHttpTrigger(
   const triggeredAt = new Date().toISOString()
   const keyHash = await httpTriggerRoutingKeyHash(input.context.body)
   const existingSession = keyHash
-    ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
+    ? await deps.sessions.findReusableHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
     : null
   let renderedPrompt: string
   try {
@@ -339,21 +384,7 @@ export async function dispatchHttpTrigger(
   }
 
   if (existingSession) {
-    const outcome =
-      existingSession.state === 'pending'
-        ? {
-            ok: true as const,
-            message: await deps.sessions.insertMessage({
-              organizationId: auth.organization.id,
-              projectId: auth.project.id,
-              sessionId: existingSession.id,
-              content: renderedPrompt,
-              delivery: 'queued',
-              state: 'accepted',
-              createdAt: new Date().toISOString(),
-            }),
-          }
-        : await sendSessionMessage(deps, auth, existingSession, renderedPrompt)
+    const outcome = await dispatchToReusableHttpSession(deps, auth, existingSession, renderedPrompt, run.correlationId)
     if (!outcome.ok) {
       const message = outcome.message
       await deps.triggerDispatch.markRunFailed(trigger, run, message)

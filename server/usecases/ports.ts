@@ -1935,7 +1935,7 @@ export interface SessionRepo {
   list(query: SessionListQuery): Promise<SessionListPage>
   find(projectId: string, sessionId: string): Promise<Session | null>
   findByOrganization(organizationId: string, sessionId: string): Promise<Session | null>
-  findActiveHttpTriggerSession(
+  findReusableHttpTriggerSession(
     projectId: string,
     triggerId: string,
     keyHash: string,

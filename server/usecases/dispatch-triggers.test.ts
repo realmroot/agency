@@ -4,7 +4,7 @@ import type { Trigger } from '@server/domain/trigger'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
-import type { AuthScope, ClaimedRun, DueTrigger } from './ports'
+import type { AuthScope, ClaimedRun, DueTrigger, RuntimeSessionHandle } from './ports'
 
 // dispatchDueScheduledTriggers now calls the runtime createSession usecase
 // directly (the SessionRuntimeGateway indirection was removed). Mock that module
@@ -24,7 +24,10 @@ vi.mock('./runtime/sessions', () => ({
 import { dispatchDueScheduledTriggers, dispatchHttpTrigger } from './dispatch-triggers'
 import * as runtimeSessions from './runtime/sessions'
 
-type RuntimeSessionOverrides = { createSession?: typeof runtimeSessions.createSession }
+type RuntimeSessionOverrides = {
+  createSession?: typeof runtimeSessions.createSession
+  reopenSession?: typeof runtimeSessions.reopenSession
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -198,6 +201,23 @@ function sessionMessageRecord(overrides: Partial<SessionMessage> = {}): SessionM
   }
 }
 
+function runtimeSession(overrides: Partial<RuntimeSessionHandle> = {}): RuntimeSessionHandle {
+  return {
+    id: 'sess_existing',
+    projectId: 'project_1',
+    organizationId: 'org_1',
+    state: 'idle',
+    archivedAt: null,
+    sandboxId: 'sandbox_1',
+    metadata: {
+      source: 'http-trigger',
+      httpTriggerId: 'http_trigger_1',
+      annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: 'key_hash' },
+    },
+    ...overrides,
+  }
+}
+
 function fakeDeps(
   overrides: {
     triggerDispatch?: Partial<Deps['triggerDispatch']>
@@ -218,13 +238,24 @@ function fakeDeps(
   vi.mocked(runtimeSessions.createSession).mockImplementation(
     overrides.sessionRuntime?.createSession ?? (async () => ({ ok: true, value: sessionRecord() })),
   )
+  vi.mocked(runtimeSessions.reopenSession).mockImplementation(
+    overrides.sessionRuntime?.reopenSession ??
+      (async (_deps, _auth, session) => ({
+        ok: true,
+        value: sessionRecord({
+          metadata: { ...sessionRecord().metadata, uid: session.id },
+          status: { ...sessionRecord().status, phase: 'idle' },
+        }),
+      })),
+  )
   vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async () => ({
     ok: true,
     delivery: 'queued',
     state: 'accepted',
   }))
   const sessionsRepo = {
-    findActiveHttpTriggerSession: async () => null,
+    findReusableHttpTriggerSession: async () => null,
+    findRuntimeRow: async (_projectId: string, sessionId: string) => runtimeSession({ id: sessionId, state: 'idle' }),
     insertMessage: async (record: Parameters<Deps['sessions']['insertMessage']>[0]) =>
       sessionMessageRecord({ sessionId: record.sessionId, content: record.content }),
     ...overrides.sessions,
@@ -807,7 +838,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     let lookedUpKey: string | null | undefined = 'unset'
     const deps = fakeDeps({
       sessions: {
-        findActiveHttpTriggerSession: async (_projectId, _triggerId, key) => {
+        findReusableHttpTriggerSession: async (_projectId, _triggerId, key) => {
           lookedUpKey = key
           return null
         },
@@ -977,21 +1008,9 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
+        findReusableHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
           keyHash === issueKeyHash
-            ? {
-                id: 'sess_existing',
-                projectId: 'project_1',
-                organizationId: 'org_1',
-                state: 'idle',
-                archivedAt: null,
-                sandboxId: 'sandbox_1',
-                metadata: {
-                  source: 'http-trigger',
-                  httpTriggerId: 'http_trigger_1',
-                  annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
-                },
-              }
+            ? runtimeSession({ metadata: { annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } } })
             : null,
         insertMessage: async (record) => {
           messageContent = record.content
@@ -1043,15 +1062,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async () => ({
-          id: 'sess_existing',
-          projectId: 'project_1',
-          organizationId: 'org_1',
-          state: 'idle',
-          archivedAt: null,
-          sandboxId: 'sandbox_1',
-          metadata: {},
-        }),
+        findReusableHttpTriggerSession: async () => runtimeSession({ metadata: {} }),
       },
     })
 
@@ -1099,21 +1110,18 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
+        findReusableHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
           keyHash === issueKeyHash
-            ? {
+            ? runtimeSession({
                 id: 'sess_pending',
-                projectId: 'project_1',
-                organizationId: 'org_1',
                 state: 'pending',
-                archivedAt: null,
                 sandboxId: null,
                 metadata: {
                   source: 'http-trigger',
                   httpTriggerId: 'http_trigger_1',
                   annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
                 },
-              }
+              })
             : null,
         insertMessage: async (record) => {
           inserted = record
@@ -1142,6 +1150,94 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 
+  it('reopens and reuses a closed HTTP trigger session with the same routing key', async () => {
+    let markedSessionId: string | null = null
+    let reopenedRequestId: string | null = null
+    let dispatchedSessionId: string | null = null
+    let dispatchedPrompt: string | null = null
+    const deps = fakeDeps({
+      triggerDispatch: {
+        markRunDispatched: async (_trigger, _run, sessionId) => {
+          markedSessionId = sessionId
+        },
+      },
+      sessionRuntime: {
+        reopenSession: async (_deps, _auth, session, requestId) => {
+          reopenedRequestId = requestId
+          return {
+            ok: true,
+            value: sessionRecord({
+              metadata: { ...sessionRecord().metadata, uid: session.id },
+              status: { ...sessionRecord().status, phase: 'idle' },
+            }),
+          }
+        },
+      },
+      sessions: {
+        findReusableHttpTriggerSession: async () =>
+          runtimeSession({ id: 'sess_closed', state: 'closed', sandboxId: null }),
+        findRuntimeRow: async (_projectId, sessionId) =>
+          runtimeSession({ id: sessionId, state: 'idle', sandboxId: null }),
+      },
+    })
+    vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async (_deps, _auth, session, content) => {
+      dispatchedSessionId = session.id
+      dispatchedPrompt = content
+      return { ok: true, delivery: 'queued', state: 'accepted' }
+    })
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
+      context: {
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
+      },
+    })
+
+    expect(result).toMatchObject({ state: 'dispatched', sessionId: 'sess_closed' })
+    expect(markedSessionId).toBe('sess_closed')
+    expect(reopenedRequestId).toBe('corr_1')
+    expect(dispatchedSessionId).toBe('sess_closed')
+    expect(dispatchedPrompt).toBe('Handle T-123 from portal')
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+  })
+
+  it('does not create another HTTP trigger session when a reusable routing-keyed session is unhealthy', async () => {
+    let markedMessage: string | null = null
+    const deps = fakeDeps({
+      triggerDispatch: {
+        markRunFailed: async (_trigger, _run, message) => {
+          markedMessage = message
+        },
+      },
+      sessions: {
+        findReusableHttpTriggerSession: async () =>
+          runtimeSession({ id: 'sess_error', state: 'error', sandboxId: null }),
+      },
+    })
+    vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async () => ({
+      ok: false,
+      status: 409,
+      message: 'Session runtime is not active',
+    }))
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
+      context: {
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
+      },
+    })
+
+    expect(result).toMatchObject({
+      state: 'failed',
+      sessionId: null,
+      errorMessage: 'Session runtime is not active',
+    })
+    expect(markedMessage).toBe('Session runtime is not active')
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+  })
+
   it('fails the HTTP run when sending to a reused routing-keyed session fails', async () => {
     let markedMessage: string | null = null
     let auditOutcome: string | null = null
@@ -1152,19 +1248,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       sessions: {
-        findActiveHttpTriggerSession: async () => ({
-          id: 'sess_existing',
-          projectId: 'project_1',
-          organizationId: 'org_1',
-          state: 'idle',
-          archivedAt: null,
-          sandboxId: 'sandbox_1',
-          metadata: {
-            source: 'http-trigger',
-            httpTriggerId: 'http_trigger_1',
-            annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash },
-          },
-        }),
+        findReusableHttpTriggerSession: async () => runtimeSession(),
       },
       audit: {
         record: async (_auth, entry) => {

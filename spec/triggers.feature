@@ -65,6 +65,7 @@ Feature: Triggers
     Given a signed-in user with an active HTTP trigger
     When the user posts JSON to the trigger runs collection
     Then one run creates a session with a prompt rendered from body, query, and allowed headers
+    And later posts with the same routing key reuse the same non-archived session instead of creating another one
     And missing template variables fail the run request without creating a session
 
   @triggers/inactive @api

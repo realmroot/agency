@@ -337,7 +337,7 @@ export function createSessionRepo(db: Db): SessionRepo {
       return row ? serializeSession(row) : null
     },
 
-    async findActiveHttpTriggerSession(projectId, triggerId, keyHash) {
+    async findReusableHttpTriggerSession(projectId, triggerId, keyHash) {
       const row = await db
         .select()
         .from(sessions)
@@ -345,7 +345,6 @@ export function createSessionRepo(db: Db): SessionRepo {
           and(
             eq(sessions.projectId, projectId),
             isNull(sessions.archivedAt),
-            inArray(sessions.state, ['pending', 'idle', 'running']),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
             eq(
