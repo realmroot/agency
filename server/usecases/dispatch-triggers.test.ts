@@ -861,7 +861,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
 
     expect(sessionMetadata).toMatchObject({
       annotations: { retained: 'true' },
-      labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
+      labels: { maintainerId: 'maintainer_1', subject: 'github-issue', key: 'github:owner/repo:issue:123' },
       github: {
         repository: 'owner/repo',
         type: 'issue',
@@ -869,7 +869,6 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         url: 'https://github.com/owner/repo/issues/123',
       },
       source: 'http-trigger',
-      key: 'github:owner/repo:issue:123',
     })
     expect(runMetadata).toMatchObject(sessionMetadata!)
   })
@@ -893,7 +892,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 state: 'idle',
                 archivedAt: null,
                 sandboxId: 'sandbox_1',
-                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', key },
+                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', labels: { key } },
               }
             : null,
         insertMessage: async (record) => {
@@ -961,7 +960,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(markedMetadata).toMatchObject({
       source: 'http-trigger',
       httpTriggerId: 'http_trigger_1',
-      key: 'github:owner/repo:pull:456',
+      labels: { key: 'github:owner/repo:pull:456' },
       reusedSession: true,
       github: {
         repository: 'owner/repo',
@@ -991,7 +990,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 state: 'pending',
                 archivedAt: null,
                 sandboxId: null,
-                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', key },
+                metadata: { source: 'http-trigger', httpTriggerId: 'http_trigger_1', labels: { key } },
               }
             : null,
         insertMessage: async (record) => {
@@ -1042,7 +1041,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           metadata: {
             source: 'http-trigger',
             httpTriggerId: 'http_trigger_1',
-            key: 'github:owner/repo:issue:123',
+            labels: { key: 'github:owner/repo:issue:123' },
           },
         }),
       },
@@ -1139,7 +1138,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(markedMetadata).toMatchObject({
       source: 'http-trigger',
       httpTriggerId: 'http_trigger_1',
-      key: 'github:owner/repo:issue:123',
+      labels: { key: 'github:owner/repo:issue:123' },
     })
   })
 

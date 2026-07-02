@@ -347,7 +347,7 @@ export function createSessionRepo(db: Db): SessionRepo {
             inArray(sessions.state, ['pending', 'idle', 'running']),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
-            eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.key')`, key),
+            eq(sql<string>`json_extract(${sessions.metadata}, '$.labels.key')`, key),
           ),
         )
         .orderBy(desc(sessions.createdAt), desc(sessions.id))

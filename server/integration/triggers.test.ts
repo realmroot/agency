@@ -761,6 +761,11 @@ describe('[CF] /api/v1/triggers', () => {
 
     expect(firstRun.status.sessionId).toEqual(expect.any(String))
     expect(secondRun.status.sessionId).toBe(firstRun.status.sessionId)
+    const sessionRes = await jsonFetch(`/api/v1/sessions/${firstRun.status.sessionId}`, authorization)
+    expect(sessionRes.status).toBe(200)
+    await expect(sessionRes.json()).resolves.toMatchObject({
+      metadata: { labels: { key: 'github:owner/repo:issue:123' } },
+    })
   })
 
   it('does not dispatch paused or archived triggers [spec: triggers/inactive]', async () => {

@@ -294,7 +294,12 @@ export async function dispatchHttpTrigger(
   }
 
   const requestMetadata = httpTriggerBodyMetadata(input.context.body)
-  const labels = mergeLabels(trigger.spec.template.metadata.labels, requestMetadata.labels)
+  const key = httpTriggerSessionKey(input.context.body)
+  const requestLabels = {
+    ...(recordValue(requestMetadata.labels) ?? {}),
+    ...(key ? { key } : {}),
+  }
+  const labels = mergeLabels(trigger.spec.template.metadata.labels, requestLabels)
   const sessionMetadata = {
     labels: trigger.spec.template.metadata.labels,
     annotations: trigger.spec.template.metadata.annotations,
@@ -306,7 +311,6 @@ export async function dispatchHttpTrigger(
     triggeredAt,
     correlationId: run.correlationId,
   }
-  const key = httpTriggerSessionKey(input.context.body)
   const existingSession = key
     ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, key)
     : null
@@ -343,7 +347,6 @@ export async function dispatchHttpTrigger(
 
     await deps.triggerDispatch.markRunDispatched(trigger, run, existingSession.id, {
       ...sessionMetadata,
-      key,
       reusedSession: true,
     })
     await recordHttpDispatch(deps, auth, trigger, run, { ok: true, sessionId: existingSession.id })
@@ -362,7 +365,7 @@ export async function dispatchHttpTrigger(
     environmentId: trigger.spec.template.spec.environmentId,
     options: {
       name: trigger.metadata.name,
-      metadata: key ? { ...sessionMetadata, key } : sessionMetadata,
+      metadata: sessionMetadata,
       runtime: trigger.spec.template.spec.runtime,
       prompt: renderedPrompt,
       env: trigger.spec.template.spec.env,
@@ -391,7 +394,7 @@ export async function dispatchHttpTrigger(
     trigger,
     run,
     result.value.metadata.uid,
-    key ? { ...sessionMetadata, key } : sessionMetadata,
+    sessionMetadata,
   )
   await recordHttpDispatch(deps, auth, trigger, run, { ok: true, sessionId: result.value.metadata.uid })
   return {
