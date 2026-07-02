@@ -21,7 +21,7 @@ export function sdkEnv(request: RuntimeProviderRequest): Record<string, string> 
   const home = hostHome(request.env)
   return {
     ...request.env,
-    ...(home ? { HOME: home, AMA_RUNTIME_BRIDGE_SESSION_HOME: request.env.HOME } : {}),
+    ...(home ? { HOME: home, AMA_WORKSPACE_HOME: request.env.HOME } : {}),
   }
 }
 

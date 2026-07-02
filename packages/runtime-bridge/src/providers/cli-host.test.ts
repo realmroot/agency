@@ -40,14 +40,14 @@ describe('sdkEnv', () => {
   it('swaps HOME to the host home and stashes the sandbox HOME', () => {
     const env = sdkEnv(request({ HOME: '/sandbox', AMA_RUNTIME_BRIDGE_HOST_HOME: '/host', FOO: 'bar' }))
     expect(env.HOME).toBe('/host')
-    expect(env.AMA_RUNTIME_BRIDGE_SESSION_HOME).toBe('/sandbox')
+    expect(env.AMA_WORKSPACE_HOME).toBe('/sandbox')
     expect(env.FOO).toBe('bar')
   })
 
   it('leaves HOME untouched when no host home is supplied', () => {
     const env = sdkEnv(request({ HOME: '/sandbox' }))
     expect(env.HOME).toBe('/sandbox')
-    expect(env.AMA_RUNTIME_BRIDGE_SESSION_HOME).toBeUndefined()
+    expect(env.AMA_WORKSPACE_HOME).toBeUndefined()
   })
 })
 
