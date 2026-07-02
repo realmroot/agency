@@ -673,12 +673,18 @@ describe('[CF] /api/v1/triggers', () => {
     const runRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs?source=portal`, authorization, {
       method: 'POST',
       headers: { 'x-source': 'zendesk', 'idempotency-key': 'ticket-123' },
-      body: JSON.stringify({ ticket: { id: 'T-123' } }),
+      body: JSON.stringify({
+        ticket: { id: 'T-123' },
+        metadata: {
+          labels: { 'agent-kanban.dev/session-key': 'github:owner/repo:issue:123' },
+          annotations: { 'agent-kanban.dev/source-event': 'issues.opened' },
+        },
+      }),
     })
     expect(runRes.status).toBe(201)
     const run = (await runRes.json()) as {
       metadata: { uid: string }
-      spec: { triggerId: string; scheduledFor: string | null }
+      spec: { triggerId: string; scheduledFor: string | null; metadata: Record<string, unknown> }
       status: {
         phase: string
         sessionId: string | null
@@ -688,7 +694,14 @@ describe('[CF] /api/v1/triggers', () => {
       }
     }
     expect(run).toMatchObject({
-      spec: { triggerId, scheduledFor: null },
+      spec: {
+        triggerId,
+        scheduledFor: null,
+        metadata: {
+          labels: { 'agent-kanban.dev/session-key': 'github:owner/repo:issue:123' },
+          annotations: { 'agent-kanban.dev/source-event': 'issues.opened' },
+        },
+      },
       status: { phase: 'dispatched', heartbeatAt: null, idempotencyKey: `http:${triggerId}:ticket-123` },
     })
     expect(run.status.sessionId).toEqual(expect.any(String))

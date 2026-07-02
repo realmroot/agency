@@ -1011,6 +1011,7 @@ export interface ClaimedRun {
   id: string
   scheduledFor: string
   correlationId: string
+  metadata: Record<string, unknown>
 }
 
 // DB boundary for the background trigger dispatcher (cron/queue entry). The
@@ -1026,6 +1027,7 @@ export interface TriggerDispatchRepo {
     trigger: Trigger,
     triggeredAt: string,
     idempotencyKey: string | null,
+    metadata: Record<string, unknown>,
   ): Promise<ClaimedRun | null>
   projectName(projectId: string): Promise<string | null>
   markRunFailed(trigger: DueTrigger | Trigger, run: ClaimedRun, message: string): Promise<void>

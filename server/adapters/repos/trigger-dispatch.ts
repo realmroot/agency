@@ -138,10 +138,10 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
         }
         throw error
       }
-      return { id: runId, scheduledFor, correlationId }
+      return { id: runId, scheduledFor, correlationId, metadata: {} }
     },
 
-    async claimHttpRun(auth, trigger, triggeredAt, rawIdempotencyKey): Promise<ClaimedRun | null> {
+    async claimHttpRun(auth, trigger, triggeredAt, rawIdempotencyKey, metadata): Promise<ClaimedRun | null> {
       const runId = newId('httprun')
       const idempotencyKey = rawIdempotencyKey
         ? `http:${trigger.metadata.uid}:${rawIdempotencyKey}`
@@ -161,7 +161,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
           sessionId: null,
           correlationId,
           errorMessage: null,
-          metadata: '{}',
+          metadata: JSON.stringify(metadata),
           createdAt: triggeredAt,
           updatedAt: triggeredAt,
         })
@@ -171,7 +171,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
         }
         throw error
       }
-      return { id: runId, scheduledFor: triggeredAt, correlationId }
+      return { id: runId, scheduledFor: triggeredAt, correlationId, metadata }
     },
 
     async projectName(projectId): Promise<string | null> {
@@ -195,7 +195,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
         .set({
           state: 'dispatched',
           sessionId,
-          metadata: JSON.stringify({ sessionMetadata }),
+          metadata: JSON.stringify({ ...run.metadata, sessionMetadata }),
           updatedAt: timestamp,
         })
         .where(eq(triggerRuns.id, run.id))

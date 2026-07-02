@@ -116,6 +116,7 @@ function claimedRun(overrides: Partial<ClaimedRun> = {}): ClaimedRun {
     id: 'run_1',
     scheduledFor: '2026-01-01T00:00:00.000Z',
     correlationId: 'corr_1',
+    metadata: {},
     ...overrides,
   }
 }
@@ -822,7 +823,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
 
   it('adds request metadata from the HTTP body to newly created session metadata and run metadata', async () => {
     let sessionMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
-    let runMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
+    let runMetadata: Record<string, unknown> | undefined
+    let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
     const deps = fakeDeps({
       sessionRuntime: {
         createSession: async (_deps, _auth, input) => {
@@ -831,8 +833,12 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
       triggerDispatch: {
-        markRunDispatched: async (_trigger, _run, _sessionId, metadata) => {
+        claimHttpRun: async (_auth, _trigger, _triggeredAt, _idempotencyKey, metadata) => {
           runMetadata = metadata
+          return claimedRun({ id: 'httprun_1', metadata })
+        },
+        markRunDispatched: async (_trigger, _run, _sessionId, metadata) => {
+          markedMetadata = metadata
         },
       },
     })
@@ -877,7 +883,14 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(sessionMetadata).not.toHaveProperty('github')
     expect(sessionMetadata?.labels).not.toHaveProperty('ignored')
     expect(sessionMetadata?.annotations).not.toHaveProperty('ignored')
-    expect(runMetadata).toMatchObject(sessionMetadata!)
+    expect(runMetadata).toMatchObject({
+      annotations: {
+        externalUrl: 'https://github.com/owner/repo/issues/123',
+      },
+      labels: { subject: 'github-issue' },
+    })
+    expect(runMetadata).not.toHaveProperty('github')
+    expect(markedMetadata).toMatchObject(sessionMetadata!)
   })
 
   it('ignores unsupported HTTP request metadata fields and non-string map entries', async () => {
@@ -994,9 +1007,14 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
   })
 
   it('records request metadata on runs that reuse an existing keyed session', async () => {
+    let runMetadata: Record<string, unknown> | undefined
     let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | null = null
     const deps = fakeDeps({
       triggerDispatch: {
+        claimHttpRun: async (_auth, _trigger, _triggeredAt, _idempotencyKey, metadata) => {
+          runMetadata = metadata
+          return claimedRun({ id: 'httprun_1', metadata })
+        },
         markRunDispatched: async (_trigger, _run, _sessionId, metadata) => {
           markedMetadata = metadata
         },
@@ -1031,6 +1049,10 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       },
     })
 
+    expect(runMetadata).toMatchObject({
+      labels: { subject: 'github-pull' },
+      annotations: { externalUrl: 'https://github.com/owner/repo/pull/456' },
+    })
     expect(markedMetadata).toMatchObject({
       labels: { subject: 'github-pull' },
       annotations: {
@@ -1042,6 +1064,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       },
     })
     expect(markedMetadata).not.toHaveProperty('github')
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 
   it('queues a message when reusing a pending HTTP trigger session with the same key', async () => {

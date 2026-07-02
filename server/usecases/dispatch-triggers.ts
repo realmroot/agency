@@ -301,12 +301,18 @@ export async function dispatchHttpTrigger(
     throw error
   }
 
-  const run = await deps.triggerDispatch.claimHttpRun(auth, trigger, triggeredAt, input.idempotencyKey ?? null)
+  const requestMetadata = httpTriggerBodyMetadata(input.context.body)
+  const run = await deps.triggerDispatch.claimHttpRun(
+    auth,
+    trigger,
+    triggeredAt,
+    input.idempotencyKey ?? null,
+    requestMetadata,
+  )
   if (!run) {
     throw new TriggerConflictError('HTTP trigger run already exists for this idempotency key')
   }
 
-  const requestMetadata = httpTriggerBodyMetadata(input.context.body)
   const keyHash = await httpTriggerSessionKeyHash(input.context.body)
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: mergeStringMaps(trigger.spec.template.metadata.labels, requestMetadata.labels),
