@@ -50,78 +50,94 @@ describe('hasSecretMaterial', () => {
 })
 
 describe('renderHttpPromptTemplate', () => {
-  it('renders body, query, and header variables', () => {
+  it('renders body, header, and AMA run variables', () => {
     const prompt = renderHttpPromptTemplate(
-      'Handle {{ body.ticket.id }} for {{ query.team }} via {{ headers.x-source }}.',
+      'Handle {{ .body.ticket.id }} for {{ .body.team }} via {{ .header["x-source"] }} reused={{ .ama.run.session_reused }}.',
       {
-        body: { ticket: { id: 'T-123' } },
-        query: { team: 'support' },
-        headers: { 'x-source': 'webhook' },
+        body: { ticket: { id: 'T-123' }, team: 'support' },
+        header: { 'x-source': 'webhook' },
+        run: { session_reused: false, session_id: null, session_state: null },
       },
     )
-    expect(prompt).toBe('Handle T-123 for support via webhook.')
+    expect(prompt).toBe('Handle T-123 for support via webhook reused=false.')
   })
 
-  it('stringifies object values when a path resolves to an object', () => {
-    const prompt = renderHttpPromptTemplate('Payload: {{ body.payload }}', {
+  it('keeps template output as Markdown text', () => {
+    const prompt = renderHttpPromptTemplate(
+      '# Event\n\n- Ticket: {{ .body.ticket.id }}\n- URL: [open]({{ .body.ticket.url }})',
+      {
+        body: { ticket: { id: 'T-123', url: 'https://example.test/tickets/T-123' } },
+        header: {},
+      },
+    )
+    expect(prompt).toBe('# Event\n\n- Ticket: T-123\n- URL: [open](https://example.test/tickets/T-123)')
+  })
+
+  it('renders missing variables as empty text', () => {
+    const prompt = renderHttpPromptTemplate('Payload: {{ .body.missing.value }}.', {
       body: { payload: { ok: true } },
-      query: {},
-      headers: {},
+      header: {},
     })
-    expect(prompt).toBe('Payload: {"ok":true}')
+    expect(prompt).toBe('Payload: .')
+  })
+
+  it('does not expose body fields at the template root', () => {
+    const prompt = renderHttpPromptTemplate('Event={{ .event }} Body={{ .body.event }}', {
+      body: { event: 'issues' },
+      header: {},
+    })
+    expect(prompt).toBe('Event= Body=issues')
   })
 
   it('renders array, null, number, and boolean values', () => {
-    const prompt = renderHttpPromptTemplate('{{ body.items.1 }} {{ body.none }} {{ body.count }} {{ body.ok }}', {
+    const prompt = renderHttpPromptTemplate('{{ .body.items[1] }} {{ .body.none }} {{ .body.count }} {{ .body.ok }}', {
       body: { items: ['first', 'second'], none: null, count: 3, ok: false },
-      query: {},
-      headers: {},
+      header: {},
     })
     expect(prompt).toBe('second  3 false')
   })
 
   it('renders conditional blocks for truthy paths', () => {
-    const prompt = renderHttpPromptTemplate('{{#if body.comment.id}}Comment {{ body.comment.id }}{{/if}}', {
+    const prompt = renderHttpPromptTemplate('{% if .body.comment.id %}Comment {{ .body.comment.id }}{% endif %}', {
       body: { comment: { id: 123 } },
-      query: {},
-      headers: {},
+      header: {},
     })
     expect(prompt).toBe('Comment 123')
   })
 
   it('renders else branch for missing or falsey condition paths', () => {
-    const prompt = renderHttpPromptTemplate('{{#if body.review.id}}Review{{else}}No review{{/if}}', {
+    const prompt = renderHttpPromptTemplate('{% if .body.review.id %}Review{% else %}No review{% endif %}', {
       body: { review: { id: null } },
-      query: {},
-      headers: {},
+      header: {},
     })
     expect(prompt).toBe('No review')
   })
 
   it('supports equality conditions', () => {
-    const prompt = renderHttpPromptTemplate('{{#if eq body.event "issues"}}Issue {{ body.subject.number }}{{/if}}', {
-      body: { event: 'issues', subject: { number: 42 } },
-      query: {},
-      headers: {},
-    })
+    const prompt = renderHttpPromptTemplate(
+      '{% if .body.event == "issues" %}Issue {{ .body.subject.number }}{% endif %}',
+      {
+        body: { event: 'issues', subject: { number: 42 } },
+        header: {},
+      },
+    )
     expect(prompt).toBe('Issue 42')
   })
 
   it('[spec: triggers/http-create] supports literal comparisons in conditional prompt templates', () => {
     const prompt = renderHttpPromptTemplate(
       [
-        '{{#if eq body.ok true}}ok{{/if}}',
-        '{{#if eq body.disabled false}}disabled{{/if}}',
-        '{{#if eq body.count 3}}count{{/if}}',
-        '{{#if eq body.none null}}none{{/if}}',
-        '{{#if eq body.status open}}open{{/if}}',
-        '{{#if eq body.notNumber NaN}}nan{{/if}}',
-        '{{#if ne body.event "pull_request"}}not-pr{{/if}}',
+        '{% if .body.ok == true %}ok{% endif %}',
+        '{% if .body.disabled == false %}disabled{% endif %}',
+        '{% if .body.count == 3 %}count{% endif %}',
+        '{% if .body.none == null %}none{% endif %}',
+        '{% if .body.status == "open" %}open{% endif %}',
+        '{% if .body.notNumber == "NaN" %}nan{% endif %}',
+        '{% if .body.event != "pull_request" %}not-pr{% endif %}',
       ].join(' '),
       {
         body: { ok: true, disabled: false, count: 3, none: null, status: 'open', notNumber: 'NaN', event: 'issues' },
-        query: {},
-        headers: {},
+        header: {},
       },
     )
     expect(prompt).toBe('ok disabled count none open nan not-pr')
@@ -129,78 +145,46 @@ describe('renderHttpPromptTemplate', () => {
 
   it('does not render variables inside skipped conditional branches', () => {
     const prompt = renderHttpPromptTemplate(
-      '{{#if eq body.event "pull_request"}}{{ body.missing.value }}{{else}}Issue{{/if}}',
+      '{% if .body.event == "pull_request" %}{{ .body.missing.value }}{% else %}Issue{% endif %}',
       {
         body: { event: 'issues' },
-        query: {},
-        headers: {},
+        header: {},
       },
     )
     expect(prompt).toBe('Issue')
   })
 
   it('[spec: triggers/http-create] renders empty content for false conditional blocks without else branches', () => {
-    const prompt = renderHttpPromptTemplate('Start{{#if body.review.id}}Review{{/if}}End', {
+    const prompt = renderHttpPromptTemplate('Start{% if .body.review.id %}Review{% endif %}End', {
       body: { review: { id: null } },
-      query: {},
-      headers: {},
+      header: {},
     })
     expect(prompt).toBe('StartEnd')
   })
 
-  it('fails when a variable is missing', () => {
-    expect(() => renderHttpPromptTemplate('Handle {{ body.ticket.id }}', { body: {}, query: {}, headers: {} })).toThrow(
-      PromptTemplateRenderError,
-    )
-  })
-
-  it('fails when a variable reads an unsupported root', () => {
-    expect(() => renderHttpPromptTemplate('Handle {{ secrets.token }}', { body: {}, query: {}, headers: {} })).toThrow(
-      PromptTemplateRenderError,
-    )
-  })
-
-  it('fails when a variable path segment is invalid', () => {
-    expect(() =>
-      renderHttpPromptTemplate('Handle {{ body.ticket["id"] }}', { body: {}, query: {}, headers: {} }),
-    ).toThrow(PromptTemplateRenderError)
-  })
-
-  it('fails when a conditional expression is invalid', () => {
-    expect(() =>
-      renderHttpPromptTemplate('{{#if matches body.event "issues"}}Issue{{/if}}', { body: {}, query: {}, headers: {} }),
-    ).toThrow(PromptTemplateRenderError)
-  })
-
   it('[spec: triggers/http-create] fails when a conditional block is malformed', () => {
     expect(() =>
-      renderHttpPromptTemplate('{{#if body.event}}Issue', {
+      renderHttpPromptTemplate('{% if .body.event %}Issue', {
         body: { event: 'issues' },
-        query: {},
-        headers: {},
+        header: {},
       }),
     ).toThrow(PromptTemplateRenderError)
   })
 
   it('[spec: triggers/http-create] fails when a conditional expression is blank', () => {
     expect(() =>
-      renderHttpPromptTemplate('{{#if    }}Issue{{/if}}', {
+      renderHttpPromptTemplate('{% if %}Issue{% endif %}', {
         body: {},
-        query: {},
-        headers: {},
+        header: {},
       }),
     ).toThrow(PromptTemplateRenderError)
   })
 
-  it('propagates unexpected read errors', () => {
-    const body = {}
-    Object.defineProperty(body, 'ticket', {
-      get() {
-        throw new Error('getter failed')
-      },
+  it('does not expose unknown template roots', () => {
+    const prompt = renderHttpPromptTemplate('Secret={{ secrets.token }}', {
+      body: {},
+      header: {},
     })
-    expect(() => renderHttpPromptTemplate('Handle {{ body.ticket.id }}', { body, query: {}, headers: {} })).toThrow(
-      'getter failed',
-    )
+    expect(prompt).toBe('Secret=')
   })
 })

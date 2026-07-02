@@ -74,7 +74,7 @@ async function createRuntimeCredential(authorization: string) {
   const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
     method: 'POST',
     body: JSON.stringify({
-      name: 'AK agent session key',
+      name: 'AK agent routing key',
       type: 'opaque',
       secret: { stringData: { value: 'raw-ak-agent-key' } },
     }),
@@ -655,7 +655,7 @@ describe('[CF] /api/v1/triggers', () => {
           agentId: agent.id,
           environmentId: environment.id,
           runtime: 'ama',
-          promptTemplate: 'Handle ticket {{ body.ticket.id }} from {{ query.source }} via {{ headers.x-source }}.',
+          promptTemplate: 'Handle ticket {{ .body.ticket.id }} from {{ .body.source }} via {{ .header["x-source"] }}.',
           env: {},
           envFrom: [],
           volumes: [],
@@ -675,6 +675,7 @@ describe('[CF] /api/v1/triggers', () => {
       headers: { 'x-source': 'zendesk', 'idempotency-key': 'ticket-123' },
       body: JSON.stringify({
         ticket: { id: 'T-123' },
+        source: 'portal',
         metadata: {
           labels: { 'agent-kanban.dev/session-key': 'github:owner/repo:issue:123' },
           annotations: { 'agent-kanban.dev/source-event': 'issues.opened' },
@@ -714,18 +715,47 @@ describe('[CF] /api/v1/triggers', () => {
     })
     expect(duplicateRunRes.status).toBe(409)
 
-    const invalidRunRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs?source=portal`, authorization, {
+    const optionalRunRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs?source=portal`, authorization, {
       method: 'POST',
       headers: { 'x-source': 'zendesk' },
       body: JSON.stringify({ ticket: {} }),
     })
+    expect(optionalRunRes.status).toBe(201)
+
+    const invalidTrigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Invalid ticket webhook',
+      source: { type: 'http' },
+      template: {
+        metadata: { labels: {}, annotations: {} },
+        spec: {
+          agentId: agent.id,
+          environmentId: environment.id,
+          runtime: 'ama',
+          promptTemplate: '{% if .body.ticket.id %}Ticket',
+          env: {},
+          envFrom: [],
+          volumes: [],
+          volumeMounts: [],
+        },
+      },
+      nextDueAt: undefined,
+    })
+    const invalidRunRes = await jsonFetch(
+      `/api/v1/triggers/${invalidTrigger.metadata.uid}/runs?source=portal`,
+      authorization,
+      {
+        method: 'POST',
+        headers: { 'x-source': 'zendesk' },
+        body: JSON.stringify({ ticket: { id: 'T-124' } }),
+      },
+    )
     expect(invalidRunRes.status).toBe(400)
     await expect(invalidRunRes.json()).resolves.toMatchObject({
       error: { type: 'validation_error' },
     })
   })
 
-  it('reuses the existing HTTP trigger session when request body carries the same key [spec: triggers/http-dispatch]', async () => {
+  it('reuses the existing HTTP trigger session when request body carries the same routing key [spec: triggers/http-dispatch]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
     const environment = await createEnvironment(authorization)
@@ -738,7 +768,7 @@ describe('[CF] /api/v1/triggers', () => {
           agentId: agent.id,
           environmentId: environment.id,
           runtime: 'ama',
-          promptTemplate: 'Handle {{ body.event }} {{ body.key }}: {{ body.comment.body }}.',
+          promptTemplate: 'Handle {{ .body.event }} {{ .body.routing_key }}: {{ .body.comment.body }}.',
           env: {},
           envFrom: [],
           volumes: [],
@@ -753,7 +783,7 @@ describe('[CF] /api/v1/triggers', () => {
       method: 'POST',
       headers: { 'idempotency-key': 'delivery-1' },
       body: JSON.stringify({
-        key: 'github:owner/repo:issue:123',
+        routing_key: 'github:owner/repo:issue:123',
         event: 'issues',
         comment: { body: 'Initial issue opened' },
       }),
@@ -765,7 +795,7 @@ describe('[CF] /api/v1/triggers', () => {
       method: 'POST',
       headers: { 'idempotency-key': 'delivery-2' },
       body: JSON.stringify({
-        key: 'github:owner/repo:issue:123',
+        routing_key: 'github:owner/repo:issue:123',
         event: 'issue_comment',
         comment: { body: 'Follow-up from the issue thread' },
       }),

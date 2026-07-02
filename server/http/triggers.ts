@@ -603,8 +603,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
           trigger,
           context: {
             body: c.req.valid('json'),
-            query: c.req.query(),
-            headers: promptHeaders(c.req.raw.headers),
+            header: promptHeaders(c.req.raw.headers),
           },
           idempotencyKey: c.req.header('idempotency-key') ?? null,
         })

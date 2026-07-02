@@ -100,16 +100,16 @@ async function recordHttpDispatch(
   })
 }
 
-function httpTriggerSessionKey(body: unknown): string | null {
+function httpTriggerRoutingKey(body: unknown): string | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return null
   }
-  const key = (body as Record<string, unknown>).key
+  const key = (body as Record<string, unknown>).routing_key
   return typeof key === 'string' && key.trim().length > 0 ? key : null
 }
 
-async function httpTriggerSessionKeyHash(body: unknown): Promise<string | null> {
-  const key = httpTriggerSessionKey(body)
+async function httpTriggerRoutingKeyHash(body: unknown): Promise<string | null> {
+  const key = httpTriggerRoutingKey(body)
   if (!key) return null
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -291,9 +291,20 @@ export async function dispatchHttpTrigger(
   }
 
   const triggeredAt = new Date().toISOString()
+  const keyHash = await httpTriggerRoutingKeyHash(input.context.body)
+  const existingSession = keyHash
+    ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
+    : null
   let renderedPrompt: string
   try {
-    renderedPrompt = renderHttpPromptTemplate(trigger.spec.template.spec.promptTemplate, input.context)
+    renderedPrompt = renderHttpPromptTemplate(trigger.spec.template.spec.promptTemplate, {
+      ...input.context,
+      run: {
+        session_reused: Boolean(existingSession),
+        session_id: existingSession?.id ?? null,
+        session_state: existingSession?.state ?? null,
+      },
+    })
   } catch (error) {
     if (error instanceof PromptTemplateRenderError) {
       throw new TriggerValidationError('Invalid trigger prompt template', { promptTemplate: error.message })
@@ -313,7 +324,6 @@ export async function dispatchHttpTrigger(
     throw new TriggerConflictError('HTTP trigger run already exists for this idempotency key')
   }
 
-  const keyHash = await httpTriggerSessionKeyHash(input.context.body)
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: mergeStringMaps(trigger.spec.template.metadata.labels, requestMetadata.labels),
     annotations: {
@@ -327,9 +337,6 @@ export async function dispatchHttpTrigger(
       correlationId: run.correlationId,
     },
   }
-  const existingSession = keyHash
-    ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
-    : null
 
   if (existingSession) {
     const outcome =

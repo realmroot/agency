@@ -92,7 +92,7 @@ function httpTrigger(
           agentId: 'agent_1',
           environmentId: 'env_1',
           runtime: 'ama',
-          promptTemplate: 'Handle {{ body.ticket.id }} from {{ query.source }}',
+          promptTemplate: 'Handle {{ .body.ticket.id }} from {{ .body.source }}',
           env: {},
           envFrom: [],
           volumes: [],
@@ -771,6 +771,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
 
   it('creates a session with a prompt rendered from request fields', async () => {
     let prompt: string | undefined
+    const baseTrigger = httpTrigger()
     const deps = fakeDeps({
       sessionRuntime: {
         createSession: async (_deps, _auth, input) => {
@@ -780,19 +781,29 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       },
     })
     const result = await dispatchHttpTrigger(deps, auth, {
-      trigger: httpTrigger(),
+      trigger: httpTrigger({
+        spec: {
+          template: {
+            ...baseTrigger.spec.template,
+            spec: {
+              ...baseTrigger.spec.template.spec,
+              promptTemplate:
+                '{% if .ama.run.session_reused == false %}New{% else %}Reused{% endif %} {{ .body.ticket.id }} from {{ .body.source }}',
+            },
+          },
+        },
+      }),
       context: {
-        body: { ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
       },
     })
     expect(result.state).toBe('dispatched')
     expect(result.sessionId).toBe('sess_http')
-    expect(prompt).toBe('Handle T-123 from portal')
+    expect(prompt).toBe('New T-123 from portal')
   })
 
-  it('creates a run without a reusable session key when the body is not an object', async () => {
+  it('creates a run without a reusable routing key when the body is not an object', async () => {
     let lookedUpKey: string | null | undefined = 'unset'
     const deps = fakeDeps({
       sessions: {
@@ -813,8 +824,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       }),
       context: {
         body: null,
-        query: {},
-        headers: {},
+        header: {},
       },
     })
     expect(result.state).toBe('dispatched')
@@ -854,7 +864,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       }),
       context: {
         body: {
-          key: 'github:owner/repo:issue:123',
+          routing_key: 'github:owner/repo:issue:123',
           ticket: { id: 'T-123' },
           metadata: {
             labels: { subject: 'github-issue', ignored: 123 },
@@ -867,8 +877,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             },
           },
         },
-        query: { source: 'portal' },
-        headers: {},
+        header: {},
       },
     })
 
@@ -915,8 +924,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             github: { repository: 'owner/repo' },
           },
         },
-        query: { source: 'portal' },
-        headers: {},
+        header: {},
       },
     })
 
@@ -947,8 +955,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           ticket: { id: 'T-123' },
           metadata: { annotations: { source: 'spoofed', httpTriggerId: 'spoofed', correlationId: 'spoofed' } },
         },
-        query: { source: 'portal' },
-        headers: {},
+        header: {},
       },
     })
 
@@ -959,9 +966,10 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
   })
 
-  it('reuses an active HTTP trigger session when request body carries the same key', async () => {
+  it('reuses an active HTTP trigger session when request body carries the same routing key', async () => {
     let markedSessionId: string | null = null
     let messageContent: string | null = null
+    const baseTrigger = httpTrigger()
     const deps = fakeDeps({
       triggerDispatch: {
         markRunDispatched: async (_trigger, _run, sessionId) => {
@@ -991,22 +999,37 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
         },
       },
     })
+    vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async (_deps, _auth, _sessionId, content) => {
+      messageContent = content
+      return { ok: true, delivery: 'queued', state: 'accepted' }
+    })
     const result = await dispatchHttpTrigger(deps, auth, {
-      trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
+      trigger: httpTrigger({
+        metadata: { uid: 'http_trigger_1' },
+        spec: {
+          template: {
+            ...baseTrigger.spec.template,
+            spec: {
+              ...baseTrigger.spec.template.spec,
+              promptTemplate:
+                '{% if .ama.run.session_reused %}Reused {{ .ama.run.session_id }} {{ .ama.run.session_state }}{% else %}New{% endif %} {{ .body.ticket.id }}',
+            },
+          },
+        },
+      }),
       context: {
-        body: { key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
       },
     })
 
     expect(result).toMatchObject({ state: 'dispatched', sessionId: 'sess_existing' })
     expect(markedSessionId).toBe('sess_existing')
-    expect(messageContent).toBe('Handle T-123 from portal')
+    expect(messageContent).toBe('Reused sess_existing idle T-123')
     expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 
-  it('records request metadata on runs that reuse an existing keyed session', async () => {
+  it('records request metadata on runs that reuse an existing routing-keyed session', async () => {
     let runMetadata: Record<string, unknown> | undefined
     let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | null = null
     const deps = fakeDeps({
@@ -1036,7 +1059,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
       context: {
         body: {
-          key: 'github:owner/repo:pull:456',
+          routing_key: 'github:owner/repo:pull:456',
           ticket: { id: 'T-123' },
           metadata: {
             labels: { subject: 'github-pull' },
@@ -1044,8 +1067,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             github: { repository: 'owner/repo' },
           },
         },
-        query: { source: 'portal' },
-        headers: {},
+        header: {},
       },
     })
 
@@ -1067,7 +1089,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 
-  it('queues a message when reusing a pending HTTP trigger session with the same key', async () => {
+  it('queues a message when reusing a pending HTTP trigger session with the same routing key', async () => {
     let markedSessionId: string | null = null
     let inserted: Parameters<Deps['sessions']['insertMessage']>[0] | null = null
     const deps = fakeDeps({
@@ -1103,9 +1125,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     const result = await dispatchHttpTrigger(deps, auth, {
       trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
       context: {
-        body: { key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
       },
     })
 
@@ -1121,7 +1142,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 
-  it('fails the HTTP run when sending to a reused keyed session fails', async () => {
+  it('fails the HTTP run when sending to a reused routing-keyed session fails', async () => {
     let markedMessage: string | null = null
     let auditOutcome: string | null = null
     const deps = fakeDeps({
@@ -1160,9 +1181,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     const result = await dispatchHttpTrigger(deps, auth, {
       trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
       context: {
-        body: { key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
+        header: {},
       },
     })
 
@@ -1208,15 +1228,14 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     await dispatchHttpTrigger(deps, auth, {
       trigger,
       context: {
-        body: { ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { ticket: { id: 'T-123' }, source: 'portal' },
+        header: {},
       },
     })
     expect(capturedOptions).toMatchObject({ env: trigger.spec.template.spec.env, envFrom })
   })
 
-  it('records the HTTP session key on newly created trigger run metadata', async () => {
+  it('records the HTTP routing key on newly created trigger run metadata', async () => {
     let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | null = null
     const deps = fakeDeps({
       triggerDispatch: {
@@ -1229,9 +1248,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     await dispatchHttpTrigger(deps, auth, {
       trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
       context: {
-        body: { key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
-        query: { source: 'portal' },
-        headers: {},
+        body: { routing_key: 'github:owner/repo:issue:123', ticket: { id: 'T-123' } },
+        header: {},
       },
     })
 
@@ -1245,23 +1263,22 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
   })
 
-  it('rejects a missing template variable before claiming a run', async () => {
-    let claimed = false
+  it('renders missing template variables as empty text', async () => {
+    let capturedPrompt: string | null = null
     const deps = fakeDeps({
-      triggerDispatch: {
-        claimHttpRun: async () => {
-          claimed = true
-          return claimedRun()
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          capturedPrompt = input.options.prompt
+          return { ok: true, value: sessionRecord() }
         },
       },
     })
-    await expect(
-      dispatchHttpTrigger(deps, auth, {
-        trigger: httpTrigger(),
-        context: { body: {}, query: { source: 'portal' }, headers: {} },
-      }),
-    ).rejects.toMatchObject({ name: 'TriggerValidationError' })
-    expect(claimed).toBe(false)
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: httpTrigger(),
+      context: { body: { source: 'portal' }, header: {} },
+    })
+    expect(result).toMatchObject({ state: 'dispatched' })
+    expect(capturedPrompt).toBe('Handle  from portal')
   })
 
   it('rejects scheduled triggers at the HTTP dispatch entry', async () => {
@@ -1272,7 +1289,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             source: { type: 'schedule', schedule: { type: 'interval', intervalSeconds: 3600, windowSeconds: 0 } },
           },
         }),
-        context: { body: {}, query: {}, headers: {} },
+        context: { body: { source: 'portal' }, header: {} },
       }),
     ).rejects.toMatchObject({ name: 'TriggerConflictError' })
   })
@@ -1281,7 +1298,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     await expect(
       dispatchHttpTrigger(fakeDeps(), auth, {
         trigger: httpTrigger({ spec: { suspend: true } }),
-        context: { body: {}, query: {}, headers: {} },
+        context: { body: { source: 'portal' }, header: {} },
       }),
     ).rejects.toMatchObject({ name: 'TriggerConflictError' })
   })
@@ -1293,7 +1310,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           metadata: { archivedAt: '2026-01-02T00:00:00.000Z' },
           status: { phase: 'archived' },
         }),
-        context: { body: {}, query: {}, headers: {} },
+        context: { body: { source: 'portal' }, header: {} },
       }),
     ).rejects.toMatchObject({ name: 'TriggerConflictError' })
   })
@@ -1303,7 +1320,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     await expect(
       dispatchHttpTrigger(deps, auth, {
         trigger: httpTrigger(),
-        context: { body: { ticket: { id: 'T-123' } }, query: { source: 'portal' }, headers: {} },
+        context: { body: { ticket: { id: 'T-123' }, source: 'portal' }, header: {} },
         idempotencyKey: 'same-key',
       }),
     ).rejects.toMatchObject({ name: 'TriggerConflictError' })
@@ -1332,26 +1349,46 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
     const result = await dispatchHttpTrigger(deps, auth, {
       trigger: httpTrigger(),
-      context: { body: { ticket: { id: 'T-123' } }, query: { source: 'portal' }, headers: {} },
+      context: { body: { ticket: { id: 'T-123' }, source: 'portal' }, header: {} },
     })
     expect(result).toMatchObject({ state: 'failed', sessionId: null, errorMessage: 'Invalid agent' })
     expect(markedMessage).toBe('Invalid agent')
     expect(auditOutcome).toBe('failure')
   })
 
-  it('propagates unexpected template rendering errors', async () => {
-    const body = {}
-    Object.defineProperty(body, 'ticket', {
-      get() {
-        throw new Error('getter failed')
+  it('rejects an invalid prompt template before claiming a run', async () => {
+    let claimed = false
+    const deps = fakeDeps({
+      triggerDispatch: {
+        claimHttpRun: async () => {
+          claimed = true
+          return claimedRun()
+        },
       },
     })
     await expect(
-      dispatchHttpTrigger(fakeDeps(), auth, {
-        trigger: httpTrigger(),
-        context: { body, query: { source: 'portal' }, headers: {} },
+      dispatchHttpTrigger(deps, auth, {
+        trigger: httpTrigger({
+          spec: {
+            template: {
+              metadata: { labels: {}, annotations: {} },
+              spec: {
+                agentId: 'agent_1',
+                environmentId: 'env_1',
+                runtime: 'ama',
+                promptTemplate: '{% if .body.ticket.id %}Ticket',
+                env: {},
+                envFrom: [],
+                volumes: [],
+                volumeMounts: [],
+              },
+            },
+          },
+        }),
+        context: { body: { ticket: { id: 'T-123' }, source: 'portal' }, header: {} },
       }),
-    ).rejects.toThrow('getter failed')
+    ).rejects.toMatchObject({ name: 'TriggerValidationError' })
+    expect(claimed).toBe(false)
   })
 })
 
