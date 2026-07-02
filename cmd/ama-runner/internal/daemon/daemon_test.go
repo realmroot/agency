@@ -157,6 +157,15 @@ func (f *fakeAMAServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, f.lease.workItem)
+	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/leases":
+		f.mu.Lock()
+		lease := f.lease
+		f.mu.Unlock()
+		data := []ama.Lease{}
+		if lease != nil {
+			data = append(data, *lease.lease)
+		}
+		writeJSON(w, http.StatusOK, ama.LeaseListResponse{Data: data, Pagination: ama.ListPagination{Limit: len(data)}})
 	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/leases":
 		if f.lease == nil {
 			writeAPIError(w, http.StatusInternalServerError, fmt.Errorf("no work item to lease"))
@@ -1094,6 +1103,66 @@ func TestStartRunsPushedWorkAssignments(t *testing.T) {
 	if err := <-done; !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context cancellation after assigned work, got %v", err)
 	}
+}
+
+func TestStartRecoversActiveAssignedWork(t *testing.T) {
+	work := approvedLease()
+	client := &fakeAMAServer{lease: work, hubChannel: newFakeSessionChannel(ama.JSON{"type": "runner.channel.accepted"})}
+	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: ama.JSON{"ok": true}}}
+	daemon := testDaemon(client, adapter)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- daemon.Start(ctx)
+	}()
+	deadline := time.After(time.Second)
+	for {
+		client.mu.Lock()
+		updates := len(client.updates)
+		client.mu.Unlock()
+		if updates > 0 {
+			cancel()
+			break
+		}
+		select {
+		case err := <-done:
+			t.Fatalf("runner exited before recovering assigned work: %v", err)
+		case <-deadline:
+			t.Fatal("timed out waiting for recovered work completion")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation after recovered work, got %v", err)
+	}
+}
+
+func TestRunAssignedWorkDeduplicatesActiveLease(t *testing.T) {
+	work := approvedLease()
+	client := &fakeAMAServer{lease: work}
+	adapter := &fakeAdapter{waitForCancel: true}
+	daemon := testDaemon(client, adapter)
+	daemon.Config.MaxConcurrent = 2
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	daemon.runAssignedWork(ctx, work.lease, work.workItem)
+	deadline := time.After(time.Second)
+	for daemon.activeLoad() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("timed out waiting for assigned work to start")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	daemon.runAssignedWork(ctx, work.lease, work.workItem)
+	time.Sleep(5 * time.Millisecond)
+	if load := daemon.activeLoad(); load != 1 {
+		t.Fatalf("expected duplicate lease to keep one active slot, got %d", load)
+	}
+	cancel()
 }
 
 func TestRunOnceReturnsWhenNoLeaseIsAvailable(t *testing.T) {

@@ -32,11 +32,12 @@ type Daemon struct {
 	// relay owns the runner's single per-runner relay channel for all sessions.
 	// Started once the runner id is known and kept
 	// open for the runner's lifetime; nil until Start wires it.
-	relay        *runnersession.Relay
-	RunnerID     string
-	mu           sync.Mutex
-	activeLeases int
-	leaseWG      sync.WaitGroup
+	relay          *runnersession.Relay
+	RunnerID       string
+	mu             sync.Mutex
+	activeLeases   int
+	activeLeaseIDs map[string]struct{}
+	leaseWG        sync.WaitGroup
 }
 
 func (d *Daemon) runtimeBridge() runtime.Bridge {
@@ -109,6 +110,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	// runner's lifetime (reconnecting on drop), so a completed CLI session still
 	// streams its history over the relay while the runner is online.
 	d.startRelay(ctx)
+	d.recoverAssignedWork(ctx)
 
 	heartbeatTicker := time.NewTicker(d.Config.HeartbeatInterval)
 	defer heartbeatTicker.Stop()
@@ -234,14 +236,14 @@ func (d *Daemon) runOneLease(ctx context.Context) error {
 }
 
 func (d *Daemon) runAssignedWork(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem) {
-	if !d.tryAcquireLeaseSlot() {
+	if !d.tryAcquireLeaseSlotFor(lease.Id) {
 		slog.Warn("runner received work assignment while at local capacity", "workItemId", workItem.Id, "leaseId", lease.Id)
 		return
 	}
 	d.leaseWG.Add(1)
 	go func() {
 		defer d.leaseWG.Done()
-		defer d.releaseLeaseSlot()
+		defer d.releaseLeaseSlotFor(lease.Id)
 		if err := d.leaseWorker().RunAssigned(ctx, lease, workItem); err != nil {
 			if ctx.Err() != nil {
 				return
@@ -253,6 +255,41 @@ func (d *Daemon) runAssignedWork(ctx context.Context, lease *ama.Lease, workItem
 			slog.Warn("runner assigned lease failed", "leaseId", lease.Id, "workItemId", workItem.Id, "error", err)
 		}
 	}()
+}
+
+func (d *Daemon) recoverAssignedWork(ctx context.Context) {
+	if d.RunnerID == "" {
+		return
+	}
+	runnerID := d.RunnerID
+	state := ama.ListLeasesParamsStateActive
+	limit := 100
+	var cursor *string
+	for {
+		leases, err := d.Client.Leases.List(ctx, &ama.ListLeasesParams{
+			RunnerId: &runnerID,
+			State:    &state,
+			Limit:    &limit,
+			Cursor:   cursor,
+		})
+		if err != nil {
+			slog.Warn("runner failed to recover assigned work", "runnerId", runnerID, "error", err)
+			return
+		}
+		for _, lease := range leases.Data {
+			workItem, err := d.Client.WorkItems.Get(ctx, lease.WorkItemId)
+			if err != nil {
+				slog.Warn("runner failed to recover assigned work item", "runnerId", runnerID, "leaseId", lease.Id, "workItemId", lease.WorkItemId, "error", err)
+				continue
+			}
+			leaseCopy := lease
+			d.runAssignedWork(ctx, &leaseCopy, workItem)
+		}
+		if !leases.Pagination.HasMore || leases.Pagination.NextCursor == nil {
+			return
+		}
+		cursor = leases.Pagination.NextCursor
+	}
 }
 
 func (d *Daemon) leaseWorker() LeaseWorker {
@@ -272,20 +309,42 @@ func (d *Daemon) leaseWorker() LeaseWorker {
 }
 
 func (d *Daemon) tryAcquireLeaseSlot() bool {
+	return d.tryAcquireLeaseSlotFor("")
+}
+
+func (d *Daemon) tryAcquireLeaseSlotFor(leaseID string) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if leaseID != "" {
+		if d.activeLeaseIDs == nil {
+			d.activeLeaseIDs = map[string]struct{}{}
+		}
+		if _, active := d.activeLeaseIDs[leaseID]; active {
+			return false
+		}
+	}
 	if d.activeLeases >= d.Config.MaxConcurrent {
 		return false
 	}
 	d.activeLeases += 1
+	if leaseID != "" {
+		d.activeLeaseIDs[leaseID] = struct{}{}
+	}
 	return true
 }
 
 func (d *Daemon) releaseLeaseSlot() {
+	d.releaseLeaseSlotFor("")
+}
+
+func (d *Daemon) releaseLeaseSlotFor(leaseID string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.activeLeases > 0 {
 		d.activeLeases -= 1
+	}
+	if leaseID != "" && d.activeLeaseIDs != nil {
+		delete(d.activeLeaseIDs, leaseID)
 	}
 }
 

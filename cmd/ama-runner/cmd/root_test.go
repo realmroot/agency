@@ -239,6 +239,8 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 			_, _ = w.Write([]byte(`{"runnerId":"runner_1","state":"active","currentLoad":0,"runtimeUsage":[],"runtimeInventory":[],"lastHeartbeatAt":null}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/work-items":
 			_, _ = w.Write([]byte(`{"data":[],"pagination":{"limit":50,"hasMore":false,"nextCursor":null}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/leases":
+			_, _ = w.Write([]byte(`{"data":[],"pagination":{"limit":100,"hasMore":false,"nextCursor":null}}`))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/channel"):
 			if got := r.Header.Get("authorization"); got != "Bearer token" {
 				t.Fatalf("expected runner channel authorization header, got %q", got)

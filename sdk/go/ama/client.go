@@ -189,6 +189,8 @@ type WebSocketChannel struct {
 	Conn *websocket.Conn
 }
 
+const webSocketReadLimit = 16 << 20
+
 func (c *WebSocketChannel) ReadJSON(ctx context.Context, out any) error {
 	_, data, err := c.Conn.Read(ctx)
 	if err != nil {
@@ -232,6 +234,7 @@ func (c *clientCore) dialWebSocket(ctx context.Context, path string) (JSONChanne
 	if err != nil {
 		return nil, err
 	}
+	conn.SetReadLimit(webSocketReadLimit)
 	return &WebSocketChannel{Conn: conn}, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/coder/websocket"
@@ -107,6 +108,43 @@ func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 	}
 	if err := channel.Close(1000, "test complete"); err != nil {
 		t.Fatalf("expected close success, got %v", err)
+	}
+}
+
+func TestRunnerWebSocketChannelReadsLargeMessages(t *testing.T) {
+	const largeBodySize = 64 << 10
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			t.Fatalf("expected websocket upgrade, got %v", err)
+		}
+		defer conn.Close(websocket.StatusNormalClosure, "done")
+		payload := JSON{"type": "work.assigned", "body": strings.Repeat("x", largeBodySize)}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("expected marshal success, got %v", err)
+		}
+		if err := conn.Write(r.Context(), websocket.MessageText, data); err != nil {
+			t.Fatalf("expected websocket write success, got %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewRunner(ClientConfig{BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("expected client, got %v", err)
+	}
+	channel, err := client.Runners.Channel(context.Background(), "runner_42")
+	if err != nil {
+		t.Fatalf("expected runner channel, got %v", err)
+	}
+	defer channel.Close(1000, "test complete")
+	var message JSON
+	if err := channel.ReadJSON(context.Background(), &message); err != nil {
+		t.Fatalf("expected large message read success, got %v", err)
+	}
+	if len(message["body"].(string)) != largeBodySize {
+		t.Fatalf("expected large body to round-trip, got %#v", message["body"])
 	}
 }
 
