@@ -11,6 +11,17 @@ import (
 	"github.com/samber/lo"
 )
 
+const SkillsLockFileName = "skills-lock.json"
+
+type SkillRefreshChange struct {
+	Ref    string
+	Status string
+}
+
+type AgentPrepareReport struct {
+	SkillChanges []SkillRefreshChange
+}
+
 func agentCapabilitiesSection(agentSnapshot map[string]any) string {
 	parts := []string{}
 	if skills := agentStringArray(agentSnapshot["skills"]); len(skills) > 0 {
@@ -75,30 +86,62 @@ func agentSkillRefs(agentSnapshot map[string]any) []string {
 }
 
 func installAgentSkill(ctx context.Context, cwd string, runtimeName string, ref string) error {
+	_, err := refreshAgentSkill(ctx, cwd, runtimeName, ref)
+	return err
+}
+
+func refreshAgentSkill(ctx context.Context, cwd string, runtimeName string, ref string) (*SkillRefreshChange, error) {
 	at := strings.LastIndex(ref, "@")
 	if at <= 0 || at == len(ref)-1 {
-		return fmt.Errorf("agent skill must be a stable <source>@<skill> reference: %s", ref)
+		return nil, fmt.Errorf("agent skill must be a stable <source>@<skill> reference: %s", ref)
 	}
 	source := ref[:at]
 	skill := ref[at+1:]
-	if fileExists(filepath.Join(cwd, ".agents", "skills", skill, "SKILL.md")) || fileExists(filepath.Join(cwd, ".claude", "skills", skill, "SKILL.md")) {
-		return nil
+	before, hadLock, err := readSkillsLock(cwd)
+	if err != nil {
+		return nil, err
 	}
-	args := []string{"skills", "add", source, "--skill", skill, "--agent", "universal", "-y"}
+	agent := "universal"
 	if runtimeName == "claude-code" {
-		args = append(args[:len(args)-1], "--agent", "claude-code", "-y")
+		agent = "claude-code"
 	}
+	args := []string{"skills", "add", source, "--skill", skill, "--agent", agent, "-y"}
 	cmd := exec.CommandContext(ctx, "npx", args...)
 	cmd.Dir = cwd
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("install agent skill %s failed: %w: %s", ref, err, strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("install agent skill %s failed: %w: %s", ref, err, strings.TrimSpace(string(output)))
 	}
-	return ensureAgentSkillGitignore(cwd)
+	after, _, err := readSkillsLock(cwd)
+	if err != nil {
+		return nil, err
+	}
+	if err := ensureAgentSkillGitignore(cwd); err != nil {
+		return nil, err
+	}
+	if before == after {
+		return nil, nil
+	}
+	status := "updated"
+	if !hadLock {
+		status = "installed"
+	}
+	return &SkillRefreshChange{Ref: ref, Status: status}, nil
+}
+
+func readSkillsLock(cwd string) (string, bool, error) {
+	data, err := os.ReadFile(filepath.Join(cwd, SkillsLockFileName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return string(data), true, nil
 }
 
 func ensureAgentSkillGitignore(cwd string) error {
-	return ensureGitignoreEntries(cwd, "# agent skills (managed by AMA runner)", []string{".claude/skills/", ".agents/", "skills-lock.json"})
+	return ensureGitignoreEntries(cwd, "# agent skills (managed by AMA runner)", []string{".claude/skills/", ".agents/", SkillsLockFileName})
 }
 
 func ensureGitignoreEntries(cwd string, comment string, entries []string) error {

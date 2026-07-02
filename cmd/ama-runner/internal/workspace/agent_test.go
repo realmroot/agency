@@ -48,11 +48,16 @@ func TestPrepareAgentReturnsSkillInstallError(t *testing.T) {
 	}
 }
 
-func TestInstallAgentSkillValidatesReferenceAndSkipsInstalledSkill(t *testing.T) {
+func TestInstallAgentSkillValidatesReferenceAndRunsForInstalledSkill(t *testing.T) {
 	cwd := t.TempDir()
 	if err := installAgentSkill(context.Background(), cwd, "codex", "bad-ref"); err == nil || !strings.Contains(err.Error(), "stable <source>@<skill>") {
 		t.Fatalf("expected invalid ref error, got %v", err)
 	}
+	installFakeNpx(t, `#!/bin/sh
+echo "$*" > npx.args
+printf '{"review":"v1"}' > skills-lock.json
+exit 0
+`)
 	installed := filepath.Join(cwd, ".agents", "skills", "review", "SKILL.md")
 	if err := os.MkdirAll(filepath.Dir(installed), 0o755); err != nil {
 		t.Fatal(err)
@@ -61,8 +66,67 @@ func TestInstallAgentSkillValidatesReferenceAndSkipsInstalledSkill(t *testing.T)
 		t.Fatal(err)
 	}
 	if err := installAgentSkill(context.Background(), cwd, "codex", "ama@review"); err != nil {
-		t.Fatalf("already installed skill should skip npx: %v", err)
+		t.Fatalf("expected installed skill refresh success: %v", err)
 	}
+	args, err := os.ReadFile(filepath.Join(cwd, "npx.args"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(args), "skills add ama --skill review --agent universal -y") {
+		t.Fatalf("expected npx skills add args, got %q", string(args))
+	}
+}
+
+func TestRefreshAgentSkillReportsLockChanges(t *testing.T) {
+	t.Run("installed", func(t *testing.T) {
+		installFakeNpx(t, `#!/bin/sh
+printf '{"review":"v1"}' > skills-lock.json
+exit 0
+`)
+		change, err := refreshAgentSkill(context.Background(), t.TempDir(), "codex", "ama@review")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if change == nil || change.Ref != "ama@review" || change.Status != "installed" {
+			t.Fatalf("expected installed change, got %#v", change)
+		}
+	})
+
+	t.Run("updated", func(t *testing.T) {
+		installFakeNpx(t, `#!/bin/sh
+printf '{"review":"v2"}' > skills-lock.json
+exit 0
+`)
+		cwd := t.TempDir()
+		if err := os.WriteFile(filepath.Join(cwd, SkillsLockFileName), []byte(`{"review":"v1"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "ama@review")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if change == nil || change.Ref != "ama@review" || change.Status != "updated" {
+			t.Fatalf("expected updated change, got %#v", change)
+		}
+	})
+
+	t.Run("unchanged", func(t *testing.T) {
+		installFakeNpx(t, `#!/bin/sh
+printf '{"review":"v1"}' > skills-lock.json
+exit 0
+`)
+		cwd := t.TempDir()
+		if err := os.WriteFile(filepath.Join(cwd, SkillsLockFileName), []byte(`{"review":"v1"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "ama@review")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if change != nil {
+			t.Fatalf("expected unchanged skill to report no change, got %#v", change)
+		}
+	})
 }
 
 func TestInstallAgentSkillRunsNpxAndReportsFailures(t *testing.T) {

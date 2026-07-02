@@ -260,7 +260,7 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 	renewErrors := make(chan error, 1)
 	go r.renewLease(leaseCtx, lease, cancel, renewErrors, nil)
 
-	workspace, err := r.prepareWorkspace(leaseCtx, payload)
+	workspace, _, err := r.prepareWorkspace(leaseCtx, payload)
 	if err != nil {
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
 			return finishErr
@@ -335,7 +335,7 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		}
 	}
 
-	workspace, workspaceErr := r.prepareWorkspace(leaseCtx, payload)
+	workspace, agentReport, workspaceErr := r.prepareWorkspace(leaseCtx, payload)
 	if workspaceErr != nil {
 		result := runtime.Result{Err: workspaceErr}
 		writeRuntimeError := func(errPayload ama.JSON) {
@@ -366,7 +366,7 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		Provider:              payload.Provider,
 		Model:                 payload.Model,
 		AgentSnapshot:         payload.AgentSnapshot,
-		Prompt:                workPrompt(payload),
+		Prompt:                promptWithSkillRefresh(workPrompt(payload), agentReport),
 		Resume:                payload.Resume,
 		ResumeToken:           payload.ResumeToken,
 		WorkDir:               workspace.Cwd,
@@ -429,20 +429,21 @@ func (r LeaseWorker) finalizeRuntimeSession(
 	return result.Err
 }
 
-func (r LeaseWorker) prepareWorkspace(ctx context.Context, payload protocol.WorkPayload) (*workspace.Workspace, error) {
+func (r LeaseWorker) prepareWorkspace(ctx context.Context, payload protocol.WorkPayload) (*workspace.Workspace, workspace.AgentPrepareReport, error) {
 	prepared, err := workspace.Prepare(ctx, workspace.PrepareRequest{
 		WorkDir:   r.Config.WorkDir,
 		SessionID: payload.SessionID,
 		Manifest:  payload.WorkspaceManifest,
 	})
 	if err != nil {
-		return nil, err
+		return nil, workspace.AgentPrepareReport{}, err
 	}
-	if err := prepared.PrepareAgent(ctx, payload.Runtime, payload.AgentSnapshot); err != nil {
+	report, err := prepared.PrepareAgentWithReport(ctx, payload.Runtime, payload.AgentSnapshot)
+	if err != nil {
 		_ = prepared.Cleanup(context.Background())
-		return nil, err
+		return nil, report, err
 	}
-	return prepared, nil
+	return prepared, report, nil
 }
 
 func (r LeaseWorker) attachMemoryStores(prepared *workspace.Workspace, result runtime.Result) runtime.Result {
@@ -502,6 +503,18 @@ func workPrompt(payload protocol.WorkPayload) string {
 		return ""
 	}
 	return *payload.Prompt
+}
+
+func promptWithSkillRefresh(prompt string, report workspace.AgentPrepareReport) string {
+	if prompt == "" || len(report.SkillChanges) == 0 {
+		return prompt
+	}
+	lines := []string{"Workspace skills were refreshed before this prompt.", "", "Changed skills:"}
+	for _, change := range report.SkillChanges {
+		lines = append(lines, fmt.Sprintf("- %s: %s", change.Ref, change.Status))
+	}
+	lines = append(lines, "", "User prompt:", prompt)
+	return strings.Join(lines, "\n")
 }
 
 func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel context.CancelFunc, errors chan<- error, resumeTokens *resumeTokenBox) {

@@ -363,6 +363,24 @@ func TestLeaseWorkerLeafHelpers(t *testing.T) {
 	if got := workPrompt(protocol.WorkPayload{}); got != "" {
 		t.Fatalf("expected empty prompt, got %q", got)
 	}
+	if got := promptWithSkillRefresh("build it", workspace.AgentPrepareReport{}); got != "build it" {
+		t.Fatalf("expected unchanged prompt without skill changes, got %q", got)
+	}
+	if got := promptWithSkillRefresh("", workspace.AgentPrepareReport{SkillChanges: []workspace.SkillRefreshChange{{Ref: "ama@review", Status: "updated"}}}); got != "" {
+		t.Fatalf("expected empty prompt to stay empty, got %q", got)
+	}
+	refreshed := promptWithSkillRefresh("build it", workspace.AgentPrepareReport{
+		SkillChanges: []workspace.SkillRefreshChange{{Ref: "ama@review", Status: "updated"}},
+	})
+	for _, want := range []string{
+		"Workspace skills were refreshed before this prompt.",
+		"- ama@review: updated",
+		"User prompt:\nbuild it",
+	} {
+		if !strings.Contains(refreshed, want) {
+			t.Fatalf("expected refreshed prompt to contain %q, got %q", want, refreshed)
+		}
+	}
 	if got := toolResultContent(nil); len(got) != 1 || got[0]["type"] != "json" {
 		t.Fatalf("expected nil output to render as json block, got %#v", got)
 	}
@@ -409,10 +427,10 @@ func TestAttachMemoryStoresBranches(t *testing.T) {
 
 func TestPrepareWorkspaceErrors(t *testing.T) {
 	worker := LeaseWorker{Config: runnerconfig.Config{WorkDir: t.TempDir()}}
-	if _, err := worker.prepareWorkspace(context.Background(), protocol.WorkPayload{SessionID: "../bad"}); err == nil {
+	if _, _, err := worker.prepareWorkspace(context.Background(), protocol.WorkPayload{SessionID: "../bad"}); err == nil {
 		t.Fatal("expected invalid session workspace error")
 	}
-	if _, err := worker.prepareWorkspace(context.Background(), protocol.WorkPayload{
+	if _, _, err := worker.prepareWorkspace(context.Background(), protocol.WorkPayload{
 		SessionID:     "session_1",
 		Runtime:       "codex",
 		AgentSnapshot: map[string]any{"skills": []any{"not-a-valid-skill-ref"}},

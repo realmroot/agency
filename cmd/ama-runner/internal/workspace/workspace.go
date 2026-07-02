@@ -225,15 +225,28 @@ func ensureUnderWorkspace(root string, resolved string) error {
 }
 
 func (w *Workspace) PrepareAgent(ctx context.Context, runtimeName string, agentSnapshot map[string]any) error {
+	_, err := w.PrepareAgentWithReport(ctx, runtimeName, agentSnapshot)
+	return err
+}
+
+func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName string, agentSnapshot map[string]any) (AgentPrepareReport, error) {
+	report := AgentPrepareReport{}
 	if w == nil || agentSnapshot == nil {
-		return nil
+		return report, nil
 	}
 	for _, skill := range agentSkillRefs(agentSnapshot) {
-		if err := installAgentSkill(ctx, w.Cwd, runtimeName, skill); err != nil {
-			return err
+		change, err := refreshAgentSkill(ctx, w.Cwd, runtimeName, skill)
+		if err != nil {
+			return report, err
+		}
+		if change != nil {
+			report.SkillChanges = append(report.SkillChanges, *change)
 		}
 	}
-	return materializeSubagents(w.Cwd, runtimeName, agentSubagentProfiles(agentSnapshot))
+	if err := materializeSubagents(w.Cwd, runtimeName, agentSubagentProfiles(agentSnapshot)); err != nil {
+		return report, err
+	}
+	return report, nil
 }
 
 func (w *Workspace) AgentSystemPrompt(agentSnapshot map[string]any) string {
