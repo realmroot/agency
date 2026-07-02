@@ -311,10 +311,10 @@ export async function dispatchHttpTrigger(
   const requestMetadata = httpTriggerBodyMetadata(input.context.body)
   const keyHash = await httpTriggerSessionKeyHash(input.context.body)
   const labels = mergeLabels(trigger.spec.template.metadata.labels, requestMetadata.labels)
-  const requestAnnotations = {
-    ...(recordValue(requestMetadata.annotations) ?? {}),
-    ...(keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : {}),
-  }
+  const requestAnnotations = mergeAnnotations(
+    requestMetadata.annotations,
+    keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : undefined,
+  )
   const annotations = mergeAnnotations(trigger.spec.template.metadata.annotations, requestAnnotations)
   const sessionMetadata = {
     labels: trigger.spec.template.metadata.labels,

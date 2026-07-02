@@ -877,6 +877,135 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(runMetadata).toMatchObject(sessionMetadata!)
   })
 
+  it('uses request labels when trigger template labels are not an object', async () => {
+    let sessionMetadata: Record<string, unknown> | undefined
+    const trigger = httpTrigger({
+      spec: {
+        template: {
+          ...httpTrigger().spec.template,
+          metadata: { labels: null, annotations: {} } as unknown as Trigger['spec']['template']['metadata'],
+        },
+      },
+    })
+    const deps = fakeDeps({
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          sessionMetadata = input.options.metadata
+          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
+        },
+      },
+    })
+
+    await dispatchHttpTrigger(deps, auth, {
+      trigger,
+      context: {
+        body: { ticket: { id: 'T-123' }, metadata: { labels: { subject: 'github-issue' } } },
+        query: { source: 'portal' },
+        headers: {},
+      },
+    })
+
+    expect(sessionMetadata).toMatchObject({
+      labels: { subject: 'github-issue' },
+      source: 'http-trigger',
+    })
+  })
+
+  it('does not coerce invalid request labels into merged label objects', async () => {
+    let sessionMetadata: Record<string, unknown> | undefined
+    const trigger = httpTrigger({
+      spec: {
+        template: {
+          ...httpTrigger().spec.template,
+          metadata: { labels: null, annotations: {} } as unknown as Trigger['spec']['template']['metadata'],
+        },
+      },
+    })
+    const deps = fakeDeps({
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          sessionMetadata = input.options.metadata
+          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
+        },
+      },
+    })
+
+    await dispatchHttpTrigger(deps, auth, {
+      trigger,
+      context: {
+        body: { ticket: { id: 'T-123' }, metadata: { labels: 'invalid-labels' } },
+        query: { source: 'portal' },
+        headers: {},
+      },
+    })
+
+    expect(sessionMetadata).toMatchObject({ labels: 'invalid-labels', source: 'http-trigger' })
+  })
+
+  it('keeps trigger annotations when request annotations are not an object', async () => {
+    let sessionMetadata: Record<string, unknown> | undefined
+    const deps = fakeDeps({
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          sessionMetadata = input.options.metadata
+          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
+        },
+      },
+    })
+
+    await dispatchHttpTrigger(deps, auth, {
+      trigger: httpTrigger({
+        spec: {
+          template: {
+            ...httpTrigger().spec.template,
+            metadata: { labels: {}, annotations: { retained: 'true' } },
+          },
+        },
+      }),
+      context: {
+        body: { ticket: { id: 'T-123' }, metadata: { annotations: 'invalid-annotations' } },
+        query: { source: 'portal' },
+        headers: {},
+      },
+    })
+
+    expect(sessionMetadata).toMatchObject({
+      annotations: { retained: 'true' },
+      source: 'http-trigger',
+    })
+  })
+
+  it('does not synthesize annotations when trigger and request annotations are not objects', async () => {
+    let sessionMetadata: Record<string, unknown> | undefined
+    const trigger = httpTrigger({
+      spec: {
+        template: {
+          ...httpTrigger().spec.template,
+          metadata: { labels: {}, annotations: null } as unknown as Trigger['spec']['template']['metadata'],
+        },
+      },
+    })
+    const deps = fakeDeps({
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          sessionMetadata = input.options.metadata
+          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
+        },
+      },
+    })
+
+    await dispatchHttpTrigger(deps, auth, {
+      trigger,
+      context: {
+        body: { ticket: { id: 'T-123' }, metadata: { annotations: 'invalid-annotations' } },
+        query: { source: 'portal' },
+        headers: {},
+      },
+    })
+
+    expect(sessionMetadata).toMatchObject({ annotations: 'invalid-annotations', source: 'http-trigger' })
+  })
+
   it('reuses an active HTTP trigger session when request body carries the same key', async () => {
     let markedSessionId: string | null = null
     let messageContent: string | null = null
