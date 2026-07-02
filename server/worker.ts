@@ -4,7 +4,12 @@ import type { Env } from './env'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
 import type { CloudTurnQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
-import { consumeCloudTurnQueueMessage, markCloudTurnDeadLettered, markStalledCloudSessions } from './usecases/runtime'
+import {
+  consumeCloudTurnQueueMessage,
+  markCloudTurnDeadLettered,
+  markIdleTimedOutSessions,
+  markStalledCloudSessions,
+} from './usecases/runtime'
 
 export { Sandbox } from '@cloudflare/sandbox'
 export { RunnerPoolObject } from './worker/runner-pool-object'
@@ -19,6 +24,7 @@ export default {
   scheduled(event, env, ctx) {
     ctx.waitUntil(dispatchDueScheduledTriggers(env, ctx, { heartbeatAt: new Date(event.scheduledTime).toISOString() }))
     ctx.waitUntil(markStalledCloudSessions(createDeps(env)))
+    ctx.waitUntil(markIdleTimedOutSessions(createDeps(env)))
     // The model catalog changes slowly; refresh once an hour (the cron fires
     // every minute, so gate on minute 0) rather than every tick.
     if (new Date(event.scheduledTime).getUTCMinutes() === 0) {

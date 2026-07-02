@@ -5,7 +5,7 @@ import {
   renderHttpPromptTemplate,
   type Trigger,
 } from '@server/domain/trigger'
-import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
+import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type { Deps } from './deps'
 import { type AuthScope, type ClaimedRun, type DueTrigger, TriggerConflictError, TriggerValidationError } from './ports'
 import { createSession } from './runtime/sessions'
@@ -319,7 +319,7 @@ export async function dispatchHttpTrigger(
     annotations: {
       ...trigger.spec.template.metadata.annotations,
       ...requestMetadata.annotations,
-      ...(keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : {}),
+      ...(keyHash ? { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } : {}),
       source: 'http-trigger',
       httpTriggerId: trigger.metadata.uid,
       httpRunId: run.id,

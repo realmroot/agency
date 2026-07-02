@@ -1818,6 +1818,7 @@ export interface SessionOrchestrationStore {
 
   // ── watchdog: stalled cloud sessions + leaked sandboxes ──
   markStalledCloudSessions(threshold: string, timestamp: string): Promise<void>
+  markIdleTimedOutSessions(timestamp: string): Promise<void>
   leakedSandboxSessions(
     terminalStates: string[],
     limit: number,

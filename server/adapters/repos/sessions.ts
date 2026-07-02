@@ -1,4 +1,4 @@
-import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
+import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type {
   EventQuery,
   RuntimeSessionHandle,
@@ -349,7 +349,7 @@ export function createSessionRepo(db: Db): SessionRepo {
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
             eq(
-              sql<string>`json_extract(${sessions.metadata}, ${`$.annotations."${AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION}"`})`,
+              sql<string>`json_extract(${sessions.metadata}, ${`$.annotations."${AMA_ANNOTATION_KEY_ROUTING_KEY_HASH}"`})`,
               keyHash,
             ),
           ),

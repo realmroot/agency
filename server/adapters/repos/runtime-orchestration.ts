@@ -1,6 +1,7 @@
 import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runnerSupportsRuntimeProviderModel } from '@server/domain/runtime-catalog'
 import { vaultIdFromRef } from '@server/domain/vault'
+import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import type { ConnectorRecord, SessionOrchestrationStore } from '@server/usecases/ports'
 import type {
   AgentRow,
@@ -724,6 +725,26 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             ),
             notLike(sessions.metadata, '%"sandboxBackend":"runner-sandbox"%'),
             lt(sessions.updatedAt, threshold),
+          ),
+        )
+    },
+
+    async markIdleTimedOutSessions(timestamp: string): Promise<void> {
+      const timeoutSeconds = sql<number>`cast(json_extract(${sessions.metadata}, ${`$.annotations."${AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS}"`}) as integer)`
+      await db
+        .update(sessions)
+        .set({
+          state: persistedSessionState('closed'),
+          stateReason: 'idle-timeout',
+          closedAt: timestamp,
+          updatedAt: timestamp,
+        })
+        .where(
+          and(
+            isNull(sessions.archivedAt),
+            eq(sessions.state, 'idle'),
+            sql`${timeoutSeconds} > 0`,
+            sql`strftime('%s', ${timestamp}) - strftime('%s', ${sessions.updatedAt}) >= ${timeoutSeconds}`,
           ),
         )
     },

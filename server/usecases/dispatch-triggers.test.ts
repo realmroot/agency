@@ -1,7 +1,7 @@
 import { resourceMetadata } from '@server/domain/resource'
 import type { Session, SessionMessage } from '@server/domain/session'
 import type { Trigger } from '@server/domain/trigger'
-import { AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION } from '@server/metadata-keys'
+import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
 import type { AuthScope, ClaimedRun, DueTrigger } from './ports'
@@ -876,7 +876,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         retained: 'true',
         externalUrl: 'https://github.com/owner/repo/issues/123',
-        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash,
+        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
       },
       labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
     })
@@ -981,7 +981,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 metadata: {
                   source: 'http-trigger',
                   httpTriggerId: 'http_trigger_1',
-                  annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash },
+                  annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
                 },
               }
             : null,
@@ -1058,7 +1058,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         source: 'http-trigger',
         httpTriggerId: 'http_trigger_1',
-        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: pullKeyHash,
+        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: pullKeyHash,
         reusedSession: 'true',
         externalUrl: 'https://github.com/owner/repo/pull/456',
       },
@@ -1089,7 +1089,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 metadata: {
                   source: 'http-trigger',
                   httpTriggerId: 'http_trigger_1',
-                  annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash },
+                  annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
                 },
               }
             : null,
@@ -1141,7 +1141,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           metadata: {
             source: 'http-trigger',
             httpTriggerId: 'http_trigger_1',
-            annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
+            annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash },
           },
         }),
       },
@@ -1240,7 +1240,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         source: 'http-trigger',
         httpTriggerId: 'http_trigger_1',
-        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash,
+        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
       },
     })
   })

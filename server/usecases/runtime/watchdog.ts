@@ -28,6 +28,10 @@ export async function markStalledCloudSessions(deps: WatchdogDeps): Promise<void
   await destroyLeakedSandboxes(deps)
 }
 
+export async function markIdleTimedOutSessions(deps: Pick<WatchdogDeps, 'sessionOrchestration'>): Promise<void> {
+  await deps.sessionOrchestration.markIdleTimedOutSessions(new Date().toISOString())
+}
+
 // Sandboxes of ended sessions occupy container instances (max_instances is a
 // hard cap) when teardown was skipped — e.g. a close while an exec was hung.
 // Destroy them and stamp the session so each sandbox is cleaned exactly once.

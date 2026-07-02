@@ -250,6 +250,9 @@ export async function reopenSession(
   if (!session) {
     return { ok: false, error: { status: 404, code: 'not_found', message: 'Session not found' } }
   }
+  if (session.state === 'idle' || session.state === 'pending' || session.state === 'running') {
+    return { ok: true, session }
+  }
   if (session.state !== 'closed') {
     return { ok: false, error: { status: 409, code: 'conflict', message: 'Only closed sessions can be reopened' } }
   }
