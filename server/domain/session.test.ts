@@ -61,7 +61,7 @@ describe('mergeSessionUserMetadata', () => {
     expect(
       mergeSessionUserMetadata(
         { runtime: 'ama', labels: { lane: 'old' }, annotations: { keep: 'yes', remove: 'old' } },
-        { labels: { lane: 'new' }, remove: null, ticket: 'AMA-1' },
+        { labels: { lane: 'new' }, annotations: { remove: null, ticket: 'AMA-1' } },
       ),
     ).toEqual({
       runtime: 'ama',
@@ -79,14 +79,14 @@ describe('mergeSessionUserMetadata', () => {
         count: 2,
         nullable: null,
       }),
-    ).toEqual({ labels: { team: 'runtime' }, annotations: { note: 'keep', ticket: 'AMA-1' } })
+    ).toEqual({ labels: { team: 'runtime' }, annotations: { note: 'keep' } })
 
     expect(
       mergeSessionUserMetadata(
         { labels: { keep: 'yes', remove: 'old' }, annotations: { keep: 'yes', remove: 'old' } },
-        { labels: { remove: null, add: 'new' }, annotations: { remove: null, add: 'new' }, keep: null },
+        { labels: { remove: null, add: 'new' }, annotations: { remove: null, add: 'new' } },
       ),
-    ).toEqual({ labels: { keep: 'yes', add: 'new' }, annotations: { add: 'new' } })
+    ).toEqual({ labels: { keep: 'yes', add: 'new' }, annotations: { keep: 'yes', add: 'new' } })
   })
 
   it('applies delete patches when current labels or annotations are absent', () => {

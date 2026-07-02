@@ -460,9 +460,11 @@ describe('[spec: triggers/dispatch] dispatchDueScheduledTriggers — successful 
     })
     await dispatchDueScheduledTriggers(deps)
     expect(capturedMetadata).toMatchObject({
-      annotations: { env: 'staging' },
-      source: 'scheduled-agent-trigger',
-      scheduledTriggerId: 'trigger_1',
+      annotations: {
+        env: 'staging',
+        source: 'scheduled-agent-trigger',
+        scheduledTriggerId: 'trigger_1',
+      },
     })
   })
 
@@ -819,8 +821,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
   })
 
   it('adds request metadata from the HTTP body to newly created session metadata and run metadata', async () => {
-    let sessionMetadata: Record<string, unknown> | undefined
-    let runMetadata: Record<string, unknown> | undefined
+    let sessionMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
+    let runMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
     const deps = fakeDeps({
       sessionRuntime: {
         createSession: async (_deps, _auth, input) => {
@@ -849,7 +851,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           key: 'github:owner/repo:issue:123',
           ticket: { id: 'T-123' },
           metadata: {
-            labels: { subject: 'github-issue' },
+            labels: { subject: 'github-issue', ignored: 123 },
+            annotations: { externalUrl: 'https://github.com/owner/repo/issues/123', ignored: false },
             github: {
               repository: 'owner/repo',
               type: 'issue',
@@ -864,29 +867,21 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
 
     expect(sessionMetadata).toMatchObject({
-      annotations: { retained: 'true', [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
-      labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
-      github: {
-        repository: 'owner/repo',
-        type: 'issue',
-        number: 123,
-        url: 'https://github.com/owner/repo/issues/123',
+      annotations: {
+        retained: 'true',
+        externalUrl: 'https://github.com/owner/repo/issues/123',
+        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash,
       },
-      source: 'http-trigger',
+      labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
     })
+    expect(sessionMetadata).not.toHaveProperty('github')
+    expect(sessionMetadata?.labels).not.toHaveProperty('ignored')
+    expect(sessionMetadata?.annotations).not.toHaveProperty('ignored')
     expect(runMetadata).toMatchObject(sessionMetadata!)
   })
 
-  it('uses request labels when trigger template labels are not an object', async () => {
-    let sessionMetadata: Record<string, unknown> | undefined
-    const trigger = httpTrigger({
-      spec: {
-        template: {
-          ...httpTrigger().spec.template,
-          metadata: { labels: null, annotations: {} } as unknown as Trigger['spec']['template']['metadata'],
-        },
-      },
-    })
+  it('ignores unsupported HTTP request metadata fields and non-string map entries', async () => {
+    let sessionMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
     const deps = fakeDeps({
       sessionRuntime: {
         createSession: async (_deps, _auth, input) => {
@@ -897,9 +892,16 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
 
     await dispatchHttpTrigger(deps, auth, {
-      trigger,
+      trigger: httpTrigger(),
       context: {
-        body: { ticket: { id: 'T-123' }, metadata: { labels: { subject: 'github-issue' } } },
+        body: {
+          ticket: { id: 'T-123' },
+          metadata: {
+            labels: { subject: 'github-issue', priority: 2 },
+            annotations: { externalId: 'issue-123', payload: { nested: true } },
+            github: { repository: 'owner/repo' },
+          },
+        },
         query: { source: 'portal' },
         headers: {},
       },
@@ -907,103 +909,41 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
 
     expect(sessionMetadata).toMatchObject({
       labels: { subject: 'github-issue' },
+      annotations: { externalId: 'issue-123', source: 'http-trigger' },
+    })
+    expect(sessionMetadata).not.toHaveProperty('github')
+    expect(sessionMetadata?.labels).not.toHaveProperty('priority')
+    expect(sessionMetadata?.annotations).not.toHaveProperty('payload')
+  })
+
+  it('keeps system HTTP annotations authoritative over request annotations', async () => {
+    let sessionMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | undefined
+    const deps = fakeDeps({
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => {
+          sessionMetadata = input.options.metadata
+          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
+        },
+      },
+    })
+
+    await dispatchHttpTrigger(deps, auth, {
+      trigger: httpTrigger({ metadata: { uid: 'http_trigger_1' } }),
+      context: {
+        body: {
+          ticket: { id: 'T-123' },
+          metadata: { annotations: { source: 'spoofed', httpTriggerId: 'spoofed', correlationId: 'spoofed' } },
+        },
+        query: { source: 'portal' },
+        headers: {},
+      },
+    })
+
+    expect(sessionMetadata?.annotations).toMatchObject({
       source: 'http-trigger',
+      httpTriggerId: 'http_trigger_1',
+      correlationId: 'corr_1',
     })
-  })
-
-  it('does not coerce invalid request labels into merged label objects', async () => {
-    let sessionMetadata: Record<string, unknown> | undefined
-    const trigger = httpTrigger({
-      spec: {
-        template: {
-          ...httpTrigger().spec.template,
-          metadata: { labels: null, annotations: {} } as unknown as Trigger['spec']['template']['metadata'],
-        },
-      },
-    })
-    const deps = fakeDeps({
-      sessionRuntime: {
-        createSession: async (_deps, _auth, input) => {
-          sessionMetadata = input.options.metadata
-          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
-        },
-      },
-    })
-
-    await dispatchHttpTrigger(deps, auth, {
-      trigger,
-      context: {
-        body: { ticket: { id: 'T-123' }, metadata: { labels: 'invalid-labels' } },
-        query: { source: 'portal' },
-        headers: {},
-      },
-    })
-
-    expect(sessionMetadata).toMatchObject({ labels: 'invalid-labels', source: 'http-trigger' })
-  })
-
-  it('keeps trigger annotations when request annotations are not an object', async () => {
-    let sessionMetadata: Record<string, unknown> | undefined
-    const deps = fakeDeps({
-      sessionRuntime: {
-        createSession: async (_deps, _auth, input) => {
-          sessionMetadata = input.options.metadata
-          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
-        },
-      },
-    })
-
-    await dispatchHttpTrigger(deps, auth, {
-      trigger: httpTrigger({
-        spec: {
-          template: {
-            ...httpTrigger().spec.template,
-            metadata: { labels: {}, annotations: { retained: 'true' } },
-          },
-        },
-      }),
-      context: {
-        body: { ticket: { id: 'T-123' }, metadata: { annotations: 'invalid-annotations' } },
-        query: { source: 'portal' },
-        headers: {},
-      },
-    })
-
-    expect(sessionMetadata).toMatchObject({
-      annotations: { retained: 'true' },
-      source: 'http-trigger',
-    })
-  })
-
-  it('does not synthesize annotations when trigger and request annotations are not objects', async () => {
-    let sessionMetadata: Record<string, unknown> | undefined
-    const trigger = httpTrigger({
-      spec: {
-        template: {
-          ...httpTrigger().spec.template,
-          metadata: { labels: {}, annotations: null } as unknown as Trigger['spec']['template']['metadata'],
-        },
-      },
-    })
-    const deps = fakeDeps({
-      sessionRuntime: {
-        createSession: async (_deps, _auth, input) => {
-          sessionMetadata = input.options.metadata
-          return { ok: true, value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: 'sess_http' } }) }
-        },
-      },
-    })
-
-    await dispatchHttpTrigger(deps, auth, {
-      trigger,
-      context: {
-        body: { ticket: { id: 'T-123' }, metadata: { annotations: 'invalid-annotations' } },
-        query: { source: 'portal' },
-        headers: {},
-      },
-    })
-
-    expect(sessionMetadata).toMatchObject({ annotations: 'invalid-annotations', source: 'http-trigger' })
   })
 
   it('reuses an active HTTP trigger session when request body carries the same key', async () => {
@@ -1054,7 +994,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
   })
 
   it('records request metadata on runs that reuse an existing keyed session', async () => {
-    let markedMetadata: Record<string, unknown> | null = null
+    let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | null = null
     const deps = fakeDeps({
       triggerDispatch: {
         markRunDispatched: async (_trigger, _run, _sessionId, metadata) => {
@@ -1081,12 +1021,9 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           key: 'github:owner/repo:pull:456',
           ticket: { id: 'T-123' },
           metadata: {
-            github: {
-              repository: 'owner/repo',
-              type: 'pull',
-              number: 456,
-              url: 'https://github.com/owner/repo/pull/456',
-            },
+            labels: { subject: 'github-pull' },
+            annotations: { externalUrl: 'https://github.com/owner/repo/pull/456' },
+            github: { repository: 'owner/repo' },
           },
         },
         query: { source: 'portal' },
@@ -1095,17 +1032,16 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
 
     expect(markedMetadata).toMatchObject({
-      source: 'http-trigger',
-      httpTriggerId: 'http_trigger_1',
-      annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: pullKeyHash },
-      reusedSession: true,
-      github: {
-        repository: 'owner/repo',
-        type: 'pull',
-        number: 456,
-        url: 'https://github.com/owner/repo/pull/456',
+      labels: { subject: 'github-pull' },
+      annotations: {
+        source: 'http-trigger',
+        httpTriggerId: 'http_trigger_1',
+        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: pullKeyHash,
+        reusedSession: 'true',
+        externalUrl: 'https://github.com/owner/repo/pull/456',
       },
     })
+    expect(markedMetadata).not.toHaveProperty('github')
   })
 
   it('queues a message when reusing a pending HTTP trigger session with the same key', async () => {
@@ -1258,7 +1194,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
   })
 
   it('records the HTTP session key on newly created trigger run metadata', async () => {
-    let markedMetadata: Record<string, unknown> | null = null
+    let markedMetadata: Pick<Trigger['metadata'], 'labels' | 'annotations'> | null = null
     const deps = fakeDeps({
       triggerDispatch: {
         markRunDispatched: async (_trigger, _run, _sessionId, metadata) => {
@@ -1277,9 +1213,12 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     })
 
     expect(markedMetadata).toMatchObject({
-      source: 'http-trigger',
-      httpTriggerId: 'http_trigger_1',
-      annotations: { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash },
+      labels: {},
+      annotations: {
+        source: 'http-trigger',
+        httpTriggerId: 'http_trigger_1',
+        [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: issueKeyHash,
+      },
     })
   })
 

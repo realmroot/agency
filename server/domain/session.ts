@@ -7,6 +7,7 @@ import type {
   EnvironmentType,
   EnvironmentVariable,
 } from './environment'
+import type { ResourceMetadata } from './resource'
 import type { EnvFromEntry, Volume, VolumeMount } from './runtime/execution-inputs'
 import type { RuntimeName } from './runtime-catalog'
 
@@ -220,20 +221,11 @@ export function hasEmbeddedCredentialUrl(value: unknown): boolean {
   return Object.values(value).some(hasEmbeddedCredentialUrl)
 }
 
-export function sessionUserMetadata(input: Record<string, unknown> | undefined): {
-  labels: Record<string, string>
-  annotations: Record<string, string>
-} {
+export function sessionUserMetadata(
+  input: Record<string, unknown> | undefined,
+): Pick<ResourceMetadata, 'labels' | 'annotations'> {
   const labels = stringRecord(input?.labels)
   const annotations = stringRecord(input?.annotations)
-  for (const [key, value] of Object.entries(input ?? {})) {
-    if (key === 'labels' || key === 'annotations' || value === null || value === undefined) {
-      continue
-    }
-    if (typeof value === 'string') {
-      annotations[key] = value
-    }
-  }
   return { labels, annotations }
 }
 
@@ -252,16 +244,6 @@ export function mergeSessionUserMetadata(
     }
   }
   for (const [key, value] of Object.entries(objectRecord(update.annotations))) {
-    if (value === null) {
-      delete currentAnnotations[key]
-    } else if (typeof value === 'string') {
-      currentAnnotations[key] = value
-    }
-  }
-  for (const [key, value] of Object.entries(update)) {
-    if (key === 'labels' || key === 'annotations') {
-      continue
-    }
     if (value === null) {
       delete currentAnnotations[key]
     } else if (typeof value === 'string') {

@@ -62,19 +62,11 @@ function normalizeTestRequest(path: string, init: RequestInit) {
 function normalizeSessionMetadata(metadata: unknown, name: unknown) {
   const record =
     metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : {}
-  const { labels, annotations, name: metadataName, ...extra } = record
-  const normalizedAnnotations = {
-    ...(annotations && typeof annotations === 'object' && !Array.isArray(annotations) ? annotations : {}),
-    ...Object.fromEntries(
-      Object.entries(extra)
-        .filter(([, value]) => typeof value === 'string')
-        .map(([key, value]) => [key, value]),
-    ),
-  }
+  const { labels, annotations, name: metadataName } = record
   return {
     ...(typeof name === 'string' ? { name } : typeof metadataName === 'string' ? { name: metadataName } : {}),
     ...(labels && typeof labels === 'object' && !Array.isArray(labels) ? { labels } : {}),
-    ...(Object.keys(normalizedAnnotations).length > 0 ? { annotations: normalizedAnnotations } : {}),
+    ...(annotations && typeof annotations === 'object' && !Array.isArray(annotations) ? { annotations } : {}),
   }
 }
 
@@ -405,7 +397,7 @@ describe('[CF] /api/v1/sessions', () => {
         runtime: 'ama',
         name: 'Ship the first task',
         prompt: 'Ship the first task',
-        metadata: { ticket: 'AMA-1' },
+        metadata: { annotations: { ticket: 'AMA-1' } },
         volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
         volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban', readOnly: true }],
         env: { AK_API_URL: 'https://ak.example.com', AK_AGENT_ID: 'agent_123' },
@@ -745,7 +737,7 @@ describe('[CF] /api/v1/sessions', () => {
         runtime: 'ama',
         name: 'Before rename',
         prompt: 'Create a session for rename coverage',
-        metadata: { ticket: 'AMA-1' },
+        metadata: { annotations: { ticket: 'AMA-1' } },
       }),
     })
     expect(createRes.status).toBe(201)
@@ -753,7 +745,7 @@ describe('[CF] /api/v1/sessions', () => {
 
     const patchRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ name: 'After rename', metadata: { ticket: 'AMA-2', extra: 'true' } }),
+      body: JSON.stringify({ name: 'After rename', metadata: { annotations: { ticket: 'AMA-2', extra: 'true' } } }),
     })
     expect(patchRes.status).toBe(200)
     await expect(patchRes.json()).resolves.toMatchObject({
@@ -765,7 +757,7 @@ describe('[CF] /api/v1/sessions', () => {
 
     const secretMetadataRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ metadata: { apiKey: 'raw-secret-token' } }),
+      body: JSON.stringify({ metadata: { annotations: { apiKey: 'raw-secret-token' } } }),
     })
     expect(secretMetadataRes.status).toBe(400)
 
@@ -1731,8 +1723,10 @@ describe('[CF] /api/v1/sessions', () => {
         runtime: 'ama',
         name: 'Scheduled banking bonus research',
         metadata: {
-          externalRunId: 'tftt-banking-bonus-2026-05-26',
-          source: 'tftt-cron',
+          annotations: {
+            externalRunId: 'tftt-banking-bonus-2026-05-26',
+            source: 'tftt-cron',
+          },
         },
         prompt: 'Research current Canadian banking bonus offers.',
       }),

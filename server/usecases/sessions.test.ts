@@ -391,7 +391,7 @@ describe('[spec: sessions/archive] updateSession — name and metadata edits', (
       deps,
       auth,
       sessionRow({ metadata: { runtime: 'ama', annotations: { keep: 'yes', remove: 'old' } } }),
-      { metadata: { remove: null } },
+      { metadata: { annotations: { remove: null } } },
       null,
     )
     expect(mergedMetadata).toEqual({ runtime: 'ama', labels: {}, annotations: { keep: 'yes' } })

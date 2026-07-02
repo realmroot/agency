@@ -1,3 +1,4 @@
+import type { ResourceMetadata } from '@server/domain/resource'
 import {
   type HttpTriggerTemplateContext,
   PromptTemplateRenderError,
@@ -118,25 +119,25 @@ function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
 
-function mergeLabels(base: unknown, next: unknown): Record<string, unknown> | undefined {
-  const baseLabels = recordValue(base)
-  const nextLabels = recordValue(next)
-  if (!baseLabels && !nextLabels) return undefined
-  return { ...(baseLabels ?? {}), ...(nextLabels ?? {}) }
+function stringRecordValue(value: unknown): Record<string, string> {
+  const record = recordValue(value)
+  if (!record) return {}
+  return Object.fromEntries(
+    Object.entries(record).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  )
 }
 
-function mergeAnnotations(base: unknown, next: unknown): Record<string, unknown> | undefined {
-  const baseAnnotations = recordValue(base)
-  const nextAnnotations = recordValue(next)
-  if (!baseAnnotations && !nextAnnotations) return undefined
-  return { ...(baseAnnotations ?? {}), ...(nextAnnotations ?? {}) }
+function mergeStringMaps(base: Record<string, string>, next: Record<string, string>): Record<string, string> {
+  return { ...base, ...next }
 }
 
-function httpTriggerBodyMetadata(body: unknown): Record<string, unknown> {
+function httpTriggerBodyMetadata(body: unknown): Pick<ResourceMetadata, 'labels' | 'annotations'> {
   const bodyObject = recordValue(body)
   const requestMetadata = recordValue(bodyObject?.metadata)
-  if (!requestMetadata) return {}
-  return requestMetadata
+  return {
+    labels: stringRecordValue(requestMetadata?.labels),
+    annotations: stringRecordValue(requestMetadata?.annotations),
+  }
 }
 
 async function failRun(deps: Deps, auth: AuthScope, trigger: DueTrigger, run: ClaimedRun, message: string) {
@@ -160,19 +161,16 @@ async function dispatchTrigger(deps: Deps, trigger: DueTrigger, heartbeatAt: str
     }
     auth = systemAuth(trigger, { id: trigger.projectId, name: projectName })
 
-    const sessionMetadata = {
+    const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
       labels: trigger.template.metadata.labels,
       annotations: {
         ...trigger.template.metadata.annotations,
         source: 'scheduled-agent-trigger',
         scheduledTriggerId: trigger.id,
         scheduledRunId: run.id,
+        scheduledFor: run.scheduledFor,
+        correlationId: run.correlationId,
       },
-      source: 'scheduled-agent-trigger',
-      scheduledTriggerId: trigger.id,
-      scheduledRunId: run.id,
-      scheduledFor: run.scheduledFor,
-      correlationId: run.correlationId,
     }
     const result = await createSession(deps, auth, {
       agentId: trigger.template.spec.agentId,
@@ -310,23 +308,18 @@ export async function dispatchHttpTrigger(
 
   const requestMetadata = httpTriggerBodyMetadata(input.context.body)
   const keyHash = await httpTriggerSessionKeyHash(input.context.body)
-  const labels = mergeLabels(trigger.spec.template.metadata.labels, requestMetadata.labels)
-  const requestAnnotations = mergeAnnotations(
-    requestMetadata.annotations,
-    keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : undefined,
-  )
-  const annotations = mergeAnnotations(trigger.spec.template.metadata.annotations, requestAnnotations)
-  const sessionMetadata = {
-    labels: trigger.spec.template.metadata.labels,
-    annotations: trigger.spec.template.metadata.annotations,
-    ...requestMetadata,
-    ...(labels ? { labels } : {}),
-    ...(annotations ? { annotations } : {}),
-    source: 'http-trigger',
-    httpTriggerId: trigger.metadata.uid,
-    httpRunId: run.id,
-    triggeredAt,
-    correlationId: run.correlationId,
+  const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
+    labels: mergeStringMaps(trigger.spec.template.metadata.labels, requestMetadata.labels),
+    annotations: {
+      ...trigger.spec.template.metadata.annotations,
+      ...requestMetadata.annotations,
+      ...(keyHash ? { [AMA_HTTP_TRIGGER_KEY_HASH_ANNOTATION]: keyHash } : {}),
+      source: 'http-trigger',
+      httpTriggerId: trigger.metadata.uid,
+      httpRunId: run.id,
+      triggeredAt,
+      correlationId: run.correlationId,
+    },
   }
   const existingSession = keyHash
     ? await deps.sessions.findActiveHttpTriggerSession(auth.project.id, trigger.metadata.uid, keyHash)
@@ -364,7 +357,10 @@ export async function dispatchHttpTrigger(
 
     await deps.triggerDispatch.markRunDispatched(trigger, run, existingSession.id, {
       ...sessionMetadata,
-      reusedSession: true,
+      annotations: {
+        ...sessionMetadata.annotations,
+        reusedSession: 'true',
+      },
     })
     await recordHttpDispatch(deps, auth, trigger, run, { ok: true, sessionId: existingSession.id })
     return {

@@ -4,6 +4,7 @@ import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server
 import type { Memory, MemoryStore, MemoryStoreAccess } from '@server/domain/memory-store'
 import type { CatalogModel } from '@server/domain/model-catalog'
 import type { ModelAvailability, ModelCatalogState } from '@server/domain/provider'
+import type { ResourceMetadata } from '@server/domain/resource'
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
 import type { EnvFromEntry, MemoryVolume, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
 import type {
@@ -1032,7 +1033,7 @@ export interface TriggerDispatchRepo {
     trigger: DueTrigger | Trigger,
     run: ClaimedRun,
     sessionId: string,
-    sessionMetadata: Record<string, unknown>,
+    sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'>,
   ): Promise<void>
 }
 
@@ -2021,7 +2022,7 @@ export type PromptDispatchResult =
 
 export interface SessionCreateOptions {
   name?: string
-  metadata?: Record<string, unknown>
+  metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>
   volumes?: Volume[]
   volumeMounts?: VolumeMount[]
   runtime: RuntimeName
