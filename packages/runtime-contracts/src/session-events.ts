@@ -1,6 +1,11 @@
 import { z } from 'zod'
-import { AMA_SANDBOX_TOOL_NAMES } from './agent-tools'
-import { type AmaSandboxToolCall, AmaSandboxToolCallSchema } from './tool-contracts'
+import { AMA_RUNTIME_TOOL_NAMES } from './agent-tools'
+import {
+  type AmaOrchestrationToolCall,
+  AmaOrchestrationToolCallSchema,
+  type AmaSandboxToolCall,
+  AmaSandboxToolCallSchema,
+} from './tool-contracts'
 
 // The session metadata stamp that routes a session's canonical event firehose to
 // the per-session Session DO (SQLite hot + R2 cold). Written by the cloud-loop
@@ -80,7 +85,7 @@ export type ExternalToolCall = {
   input: Record<string, unknown>
 }
 
-export type ToolCall = AmaSandboxToolCall | ExternalToolCall
+export type ToolCall = AmaSandboxToolCall | AmaOrchestrationToolCall | ExternalToolCall
 
 export type ToolResult = {
   content: ToolResultValueContentBlock[]
@@ -196,19 +201,23 @@ export const EventErrorSchema = z
   })
   .strict()
 
-const AMA_SANDBOX_TOOL_NAME_SET = new Set<string>(AMA_SANDBOX_TOOL_NAMES)
+const AMA_RUNTIME_TOOL_NAME_SET = new Set<string>(AMA_RUNTIME_TOOL_NAMES)
 
 export const ExternalToolCallSchema = z
   .object({
     id: z.string(),
-    name: z.string().refine((value) => !AMA_SANDBOX_TOOL_NAME_SET.has(value), {
-      message: 'known AMA sandbox tools must use their canonical input schema',
+    name: z.string().refine((value) => !AMA_RUNTIME_TOOL_NAME_SET.has(value), {
+      message: 'known AMA runtime tools must use their canonical input schema',
     }),
     input: JsonObjectSchema,
   })
   .strict()
 
-export const ToolCallSchema = z.union([AmaSandboxToolCallSchema, ExternalToolCallSchema])
+export const ToolCallSchema = z.union([
+  AmaSandboxToolCallSchema,
+  AmaOrchestrationToolCallSchema,
+  ExternalToolCallSchema,
+])
 
 export const ToolResultSchema: z.ZodTypeAny = z.lazy(() =>
   z

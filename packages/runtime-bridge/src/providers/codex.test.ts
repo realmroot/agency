@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
@@ -105,6 +108,94 @@ async function* fileChangeEvents() {
       changes: [{ kind: 'update', path: 'src/app.ts' }],
     },
   }
+}
+
+async function* subagentFunctionEvents() {
+  yield {
+    type: 'item.completed',
+    item: {
+      id: 'call_spawn_1',
+      type: 'function_call',
+      name: 'spawn_agent',
+      arguments: JSON.stringify({
+        agent_type: 'reviewer',
+        message: 'Check this change',
+        reasoning_effort: 'medium',
+      }),
+    },
+  }
+  yield {
+    type: 'item.completed',
+    item: {
+      call_id: 'call_spawn_1',
+      type: 'function_call_output',
+      output: JSON.stringify({ agent_id: 'agent_1', nickname: 'Raman' }),
+    },
+  }
+  yield {
+    type: 'item.completed',
+    item: {
+      id: 'call_wait_1',
+      type: 'function_call',
+      name: 'wait_agent',
+      arguments: JSON.stringify({ targets: ['agent_1'], timeout_ms: 60_000 }),
+    },
+  }
+  yield {
+    type: 'item.completed',
+    item: {
+      call_id: 'call_wait_1',
+      type: 'function_call_output',
+      output: JSON.stringify({ status: { agent_1: { completed: 'Review passed.' } }, timed_out: false }),
+    },
+  }
+}
+
+function writeCodexChildSession(home: string, agentId: string) {
+  const sessionDir = join(home, '.codex', 'sessions', '2026', '07', '03')
+  mkdirSync(sessionDir, { recursive: true })
+  writeFileSync(
+    join(sessionDir, `rollout-2026-07-03T12-00-00-${agentId}.jsonl`),
+    [
+      JSON.stringify({
+        timestamp: '2026-07-03T12:00:00.000Z',
+        type: 'session_meta',
+        payload: {
+          id: agentId,
+          thread_source: 'subagent',
+          source: { subagent: { thread_spawn: { parent_thread_id: 'thread_1' } } },
+        },
+      }),
+      JSON.stringify({
+        timestamp: '2026-07-03T12:00:01.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'Inspecting the patch.' }],
+        },
+      }),
+      JSON.stringify({
+        timestamp: '2026-07-03T12:00:02.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          call_id: 'call_child_1',
+          name: 'exec_command',
+          arguments: JSON.stringify({ cmd: 'pnpm test' }),
+        },
+      }),
+      JSON.stringify({
+        timestamp: '2026-07-03T12:00:03.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call_output',
+          call_id: 'call_child_1',
+          output: 'tests passed',
+        },
+      }),
+    ].join('\n'),
+  )
 }
 
 async function* repeatedCommandEvents() {
@@ -309,6 +400,118 @@ describe('codexProvider', () => {
     }
 
     expect(events).toEqual([])
+  })
+
+  it('normalizes Codex sub-agent functions to the canonical AMA agent tool contract', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'codex-home-'))
+    writeCodexChildSession(home, 'agent_1')
+    runStreamedMock.mockResolvedValue({ events: subagentFunctionEvents() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+
+    const handle = await codexProvider.execute(
+      request({ env: { HOME: '/home/agent', AMA_RUNTIME_BRIDGE_HOST_HOME: home } }),
+    )
+    const events = []
+    for await (const event of handle.events) {
+      events.push(event)
+    }
+
+    expect(JSON.stringify(events)).not.toContain('spawn_agent')
+    expect(JSON.stringify(events)).not.toContain('wait_agent')
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'assistant',
+              content: [
+                {
+                  type: 'tool_call',
+                  toolCall: {
+                    id: 'call_spawn_1',
+                    name: 'agent',
+                    input: { prompt: 'Check this change', subagentName: 'reviewer' },
+                  },
+                },
+              ],
+            }),
+          },
+        }),
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'tool',
+              parentToolCallId: 'call_spawn_1',
+              content: [
+                {
+                  type: 'tool_result',
+                  toolCallId: 'call_spawn_1',
+                  result: {
+                    content: [{ type: 'text', text: 'Review passed.' }],
+                    structuredContent: {
+                      agentId: 'agent_1',
+                      status: 'completed',
+                      provider: 'codex',
+                      rawStatus: { completed: 'Review passed.' },
+                    },
+                  },
+                },
+              ],
+            }),
+          },
+        }),
+      ]),
+    )
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'assistant',
+              parentToolCallId: 'call_spawn_1',
+              content: [{ type: 'text', text: 'Inspecting the patch.' }],
+            }),
+          },
+        }),
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'assistant',
+              parentToolCallId: 'call_spawn_1',
+              content: [
+                {
+                  type: 'tool_call',
+                  toolCall: { id: 'call_child_1', name: 'bash', input: { command: 'pnpm test' } },
+                },
+              ],
+            }),
+          },
+        }),
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'tool',
+              parentToolCallId: 'call_child_1',
+              content: [
+                {
+                  type: 'tool_result',
+                  toolCallId: 'call_child_1',
+                  result: {
+                    content: [{ type: 'text', text: 'tests passed' }],
+                    structuredContent: { output: 'tests passed' },
+                  },
+                },
+              ],
+            }),
+          },
+        }),
+      ]),
+    )
   })
 
   it('does not emit model usage when Codex SDK events do not report the actual model', async () => {

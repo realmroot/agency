@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { type Dirent, existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
 import { Codex, type ThreadEvent } from '@openai/codex-sdk'
@@ -51,28 +51,92 @@ function positiveNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
-function itemId(item: Record<string, unknown>) {
-  return typeof item.id === 'string' && item.id ? item.id : null
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value ? value : null
 }
 
-function codexToolShape(item: Record<string, unknown>): { toolName: string; args: Record<string, unknown> } | null {
+function itemId(item: Record<string, unknown>) {
+  return stringValue(item.id) ?? stringValue(item.call_id)
+}
+
+type CodexToolShape = {
+  toolName: string
+  args: Record<string, unknown>
+  nativeFunctionName?: string
+  hiddenControl?: boolean
+}
+
+function codexToolShape(item: Record<string, unknown>): CodexToolShape | null {
   switch (item.type) {
     case 'command_execution': {
       if (typeof item.command !== 'string' || !item.command) return null
       return { toolName: 'bash', args: { command: item.command } }
     }
-    case 'mcp_tool_call':
+    case 'mcp_tool_call': {
+      const name = stringValue(item.name)
+      const server = stringValue(item.server)
+      const tool = stringValue(item.tool)
       return {
-        toolName: typeof item.name === 'string' && item.name ? `mcp.${item.name}` : 'mcp.tool',
-        args: objectValue(item.arguments),
+        toolName: name ? `mcp.${name}` : server && tool ? `mcp.${server}.${tool}` : 'mcp.tool',
+        args: parseJsonObject(item.arguments),
       }
+    }
     case 'web_search': {
       if (typeof item.query !== 'string' || !item.query) return null
       return { toolName: 'web_search', args: { query: item.query } }
     }
+    case 'function_call': {
+      const nativeFunctionName = stringValue(item.name)
+      if (!nativeFunctionName) return null
+      const args = parseJsonObject(item.arguments ?? item.input)
+      if (nativeFunctionName === 'exec_command') {
+        const command = stringValue(args.cmd) ?? stringValue(args.command)
+        return {
+          toolName: command ? 'bash' : nativeFunctionName,
+          args: command ? { command } : args,
+          nativeFunctionName,
+        }
+      }
+      if (nativeFunctionName === 'spawn_agent' || nativeFunctionName === 'agent') {
+        return { toolName: 'agent', args: normalizeAgentToolInput(args), nativeFunctionName }
+      }
+      if (isCodexSubagentControlFunction(nativeFunctionName)) {
+        return { toolName: nativeFunctionName, args, nativeFunctionName, hiddenControl: true }
+      }
+      return { toolName: nativeFunctionName, args, nativeFunctionName }
+    }
     default:
       return null
   }
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'string') return objectValue(value)
+  try {
+    return objectValue(JSON.parse(value))
+  } catch {
+    return {}
+  }
+}
+
+function normalizeAgentToolInput(input: Record<string, unknown>): Record<string, unknown> {
+  const prompt = stringValue(input.prompt) ?? stringValue(input.message) ?? JSON.stringify(input)
+  const description = stringValue(input.description)
+  const subagentName =
+    stringValue(input.subagentName) ??
+    stringValue(input.subagent_type) ??
+    stringValue(input.subagentType) ??
+    stringValue(input.agent_type) ??
+    stringValue(input.agentType)
+  return {
+    prompt,
+    ...(description ? { description } : {}),
+    ...(subagentName ? { subagentName } : {}),
+  }
+}
+
+function isCodexSubagentControlFunction(name: string) {
+  return name === 'wait_agent' || name === 'close_agent' || name === 'send_input' || name === 'resume_agent'
 }
 
 function toolResult(item: Record<string, unknown>): ToolResult {
@@ -119,6 +183,21 @@ function codexAssistantMessage(content: MessageContentBlock[], providerMessageId
 }
 
 class CodexEventMapper {
+  private readonly nativeFunctionNameByCallId = new Map<string, string>()
+  private readonly nativeFunctionInputByCallId = new Map<string, Record<string, unknown>>()
+  private readonly agentToolCallIdByAgentId = new Map<string, string>()
+  private providerThreadId: string | null = null
+  private readonly finalizedAgentIds = new Set<string>()
+
+  constructor(
+    private readonly codexHome: string | undefined,
+    private readonly importRawSubagentSessions = true,
+  ) {}
+
+  setThreadId(threadId: string) {
+    this.providerThreadId = threadId
+  }
+
   *map(event: ThreadEvent): Generator<AmaRuntimeEvent> {
     switch (event.type) {
       case 'thread.started':
@@ -131,7 +210,7 @@ class CodexEventMapper {
         const item = objectValue(event.item)
         const shape = codexToolShape(item)
         const id = itemId(item)
-        if (shape && id) {
+        if (shape && id && !shape.hiddenControl && item.type !== 'function_call') {
           yield messageEvent({
             id: randomId('msg'),
             role: 'assistant',
@@ -153,8 +232,23 @@ class CodexEventMapper {
           yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)))
           return
         }
+        if (item.type === 'function_call_output') {
+          for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent
+          return
+        }
         const shape = codexToolShape(item)
         const id = itemId(item)
+        this.trackFunctionCall(item, id, shape)
+        if (shape && id && item.type === 'function_call') {
+          if (!shape.hiddenControl) {
+            yield messageEvent({
+              id: randomId('msg'),
+              role: 'assistant',
+              content: [toolCallBlock({ id, name: shape.toolName, input: shape.args })],
+            })
+          }
+          return
+        }
         if (shape && id) yield messageEvent(toolResultMessage(id, toolResult(item), Boolean(item.error)))
         return
       }
@@ -182,6 +276,241 @@ class CodexEventMapper {
         return
     }
   }
+
+  private trackFunctionCall(item: Record<string, unknown>, id: string | null, shape: CodexToolShape | null) {
+    if (item.type !== 'function_call' || !id || !shape?.nativeFunctionName) return
+    this.nativeFunctionNameByCallId.set(id, shape.nativeFunctionName)
+    this.nativeFunctionInputByCallId.set(id, shape.args)
+  }
+
+  private mapFunctionCallOutput(item: Record<string, unknown>): AmaRuntimeEvent[] {
+    const id = itemId(item)
+    if (!id) return []
+    const nativeFunctionName = this.nativeFunctionNameByCallId.get(id)
+    if (nativeFunctionName === 'spawn_agent') {
+      const output = parseJsonObject(item.output)
+      const agentId = stringValue(output.agent_id) ?? stringValue(output.agentId)
+      if (agentId) {
+        this.agentToolCallIdByAgentId.set(agentId, id)
+        return []
+      }
+      return [messageEvent(toolResultMessage(id, toolResult(item), true))]
+    }
+    if (nativeFunctionName && isCodexSubagentControlFunction(nativeFunctionName)) {
+      return this.mapSubagentControlOutput(nativeFunctionName, item)
+    }
+    return [messageEvent(toolResultMessage(id, toolResult(item), Boolean(item.error)))]
+  }
+
+  private mapSubagentControlOutput(nativeFunctionName: string, item: Record<string, unknown>): AmaRuntimeEvent[] {
+    if (nativeFunctionName !== 'wait_agent' && nativeFunctionName !== 'close_agent') return []
+    const finals = subagentFinalsFromCodexControl(
+      this.nativeFunctionInputByCallId.get(itemId(item) ?? '') ?? {},
+      parseJsonObject(item.output),
+      Boolean(item.error),
+    )
+    return finals.flatMap((final) => {
+      const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId)
+      if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return []
+      this.finalizedAgentIds.add(final.agentId)
+      const childEvents = this.importRawSubagentSessions ? this.mapRawSubagentEvents(final.agentId, toolCallId) : []
+      return [
+        ...childEvents,
+        messageEvent(
+          toolResultMessage(
+            toolCallId,
+            {
+              content: final.text ? [{ type: 'text', text: final.text }] : [],
+              structuredContent: {
+                agentId: final.agentId,
+                status: final.status,
+                provider: 'codex',
+                rawStatus: final.rawStatus,
+              },
+            },
+            final.failed,
+          ),
+        ),
+      ]
+    })
+  }
+
+  private mapRawSubagentEvents(agentId: string, parentToolCallId: string): AmaRuntimeEvent[] {
+    const filePath = findCodexSessionFile(this.codexHome, agentId)
+    if (!filePath) return []
+    const mapper = new CodexEventMapper(this.codexHome, false)
+    if (this.providerThreadId) mapper.setThreadId(this.providerThreadId)
+    const events: AmaRuntimeEvent[] = []
+    for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+      if (!line.trim()) continue
+      const record = parseJsonObject(line)
+      if (record.type !== 'response_item') continue
+      const threadEvent = codexRawResponseItemThreadEvent(objectValue(record.payload))
+      if (!threadEvent) continue
+      for (const event of mapper.map(threadEvent)) {
+        events.push(withParentToolCallId(event, parentToolCallId))
+      }
+    }
+    return events
+  }
+}
+
+type CodexSubagentFinal = {
+  agentId: string
+  status: 'completed' | 'failed' | 'stopped'
+  text: string
+  failed: boolean
+  rawStatus: unknown
+}
+
+function subagentFinalsFromCodexControl(
+  input: Record<string, unknown>,
+  output: Record<string, unknown>,
+  failed: boolean,
+): CodexSubagentFinal[] {
+  if (failed) {
+    return codexControlTargets(input).map((agentId) => ({
+      agentId,
+      status: 'failed',
+      text: 'Sub-agent control call failed.',
+      failed: true,
+      rawStatus: output,
+    }))
+  }
+  const status = objectValue(output.status)
+  const finals = Object.entries(status).flatMap(([agentId, value]) => {
+    const rawStatus = objectValue(value)
+    return codexFinalStatus(agentId, rawStatus)
+  })
+  if (finals.length > 0) return finals
+  const previousStatus = objectValue(output.previous_status)
+  const agentId = codexControlTargets(input)[0]
+  return agentId ? codexFinalStatus(agentId, previousStatus) : []
+}
+
+function codexControlTargets(input: Record<string, unknown>) {
+  const targets = input.targets
+  if (Array.isArray(targets)) return targets.flatMap((target) => (typeof target === 'string' && target ? [target] : []))
+  return [input.target, input.agent_id, input.agentId].flatMap((target) =>
+    typeof target === 'string' && target ? [target] : [],
+  )
+}
+
+function codexFinalStatus(agentId: string, rawStatus: Record<string, unknown>): CodexSubagentFinal[] {
+  for (const status of ['completed', 'failed', 'stopped'] as const) {
+    if (!(status in rawStatus)) continue
+    const value = rawStatus[status]
+    return [
+      {
+        agentId,
+        status,
+        text: codexStatusText(agentId, status, value),
+        failed: status !== 'completed',
+        rawStatus,
+      },
+    ]
+  }
+  return []
+}
+
+function codexStatusText(agentId: string, status: CodexSubagentFinal['status'], value: unknown) {
+  if (typeof value === 'string' && value) return value
+  if (value !== undefined) return JSON.stringify(value)
+  return `Sub-agent ${agentId} ${status}.`
+}
+
+function findCodexSessionFile(home: string | undefined, sessionId: string): string | null {
+  if (!home) return null
+  const root = join(home, '.codex', 'sessions')
+  if (!existsSync(root)) return null
+  const stack = [root]
+  while (stack.length > 0) {
+    const dir = stack.pop()
+    if (!dir) continue
+    let entries: Dirent<string>[]
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(path)
+        continue
+      }
+      if (entry.isFile() && entry.name.endsWith('.jsonl') && entry.name.includes(sessionId)) return path
+    }
+  }
+  return null
+}
+
+function codexRawResponseItemThreadEvent(item: Record<string, unknown>): ThreadEvent | null {
+  switch (item.type) {
+    case 'message': {
+      if (item.role !== 'assistant') return null
+      const text = textFromCodexRawContent(item.content)
+      if (!text) return null
+      return {
+        type: 'item.completed',
+        item: { id: stringValue(item.id) ?? randomId('codex_raw'), type: 'agent_message', text },
+      } as ThreadEvent
+    }
+    case 'reasoning': {
+      const text = textFromCodexRawReasoning(item)
+      if (!text) return null
+      return {
+        type: 'item.completed',
+        item: { id: stringValue(item.id) ?? randomId('codex_raw'), type: 'reasoning', text },
+      } as ThreadEvent
+    }
+    case 'function_call':
+    case 'function_call_output':
+      return { type: 'item.completed', item } as ThreadEvent
+    default:
+      return null
+  }
+}
+
+function textFromCodexRawContent(value: unknown): string {
+  if (!Array.isArray(value)) return ''
+  return value
+    .map((part) => {
+      const block = objectValue(part)
+      if (block.type === 'output_text' || block.type === 'text') return stringValue(block.text)
+      return null
+    })
+    .filter((text): text is string => Boolean(text))
+    .join('\n')
+}
+
+function textFromCodexRawReasoning(item: Record<string, unknown>): string {
+  const text = stringValue(item.text)
+  if (text) return text
+  const summary = Array.isArray(item.summary) ? item.summary : []
+  return summary
+    .map((part) => {
+      const block = objectValue(part)
+      return stringValue(block.text)
+    })
+    .filter((part): part is string => Boolean(part))
+    .join('\n')
+}
+
+function withParentToolCallId(event: AmaRuntimeEvent, parentToolCallId: string): AmaRuntimeEvent {
+  if (!event.type.startsWith('message.')) return event
+  const message = objectValue((event.payload as { message?: unknown }).message)
+  if (!message || message.parentToolCallId) return event
+  return {
+    ...event,
+    payload: {
+      ...event.payload,
+      message: {
+        ...message,
+        parentToolCallId,
+      },
+    },
+  } as AmaRuntimeEvent
 }
 
 export const codexProvider: RuntimeProvider = {
@@ -215,7 +544,7 @@ export const codexProvider: RuntimeProvider = {
     const thread =
       request.resume && resumeToken ? codex.resumeThread(resumeToken, threadOptions) : codex.startThread(threadOptions)
     const idleKeepAliveMs = positiveNumber(request.runtimeConfig?.codexIdleKeepAliveMs)
-    const mapper = new CodexEventMapper()
+    const mapper = new CodexEventMapper(hostHome(request.env) ?? request.env.HOME)
     const nextPrompt = async (): Promise<string | undefined> => {
       const queued = queuedPrompts.shift()
       if (queued !== undefined) return queued
@@ -238,7 +567,10 @@ export const codexProvider: RuntimeProvider = {
         if (prompt === undefined) return
         const streamed = await thread.runStreamed(prompt, { signal: abortController.signal })
         for await (const event of streamed.events) {
-          if (event.type === 'thread.started') resumeToken = event.thread_id
+          if (event.type === 'thread.started') {
+            resumeToken = event.thread_id
+            mapper.setThreadId(event.thread_id)
+          }
           yield* mapper.map(event)
         }
       }

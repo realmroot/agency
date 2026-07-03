@@ -41,6 +41,12 @@ describe('ClaudeEventMapper', () => {
           { type: 'tool_use', id: 'tool_glob', name: 'Glob', input: { pattern: '*.ts', path: 'src' } },
           { type: 'tool_use', id: 'tool_fetch', name: 'WebFetch', input: { url: 'https://example.com' } },
           { type: 'tool_use', id: 'tool_search', name: 'WebSearch', input: { query: 'ama runtime' } },
+          {
+            type: 'tool_use',
+            id: 'tool_agent',
+            name: 'Task',
+            input: { subagent_type: 'reviewer', description: 'Review pull request', prompt: 'Check this change' },
+          },
         ],
       },
     } as unknown as Parameters<typeof mapper.map>[0])
@@ -70,6 +76,14 @@ describe('ClaudeEventMapper', () => {
       { type: 'tool_call', toolCall: { id: 'tool_glob', name: 'find', input: { glob: '*.ts', path: 'src' } } },
       { type: 'tool_call', toolCall: { id: 'tool_fetch', name: 'fetch', input: { url: 'https://example.com' } } },
       { type: 'tool_call', toolCall: { id: 'tool_search', name: 'web_search', input: { query: 'ama runtime' } } },
+      {
+        type: 'tool_call',
+        toolCall: {
+          id: 'tool_agent',
+          name: 'agent',
+          input: { prompt: 'Check this change', description: 'Review pull request', subagentName: 'reviewer' },
+        },
+      },
     ])
   })
 })

@@ -133,6 +133,7 @@ Feature: Sessions
     When AMA stores the session events
     Then every event has a stable id and monotonically increasing sequence
     And related events share turn, message, tool-call, and span identifiers with parent references
+    And sub-agent work is represented as an agent tool call whose child events reference that tool call through parentToolCallId
 
   # ── Web console (web: session list, detail, transcript, tool trace) ──
 

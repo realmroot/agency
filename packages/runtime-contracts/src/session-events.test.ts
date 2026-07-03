@@ -20,6 +20,11 @@ const message: Message = {
 }
 
 const toolCall = { id: 'call_1', name: 'bash', input: { command: 'echo ok' } }
+const agentToolCall = {
+  id: 'call_agent_1',
+  name: 'agent',
+  input: { prompt: 'Review this change', description: 'Review pull request', subagentName: 'reviewer' },
+}
 const toolResult: ToolResult = {
   content: [{ type: 'text', text: 'ok' }],
   structuredContent: { output: 'ok' },
@@ -135,6 +140,16 @@ describe('MessageContentBlockSchema', () => {
       expect(MessageContentBlockSchema.safeParse(block).success, block.type).toBe(true)
     }
   })
+
+  it('requires canonical schemas for reserved AMA runtime tools', () => {
+    expect(MessageContentBlockSchema.safeParse({ type: 'tool_call', toolCall: agentToolCall }).success).toBe(true)
+    expect(
+      MessageContentBlockSchema.safeParse({
+        type: 'tool_call',
+        toolCall: { id: 'call_agent_bad', name: 'agent', input: { agent_type: 'reviewer', message: 'Review this' } },
+      }).success,
+    ).toBe(false)
+  })
 })
 
 describe('SessionEventSchema', () => {
@@ -231,6 +246,75 @@ describe('SessionEventSchema', () => {
     expect(toolResultMessage.parentMessageId).toBe('msg_assistant_1')
     expect(toolResultMessage.parentToolCallId).toBe(toolCall.id)
     expect(toolResultBlock).toMatchObject({ type: 'tool_result', toolCallId: toolCall.id })
+  })
+
+  it('[spec: sessions/events-hierarchy] represents sub-agent work as an agent tool call with child references', () => {
+    const records = [
+      SessionEventSchema.parse({
+        id: 'evt_agent_call',
+        sessionId: 'session_1',
+        sequence: 1,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        type: 'message.completed',
+        payload: {
+          message: {
+            id: 'msg_assistant_1',
+            role: 'assistant',
+            content: [{ type: 'tool_call', toolCall: agentToolCall }],
+          },
+        },
+      }),
+      SessionEventSchema.parse({
+        id: 'evt_child_message',
+        sessionId: 'session_1',
+        sequence: 2,
+        createdAt: '2026-01-01T00:00:01.000Z',
+        type: 'message.completed',
+        payload: {
+          message: {
+            id: 'msg_subagent_1',
+            role: 'assistant',
+            parentToolCallId: agentToolCall.id,
+            content: [{ type: 'text', text: 'I found one issue.' }],
+          },
+        },
+      }),
+      SessionEventSchema.parse({
+        id: 'evt_agent_result',
+        sessionId: 'session_1',
+        sequence: 3,
+        createdAt: '2026-01-01T00:00:02.000Z',
+        type: 'message.completed',
+        payload: {
+          message: {
+            id: 'msg_agent_result_1',
+            role: 'tool',
+            parentToolCallId: agentToolCall.id,
+            content: [
+              {
+                type: 'tool_result',
+                toolCallId: agentToolCall.id,
+                result: { content: [{ type: 'text', text: 'Sub-agent finished.' }] },
+              },
+            ],
+          },
+        },
+      }),
+    ]
+
+    const [agentCallEvent, childEvent, agentResultEvent] = records
+    if (!agentCallEvent || !childEvent || !agentResultEvent) {
+      throw new Error('Expected sub-agent hierarchy records')
+    }
+    const agentCallMessage = (agentCallEvent.payload as { message: Message }).message
+    const childMessage = (childEvent.payload as { message: Message }).message
+    const agentResultMessage = (agentResultEvent.payload as { message: Message }).message
+
+    expect(records.map((record) => record.sequence)).toEqual([1, 2, 3])
+    expect(agentCallMessage.content[0]).toMatchObject({ type: 'tool_call', toolCall: agentToolCall })
+    expect(childMessage.parentToolCallId).toBe(agentToolCall.id)
+    expect(agentResultMessage.parentToolCallId).toBe(agentToolCall.id)
+    expect(agentResultMessage.content[0]).toMatchObject({ type: 'tool_result', toolCallId: agentToolCall.id })
   })
 })
 

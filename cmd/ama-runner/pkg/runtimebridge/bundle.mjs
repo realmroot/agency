@@ -17820,6 +17820,7 @@ var AMA_RUNTIME_TOOL_NAMES = [...AMA_SANDBOX_TOOL_NAMES, ...AMA_ORCHESTRATION_TO
 
 // packages/runtime-contracts/src/tool-contracts.ts
 var AmaSandboxToolNameSchema = external_exports.enum(AMA_SANDBOX_TOOL_NAMES);
+var AmaOrchestrationToolNameSchema = external_exports.enum(AMA_ORCHESTRATION_TOOL_NAMES);
 var NonNegativeIntegerSchema = external_exports.number().int().min(0);
 var PositiveNumberSchema = external_exports.number().positive();
 var BashToolInputSchema = external_exports.object({
@@ -17890,6 +17891,11 @@ var WebSearchToolInputSchema = external_exports.object({
   query: external_exports.string().min(1),
   limit: NonNegativeIntegerSchema.optional()
 }).strict();
+var AgentToolInputSchema = external_exports.object({
+  prompt: external_exports.string().min(1),
+  description: external_exports.string().min(1).optional(),
+  subagentName: external_exports.string().min(1).optional()
+}).strict();
 var AmaSandboxToolCallSchema = external_exports.discriminatedUnion("name", [
   external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("bash"), input: BashToolInputSchema }).strict(),
   external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("read"), input: ReadToolInputSchema }).strict(),
@@ -17900,6 +17906,9 @@ var AmaSandboxToolCallSchema = external_exports.discriminatedUnion("name", [
   external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("ls"), input: LsToolInputSchema }).strict(),
   external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("fetch"), input: FetchToolInputSchema }).strict(),
   external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("web_search"), input: WebSearchToolInputSchema }).strict()
+]);
+var AmaOrchestrationToolCallSchema = external_exports.discriminatedUnion("name", [
+  external_exports.object({ id: external_exports.string().min(1), name: external_exports.literal("agent"), input: AgentToolInputSchema }).strict()
 ]);
 
 // packages/runtime-contracts/src/session-events.ts
@@ -17937,15 +17946,19 @@ var EventErrorSchema = external_exports.object({
   retryAfterSeconds: external_exports.number().optional(),
   details: JsonValueSchema.optional()
 }).strict();
-var AMA_SANDBOX_TOOL_NAME_SET = new Set(AMA_SANDBOX_TOOL_NAMES);
+var AMA_RUNTIME_TOOL_NAME_SET = new Set(AMA_RUNTIME_TOOL_NAMES);
 var ExternalToolCallSchema = external_exports.object({
   id: external_exports.string(),
-  name: external_exports.string().refine((value) => !AMA_SANDBOX_TOOL_NAME_SET.has(value), {
-    message: "known AMA sandbox tools must use their canonical input schema"
+  name: external_exports.string().refine((value) => !AMA_RUNTIME_TOOL_NAME_SET.has(value), {
+    message: "known AMA runtime tools must use their canonical input schema"
   }),
   input: JsonObjectSchema
 }).strict();
-var ToolCallSchema = external_exports.union([AmaSandboxToolCallSchema, ExternalToolCallSchema]);
+var ToolCallSchema = external_exports.union([
+  AmaSandboxToolCallSchema,
+  AmaOrchestrationToolCallSchema,
+  ExternalToolCallSchema
+]);
 var ToolResultSchema = external_exports.lazy(
   () => external_exports.object({
     content: external_exports.array(ToolResultValueContentBlockSchema),
@@ -37680,9 +37693,22 @@ function normalizeToolInput(name, input) {
       return { url: input.url };
     case "WebSearch":
       return { query: input.query };
+    case "Agent":
+    case "Task":
+      return normalizeAgentToolInput(input);
     default:
       return input;
   }
+}
+function normalizeAgentToolInput(input) {
+  const prompt = stringValue(input.prompt) ?? stringValue(input.message) ?? JSON.stringify(input);
+  const description = stringValue(input.description);
+  const subagentName = stringValue(input.subagentName) ?? stringValue(input.subagent_type) ?? stringValue(input.subagentType) ?? stringValue(input.agent_type) ?? stringValue(input.agentType);
+  return {
+    prompt,
+    ...description ? { description } : {},
+    ...subagentName ? { subagentName } : {}
+  };
 }
 function normalizeToolName(name) {
   switch (name) {
@@ -37703,6 +37729,7 @@ function normalizeToolName(name) {
     case "WebSearch":
       return "web_search";
     case "Agent":
+    case "Task":
       return "agent";
     default:
       return name;
@@ -38005,7 +38032,7 @@ var claudeCodeProvider = {
 };
 
 // packages/runtime-bridge/src/providers/codex.ts
-import { readFileSync as readFileSync3 } from "node:fs";
+import { existsSync as existsSync2, readdirSync as readdirSync2, readFileSync as readFileSync3 } from "node:fs";
 import { join as join2 } from "node:path";
 
 // node_modules/.pnpm/@openai+codex-sdk@0.142.5/node_modules/@openai/codex-sdk/dist/index.js
@@ -38557,8 +38584,11 @@ function resolveModel(request3) {
 function positiveNumber(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : void 0;
 }
+function stringValue2(value) {
+  return typeof value === "string" && value ? value : null;
+}
 function itemId(item) {
-  return typeof item.id === "string" && item.id ? item.id : null;
+  return stringValue2(item.id) ?? stringValue2(item.call_id);
 }
 function codexToolShape(item) {
   switch (item.type) {
@@ -38566,18 +38596,63 @@ function codexToolShape(item) {
       if (typeof item.command !== "string" || !item.command) return null;
       return { toolName: "bash", args: { command: item.command } };
     }
-    case "mcp_tool_call":
+    case "mcp_tool_call": {
+      const name = stringValue2(item.name);
+      const server = stringValue2(item.server);
+      const tool = stringValue2(item.tool);
       return {
-        toolName: typeof item.name === "string" && item.name ? `mcp.${item.name}` : "mcp.tool",
-        args: objectValue2(item.arguments)
+        toolName: name ? `mcp.${name}` : server && tool ? `mcp.${server}.${tool}` : "mcp.tool",
+        args: parseJsonObject(item.arguments)
       };
+    }
     case "web_search": {
       if (typeof item.query !== "string" || !item.query) return null;
       return { toolName: "web_search", args: { query: item.query } };
     }
+    case "function_call": {
+      const nativeFunctionName = stringValue2(item.name);
+      if (!nativeFunctionName) return null;
+      const args = parseJsonObject(item.arguments ?? item.input);
+      if (nativeFunctionName === "exec_command") {
+        const command = stringValue2(args.cmd) ?? stringValue2(args.command);
+        return {
+          toolName: command ? "bash" : nativeFunctionName,
+          args: command ? { command } : args,
+          nativeFunctionName
+        };
+      }
+      if (nativeFunctionName === "spawn_agent" || nativeFunctionName === "agent") {
+        return { toolName: "agent", args: normalizeAgentToolInput2(args), nativeFunctionName };
+      }
+      if (isCodexSubagentControlFunction(nativeFunctionName)) {
+        return { toolName: nativeFunctionName, args, nativeFunctionName, hiddenControl: true };
+      }
+      return { toolName: nativeFunctionName, args, nativeFunctionName };
+    }
     default:
       return null;
   }
+}
+function parseJsonObject(value) {
+  if (typeof value !== "string") return objectValue2(value);
+  try {
+    return objectValue2(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+function normalizeAgentToolInput2(input) {
+  const prompt = stringValue2(input.prompt) ?? stringValue2(input.message) ?? JSON.stringify(input);
+  const description = stringValue2(input.description);
+  const subagentName = stringValue2(input.subagentName) ?? stringValue2(input.subagent_type) ?? stringValue2(input.subagentType) ?? stringValue2(input.agent_type) ?? stringValue2(input.agentType);
+  return {
+    prompt,
+    ...description ? { description } : {},
+    ...subagentName ? { subagentName } : {}
+  };
+}
+function isCodexSubagentControlFunction(name) {
+  return name === "wait_agent" || name === "close_agent" || name === "send_input" || name === "resume_agent";
 }
 function toolResult(item) {
   const stdout2 = typeof item.stdout === "string" ? item.stdout : "";
@@ -38610,7 +38685,21 @@ function codexAssistantMessage(content, providerMessageId) {
     ...providerMessageId ? { providerMessageId } : {}
   };
 }
-var CodexEventMapper = class {
+var CodexEventMapper = class _CodexEventMapper {
+  constructor(codexHome, importRawSubagentSessions = true) {
+    this.codexHome = codexHome;
+    this.importRawSubagentSessions = importRawSubagentSessions;
+  }
+  codexHome;
+  importRawSubagentSessions;
+  nativeFunctionNameByCallId = /* @__PURE__ */ new Map();
+  nativeFunctionInputByCallId = /* @__PURE__ */ new Map();
+  agentToolCallIdByAgentId = /* @__PURE__ */ new Map();
+  providerThreadId = null;
+  finalizedAgentIds = /* @__PURE__ */ new Set();
+  setThreadId(threadId) {
+    this.providerThreadId = threadId;
+  }
   *map(event) {
     switch (event.type) {
       case "thread.started":
@@ -38623,7 +38712,7 @@ var CodexEventMapper = class {
         const item = objectValue2(event.item);
         const shape = codexToolShape(item);
         const id2 = itemId(item);
-        if (shape && id2) {
+        if (shape && id2 && !shape.hiddenControl && item.type !== "function_call") {
           yield messageEvent({
             id: randomId("msg"),
             role: "assistant",
@@ -38645,8 +38734,23 @@ var CodexEventMapper = class {
           yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)));
           return;
         }
+        if (item.type === "function_call_output") {
+          for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent;
+          return;
+        }
         const shape = codexToolShape(item);
         const id2 = itemId(item);
+        this.trackFunctionCall(item, id2, shape);
+        if (shape && id2 && item.type === "function_call") {
+          if (!shape.hiddenControl) {
+            yield messageEvent({
+              id: randomId("msg"),
+              role: "assistant",
+              content: [toolCallBlock({ id: id2, name: shape.toolName, input: shape.args })]
+            });
+          }
+          return;
+        }
         if (shape && id2) yield messageEvent(toolResultMessage(id2, toolResult(item), Boolean(item.error)));
         return;
       }
@@ -38668,7 +38772,211 @@ var CodexEventMapper = class {
         return;
     }
   }
+  trackFunctionCall(item, id2, shape) {
+    if (item.type !== "function_call" || !id2 || !shape?.nativeFunctionName) return;
+    this.nativeFunctionNameByCallId.set(id2, shape.nativeFunctionName);
+    this.nativeFunctionInputByCallId.set(id2, shape.args);
+  }
+  mapFunctionCallOutput(item) {
+    const id2 = itemId(item);
+    if (!id2) return [];
+    const nativeFunctionName = this.nativeFunctionNameByCallId.get(id2);
+    if (nativeFunctionName === "spawn_agent") {
+      const output = parseJsonObject(item.output);
+      const agentId = stringValue2(output.agent_id) ?? stringValue2(output.agentId);
+      if (agentId) {
+        this.agentToolCallIdByAgentId.set(agentId, id2);
+        return [];
+      }
+      return [messageEvent(toolResultMessage(id2, toolResult(item), true))];
+    }
+    if (nativeFunctionName && isCodexSubagentControlFunction(nativeFunctionName)) {
+      return this.mapSubagentControlOutput(nativeFunctionName, item);
+    }
+    return [messageEvent(toolResultMessage(id2, toolResult(item), Boolean(item.error)))];
+  }
+  mapSubagentControlOutput(nativeFunctionName, item) {
+    if (nativeFunctionName !== "wait_agent" && nativeFunctionName !== "close_agent") return [];
+    const finals = subagentFinalsFromCodexControl(
+      this.nativeFunctionInputByCallId.get(itemId(item) ?? "") ?? {},
+      parseJsonObject(item.output),
+      Boolean(item.error)
+    );
+    return finals.flatMap((final) => {
+      const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId);
+      if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return [];
+      this.finalizedAgentIds.add(final.agentId);
+      const childEvents = this.importRawSubagentSessions ? this.mapRawSubagentEvents(final.agentId, toolCallId) : [];
+      return [
+        ...childEvents,
+        messageEvent(
+          toolResultMessage(
+            toolCallId,
+            {
+              content: final.text ? [{ type: "text", text: final.text }] : [],
+              structuredContent: {
+                agentId: final.agentId,
+                status: final.status,
+                provider: "codex",
+                rawStatus: final.rawStatus
+              }
+            },
+            final.failed
+          )
+        )
+      ];
+    });
+  }
+  mapRawSubagentEvents(agentId, parentToolCallId) {
+    const filePath = findCodexSessionFile(this.codexHome, agentId);
+    if (!filePath) return [];
+    const mapper = new _CodexEventMapper(this.codexHome, false);
+    if (this.providerThreadId) mapper.setThreadId(this.providerThreadId);
+    const events = [];
+    for (const line of readFileSync3(filePath, "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      const record2 = parseJsonObject(line);
+      if (record2.type !== "response_item") continue;
+      const threadEvent = codexRawResponseItemThreadEvent(objectValue2(record2.payload));
+      if (!threadEvent) continue;
+      for (const event of mapper.map(threadEvent)) {
+        events.push(withParentToolCallId(event, parentToolCallId));
+      }
+    }
+    return events;
+  }
 };
+function subagentFinalsFromCodexControl(input, output, failed) {
+  if (failed) {
+    return codexControlTargets(input).map((agentId2) => ({
+      agentId: agentId2,
+      status: "failed",
+      text: "Sub-agent control call failed.",
+      failed: true,
+      rawStatus: output
+    }));
+  }
+  const status = objectValue2(output.status);
+  const finals = Object.entries(status).flatMap(([agentId2, value]) => {
+    const rawStatus = objectValue2(value);
+    return codexFinalStatus(agentId2, rawStatus);
+  });
+  if (finals.length > 0) return finals;
+  const previousStatus = objectValue2(output.previous_status);
+  const agentId = codexControlTargets(input)[0];
+  return agentId ? codexFinalStatus(agentId, previousStatus) : [];
+}
+function codexControlTargets(input) {
+  const targets = input.targets;
+  if (Array.isArray(targets)) return targets.flatMap((target) => typeof target === "string" && target ? [target] : []);
+  return [input.target, input.agent_id, input.agentId].flatMap(
+    (target) => typeof target === "string" && target ? [target] : []
+  );
+}
+function codexFinalStatus(agentId, rawStatus) {
+  for (const status of ["completed", "failed", "stopped"]) {
+    if (!(status in rawStatus)) continue;
+    const value = rawStatus[status];
+    return [
+      {
+        agentId,
+        status,
+        text: codexStatusText(agentId, status, value),
+        failed: status !== "completed",
+        rawStatus
+      }
+    ];
+  }
+  return [];
+}
+function codexStatusText(agentId, status, value) {
+  if (typeof value === "string" && value) return value;
+  if (value !== void 0) return JSON.stringify(value);
+  return `Sub-agent ${agentId} ${status}.`;
+}
+function findCodexSessionFile(home, sessionId) {
+  if (!home) return null;
+  const root = join2(home, ".codex", "sessions");
+  if (!existsSync2(root)) return null;
+  const stack = [root];
+  while (stack.length > 0) {
+    const dir2 = stack.pop();
+    if (!dir2) continue;
+    let entries;
+    try {
+      entries = readdirSync2(dir2, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const path3 = join2(dir2, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(path3);
+        continue;
+      }
+      if (entry.isFile() && entry.name.endsWith(".jsonl") && entry.name.includes(sessionId)) return path3;
+    }
+  }
+  return null;
+}
+function codexRawResponseItemThreadEvent(item) {
+  switch (item.type) {
+    case "message": {
+      if (item.role !== "assistant") return null;
+      const text = textFromCodexRawContent(item.content);
+      if (!text) return null;
+      return {
+        type: "item.completed",
+        item: { id: stringValue2(item.id) ?? randomId("codex_raw"), type: "agent_message", text }
+      };
+    }
+    case "reasoning": {
+      const text = textFromCodexRawReasoning(item);
+      if (!text) return null;
+      return {
+        type: "item.completed",
+        item: { id: stringValue2(item.id) ?? randomId("codex_raw"), type: "reasoning", text }
+      };
+    }
+    case "function_call":
+    case "function_call_output":
+      return { type: "item.completed", item };
+    default:
+      return null;
+  }
+}
+function textFromCodexRawContent(value) {
+  if (!Array.isArray(value)) return "";
+  return value.map((part) => {
+    const block = objectValue2(part);
+    if (block.type === "output_text" || block.type === "text") return stringValue2(block.text);
+    return null;
+  }).filter((text) => Boolean(text)).join("\n");
+}
+function textFromCodexRawReasoning(item) {
+  const text = stringValue2(item.text);
+  if (text) return text;
+  const summary = Array.isArray(item.summary) ? item.summary : [];
+  return summary.map((part) => {
+    const block = objectValue2(part);
+    return stringValue2(block.text);
+  }).filter((part) => Boolean(part)).join("\n");
+}
+function withParentToolCallId(event, parentToolCallId) {
+  if (!event.type.startsWith("message.")) return event;
+  const message = objectValue2(event.payload.message);
+  if (!message || message.parentToolCallId) return event;
+  return {
+    ...event,
+    payload: {
+      ...event.payload,
+      message: {
+        ...message,
+        parentToolCallId
+      }
+    }
+  };
+}
 var codexProvider = {
   name: "codex",
   binary: "codex",
@@ -38699,7 +39007,7 @@ var codexProvider = {
     };
     const thread = request3.resume && resumeToken ? codex.resumeThread(resumeToken, threadOptions) : codex.startThread(threadOptions);
     const idleKeepAliveMs = positiveNumber(request3.runtimeConfig?.codexIdleKeepAliveMs);
-    const mapper = new CodexEventMapper();
+    const mapper = new CodexEventMapper(hostHome(request3.env) ?? request3.env.HOME);
     const nextPrompt = async () => {
       const queued = queuedPrompts.shift();
       if (queued !== void 0) return queued;
@@ -38722,7 +39030,10 @@ var codexProvider = {
         if (prompt === void 0) return;
         const streamed = await thread.runStreamed(prompt, { signal: abortController.signal });
         for await (const event of streamed.events) {
-          if (event.type === "thread.started") resumeToken = event.thread_id;
+          if (event.type === "thread.started") {
+            resumeToken = event.thread_id;
+            mapper.setThreadId(event.thread_id);
+          }
           yield* mapper.map(event);
         }
       }
@@ -214776,7 +215087,7 @@ Awr();
 var import_node2 = __toESM(require_node(), 1);
 import { spawn as spawn3 } from "node:child_process";
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { existsSync as existsSync12 } from "node:fs";
+import { existsSync as existsSync13 } from "node:fs";
 import { createRequire as createRequire2 } from "node:module";
 import { Socket as Socket3 } from "node:net";
 import { dirname as dirname8, join as join30 } from "node:path";
@@ -215840,7 +216151,7 @@ function getBundledCliPath() {
   const searchPaths = req.resolve.paths("@github/copilot") ?? [];
   for (const base of searchPaths) {
     const candidate = join30(base, "@github", "copilot", "index.js");
-    if (existsSync12(candidate)) {
+    if (existsSync13(candidate)) {
       return candidate;
     }
   }
@@ -216787,7 +217098,7 @@ var CopilotClient = class _CopilotClient {
             t7.captureContent
           );
       }
-      if (!existsSync12(this.options.cliPath)) {
+      if (!existsSync13(this.options.cliPath)) {
         throw new Error(
           `Copilot CLI not found at ${this.options.cliPath}. Ensure @github/copilot is installed.`
         );

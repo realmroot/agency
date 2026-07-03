@@ -74,8 +74,27 @@ function normalizeToolInput(name: string, input: Record<string, unknown>): Recor
       return { url: input.url }
     case 'WebSearch':
       return { query: input.query }
+    case 'Agent':
+    case 'Task':
+      return normalizeAgentToolInput(input)
     default:
       return input
+  }
+}
+
+function normalizeAgentToolInput(input: Record<string, unknown>): Record<string, unknown> {
+  const prompt = stringValue(input.prompt) ?? stringValue(input.message) ?? JSON.stringify(input)
+  const description = stringValue(input.description)
+  const subagentName =
+    stringValue(input.subagentName) ??
+    stringValue(input.subagent_type) ??
+    stringValue(input.subagentType) ??
+    stringValue(input.agent_type) ??
+    stringValue(input.agentType)
+  return {
+    prompt,
+    ...(description ? { description } : {}),
+    ...(subagentName ? { subagentName } : {}),
   }
 }
 
@@ -98,6 +117,7 @@ function normalizeToolName(name: string) {
     case 'WebSearch':
       return 'web_search'
     case 'Agent':
+    case 'Task':
       return 'agent'
     default:
       return name

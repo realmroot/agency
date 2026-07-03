@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { AMA_SANDBOX_TOOL_NAMES } from './agent-tools'
+import { AMA_ORCHESTRATION_TOOL_NAMES, AMA_SANDBOX_TOOL_NAMES } from './agent-tools'
 
 export const AmaSandboxToolNameSchema = z.enum(AMA_SANDBOX_TOOL_NAMES)
+export const AmaOrchestrationToolNameSchema = z.enum(AMA_ORCHESTRATION_TOOL_NAMES)
 
 const NonNegativeIntegerSchema = z.number().int().min(0)
 const PositiveNumberSchema = z.number().positive()
@@ -121,6 +122,14 @@ export const WebSearchToolInputSchema = z
   })
   .strict()
 
+export const AgentToolInputSchema = z
+  .object({
+    prompt: z.string().min(1),
+    description: z.string().min(1).optional(),
+    subagentName: z.string().min(1).optional(),
+  })
+  .strict()
+
 export const CommandToolOutputSchema = BashToolOutputSchema
 
 export const AmaSandboxToolInputSchemas = {
@@ -133,6 +142,10 @@ export const AmaSandboxToolInputSchemas = {
   ls: LsToolInputSchema,
   fetch: FetchToolInputSchema,
   web_search: WebSearchToolInputSchema,
+} as const
+
+export const AmaOrchestrationToolInputSchemas = {
+  agent: AgentToolInputSchema,
 } as const
 
 export const AmaSandboxToolOutputSchemas = {
@@ -159,6 +172,10 @@ export const AmaSandboxToolCallSchema = z.discriminatedUnion('name', [
   z.object({ id: z.string().min(1), name: z.literal('web_search'), input: WebSearchToolInputSchema }).strict(),
 ])
 
+export const AmaOrchestrationToolCallSchema = z.discriminatedUnion('name', [
+  z.object({ id: z.string().min(1), name: z.literal('agent'), input: AgentToolInputSchema }).strict(),
+])
+
 export type BashToolInput = z.infer<typeof BashToolInputSchema>
 export type BashToolOutput = z.infer<typeof BashToolOutputSchema>
 export type ReadToolInput = z.infer<typeof ReadToolInputSchema>
@@ -172,8 +189,10 @@ export type FindToolInput = z.infer<typeof FindToolInputSchema>
 export type LsToolInput = z.infer<typeof LsToolInputSchema>
 export type FetchToolInput = z.infer<typeof FetchToolInputSchema>
 export type WebSearchToolInput = z.infer<typeof WebSearchToolInputSchema>
+export type AgentToolInput = z.infer<typeof AgentToolInputSchema>
 export type CommandToolOutput = z.infer<typeof CommandToolOutputSchema>
 export type AmaSandboxToolCall = z.infer<typeof AmaSandboxToolCallSchema>
+export type AmaOrchestrationToolCall = z.infer<typeof AmaOrchestrationToolCallSchema>
 
 export type AmaSandboxToolInputByName = {
   bash: BashToolInput
@@ -185,6 +204,10 @@ export type AmaSandboxToolInputByName = {
   ls: LsToolInput
   fetch: FetchToolInput
   web_search: WebSearchToolInput
+}
+
+export type AmaOrchestrationToolInputByName = {
+  agent: AgentToolInput
 }
 
 export type AmaSandboxToolOutputByName = {
@@ -206,6 +229,13 @@ export function parseAmaSandboxToolInput<TName extends keyof AmaSandboxToolInput
   return AmaSandboxToolInputSchemas[name].parse(input) as AmaSandboxToolInputByName[TName]
 }
 
+export function parseAmaOrchestrationToolInput<TName extends keyof AmaOrchestrationToolInputByName>(
+  name: TName,
+  input: unknown,
+): AmaOrchestrationToolInputByName[TName] {
+  return AmaOrchestrationToolInputSchemas[name].parse(input) as AmaOrchestrationToolInputByName[TName]
+}
+
 export function parseAmaSandboxToolOutput<TName extends keyof AmaSandboxToolOutputByName>(
   name: TName,
   output: unknown,
@@ -215,4 +245,8 @@ export function parseAmaSandboxToolOutput<TName extends keyof AmaSandboxToolOutp
 
 export function amaSandboxToolInputJsonSchema<TName extends keyof AmaSandboxToolInputByName>(name: TName) {
   return z.toJSONSchema(AmaSandboxToolInputSchemas[name])
+}
+
+export function amaOrchestrationToolInputJsonSchema<TName extends keyof AmaOrchestrationToolInputByName>(name: TName) {
+  return z.toJSONSchema(AmaOrchestrationToolInputSchemas[name])
 }
