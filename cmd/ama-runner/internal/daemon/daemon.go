@@ -70,6 +70,12 @@ func (d *Daemon) buildInfo() version.Info {
 }
 
 func (d *Daemon) Start(ctx context.Context) error {
+	releaseLock, err := acquireStateDirLock(d.Config.StateDir)
+	if err != nil {
+		return err
+	}
+	defer releaseLock()
+
 	if err := os.MkdirAll(d.Config.WorkDir, 0o755); err != nil {
 		return err
 	}
@@ -204,6 +210,12 @@ func (d *Daemon) drainInFlightLeases(inFlight *sync.WaitGroup) {
 }
 
 func (d *Daemon) RunOnce(ctx context.Context) error {
+	releaseLock, err := acquireStateDirLock(d.Config.StateDir)
+	if err != nil {
+		return err
+	}
+	defer releaseLock()
+
 	if err := d.ensureRunnerID(ctx); err != nil {
 		return err
 	}

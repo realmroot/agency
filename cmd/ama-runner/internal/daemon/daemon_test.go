@@ -494,6 +494,24 @@ func TestRunOnceSendsHeartbeatAndCompletesApprovedToolWork(t *testing.T) {
 	}
 }
 
+func TestRunOnceRejectsConcurrentProcessForSameStateDir(t *testing.T) {
+	client := &fakeAMAServer{}
+	daemon := testDaemon(client, &fakeAdapter{})
+	releaseLock, err := acquireStateDirLock(daemon.Config.StateDir)
+	if err != nil {
+		t.Fatalf("acquire lock: %v", err)
+	}
+	defer releaseLock()
+
+	err = daemon.RunOnce(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "already running with state directory") {
+		t.Fatalf("expected state dir lock error, got %v", err)
+	}
+	if len(client.heartbeats) != 0 {
+		t.Fatalf("expected no control-plane calls after lock failure, got %d heartbeats", len(client.heartbeats))
+	}
+}
+
 func TestRunOnceRegistersRunnerWhenIDIsMissing(t *testing.T) {
 	client := &fakeAMAServer{lease: approvedLease(), runnerID: "runner_registered"}
 	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok", "stderr": "", "exitCode": 0}}}
