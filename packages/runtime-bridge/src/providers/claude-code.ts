@@ -286,6 +286,26 @@ export class ClaudeEventMapper {
   }
 }
 
+export function claudeCodeEventsFromJsonl(filePath: string): AmaRuntimeEvent[] {
+  const mapper = new ClaudeEventMapper()
+  const events: AmaRuntimeEvent[] = []
+  let lineNumber = 0
+  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+    lineNumber += 1
+    if (!line.trim()) continue
+    let message: SDKMessage
+    try {
+      message = JSON.parse(line) as SDKMessage
+    } catch (err) {
+      throw new Error(
+        `read Claude Code JSONL ${filePath} line ${lineNumber}: ${err instanceof Error ? err.message : err}`,
+      )
+    }
+    events.push(...mapper.map(message))
+  }
+  return events
+}
+
 function claudeMessage(role: Message['role'], msg: SDKMessage, content: MessageContentBlock[]): Message {
   const raw = msg as unknown as Record<string, unknown>
   const providerMessage = objectValue(raw.message)

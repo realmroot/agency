@@ -85,6 +85,11 @@ function codexToolShape(item: Record<string, unknown>): CodexToolShape | null {
       if (typeof item.query !== 'string' || !item.query) return null
       return { toolName: 'web_search', args: { query: item.query } }
     }
+    case 'custom_tool_call': {
+      const nativeFunctionName = stringValue(item.name)
+      if (!nativeFunctionName) return null
+      return { toolName: nativeFunctionName, args: parseCustomToolInput(item.input), nativeFunctionName }
+    }
     case 'function_call': {
       const nativeFunctionName = stringValue(item.name)
       if (!nativeFunctionName) return null
@@ -108,6 +113,14 @@ function codexToolShape(item: Record<string, unknown>): CodexToolShape | null {
     default:
       return null
   }
+}
+
+function parseCustomToolInput(value: unknown): Record<string, unknown> {
+  const parsed = parseJsonObject(value)
+  if (Object.keys(parsed).length > 0) return parsed
+  if (typeof value === 'string') return { input: value }
+  if (value === undefined) return {}
+  return { input: JSON.stringify(value) }
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> {
@@ -232,14 +245,14 @@ class CodexEventMapper {
           yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)))
           return
         }
-        if (item.type === 'function_call_output') {
+        if (item.type === 'function_call_output' || item.type === 'custom_tool_call_output') {
           for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent
           return
         }
         const shape = codexToolShape(item)
         const id = itemId(item)
         this.trackFunctionCall(item, id, shape)
-        if (shape && id && item.type === 'function_call') {
+        if (shape && id && (item.type === 'function_call' || item.type === 'custom_tool_call')) {
           if (!shape.hiddenControl) {
             yield messageEvent({
               id: randomId('msg'),
@@ -278,7 +291,9 @@ class CodexEventMapper {
   }
 
   private trackFunctionCall(item: Record<string, unknown>, id: string | null, shape: CodexToolShape | null) {
-    if (item.type !== 'function_call' || !id || !shape?.nativeFunctionName) return
+    if ((item.type !== 'function_call' && item.type !== 'custom_tool_call') || !id || !shape?.nativeFunctionName) {
+      return
+    }
     this.nativeFunctionNameByCallId.set(id, shape.nativeFunctionName)
     this.nativeFunctionInputByCallId.set(id, shape.args)
   }
@@ -353,6 +368,30 @@ class CodexEventMapper {
     }
     return events
   }
+}
+
+export function codexEventsFromJsonl(
+  filePath: string,
+  options: { home?: string; importRawSubagentSessions?: boolean } = {},
+): AmaRuntimeEvent[] {
+  const mapper = new CodexEventMapper(options.home, options.importRawSubagentSessions ?? true)
+  const events: AmaRuntimeEvent[] = []
+  let lineNumber = 0
+  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+    lineNumber += 1
+    if (!line.trim()) continue
+    let record: Record<string, unknown>
+    try {
+      record = objectValue(JSON.parse(line))
+    } catch (err) {
+      throw new Error(`read Codex JSONL ${filePath} line ${lineNumber}: ${err instanceof Error ? err.message : err}`)
+    }
+    if (record.type !== 'response_item') continue
+    const threadEvent = codexRawResponseItemThreadEvent(objectValue(record.payload))
+    if (!threadEvent) continue
+    for (const event of mapper.map(threadEvent)) events.push(event)
+  }
+  return events
 }
 
 type CodexSubagentFinal = {
@@ -466,7 +505,18 @@ function codexRawResponseItemThreadEvent(item: Record<string, unknown>): ThreadE
     }
     case 'function_call':
     case 'function_call_output':
+    case 'custom_tool_call':
+    case 'custom_tool_call_output':
       return { type: 'item.completed', item } as ThreadEvent
+    case 'web_search_call': {
+      const action = objectValue(item.action)
+      const query = stringValue(action.query)
+      if (!query) return null
+      return {
+        type: 'item.completed',
+        item: { id: stringValue(item.id) ?? randomId('web_search'), type: 'web_search', query },
+      } as ThreadEvent
+    }
     default:
       return null
   }

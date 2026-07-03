@@ -36,7 +36,8 @@
     "smoke:session-socket": "vitest run --project integration server/integration/runner-relay.test.ts",
     "smoke:ama": "node scripts/smoke-ama.mjs",
     "smoke:bridge": "pnpm run bridge:build && node scripts/smoke-runtime.mjs",
-    "smoke:runtime": "pnpm run smoke:bridge"
+    "smoke:runtime": "pnpm run smoke:bridge",
+    "events:rebuild": "tsx scripts/rebuild-session-events.ts"
   },
   "engines": {
     "node": ">=24"

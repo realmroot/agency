@@ -38609,6 +38609,11 @@ function codexToolShape(item) {
       if (typeof item.query !== "string" || !item.query) return null;
       return { toolName: "web_search", args: { query: item.query } };
     }
+    case "custom_tool_call": {
+      const nativeFunctionName = stringValue2(item.name);
+      if (!nativeFunctionName) return null;
+      return { toolName: nativeFunctionName, args: parseCustomToolInput(item.input), nativeFunctionName };
+    }
     case "function_call": {
       const nativeFunctionName = stringValue2(item.name);
       if (!nativeFunctionName) return null;
@@ -38632,6 +38637,13 @@ function codexToolShape(item) {
     default:
       return null;
   }
+}
+function parseCustomToolInput(value) {
+  const parsed = parseJsonObject(value);
+  if (Object.keys(parsed).length > 0) return parsed;
+  if (typeof value === "string") return { input: value };
+  if (value === void 0) return {};
+  return { input: JSON.stringify(value) };
 }
 function parseJsonObject(value) {
   if (typeof value !== "string") return objectValue2(value);
@@ -38734,14 +38746,14 @@ var CodexEventMapper = class _CodexEventMapper {
           yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)));
           return;
         }
-        if (item.type === "function_call_output") {
+        if (item.type === "function_call_output" || item.type === "custom_tool_call_output") {
           for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent;
           return;
         }
         const shape = codexToolShape(item);
         const id2 = itemId(item);
         this.trackFunctionCall(item, id2, shape);
-        if (shape && id2 && item.type === "function_call") {
+        if (shape && id2 && (item.type === "function_call" || item.type === "custom_tool_call")) {
           if (!shape.hiddenControl) {
             yield messageEvent({
               id: randomId("msg"),
@@ -38773,7 +38785,9 @@ var CodexEventMapper = class _CodexEventMapper {
     }
   }
   trackFunctionCall(item, id2, shape) {
-    if (item.type !== "function_call" || !id2 || !shape?.nativeFunctionName) return;
+    if (item.type !== "function_call" && item.type !== "custom_tool_call" || !id2 || !shape?.nativeFunctionName) {
+      return;
+    }
     this.nativeFunctionNameByCallId.set(id2, shape.nativeFunctionName);
     this.nativeFunctionInputByCallId.set(id2, shape.args);
   }
@@ -38940,7 +38954,18 @@ function codexRawResponseItemThreadEvent(item) {
     }
     case "function_call":
     case "function_call_output":
+    case "custom_tool_call":
+    case "custom_tool_call_output":
       return { type: "item.completed", item };
+    case "web_search_call": {
+      const action = objectValue2(item.action);
+      const query = stringValue2(action.query);
+      if (!query) return null;
+      return {
+        type: "item.completed",
+        item: { id: stringValue2(item.id) ?? randomId("web_search"), type: "web_search", query }
+      };
+    }
     default:
       return null;
   }

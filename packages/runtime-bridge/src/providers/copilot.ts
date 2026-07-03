@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import type { MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
 import '@github/copilot/sdk'
 import { approveAll, CopilotClient } from '@github/copilot-sdk'
@@ -183,6 +184,24 @@ export class CopilotEventMapper {
     this.text = ''
     this.reasoning = ''
   }
+}
+
+export function copilotEventsFromJsonl(filePath: string): AmaRuntimeEvent[] {
+  const mapper = new CopilotEventMapper()
+  const events: AmaRuntimeEvent[] = []
+  let lineNumber = 0
+  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+    lineNumber += 1
+    if (!line.trim()) continue
+    let event: CopilotEvent
+    try {
+      event = JSON.parse(line) as CopilotEvent
+    } catch (err) {
+      throw new Error(`read Copilot JSONL ${filePath} line ${lineNumber}: ${err instanceof Error ? err.message : err}`)
+    }
+    events.push(...mapper.map(event))
+  }
+  return events
 }
 
 function copilotToolResult(result: unknown): ToolResult {
