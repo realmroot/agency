@@ -1,9 +1,7 @@
 // Pure trigger rules: secret-material detection (so raw secrets are kept out of
 // metadata, resource refs, and plain env — they must use secret references),
-// interval-based next-due computation, and the constrained HTTP prompt template
-// renderer.
+// and interval-based next-due computation.
 
-import { Liquid } from 'liquidjs'
 import type { ResourceMetadata, ResourcePhase } from './resource'
 import type { SessionSpec } from './session'
 
@@ -81,15 +79,6 @@ export interface TriggerRunStatus {
   errorMessage: string | null
 }
 
-export class PromptTemplateRenderError extends Error {
-  readonly field: string
-  constructor(message: string, field: string) {
-    super(message)
-    this.name = 'PromptTemplateRenderError'
-    this.field = field
-  }
-}
-
 function secretKey(key: string) {
   const normalized = key.toLowerCase().replaceAll(/[^a-z0-9]/g, '')
   return (
@@ -113,53 +102,4 @@ export function hasSecretMaterial(value: unknown): boolean {
 
 export function nextDueFromInterval(intervalSeconds: number, from: number = Date.now()) {
   return new Date(from + intervalSeconds * 1000).toISOString()
-}
-
-export interface HttpTriggerTemplateContext {
-  body: unknown
-  header: Record<string, string>
-  run?: {
-    session_reused: boolean
-    session_id: string | null
-    session_state: string | null
-  }
-}
-
-const promptTemplateEngine = new Liquid({
-  jsTruthy: true,
-  strictFilters: false,
-  strictVariables: false,
-})
-
-function normalizeRootPaths(template: string): string {
-  return template.replace(
-    /({[{%]-?\s*)(.*?)(\s*-?[}%]})/gs,
-    (_match, open: string, expression: string, close: string) => {
-      const normalized = expression.replace(/(^|[^\w"'])\.(?=[A-Za-z_])/g, '$1')
-      return `${open}${normalized}${close}`
-    },
-  )
-}
-
-function templateContext(context: HttpTriggerTemplateContext): Record<string, unknown> {
-  return {
-    body: context.body,
-    header: context.header,
-    ama: {
-      run: context.run ?? {
-        session_reused: false,
-        session_id: null,
-        session_state: null,
-      },
-    },
-  }
-}
-
-export function renderHttpPromptTemplate(template: string, context: HttpTriggerTemplateContext): string {
-  try {
-    return promptTemplateEngine.parseAndRenderSync(normalizeRootPaths(template), templateContext(context))
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new PromptTemplateRenderError(message, 'promptTemplate')
-  }
 }

@@ -389,6 +389,25 @@ func TestLeaseWorkerLeafHelpers(t *testing.T) {
 	}
 }
 
+func TestRunToolCancelsLeaseWhenContextIsCancelledBeforeEventUpload(t *testing.T) {
+	work := approvedLease()
+	client := &fakeAMAServer{lease: work}
+	daemon := testDaemon(client, &fakeAdapter{})
+	worker := daemon.leaseWorker()
+	payload, err := protocol.ParseWorkPayload(work.workItem.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := worker.runTool(ctx, work.lease, work.workItem, payload); err != nil {
+		t.Fatalf("expected cancelled lease update to succeed, got %v", err)
+	}
+	if len(client.updates) != 1 || leaseState(client.updates[0]) != "cancelled" {
+		t.Fatalf("expected cancelled lease update, got %#v", client.updates)
+	}
+}
+
 func TestAttachMemoryStoresBranches(t *testing.T) {
 	worker := LeaseWorker{}
 	failed := runtime.Result{Err: errors.New("runtime failed")}

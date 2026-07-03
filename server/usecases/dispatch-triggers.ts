@@ -1,12 +1,12 @@
 import type { ResourceMetadata } from '@server/domain/resource'
+import type { Trigger } from '@server/domain/trigger'
+import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import type { Deps } from './deps'
 import {
   type HttpTriggerTemplateContext,
   PromptTemplateRenderError,
   renderHttpPromptTemplate,
-  type Trigger,
-} from '@server/domain/trigger'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
-import type { Deps } from './deps'
+} from './http-trigger-template'
 import {
   type AuthScope,
   type ClaimedRun,

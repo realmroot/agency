@@ -182,6 +182,9 @@ func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *am
 	}
 	sessionID := workItemSessionID(workItem)
 	if err := r.uploadSessionEvent(ctx, sessionID, runnerEvent(string(sessionevent.EventTypeMessageCompleted), toolCallMessagePayload(payload))); err != nil {
+		if ctx.Err() != nil {
+			return r.cancelLease(context.Background(), lease, ctx.Err())
+		}
 		return err
 	}
 
