@@ -55,8 +55,24 @@ function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value ? value : null
 }
 
-function itemId(item: Record<string, unknown>) {
-  return stringValue(item.id) ?? stringValue(item.call_id)
+function codexProviderItemId(item: Record<string, unknown>) {
+  return stringValue(item.id)
+}
+
+function codexToolCallId(item: Record<string, unknown>) {
+  switch (item.type) {
+    case 'function_call':
+    case 'function_call_output':
+    case 'custom_tool_call':
+    case 'custom_tool_call_output':
+      return stringValue(item.call_id)
+    case 'command_execution':
+    case 'mcp_tool_call':
+    case 'web_search':
+      return stringValue(item.id)
+    default:
+      return null
+  }
 }
 
 type CodexToolShape = {
@@ -222,7 +238,7 @@ class CodexEventMapper {
       case 'item.started': {
         const item = objectValue(event.item)
         const shape = codexToolShape(item)
-        const id = itemId(item)
+        const id = codexToolCallId(item)
         if (shape && id && !shape.hiddenControl && item.type !== 'function_call') {
           yield messageEvent({
             id: randomId('msg'),
@@ -238,11 +254,11 @@ class CodexEventMapper {
           return
         }
         if (item.type === 'agent_message' && typeof item.text === 'string' && item.text) {
-          yield messageEvent(codexAssistantMessage([{ type: 'text', text: item.text }], itemId(item)))
+          yield messageEvent(codexAssistantMessage([{ type: 'text', text: item.text }], codexProviderItemId(item)))
           return
         }
         if (item.type === 'reasoning' && typeof item.text === 'string' && item.text) {
-          yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)))
+          yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], codexProviderItemId(item)))
           return
         }
         if (item.type === 'function_call_output' || item.type === 'custom_tool_call_output') {
@@ -250,7 +266,7 @@ class CodexEventMapper {
           return
         }
         const shape = codexToolShape(item)
-        const id = itemId(item)
+        const id = codexToolCallId(item)
         this.trackFunctionCall(item, id, shape)
         if (shape && id && (item.type === 'function_call' || item.type === 'custom_tool_call')) {
           if (!shape.hiddenControl) {
@@ -299,7 +315,7 @@ class CodexEventMapper {
   }
 
   private mapFunctionCallOutput(item: Record<string, unknown>): AmaRuntimeEvent[] {
-    const id = itemId(item)
+    const id = codexToolCallId(item)
     if (!id) return []
     const nativeFunctionName = this.nativeFunctionNameByCallId.get(id)
     if (nativeFunctionName === 'spawn_agent') {
@@ -319,8 +335,9 @@ class CodexEventMapper {
 
   private mapSubagentControlOutput(nativeFunctionName: string, item: Record<string, unknown>): AmaRuntimeEvent[] {
     if (nativeFunctionName !== 'wait_agent' && nativeFunctionName !== 'close_agent') return []
+    const id = codexToolCallId(item)
     const finals = subagentFinalsFromCodexControl(
-      this.nativeFunctionInputByCallId.get(itemId(item) ?? '') ?? {},
+      this.nativeFunctionInputByCallId.get(id ?? '') ?? {},
       parseJsonObject(item.output),
       Boolean(item.error),
     )

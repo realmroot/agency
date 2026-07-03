@@ -114,7 +114,8 @@ async function* subagentFunctionEvents() {
   yield {
     type: 'item.completed',
     item: {
-      id: 'call_spawn_1',
+      id: 'fc_spawn_1',
+      call_id: 'call_spawn_1',
       type: 'function_call',
       name: 'spawn_agent',
       arguments: JSON.stringify({
@@ -135,7 +136,8 @@ async function* subagentFunctionEvents() {
   yield {
     type: 'item.completed',
     item: {
-      id: 'call_wait_1',
+      id: 'fc_wait_1',
+      call_id: 'call_wait_1',
       type: 'function_call',
       name: 'wait_agent',
       arguments: JSON.stringify({ targets: ['agent_1'], timeout_ms: 60_000 }),
@@ -418,6 +420,8 @@ describe('codexProvider', () => {
 
     expect(JSON.stringify(events)).not.toContain('spawn_agent')
     expect(JSON.stringify(events)).not.toContain('wait_agent')
+    expect(JSON.stringify(events)).not.toContain('fc_spawn_1')
+    expect(JSON.stringify(events)).not.toContain('fc_wait_1')
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
