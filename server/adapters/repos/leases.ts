@@ -244,11 +244,7 @@ async function bindSessionResumeToken(
     .update(sessions)
     .set({ resumeToken, updatedAt: timestamp })
     .where(
-      and(
-        eq(sessions.id, workItem.sessionId),
-        eq(sessions.projectId, input.projectId),
-        isNull(sessions.resumeToken),
-      ),
+      and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, input.projectId), isNull(sessions.resumeToken)),
     )
     .returning({ resumeToken: sessions.resumeToken })
     .get()

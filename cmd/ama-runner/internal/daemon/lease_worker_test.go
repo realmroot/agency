@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
@@ -37,6 +38,57 @@ func TestResumeTokenBox(t *testing.T) {
 	if got := box.Get(); got != "resume_1" {
 		t.Fatalf("expected stored resume token, got %q", got)
 	}
+	if box.SetIfChanged("resume_1") {
+		t.Fatal("expected duplicate resume token to be ignored")
+	}
+	if !box.SetIfChanged("resume_2") {
+		t.Fatal("expected changed resume token to be stored")
+	}
+	if got := box.Get(); got != "resume_2" {
+		t.Fatalf("expected changed resume token, got %q", got)
+	}
+}
+
+func TestLeaseWorkerPersistResumeToken(t *testing.T) {
+	t.Run("updates active lease once per token", func(t *testing.T) {
+		client := &fakeAMAServer{lease: approvedLease()}
+		daemon := testDaemon(client, &fakeAdapter{})
+		worker := daemon.leaseWorker()
+		tokens := &resumeTokenBox{}
+		leaseUpdates := &sync.Mutex{}
+
+		if err := worker.persistResumeToken(context.Background(), client.lease.lease, tokens, leaseUpdates, "resume_1"); err != nil {
+			t.Fatalf("expected resume token update, got %v", err)
+		}
+		if err := worker.persistResumeToken(context.Background(), client.lease.lease, tokens, leaseUpdates, "resume_1"); err != nil {
+			t.Fatalf("expected duplicate resume token to be ignored, got %v", err)
+		}
+		if len(client.updates) != 1 || leaseState(client.updates[0]) != "active" {
+			t.Fatalf("expected one active lease update, got %#v", client.updates)
+		}
+		if client.updates[0].ResumeToken == nil || *client.updates[0].ResumeToken != "resume_1" {
+			t.Fatalf("expected resume token in lease update, got %#v", client.updates[0])
+		}
+		if got := tokens.Get(); got != "resume_1" {
+			t.Fatalf("expected stored resume token, got %q", got)
+		}
+	})
+
+	t.Run("propagates update errors", func(t *testing.T) {
+		client := &fakeAMAServer{lease: approvedLease(), updateErr: errors.New("lease update failed")}
+		daemon := testDaemon(client, &fakeAdapter{})
+		worker := daemon.leaseWorker()
+		err := worker.persistResumeToken(
+			context.Background(),
+			client.lease.lease,
+			&resumeTokenBox{},
+			&sync.Mutex{},
+			"resume_1",
+		)
+		if err == nil || !strings.Contains(err.Error(), "runner lease resume token update failed") {
+			t.Fatalf("expected resume token update error, got %v", err)
+		}
+	})
 }
 
 func TestIsSupportedSessionRuntimeAcceptsNonEmptyRuntime(t *testing.T) {

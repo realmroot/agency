@@ -2276,8 +2276,10 @@ describe('[CF] /api/v1/sessions', () => {
     await env.DB.prepare("UPDATE work_items SET state = 'succeeded', result = ?, updated_at = ? WHERE session_id = ?")
       .bind(JSON.stringify({ resumeToken: 'resume-token-1' }), new Date().toISOString(), created.metadata.uid)
       .run()
-    await env.DB.prepare("UPDATE sessions SET state = 'running', state_reason = NULL, updated_at = ? WHERE id = ?")
-      .bind(new Date().toISOString(), created.metadata.uid)
+    await env.DB.prepare(
+      "UPDATE sessions SET state = 'idle', state_reason = NULL, resume_token = ?, updated_at = ? WHERE id = ?",
+    )
+      .bind('resume-token-1', new Date().toISOString(), created.metadata.uid)
       .run()
 
     const messageRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/messages`, authorization, {
