@@ -38587,8 +38587,23 @@ function positiveNumber(value) {
 function stringValue2(value) {
   return typeof value === "string" && value ? value : null;
 }
-function itemId(item) {
-  return stringValue2(item.id) ?? stringValue2(item.call_id);
+function codexProviderItemId(item) {
+  return stringValue2(item.id);
+}
+function codexToolCallId(item) {
+  switch (item.type) {
+    case "function_call":
+    case "function_call_output":
+    case "custom_tool_call":
+    case "custom_tool_call_output":
+      return stringValue2(item.call_id);
+    case "command_execution":
+    case "mcp_tool_call":
+    case "web_search":
+      return stringValue2(item.id);
+    default:
+      return null;
+  }
 }
 function codexToolShape(item) {
   switch (item.type) {
@@ -38723,7 +38738,7 @@ var CodexEventMapper = class _CodexEventMapper {
       case "item.started": {
         const item = objectValue2(event.item);
         const shape = codexToolShape(item);
-        const id2 = itemId(item);
+        const id2 = codexToolCallId(item);
         if (shape && id2 && !shape.hiddenControl && item.type !== "function_call") {
           yield messageEvent({
             id: randomId("msg"),
@@ -38739,11 +38754,11 @@ var CodexEventMapper = class _CodexEventMapper {
           return;
         }
         if (item.type === "agent_message" && typeof item.text === "string" && item.text) {
-          yield messageEvent(codexAssistantMessage([{ type: "text", text: item.text }], itemId(item)));
+          yield messageEvent(codexAssistantMessage([{ type: "text", text: item.text }], codexProviderItemId(item)));
           return;
         }
         if (item.type === "reasoning" && typeof item.text === "string" && item.text) {
-          yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], itemId(item)));
+          yield messageEvent(codexAssistantMessage([reasoningBlock(item.text)], codexProviderItemId(item)));
           return;
         }
         if (item.type === "function_call_output" || item.type === "custom_tool_call_output") {
@@ -38751,7 +38766,7 @@ var CodexEventMapper = class _CodexEventMapper {
           return;
         }
         const shape = codexToolShape(item);
-        const id2 = itemId(item);
+        const id2 = codexToolCallId(item);
         this.trackFunctionCall(item, id2, shape);
         if (shape && id2 && (item.type === "function_call" || item.type === "custom_tool_call")) {
           if (!shape.hiddenControl) {
@@ -38792,7 +38807,7 @@ var CodexEventMapper = class _CodexEventMapper {
     this.nativeFunctionInputByCallId.set(id2, shape.args);
   }
   mapFunctionCallOutput(item) {
-    const id2 = itemId(item);
+    const id2 = codexToolCallId(item);
     if (!id2) return [];
     const nativeFunctionName = this.nativeFunctionNameByCallId.get(id2);
     if (nativeFunctionName === "spawn_agent") {
@@ -38811,8 +38826,9 @@ var CodexEventMapper = class _CodexEventMapper {
   }
   mapSubagentControlOutput(nativeFunctionName, item) {
     if (nativeFunctionName !== "wait_agent" && nativeFunctionName !== "close_agent") return [];
+    const id2 = codexToolCallId(item);
     const finals = subagentFinalsFromCodexControl(
-      this.nativeFunctionInputByCallId.get(itemId(item) ?? "") ?? {},
+      this.nativeFunctionInputByCallId.get(id2 ?? "") ?? {},
       parseJsonObject(item.output),
       Boolean(item.error)
     );
@@ -217840,6 +217856,9 @@ function probeFailureStatus(message) {
   if (/rate.?limit|quota|too many requests|\b429\b/i.test(message)) return "limited";
   return "unhealthy";
 }
+function deterministicResumeToken(request3) {
+  return request3.runtime === "codex" ? `e2e-${request3.sessionId}` : request3.sessionId;
+}
 function liveBridgeTestHandle(request3) {
   const marker = `${request3.runtime}-bridge-live`;
   const initialMessage = request3.resume ? `${marker} resumed-with-token:${request3.resumeToken ? "yes" : "none"}` : `${marker} received:${request3.prompt}`;
@@ -217911,7 +217930,7 @@ function liveBridgeTestHandle(request3) {
         runtimeEvent("message.completed", { message: textMessage("assistant", `${marker} permission-approved`) })
       );
     },
-    getResumeToken: () => `e2e-live-${request3.sessionId}`
+    getResumeToken: () => deterministicResumeToken(request3)
   };
 }
 function deterministicBridgeTestEvents(request3) {
@@ -217974,7 +217993,7 @@ async function runE2eBridgeTest(request3, state, write2) {
     for (const event of deterministicBridgeTestEvents(request3)) {
       write2(sessionEventOutput(request3.requestId, event));
     }
-    write2({ type: "result", requestId: request3.requestId, result: { resumeToken: `e2e-${request3.sessionId}` } });
+    write2({ type: "result", requestId: request3.requestId, result: { resumeToken: deterministicResumeToken(request3) } });
     return;
   }
   const handle = liveBridgeTestHandle(request3);
@@ -217984,6 +218003,7 @@ async function runE2eBridgeTest(request3, state, write2) {
   });
   emitLiveResumeToken();
   for await (const event of handle.events) {
+    emitLiveResumeToken();
     write2(sessionEventOutput(request3.requestId, event));
     emitLiveResumeToken();
   }
@@ -218027,6 +218047,7 @@ async function run(request3) {
     });
     emitResumeToken();
     for await (const event of handle.events) {
+      emitResumeToken();
       writeSessionEvent(request3.requestId, event);
       emitResumeToken();
     }

@@ -95,7 +95,10 @@ echo 'bridge warning' >&2
 		Resume:        true,
 		ResumeToken:   "old-token",
 		WorkDir:       t.TempDir(),
-		OnResumeToken: func(value string) { resumeToken = value },
+		OnResumeToken: func(value string) error {
+			resumeToken = value
+			return nil
+		},
 	}, func(event JSON) error {
 		events = append(events, event)
 		return nil

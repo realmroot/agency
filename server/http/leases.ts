@@ -314,20 +314,28 @@ export function registerLeaseRoutes(routes: LeaseRoutes) {
         }
       }
       const rawPayload = await deps.workItems.rawPayload(auth.project.id, lease.workItemId)
-      const updated = await deps.leases.finish(
-        {
-          organizationId: auth.organization.id,
-          projectId: auth.project.id,
-          leaseId,
-          state: requestedState,
-          ...(body.expiresAt ? { expiresAt: body.expiresAt } : {}),
-          ...(body.leaseDurationSeconds !== undefined ? { leaseDurationSeconds: body.leaseDurationSeconds } : {}),
-          ...(body.resumeToken ? { resumeToken: body.resumeToken } : {}),
-          ...(body.result ? { result: body.result } : {}),
-          ...(body.error ? { error: body.error } : {}),
-        },
-        new Date().toISOString(),
-      )
+      let updated: LeaseRecord | null
+      try {
+        updated = await deps.leases.finish(
+          {
+            organizationId: auth.organization.id,
+            projectId: auth.project.id,
+            leaseId,
+            state: requestedState,
+            ...(body.expiresAt ? { expiresAt: body.expiresAt } : {}),
+            ...(body.leaseDurationSeconds !== undefined ? { leaseDurationSeconds: body.leaseDurationSeconds } : {}),
+            ...(body.resumeToken ? { resumeToken: body.resumeToken } : {}),
+            ...(body.result ? { result: body.result } : {}),
+            ...(body.error ? { error: body.error } : {}),
+          },
+          new Date().toISOString(),
+        )
+      } catch (error) {
+        if (error instanceof RunnerConflictError) {
+          return errorResponse(c, error.status, error.status === 404 ? 'not_found' : 'conflict', error.message)
+        }
+        throw error
+      }
       if (!updated) {
         return errorResponse(c, 409, 'conflict', 'Lease is no longer active')
       }

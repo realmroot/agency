@@ -61,6 +61,7 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
     })
     emitResumeToken()
     for await (const event of handle.events) {
+      emitResumeToken()
       writeSessionEvent(request.requestId, event)
       emitResumeToken()
     }

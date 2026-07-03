@@ -488,7 +488,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(serialized).not.toContain('sandboxId')
     expect(serialized).not.toContain('runtimeEndpointPath')
     expect(serialized).not.toContain('organizationId')
-    expect(serialized).not.toContain('piRuntimeId')
+    expect(serialized).not.toContain('resumeToken')
     expect(created.status.bindings.environment.versionId).toMatch(/^envver_/)
     expect(created.status.startedAt).toEqual(expect.any(String))
 

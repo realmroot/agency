@@ -166,8 +166,7 @@ export async function startSessionRuntimeForRow(
     }
     const started = {
       sandboxId,
-      piRuntimeId: null,
-      piProcessId: null,
+      resumeToken: null,
       runtimeEndpointPath: null,
       state: 'idle',
       metadata: stringify(metadata),

@@ -116,7 +116,7 @@ async function closeSessionRow(
     outcome: 'success',
     requestId: requestIdFrom(requestId),
     sessionId: session.id,
-    metadata: { reason, sandboxId: session.sandboxId, piRuntimeId: session.piRuntimeId },
+    metadata: { reason, sandboxId: session.sandboxId, resumeToken: session.resumeToken },
   })
   await archiveTerminalSession(deps, auth, session.id)
   const closed = await store.findSession(auth.project.id, session.id)

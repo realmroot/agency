@@ -410,8 +410,7 @@ export const sessions = sqliteTable(
     // Internal runtime placement columns. Never exposed via the API.
     durableObjectName: text('durable_object_name').notNull(),
     sandboxId: text('sandbox_id'),
-    piRuntimeId: text('pi_runtime_id'),
-    piProcessId: text('pi_process_id'),
+    resumeToken: text('resume_token'),
     runtimeEndpointPath: text('runtime_endpoint_path'),
     modelProvider: text('model_provider'),
     modelConfig: text('model_config'),

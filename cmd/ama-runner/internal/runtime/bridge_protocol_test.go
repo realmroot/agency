@@ -27,8 +27,9 @@ func TestBridgeProtocolReadsReadyEventsResultsErrorsAndLogs(t *testing.T) {
 	result, err := protocol.readResult(reader, "run_session_1", func(event JSON) error {
 		events = append(events, mustJSON(t, event))
 		return nil
-	}, func(resumeToken string) {
+	}, func(resumeToken string) error {
 		resumeTokens = append(resumeTokens, resumeToken)
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("expected bridge messages, got %v", err)
@@ -41,6 +42,34 @@ func TestBridgeProtocolReadsReadyEventsResultsErrorsAndLogs(t *testing.T) {
 	}
 	if result["providerThreadId"] != "thread_1" {
 		t.Fatalf("expected bridge result, got %#v", result)
+	}
+}
+
+func TestBridgeProtocolStopsBeforeEventsWhenResumeTokenPersistFails(t *testing.T) {
+	protocol := bridgeProtocol{}
+	output := strings.Join([]string{
+		`{"type":"ready"}`,
+		`{"type":"resumeToken","requestId":"run_session_1","resumeToken":"thread_1"}`,
+		`{"type":"runtime.event","requestId":"run_session_1","event":{"type":"message.completed","payload":{"message":{"id":"msg_1","role":"assistant","content":[{"type":"text","text":"must not write"}]}}}}`,
+		`{"type":"result","requestId":"run_session_1","result":{"exitCode":0}}`,
+	}, "\n")
+	reader := protocol.lineReader(strings.NewReader(output))
+	if err := protocol.waitReady(reader); err != nil {
+		t.Fatalf("expected bridge ready, got %v", err)
+	}
+	persistErr := errors.New("persist resume token failed")
+	var events []JSON
+	_, err := protocol.readResult(reader, "run_session_1", func(event JSON) error {
+		events = append(events, event)
+		return nil
+	}, func(string) error {
+		return persistErr
+	})
+	if !errors.Is(err, persistErr) {
+		t.Fatalf("expected resume token persist error, got %v", err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("resume token failure must stop before writing events, got %#v", events)
 	}
 }
 

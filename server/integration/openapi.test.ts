@@ -664,8 +664,7 @@ describe('[CF] OpenAPI documentation', () => {
       }),
     )
     expect(schemas.Session.properties).not.toHaveProperty('runtimeMetadata')
-    expect(schemas.Session.properties).not.toHaveProperty('piRuntimeId')
-    expect(schemas.Session.properties).not.toHaveProperty('piProcessId')
+    expect(schemas.Session.properties).not.toHaveProperty('resumeToken')
     expect(schemas.Session.properties).not.toHaveProperty('modelProvider')
     expect(schemas.Session.properties).not.toHaveProperty('modelConfig')
     expect(schemas.Session.properties).not.toHaveProperty('runtimeOwner')

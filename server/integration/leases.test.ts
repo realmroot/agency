@@ -448,7 +448,7 @@ describe('[CF] /api/v1/leases', () => {
     })
   })
 
-  it('requeues interrupted work with the freshest resume token [spec: runners/lease-recovery]', async () => {
+  it('requeues interrupted work with the bound target runtime session id [spec: runners/lease-recovery]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
@@ -463,20 +463,20 @@ describe('[CF] /api/v1/leases', () => {
 
     const renewRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'runtime-resume-1' }),
+      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: session.id }),
     })
     expect(renewRes.status).toBe(200)
-    await expect(renewRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: 'runtime-resume-1' })
+    await expect(renewRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: session.id })
 
     const interruptRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ state: 'interrupted', resumeToken: 'runtime-resume-2' }),
+      body: JSON.stringify({ state: 'interrupted', resumeToken: session.id }),
     })
     expect(interruptRes.status).toBe(200)
     await expect(interruptRes.json()).resolves.toMatchObject({
       id: lease.id,
       state: 'expired',
-      resumeToken: 'runtime-resume-2',
+      resumeToken: session.id,
     })
 
     const requeuedRes = await jsonFetch(`/api/v1/work-items/${workItem.id}`, authorization)
@@ -486,13 +486,96 @@ describe('[CF] /api/v1/leases', () => {
       runnerId: string | null
     }
     expect(requeued).toMatchObject({ state: 'available', runnerId: null })
-    expect(requeued.payload).toMatchObject({ resume: true, resumeToken: 'runtime-resume-2' })
+    expect(requeued.payload).toMatchObject({ resume: true, resumeToken: session.id })
 
     const sessionRes = await jsonFetch(`/api/v1/sessions/${session.id}`, authorization)
     await expect(sessionRes.json()).resolves.toMatchObject({
       metadata: { uid: session.id },
       status: { phase: 'pending', reason: 'waiting-for-runner-recovery' },
     })
+  })
+
+  it('rejects caller-assigned runtimes when their target session id differs from the AMA session [spec: runners/session-runtime-binding]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id, {
+      capabilities: ['claude-code'],
+    })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'claude-code' })
+    const workItem = await availableWorkItem(authorization, session.id)
+    const claimRes = await claimLease(authorization, workItem.id, runner.id)
+    expect(claimRes.status).toBe(201)
+    const lease = (await claimRes.json()) as { id: string }
+
+    const bindRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: session.id }),
+    })
+    expect(bindRes.status).toBe(200)
+    await expect(bindRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: session.id })
+
+    const conflictRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'runtime-session-2' }),
+    })
+    expect(conflictRes.status).toBe(409)
+    await expect(conflictRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'conflict',
+        message: `Runtime claude-code must use AMA session ${session.id} as its resume token; got runtime-session-2`,
+      },
+    })
+
+    const leaseRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization)
+    await expect(leaseRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: session.id })
+    const workItemRes = await jsonFetch(`/api/v1/work-items/${workItem.id}`, authorization)
+    await expect(workItemRes.json()).resolves.toMatchObject({
+      id: workItem.id,
+      payload: { resume: true, resumeToken: session.id },
+    })
+    const stored = await env.DB.prepare('SELECT resume_token FROM sessions WHERE id = ?')
+      .bind(session.id)
+      .first<{ resume_token: string | null }>()
+    expect(stored).toEqual({ resume_token: null })
+  })
+
+  it('locks provider-assigned runtime session ids on the AMA session [spec: runners/session-runtime-binding]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id, {
+      capabilities: ['codex'],
+    })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'codex' })
+    const workItem = await availableWorkItem(authorization, session.id)
+    const claimRes = await claimLease(authorization, workItem.id, runner.id)
+    expect(claimRes.status).toBe(201)
+    const lease = (await claimRes.json()) as { id: string }
+
+    const bindRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'codex-thread-1' }),
+    })
+    expect(bindRes.status).toBe(200)
+    await expect(bindRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: 'codex-thread-1' })
+
+    const conflictRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'codex-thread-2' }),
+    })
+    expect(conflictRes.status).toBe(409)
+    await expect(conflictRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'conflict',
+        message: `AMA session ${session.id} is already bound to resume token codex:codex-thread-1`,
+      },
+    })
+
+    const stored = await env.DB.prepare('SELECT resume_token FROM sessions WHERE id = ?')
+      .bind(session.id)
+      .first<{ resume_token: string | null }>()
+    expect(stored).toEqual({ resume_token: 'codex-thread-1' })
   })
 
   it('marks failed work and surfaces the error on the work item and session [spec: runners/lease-lifecycle]', async () => {

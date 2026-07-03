@@ -115,4 +115,91 @@ describe('runtime event replay', () => {
     })
     expect(rebuilt[0].createdAt).toBe('2026-07-03T00:00:00.001Z')
   })
+
+  it('rejects provider JSONL with multiple top-level target runtime sessions', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-binding-test-'))
+    const sourcePath = tempFile(dir, 'codex-mixed.jsonl', [
+      { type: 'session_meta', payload: { id: 'thread_1' } },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          id: 'codex_msg_1',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'first session' }],
+        },
+      },
+      { type: 'session_meta', payload: { id: 'thread_2' } },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          id: 'codex_msg_2',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'second session' }],
+        },
+      },
+    ])
+
+    expect(() => runtimeEventsFromSource({ runtime: 'codex', sourcePath })).toThrow(
+      /multiple target runtime session ids \(thread_1, thread_2\)/,
+    )
+  })
+
+  it('allows Codex subagent session metadata inside one top-level target runtime session', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-subagent-binding-test-'))
+    const sourcePath = tempFile(dir, 'codex-subagent.jsonl', [
+      { type: 'session_meta', payload: { id: 'thread_1' } },
+      {
+        type: 'session_meta',
+        payload: {
+          id: 'agent_1',
+          thread_source: 'subagent',
+          source: { subagent: { thread_spawn: { parent_thread_id: 'thread_1' } } },
+        },
+      },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          id: 'codex_msg_1',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'main session continues' }],
+        },
+      },
+    ])
+
+    const events = runtimeEventsFromSource({ runtime: 'codex', sourcePath })
+    expect(
+      events.some((event) =>
+        textFromMessageEvent(event as Parameters<typeof textFromMessageEvent>[0]).includes('main session continues'),
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects bridge NDJSON with multiple target runtime resume tokens', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-binding-test-'))
+    const sourcePath = tempFile(dir, 'bridge-mixed.ndjson', [
+      { type: 'resumeToken', requestId: 'run_1', resumeToken: 'provider_session_1' },
+      {
+        type: 'runtime.event',
+        requestId: 'run_1',
+        event: {
+          type: 'message.completed',
+          payload: {
+            message: {
+              id: 'msg_1',
+              role: 'assistant',
+              content: [{ type: 'text', text: 'hello from bridge' }],
+            },
+          },
+        },
+      },
+      { type: 'result', requestId: 'run_1', result: { resumeToken: 'provider_session_2' } },
+    ])
+
+    expect(() => runtimeEventsFromSource({ sourcePath, sourceFormat: 'bridge-ndjson' })).toThrow(
+      /multiple target runtime session ids \(provider_session_1, provider_session_2\)/,
+    )
+  })
 })

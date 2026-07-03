@@ -40,12 +40,20 @@ type resumeTokenBox struct {
 }
 
 func (b *resumeTokenBox) Set(token string) {
+	_ = b.SetIfChanged(token)
+}
+
+func (b *resumeTokenBox) SetIfChanged(token string) bool {
 	if b == nil || token == "" {
-		return
+		return false
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.token == token {
+		return false
+	}
 	b.token = token
+	return true
 }
 
 func (b *resumeTokenBox) Get() string {
@@ -191,7 +199,7 @@ func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *am
 	leaseCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	renewErrors := make(chan error, 1)
-	go r.renewLease(leaseCtx, lease, cancel, renewErrors, nil)
+	go r.renewLease(leaseCtx, lease, cancel, renewErrors, nil, nil)
 
 	result, execErr := r.SandboxAdapter.Execute(leaseCtx, sandbox.ToolRequest{
 		ToolCallID: payload.ToolCallID,
@@ -261,7 +269,7 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 	leaseCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	renewErrors := make(chan error, 1)
-	go r.renewLease(leaseCtx, lease, cancel, renewErrors, nil)
+	go r.renewLease(leaseCtx, lease, cancel, renewErrors, nil, nil)
 
 	workspace, _, err := r.prepareWorkspace(leaseCtx, payload)
 	if err != nil {
@@ -326,8 +334,9 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 	leaseCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	resumeTokens := &resumeTokenBox{}
+	leaseUpdates := &sync.Mutex{}
 	renewErrors := make(chan error, 1)
-	go r.renewLease(leaseCtx, lease, cancel, renewErrors, resumeTokens)
+	go r.renewLease(leaseCtx, lease, cancel, renewErrors, resumeTokens, leaseUpdates)
 
 	if prompt := workPrompt(payload); prompt != "" {
 		if err := r.relayStoredEvent(leaseCtx, store, relayEvent, runnerEvent("message.completed", userPromptEventPayload(prompt))); err != nil {
@@ -362,18 +371,20 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 	}
 	var writeMu sync.Mutex
 	result := runtimeRunner.Run(leaseCtx, runtime.Request{
-		SessionID:             payload.SessionID,
-		Runtime:               payload.Runtime,
-		RuntimeConfig:         payload.RuntimeConfig,
-		Env:                   payload.Env,
-		Provider:              payload.Provider,
-		Model:                 payload.Model,
-		AgentSnapshot:         payload.AgentSnapshot,
-		Prompt:                promptWithSkillRefresh(workPrompt(payload), agentReport),
-		Resume:                payload.Resume,
-		ResumeToken:           payload.ResumeToken,
-		WorkDir:               workspace.Cwd,
-		OnResumeToken:         resumeTokens.Set,
+		SessionID:     payload.SessionID,
+		Runtime:       payload.Runtime,
+		RuntimeConfig: payload.RuntimeConfig,
+		Env:           payload.Env,
+		Provider:      payload.Provider,
+		Model:         payload.Model,
+		AgentSnapshot: payload.AgentSnapshot,
+		Prompt:        promptWithSkillRefresh(workPrompt(payload), agentReport),
+		Resume:        payload.Resume,
+		ResumeToken:   payload.ResumeToken,
+		WorkDir:       workspace.Cwd,
+		OnResumeToken: func(resumeToken string) error {
+			return r.persistResumeToken(leaseCtx, lease, resumeTokens, leaseUpdates, resumeToken)
+		},
 		RegisterControlSender: handle.RegisterControlSender,
 	}, func(event runtime.JSON) error {
 		writeMu.Lock()
@@ -520,7 +531,7 @@ func promptWithSkillRefresh(prompt string, report workspace.AgentPrepareReport) 
 	return strings.Join(lines, "\n")
 }
 
-func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel context.CancelFunc, errors chan<- error, resumeTokens *resumeTokenBox) {
+func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel context.CancelFunc, errors chan<- error, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex) {
 	ticker := time.NewTicker(r.Config.RenewInterval)
 	defer ticker.Stop()
 	for {
@@ -528,11 +539,17 @@ func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel co
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if leaseUpdates != nil {
+				leaseUpdates.Lock()
+			}
 			_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
 				State:                lo.ToPtr(ama.UpdateLeaseRequestStateActive),
 				LeaseDurationSeconds: lo.ToPtr(r.Config.LeaseDurationSeconds),
 				ResumeToken:          lo.EmptyableToPtr(resumeTokenValue(resumeTokens)),
 			})
+			if leaseUpdates != nil {
+				leaseUpdates.Unlock()
+			}
 			if err != nil {
 				select {
 				case errors <- fmt.Errorf("runner lease renewal failed: %w", err):
@@ -543,6 +560,23 @@ func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel co
 			}
 		}
 	}
+}
+
+func (r LeaseWorker) persistResumeToken(ctx context.Context, lease *ama.Lease, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex, resumeToken string) error {
+	if !resumeTokens.SetIfChanged(resumeToken) {
+		return nil
+	}
+	leaseUpdates.Lock()
+	defer leaseUpdates.Unlock()
+	_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
+		State:                lo.ToPtr(ama.UpdateLeaseRequestStateActive),
+		LeaseDurationSeconds: lo.ToPtr(r.Config.LeaseDurationSeconds),
+		ResumeToken:          lo.ToPtr(resumeToken),
+	})
+	if err != nil {
+		return fmt.Errorf("runner lease resume token update failed: %w", err)
+	}
+	return nil
 }
 
 func (r LeaseWorker) uploadSessionEvent(ctx context.Context, sessionID string, event ama.JSON) error {

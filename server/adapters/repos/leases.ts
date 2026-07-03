@@ -10,6 +10,7 @@ import type {
   ListPageResult,
   WorkItemClaimCandidate,
 } from '@server/usecases/ports'
+import { RunnerConflictError } from '@server/usecases/ports'
 import { and, desc, eq, gt, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import {
@@ -198,6 +199,76 @@ function payloadWithResumeToken(workItem: WorkItemRow, resumeToken: string | und
     return null
   }
   return stringify({ ...payload, resume: true, resumeToken })
+}
+
+function runtimeFromPayload(workItem: WorkItemRow): string | null {
+  const payload = parseJson<Record<string, unknown>>(workItem.payload)
+  return typeof payload?.runtime === 'string' && payload.runtime ? payload.runtime : null
+}
+
+function resumeTokenFromFinishInput(input: FinishLeaseInput): string | undefined {
+  if (input.resumeToken) {
+    return input.resumeToken
+  }
+  const resumeToken = input.result?.resumeToken
+  return typeof resumeToken === 'string' && resumeToken ? resumeToken : undefined
+}
+
+function runtimeUsesProviderAssignedSessionId(runtime: string): boolean {
+  return runtime === 'codex'
+}
+
+async function bindSessionResumeToken(
+  db: Db,
+  input: FinishLeaseInput,
+  workItem: WorkItemRow,
+  resumeToken: string | undefined,
+  timestamp: string,
+) {
+  if (!workItem.sessionId || !resumeToken) {
+    return
+  }
+  const runtime = runtimeFromPayload(workItem)
+  if (!runtime) {
+    return
+  }
+  if (!runtimeUsesProviderAssignedSessionId(runtime)) {
+    if (resumeToken !== workItem.sessionId) {
+      throw new RunnerConflictError(
+        `Runtime ${runtime} must use AMA session ${workItem.sessionId} as its resume token; got ${resumeToken}`,
+      )
+    }
+    return
+  }
+  const bound = await db
+    .update(sessions)
+    .set({ resumeToken, updatedAt: timestamp })
+    .where(
+      and(
+        eq(sessions.id, workItem.sessionId),
+        eq(sessions.projectId, input.projectId),
+        isNull(sessions.resumeToken),
+      ),
+    )
+    .returning({ resumeToken: sessions.resumeToken })
+    .get()
+  if (bound) {
+    return
+  }
+  const existing = await db
+    .select({ resumeToken: sessions.resumeToken })
+    .from(sessions)
+    .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, input.projectId)))
+    .get()
+  if (existing?.resumeToken === resumeToken) {
+    return
+  }
+  if (existing?.resumeToken) {
+    throw new RunnerConflictError(
+      `AMA session ${workItem.sessionId} is already bound to resume token ${runtime}:${existing.resumeToken}`,
+    )
+  }
+  throw new RunnerConflictError(`Unable to bind AMA session ${workItem.sessionId} to resume token`)
 }
 
 // Re-queues a work item whose runner stopped mid-flight so the session can be
@@ -511,6 +582,8 @@ export function createLeaseRepo(db: Db): LeaseRepo {
       ) {
         return null
       }
+      const resumeToken = resumeTokenFromFinishInput(input)
+      await bindSessionResumeToken(db, input, workItem, resumeToken, timestamp)
       if (input.state === 'active') {
         const expiresAt =
           input.expiresAt ??
@@ -541,7 +614,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
             expiresAt,
             renewedAt: timestamp,
             updatedAt: timestamp,
-            ...(input.resumeToken ? { resumeToken: input.resumeToken } : {}),
+            ...(resumeToken ? { resumeToken } : {}),
           })
           .where(and(eq(leases.id, input.leaseId), eq(leases.state, 'active')))
       } else if (input.state === 'interrupted') {
@@ -552,7 +625,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           .set({
             state: 'expired',
             updatedAt: timestamp,
-            ...(input.resumeToken ? { resumeToken: input.resumeToken } : {}),
+            ...(resumeToken ? { resumeToken } : {}),
           })
           .where(and(eq(leases.id, input.leaseId), eq(leases.state, 'active')))
           .returning({ id: leases.id })
@@ -607,7 +680,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           .set({
             state: input.state,
             updatedAt: timestamp,
-            ...(input.resumeToken ? { resumeToken: input.resumeToken } : {}),
+            ...(resumeToken ? { resumeToken } : {}),
           })
           .where(and(eq(leases.id, input.leaseId), eq(leases.state, 'active')))
         await releaseRunnerLoad(db, input.projectId, lease.runnerId, timestamp)

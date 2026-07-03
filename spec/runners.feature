@@ -85,9 +85,16 @@ Feature: Runners
   Scenario: Recover interrupted or expired leases to available work
     Given a runner lease for self-hosted work is interrupted or expires before renewal
     When the queue is read
-    Then the work returns to available with the freshest resume token and a null runner
+    Then the work returns to available with the bound target runtime session id and a null runner
     And the session exposes a safe waiting-for-runner-recovery reason
     And an eligible runner can claim the recovered work again
+
+  @runners/session-runtime-binding @api
+  Scenario: Bind each AMA session to one target runtime session
+    Given a runner lease reports a target runtime session id for self-hosted work
+    When the same AMA session reports a different target runtime session id
+    Then AMA rejects the lease update before persisting the second target runtime session id
+    And the original target runtime session id remains the only binding for that AMA session
 
   # ── Contract (api: OpenAPI) ──
 

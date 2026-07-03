@@ -59,7 +59,7 @@ func (bridgeProtocol) waitReady(reader *bridgeLineReader) error {
 	return nil
 }
 
-func (bridgeProtocol) readResult(reader *bridgeLineReader, requestID string, write EventWriter, onResumeToken func(string)) (JSON, error) {
+func (bridgeProtocol) readResult(reader *bridgeLineReader, requestID string, write EventWriter, onResumeToken func(string) error) (JSON, error) {
 	for {
 		line, err := reader.readLine()
 		if err != nil {
@@ -81,7 +81,9 @@ func (bridgeProtocol) readResult(reader *bridgeLineReader, requestID string, wri
 		switch envelope.Type {
 		case runtimebridge.BridgeMessageTypeResumeToken:
 			if onResumeToken != nil && envelope.ResumeToken != "" {
-				onResumeToken(envelope.ResumeToken)
+				if err := onResumeToken(envelope.ResumeToken); err != nil {
+					return nil, err
+				}
 			}
 		case runtimebridge.BridgeMessageTypeRuntimeEvent:
 			if envelope.Event == nil {

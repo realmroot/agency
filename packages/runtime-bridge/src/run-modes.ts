@@ -65,6 +65,10 @@ export function probeFailureStatus(message: string): 'unauthenticated' | 'unauth
   return 'unhealthy'
 }
 
+function deterministicResumeToken(request: RunRequest): string {
+  return request.runtime === 'codex' ? `e2e-${request.sessionId}` : request.sessionId
+}
+
 // Interactive deterministic runtime for e2e: stays alive after the initial
 // prompt so live follow-up prompts and aborts exercise the real handle paths.
 export function liveBridgeTestHandle(request: RunRequest): RuntimeProviderHandle {
@@ -142,7 +146,7 @@ export function liveBridgeTestHandle(request: RunRequest): RuntimeProviderHandle
         runtimeEvent('message.completed', { message: textMessage('assistant', `${marker} permission-approved`) }),
       )
     },
-    getResumeToken: () => `e2e-live-${request.sessionId}`,
+    getResumeToken: () => deterministicResumeToken(request),
   }
 }
 
@@ -215,7 +219,7 @@ export async function runE2eBridgeTest(
     for (const event of deterministicBridgeTestEvents(request)) {
       write(sessionEventOutput(request.requestId, event))
     }
-    write({ type: 'result', requestId: request.requestId, result: { resumeToken: `e2e-${request.sessionId}` } })
+    write({ type: 'result', requestId: request.requestId, result: { resumeToken: deterministicResumeToken(request) } })
     return
   }
   const handle = liveBridgeTestHandle(request)
@@ -225,6 +229,7 @@ export async function runE2eBridgeTest(
   })
   emitLiveResumeToken()
   for await (const event of handle.events) {
+    emitLiveResumeToken()
     write(sessionEventOutput(request.requestId, event))
     emitLiveResumeToken()
   }

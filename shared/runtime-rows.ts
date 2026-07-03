@@ -26,8 +26,7 @@ export interface SessionRow {
   projectId: string
   durableObjectName: string
   sandboxId: string | null
-  piRuntimeId: string | null
-  piProcessId: string | null
+  resumeToken: string | null
   runtimeEndpointPath: string | null
   modelProvider: string | null
   modelConfig: string | null
@@ -64,8 +63,7 @@ export interface SessionInsert {
   projectId: string
   durableObjectName: string
   sandboxId?: string | null
-  piRuntimeId?: string | null
-  piProcessId?: string | null
+  resumeToken?: string | null
   runtimeEndpointPath?: string | null
   modelProvider?: string | null
   modelConfig?: string | null
