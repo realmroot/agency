@@ -5,6 +5,7 @@
 // - builds and starts a real ama-runner process
 // - creates real control-plane resources over HTTP
 // - opens the real browser session WebSocket
+// - runs the focused session-socket smoke, including live prompt dispatch
 // - verifies live runner events and completed-session backfill after runner reconnect
 //
 //   pnpm run smoke:full
@@ -329,7 +330,7 @@ function watchSocket(socket) {
       })
     },
     requestBackfill(limit = 200) {
-      socket.send(JSON.stringify({ id: BACKFILL_REQUEST_ID, type: 'backfill', requestId: BACKFILL_REQUEST_ID, limit }))
+      socket.send(JSON.stringify({ type: 'backfill', requestId: BACKFILL_REQUEST_ID, limit }))
     },
     close() {
       socket.close(1000, 'smoke complete')
@@ -425,6 +426,8 @@ function recentOutput(output) {
 }
 
 async function main() {
+  run('pnpm', ['run', 'smoke:session-socket'])
+
   if (!commandExists('codex')) {
     fail('codex CLI is required for full smoke')
   }

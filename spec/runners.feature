@@ -96,6 +96,14 @@ Feature: Runners
     Then AMA rejects the lease update before persisting the second target runtime session id
     And the original target runtime session id remains the only binding for that AMA session
 
+  @runners/live-prompt @api
+  Scenario: Deliver prompts to a live self-hosted runner session
+    Given a self-hosted session is already leased to an online runner
+    When the user sends another prompt to that running session
+    Then AMA delivers the prompt over the runner session command channel
+    And the prompt does not create a second queued work item
+    And live session events continue to stream through the browser session socket
+
   # ── Contract (api: OpenAPI) ──
 
   @runners/openapi @api

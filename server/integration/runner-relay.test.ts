@@ -14,6 +14,9 @@
 //    sending on the second socket and confirming the browser receives the event.
 // 3. Assignment push: creating a self-hosted session while a runner is connected
 //    pushes work.assigned over the RunnerPool WebSocket without runner polling.
+// 4. Live prompt: POST /sessions/{id}/messages for a running self-hosted session
+//    sends a session.command to that runner and keeps live browser events on the
+//    same session socket.
 
 import { SELF } from 'cloudflare:test'
 import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
@@ -125,6 +128,37 @@ async function completeLease(authorization: string, leaseId: string) {
     body: JSON.stringify({ state: 'completed', result: { smoke: true } }),
   })
   if (res.status !== 200) throw new Error(`Lease completion failed: ${res.status} ${await res.text()}`)
+}
+
+function runnerMessageFrame(
+  sessionId: string,
+  eventId: string,
+  sequence: number,
+  role: 'assistant' | 'user',
+  text: string,
+) {
+  return JSON.stringify({
+    type: 'runner.event',
+    sessionId,
+    record: {
+      id: eventId,
+      sessionId,
+      sequence,
+      createdAt: '2026-06-20T00:00:00.000Z',
+      type: 'message.completed',
+      payload: {
+        message: {
+          id: `msg_${eventId}`,
+          role,
+          content: [{ type: 'text', text }],
+        },
+      },
+    },
+  })
+}
+
+function frameIncludes(frame: Record<string, unknown>, text: string) {
+  return JSON.stringify(frame).includes(text)
 }
 
 // Open the runner relay channel. Returns the accepted WebSocket and a
@@ -344,6 +378,75 @@ describe('[CF] per-runner relay end-to-end', () => {
     })
 
     runnerCh.ws.close()
+  })
+
+  it('delivers API prompts to a live self-hosted runner channel [spec: runners/live-prompt]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerRunner(authorization, environment.id)
+    await heartbeatRunner(authorization, runner.id)
+
+    const runnerCh = await openRunnerChannel(authorization, runner.id)
+    await runnerCh.waitForFrame((f) => f.type === 'runner.channel.accepted', 'runner.channel.accepted')
+
+    const session = await createCliRelaySession(authorization, agent.id, environment.id)
+    const assigned = await runnerCh.waitForFrame(
+      (f) => f.type === 'work.assigned' && (f.workItem as { sessionId?: string } | undefined)?.sessionId === session.id,
+      'work.assigned for live prompt session',
+    )
+    expect(assigned).toMatchObject({
+      type: 'work.assigned',
+      runnerId: runner.id,
+      workItem: { sessionId: session.id, state: 'leased' },
+    })
+
+    const browser = await openBrowserSocket(authorization, session.id)
+    const followUp = 'Reviewer rejected this task; resume it live.'
+    const messageRes = await jsonFetch(`/api/v1/sessions/${session.id}/messages`, authorization, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'prompt', content: followUp }),
+    })
+    expect(messageRes.status).toBe(201)
+    await expect(messageRes.json()).resolves.toMatchObject({
+      sessionId: session.id,
+      type: 'prompt',
+      content: followUp,
+      delivery: 'live',
+      state: 'delivered',
+    })
+
+    const commandFrame = await runnerCh.waitForFrame(
+      (f) =>
+        f.type === 'session.command' &&
+        f.sessionId === session.id &&
+        (f.command as { type?: string; message?: string } | undefined)?.type === 'send' &&
+        (f.command as { type?: string; message?: string } | undefined)?.message === followUp,
+      'session.command live prompt',
+    )
+    expect(commandFrame).toMatchObject({ type: 'session.command', sessionId: session.id, runnerId: runner.id })
+
+    runnerCh.ws.send(runnerMessageFrame(session.id, 'event_live_prompt_user', 2, 'user', followUp))
+    runnerCh.ws.send(
+      runnerMessageFrame(session.id, 'event_live_prompt_assistant', 3, 'assistant', 'live prompt response'),
+    )
+
+    await browser.waitForFrame(
+      (f) => f.type === 'event' && frameIncludes(f, followUp),
+      'browser live user prompt event',
+    )
+    await browser.waitForFrame(
+      (f) => f.type === 'event' && frameIncludes(f, 'live prompt response'),
+      'browser live assistant response event',
+    )
+
+    const availableRes = await jsonFetch(`/api/v1/work-items?state=available&sessionId=${session.id}`, authorization)
+    expect(availableRes.status).toBe(200)
+    const available = (await availableRes.json()) as { data: Array<{ sessionId: string; state: string }> }
+    expect(available.data).toEqual([])
+
+    runnerCh.ws.close()
+    browser.ws.close()
   })
 
   it('does not clobber the active channel when the runner reconnects [spec: runners/relay-reconnect]', async () => {

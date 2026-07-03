@@ -210,7 +210,7 @@ class SessionStream(JsonWebSocket):
         request_id = f"bf_{self._backfill_seq}"
         future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
         self._backfills[request_id] = future
-        await self.send_json({"id": request_id, "type": "backfill", "requestId": request_id, **options})
+        await self.send_json({"type": "backfill", "requestId": request_id, **options})
         return await future
 
     async def close(self, code: int = 1000, reason: str = "") -> None:

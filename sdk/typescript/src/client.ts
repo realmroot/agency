@@ -126,7 +126,7 @@ function createSessionStream(config: AmaClientConfig, sessionId: string): Sessio
       await ready
       const requestId = `bf_${(backfillSeq += 1)}`
       const response = new Promise<types.SessionSocketBackfillMessage>((resolve) => backfillWaiters.set(requestId, resolve))
-      socket.send(JSON.stringify({ id: requestId, type: 'backfill', requestId, ...options }))
+      socket.send(JSON.stringify({ type: 'backfill', requestId, ...options }))
       return response
     },
     close() {
