@@ -63,7 +63,10 @@ function selfHostedSession(overrides: Partial<SessionRow> = {}): SessionRow {
   }
 }
 
-function depsFor(session: SessionRow, queueResult = true) {
+function depsFor(
+  session: SessionRow,
+  options: { queueResult?: boolean; channelAccepted?: boolean; dispatchResult?: boolean } = {},
+) {
   const queueSessionWorkWhenState = vi.fn<
     (
       projectId: string,
@@ -72,7 +75,7 @@ function depsFor(session: SessionRow, queueResult = true) {
       fields: Record<string, unknown>,
       workItem: WorkItemInsert,
     ) => Promise<boolean>
-  >(async () => queueResult)
+  >(async () => options.queueResult ?? true)
   const recentSessionWorkItems = vi.fn(async () => [
     {
       state: 'succeeded',
@@ -88,8 +91,8 @@ function depsFor(session: SessionRow, queueResult = true) {
     },
     runnerChannel: {
       assignWork: async () => true,
-      isAccepted: async () => false,
-      dispatch: async () => false,
+      isAccepted: async () => options.channelAccepted ?? false,
+      dispatch: async () => options.dispatchResult ?? false,
     },
     audit: { record: vi.fn() },
   } as unknown as PromptDeps
@@ -103,43 +106,25 @@ function depsForFirstPrompt(session: SessionRow) {
 }
 
 describe('dispatchSessionPrompt [spec: sessions/prompt]', () => {
-  it('queues self-hosted prompts with the session pending transition and work item in one store call', async () => {
+  it('delivers running self-hosted prompts through the live runner channel', async () => {
+    const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession(), {
+      channelAccepted: true,
+      dispatchResult: true,
+    })
+
+    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'resume after review rejection')
+
+    expect(result).toEqual({ ok: true, delivery: 'live', state: 'delivered' })
+    expect(queueSessionWorkWhenState).not.toHaveBeenCalled()
+  })
+
+  it('does not queue a second work item when a running self-hosted session is not accepting live prompts', async () => {
     const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession())
 
     const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'resume after review rejection')
 
-    expect(result).toEqual({ ok: true, delivery: 'queued', state: 'accepted' })
-    expect(queueSessionWorkWhenState).toHaveBeenCalledTimes(1)
-    const [projectId, sessionId, expected, fields, workItem] = queueSessionWorkWhenState.mock.calls[0]!
-    expect(projectId).toBe(auth.project.id)
-    expect(sessionId).toBe('sess_1')
-    expect(expected).toEqual(['idle', 'running'])
-    expect(fields).toMatchObject({ state: 'pending', stateReason: 'waiting-for-runner' })
-    expect(workItem).toMatchObject({
-      organizationId: auth.organization.id,
-      projectId: auth.project.id,
-      sessionId: 'sess_1',
-      environmentId: 'env_1',
-      type: 'session.start',
-      state: 'available',
-    })
-    expect(JSON.parse(workItem.payload)).toMatchObject({
-      type: 'session.start',
-      sessionId: 'sess_1',
-      runtime: 'codex',
-      prompt: 'resume after review rejection',
-      resume: true,
-      resumeToken: 'result-token',
-    })
-  })
-
-  it('does not accept the prompt when the atomic self-hosted queue transition loses the state race', async () => {
-    const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession(), false)
-
-    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'resume after review rejection')
-
-    expect(result).toEqual({ ok: false, status: 409, message: 'Session runtime is no longer active' })
-    expect(queueSessionWorkWhenState).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ ok: false, status: 409, message: 'Session runtime is not accepting live prompts' })
+    expect(queueSessionWorkWhenState).not.toHaveBeenCalled()
   })
 
   it('queues the first self-hosted prompt without resume metadata when the session has no prior work item', async () => {
@@ -155,5 +140,14 @@ describe('dispatchSessionPrompt [spec: sessions/prompt]', () => {
       resume: false,
       resumeToken: null,
     })
+  })
+
+  it('does not accept an idle prompt when the atomic self-hosted queue transition loses the state race', async () => {
+    const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession({ state: 'idle' }), { queueResult: false })
+
+    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'resume after review rejection')
+
+    expect(result).toEqual({ ok: false, status: 409, message: 'Session runtime is no longer active' })
+    expect(queueSessionWorkWhenState).toHaveBeenCalledTimes(1)
   })
 })

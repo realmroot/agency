@@ -87,7 +87,9 @@ func TestHostHandleLogsWhenLiveSendErrors(t *testing.T) {
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
 		return errors.New("send failed")
 	})
-	router.deliverControl(rawControl(`{"type":"send","message":"failing prompt"}`))
+	if err := router.deliverControl(rawControl(`{"type":"send","message":"failing prompt"}`)); err == nil {
+		t.Fatal("expected live send error")
+	}
 }
 
 func TestHostHandleRegisterControlSenderLogsFlushErrorAndContinues(t *testing.T) {

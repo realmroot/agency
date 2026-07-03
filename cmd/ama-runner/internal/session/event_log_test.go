@@ -83,6 +83,27 @@ func TestReadEventLogReturnsNilForMissingFile(t *testing.T) {
 	}
 }
 
+func TestEventLogAppendCoordinatesSequenceAcrossOpenStores(t *testing.T) {
+	dir := t.TempDir()
+	first, err := OpenEventLog(dir, "session_1")
+	if err != nil {
+		t.Fatalf("open first: %v", err)
+	}
+	second, err := OpenEventLog(dir, "session_1")
+	if err != nil {
+		t.Fatalf("open second: %v", err)
+	}
+	if event, err := first.Append(ama.JSON{"type": "message.completed", "payload": ama.JSON{"writer": "first"}}); err != nil || event.Sequence != 1 {
+		t.Fatalf("first append sequence = %d err=%v, want 1", event.Sequence, err)
+	}
+	if event, err := second.Append(ama.JSON{"type": "message.completed", "payload": ama.JSON{"writer": "second"}}); err != nil || event.Sequence != 2 {
+		t.Fatalf("second append sequence = %d err=%v, want 2", event.Sequence, err)
+	}
+	if event, err := first.Append(ama.JSON{"type": "message.completed", "payload": ama.JSON{"writer": "first"}}); err != nil || event.Sequence != 3 {
+		t.Fatalf("third append sequence = %d err=%v, want 3", event.Sequence, err)
+	}
+}
+
 func TestEventLogReadsEventsLargerThanOldScannerLimit(t *testing.T) {
 	store, err := OpenEventLog(t.TempDir(), "session_1")
 	if err != nil {

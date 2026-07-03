@@ -41,6 +41,13 @@ type EventLog struct {
 	seq       int64
 }
 
+var eventLogPathLocks sync.Map
+
+func eventLogPathLock(path string) *sync.Mutex {
+	lock, _ := eventLogPathLocks.LoadOrStore(path, &sync.Mutex{})
+	return lock.(*sync.Mutex)
+}
+
 // EventLogPath is the canonical on-disk log file for a session's event
 // store. The relay serves a backfill for a completed session straight from
 // this file, so the path is shared rather than re-derived.
@@ -53,6 +60,9 @@ func OpenEventLog(sessionDir string, sessionID string) (*EventLog, error) {
 		return nil, err
 	}
 	store := &EventLog{path: EventLogPath(sessionDir), sessionID: sessionID}
+	pathLock := eventLogPathLock(store.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
 	// Recover the latest sequence so a resumed session continues the run rather
 	// than restarting the count (the on-disk log is the source of truth).
 	events, err := store.readAll()
@@ -78,6 +88,18 @@ func newEventID() (string, error) {
 func (s *EventLog) Append(body ama.JSON) (Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	pathLock := eventLogPathLock(s.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	events, err := s.readAll()
+	if err != nil {
+		return Event{}, err
+	}
+	for _, event := range events {
+		if event.Sequence > s.seq {
+			s.seq = event.Sequence
+		}
+	}
 	s.seq++
 	id, err := newEventID()
 	if err != nil {
@@ -129,11 +151,14 @@ func (e Event) AmaEvent() ama.JSON {
 func (s *EventLog) ReadAll() ([]Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	pathLock := eventLogPathLock(s.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
 	return s.readAll()
 }
 
 func (s *EventLog) readAll() ([]Event, error) {
-	return ReadEventLog(s.path)
+	return readEventLog(s.path)
 }
 
 // ReadEventLog reads a session's full ordered log straight from disk. The
@@ -141,6 +166,13 @@ func (s *EventLog) readAll() ([]Event, error) {
 // (the lease completed) — the events survive on disk. A missing log is an empty
 // history, not an error.
 func ReadEventLog(path string) ([]Event, error) {
+	pathLock := eventLogPathLock(path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	return readEventLog(path)
+}
+
+func readEventLog(path string) ([]Event, error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil

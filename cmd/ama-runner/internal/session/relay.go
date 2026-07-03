@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -238,7 +239,90 @@ func (h *Relay) routeCommand(message protocol.RunnerChannelMessage) {
 			"sessionId", sessionID)
 		return
 	}
-	commandHandler.DeliverCommand(command)
+	if prompt, ok := livePromptMessage(command); ok {
+		h.recordLivePromptEvent(sessionID, prompt)
+	}
+	if err := commandHandler.DeliverCommand(command); err != nil {
+		h.recordRuntimeErrorEvent(sessionID, "Runner failed to forward live prompt to runtime bridge: "+err.Error(), "runtime_prompt_delivery_failed")
+	}
+}
+
+func livePromptMessage(command protocol.RunnerSessionCommand) (string, bool) {
+	var frame struct {
+		Type    string  `json:"type"`
+		Message *string `json:"message"`
+	}
+	if err := json.Unmarshal(command, &frame); err != nil {
+		return "", false
+	}
+	if frame.Type != "send" || frame.Message == nil {
+		return "", false
+	}
+	return *frame.Message, true
+}
+
+func livePromptPayload(message string) (ama.JSON, error) {
+	id, err := newEventID()
+	if err != nil {
+		return nil, err
+	}
+	return ama.JSON{
+		"message": ama.JSON{
+			"id":   "msg_" + strings.TrimPrefix(id, "event_"),
+			"role": "user",
+			"content": []ama.JSON{
+				{"type": "text", "text": message},
+			},
+		},
+	}, nil
+}
+
+func (h *Relay) recordLivePromptEvent(sessionID string, message string) {
+	h.recordStoredEvent(sessionID, ama.JSON{"type": "message.completed", "payload": mustLivePromptPayload(message)})
+}
+
+func mustLivePromptPayload(message string) ama.JSON {
+	payload, err := livePromptPayload(message)
+	if err != nil {
+		return ama.JSON{
+			"message": ama.JSON{
+				"id":   "msg_live_prompt_unavailable",
+				"role": "user",
+				"content": []ama.JSON{
+					{"type": "text", "text": message},
+				},
+			},
+		}
+	}
+	return payload
+}
+
+func (h *Relay) recordRuntimeErrorEvent(sessionID string, message string, code string) {
+	h.recordStoredEvent(sessionID, ama.JSON{
+		"type": "runtime.error",
+		"payload": ama.JSON{
+			"message": message,
+			"code":    code,
+		},
+	})
+}
+
+func (h *Relay) recordStoredEvent(sessionID string, event ama.JSON) {
+	store, err := OpenEventLog(filepath.Join(h.storeDir, sessionID), sessionID)
+	if err != nil {
+		slog.Warn("runner failed to open session event log for live command", "sessionId", sessionID, "error", err)
+		return
+	}
+	stored, err := store.Append(event)
+	if err != nil {
+		slog.Warn("runner failed to record live command event", "sessionId", sessionID, "error", err)
+		return
+	}
+	h.RelayEvent(context.Background(), sessionID, stored.AmaEvent(), &RelayStamp{
+		Sequence:  stored.Sequence,
+		ID:        stored.ID,
+		CreatedAt: stored.CreatedAt,
+	})
 }
 
 // handleBackfillRequest answers a relayed history read for one session straight from

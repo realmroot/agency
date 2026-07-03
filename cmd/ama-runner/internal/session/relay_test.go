@@ -146,7 +146,8 @@ func TestRelayEventWritesSessionTaggedFrame(t *testing.T) {
 }
 
 func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	workDir := t.TempDir()
+	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 
@@ -164,6 +165,55 @@ func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
 
 	if received != `{"type":"send","message":"build it"}` {
 		t.Fatalf("expected opaque command routed to session, got %q", received)
+	}
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read live prompt event: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected live prompt event recorded, got %d", len(events))
+	}
+	message, _ := events[0].Payload["message"].(map[string]any)
+	if message["role"] != "user" {
+		t.Fatalf("expected user message payload, got %#v", events[0].Payload)
+	}
+	content, _ := message["content"].([]any)
+	block, _ := content[0].(map[string]any)
+	if block["text"] != "build it" {
+		t.Fatalf("expected live prompt text recorded, got %#v", block)
+	}
+}
+
+func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
+	workDir := t.TempDir()
+	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	router := NewHostHandle("session_1")
+	hub.Register("session_1", router)
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		return errors.New("stdin closed")
+	})
+
+	hub.routeCommand(protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"build it"}`),
+	})
+
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read live prompt events: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected prompt plus runtime error, got %d events", len(events))
+	}
+	if events[0].Type != "message.completed" || events[1].Type != "runtime.error" {
+		t.Fatalf("expected prompt then runtime error, got %s then %s", events[0].Type, events[1].Type)
+	}
+	if events[0].Sequence != 1 || events[1].Sequence != 2 {
+		t.Fatalf("expected monotonic sequences 1,2 got %d,%d", events[0].Sequence, events[1].Sequence)
+	}
+	if events[1].Payload["code"] != "runtime_prompt_delivery_failed" {
+		t.Fatalf("expected runtime prompt delivery error code, got %#v", events[1].Payload)
 	}
 }
 

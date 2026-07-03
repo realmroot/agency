@@ -13,17 +13,11 @@ import {
 } from './runtime-catalog'
 
 describe('runtimeSupportsLivePrompts', () => {
-  it('returns true only for ama, which loops a continuation turn per injected prompt', () => {
+  it('returns true for all runtimes with bridge-level prompt injection', () => {
     expect(runtimeSupportsLivePrompts('ama')).toBe(true)
-  })
-
-  it('returns false for SDK-session and one-shot runtimes, which queue a resume work item', () => {
-    // claude-code/copilot resume an SDK session and codex runs one prompt per
-    // process: a prompt injected as a turn ends races the loop exit and is
-    // dropped, so they must queue a fresh resume work item instead.
-    expect(runtimeSupportsLivePrompts('claude-code')).toBe(false)
-    expect(runtimeSupportsLivePrompts('copilot')).toBe(false)
-    expect(runtimeSupportsLivePrompts('codex')).toBe(false)
+    expect(runtimeSupportsLivePrompts('claude-code')).toBe(true)
+    expect(runtimeSupportsLivePrompts('copilot')).toBe(true)
+    expect(runtimeSupportsLivePrompts('codex')).toBe(true)
   })
 })
 

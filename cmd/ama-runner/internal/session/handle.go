@@ -20,7 +20,7 @@ type Handle interface {
 
 type CommandHandler interface {
 	Handle
-	DeliverCommand(command protocol.RunnerSessionCommand)
+	DeliverCommand(command protocol.RunnerSessionCommand) error
 }
 
 type SandboxHandler interface {
@@ -40,30 +40,31 @@ func NewHostHandle(sessionID string) *HostHandle {
 	return &HostHandle{sessionID: sessionID}
 }
 
-func (h *HostHandle) DeliverCommand(command protocol.RunnerSessionCommand) {
+func (h *HostHandle) DeliverCommand(command protocol.RunnerSessionCommand) error {
 	if len(command) == 0 {
-		return
+		return nil
 	}
-	h.deliverControl(runtime.BridgeControlFrame(command))
+	return h.deliverControl(runtime.BridgeControlFrame(command))
 }
 
 func (h *HostHandle) Close(context.Context) error {
 	return nil
 }
 
-func (h *HostHandle) deliverControl(command runtime.BridgeControlFrame) {
+func (h *HostHandle) deliverControl(command runtime.BridgeControlFrame) error {
 	h.mu.Lock()
 	send := h.sendControl
 	if send == nil {
 		h.pendingControls = append(h.pendingControls, command)
 		h.mu.Unlock()
-		return
+		return nil
 	}
 	h.mu.Unlock()
 	if err := send(command); err != nil {
 		slog.Warn("runner failed to forward control frame to live runtime", "sessionId", h.sessionID, "error", err)
-		return
+		return err
 	}
+	return nil
 }
 
 // RegisterControlSender is handed to the runtime adapter as
