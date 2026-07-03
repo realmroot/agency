@@ -31,6 +31,23 @@ func TestMaterializeWritesEmbeddedBundle(t *testing.T) {
 	if cached != path {
 		t.Fatalf("expected stable materialized path, got %q then %q", path, cached)
 	}
+	if err := os.WriteFile(path, []byte("stale"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rewritten, err := Materialize()
+	if err != nil {
+		t.Fatalf("expected stale embedded bridge to be rewritten, got %v", err)
+	}
+	if rewritten != path {
+		t.Fatalf("expected stale bridge rewrite to keep stable path, got %q then %q", path, rewritten)
+	}
+	data, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(Bytes()) {
+		t.Fatal("expected stale materialized bridge to be replaced")
+	}
 }
 
 func TestMaterializeReturnsCacheDirectoryError(t *testing.T) {

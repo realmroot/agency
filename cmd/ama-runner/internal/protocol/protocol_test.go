@@ -160,6 +160,11 @@ func TestParseWorkPayloadRejectsMalformedToolWork(t *testing.T) {
 		want    string
 	}{
 		{
+			name:    "missing protocol",
+			payload: ama.JSON{"type": "tool.execute"},
+			want:    "unsupported work protocol",
+		},
+		{
 			name:    "unsupported protocol",
 			payload: ama.JSON{"protocol": "other"},
 			want:    "unsupported work protocol",
@@ -334,6 +339,10 @@ func TestRunnerChannelMessageAccessorsHandleMissingFields(t *testing.T) {
 		SandboxRequestToolName(request) != "" || SandboxRequestInput(request) != nil ||
 		SandboxRequestVolumes(request) != nil || SandboxRequestVolumeMounts(request) != nil {
 		t.Fatalf("expected empty sandbox request accessors, got %#v", request)
+	}
+	empty := ama.RunnerSandboxRequest{}
+	if SandboxRequestVolumes(empty) != nil || SandboxRequestVolumeMounts(empty) != nil {
+		t.Fatal("expected nil request slices to stay nil")
 	}
 }
 

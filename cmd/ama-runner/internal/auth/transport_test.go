@@ -102,6 +102,58 @@ func TestAuthTransportPassesThroughWithoutTokenSource(t *testing.T) {
 	_ = res.Body.Close()
 }
 
+func TestAuthTransportReturnsBaseErrors(t *testing.T) {
+	expected := errors.New("transport failed")
+	transport := AuthTransport{Base: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return nil, expected
+	})}
+	request, err := http.NewRequest(http.MethodGet, "https://ama.example.test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := transport.RoundTrip(request); !errors.Is(err, expected) {
+		t.Fatalf("expected base transport error, got %v", err)
+	}
+}
+
+func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) {
+	source, err := NewTokenSource(runnerconfig.Config{
+		Token:         "static-token",
+		TokenExplicit: true,
+	}, http.DefaultClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := 0
+	transport := AuthTransport{
+		Tokens: source,
+		Base: roundTripperFunc(func(request *http.Request) (*http.Response, error) {
+			requests++
+			if request.Header.Get("authorization") != "Bearer static-token" {
+				t.Fatalf("unexpected authorization header %q", request.Header.Get("authorization"))
+			}
+			return &http.Response{
+				StatusCode: http.StatusUnauthorized,
+				Body:       io.NopCloser(strings.NewReader("unauthorized")),
+				Header:     make(http.Header),
+				Request:    request,
+			}, nil
+		}),
+	}
+	request, err := http.NewRequest(http.MethodGet, "https://ama.example.test/secure", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := transport.RoundTrip(request)
+	if err != nil {
+		t.Fatalf("expected unauthorized response, got %v", err)
+	}
+	defer response.Body.Close()
+	if requests != 1 || response.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected no retry, requests=%d status=%d", requests, response.StatusCode)
+	}
+}
+
 func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 	source, err := NewTokenSource(runnerconfig.Config{
 		Token:         "token",

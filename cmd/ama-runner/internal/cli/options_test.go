@@ -194,6 +194,50 @@ func TestAuthConfigPathAndProfileAPIServer(t *testing.T) {
 	}
 }
 
+func TestAuthLoginAndSwitchConfigUseEnvironment(t *testing.T) {
+	t.Setenv("AMA_API_SERVER", "https://env.example.test")
+	t.Setenv("AMA_RUNNER_CREDENTIALS", filepath.Join(t.TempDir(), "credentials.json"))
+
+	login, err := LoadAuthLoginConfig(authLoginTestCommand(t))
+	if err != nil {
+		t.Fatalf("expected auth login config from env, got %v", err)
+	}
+	if login.APIServer != "https://env.example.test" {
+		t.Fatalf("unexpected login api server %q", login.APIServer)
+	}
+
+	got, err := AuthProfileAPIServer(authSwitchTestCommand(t))
+	if err != nil {
+		t.Fatalf("expected auth switch api server from env, got %v", err)
+	}
+	if got != "https://env.example.test" {
+		t.Fatalf("unexpected switch api server %q", got)
+	}
+}
+
+func TestApplySavedLoginKeepsExplicitServerTokenEmptyWhenServerDiffers(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID:   "acct_1",
+		APIServer:   "https://saved.example.test",
+		AccessToken: "saved-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	config := runnerconfig.Config{
+		CredentialPath: credentialPath,
+		APIServer:      "https://other.example.test",
+	}
+	if err := applySavedLogin(&config); err != nil {
+		t.Fatalf("apply saved login: %v", err)
+	}
+	if config.Token != "" || config.APIServer != "https://other.example.test" {
+		t.Fatalf("expected explicit server without token fill, got %#v", config)
+	}
+}
+
 func TestConfigFlagChangedHandlesMissingFlag(t *testing.T) {
 	if configFlagChanged(&cobra.Command{}) {
 		t.Fatal("expected command without config flag to report unchanged")

@@ -531,6 +531,28 @@ func TestCleanupStaleHandlesRetentionMissingAndRecentWorkspaces(t *testing.T) {
 	}
 }
 
+func TestCleanupStaleSkipsNonDirectoryEntries(t *testing.T) {
+	workDir := t.TempDir()
+	sessionsDir := filepath.Join(workDir, SessionsDirName)
+	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(sessionsDir, "not-a-session")
+	if err := os.WriteFile(file, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	oldTime := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(file, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupStale(context.Background(), workDir, time.Hour); err != nil {
+		t.Fatalf("cleanup stale with file entry: %v", err)
+	}
+	if data, err := os.ReadFile(file); err != nil || string(data) != "keep" {
+		t.Fatalf("expected non-directory entry to remain, data=%q err=%v", data, err)
+	}
+}
+
 func TestCleanupStaleRemovesOldWorkspaceWithInvalidState(t *testing.T) {
 	workDir := t.TempDir()
 	oldSession := filepath.Join(workDir, SessionsDirName, "old")
