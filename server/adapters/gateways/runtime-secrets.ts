@@ -4,6 +4,7 @@ import {
   type EnvFromEntry,
   isGitRepositoryVolume,
   isMemoryVolume,
+  type SecretItem,
   type Volume,
   type VolumeMount,
   volumeMountPath,
@@ -66,7 +67,7 @@ export async function resolveRuntimeWorkspaceManifest(
   for (const volume of volumes) {
     const mountPath = volumeMountPath(volume.name, volumeMounts)
     if (isGitRepositoryVolume(volume)) {
-      const credential = volume.secretRef ? await resolveGitCredential(env, repo, scope, volume.secretRef) : undefined
+      const credential = volume.secretRef ? await resolveGitCredential(env, repo, scope, volume.secretRef, volume.items) : undefined
       mounts.push({
         type: 'git_repository',
         name: volume.name,
@@ -92,7 +93,7 @@ export async function resolveRuntimeWorkspaceManifest(
       continue
     }
     if (volume.type === 'secret') {
-      const resolved = await resolveSecretMount(env, repo, scope, volume.secretRef)
+      const resolved = await resolveSecretMount(env, repo, scope, volume.secretRef, volume.items)
       mounts.push({
         type: 'secret',
         name: volume.name,
@@ -110,13 +111,14 @@ async function resolveGitCredential(
   repo: ReturnType<typeof createRuntimeOrchestrationRepo>,
   scope: { organizationId: string; projectId: string },
   secretRef: string,
+  items: SecretItem[] | undefined,
 ): Promise<WorkspaceGitCredential> {
   const version = await repo.secretVersionForResolution(scope.organizationId, scope.projectId, secretRef)
   if (version?.state !== 'active') {
     throw new Error(`Runtime git secret reference ${secretRef} cannot be resolved`)
   }
   return gitCredentialFromSecretData(
-    await decryptVersionData(env, version.metadata, version.secretRef),
+    projectSecretData(await decryptVersionData(env, version.metadata, version.secretRef), items, secretRef),
     version.secretRef,
   )
 }
@@ -146,13 +148,17 @@ async function resolveSecretMount(
   repo: ReturnType<typeof createRuntimeOrchestrationRepo>,
   scope: { organizationId: string; projectId: string },
   secretRef: string,
+  items: SecretItem[] | undefined,
 ): Promise<WorkspaceFile[]> {
   const version = await repo.secretVersionForResolution(scope.organizationId, scope.projectId, secretRef)
   if (version) {
     if (version.state !== 'active') {
       throw new Error(`Runtime secret reference ${secretRef} cannot be resolved`)
     }
-    return filesFromSecretData(await decryptVersionData(env, version.metadata, secretRef))
+    return filesFromSecretData(projectSecretData(await decryptVersionData(env, version.metadata, secretRef), items, secretRef))
+  }
+  if (items && items.length > 0) {
+    throw new Error(`Runtime secret reference ${secretRef} cannot use items without a credential reference`)
   }
   const versions = await repo.vaultVersionsForResolution(scope.organizationId, scope.projectId, secretRef)
   if (!versions) {
@@ -209,6 +215,25 @@ function secretValueForEnv(entry: EnvFromEntry, data: Record<string, string>, se
   return value
 }
 
+function projectSecretData(data: Record<string, string>, items: SecretItem[] | undefined, secretRef: string) {
+  if (!items || items.length === 0) {
+    return data
+  }
+  const projected: Record<string, string> = {}
+  for (const item of items) {
+    const value = data[item.key]
+    if (typeof value !== 'string') {
+      throw new Error(`Runtime secret reference ${secretRef} has no data key ${item.key}`)
+    }
+    const path = safeFilePath(item.path)
+    if (Object.prototype.hasOwnProperty.call(projected, path)) {
+      throw new Error(`Runtime secret reference ${secretRef} projects duplicate item path ${path}`)
+    }
+    projected[path] = value
+  }
+  return projected
+}
+
 function singleDataKey(data: Record<string, string>, secretRef: string) {
   const keys = Object.keys(data)
   if (keys.length !== 1) {
@@ -220,12 +245,23 @@ function singleDataKey(data: Record<string, string>, secretRef: string) {
 function filesFromSecretData(data: Record<string, string>) {
   return Object.entries(data)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([path, content]) => ({ path: safeFileName(path), content }))
+    .map(([path, content]) => ({ path: safeFilePath(path), content }))
 }
 
 function safeFileName(value: string) {
   if (!/^[A-Za-z0-9._-]+$/.test(value) || value === '.' || value === '..') {
     throw new Error(`Vault credential name cannot be mounted as a file: ${value}`)
+  }
+  return value
+}
+
+function safeFilePath(value: string) {
+  if (
+    !/^[A-Za-z0-9._/-]+$/.test(value) ||
+    value.startsWith('/') ||
+    value.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+  ) {
+    throw new Error(`Vault credential item path cannot be mounted as a file: ${value}`)
   }
   return value
 }

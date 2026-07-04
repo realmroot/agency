@@ -1,6 +1,6 @@
 import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runnerSupportsRuntimeProviderModel } from '@server/domain/runtime-catalog'
-import { vaultIdFromRef } from '@server/domain/vault'
+import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
 import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import type { ConnectorRecord, SessionOrchestrationStore } from '@server/usecases/ports'
 import type {
@@ -533,6 +533,30 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       projectId: string,
       secretRef: string,
     ): Promise<{ state: string; metadata: string; secretRef: string } | null> {
+      const identity = secretRefIdentity(secretRef)
+      if (identity?.credentialId && !identity.versionId) {
+        return (
+          (await db
+            .select({
+              state: vaultCredentialVersions.state,
+              metadata: vaultCredentialVersions.metadata,
+              secretRef: vaultCredentialVersions.secretRef,
+            })
+            .from(vaultCredentials)
+            .innerJoin(vaultCredentialVersions, eq(vaultCredentials.activeVersionId, vaultCredentialVersions.id))
+            .where(
+              and(
+                eq(vaultCredentials.id, identity.credentialId),
+                eq(vaultCredentials.vaultId, identity.vaultId),
+                eq(vaultCredentials.organizationId, organizationId),
+                or(eq(vaultCredentials.projectId, projectId), isNull(vaultCredentials.projectId)),
+                eq(vaultCredentials.state, 'active'),
+                eq(vaultCredentialVersions.state, 'active'),
+              ),
+            )
+            .get()) ?? null
+        )
+      }
       return (
         (await db
           .select({

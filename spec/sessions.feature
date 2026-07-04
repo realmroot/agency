@@ -36,6 +36,13 @@ Feature: Sessions
 	    And repository resources are declared in the deterministic workspace manifest
 	    And raw credentials are rejected from the request body
 
+  @sessions/secret-projection @usecase
+  Scenario: Project selected credential keys into runtime inputs
+    Given a session references vault credentials without pinning a version
+    When runtime secrets are materialized for env and workspace volumes
+    Then the active credential version is resolved at dispatch time
+    And volume items project selected secret keys to the runtime-facing names
+
 	  @sessions/memory-store-resources @api
 	  Scenario: Create a session with attached memory stores
 	    Given a project has an active memory store with memories

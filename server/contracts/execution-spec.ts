@@ -36,6 +36,18 @@ const VolumeNameSchema = z
   .min(1)
   .max(80)
   .regex(/^[A-Za-z0-9._-]+$/, 'Use a safe volume name.')
+const SecretItemSchema = z
+  .object({
+    key: z.string().min(1).max(253).openapi({ example: 'GH_TOKEN' }),
+    path: z
+      .string()
+      .min(1)
+      .max(253)
+      .refine((value) => !value.startsWith('/') && !value.split('/').includes('..'), 'Use a safe relative item path.')
+      .openapi({ example: 'password' }),
+  })
+  .strict()
+  .openapi('SecretItem')
 
 export const GitRepositoryVolumeSchema = z
   .object({
@@ -44,6 +56,7 @@ export const GitRepositoryVolumeSchema = z
     url: GitRepositoryUrlSchema.openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: GitRefSchema.optional(),
     secretRef: SecretRefSchema.optional(),
+    items: z.array(SecretItemSchema).max(50).optional(),
   })
   .strict()
   .openapi('GitRepositoryVolume')
@@ -65,8 +78,9 @@ export const SecretVolumeSchema = z
     name: VolumeNameSchema.openapi({ example: 'github-token' }),
     type: z.literal('secret'),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123',
+      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
     }),
+    items: z.array(SecretItemSchema).max(50).optional(),
   })
   .strict()
   .openapi('SecretVolume')

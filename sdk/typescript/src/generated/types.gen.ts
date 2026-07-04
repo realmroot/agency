@@ -1397,6 +1397,12 @@ export type SecretVolume = {
     name: string;
     type: 'secret';
     secretRef: string;
+    items?: Array<SecretItem>;
+};
+
+export type SecretItem = {
+    key: string;
+    path: string;
 };
 
 export type GitRepositoryVolume = {
@@ -1405,6 +1411,7 @@ export type GitRepositoryVolume = {
     url: string;
     ref?: string;
     secretRef?: string;
+    items?: Array<SecretItem>;
 };
 
 export type MemoryVolume = {

@@ -5695,13 +5695,42 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecretItem"
+            },
+            "maxItems": 50
           }
         },
         "required": [
           "name",
           "type",
           "secretRef"
+        ],
+        "additionalProperties": false
+      },
+      "SecretItem": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "example": "GH_TOKEN"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "example": "password"
+          }
+        },
+        "required": [
+          "key",
+          "path"
         ],
         "additionalProperties": false
       },
@@ -5736,6 +5765,13 @@
             "type": "string",
             "minLength": 1,
             "example": "ama://vaults/vault_abc123"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecretItem"
+            },
+            "maxItems": 50
           }
         },
         "required": [

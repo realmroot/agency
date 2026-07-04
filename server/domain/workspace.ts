@@ -180,6 +180,7 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
       url,
       ...(parsed.ref ? { ref: parsed.ref } : {}),
       ...(parsed.secretRef ? { secretRef: parsed.secretRef } : {}),
+      ...(parsed.items ? { items: parsed.items } : {}),
     } satisfies GitRepositoryVolume)
   }
   return { volumes: normalizedVolumes, volumeMounts: normalizedMounts }

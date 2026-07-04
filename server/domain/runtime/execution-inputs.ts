@@ -9,12 +9,18 @@ export interface EnvFromEntry {
   key?: string | undefined
 }
 
+export interface SecretItem {
+  key: string
+  path: string
+}
+
 export type Volume = SecretVolume | GitRepositoryVolume | MemoryVolume
 
 export interface SecretVolume {
   name: string
   type: 'secret'
   secretRef: string
+  items?: SecretItem[] | undefined
 }
 
 export interface GitRepositoryVolume extends Record<string, unknown> {
@@ -23,6 +29,7 @@ export interface GitRepositoryVolume extends Record<string, unknown> {
   url: string
   ref?: string | undefined
   secretRef?: string | undefined
+  items?: SecretItem[] | undefined
 }
 
 export interface MemoryVolume extends Record<string, unknown> {

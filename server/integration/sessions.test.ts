@@ -1023,7 +1023,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(duplicateMountRes.status).toBe(400)
   })
 
-  it('materializes credential-backed env and workspace volumes for runner use', async () => {
+  it('materializes credential-backed env and workspace volumes for runner use [spec: sessions/secret-projection]', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, {
       name: `Self-hosted credential workspace ${crypto.randomUUID()}`,
@@ -1044,8 +1044,8 @@ describe('[CF] /api/v1/sessions', () => {
     const vault = await createVault(authorization)
     const gitCredential = await createCredential(authorization, vault.id, {
       name: 'git-basic-auth',
-      type: 'ama.dev/basic-auth',
-      stringData: { username: 'git-user', password: 'git-password' },
+      type: 'opaque',
+      stringData: { GH_USERNAME: 'git-user', GH_TOKEN: 'git-password' },
     })
     const appSecret = await createCredential(authorization, vault.id, {
       name: 'app-config',
@@ -1057,6 +1057,8 @@ describe('[CF] /api/v1/sessions', () => {
       type: 'ama.dev/tls',
       stringData: { 'tls.crt': '-----BEGIN CERTIFICATE-----', 'tls.key': '-----BEGIN PRIVATE KEY-----' },
     })
+    const gitSecretRef = `ama://vaults/${vault.id}/credentials/${gitCredential.id}`
+    const appSecretRef = `ama://vaults/${vault.id}/credentials/${appSecret.id}`
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
@@ -1069,8 +1071,8 @@ describe('[CF] /api/v1/sessions', () => {
           {
             type: 'secret',
             name: 'SERVICE_PASSWORD',
-            secretRef: gitCredential.activeVersion.secretRef,
-            key: 'password',
+            secretRef: gitSecretRef,
+            key: 'GH_TOKEN',
           },
         ],
         volumes: [
@@ -1078,9 +1080,13 @@ describe('[CF] /api/v1/sessions', () => {
             name: 'repo',
             type: 'git_repository',
             url: 'https://github.com/saltbo/slink.git',
-            secretRef: gitCredential.activeVersion.secretRef,
+            secretRef: gitSecretRef,
+            items: [
+              { key: 'GH_USERNAME', path: 'username' },
+              { key: 'GH_TOKEN', path: 'password' },
+            ],
           },
-          { name: 'single-secret', type: 'secret', secretRef: appSecret.activeVersion.secretRef },
+          { name: 'single-secret', type: 'secret', secretRef: appSecretRef },
           { name: 'vault-secrets', type: 'secret', secretRef: `ama://vaults/${vault.id}` },
         ],
         volumeMounts: [
@@ -1142,8 +1148,8 @@ describe('[CF] /api/v1/sessions', () => {
       expect.arrayContaining([
         { path: 'app-config/alpha', content: 'secret-alpha' },
         { path: 'app-config/beta', content: 'secret-beta' },
-        { path: 'git-basic-auth/password', content: 'git-password' },
-        { path: 'git-basic-auth/username', content: 'git-user' },
+        { path: 'git-basic-auth/GH_TOKEN', content: 'git-password' },
+        { path: 'git-basic-auth/GH_USERNAME', content: 'git-user' },
         { path: 'tls-cert/tls.crt', content: '-----BEGIN CERTIFICATE-----' },
         { path: 'tls-cert/tls.key', content: '-----BEGIN PRIVATE KEY-----' },
       ]),

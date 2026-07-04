@@ -129,16 +129,16 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     ).rejects.toThrow('has no data key missing')
   })
 
-  it('materializes git, memory, and single-secret workspace mounts', async () => {
+  it('[spec: sessions/secret-projection] materializes projected git, memory, and single-secret workspace mounts', async () => {
     secretVersionForResolutionMock
       .mockResolvedValueOnce({
         state: 'active',
-        metadata: JSON.stringify({ encryptedSecretData: { username: 'u', password: 'p' } }),
+        metadata: JSON.stringify({ encryptedSecretData: { GH_USERNAME: 'u', GH_TOKEN: 'p' } }),
         secretRef: 'git-ref',
       })
       .mockResolvedValueOnce({
         state: 'active',
-        metadata: JSON.stringify({ encryptedSecretData: { config: 'c' } }),
+        metadata: JSON.stringify({ encryptedSecretData: { APP_CONFIG: 'c' } }),
         secretRef: 'secret-ref',
       })
     decryptSecretValueMock
@@ -156,6 +156,10 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
             url: 'https://github.com/saltbo/slink.git',
             ref: 'main',
             secretRef: 'git-ref',
+            items: [
+              { key: 'GH_USERNAME', path: 'username' },
+              { key: 'GH_TOKEN', path: 'password' },
+            ],
           },
           {
             name: 'memory',
@@ -166,7 +170,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
             description: 'Notes',
             memories: [{ path: 'notes.md', content: 'hello' }],
           },
-          { name: 'secret', type: 'secret', secretRef: 'secret-ref' },
+          { name: 'secret', type: 'secret', secretRef: 'secret-ref', items: [{ key: 'APP_CONFIG', path: 'config.json' }] },
         ],
         [
           { name: 'repo', mountPath: '/workspace/repo' },
@@ -199,7 +203,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
           name: 'secret',
           mountPath: '/workspace/.ama/secrets/custom',
           readOnly: true,
-          files: [{ path: 'config', content: 'secret-config' }],
+          files: [{ path: 'config.json', content: 'secret-config' }],
         },
       ],
     })

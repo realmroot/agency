@@ -3826,6 +3826,7 @@ type FindToolInput struct {
 
 // GitRepositoryVolume defines model for GitRepositoryVolume.
 type GitRepositoryVolume struct {
+	Items     *[]SecretItem           `json:"items,omitempty"`
 	Name      string                  `json:"name"`
 	Ref       *string                 `json:"ref,omitempty"`
 	SecretRef *string                 `json:"secretRef,omitempty"`
@@ -4529,8 +4530,15 @@ type RuntimeUsageWindow struct {
 	Utilization float32 `json:"utilization"`
 }
 
+// SecretItem defines model for SecretItem.
+type SecretItem struct {
+	Key  string `json:"key"`
+	Path string `json:"path"`
+}
+
 // SecretVolume defines model for SecretVolume.
 type SecretVolume struct {
+	Items     *[]SecretItem    `json:"items,omitempty"`
 	Name      string           `json:"name"`
 	SecretRef string           `json:"secretRef"`
 	Type      SecretVolumeType `json:"type"`

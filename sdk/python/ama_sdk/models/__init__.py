@@ -322,6 +322,7 @@ from .runtime_lifecycle_payload import RuntimeLifecyclePayload
 from .runtime_name import RuntimeName
 from .runtime_usage import RuntimeUsage
 from .runtime_usage_window import RuntimeUsageWindow
+from .secret_item import SecretItem
 from .secret_volume import SecretVolume
 from .secret_volume_type import SecretVolumeType
 from .session import Session
@@ -844,6 +845,7 @@ __all__ = (
     "RuntimeName",
     "RuntimeUsage",
     "RuntimeUsageWindow",
+    "SecretItem",
     "SecretVolume",
     "SecretVolumeType",
     "Session",

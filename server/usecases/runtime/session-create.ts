@@ -21,6 +21,7 @@ import type {
   EnvFromEntry,
   GitRepositoryVolume,
   MemoryVolume,
+  SecretItem,
   Volume,
   VolumeMount,
 } from '@server/domain/runtime/execution-inputs'
@@ -56,6 +57,7 @@ import { validateRuntimeProviderModel } from './provisioning'
 
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
+const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
 
 // The create flow delegates the inline cloud launch to the cloud-turn usecase,
 // so it needs the full CloudTurnDeps. The self-hosted / queued paths use the
@@ -146,11 +148,44 @@ async function resolveEnvFromEntries(
     entries.push({
       type: 'secret',
       name: entry.name,
-      secretRef: version.secretRef,
+      secretRef,
       ...(entry.key ? { key: entry.key } : {}),
     })
   }
   return { entries }
+}
+
+function validateSecretItems(field: string, items: SecretItem[] | undefined): Record<string, string> | null {
+  if (!items) {
+    return null
+  }
+  if (!Array.isArray(items) || items.length > 50) {
+    return { [`${field}.items`]: 'Use at most 50 secret items.' }
+  }
+  const paths = new Set<string>()
+  for (const [index, item] of items.entries()) {
+    const key = item.key
+    const path = item.path
+    if (typeof key !== 'string' || key.length === 0 || key.length > 253) {
+      return { [`${field}.items.${index}.key`]: 'Use a valid secret data key.' }
+    }
+    const segments = typeof path === 'string' ? path.split('/') : []
+    if (
+      typeof path !== 'string' ||
+      path.length === 0 ||
+      path.length > 253 ||
+      !SECRET_ITEM_PATH_PATTERN.test(path) ||
+      path.startsWith('/') ||
+      segments.some((segment) => !segment || segment === '.' || segment === '..')
+    ) {
+      return { [`${field}.items.${index}.path`]: 'Use a safe relative item path.' }
+    }
+    if (paths.has(path)) {
+      return { [`${field}.items.${index}.path`]: 'Secret item paths must be unique.' }
+    }
+    paths.add(path)
+  }
+  return null
 }
 
 async function validateDeclaredVolumes(
@@ -172,6 +207,10 @@ async function validateDeclaredVolumes(
     volumeNames.add(volume.name)
     if (volume.type !== 'secret') {
       if (volume.type === 'git_repository' && volume.secretRef) {
+        const itemFields = validateSecretItems(field, volume.items)
+        if (itemFields) {
+          return { fields: itemFields }
+        }
         const version = await store.secretVersionForResolution(auth.organization.id, auth.project.id, volume.secretRef)
         if (version?.state !== 'active') {
           return {
@@ -180,18 +219,25 @@ async function validateDeclaredVolumes(
             },
           }
         }
-        normalizedVolumes.push({ ...volume, secretRef: version.secretRef } satisfies GitRepositoryVolume)
+        normalizedVolumes.push({ ...volume, secretRef: volume.secretRef } satisfies GitRepositoryVolume)
         continue
+      }
+      if (volume.type === 'git_repository' && volume.items && volume.items.length > 0) {
+        return { fields: { [`${field}.items`]: 'Secret items require a secretRef.' } }
       }
       normalizedVolumes.push(volume)
       continue
+    }
+    const itemFields = validateSecretItems(field, volume.items)
+    if (itemFields) {
+      return { fields: itemFields }
     }
     const version = await store.secretVersionForResolution(auth.organization.id, auth.project.id, volume.secretRef)
     if (version) {
       if (version.state !== 'active') {
         return { fields: { [`${field}.secretRef`]: 'Secret reference must be active.' } }
       }
-      normalizedVolumes.push({ ...volume, secretRef: version.secretRef })
+      normalizedVolumes.push({ ...volume, secretRef: volume.secretRef })
       continue
     }
     const vaultVersions = await store.vaultVersionsForResolution(
@@ -203,6 +249,9 @@ async function validateDeclaredVolumes(
       return {
         fields: { [`${field}.secretRef`]: 'Secret reference must point to an active credential version or vault.' },
       }
+    }
+    if (volume.items && volume.items.length > 0) {
+      return { fields: { [`${field}.items`]: 'Secret items require a credential reference.' } }
     }
     normalizedVolumes.push(volume)
   }
