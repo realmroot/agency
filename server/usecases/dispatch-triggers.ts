@@ -142,7 +142,7 @@ async function dispatchToReusableHttpSession(
     }
   }
 
-  return await sendSessionMessage(deps, auth, target, content)
+  return await sendSessionMessage(deps, auth, target, content, requestId)
 }
 
 function httpTriggerRoutingKey(body: unknown): string | null {

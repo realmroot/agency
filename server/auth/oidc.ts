@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { createRemoteJWKSet, customFetch, type JWKSCacheInput, jwksCache, jwtVerify } from 'jose'
 import * as client from 'openid-client'
@@ -214,17 +214,7 @@ export async function upsertProjectForClaims(
   }
   const organizationId = organizationIdForClaims(claims)
   const projectName = 'Default project'
-  let project = await db.select().from(projects).where(eq(projects.organizationId, organizationId)).get()
-  if (!project) {
-    project = {
-      id: newId('project'),
-      organizationId,
-      name: projectName,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }
-    await db.insert(projects).values(project)
-  }
+
   if (requestedProjectId) {
     const requestedProject = await db
       .select()
@@ -234,6 +224,29 @@ export async function upsertProjectForClaims(
     if (requestedProject) {
       return { id: requestedProject.id, name: requestedProject.name, organizationId: requestedProject.organizationId }
     }
+  }
+
+  let project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.organizationId, organizationId), eq(projects.name, projectName)))
+    .orderBy(asc(projects.createdAt), asc(projects.id))
+    .get()
+  project ??= await db
+    .select()
+    .from(projects)
+    .where(eq(projects.organizationId, organizationId))
+    .orderBy(asc(projects.createdAt), asc(projects.id))
+    .get()
+  if (!project) {
+    project = {
+      id: newId('project'),
+      organizationId,
+      name: projectName,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    await db.insert(projects).values(project)
   }
   return { id: project.id, name: project.name, organizationId: project.organizationId }
 }

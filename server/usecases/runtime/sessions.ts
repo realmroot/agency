@@ -121,8 +121,9 @@ export async function dispatchPrompt(
   auth: AuthScope,
   session: RuntimeSessionHandle,
   content: string,
+  requestId?: string | null,
 ): Promise<PromptDispatchResult> {
-  const outcome = await dispatchSessionPrompt(deps, auth, session.id, content)
+  const outcome = await dispatchSessionPrompt(deps, auth, session.id, content, requestId)
   if (!outcome.ok) {
     return {
       ok: false,
@@ -140,8 +141,9 @@ export async function decideApproval(
   session: RuntimeSessionHandle,
   approvalId: string,
   body: { decision: 'approve' | 'deny'; reason?: string; result?: Record<string, unknown> },
+  requestId?: string | null,
 ): Promise<SessionRuntimeOutcome<SessionApproval>> {
-  const result = await decideSessionApproval(deps, auth, session.id, approvalId, body)
+  const result = await decideSessionApproval(deps, auth, session.id, approvalId, body, requestId)
   if (!result.ok) {
     return result
   }

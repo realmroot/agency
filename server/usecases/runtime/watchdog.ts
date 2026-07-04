@@ -38,18 +38,22 @@ export async function markIdleTimedOutSessions(deps: Pick<WatchdogDeps, 'session
 async function destroyLeakedSandboxes(deps: WatchdogDeps): Promise<void> {
   // archived is lifecycle (archivedAt), not a state value
   const rows = await deps.sessionOrchestration.leakedSandboxSessions(ENDED_RUNTIME_STATES, 20)
+  const failures: Error[] = []
   for (const row of rows) {
     if (!row.sandboxId) continue
     try {
       await deps.cloudRuntime.stopCloudSession(row.sandboxId)
     } catch (error) {
-      // instance may already be gone; stamping below prevents retry loops. Log
-      // which sandbox failed to destroy so a real teardown failure is visible.
-      console.warn(`failed to destroy leaked sandbox ${row.sandboxId} (sessionId=${row.id}):`, error)
+      failures.push(
+        new Error(`failed to destroy leaked sandbox ${row.sandboxId} for session ${row.id}`, { cause: error }),
+      )
     }
     const metadata = parseMetadata(row.metadata)
     metadata.sandboxDestroyedAt = new Date().toISOString()
     await deps.sessionOrchestration.stampSandboxDestroyed(row.id, JSON.stringify(metadata))
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(failures, 'Failed to destroy leaked sandboxes')
   }
 }
 

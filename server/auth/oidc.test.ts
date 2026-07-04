@@ -1,7 +1,32 @@
+import { drizzle } from 'drizzle-orm/d1'
 import { exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
-import { getBearerClaims, OidcError, organizationIdForClaims } from './oidc'
+import { getBearerClaims, OidcError, organizationIdForClaims, upsertProjectForClaims } from './oidc'
+
+type ProjectRawRow = [string, string, string, string, string]
+
+function fakeD1ForProjectHint(row: ProjectRawRow) {
+  const calls: Array<{ sql: string; params: unknown[] }> = []
+  const db = {
+    prepare(sql: string) {
+      return {
+        bind(...params: unknown[]) {
+          return {
+            async raw() {
+              calls.push({ sql, params })
+              if (sql.includes('"projects"."id" = ?')) {
+                return [row]
+              }
+              throw new Error(`unexpected project hint query: ${sql}`)
+            },
+          }
+        },
+      }
+    },
+  } as unknown as D1Database
+  return { db, calls }
+}
 
 function envFor(issuer: string, overrides: Partial<Env> = {}) {
   return {
@@ -128,5 +153,38 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
     expect(claims.roles).toContain('runner')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/introspect')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/userinfo')
+  })
+})
+
+describe('[spec: auth/session-current] OIDC project resolution', () => {
+  it('resolves a requested project before falling back to an organization default', async () => {
+    const requestedProject = [
+      'project_requested',
+      'user:user_project_hint',
+      'Requested project',
+      '2026-01-01T00:00:00.000Z',
+      '2026-01-01T00:00:00.000Z',
+    ] satisfies ProjectRawRow
+    const { db, calls } = fakeD1ForProjectHint(requestedProject)
+
+    const project = await upsertProjectForClaims(
+      drizzle(db),
+      {
+        sub: 'user_project_hint',
+        roles: ['owner'],
+        permissions: ['*'],
+        teams: [],
+      },
+      '2026-01-02T00:00:00.000Z',
+      'project_requested',
+    )
+
+    expect(project).toEqual({
+      id: 'project_requested',
+      organizationId: 'user:user_project_hint',
+      name: 'Requested project',
+    })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.params).toEqual(['project_requested', 'user:user_project_hint'])
   })
 })

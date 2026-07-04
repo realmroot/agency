@@ -582,7 +582,14 @@ describe('[spec: sessions/prompt] sendSessionMessage', () => {
 
   it('dispatches prompt and persists message record on success', async () => {
     let inserted: string | null = null
+    let dispatchedRequestId: string | null | undefined
     const deps = fakeDeps({
+      sessionRuntime: {
+        dispatchPrompt: async (_deps, _auth, _session, _content, requestId) => {
+          dispatchedRequestId = requestId
+          return { ok: true, delivery: 'live', state: 'accepted' }
+        },
+      },
       sessions: {
         insertMessage: async (record): Promise<SessionMessage> => {
           inserted = record.content
@@ -590,12 +597,13 @@ describe('[spec: sessions/prompt] sendSessionMessage', () => {
         },
       },
     })
-    const result = await sendSessionMessage(deps, auth, sessionRow(), 'hi there')
+    const result = await sendSessionMessage(deps, auth, sessionRow(), 'hi there', 'req_msg_1')
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.message.content).toBe('hi there')
     }
     expect(inserted).toBe('hi there')
+    expect(dispatchedRequestId).toBe('req_msg_1')
   })
 
   it('returns the runtime error without persisting a message when dispatch fails with 409', async () => {

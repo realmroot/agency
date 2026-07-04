@@ -1473,6 +1473,7 @@ export type CloudTurnQueueTurnMessage = {
   sessionId: string
   organizationId: string
   projectId: string
+  requestId?: string | null
   prompt: string
   auditAction: 'session.prompt' | 'session.command'
 }
@@ -1488,6 +1489,7 @@ export type CloudTurnQueueStepMessage = {
   sessionId: string
   organizationId: string
   projectId: string
+  requestId?: string | null
   // Present for a budget continuation (renew the held lease); absent for an
   // approval-resume step, which acquires a fresh lease in the consumer.
   turnId?: string
@@ -1499,6 +1501,7 @@ export type CloudTurnQueueStartMessage = {
   sessionId: string
   organizationId: string
   projectId: string
+  requestId?: string | null
   runtime: string
   runtimeConfig: Record<string, unknown>
   env: Record<string, string>

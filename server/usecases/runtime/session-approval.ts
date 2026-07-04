@@ -14,7 +14,7 @@
 
 import { type SessionApprovalGrants, sessionApprovalState } from '@server/domain/runtime/approval-state'
 import { parseJson } from '@server/domain/runtime/session-snapshot'
-import { now, stringify } from '@server/domain/runtime/util'
+import { now, requestIdFrom, stringify } from '@server/domain/runtime/util'
 import { isAmaSandboxToolName } from '@shared/agent-tools'
 import type { AuthScope, SessionSandboxExecutor } from '../ports'
 import { writeSessionApprovalState } from './approval-gate'
@@ -63,6 +63,7 @@ export async function decideSessionApproval(
   sessionId: string,
   approvalId: string,
   body: { decision: 'approve' | 'deny'; reason?: string; result?: Record<string, unknown> },
+  requestId?: string | null,
 ): Promise<ApprovalDecisionResult> {
   const store = deps.sessionOrchestration
   const session = await store.findSession(auth.project.id, sessionId)
@@ -218,6 +219,7 @@ export async function decideSessionApproval(
       sessionId: session.id,
       organizationId: auth.organization.id,
       projectId: auth.project.id,
+      requestId: requestIdFrom(requestId),
       auditAction: 'session.command',
     })
   }

@@ -16,6 +16,7 @@ import { registerLeaseRoutes } from './http/leases'
 import { registerMemoryStoreRoutes } from './http/memory-stores'
 import { registerProjectRoutes } from './http/projects'
 import { registerProviderRoutes } from './http/providers'
+import { requestId } from './http/request-context'
 import { registerRunnerRoutes } from './http/runners'
 import { registerSessionRoutes } from './http/sessions'
 import { registerTriggerRoutes } from './http/triggers'
@@ -23,6 +24,7 @@ import { registerUsageRecordRoutes } from './http/usage-records'
 import { registerUsageSummaryRoutes } from './http/usage-summary'
 import { registerVaultRoutes } from './http/vaults'
 import { registerWorkItemRoutes } from './http/work-items'
+import { logError, requestLogContext } from './logging'
 import { ApiSecuritySchemes, createDepsApiRouter } from './openapi'
 
 export function createApp() {
@@ -129,8 +131,13 @@ export function createApp() {
   routes.notFound((c) => c.json({ error: { type: 'not_found', message: 'Not found' } }, 404))
 
   routes.onError((err, c) => {
-    console.error(err)
-    return c.json({ error: { type: 'internal_error', message: 'Internal server error' } }, 500)
+    const id = requestId(c)
+    logError('http.request.failed', err, requestLogContext(c.req.raw, id))
+    c.header('x-request-id', id)
+    return c.json(
+      { error: { type: 'internal_error', message: 'Internal server error', details: { requestId: id } } },
+      500,
+    )
   })
 
   return routes

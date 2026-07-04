@@ -1393,7 +1393,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       if (!session) {
         return errorResponse(c, 404, 'not_found', 'Session not found')
       }
-      const outcome = await sendSessionMessage(deps, auth as never, session, content)
+      const outcome = await sendSessionMessage(deps, auth as never, session, content, requestId(c))
       if (!outcome.ok) {
         return errorResponse(
           c,
@@ -1534,11 +1534,18 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       // Decide is a single forward to the runtime boundary (it executes the
       // approved tool or records the denial, persists the decided approval, and
       // resumes the turn), so the route calls the runtime usecase with deps directly.
-      const outcome = await decideRuntimeApproval(deps, auth, session, approvalId, {
-        decision: body.decision,
-        ...(body.reason !== undefined ? { reason: body.reason } : {}),
-        ...(body.result !== undefined ? { result: body.result } : {}),
-      })
+      const outcome = await decideRuntimeApproval(
+        deps,
+        auth,
+        session,
+        approvalId,
+        {
+          decision: body.decision,
+          ...(body.reason !== undefined ? { reason: body.reason } : {}),
+          ...(body.result !== undefined ? { result: body.result } : {}),
+        },
+        requestId(c),
+      )
       if (!outcome.ok) {
         return runtimeErrorResponse(c, outcome.error) as never
       }

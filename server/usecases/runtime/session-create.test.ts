@@ -205,12 +205,15 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       'agent_1',
       'env_1',
       { runtime: 'ama', prompt: 'Start cloud session' },
-      null,
+      'req_create_1',
     )
 
     expect(result.ok).toBe(true)
     expect(insertSessionMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Start cloud session' }))
     expect(enqueueCloudTurnMock).toHaveBeenCalledTimes(1)
+    expect(enqueueCloudTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'session.start', requestId: 'req_create_1' }),
+    )
     const reconcile = updateSessionWhenStateMock.mock.calls.find(
       (call) => (call[3] as { state?: string }).state === 'error',
     )

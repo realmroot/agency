@@ -129,12 +129,13 @@ describe('dispatchSessionPrompt [spec: sessions/prompt]', () => {
   it('queues the first self-hosted prompt without resume metadata when the session has no prior work item', async () => {
     const { deps, queueSessionWorkWhenState } = depsForFirstPrompt(selfHostedSession({ state: 'idle' }))
 
-    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'start the session')
+    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'start the session', 'req_prompt_1')
 
     expect(result).toEqual({ ok: true, delivery: 'queued', state: 'accepted' })
     const workItem = queueSessionWorkWhenState.mock.calls[0]?.[4]
     expect(JSON.parse(workItem?.payload ?? '{}')).toMatchObject({
       type: 'session.start',
+      requestId: 'req_prompt_1',
       prompt: 'start the session',
       resume: false,
       resumeToken: null,

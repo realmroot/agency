@@ -119,11 +119,12 @@ export async function sendSessionMessage(
   auth: AuthScope,
   session: RuntimeSessionHandle,
   content: string,
+  requestId?: string | null,
 ): Promise<SendMessageOutcome | { ok: false; status: 409; message: string; archived: true }> {
   if (session.archivedAt) {
     return { ok: false, status: 409, message: 'Archived sessions cannot accept messages', archived: true }
   }
-  const dispatch: PromptDispatchResult = await dispatchPrompt(deps, auth, session, content)
+  const dispatch: PromptDispatchResult = await dispatchPrompt(deps, auth, session, content, requestId)
   if (!dispatch.ok) {
     return {
       ok: false,

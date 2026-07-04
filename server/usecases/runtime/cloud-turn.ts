@@ -35,7 +35,7 @@ import {
   TURN_LEASE_RETRY_DELAY_SECONDS,
   turnLeaseExpiry,
 } from '@server/domain/runtime/turn'
-import { now, RUNTIME_START_TIMEOUT_MS, stringify, withTimeout } from '@server/domain/runtime/util'
+import { now, RUNTIME_START_TIMEOUT_MS, requestIdFrom, stringify, withTimeout } from '@server/domain/runtime/util'
 import { safeRuntimeError } from '@server/runtime-error'
 import { type AmaEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
@@ -91,6 +91,7 @@ export async function startSessionRuntimeForRow(
     environmentSnapshot: EnvironmentSnapshot | null
     runtime: RuntimeName
     runtimeConfig: Record<string, unknown>
+    requestId?: string | null
     env?: Record<string, string>
     envFrom?: EnvFromEntry[]
     volumes?: Volume[]
@@ -187,6 +188,7 @@ export async function startSessionRuntimeForRow(
       resourceType: 'session',
       resourceId: sessionId,
       outcome: 'success',
+      requestId: requestIdFrom(input.requestId),
       sessionId,
       metadata: { sandboxId: startedRuntime.sandboxId },
     })
@@ -196,6 +198,7 @@ export async function startSessionRuntimeForRow(
         auth,
         { ...pending, ...started, stateReason: null, closedAt: null, archivedAt: null },
         prompt,
+        input.requestId,
       )
     }
   } catch (error) {
@@ -218,6 +221,7 @@ export async function startSessionRuntimeForRow(
       resourceType: 'session',
       resourceId: sessionId,
       outcome: 'failure',
+      requestId: requestIdFrom(input.requestId),
       sessionId,
       metadata: { ...safeError },
     })
@@ -375,6 +379,7 @@ async function handleTurnOutcome(
   turnId: string,
   auditAction: 'session.prompt' | 'session.command',
   outcome: CloudTurnOutcome,
+  requestId?: string | null,
 ): Promise<void> {
   const store = deps.sessionOrchestration
   if (outcome.ok && outcome.paused) {
@@ -393,6 +398,7 @@ async function handleTurnOutcome(
       sessionId: session.id,
       organizationId: auth.organization.id,
       projectId: auth.project.id,
+      requestId: requestIdFrom(requestId),
       turnId,
       auditAction,
     })
@@ -429,7 +435,7 @@ async function runLeasedTurn(
     return
   }
   const outcome = await executeCloudSessionTurn(deps, auth, session, work, auditAction)
-  await handleTurnOutcome(deps, auth, session, turnId, auditAction, outcome)
+  await handleTurnOutcome(deps, auth, session, turnId, auditAction, outcome, deferMessage.requestId)
 }
 
 export async function consumeCloudTurnQueueMessage(deps: CloudTurnDeps, message: CloudTurnQueueMessage): Promise<void> {
@@ -464,6 +470,7 @@ export async function consumeCloudTurnQueueMessage(deps: CloudTurnDeps, message:
       envFrom: message.envFrom,
       volumes: message.volumes,
       volumeMounts: message.volumeMounts,
+      requestId: requestIdFrom(message.requestId),
       ...(message.prompt !== undefined ? { prompt: message.prompt } : {}),
     })
     return
@@ -481,7 +488,7 @@ export async function consumeCloudTurnQueueMessage(deps: CloudTurnDeps, message:
         return
       }
       const outcome = await executeCloudSessionTurn(deps, auth, session, { continuation: true }, message.auditAction)
-      await handleTurnOutcome(deps, auth, session, message.turnId, message.auditAction, outcome)
+      await handleTurnOutcome(deps, auth, session, message.turnId, message.auditAction, outcome, message.requestId)
       return
     }
     // Approval-resume (continuation with no held lease): acquire a fresh lease.
@@ -503,7 +510,13 @@ export async function consumeCloudTurnQueueMessage(deps: CloudTurnDeps, message:
   await runLeasedTurn(deps, auth, session, { prompt: message.prompt }, message.auditAction, message)
 }
 
-export async function dispatchPrompt(deps: CloudTurnDeps, auth: AuthScope, session: SessionRow, prompt: string) {
+export async function dispatchPrompt(
+  deps: CloudTurnDeps,
+  auth: AuthScope,
+  session: SessionRow,
+  prompt: string,
+  requestId?: string | null,
+) {
   const store = deps.sessionOrchestration
   const submittedAt = now()
   const started = await store.updateSessionWhenState(auth.project.id, session.id, ['idle', 'running'], {
@@ -524,6 +537,7 @@ export async function dispatchPrompt(deps: CloudTurnDeps, auth: AuthScope, sessi
     sessionId: session.id,
     organizationId: auth.organization.id,
     projectId: auth.project.id,
+    requestId: requestIdFrom(requestId),
     prompt: prompt,
     auditAction: 'session.prompt',
   })
@@ -547,6 +561,7 @@ export async function markCloudTurnDeadLettered(deps: CloudTurnDeps, message: Cl
     resourceType: 'session',
     resourceId: message.sessionId,
     outcome: 'failure',
+    requestId: requestIdFrom(message.requestId),
     sessionId: message.sessionId,
     metadata: { reason: 'cloud_turn_dead_lettered', messageType: message.type },
   })

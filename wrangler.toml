@@ -114,6 +114,10 @@ max_instances = 20
 [observability]
 enabled = true
 
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.05
+
 [env.staging]
 
 [env.staging.vars]

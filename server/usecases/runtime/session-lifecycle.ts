@@ -170,8 +170,8 @@ async function archiveTerminalSession(deps: LifecycleDeps, auth: AuthScope, sess
       projectId: auth.project.id,
       sessionId,
     })
-  } catch (error) {
-    console.error(`session ${sessionId} event archive failed:`, error)
+  } catch {
+    // Best-effort archive: the hot Session DO event stream remains readable.
   }
 }
 
@@ -298,6 +298,7 @@ export async function reopenSession(
       envFrom: parseJson<EnvFromEntry[]>(session.envFrom) ?? [],
       volumes: parseJson<Volume[]>(session.volumes) ?? [],
       volumeMounts: parseJson<VolumeMount[]>(session.volumeMounts) ?? [],
+      requestId: requestIdFrom(requestId),
     })
   }
   await deps.audit.record(auth, {

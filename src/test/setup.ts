@@ -33,6 +33,11 @@ beforeAll(() => {
     configurable: true,
     value: ResizeObserverStub,
   })
+  Object.defineProperty(globalThis, 'CustomEvent', {
+    writable: true,
+    configurable: true,
+    value: window.CustomEvent,
+  })
   // Any /api/v1 request a test forgot to handle is a real gap — fail loudly.
   server.listen({ onUnhandledRequest: 'error' })
 })

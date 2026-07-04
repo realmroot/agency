@@ -1180,9 +1180,11 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           runtimeSession({ id: sessionId, state: 'idle', sandboxId: null }),
       },
     })
-    vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async (_deps, _auth, session, content) => {
+    let dispatchedRequestId: string | null | undefined
+    vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(async (_deps, _auth, session, content, requestId) => {
       dispatchedSessionId = session.id
       dispatchedPrompt = content
+      dispatchedRequestId = requestId
       return { ok: true, delivery: 'queued', state: 'accepted' }
     })
 
@@ -1199,6 +1201,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     expect(reopenedRequestId).toBe('corr_1')
     expect(dispatchedSessionId).toBe('sess_closed')
     expect(dispatchedPrompt).toBe('Handle T-123 from portal')
+    expect(dispatchedRequestId).toBe('corr_1')
     expect(runtimeSessions.createSession).not.toHaveBeenCalled()
   })
 

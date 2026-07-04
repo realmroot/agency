@@ -17,7 +17,7 @@ import {
   parseAgentSnapshot,
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
-import { now } from '@server/domain/runtime/util'
+import { now, requestIdFrom } from '@server/domain/runtime/util'
 import { runtimeSupportsLivePrompts } from '@server/domain/runtime-catalog'
 import { sessionRuntimeConfig, sessionRuntimeFromMetadata } from '@server/domain/runtime-session'
 import type { safeRuntimeError } from '@server/runtime-error'
@@ -42,6 +42,7 @@ export async function dispatchSessionPrompt(
   auth: AuthScope,
   sessionId: string,
   content: string,
+  requestId?: string | null,
 ): Promise<PromptDispatchOutcome> {
   const store = deps.sessionOrchestration
   const session = await store.findSession(auth.project.id, sessionId)
@@ -70,6 +71,7 @@ export async function dispatchSessionPrompt(
           resourceType: 'session',
           resourceId: session.id,
           outcome: 'success',
+          requestId: requestIdFrom(requestId),
           sessionId: session.id,
           metadata: { type: 'prompt', delivery: 'live' },
         })
@@ -77,7 +79,7 @@ export async function dispatchSessionPrompt(
       }
       return { ok: false, status: 409, message: 'Session runtime did not accept the live prompt' }
     }
-    return await queueSelfHostedSessionPrompt(deps, auth, session, content)
+    return await queueSelfHostedSessionPrompt(deps, auth, session, content, requestId)
   }
 
   const submittedAt = now()
@@ -96,6 +98,7 @@ export async function dispatchSessionPrompt(
       sessionId: session.id,
       organizationId: auth.organization.id,
       projectId: auth.project.id,
+      requestId: requestIdFrom(requestId),
       prompt: content,
       auditAction: 'session.command',
     })
@@ -117,6 +120,7 @@ async function queueSelfHostedSessionPrompt(
   auth: AuthScope,
   session: SessionRow,
   content: string,
+  requestId?: string | null,
 ): Promise<PromptDispatchOutcome> {
   const agentSnapshot = parseAgentSnapshot(session.agentSnapshot)
   if (!agentSnapshot) {
@@ -144,6 +148,7 @@ async function queueSelfHostedSessionPrompt(
       prompt: content,
       resume: Boolean(resumeToken),
       resumeToken,
+      requestId: requestIdFrom(requestId),
     },
     ['idle', 'running'],
     {

@@ -154,7 +154,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
   it('re-enqueues a session.step continuation when the turn pauses, without parking idle', async () => {
     runSessionTurnMock.mockResolvedValue({ status: 'paused' })
 
-    await consumeCloudTurnQueueMessage(deps, stepMessage)
+    await consumeCloudTurnQueueMessage(deps, { ...stepMessage, requestId: 'req_turn_1' })
 
     expect(enqueueCloudTurnMock).toHaveBeenCalledTimes(1)
     expect(enqueueCloudTurnMock).toHaveBeenCalledWith(
@@ -164,6 +164,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
         sessionId: 'session_1',
         organizationId: 'org_1',
         projectId: 'proj_1',
+        requestId: 'req_turn_1',
         auditAction: 'session.command',
       }),
     )

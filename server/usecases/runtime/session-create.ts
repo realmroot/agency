@@ -272,6 +272,7 @@ export async function enqueueSelfHostedSessionWork(
     prompt?: string
     resume?: boolean
     resumeToken?: string | null
+    requestId?: string | null
   },
 ) {
   const timestamp = now()
@@ -335,6 +336,7 @@ function selfHostedSessionWorkItem(
     envFrom: values.envFrom ?? [],
     volumes: values.volumes ?? [],
     volumeMounts: values.volumeMounts ?? [],
+    requestId: requestIdFrom(values.requestId),
     prompt: values.prompt ?? null,
     resume: values.resume ?? false,
     resumeToken: values.resumeToken ?? null,
@@ -763,6 +765,7 @@ export async function createSessionForAgent(
         volumes: validatedVolumes.volumes,
         volumeMounts: validatedVolumes.volumeMounts,
         prompt,
+        requestId: requestIdFrom(requestId),
       })
       return { ok: true, session: pending }
     }
@@ -773,6 +776,7 @@ export async function createSessionForAgent(
         sessionId: pending.id,
         organizationId: auth.organization.id,
         projectId: auth.project.id,
+        requestId: requestIdFrom(requestId),
         runtime,
         runtimeConfig,
         env: mergedEnv,
@@ -790,6 +794,7 @@ export async function createSessionForAgent(
       environmentSnapshot,
       runtime,
       runtimeConfig,
+      requestId: requestIdFrom(requestId),
       env: mergedEnv,
       envFrom: mergedEnvFrom,
       volumes: validatedVolumes.volumes,

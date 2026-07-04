@@ -1,6 +1,7 @@
 import { createApp } from './app'
 import { createDeps } from './composition'
 import type { Env } from './env'
+import { type LogContext, logError } from './logging'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
 import type { CloudTurnQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
@@ -17,18 +18,48 @@ export { SessionObject } from './worker/session-object'
 
 const app = createApp()
 
+function waitUntilLogged(ctx: ExecutionContext, event: string, promise: Promise<unknown>, context = {}) {
+  ctx.waitUntil(promise.catch((error) => logError(event, error, context)))
+}
+
+function queueMessageContext(message: unknown): LogContext {
+  if (!message || typeof message !== 'object' || Array.isArray(message)) {
+    return { cloudTurnType: 'unknown' }
+  }
+  const record = message as Partial<CloudTurnQueueMessage>
+  return {
+    cloudTurnType: record.type ?? 'unknown',
+    sessionId: record.sessionId,
+    organizationId: record.organizationId,
+    projectId: record.projectId,
+    requestId: record.requestId,
+  }
+}
+
 export default {
   fetch(request, env, ctx) {
     return app.fetch(request, env, ctx)
   },
   scheduled(event, env, ctx) {
-    ctx.waitUntil(dispatchDueScheduledTriggers(env, ctx, { heartbeatAt: new Date(event.scheduledTime).toISOString() }))
-    ctx.waitUntil(markStalledCloudSessions(createDeps(env)))
-    ctx.waitUntil(markIdleTimedOutSessions(createDeps(env)))
+    const scheduledAt = new Date(event.scheduledTime).toISOString()
+    waitUntilLogged(
+      ctx,
+      'scheduled.triggers.failed',
+      dispatchDueScheduledTriggers(env, ctx, { heartbeatAt: scheduledAt }),
+      {
+        scheduledAt,
+      },
+    )
+    waitUntilLogged(ctx, 'scheduled.stalled-sessions.failed', markStalledCloudSessions(createDeps(env)), {
+      scheduledAt,
+    })
+    waitUntilLogged(ctx, 'scheduled.idle-timeouts.failed', markIdleTimedOutSessions(createDeps(env)), { scheduledAt })
     // The model catalog changes slowly; refresh once an hour (the cron fires
     // every minute, so gate on minute 0) rather than every tick.
     if (new Date(event.scheduledTime).getUTCMinutes() === 0) {
-      ctx.waitUntil(refreshPlatformCatalog(createDeps(env)))
+      waitUntilLogged(ctx, 'scheduled.provider-catalog-refresh.failed', refreshPlatformCatalog(createDeps(env)), {
+        scheduledAt,
+      })
     }
   },
   async queue(batch, env) {
@@ -37,17 +68,21 @@ export default {
     const deadLetter = batch.queue.endsWith('-dlq')
     const deps = createDeps(env)
     for (const message of batch.messages) {
+      const body = message.body as CloudTurnQueueMessage
       try {
         if (deadLetter) {
-          await markCloudTurnDeadLettered(deps, message.body as CloudTurnQueueMessage)
+          await markCloudTurnDeadLettered(deps, body)
         } else {
-          await consumeCloudTurnQueueMessage(deps, message.body as CloudTurnQueueMessage)
+          await consumeCloudTurnQueueMessage(deps, body)
         }
         message.ack()
       } catch (error) {
-        console.error(
-          `cloud turn ${deadLetter ? 'dead-letter handler' : 'consumer'} failed for ${message.id}: ${error}`,
-        )
+        logError(`cloud-turn.${deadLetter ? 'dead-letter' : 'consumer'}.failed`, error, {
+          queue: batch.queue,
+          messageId: message.id,
+          deadLetter,
+          ...queueMessageContext(body),
+        })
         message.retry()
       }
     }
