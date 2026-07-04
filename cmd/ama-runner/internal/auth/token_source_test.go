@@ -88,6 +88,69 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 	}
 }
 
+func TestTokenSourceRefreshRetainsExistingRefreshTokenWhenOmitted(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/configz":
+			_ = json.NewEncoder(w).Encode(testPublicConfig(
+				"http://"+r.Host+"/issuer",
+				"",
+				"runner-client",
+				[]string{"openid", "profile", "email", "offline_access"},
+			))
+		case "/issuer/.well-known/openid-configuration":
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"issuer":                        "http://" + r.Host + "/issuer",
+				"device_authorization_endpoint": "http://" + r.Host + "/device",
+				"token_endpoint":                "http://" + r.Host + "/token",
+			})
+		case "/token":
+			if r.FormValue("resource") != server.URL {
+				t.Fatalf("expected fallback resource %q, got %q", server.URL, r.FormValue("resource"))
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "fresh-access-token",
+				"token_type":   "Bearer",
+				"expires_in":   3600,
+			})
+		default:
+			t.Fatalf("unexpected request %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID:    "acct_1",
+		APIServer:    server.URL,
+		AccessToken:  "expired-access-token",
+		RefreshToken: "old-refresh-token",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	source, err := NewTokenSource(runnerconfig.Config{
+		CredentialPath: credentialPath,
+		APIServer:      server.URL,
+	}, server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.AccessToken(context.Background()); err != nil {
+		t.Fatalf("expected refresh to succeed, got %v", err)
+	}
+	saved, err := runnerconfig.LoadActiveCredentialProfile(credentialPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.RefreshToken != "old-refresh-token" {
+		t.Fatalf("expected existing refresh token to be retained, got %#v", saved)
+	}
+}
+
 func TestTokenSourceReusesCredentialRefreshedByAnotherProcess(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
@@ -236,5 +299,18 @@ func TestNewTokenSourceReturnsCredentialLoadErrors(t *testing.T) {
 	}
 	if _, err := NewTokenSource(runnerconfig.Config{CredentialPath: credentialPath, APIServer: "https://ama.example.test"}, nil); err == nil {
 		t.Fatal("expected invalid credential file error")
+	}
+}
+
+func TestNewTokenSourceWithoutSavedProfileRequiresExplicitToken(t *testing.T) {
+	source, err := NewTokenSource(runnerconfig.Config{
+		CredentialPath: filepath.Join(t.TempDir(), "missing.json"),
+		APIServer:      "https://ama.example.test",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.AccessToken(context.Background()); err == nil {
+		t.Fatal("expected missing token error")
 	}
 }

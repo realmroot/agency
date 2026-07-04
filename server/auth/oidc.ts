@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import { createRemoteJWKSet, customFetch, jwksCache, jwtVerify, type JWKSCacheInput } from 'jose'
+import { createRemoteJWKSet, customFetch, type JWKSCacheInput, jwksCache, jwtVerify } from 'jose'
 import * as client from 'openid-client'
 import { projects } from '../db/schema'
 import type { Env } from '../env'

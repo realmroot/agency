@@ -208,3 +208,106 @@ func TestCredentialProfileLookupAndLogoutBranches(t *testing.T) {
 		t.Fatalf("logout orphan active profile should be a no-op: %v", err)
 	}
 }
+
+func TestCredentialProfileUpdateBranches(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	profile := CredentialProfile{
+		AccountID:    "acct_1",
+		APIServer:    "https://ama.example.test",
+		AccessToken:  "token-1",
+		RefreshToken: "refresh-1",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}
+	if err := SaveCredentialProfile(path, profile); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := UpdateCredentialProfile(path, "https://ama.example.test", nil); err == nil {
+		t.Fatal("expected nil update function error")
+	}
+	if _, err := UpdateCredentialProfile(path, "https://missing.example.test", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		t.Fatalf("unexpected update for missing profile %#v", current)
+		return current, false, nil
+	}); err == nil || !strings.Contains(err.Error(), "no saved auth profile") {
+		t.Fatalf("expected missing profile update error, got %v", err)
+	}
+	if _, err := UpdateCredentialProfile(path, "", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		return current, false, os.ErrPermission
+	}); err == nil || !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("expected update callback error, got %v", err)
+	}
+
+	updated, err := UpdateCredentialProfile(path, "https://ama.example.test/", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		current.AccessToken = "token-2"
+		return current, true, nil
+	})
+	if err != nil {
+		t.Fatalf("update profile: %v", err)
+	}
+	if updated.AccessToken != "token-2" {
+		t.Fatalf("unexpected updated profile %#v", updated)
+	}
+	loaded, err := LoadCredentialProfile(path, "https://ama.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded == nil || loaded.AccessToken != "token-2" {
+		t.Fatalf("expected persisted updated profile, got %#v", loaded)
+	}
+}
+
+func TestCredentialProfileSelectionEdgeCases(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	sharedOne := CredentialProfile{
+		AccountID:    "acct_shared_1",
+		APIServer:    "https://shared.example.test",
+		Email:        "one@example.test",
+		Name:         "One",
+		AccessToken:  "token-1",
+		RefreshToken: "refresh-1",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}
+	sharedTwo := CredentialProfile{
+		AccountID:    "acct_shared_2",
+		APIServer:    "https://shared.example.test/",
+		Email:        "two@example.test",
+		Name:         "Two",
+		AccessToken:  "token-2",
+		RefreshToken: "refresh-2",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}
+	other := CredentialProfile{
+		AccountID:   "acct_other",
+		APIServer:   "https://other.example.test",
+		AccessToken: "token-other",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}
+	for _, profile := range []CredentialProfile{sharedOne, sharedTwo, other} {
+		if err := SaveCredentialProfile(path, profile); err != nil {
+			t.Fatalf("save profile %s: %v", profile.AccountID, err)
+		}
+	}
+
+	if _, err := LoadCredentialProfile(path, "https://shared.example.test"); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
+		t.Fatalf("expected ambiguous profile error, got %v", err)
+	}
+	switched, err := SwitchCredentialProfile(path, "https://shared.example.test", "Two")
+	if err != nil {
+		t.Fatalf("switch by display name: %v", err)
+	}
+	if switched.AccountID != "acct_shared_2" {
+		t.Fatalf("unexpected switched profile %#v", switched)
+	}
+
+	invalidExpiry := filepath.Join(t.TempDir(), "invalid-expiry.json")
+	if err := os.WriteFile(invalidExpiry, []byte(`{"active":"https://ama.example.test#acct","profiles":[{"accountId":"acct","apiServer":"https://ama.example.test","accessToken":"token","expiresAt":"not-time"}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadActiveCredentialProfile(invalidExpiry); err == nil {
+		t.Fatal("expected invalid expiry error")
+	}
+}

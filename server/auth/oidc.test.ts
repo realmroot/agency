@@ -1,4 +1,4 @@
-import { exportJWK, generateKeyPair, SignJWT, type JSONWebKeySet } from 'jose'
+import { exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
 import { getBearerClaims, OidcError, organizationIdForClaims } from './oidc'
@@ -56,7 +56,9 @@ function stubJwks(jwks: JSONWebKeySet) {
 }
 
 function requestedPaths(fetchMock: ReturnType<typeof vi.fn>) {
-  return fetchMock.mock.calls.map(([input]) => new URL(input instanceof Request ? input.url : input.toString()).pathname)
+  return fetchMock.mock.calls.map(
+    ([input]) => new URL(input instanceof Request ? input.url : input.toString()).pathname,
+  )
 }
 
 describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {

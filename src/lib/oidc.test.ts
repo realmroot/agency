@@ -363,7 +363,6 @@ describe('oidc helpers', () => {
       const result = await completeSignIn()
       expect(result).toBe('/')
     })
-
   })
 
   // ---------------------------------------------------------------------------
