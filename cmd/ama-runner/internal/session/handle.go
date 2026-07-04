@@ -88,14 +88,21 @@ type SandboxHandle struct {
 	workspace       *workspace.Workspace
 	workspaceClosed bool
 	adapter         sandbox.SandboxAdapter
+	env             map[string]string
 	mu              sync.Mutex
 }
 
-func NewSandboxHandle(sessionID string, prepared *workspace.Workspace, adapter sandbox.SandboxAdapter) *SandboxHandle {
+func NewSandboxHandle(
+	sessionID string,
+	prepared *workspace.Workspace,
+	adapter sandbox.SandboxAdapter,
+	env map[string]string,
+) *SandboxHandle {
 	return &SandboxHandle{
 		sessionID: sessionID,
 		workspace: prepared,
 		adapter:   adapter,
+		env:       cloneEnv(env),
 	}
 }
 
@@ -116,6 +123,7 @@ func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.Run
 	closed := h.workspaceClosed
 	workspace := h.workspace
 	adapter := h.adapter
+	env := cloneEnv(h.env)
 	h.mu.Unlock()
 	if closed || adapter == nil {
 		return nil, errors.New("runner sandbox is not registered for session")
@@ -133,6 +141,7 @@ func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.Run
 			ToolName:   toolName,
 			Input:      protocol.SandboxRequestInput(request),
 			WorkDir:    workspace.Cwd,
+			Env:        env,
 		})
 		response := ama.JSON{
 			"toolCallId": toolCallID,
@@ -155,4 +164,15 @@ func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.Run
 	default:
 		return nil, errors.New("unsupported runner sandbox request")
 	}
+}
+
+func cloneEnv(env map[string]string) map[string]string {
+	if len(env) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(env))
+	for key, value := range env {
+		cloned[key] = value
+	}
+	return cloned
 }

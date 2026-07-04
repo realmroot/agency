@@ -368,7 +368,7 @@ func TestRelayHandlesSandboxRequest(t *testing.T) {
 	input := map[string]any{"command": "echo ok"}
 	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{
 		result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok\n", "exitCode": 0}},
-	})
+	}, nil)
 	hub.Register("session_1", handle)
 
 	hub.handleSandboxRequest(context.Background(), ch, protocol.RunnerChannelMessage{
@@ -432,7 +432,7 @@ func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 	t.Run("handler error", func(t *testing.T) {
 		ch := newFakeChannel()
 		hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
-		hub.Register("session_1", NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{}))
+		hub.Register("session_1", NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{}, nil))
 		hub.handleSandboxRequest(context.Background(), ch, protocol.RunnerChannelMessage{
 			Type:      "sandbox.request",
 			RequestId: ptr("request_3"),

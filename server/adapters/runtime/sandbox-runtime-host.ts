@@ -197,8 +197,9 @@ function gitCredentialLine(repositoryUrl: string, credential: WorkspaceGitCreden
 }
 
 // Parity with the self-hosted runner's prepareRuntimeWorkspace: configure the
-// agent git identity, store per-host git credentials, and clone declared
-// git_repository volumes so the agent starts with a ready workspace.
+// agent git identity and clone declared git_repository volumes. Volume
+// credentials are scoped to workspace setup; session env/envFrom remains the
+// general mechanism for platform-provided runtime authorization.
 async function prepareCloudWorkspace(
   sandbox: CloudWorkspaceSandbox,
   values: {
@@ -206,6 +207,8 @@ async function prepareCloudWorkspace(
     env: Record<string, string>
   },
 ) {
+  const homeDir = values.env.HOME || '/root'
+  await execOrThrow(sandbox, `mkdir -p ${shellQuote(homeDir)}`)
   if (values.env.GIT_AUTHOR_NAME) {
     await execOrThrow(sandbox, `git config --global user.name ${shellQuote(values.env.GIT_AUTHOR_NAME)}`)
   }
@@ -218,24 +221,41 @@ async function prepareCloudWorkspace(
   const credentialLines = gitVolumes
     .filter((volume) => Boolean(volume.credential))
     .map((volume) => gitCredentialLine(volume.url, volume.credential!))
-  if (credentialLines.length > 0) {
-    await execOrThrow(sandbox, 'git config --global credential.helper store')
-    await sandbox.writeFile('/root/.git-credentials', credentialLines.join(''), { encoding: 'utf-8' })
+  const cloneCredentialsPath = credentialLines.length > 0 ? `${homeDir}/.git-clone-credentials` : null
+  if (cloneCredentialsPath) {
+    await sandbox.writeFile(cloneCredentialsPath, credentialLines.join(''), { encoding: 'utf-8' })
   }
 
-  for (const volume of gitVolumes) {
-    const url = volume.url
-    const mountPath = volume.mountPath || gitRepositoryMountPath(volume.url)
-    if (!mountPath.startsWith('/workspace/')) {
-      throw new Error(`git_repository mountPath must stay under /workspace: ${mountPath}`)
+  let pendingError: unknown = null
+  try {
+    for (const volume of gitVolumes) {
+      const url = volume.url
+      const mountPath = volume.mountPath || gitRepositoryMountPath(volume.url)
+      if (!mountPath.startsWith('/workspace/')) {
+        throw new Error(`git_repository mountPath must stay under /workspace: ${mountPath}`)
+      }
+      const credentialArgs = cloneCredentialsPath
+        ? `-c credential.helper= -c credential.helper=${shellQuote(`store --file ${cloneCredentialsPath}`)} `
+        : ''
+      await execOrThrow(sandbox, `git ${credentialArgs}clone ${shellQuote(url)} ${shellQuote(mountPath)}`, {
+        timeout: GIT_CLONE_TIMEOUT_MS,
+      })
+      if (volume.ref) {
+        await execOrThrow(sandbox, `git -C ${shellQuote(mountPath)} checkout ${shellQuote(volume.ref)}`)
+      }
     }
-    await execOrThrow(sandbox, `git clone ${shellQuote(url)} ${shellQuote(mountPath)}`, {
-      timeout: GIT_CLONE_TIMEOUT_MS,
-    })
-    if (volume.ref) {
-      await execOrThrow(sandbox, `git -C ${shellQuote(mountPath)} checkout ${shellQuote(volume.ref)}`)
+  } catch (error) {
+    pendingError = error
+  }
+  if (cloneCredentialsPath) {
+    try {
+      await execOrThrow(sandbox, `rm -f ${shellQuote(cloneCredentialsPath)}`)
+    } catch (error) {
+      pendingError ??= error
     }
   }
+  if (pendingError) throw pendingError
+
   for (const volume of values.manifest.mounts.filter(
     (mount): mount is Extract<WorkspaceManifestMount, { type: 'memory' }> => mount.type === 'memory',
   )) {

@@ -206,6 +206,7 @@ func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *am
 		ToolName:   payload.ToolName,
 		Input:      payload.Input,
 		WorkDir:    r.Config.WorkDir,
+		Env:        payload.Env,
 	})
 	cancel()
 	if err := firstRenewError(renewErrors); err != nil {
@@ -278,7 +279,7 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 		}
 		return err
 	}
-	handle := runnersession.NewSandboxHandle(payload.SessionID, workspace, r.SandboxAdapter)
+	handle := runnersession.NewSandboxHandle(payload.SessionID, workspace, r.SandboxAdapter, payload.Env)
 	relay.Register(payload.SessionID, handle)
 	if err := r.uploadSessionEvent(leaseCtx, payload.SessionID, runnerEvent(string(sessionevent.EventTypeRuntimeStarted), ama.JSON{})); err != nil {
 		relay.Unregister(payload.SessionID)

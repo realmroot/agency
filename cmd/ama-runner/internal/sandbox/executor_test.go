@@ -89,6 +89,9 @@ func TestProcessCommandEnvironmentUsesSessionPrivateDirs(t *testing.T) {
 	if !strings.Contains(joined, "\nHOME="+filepath.Join(sessionDir, ".home")+"\n") {
 		t.Fatalf("expected session-private HOME in env: %v", env)
 	}
+	if !strings.Contains(joined, "\nAMA_WORKSPACE_HOME="+filepath.Join(sessionDir, ".home")+"\n") {
+		t.Fatalf("expected session-private AMA_WORKSPACE_HOME in env: %v", env)
+	}
 }
 
 func TestProcessAdapterExecutesSandboxExecInWorkdir(t *testing.T) {
@@ -108,6 +111,39 @@ func TestProcessAdapterExecutesSandboxExecInWorkdir(t *testing.T) {
 	}
 	if result.Output["exitCode"] != 0 {
 		t.Fatalf("unexpected exit code %#v", result.Output["exitCode"])
+	}
+}
+
+func TestProcessAdapterMergesRequestEnvironment(t *testing.T) {
+	workDir := t.TempDir()
+	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
+	result, err := adapter.Execute(context.Background(), ToolRequest{
+		ToolName: "bash",
+		Input:    map[string]any{"command": "printf '%s:%s' \"$CUSTOM_TOKEN\" \"$GH_TOKEN\""},
+		WorkDir:  workDir,
+		Env: map[string]string{
+			"CUSTOM_TOKEN": "custom-value",
+			"GH_TOKEN":     "github-value",
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected command success, got %v", err)
+	}
+	if result.Output["stdout"] != "custom-value:github-value" {
+		t.Fatalf("expected request env in process, got %#v", result.Output)
+	}
+}
+
+func TestProcessAdapterRejectsReservedRequestEnvironment(t *testing.T) {
+	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
+	_, err := adapter.Execute(context.Background(), ToolRequest{
+		ToolName: "bash",
+		Input:    map[string]any{"command": "env"},
+		WorkDir:  t.TempDir(),
+		Env:      map[string]string{"AMA_SESSION_ID": "override"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("expected reserved env error, got %v", err)
 	}
 }
 
@@ -430,7 +466,16 @@ func TestProcessCommandEnvironmentUsesSessionPrivateDirsForRuntimeWorkspace(t *t
 	sessionHome := filepath.Join(resolvedSessionDir, ".home")
 	sessionTemp := filepath.Join(resolvedSessionDir, ".tmp")
 	joined := strings.Join(env, "\n")
-	for _, expected := range []string{"HOME=" + sessionHome, "TMPDIR=" + sessionTemp, "TEMP=" + sessionTemp, "TMP=" + sessionTemp} {
+	for _, expected := range []string{
+		"HOME=" + sessionHome,
+		"AMA_WORKSPACE_HOME=" + sessionHome,
+		"GH_CONFIG_DIR=" + filepath.Join(sessionHome, ".config", "gh"),
+		"GIT_CONFIG_GLOBAL=" + filepath.Join(sessionHome, ".gitconfig"),
+		"GIT_CONFIG_NOSYSTEM=1",
+		"TMPDIR=" + sessionTemp,
+		"TEMP=" + sessionTemp,
+		"TMP=" + sessionTemp,
+	} {
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected session-scoped environment %q, got %q", expected, joined)
 		}

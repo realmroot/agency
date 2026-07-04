@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -591,7 +590,7 @@ func TestCleanupStaleRemovesOldWorkspaceWithInvalidState(t *testing.T) {
 	}
 }
 
-func TestPrepareWorkspaceConfiguresSessionScopedGitCredentialFromGHToken(t *testing.T) {
+func TestPrepareWorkspaceUsesCloneCredentialWithoutPersistingGitAuth(t *testing.T) {
 	workDir := t.TempDir()
 	sourceDir := filepath.Join(t.TempDir(), "source")
 	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
@@ -624,28 +623,17 @@ func TestPrepareWorkspaceConfiguresSessionScopedGitCredentialFromGHToken(t *test
 	if err != nil {
 		t.Fatalf("expected workspace preparation success, got %v", err)
 	}
-	credentialsPath := filepath.Join(workspace.Dir, "git-credentials")
-	credentials, err := os.ReadFile(credentialsPath)
-	if err != nil {
-		t.Fatalf("expected session credential store, got %v", err)
+	if _, err := os.Stat(filepath.Join(workspace.Dir, ".git-clone-credentials")); !os.IsNotExist(err) {
+		t.Fatalf("expected clone credential store to be removed after prepare, got err=%v", err)
 	}
-	if string(credentials) != "https://x-access-token:ghs_session_token@github.com\n" {
-		t.Fatalf("expected git credential line, got %q", string(credentials))
-	}
-	info, err := os.Stat(credentialsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("expected credential store mode 0600, got %v", info.Mode().Perm())
+	if _, err := os.Stat(filepath.Join(workspace.Dir, ".home", ".git-credentials")); !os.IsNotExist(err) {
+		t.Fatalf("expected no worker git credential store before ak auth git, got err=%v", err)
 	}
 	repoPath := filepath.Join(workspace.Root, "repos", "github.com", "saltbo", "zpan")
-	helpers := runGitOutput(t, repoPath, "config", "--worktree", "--get-all", "credential.helper")
-	if !strings.Contains(helpers, fmt.Sprintf("store --file %q", credentialsPath)) {
-		t.Fatalf("expected worktree credential helper pointing at the session store, got %q", helpers)
-	}
-	if !strings.HasPrefix(helpers, "\n") {
-		t.Fatalf("expected an empty helper entry resetting inherited helpers, got %q", helpers)
+	helperCheck := exec.Command("git", "config", "--worktree", "--get-all", "credential.helper")
+	helperCheck.Dir = repoPath
+	if output, err := helperCheck.CombinedOutput(); err == nil && strings.TrimSpace(string(output)) != "" {
+		t.Fatalf("expected no bootstrap credential helper after clone, got %q", string(output))
 	}
 
 	// A token must stay scoped to its session: a second workspace from the
@@ -663,7 +651,7 @@ func TestPrepareWorkspaceConfiguresSessionScopedGitCredentialFromGHToken(t *test
 	if output, err := leakCheck.CombinedOutput(); err == nil && strings.TrimSpace(string(output)) != "" {
 		t.Fatalf("expected no credential helper leak into other sessions, got %q", string(output))
 	}
-	if _, err := os.Stat(filepath.Join(second.Dir, "git-credentials")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(second.Dir, ".git-clone-credentials")); !os.IsNotExist(err) {
 		t.Fatalf("expected no credential store without a manifest credential, got err=%v", err)
 	}
 	for _, prepared := range []*Workspace{workspace, second} {

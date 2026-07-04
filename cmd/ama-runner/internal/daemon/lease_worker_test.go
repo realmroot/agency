@@ -18,6 +18,7 @@ import (
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
 	runnersession "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/session"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
@@ -194,6 +195,30 @@ func TestLeaseWorkerRunToolFailsWithoutSandboxAdapter(t *testing.T) {
 	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "failed" {
 		t.Fatalf("expected failed lease update, got %#v", client.updates)
+	}
+}
+
+func TestLeaseWorkerRunToolPassesPayloadEnvironment(t *testing.T) {
+	work := approvedLease()
+	work.workItem.Payload["env"] = map[string]any{
+		"GH_TOKEN":     "github-value",
+		"CUSTOM_TOKEN": "custom-value",
+	}
+	client := &fakeAMAServer{lease: work}
+	adapter := &fakeAdapter{
+		result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok", "exitCode": 0}},
+	}
+	daemon := testDaemon(client, adapter)
+	payload, err := protocol.ParseWorkPayload(work.workItem.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := daemon.leaseWorker().runTool(context.Background(), work.lease, work.workItem, payload); err != nil {
+		t.Fatalf("expected tool success, got %v", err)
+	}
+	request := adapter.lastRequest()
+	if request.Env["GH_TOKEN"] != "github-value" || request.Env["CUSTOM_TOKEN"] != "custom-value" {
+		t.Fatalf("expected payload env in sandbox request, got %#v", request.Env)
 	}
 }
 

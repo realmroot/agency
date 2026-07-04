@@ -479,7 +479,12 @@ describe('session-runtime', () => {
         agentSnapshot: { systemPrompt: 'Test runtime' },
         environmentSnapshot: { runtimeConfig: { image: 'ama-tool-executor' } },
         mcpServers: { servers: [{ connectorId: 'github' }] },
-        env: { AK_API_URL: 'https://ak.example.com', AK_AGENT_ID: 'agent_123' },
+        env: {
+          AK_API_URL: 'https://ak.example.com',
+          AK_AGENT_ID: 'agent_123',
+          GH_TOKEN: 'platform-injected-token',
+          HOME: '/workspace/.home',
+        },
         workspaceManifest: {
           root: '/workspace',
           mounts: [
@@ -524,23 +529,36 @@ describe('session-runtime', () => {
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
       AK_API_URL: 'https://ak.example.com',
       AK_AGENT_ID: 'agent_123',
+      GH_TOKEN: 'platform-injected-token',
+      HOME: '/workspace/.home',
     })
+    expect(mockSandbox.exec).toHaveBeenCalledWith("mkdir -p '/workspace/.home'", undefined)
     expect(mockSandbox.exec).toHaveBeenCalledWith(
-      "git clone 'https://github.com/saltbo/any-managed-agents.git' '/workspace/repos/saltbo/any-managed-agents'",
+      "git -c credential.helper= -c credential.helper='store --file /workspace/.home/.git-clone-credentials' clone 'https://github.com/saltbo/any-managed-agents.git' '/workspace/repos/saltbo/any-managed-agents'",
       { timeout: 120_000 },
     )
     expect(mockSandbox.exec).toHaveBeenCalledWith(
       "git -C '/workspace/repos/saltbo/any-managed-agents' checkout 'main'",
       undefined,
     )
-    expect(mockSandbox.exec).toHaveBeenCalledWith('git config --global credential.helper store', undefined)
+    expect(mockSandbox.exec).toHaveBeenCalledWith("rm -f '/workspace/.home/.git-clone-credentials'", undefined)
+    expect(mockSandbox.exec).not.toHaveBeenCalledWith('git config --global credential.helper store', undefined)
     expect(mockSandbox.writeFile).toHaveBeenCalledWith(
-      '/root/.git-credentials',
+      '/workspace/.home/.git-clone-credentials',
       'https://git-user:git-password@github.com\n',
       {
         encoding: 'utf-8',
       },
     )
+    const setEnvOrder = mockSandbox.setEnvVars.mock.invocationCallOrder[0]
+    const mkdirOrder = mockSandbox.exec.mock.invocationCallOrder.find(
+      (_, index) => mockSandbox.exec.mock.calls[index]?.[0] === "mkdir -p '/workspace/.home'",
+    )
+    const cloneOrder = mockSandbox.exec.mock.invocationCallOrder.find(
+      (_, index) => String(mockSandbox.exec.mock.calls[index]?.[0]).includes(" clone 'https://github.com/saltbo/any-managed-agents.git'"),
+    )
+    expect(setEnvOrder).toBeLessThan(mkdirOrder!)
+    expect(setEnvOrder).toBeLessThan(cloneOrder!)
     expect(mockSandbox.writeFile).toHaveBeenCalledWith(
       '/workspace/.ama/memory-stores/memstore_1/guides/review.md',
       'Review carefully.',

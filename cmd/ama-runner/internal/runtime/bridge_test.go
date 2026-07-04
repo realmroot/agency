@@ -299,6 +299,10 @@ func TestRuntimeCommandEnvironmentSanitizesRunnerSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected runtime env, got %v", err)
 	}
+	resolvedWorkDir, err := filepath.EvalSymlinks(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	envText := strings.Join(env, "\n")
 	for _, expected := range []string{
 		"AMA_SESSION_ID=session_1",
@@ -306,6 +310,7 @@ func TestRuntimeCommandEnvironmentSanitizesRunnerSecrets(t *testing.T) {
 		"AMA_PROVIDER=provider_codex",
 		"AMA_MODEL=gpt-5.3-codex",
 		"AMA_WORKSPACE=" + workDir,
+		"AMA_WORKSPACE_HOME=" + filepath.Join(resolvedWorkDir, ".home"),
 		`AMA_RUNTIME_CONFIG={"mode":"test"}`,
 		`AMA_AGENT_SNAPSHOT={"name":"agent"}`,
 		"CUSTOM=value",

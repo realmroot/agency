@@ -278,6 +278,8 @@ type fakeAdapter struct {
 	result        sandbox.ToolResult
 	err           error
 	cancelled     atomic.Bool
+	mu            sync.Mutex
+	requests      []sandbox.ToolRequest
 }
 
 type fakeRuntimeAdapter struct {
@@ -440,13 +442,25 @@ func (ch *fakeSessionChannel) writtenMessages() []ama.JSON {
 	return messages
 }
 
-func (a *fakeAdapter) Execute(ctx context.Context, _ sandbox.ToolRequest) (sandbox.ToolResult, error) {
+func (a *fakeAdapter) Execute(ctx context.Context, request sandbox.ToolRequest) (sandbox.ToolResult, error) {
+	a.mu.Lock()
+	a.requests = append(a.requests, request)
+	a.mu.Unlock()
 	if !a.waitForCancel {
 		return a.result, a.err
 	}
 	<-ctx.Done()
 	a.cancelled.Store(true)
 	return sandbox.ToolResult{}, ctx.Err()
+}
+
+func (a *fakeAdapter) lastRequest() sandbox.ToolRequest {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if len(a.requests) == 0 {
+		return sandbox.ToolRequest{}
+	}
+	return a.requests[len(a.requests)-1]
 }
 
 func (a *fakeRuntimeAdapter) Run(ctx context.Context, request runtime.Request, write runtime.EventWriter) (runtime.JSON, error) {

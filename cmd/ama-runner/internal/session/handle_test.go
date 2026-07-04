@@ -142,7 +142,9 @@ func TestSandboxHandleExecutesSandboxRequest(t *testing.T) {
 	adapter := &fakeSandboxAdapter{
 		result: sandbox.ToolResult{Output: map[string]any{"stdout": "/workspace\n", "exitCode": 0}},
 	}
-	handle := NewSandboxHandle("session_1", testWorkspace(t), adapter)
+	env := map[string]string{"GH_TOKEN": "github-value"}
+	handle := NewSandboxHandle("session_1", testWorkspace(t), adapter, env)
+	env["GH_TOKEN"] = "mutated"
 
 	result, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{
 		Type:       "sandbox.execute",
@@ -166,6 +168,9 @@ func TestSandboxHandleExecutesSandboxRequest(t *testing.T) {
 	if adapter.request.WorkDir == "" {
 		t.Fatal("adapter request did not include workspace cwd")
 	}
+	if adapter.request.Env["GH_TOKEN"] != "github-value" {
+		t.Fatalf("adapter request did not include sandbox env snapshot: %#v", adapter.request.Env)
+	}
 }
 
 func TestSandboxHandleExecuteReturnsToolErrorInResponse(t *testing.T) {
@@ -175,7 +180,7 @@ func TestSandboxHandleExecuteReturnsToolErrorInResponse(t *testing.T) {
 	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{
 		result: sandbox.ToolResult{Output: map[string]any{"stderr": "boom", "exitCode": 1}},
 		err:    errors.New("command failed"),
-	})
+	}, nil)
 
 	result, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{
 		Type:       "sandbox.execute",
@@ -192,11 +197,11 @@ func TestSandboxHandleExecuteReturnsToolErrorInResponse(t *testing.T) {
 }
 
 func TestSandboxHandleRejectsMissingAdapterOrWorkspace(t *testing.T) {
-	handle := NewSandboxHandle("session_1", testWorkspace(t), nil)
+	handle := NewSandboxHandle("session_1", testWorkspace(t), nil, nil)
 	if _, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.execute"}); err == nil {
 		t.Fatal("expected missing adapter error")
 	}
-	handle = NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{})
+	handle = NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{}, nil)
 	if _, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.execute"}); err == nil {
 		t.Fatal("expected missing workspace error")
 	}
@@ -204,7 +209,7 @@ func TestSandboxHandleRejectsMissingAdapterOrWorkspace(t *testing.T) {
 
 func TestSandboxHandleStopClosesWorkspace(t *testing.T) {
 	prepared := testWorkspace(t)
-	handle := NewSandboxHandle("session_1", prepared, &fakeSandboxAdapter{})
+	handle := NewSandboxHandle("session_1", prepared, &fakeSandboxAdapter{}, nil)
 
 	result, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.stop"})
 	if err != nil {
@@ -225,7 +230,7 @@ func TestSandboxHandleStopClosesWorkspace(t *testing.T) {
 }
 
 func TestSandboxHandleReadsWritableMemoryStores(t *testing.T) {
-	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{})
+	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{}, nil)
 	result, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.readMemoryStores"})
 	if err != nil {
 		t.Fatalf("read memory stores: %v", err)
@@ -240,14 +245,14 @@ func TestSandboxHandleReadsWritableMemoryStores(t *testing.T) {
 }
 
 func TestSandboxHandleRejectsUnsupportedRequest(t *testing.T) {
-	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{})
+	handle := NewSandboxHandle("session_1", testWorkspace(t), &fakeSandboxAdapter{}, nil)
 	if _, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.unknown"}); err == nil {
 		t.Fatal("expected unsupported request error")
 	}
 }
 
 func TestSandboxHandleReadMemoryStoresReturnsWorkspaceError(t *testing.T) {
-	handle := NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{})
+	handle := NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{}, nil)
 	if _, err := handle.ExecuteSandbox(context.Background(), protocol.RunnerSandboxRequest{Type: "sandbox.readMemoryStores"}); err == nil {
 		t.Fatal("expected missing workspace error")
 	}

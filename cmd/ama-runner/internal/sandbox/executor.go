@@ -21,6 +21,7 @@ type ToolRequest struct {
 	ToolName   string
 	Input      map[string]any
 	WorkDir    string
+	Env        map[string]string
 }
 
 type ToolResult struct {
@@ -84,6 +85,10 @@ func (a ProcessAdapter) command(ctx context.Context, request ToolRequest, comman
 	defer cancel()
 
 	env, err := ProcessCommandEnvironment(request.WorkDir)
+	if err != nil {
+		return ToolResult{}, err
+	}
+	env, err = appendRequestEnvironment(env, request.Env)
 	if err != nil {
 		return ToolResult{}, err
 	}
@@ -319,6 +324,19 @@ func webSearchCommand(input map[string]any) string {
 	}, " | ")
 }
 
+func appendRequestEnvironment(env []string, requestEnv map[string]string) ([]string, error) {
+	for key, value := range requestEnv {
+		if key == "" || strings.Contains(key, "=") {
+			return nil, fmt.Errorf("env key %q is invalid", key)
+		}
+		if strings.HasPrefix(key, "AMA_") {
+			return nil, fmt.Errorf("env key %q is reserved", key)
+		}
+		env = append(env, key+"="+value)
+	}
+	return env, nil
+}
+
 func ProcessCommandEnvironment(workDir string) ([]string, error) {
 	root, err := filepath.Abs(workDir)
 	if err != nil {
@@ -340,6 +358,10 @@ func ProcessCommandEnvironment(workDir string) ([]string, error) {
 
 	env := []string{
 		"HOME=" + homeDir,
+		"AMA_WORKSPACE_HOME=" + homeDir,
+		"GH_CONFIG_DIR=" + filepath.Join(homeDir, ".config", "gh"),
+		"GIT_CONFIG_GLOBAL=" + filepath.Join(homeDir, ".gitconfig"),
+		"GIT_CONFIG_NOSYSTEM=1",
 		"TMPDIR=" + tempDir,
 		"TEMP=" + tempDir,
 		"TMP=" + tempDir,

@@ -93,6 +93,11 @@ func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
 		_ = workspace.Cleanup(context.Background())
 		return nil, err
 	}
+	if gitCredentialsPath != "" {
+		defer func() {
+			_ = os.Remove(gitCredentialsPath)
+		}()
+	}
 	for _, volume := range gitVolumes {
 		localPath, cacheDir, err := materializeGitRepository(
 			ctx,
@@ -158,10 +163,6 @@ func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
 	}
 	workspace.worktrees = worktrees
 	workspace.memoryStores = memoryStores
-	if err := configureWorkspaceGitCredentials(ctx, gitCredentialsPath, worktrees); err != nil {
-		_ = workspace.Cleanup(context.Background())
-		return nil, err
-	}
 	if err := writeSessionState(workspace.Dir, workspace.Root, mounted); err != nil {
 		_ = workspace.Cleanup(context.Background())
 		return nil, err
@@ -311,7 +312,7 @@ func writeGitCredentialStore(sessionDir string, credentialLines []string) (strin
 	if len(credentialLines) == 0 {
 		return "", nil
 	}
-	credentialsPath := filepath.Join(sessionDir, "git-credentials")
+	credentialsPath := filepath.Join(sessionDir, ".git-clone-credentials")
 	if err := os.WriteFile(credentialsPath, []byte(strings.Join(credentialLines, "")), 0o600); err != nil {
 		return "", err
 	}
