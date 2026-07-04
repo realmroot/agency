@@ -305,6 +305,13 @@ func TestWorkspaceReadWritableMemoryStoresNilAndReadOnly(t *testing.T) {
 	if _, err := (*Workspace)(nil).ReadWritableMemoryStores(); err == nil || !strings.Contains(err.Error(), "workspace is not prepared") {
 		t.Fatalf("expected nil workspace error, got %v", err)
 	}
+	if _, err := (&Workspace{memoryStores: []preparedMemoryStore{{
+		memoryRef: "ama://memories/missing",
+		path:      filepath.Join(t.TempDir(), "missing"),
+		access:    "read_write",
+	}}}).ReadWritableMemoryStores(); err == nil {
+		t.Fatal("expected missing writable memory store error")
+	}
 	prepared, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   t.TempDir(),
 		SessionID: "session_1",
@@ -427,6 +434,15 @@ func TestWorkspaceAgentSystemPromptIncludesCapabilities(t *testing.T) {
 	}
 }
 
+func TestPrepareAgentWithReportSkipsNilInputs(t *testing.T) {
+	if report, err := (*Workspace)(nil).PrepareAgentWithReport(context.Background(), "codex", map[string]any{}); err != nil || len(report.SkillChanges) != 0 {
+		t.Fatalf("expected nil workspace no-op, report=%#v err=%v", report, err)
+	}
+	if report, err := (&Workspace{}).PrepareAgentWithReport(context.Background(), "codex", nil); err != nil || len(report.SkillChanges) != 0 {
+		t.Fatalf("expected nil agent snapshot no-op, report=%#v err=%v", report, err)
+	}
+}
+
 func TestPrepareWorkspaceRejectsUnsafeMemoryPath(t *testing.T) {
 	_, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   t.TempDir(),
@@ -470,7 +486,7 @@ func TestWorkspaceReferenceParsing(t *testing.T) {
 	if id, err := memoryStoreIDFromRef("ama://memories/store%201"); err != nil || id != "store 1" {
 		t.Fatalf("expected decoded memory id, id=%q err=%v", id, err)
 	}
-	for _, ref := range []string{"", "https://example.test/store", "ama://memories", "ama://memories/a/b"} {
+	for _, ref := range []string{"", "https://example.test/store", "ama://memories", "ama://memories/a/b", "ama://memories/%zz"} {
 		if _, err := memoryStoreIDFromRef(ref); err == nil {
 			t.Fatalf("expected invalid memory ref error for %q", ref)
 		}
@@ -484,6 +500,7 @@ func TestWorkspaceReferenceParsing(t *testing.T) {
 		"https://github.com/saltbo",
 		"https://github.com/saltbo/../zpan.git",
 		"https://github.com/saltbo/zpan.git?token=secret",
+		"https://github.com/saltbo/%zz/zpan.git",
 	} {
 		if _, err := parseGitRepositoryURL(raw); err == nil {
 			t.Fatalf("expected unsafe git url error for %q", raw)

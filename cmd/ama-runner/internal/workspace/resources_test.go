@@ -389,7 +389,11 @@ func TestResolveWorktreeRefUsesRemoteBranchCommitOrHead(t *testing.T) {
 	runGit(t, cacheDir, "add", "README.md")
 	runGit(t, cacheDir, "commit", "-m", "init")
 	commit := strings.TrimSpace(runGitOutput(t, cacheDir, "rev-parse", "HEAD"))
+	runGit(t, cacheDir, "update-ref", "refs/remotes/origin/main", commit)
 
+	if got, err := resolveWorktreeRef(context.Background(), cacheDir, "main"); err != nil || got != "refs/remotes/origin/main" {
+		t.Fatalf("expected remote branch ref, got %q err=%v", got, err)
+	}
 	if got, err := resolveWorktreeRef(context.Background(), cacheDir, commit); err != nil || got != commit {
 		t.Fatalf("expected commit ref, got %q err=%v", got, err)
 	}
