@@ -1,12 +1,6 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { getBearerClaims, OidcError, organizationIdForClaims, requireOidcConfig } from '../auth/oidc'
-import {
-  createSessionCookie,
-  requireAuth,
-  resolveProjectForClaims,
-  SESSION_COOKIE_NAME,
-  sessionCookieHeader,
-} from '../auth/session'
+import { requireAuth, resolveProjectForClaims } from '../auth/session'
 import { errorResponse } from '../errors'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
@@ -96,11 +90,11 @@ const createAuthSessionRoute = createRoute({
   path: '/sessions',
   operationId: 'createAuthSession',
   tags: ['Auth'],
-  summary: 'Complete OIDC sign-in and create an httpOnly session cookie',
+  summary: 'Validate an OIDC bearer token and return auth context',
   request: { body: { required: true, content: { 'application/json': { schema: CreateAuthSessionRequestSchema } } } },
   responses: {
     201: {
-      description: 'Session created. Sets an httpOnly session cookie.',
+      description: 'Bearer token accepted. Returns user, organization, and project context.',
       content: { 'application/json': { schema: AuthSessionSchema } },
     },
     401: {
@@ -132,16 +126,11 @@ const deleteCurrentAuthSessionRoute = createRoute({
   path: '/sessions/current',
   operationId: 'deleteCurrentAuthSession',
   tags: ['Auth'],
-  summary: 'Sign out and clear the session cookie',
+  summary: 'Complete a local sign-out request',
   responses: {
-    204: { description: 'Session cleared. Expires the httpOnly session cookie.' },
+    204: { description: 'Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider.' },
   },
 })
-
-function clearedSessionCookieHeader(secure: boolean): string {
-  const secureFlag = secure ? '; Secure' : ''
-  return `${SESSION_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/${secureFlag}; Max-Age=0`
-}
 
 // Registration order is load-bearing: static segments (/config, /sessions)
 // register before parameter segments and the auth wall guards
@@ -183,12 +172,6 @@ export function registerAuthRoutes(routes: AuthRoutes) {
 
       const project = await resolveProjectForClaims(c.env, claims)
       const organizationId = project.organizationId ?? organizationIdForClaims(claims)
-
-      const cookieValue = await createSessionCookie(c.env, claims)
-      if (cookieValue) {
-        const isSecure = new URL(c.req.url).protocol === 'https:'
-        c.header('Set-Cookie', sessionCookieHeader(cookieValue, isSecure))
-      }
 
       return c.json(
         {
@@ -235,10 +218,6 @@ export function registerAuthRoutes(routes: AuthRoutes) {
       )
     })
     .openapi(deleteCurrentAuthSessionRoute, (c) => {
-      // Idempotent sign-out: always expire the cookie, even when the session is
-      // already gone, so stale clients can recover.
-      const isSecure = new URL(c.req.url).protocol === 'https:'
-      c.header('Set-Cookie', clearedSessionCookieHeader(isSecure))
       return c.body(null, 204)
     })
 }

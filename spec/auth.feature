@@ -14,24 +14,24 @@ Feature: Auth
   # ── Session and context API (api: assembled server, real D1) ──
 
   @auth/session-create @api
-  Scenario: Create an httpOnly session from a valid access token
+  Scenario: Resolve bearer context from a valid access token
     Given an OIDC provider can issue a valid access token
-    When the user exchanges the token for a session
-    Then an httpOnly session is created with user, organization, and default project
+    When the user submits the token for context resolution
+    Then the bearer token resolves user, organization, and default project
     And the project response never exposes the organization id
 
   @auth/session-reject @api
   Scenario: Reject invalid tokens, disallowed origins, and malformed payloads
-    When a session is requested with an invalid token, a disallowed origin, or a malformed payload
+    When context resolution is requested with an invalid token, a disallowed origin, or a malformed payload
     Then the request is rejected with the standard OIDC, forbidden, or validation envelope
     And no tenant data is returned
 
   @auth/session-current @api
-  Scenario: Read and clear the current session context
+  Scenario: Read the bearer-authenticated context and acknowledge sign-out
     Given an authenticated user
     When the user reads the current session context and then signs out
     Then the context returns user, organization, and project without the organization id
-    And sign-out expires the httpOnly session cookie
+    And sign-out does not create or clear a server-managed cookie
 
   @auth/guard @api
   Scenario: Guard protected resources against unauthenticated access
@@ -76,5 +76,5 @@ Feature: Auth
   @auth/e2e-sign-in @e2e
   Scenario: Complete sign in
     When a user completes the OIDC callback
-    Then the platform creates an httpOnly session and resolves user, organization, and project context
+    Then the browser stores the OIDC token and API requests resolve user, organization, and project context
     And invalid OIDC provider callbacks return the standard OIDC error envelope

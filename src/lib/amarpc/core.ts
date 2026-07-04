@@ -16,7 +16,6 @@ export class ApiError extends Error {
 }
 
 export const rpc = hc<AppType>('/', {
-  init: { credentials: 'include' },
   headers: async () => {
     const token = await getAccessToken()
     const projectId = getSelectedProjectId()

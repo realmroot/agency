@@ -1,10 +1,8 @@
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { drizzle } from 'drizzle-orm/d1'
 import type { Context, Env as HonoEnv } from 'hono'
-import { getCookie } from 'hono/cookie'
 import type { Env } from '../env'
 import { errorResponse } from '../errors'
-import { base64UrlDecode, base64UrlEncode, constantTimeEqual, hmacSha256 } from './crypto'
 import {
   getBearerClaims,
   OidcError,
@@ -18,92 +16,6 @@ import {
 // shape or the other. These helpers only read env/request, so the param is
 // generic over the caller's full Hono env (with Bindings pinned to ours).
 type AppContext<E extends HonoEnv = { Bindings: Env }> = Context<E & { Bindings: Env }>
-
-export const SESSION_COOKIE_NAME = 'ama_session'
-const SESSION_EXPIRY_SECONDS = 24 * 60 * 60 // 24 hours
-
-interface SessionPayload {
-  sub: string
-  email?: string
-  name?: string
-  picture?: string
-  org_id?: string
-  org_name?: string
-  roles: string[]
-  permissions: string[]
-  teams?: string[]
-  iat: number
-  exp: number
-}
-
-export async function createSessionCookie(env: Env, claims: UserInfoClaims): Promise<string | null> {
-  if (!env.AMA_SESSION_SECRET) {
-    return null
-  }
-  const now = Math.floor(Date.now() / 1000)
-  const payload: SessionPayload = {
-    sub: claims.sub,
-    ...(claims.email ? { email: claims.email } : {}),
-    ...(claims.name ? { name: claims.name } : {}),
-    ...(claims.picture ? { picture: claims.picture } : {}),
-    ...(claims.org_id ? { org_id: claims.org_id } : {}),
-    ...(claims.org_name ? { org_name: claims.org_name } : {}),
-    roles: claims.roles,
-    permissions: claims.permissions,
-    teams: claims.teams,
-    iat: now,
-    exp: now + SESSION_EXPIRY_SECONDS,
-  }
-  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
-  const signature = await hmacSha256(env.AMA_SESSION_SECRET, encodedPayload)
-  return `${encodedPayload}.${signature}`
-}
-
-export function sessionCookieHeader(value: string, secure: boolean): string {
-  const secureFlag = secure ? '; Secure' : ''
-  return `${SESSION_COOKIE_NAME}=${value}; HttpOnly; SameSite=Lax; Path=/${secureFlag}; Max-Age=${SESSION_EXPIRY_SECONDS}`
-}
-
-export async function resolveSessionClaims<E extends HonoEnv>(c: AppContext<E>): Promise<UserInfoClaims | null> {
-  if (!c.env.AMA_SESSION_SECRET) {
-    return null
-  }
-  const cookieValue = getCookie(c, SESSION_COOKIE_NAME)
-  if (!cookieValue) {
-    return null
-  }
-  const dotIndex = cookieValue.lastIndexOf('.')
-  if (dotIndex < 0) {
-    return null
-  }
-  const encodedPayload = cookieValue.slice(0, dotIndex)
-  const providedSignature = cookieValue.slice(dotIndex + 1)
-  const expectedSignature = await hmacSha256(c.env.AMA_SESSION_SECRET, encodedPayload)
-  if (!constantTimeEqual(providedSignature, expectedSignature)) {
-    return null
-  }
-  let payload: SessionPayload
-  try {
-    payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(encodedPayload))) as SessionPayload
-  } catch {
-    return null
-  }
-  const now = Math.floor(Date.now() / 1000)
-  if (!payload.sub || !payload.exp || payload.exp < now) {
-    return null
-  }
-  return {
-    sub: payload.sub,
-    ...(payload.email ? { email: payload.email } : {}),
-    ...(payload.name ? { name: payload.name } : {}),
-    ...(payload.picture ? { picture: payload.picture } : {}),
-    ...(payload.org_id ? { org_id: payload.org_id } : {}),
-    ...(payload.org_name ? { org_name: payload.org_name } : {}),
-    roles: payload.roles,
-    permissions: payload.permissions,
-    teams: payload.teams ?? [],
-  }
-}
 
 export interface AuthContext {
   user: {
@@ -200,20 +112,6 @@ export async function resolveAuthContext<E extends HonoEnv>(
     }
   }
 
-  const sessionClaims = await resolveSessionClaims(c)
-  if (sessionClaims) {
-    const identity = authIdentityFromClaims(sessionClaims)
-    const project = await upsertProjectForClaims(db, sessionClaims, new Date().toISOString(), requestedProjectId)
-    return {
-      ...identity,
-      organization: {
-        ...identity.organization,
-        id: project.organizationId ?? identity.organization.id,
-      },
-      project,
-    }
-  }
-
   return null
 }
 
@@ -255,11 +153,6 @@ export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): 
   if (token) {
     const claims = await getBearerClaims(c.env, token)
     return authIdentityFromClaims(claims)
-  }
-
-  const sessionClaims = await resolveSessionClaims(c)
-  if (sessionClaims) {
-    return authIdentityFromClaims(sessionClaims)
   }
 
   return null

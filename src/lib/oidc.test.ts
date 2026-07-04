@@ -227,7 +227,7 @@ describe('oidc helpers', () => {
   // completeSignIn
   // ---------------------------------------------------------------------------
   describe('completeSignIn', () => {
-    it('posts the access token to create a server session and returns returnTo path', async () => {
+    it('stores the callback user locally and returns returnTo path without creating a server session', async () => {
       const { completeSignIn } = await freshOidc()
       const fakeUser = {
         access_token: 'callback_token',
@@ -245,14 +245,7 @@ describe('oidc helpers', () => {
 
       const result = await completeSignIn()
       expect(fetchMock).toHaveBeenCalledWith('/api/v1/configz')
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/v1/auth/sessions',
-        expect.objectContaining({
-          method: 'POST',
-          credentials: 'include',
-          body: JSON.stringify({ accessToken: 'callback_token' }),
-        }),
-      )
+      expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/auth/sessions', expect.anything())
       expect(result).toBe('/my-app')
     })
 
@@ -313,37 +306,6 @@ describe('oidc helpers', () => {
       expect(result).toBe('/')
     })
 
-    it('throws with the error message from the JSON body on session creation failure', async () => {
-      const { completeSignIn } = await freshOidc()
-      const fakeUser = { access_token: 'token', state: undefined } as unknown as User
-      mockSigninRedirectCallback.mockResolvedValueOnce(fakeUser)
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (input: RequestInfo | URL) => {
-          if (String(input) === '/api/v1/configz') {
-            return configzResponse()
-          }
-          return new Response(JSON.stringify({ error: { message: 'Unauthorized' } }), { status: 401 })
-        }),
-      )
-      await expect(completeSignIn()).rejects.toThrow('Unauthorized')
-    })
-
-    it('throws with fallback message when session creation fails and body is not parseable JSON', async () => {
-      const { completeSignIn } = await freshOidc()
-      const fakeUser = { access_token: 'token', state: undefined } as unknown as User
-      mockSigninRedirectCallback.mockResolvedValueOnce(fakeUser)
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (input: RequestInfo | URL) => {
-          if (String(input) === '/api/v1/configz') {
-            return configzResponse()
-          }
-          return new Response('not-json', { status: 500 })
-        }),
-      )
-      await expect(completeSignIn()).rejects.toThrow('Failed to create session')
-    })
   })
 
   // ---------------------------------------------------------------------------

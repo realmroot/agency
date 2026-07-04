@@ -55,7 +55,7 @@ describe('[CF] auth v1', () => {
     expect(body.methods).toHaveLength(1)
   })
 
-  it('creates an auth session from a valid access token [spec: auth/session-create]', async () => {
+  it('resolves auth context from a valid access token [spec: auth/session-create]', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/auth/sessions', undefined, {
       body: { accessToken: accessTokenOf(authorization) },
@@ -81,6 +81,7 @@ describe('[CF] auth v1', () => {
       },
     })
     expect(body.project).not.toHaveProperty('organizationId')
+    expect(res.headers.get('set-cookie')).toBeNull()
   })
 
   it('rejects invalid access tokens with 401 [spec: auth/session-reject]', async () => {
@@ -133,13 +134,10 @@ describe('[CF] auth v1', () => {
     expectAuthRequired(await res.json())
   })
 
-  it('signs out by expiring the session cookie [spec: auth/session-current]', async () => {
+  it('acknowledges sign-out without managing server auth state [spec: auth/session-current]', async () => {
     const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', { method: 'DELETE' })
     expect(res.status).toBe(204)
-    const setCookie = res.headers.get('set-cookie')
-    expect(setCookie).toContain('ama_session=;')
-    expect(setCookie).toContain('Max-Age=0')
-    expect(setCookie).toContain('HttpOnly')
+    expect(res.headers.get('set-cookie')).toBeNull()
   })
 })
 

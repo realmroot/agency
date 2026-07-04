@@ -77,7 +77,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       '/api/v1/agents?archived=true&search=research&createdFrom=2026-05-01T00%3A00%3A00.000Z&createdTo=2026-05-31T23%3A59%3A59.999Z&limit=25&cursor=cursor_value',
       expect.objectContaining({
         body: undefined,
-        credentials: 'include',
         method: 'GET',
       }),
     )
@@ -106,7 +105,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       '/api/v1/sessions?archived=true',
       expect.objectContaining({
         body: undefined,
-        credentials: 'include',
         method: 'GET',
       }),
     )

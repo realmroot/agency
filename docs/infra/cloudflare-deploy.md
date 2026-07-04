@@ -20,22 +20,19 @@ Required settings:
 - Issuer: `OIDC_ISSUER`
 - Client id: `OIDC_CLIENT_ID`
 - Client secret: store as Wrangler secret `OIDC_CLIENT_SECRET`
-- Introspection client id: `OIDC_INTROSPECTION_CLIENT_ID`
-- Introspection client secret: store as Wrangler secret
-  `OIDC_INTROSPECTION_CLIENT_SECRET`
 - Redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE
 
 The browser uses the community `oidc-client-ts` library for authorization-code
 PKCE redirect handling. The Worker uses the community `openid-client` library for
-discovery and userinfo retrieval from OIDC bearer tokens. Do not implement
-OIDC parsing or token validation by hand.
+discovery and `jose` for local JWT/JWKS bearer-token verification. Do not
+implement OIDC parsing or token validation by hand.
 
 Control-plane settings:
 
-- `AMA_ALLOWED_ORIGINS`: comma-separated browser origins allowed for credentialed
-  CORS requests.
+- `AMA_ALLOWED_ORIGINS`: comma-separated browser origins allowed for
+  bearer-authenticated CORS requests.
 
 ## Sandbox tool executor
 
@@ -81,8 +78,7 @@ anything reaches D1.
 Required settings for managed vault storage:
 
 - `AMA_VAULT_ENCRYPTION_KEY`: store as a Wrangler secret with at least 32
-  characters. Credential creation and rotation fail fast when it is missing;
-  there is no fallback to `AMA_SESSION_SECRET`.
+  characters. Credential creation and rotation fail fast when it is missing.
 
 Rotating this key invalidates existing ciphertext, so plan a credential
 rotation pass when the key changes. Tampered or foreign ciphertext is rejected

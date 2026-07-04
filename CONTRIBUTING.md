@@ -36,7 +36,7 @@ cp .env.example .dev.vars
 pnpm dev
 ```
 
-For local API and browser checks, configure OIDC issuer/client values, `AMA_SESSION_SECRET`, and Workers AI settings in `.dev.vars`. `pnpm dev` uses local development variables. Live runtime sessions require the Cloudflare Sandbox container image built from this repository's `Dockerfile`.
+For local API and browser checks, configure OIDC issuer/client values and Workers AI settings in `.dev.vars`. `pnpm dev` uses local development variables. Live runtime sessions require the Cloudflare Sandbox container image built from this repository's `Dockerfile`.
 
 ## Common Commands
 
@@ -107,7 +107,8 @@ OpenAPI is the public contract for operators, generated SDKs, and restish workfl
 Use mature OIDC libraries:
 
 - `oidc-client-ts` in the browser for authorization-code PKCE redirect handling.
-- `openid-client` in the Worker for provider discovery and token-backed userinfo.
+- `openid-client` in the Worker for provider discovery.
+- `jose` in the Worker for local JWT/JWKS bearer-token verification.
 
 Do not hand-roll token parsing, token validation, callback validation, or OIDC discovery logic.
 
@@ -116,9 +117,7 @@ Expected configuration names use generic OIDC terminology, for example:
 - `OIDC_ISSUER`
 - `OIDC_CLIENT_ID`
 - `OIDC_CLIENT_SECRET`
-- `OIDC_INTROSPECTION_CLIENT_ID`
-- `OIDC_INTROSPECTION_CLIENT_SECRET`
-- `AMA_SESSION_SECRET`
+- `AMA_VAULT_ENCRYPTION_KEY`
 
 ## UI Contributions
 

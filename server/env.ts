@@ -16,7 +16,6 @@ export interface Env {
   CLOUD_TURNS?: Queue<unknown>
   AMA_DEFAULT_MODEL?: string
   AMA_RUNTIME_MODE?: string
-  AMA_SESSION_SECRET?: string
   AMA_VAULT_ENCRYPTION_KEY?: string
   // AI Gateway name for third-party ({vendor}/{model}) cloud models (Unified
   // Billing / BYOK); defaults to 'ama'. '@cf/' models stay gateway-free.
@@ -24,8 +23,6 @@ export interface Env {
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
   OIDC_CLIENT_SECRET?: string
-  OIDC_INTROSPECTION_CLIENT_ID?: string
-  OIDC_INTROSPECTION_CLIENT_SECRET?: string
   OIDC_RUNNER_CLIENT_ID?: string
   OIDC_RUNNER_SCOPES?: string
   OIDC_USE_SERVICE_BINDING?: string

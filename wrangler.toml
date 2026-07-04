@@ -20,7 +20,6 @@ AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.tftt.cc/api/auth"
 OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
-OIDC_INTROSPECTION_CLIENT_ID = "client_12c843d07a6341629719c05f58021868"
 OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 
@@ -121,7 +120,6 @@ enabled = true
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 OIDC_ISSUER = "https://id.tftt.cc/api/auth"
 OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
-OIDC_INTROSPECTION_CLIENT_ID = "client_12c843d07a6341629719c05f58021868"
 OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 AMA_ALLOWED_ORIGINS = "https://any-managed-agents-staging.saltbo.workers.dev"
@@ -190,7 +188,6 @@ OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 AMA_ALLOWED_ORIGINS = "http://localhost:5173"
 AMA_E2E_TEST_AUTH = "true"
 AMA_RUNTIME_MODE = "test"
-AMA_SESSION_SECRET = "e2e-local-test-session-secret-not-for-production"
 AMA_VAULT_ENCRYPTION_KEY = "e2e-local-vault-encryption-key-not-for-production"
 
 [env.e2e.triggers]

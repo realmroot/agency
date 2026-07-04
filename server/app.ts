@@ -49,7 +49,6 @@ export function createApp() {
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'X-AMA-Project-ID'],
-      credentials: true,
     }),
   )
 

@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { createRemoteJWKSet, customFetch, jwksCache, jwtVerify, type JWKSCacheInput } from 'jose'
 import * as client from 'openid-client'
 import { projects } from '../db/schema'
 import type { Env } from '../env'
@@ -29,40 +30,24 @@ export interface UserInfoClaims {
   ama_environment_id?: string
 }
 
-interface IntrospectionClaims {
-  active?: boolean
-  iss?: string
-  sub?: string
-  email?: string
-  name?: string
-  picture?: string
-  client_id?: string
-  azp?: string
-  scope?: string
-  org_id?: string
-  organization_id?: string
-  org_name?: string
-  organization_name?: string
-  roles?: unknown
-  permissions?: unknown
-  teams?: unknown
-  external_tenant_id?: string
-  tenant_id?: string
-  ama_project_id?: string
-  ama_environment_id?: string
-  authorization?: {
-    roles?: unknown
-    permissions?: unknown
-    teams?: unknown
-  }
-}
-
 export class OidcError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'OidcError'
   }
 }
+
+interface CachedOidcMetadata {
+  issuer: string
+  jwksUri: string
+  expiresAt: number
+}
+
+const OIDC_METADATA_CACHE_MS = 10 * 60 * 1000
+const JWKS_CACHE_MAX_AGE_MS = 10 * 60 * 1000
+const JWKS_COOLDOWN_MS = 30 * 1000
+const oidcMetadataCache = new Map<string, CachedOidcMetadata>()
+const oidcJwksDataCache = new Map<string, JWKSCacheInput>()
 
 export function requireOidcConfig(env: Env) {
   if (!env.OIDC_ISSUER || !env.OIDC_CLIENT_ID) {
@@ -153,94 +138,56 @@ export async function getBearerClaims(env: Env, accessToken: string): Promise<Us
     return e2eFederatedRunnerClaims(accessToken.slice('e2e-federated-runner:'.length))
   }
 
-  // Identify the calling client via introspection (RFC 7662) first: userinfo
-  // describes the end user but never reports `client_id`/`azp`, which runner
-  // detection and runner-row binding key off. A runner token carries everything
-  // it needs in the introspection result, so it skips the userinfo round-trip;
-  // interactive user tokens still go through userinfo for the richer profile and
-  // merge in the client identity introspection reported.
-  const introspected = await introspectAccessToken(env, accessToken).catch(() => null)
-  const introspectedClientId = introspected
-    ? (stringClaim(introspected.client_id) ?? stringClaim(introspected.azp))
-    : undefined
-  if (introspected && isRunnerTokenClaim(env, introspectedClientId, introspected)) {
-    return normalizeClaims(env, introspected)
-  }
-
-  const oidcClient = await createOidcClient(env)
-  const claims = await runOidcWithIntrospectionFallback(env, accessToken, () =>
-    client.fetchUserInfo(oidcClient, accessToken, client.skipSubjectCheck),
-  )
-  if (!claims.sub) {
-    throw new OidcError('OIDC provider userinfo did not include required subject')
-  }
-  const merged =
-    introspectedClientId && !claims.client_id && !claims.azp
-      ? {
-          ...claims,
-          client_id: introspected!.client_id ?? introspectedClientId,
-          ...(introspected!.azp ? { azp: introspected!.azp } : {}),
-        }
-      : claims
-  return normalizeClaims(env, merged as Record<string, unknown> & { sub: string })
+  return normalizeClaims(env, await verifyJwtAccessToken(env, accessToken))
 }
 
-async function runOidcWithIntrospectionFallback<T extends Record<string, unknown>>(
-  env: Env,
-  accessToken: string,
-  operation: () => Promise<T>,
-) {
+async function verifyJwtAccessToken(env: Env, accessToken: string): Promise<Record<string, unknown> & { sub: string }> {
+  if (accessToken.split('.').length !== 3) {
+    throw new OidcError('OIDC access token must be a JWT')
+  }
+
+  const metadata = await oidcMetadata(env)
+  const cachedJwks = oidcJwksDataCache.get(metadata.jwksUri) ?? {}
+  oidcJwksDataCache.set(metadata.jwksUri, cachedJwks)
+  const remoteJwks = createRemoteJWKSet(new URL(metadata.jwksUri), {
+    [customFetch]: (url, options) => oidcFetch(env, url, options),
+    [jwksCache]: cachedJwks,
+    cacheMaxAge: JWKS_CACHE_MAX_AGE_MS,
+    cooldownDuration: JWKS_COOLDOWN_MS,
+    timeoutDuration: 5000,
+  })
+
   try {
-    return await operation()
-  } catch (err) {
-    const claims = await introspectAccessToken(env, accessToken)
-    if (claims) {
-      return claims as T
+    const { payload } = await jwtVerify(accessToken, remoteJwks, { issuer: metadata.issuer })
+    if (!payload.sub) {
+      throw new OidcError('OIDC access token did not include required subject')
     }
+    return { ...payload, sub: payload.sub }
+  } catch (err) {
     throw toOidcError(err)
   }
 }
 
-async function introspectAccessToken(
-  env: Env,
-  accessToken: string,
-): Promise<(Record<string, unknown> & { sub: string }) | null> {
-  const issuer = env.OIDC_ISSUER?.replace(/\/$/, '')
-  const clientId = env.OIDC_INTROSPECTION_CLIENT_ID ?? env.OIDC_CLIENT_ID
-  const clientSecret = env.OIDC_INTROSPECTION_CLIENT_SECRET ?? env.OIDC_CLIENT_SECRET
-  if (!issuer || !clientId || !clientSecret) {
-    return null
+async function oidcMetadata(env: Env): Promise<CachedOidcMetadata> {
+  const { issuer } = requireOidcConfig(env)
+  const cached = oidcMetadataCache.get(issuer)
+  const now = Date.now()
+  if (cached && cached.expiresAt > now) {
+    return cached
   }
 
-  const body = new URLSearchParams()
-  body.set('token', accessToken)
-  const response = await oidcFetch(env, `${issuer}/oauth2/introspect`, {
-    method: 'POST',
-    headers: {
-      authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  })
-  if (!response.ok) {
-    throw new OidcError(`OIDC token introspection failed with HTTP ${response.status}`)
+  const oidcClient = await createOidcClient(env)
+  const metadata = oidcClient.serverMetadata()
+  if (!metadata.jwks_uri) {
+    throw new OidcError('OIDC discovery did not include jwks_uri')
   }
-  const claims = (await response.json()) as IntrospectionClaims
-  if (!claims.active) {
-    throw new OidcError('OIDC token introspection reported an inactive token')
+  const next = {
+    issuer: metadata.issuer ?? issuer,
+    jwksUri: metadata.jwks_uri,
+    expiresAt: now + OIDC_METADATA_CACHE_MS,
   }
-  // The principal is always a real user `sub`. A token's `client_id`/`azp` identifies which
-  // application is calling — it must never stand in as the subject or the tenant. A token with
-  // no user subject (e.g. a pure client_credentials token) is rejected here. client_id/azp still
-  // pass through via `...claims` for audit and runner detection.
-  const sub = stringClaim(claims.sub)
-  if (!sub) {
-    throw new OidcError('OIDC token introspection did not include a subject')
-  }
-  return {
-    ...claims,
-    sub,
-  } as Record<string, unknown> & { sub: string }
+  oidcMetadataCache.set(issuer, next)
+  return next
 }
 
 function oidcFetch(env: Env, url: string, init: RequestInit) {
