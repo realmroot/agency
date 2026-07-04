@@ -34,6 +34,18 @@ function writeSessionEvent(requestId: string, event: AmaRuntimeEvent) {
   })
 }
 
+function writeProviderEvent(
+  request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>,
+  event: Record<string, unknown>,
+) {
+  write({
+    type: 'provider.event',
+    requestId: request.requestId,
+    runtime: request.runtime,
+    event,
+  })
+}
+
 function parseInput(line: string): RuntimeBridgeInputMessage | null {
   const record = JSON.parse(line) as RuntimeBridgeInputMessage
   if (!record || typeof record !== 'object' || !('type' in record)) {
@@ -51,7 +63,10 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
       return
     }
     const provider = getProvider(request.runtime)
-    const handle = await provider.execute(request)
+    const handle = await provider.execute({
+      ...request,
+      emitProviderEvent: (event) => writeProviderEvent(request, event),
+    })
     state.handle = handle
     // Surface the resume token as soon as the provider learns it so the runner
     // can persist it via lease renewals; waiting for the final result message

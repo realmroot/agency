@@ -110,17 +110,20 @@ func (e RuntimeBridgeInventoryMessageType) Valid() bool {
 
 // Defines values for RuntimeBridgeOutputMessageType.
 const (
-	BridgeMessageTypeError        RuntimeBridgeOutputMessageType = "error"
-	BridgeMessageTypeReady        RuntimeBridgeOutputMessageType = "ready"
-	BridgeMessageTypeResult       RuntimeBridgeOutputMessageType = "result"
-	BridgeMessageTypeResumeToken  RuntimeBridgeOutputMessageType = "resumeToken"
-	BridgeMessageTypeRuntimeEvent RuntimeBridgeOutputMessageType = "runtime.event"
+	BridgeMessageTypeError         RuntimeBridgeOutputMessageType = "error"
+	BridgeMessageTypeProviderEvent RuntimeBridgeOutputMessageType = "provider.event"
+	BridgeMessageTypeReady         RuntimeBridgeOutputMessageType = "ready"
+	BridgeMessageTypeResult        RuntimeBridgeOutputMessageType = "result"
+	BridgeMessageTypeResumeToken   RuntimeBridgeOutputMessageType = "resumeToken"
+	BridgeMessageTypeRuntimeEvent  RuntimeBridgeOutputMessageType = "runtime.event"
 )
 
 // Valid indicates whether the value is a known member of the RuntimeBridgeOutputMessageType enum.
 func (e RuntimeBridgeOutputMessageType) Valid() bool {
 	switch e {
 	case BridgeMessageTypeError:
+		return true
+	case BridgeMessageTypeProviderEvent:
 		return true
 	case BridgeMessageTypeReady:
 		return true
@@ -216,6 +219,7 @@ type RuntimeBridgeOutputMessage struct {
 	RequestID   string                         `json:"requestId,omitempty"`
 	Result      JSON                           `json:"result,omitempty"`
 	ResumeToken string                         `json:"resumeToken,omitempty"`
+	Runtime     ExternalRuntimeName            `json:"runtime,omitempty"`
 	Type        RuntimeBridgeOutputMessageType `json:"type"`
 }
 

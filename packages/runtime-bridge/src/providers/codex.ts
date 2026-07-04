@@ -1,4 +1,4 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
 import { Codex, type ThreadEvent } from '@openai/codex-sdk'
@@ -69,6 +69,7 @@ function codexToolCallId(item: Record<string, unknown>) {
     case 'command_execution':
     case 'mcp_tool_call':
     case 'web_search':
+    case 'collab_tool_call':
       return stringValue(item.id)
     default:
       return null
@@ -100,6 +101,19 @@ function codexToolShape(item: Record<string, unknown>): CodexToolShape | null {
     case 'web_search': {
       if (typeof item.query !== 'string' || !item.query) return null
       return { toolName: 'web_search', args: { query: item.query } }
+    }
+    case 'collab_tool_call': {
+      const nativeFunctionName = stringValue(item.tool)
+      if (!nativeFunctionName) return null
+      if (nativeFunctionName === 'spawn_agent') {
+        return { toolName: 'agent', args: normalizeAgentToolInput(collabAgentToolInput(item)), nativeFunctionName }
+      }
+      return {
+        toolName: nativeFunctionName,
+        args: collabControlToolInput(item),
+        nativeFunctionName,
+        hiddenControl: true,
+      }
     }
     case 'custom_tool_call': {
       const nativeFunctionName = stringValue(item.name)
@@ -165,7 +179,39 @@ function normalizeAgentToolInput(input: Record<string, unknown>): Record<string,
 }
 
 function isCodexSubagentControlFunction(name: string) {
-  return name === 'wait_agent' || name === 'close_agent' || name === 'send_input' || name === 'resume_agent'
+  return (
+    name === 'wait_agent' ||
+    name === 'wait' ||
+    name === 'close_agent' ||
+    name === 'send_input' ||
+    name === 'resume_agent'
+  )
+}
+
+function collabAgentToolInput(item: Record<string, unknown>): Record<string, unknown> {
+  return {
+    prompt: stringValue(item.prompt) ?? 'Spawn Codex sub-agent.',
+    ...(stringValue(item.subagentName) ? { subagentName: stringValue(item.subagentName) } : {}),
+    ...(stringValue(item.subagent_type) ? { subagent_type: stringValue(item.subagent_type) } : {}),
+    ...(stringValue(item.subagentType) ? { subagentType: stringValue(item.subagentType) } : {}),
+    ...(stringValue(item.agent_type) ? { agent_type: stringValue(item.agent_type) } : {}),
+    ...(stringValue(item.agentType) ? { agentType: stringValue(item.agentType) } : {}),
+  }
+}
+
+function collabControlToolInput(item: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries({
+      senderThreadId: item.sender_thread_id,
+      receiverThreadIds: item.receiver_thread_ids,
+      prompt: item.prompt,
+    }).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  )
+}
+
+function stringArrayValue(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0)
 }
 
 function toolResult(item: Record<string, unknown>): ToolResult {
@@ -215,16 +261,11 @@ class CodexEventMapper {
   private readonly nativeFunctionNameByCallId = new Map<string, string>()
   private readonly nativeFunctionInputByCallId = new Map<string, Record<string, unknown>>()
   private readonly agentToolCallIdByAgentId = new Map<string, string>()
-  private providerThreadId: string | null = null
+  private readonly emittedCollabToolCallIds = new Set<string>()
   private readonly finalizedAgentIds = new Set<string>()
 
-  constructor(
-    private readonly codexHome: string | undefined,
-    private readonly importRawSubagentSessions = true,
-  ) {}
-
   setThreadId(threadId: string) {
-    this.providerThreadId = threadId
+    void threadId
   }
 
   *map(event: ThreadEvent): Generator<AmaRuntimeEvent> {
@@ -237,6 +278,10 @@ class CodexEventMapper {
         return
       case 'item.started': {
         const item = objectValue(event.item)
+        if (item.type === 'collab_tool_call') {
+          for (const outputEvent of this.mapCollabToolStarted(item)) yield outputEvent
+          return
+        }
         const shape = codexToolShape(item)
         const id = codexToolCallId(item)
         if (shape && id && !shape.hiddenControl && item.type !== 'function_call') {
@@ -263,6 +308,10 @@ class CodexEventMapper {
         }
         if (item.type === 'function_call_output' || item.type === 'custom_tool_call_output') {
           for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent
+          return
+        }
+        if (item.type === 'collab_tool_call') {
+          for (const outputEvent of this.mapCollabToolCompleted(item)) yield outputEvent
           return
         }
         const shape = codexToolShape(item)
@@ -345,9 +394,7 @@ class CodexEventMapper {
       const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId)
       if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return []
       this.finalizedAgentIds.add(final.agentId)
-      const childEvents = this.importRawSubagentSessions ? this.mapRawSubagentEvents(final.agentId, toolCallId) : []
       return [
-        ...childEvents,
         messageEvent(
           toolResultMessage(
             toolCallId,
@@ -367,46 +414,93 @@ class CodexEventMapper {
     })
   }
 
-  private mapRawSubagentEvents(agentId: string, parentToolCallId: string): AmaRuntimeEvent[] {
-    const filePath = findCodexSessionFile(this.codexHome, agentId)
-    if (!filePath) return []
-    const mapper = new CodexEventMapper(this.codexHome, false)
-    if (this.providerThreadId) mapper.setThreadId(this.providerThreadId)
+  private mapCollabToolStarted(item: Record<string, unknown>): AmaRuntimeEvent[] {
+    const shape = codexToolShape(item)
+    const id = codexToolCallId(item)
+    this.trackCollabToolCall(item, id)
+    if (!shape || !id || shape.hiddenControl) return []
+    this.emittedCollabToolCallIds.add(id)
+    return [
+      messageEvent({
+        id: randomId('msg'),
+        role: 'assistant',
+        content: [toolCallBlock({ id, name: shape.toolName, input: shape.args })],
+      }),
+    ]
+  }
+
+  private mapCollabToolCompleted(item: Record<string, unknown>): AmaRuntimeEvent[] {
+    const shape = codexToolShape(item)
+    const id = codexToolCallId(item)
+    this.trackCollabToolCall(item, id)
     const events: AmaRuntimeEvent[] = []
-    for (const line of readFileSync(filePath, 'utf8').split('\n')) {
-      if (!line.trim()) continue
-      const record = parseJsonObject(line)
-      if (record.type !== 'response_item') continue
-      const threadEvent = codexRawResponseItemThreadEvent(objectValue(record.payload))
-      if (!threadEvent) continue
-      for (const event of mapper.map(threadEvent)) {
-        events.push(withParentToolCallId(event, parentToolCallId))
-      }
+    if (shape && id && !shape.hiddenControl && !this.emittedCollabToolCallIds.has(id)) {
+      this.emittedCollabToolCallIds.add(id)
+      events.push(
+        messageEvent({
+          id: randomId('msg'),
+          role: 'assistant',
+          content: [toolCallBlock({ id, name: shape.toolName, input: shape.args })],
+        }),
+      )
+    }
+    const finalEvents = this.mapCollabAgentFinals(item)
+    events.push(...finalEvents)
+    if (shape && id && !shape.hiddenControl && finalEvents.length === 0 && stringValue(item.status) === 'failed') {
+      events.push(
+        messageEvent(
+          toolResultMessage(
+            id,
+            {
+              content: [{ type: 'text', text: 'Sub-agent spawn failed.' }],
+              structuredContent: { provider: 'codex', status: 'failed' },
+            },
+            true,
+          ),
+        ),
+      )
     }
     return events
   }
+
+  private trackCollabToolCall(item: Record<string, unknown>, id: string | null) {
+    if (item.type !== 'collab_tool_call' || item.tool !== 'spawn_agent' || !id) return
+    for (const agentId of collabReceiverThreadIds(item)) {
+      this.agentToolCallIdByAgentId.set(agentId, id)
+    }
+  }
+
+  private mapCollabAgentFinals(item: Record<string, unknown>): AmaRuntimeEvent[] {
+    return collabFinalsFromCodexToolCall(item).flatMap((final) => {
+      const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId)
+      if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return []
+      this.finalizedAgentIds.add(final.agentId)
+      return [
+        messageEvent(
+          toolResultMessage(
+            toolCallId,
+            {
+              content: final.text ? [{ type: 'text', text: final.text }] : [],
+              structuredContent: {
+                agentId: final.agentId,
+                status: final.status,
+                provider: 'codex',
+                rawStatus: final.rawStatus,
+              },
+            },
+            final.failed,
+          ),
+        ),
+      ]
+    })
+  }
 }
 
-export function codexEventsFromJsonl(
-  filePath: string,
-  options: { home?: string; importRawSubagentSessions?: boolean } = {},
-): AmaRuntimeEvent[] {
-  const mapper = new CodexEventMapper(options.home, options.importRawSubagentSessions ?? true)
+export function codexEventsFromProviderEvents(providerEvents: unknown[]): AmaRuntimeEvent[] {
+  const mapper = new CodexEventMapper()
   const events: AmaRuntimeEvent[] = []
-  let lineNumber = 0
-  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
-    lineNumber += 1
-    if (!line.trim()) continue
-    let record: Record<string, unknown>
-    try {
-      record = objectValue(JSON.parse(line))
-    } catch (err) {
-      throw new Error(`read Codex JSONL ${filePath} line ${lineNumber}: ${err instanceof Error ? err.message : err}`)
-    }
-    if (record.type !== 'response_item') continue
-    const threadEvent = codexRawResponseItemThreadEvent(objectValue(record.payload))
-    if (!threadEvent) continue
-    for (const event of mapper.map(threadEvent)) events.push(event)
+  for (const providerEvent of providerEvents) {
+    for (const event of mapper.map(providerEvent as ThreadEvent)) events.push(event)
   }
   return events
 }
@@ -475,109 +569,33 @@ function codexStatusText(agentId: string, status: CodexSubagentFinal['status'], 
   return `Sub-agent ${agentId} ${status}.`
 }
 
-function findCodexSessionFile(home: string | undefined, sessionId: string): string | null {
-  if (!home) return null
-  const root = join(home, '.codex', 'sessions')
-  if (!existsSync(root)) return null
-  const stack = [root]
-  while (stack.length > 0) {
-    const dir = stack.pop()
-    if (!dir) continue
-    let entries: Dirent<string>[]
-    try {
-      entries = readdirSync(dir, { withFileTypes: true })
-    } catch {
-      continue
-    }
-    for (const entry of entries) {
-      const path = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        stack.push(path)
-        continue
-      }
-      if (entry.isFile() && entry.name.endsWith('.jsonl') && entry.name.includes(sessionId)) return path
-    }
-  }
-  return null
+function collabReceiverThreadIds(item: Record<string, unknown>): string[] {
+  const ids = stringArrayValue(item.receiver_thread_ids)
+  if (ids.length > 0) return ids
+  return Object.keys(objectValue(item.agents_states))
 }
 
-function codexRawResponseItemThreadEvent(item: Record<string, unknown>): ThreadEvent | null {
-  switch (item.type) {
-    case 'message': {
-      if (item.role !== 'assistant') return null
-      const text = textFromCodexRawContent(item.content)
-      if (!text) return null
-      return {
-        type: 'item.completed',
-        item: { id: stringValue(item.id) ?? randomId('codex_raw'), type: 'agent_message', text },
-      } as ThreadEvent
-    }
-    case 'reasoning': {
-      const text = textFromCodexRawReasoning(item)
-      if (!text) return null
-      return {
-        type: 'item.completed',
-        item: { id: stringValue(item.id) ?? randomId('codex_raw'), type: 'reasoning', text },
-      } as ThreadEvent
-    }
-    case 'function_call':
-    case 'function_call_output':
-    case 'custom_tool_call':
-    case 'custom_tool_call_output':
-      return { type: 'item.completed', item } as ThreadEvent
-    case 'web_search_call': {
-      const action = objectValue(item.action)
-      const query = stringValue(action.query)
-      if (!query) return null
-      return {
-        type: 'item.completed',
-        item: { id: stringValue(item.id) ?? randomId('web_search'), type: 'web_search', query },
-      } as ThreadEvent
-    }
-    default:
-      return null
-  }
+function collabFinalsFromCodexToolCall(item: Record<string, unknown>): CodexSubagentFinal[] {
+  return Object.entries(objectValue(item.agents_states)).flatMap(([agentId, value]) =>
+    codexCollabFinalStatus(agentId, objectValue(value)),
+  )
 }
 
-function textFromCodexRawContent(value: unknown): string {
-  if (!Array.isArray(value)) return ''
-  return value
-    .map((part) => {
-      const block = objectValue(part)
-      if (block.type === 'output_text' || block.type === 'text') return stringValue(block.text)
-      return null
-    })
-    .filter((text): text is string => Boolean(text))
-    .join('\n')
-}
-
-function textFromCodexRawReasoning(item: Record<string, unknown>): string {
-  const text = stringValue(item.text)
-  if (text) return text
-  const summary = Array.isArray(item.summary) ? item.summary : []
-  return summary
-    .map((part) => {
-      const block = objectValue(part)
-      return stringValue(block.text)
-    })
-    .filter((part): part is string => Boolean(part))
-    .join('\n')
-}
-
-function withParentToolCallId(event: AmaRuntimeEvent, parentToolCallId: string): AmaRuntimeEvent {
-  if (!event.type.startsWith('message.')) return event
-  const message = objectValue((event.payload as { message?: unknown }).message)
-  if (!message || message.parentToolCallId) return event
-  return {
-    ...event,
-    payload: {
-      ...event.payload,
-      message: {
-        ...message,
-        parentToolCallId,
-      },
+function codexCollabFinalStatus(agentId: string, rawStatus: Record<string, unknown>): CodexSubagentFinal[] {
+  const status = stringValue(rawStatus.status)
+  if (!status || status === 'pending_init' || status === 'running' || status === 'interrupted') return []
+  const normalizedStatus: CodexSubagentFinal['status'] =
+    status === 'completed' ? 'completed' : status === 'shutdown' ? 'stopped' : 'failed'
+  const message = stringValue(rawStatus.message)
+  return [
+    {
+      agentId,
+      status: normalizedStatus,
+      text: message ?? `Sub-agent ${agentId} ${normalizedStatus}.`,
+      failed: normalizedStatus !== 'completed',
+      rawStatus,
     },
-  } as AmaRuntimeEvent
+  ]
 }
 
 export const codexProvider: RuntimeProvider = {
@@ -611,7 +629,7 @@ export const codexProvider: RuntimeProvider = {
     const thread =
       request.resume && resumeToken ? codex.resumeThread(resumeToken, threadOptions) : codex.startThread(threadOptions)
     const idleKeepAliveMs = positiveNumber(request.runtimeConfig?.codexIdleKeepAliveMs)
-    const mapper = new CodexEventMapper(hostHome(request.env) ?? request.env.HOME)
+    const mapper = new CodexEventMapper()
     const nextPrompt = async (): Promise<string | undefined> => {
       const queued = queuedPrompts.shift()
       if (queued !== undefined) return queued
@@ -634,6 +652,7 @@ export const codexProvider: RuntimeProvider = {
         if (prompt === undefined) return
         const streamed = await thread.runStreamed(prompt, { signal: abortController.signal })
         for await (const event of streamed.events) {
+          request.emitProviderEvent?.(objectValue(event))
           if (event.type === 'thread.started') {
             resumeToken = event.thread_id
             mapper.setThreadId(event.thread_id)

@@ -314,10 +314,8 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		}
 		return err
 	}
-	store, err := runnersession.OpenEventLog(
-		filepath.Join(r.Config.WorkDir, workspace.SessionsDirName, payload.SessionID),
-		payload.SessionID,
-	)
+	sessionDir := filepath.Join(r.Config.WorkDir, workspace.SessionsDirName, payload.SessionID)
+	store, err := runnersession.OpenEventLog(sessionDir, payload.SessionID)
 	if err != nil {
 		if finishErr := r.failLease(ctx, lease, fmt.Errorf("open session event store: %w", err), nil); finishErr != nil {
 			return finishErr
@@ -385,6 +383,10 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		WorkDir:       workspace.Cwd,
 		OnResumeToken: func(resumeToken string) error {
 			return r.persistResumeToken(leaseCtx, lease, resumeTokens, leaseUpdates, resumeToken)
+		},
+		OnProviderEvent: func(runtimeName string, event runtime.JSON) error {
+			_, err := runnersession.AppendProviderEvent(sessionDir, runtimeName, ama.JSON(event))
+			return err
 		},
 		RegisterControlSender: handle.RegisterControlSender,
 	}, func(event runtime.JSON) error {

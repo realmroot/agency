@@ -38032,7 +38032,7 @@ var claudeCodeProvider = {
 };
 
 // packages/runtime-bridge/src/providers/codex.ts
-import { existsSync as existsSync2, readdirSync as readdirSync2, readFileSync as readFileSync3 } from "node:fs";
+import { readFileSync as readFileSync3 } from "node:fs";
 import { join as join2 } from "node:path";
 
 // node_modules/.pnpm/@openai+codex-sdk@0.142.5/node_modules/@openai/codex-sdk/dist/index.js
@@ -38600,6 +38600,7 @@ function codexToolCallId(item) {
     case "command_execution":
     case "mcp_tool_call":
     case "web_search":
+    case "collab_tool_call":
       return stringValue2(item.id);
     default:
       return null;
@@ -38623,6 +38624,19 @@ function codexToolShape(item) {
     case "web_search": {
       if (typeof item.query !== "string" || !item.query) return null;
       return { toolName: "web_search", args: { query: item.query } };
+    }
+    case "collab_tool_call": {
+      const nativeFunctionName = stringValue2(item.tool);
+      if (!nativeFunctionName) return null;
+      if (nativeFunctionName === "spawn_agent") {
+        return { toolName: "agent", args: normalizeAgentToolInput2(collabAgentToolInput(item)), nativeFunctionName };
+      }
+      return {
+        toolName: nativeFunctionName,
+        args: collabControlToolInput(item),
+        nativeFunctionName,
+        hiddenControl: true
+      };
     }
     case "custom_tool_call": {
       const nativeFunctionName = stringValue2(item.name);
@@ -38679,7 +38693,30 @@ function normalizeAgentToolInput2(input) {
   };
 }
 function isCodexSubagentControlFunction(name) {
-  return name === "wait_agent" || name === "close_agent" || name === "send_input" || name === "resume_agent";
+  return name === "wait_agent" || name === "wait" || name === "close_agent" || name === "send_input" || name === "resume_agent";
+}
+function collabAgentToolInput(item) {
+  return {
+    prompt: stringValue2(item.prompt) ?? "Spawn Codex sub-agent.",
+    ...stringValue2(item.subagentName) ? { subagentName: stringValue2(item.subagentName) } : {},
+    ...stringValue2(item.subagent_type) ? { subagent_type: stringValue2(item.subagent_type) } : {},
+    ...stringValue2(item.subagentType) ? { subagentType: stringValue2(item.subagentType) } : {},
+    ...stringValue2(item.agent_type) ? { agent_type: stringValue2(item.agent_type) } : {},
+    ...stringValue2(item.agentType) ? { agentType: stringValue2(item.agentType) } : {}
+  };
+}
+function collabControlToolInput(item) {
+  return Object.fromEntries(
+    Object.entries({
+      senderThreadId: item.sender_thread_id,
+      receiverThreadIds: item.receiver_thread_ids,
+      prompt: item.prompt
+    }).filter(([, value]) => value !== void 0 && value !== null && value !== "")
+  );
+}
+function stringArrayValue(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => typeof item === "string" && item.length > 0);
 }
 function toolResult(item) {
   const stdout2 = typeof item.stdout === "string" ? item.stdout : "";
@@ -38712,20 +38749,14 @@ function codexAssistantMessage(content, providerMessageId) {
     ...providerMessageId ? { providerMessageId } : {}
   };
 }
-var CodexEventMapper = class _CodexEventMapper {
-  constructor(codexHome, importRawSubagentSessions = true) {
-    this.codexHome = codexHome;
-    this.importRawSubagentSessions = importRawSubagentSessions;
-  }
-  codexHome;
-  importRawSubagentSessions;
+var CodexEventMapper = class {
   nativeFunctionNameByCallId = /* @__PURE__ */ new Map();
   nativeFunctionInputByCallId = /* @__PURE__ */ new Map();
   agentToolCallIdByAgentId = /* @__PURE__ */ new Map();
-  providerThreadId = null;
+  emittedCollabToolCallIds = /* @__PURE__ */ new Set();
   finalizedAgentIds = /* @__PURE__ */ new Set();
   setThreadId(threadId) {
-    this.providerThreadId = threadId;
+    void threadId;
   }
   *map(event) {
     switch (event.type) {
@@ -38737,6 +38768,10 @@ var CodexEventMapper = class _CodexEventMapper {
         return;
       case "item.started": {
         const item = objectValue2(event.item);
+        if (item.type === "collab_tool_call") {
+          for (const outputEvent of this.mapCollabToolStarted(item)) yield outputEvent;
+          return;
+        }
         const shape = codexToolShape(item);
         const id2 = codexToolCallId(item);
         if (shape && id2 && !shape.hiddenControl && item.type !== "function_call") {
@@ -38763,6 +38798,10 @@ var CodexEventMapper = class _CodexEventMapper {
         }
         if (item.type === "function_call_output" || item.type === "custom_tool_call_output") {
           for (const outputEvent of this.mapFunctionCallOutput(item)) yield outputEvent;
+          return;
+        }
+        if (item.type === "collab_tool_call") {
+          for (const outputEvent of this.mapCollabToolCompleted(item)) yield outputEvent;
           return;
         }
         const shape = codexToolShape(item);
@@ -38836,9 +38875,7 @@ var CodexEventMapper = class _CodexEventMapper {
       const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId);
       if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return [];
       this.finalizedAgentIds.add(final.agentId);
-      const childEvents = this.importRawSubagentSessions ? this.mapRawSubagentEvents(final.agentId, toolCallId) : [];
       return [
-        ...childEvents,
         messageEvent(
           toolResultMessage(
             toolCallId,
@@ -38857,23 +38894,82 @@ var CodexEventMapper = class _CodexEventMapper {
       ];
     });
   }
-  mapRawSubagentEvents(agentId, parentToolCallId) {
-    const filePath = findCodexSessionFile(this.codexHome, agentId);
-    if (!filePath) return [];
-    const mapper = new _CodexEventMapper(this.codexHome, false);
-    if (this.providerThreadId) mapper.setThreadId(this.providerThreadId);
+  mapCollabToolStarted(item) {
+    const shape = codexToolShape(item);
+    const id2 = codexToolCallId(item);
+    this.trackCollabToolCall(item, id2);
+    if (!shape || !id2 || shape.hiddenControl) return [];
+    this.emittedCollabToolCallIds.add(id2);
+    return [
+      messageEvent({
+        id: randomId("msg"),
+        role: "assistant",
+        content: [toolCallBlock({ id: id2, name: shape.toolName, input: shape.args })]
+      })
+    ];
+  }
+  mapCollabToolCompleted(item) {
+    const shape = codexToolShape(item);
+    const id2 = codexToolCallId(item);
+    this.trackCollabToolCall(item, id2);
     const events = [];
-    for (const line of readFileSync3(filePath, "utf8").split("\n")) {
-      if (!line.trim()) continue;
-      const record2 = parseJsonObject(line);
-      if (record2.type !== "response_item") continue;
-      const threadEvent = codexRawResponseItemThreadEvent(objectValue2(record2.payload));
-      if (!threadEvent) continue;
-      for (const event of mapper.map(threadEvent)) {
-        events.push(withParentToolCallId(event, parentToolCallId));
-      }
+    if (shape && id2 && !shape.hiddenControl && !this.emittedCollabToolCallIds.has(id2)) {
+      this.emittedCollabToolCallIds.add(id2);
+      events.push(
+        messageEvent({
+          id: randomId("msg"),
+          role: "assistant",
+          content: [toolCallBlock({ id: id2, name: shape.toolName, input: shape.args })]
+        })
+      );
+    }
+    const finalEvents = this.mapCollabAgentFinals(item);
+    events.push(...finalEvents);
+    if (shape && id2 && !shape.hiddenControl && finalEvents.length === 0 && stringValue2(item.status) === "failed") {
+      events.push(
+        messageEvent(
+          toolResultMessage(
+            id2,
+            {
+              content: [{ type: "text", text: "Sub-agent spawn failed." }],
+              structuredContent: { provider: "codex", status: "failed" }
+            },
+            true
+          )
+        )
+      );
     }
     return events;
+  }
+  trackCollabToolCall(item, id2) {
+    if (item.type !== "collab_tool_call" || item.tool !== "spawn_agent" || !id2) return;
+    for (const agentId of collabReceiverThreadIds(item)) {
+      this.agentToolCallIdByAgentId.set(agentId, id2);
+    }
+  }
+  mapCollabAgentFinals(item) {
+    return collabFinalsFromCodexToolCall(item).flatMap((final) => {
+      const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId);
+      if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return [];
+      this.finalizedAgentIds.add(final.agentId);
+      return [
+        messageEvent(
+          toolResultMessage(
+            toolCallId,
+            {
+              content: final.text ? [{ type: "text", text: final.text }] : [],
+              structuredContent: {
+                agentId: final.agentId,
+                status: final.status,
+                provider: "codex",
+                rawStatus: final.rawStatus
+              }
+            },
+            final.failed
+          )
+        )
+      ];
+    });
   }
 };
 function subagentFinalsFromCodexControl(input, output, failed) {
@@ -38924,99 +39020,30 @@ function codexStatusText(agentId, status, value) {
   if (value !== void 0) return JSON.stringify(value);
   return `Sub-agent ${agentId} ${status}.`;
 }
-function findCodexSessionFile(home, sessionId) {
-  if (!home) return null;
-  const root = join2(home, ".codex", "sessions");
-  if (!existsSync2(root)) return null;
-  const stack = [root];
-  while (stack.length > 0) {
-    const dir2 = stack.pop();
-    if (!dir2) continue;
-    let entries;
-    try {
-      entries = readdirSync2(dir2, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const path3 = join2(dir2, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(path3);
-        continue;
-      }
-      if (entry.isFile() && entry.name.endsWith(".jsonl") && entry.name.includes(sessionId)) return path3;
-    }
-  }
-  return null;
+function collabReceiverThreadIds(item) {
+  const ids = stringArrayValue(item.receiver_thread_ids);
+  if (ids.length > 0) return ids;
+  return Object.keys(objectValue2(item.agents_states));
 }
-function codexRawResponseItemThreadEvent(item) {
-  switch (item.type) {
-    case "message": {
-      if (item.role !== "assistant") return null;
-      const text = textFromCodexRawContent(item.content);
-      if (!text) return null;
-      return {
-        type: "item.completed",
-        item: { id: stringValue2(item.id) ?? randomId("codex_raw"), type: "agent_message", text }
-      };
-    }
-    case "reasoning": {
-      const text = textFromCodexRawReasoning(item);
-      if (!text) return null;
-      return {
-        type: "item.completed",
-        item: { id: stringValue2(item.id) ?? randomId("codex_raw"), type: "reasoning", text }
-      };
-    }
-    case "function_call":
-    case "function_call_output":
-    case "custom_tool_call":
-    case "custom_tool_call_output":
-      return { type: "item.completed", item };
-    case "web_search_call": {
-      const action = objectValue2(item.action);
-      const query = stringValue2(action.query);
-      if (!query) return null;
-      return {
-        type: "item.completed",
-        item: { id: stringValue2(item.id) ?? randomId("web_search"), type: "web_search", query }
-      };
-    }
-    default:
-      return null;
-  }
+function collabFinalsFromCodexToolCall(item) {
+  return Object.entries(objectValue2(item.agents_states)).flatMap(
+    ([agentId, value]) => codexCollabFinalStatus(agentId, objectValue2(value))
+  );
 }
-function textFromCodexRawContent(value) {
-  if (!Array.isArray(value)) return "";
-  return value.map((part) => {
-    const block = objectValue2(part);
-    if (block.type === "output_text" || block.type === "text") return stringValue2(block.text);
-    return null;
-  }).filter((text) => Boolean(text)).join("\n");
-}
-function textFromCodexRawReasoning(item) {
-  const text = stringValue2(item.text);
-  if (text) return text;
-  const summary = Array.isArray(item.summary) ? item.summary : [];
-  return summary.map((part) => {
-    const block = objectValue2(part);
-    return stringValue2(block.text);
-  }).filter((part) => Boolean(part)).join("\n");
-}
-function withParentToolCallId(event, parentToolCallId) {
-  if (!event.type.startsWith("message.")) return event;
-  const message = objectValue2(event.payload.message);
-  if (!message || message.parentToolCallId) return event;
-  return {
-    ...event,
-    payload: {
-      ...event.payload,
-      message: {
-        ...message,
-        parentToolCallId
-      }
+function codexCollabFinalStatus(agentId, rawStatus) {
+  const status = stringValue2(rawStatus.status);
+  if (!status || status === "pending_init" || status === "running" || status === "interrupted") return [];
+  const normalizedStatus = status === "completed" ? "completed" : status === "shutdown" ? "stopped" : "failed";
+  const message = stringValue2(rawStatus.message);
+  return [
+    {
+      agentId,
+      status: normalizedStatus,
+      text: message ?? `Sub-agent ${agentId} ${normalizedStatus}.`,
+      failed: normalizedStatus !== "completed",
+      rawStatus
     }
-  };
+  ];
 }
 var codexProvider = {
   name: "codex",
@@ -39048,7 +39075,7 @@ var codexProvider = {
     };
     const thread = request3.resume && resumeToken ? codex.resumeThread(resumeToken, threadOptions) : codex.startThread(threadOptions);
     const idleKeepAliveMs = positiveNumber(request3.runtimeConfig?.codexIdleKeepAliveMs);
-    const mapper = new CodexEventMapper(hostHome(request3.env) ?? request3.env.HOME);
+    const mapper = new CodexEventMapper();
     const nextPrompt = async () => {
       const queued = queuedPrompts.shift();
       if (queued !== void 0) return queued;
@@ -39071,6 +39098,7 @@ var codexProvider = {
         if (prompt === void 0) return;
         const streamed = await thread.runStreamed(prompt, { signal: abortController.signal });
         for await (const event of streamed.events) {
+          request3.emitProviderEvent?.(objectValue2(event));
           if (event.type === "thread.started") {
             resumeToken = event.thread_id;
             mapper.setThreadId(event.thread_id);
@@ -215128,7 +215156,7 @@ Awr();
 var import_node2 = __toESM(require_node(), 1);
 import { spawn as spawn3 } from "node:child_process";
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { existsSync as existsSync13 } from "node:fs";
+import { existsSync as existsSync12 } from "node:fs";
 import { createRequire as createRequire2 } from "node:module";
 import { Socket as Socket3 } from "node:net";
 import { dirname as dirname8, join as join30 } from "node:path";
@@ -216192,7 +216220,7 @@ function getBundledCliPath() {
   const searchPaths = req.resolve.paths("@github/copilot") ?? [];
   for (const base of searchPaths) {
     const candidate = join30(base, "@github", "copilot", "index.js");
-    if (existsSync13(candidate)) {
+    if (existsSync12(candidate)) {
       return candidate;
     }
   }
@@ -217139,7 +217167,7 @@ var CopilotClient = class _CopilotClient {
             t7.captureContent
           );
       }
-      if (!existsSync13(this.options.cliPath)) {
+      if (!existsSync12(this.options.cliPath)) {
         throw new Error(
           `Copilot CLI not found at ${this.options.cliPath}. Ensure @github/copilot is installed.`
         );
@@ -218024,6 +218052,14 @@ function writeSessionEvent(requestId, event) {
     event: canonical
   });
 }
+function writeProviderEvent(request3, event) {
+  write({
+    type: "provider.event",
+    requestId: request3.requestId,
+    runtime: request3.runtime,
+    event
+  });
+}
 function parseInput(line) {
   const record2 = JSON.parse(line);
   if (!record2 || typeof record2 !== "object" || !("type" in record2)) {
@@ -218040,7 +218076,10 @@ async function run(request3) {
       return;
     }
     const provider = getProvider(request3.runtime);
-    const handle = await provider.execute(request3);
+    const handle = await provider.execute({
+      ...request3,
+      emitProviderEvent: (event) => writeProviderEvent(request3, event)
+    });
     state.handle = handle;
     const emitResumeToken = createResumeTokenWatcher(handle, (resumeToken) => {
       write({ type: "resumeToken", requestId: request3.requestId, resumeToken });

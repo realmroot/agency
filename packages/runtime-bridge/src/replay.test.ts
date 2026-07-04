@@ -11,75 +11,141 @@ function tempFile(dir: string, name: string, records: unknown[]) {
   return filePath
 }
 
+function providerRecord(event: Record<string, unknown>, runtime = 'codex') {
+  return { sequence: 1, createdAt: '2026-07-04T00:00:00.000Z', runtime, event }
+}
+
 function textFromMessageEvent(event: { payload: { message?: { content?: Array<{ text?: string }> } } }) {
   return event.payload.message?.content?.map((block) => block.text ?? '').join('') ?? ''
 }
 
 describe('runtime event replay', () => {
-  it('maps provider JSONL for each external runtime through AMA event mappers', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-test-'))
-    const sources = {
-      codex: tempFile(dir, 'codex.jsonl', [
-        {
-          type: 'response_item',
-          payload: {
-            type: 'message',
-            id: 'codex_msg',
-            role: 'assistant',
-            content: [{ type: 'output_text', text: 'codex ok' }],
-          },
-        },
-      ]),
-      'claude-code': tempFile(dir, 'claude.jsonl', [
-        {
-          type: 'assistant',
-          uuid: 'claude_msg',
-          message: { content: [{ type: 'text', text: 'claude ok' }] },
-        },
-        { type: 'result', modelUsage: {} },
-      ]),
-      copilot: tempFile(dir, 'copilot.jsonl', [
-        { type: 'assistant.turn.started', data: {} },
-        { type: 'assistant.message', data: { messageId: 'copilot_msg', content: 'copilot ok' } },
-        { type: 'session.idle', data: {} },
-      ]),
-    } as const
+  it('maps captured Codex provider stream events through the runtime mapper', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-provider-test-'))
+    const sourcePath = tempFile(dir, 'provider-events.jsonl', [
+      providerRecord({ type: 'thread.started', thread_id: 'thread_1' }),
+      providerRecord({
+        type: 'item.completed',
+        item: { id: 'codex_msg', type: 'agent_message', text: 'codex ok' },
+      }),
+      providerRecord({ type: 'turn.completed' }),
+    ])
 
-    for (const [runtime, sourcePath] of Object.entries(sources)) {
-      const events = runtimeEventsFromSource({ runtime: runtime as keyof typeof sources, sourcePath })
-      expect(events.at(0)?.type).toBe('runtime.started')
-      expect(events.some((event) => event.type === 'turn.started')).toBe(true)
-      expect(events.at(-1)?.type).toBe('turn.completed')
-      const message = events.find((event) => event.type === 'message.completed')
-      const expected = runtime === 'claude-code' ? 'claude ok' : runtime === 'copilot' ? 'copilot ok' : 'codex ok'
-      expect(message).toBeDefined()
-      expect(textFromMessageEvent(message as Parameters<typeof textFromMessageEvent>[0])).toContain(expected)
-    }
+    const events = runtimeEventsFromSource({ sourcePath })
+
+    expect(events.at(0)?.type).toBe('runtime.started')
+    expect(events.at(-1)?.type).toBe('turn.completed')
+    const message = events.find((event) => event.type === 'message.completed')
+    expect(message).toBeDefined()
+    expect(textFromMessageEvent(message as Parameters<typeof textFromMessageEvent>[0])).toContain('codex ok')
   })
 
-  it('rebuilds an events.jsonl file and backs up the previous log', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-rebuild-test-'))
-    const sourcePath = tempFile(dir, 'bridge.ndjson', [
-      { type: 'ready', requestId: 'run_1' },
-      {
-        type: 'runtime.event',
-        requestId: 'run_1',
-        event: {
+  it('maps Codex collab tool calls from captured provider events to the canonical agent tool contract', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-collab-test-'))
+    const sourcePath = tempFile(dir, 'provider-events.jsonl', [
+      providerRecord({
+        type: 'item.started',
+        item: {
+          id: 'collab_spawn_1',
+          type: 'collab_tool_call',
+          tool: 'spawn_agent',
+          sender_thread_id: 'thread_parent',
+          receiver_thread_ids: [],
+          prompt: 'Review the patch',
+          agents_states: {},
+          status: 'in_progress',
+        },
+      }),
+      providerRecord({
+        type: 'item.completed',
+        item: {
+          id: 'collab_spawn_1',
+          type: 'collab_tool_call',
+          tool: 'spawn_agent',
+          sender_thread_id: 'thread_parent',
+          receiver_thread_ids: ['agent_1'],
+          prompt: 'Review the patch',
+          agents_states: { agent_1: { status: 'pending_init' } },
+          status: 'completed',
+        },
+      }),
+      providerRecord({
+        type: 'item.completed',
+        item: {
+          id: 'collab_wait_1',
+          type: 'collab_tool_call',
+          tool: 'wait',
+          sender_thread_id: 'thread_parent',
+          receiver_thread_ids: ['agent_1'],
+          agents_states: { agent_1: { status: 'completed', message: 'Review passed.' } },
+          status: 'completed',
+        },
+      }),
+    ])
+
+    const events = runtimeEventsFromSource({ sourcePath })
+
+    expect(JSON.stringify(events)).not.toContain('"spawn_agent"')
+    expect(JSON.stringify(events)).not.toContain('"wait"')
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
           type: 'message.completed',
           payload: {
-            message: {
-              id: 'msg_1',
+            message: expect.objectContaining({
               role: 'assistant',
-              content: [{ type: 'text', text: 'hello from bridge' }],
-            },
+              content: [
+                {
+                  type: 'tool_call',
+                  toolCall: {
+                    id: 'collab_spawn_1',
+                    name: 'agent',
+                    input: { prompt: 'Review the patch' },
+                  },
+                },
+              ],
+            }),
           },
-        },
-      },
-      { type: 'result', requestId: 'run_1', result: { resumeToken: 'provider_session_1' } },
-    ])
+        }),
+        expect.objectContaining({
+          type: 'message.completed',
+          payload: {
+            message: expect.objectContaining({
+              role: 'tool',
+              parentToolCallId: 'collab_spawn_1',
+              content: [
+                {
+                  type: 'tool_result',
+                  toolCallId: 'collab_spawn_1',
+                  result: {
+                    content: [{ type: 'text', text: 'Review passed.' }],
+                    structuredContent: {
+                      agentId: 'agent_1',
+                      status: 'completed',
+                      provider: 'codex',
+                      rawStatus: { status: 'completed', message: 'Review passed.' },
+                    },
+                  },
+                },
+              ],
+            }),
+          },
+        }),
+      ]),
+    )
+  })
+
+  it('rebuilds an events.jsonl file from the default provider-events sidecar', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-rebuild-test-'))
     const targetDir = join(dir, 'sessions', 'session_1')
     const targetPath = join(targetDir, 'events.jsonl')
     mkdirSync(targetDir, { recursive: true })
+    tempFile(targetDir, 'provider-events.jsonl', [
+      providerRecord({
+        type: 'item.completed',
+        item: { id: 'codex_msg', type: 'agent_message', text: 'hello from provider sidecar' },
+      }),
+    ])
     writeFileSync(
       targetPath,
       `${JSON.stringify({
@@ -92,13 +158,13 @@ describe('runtime event replay', () => {
       })}\n`,
     )
 
-    const result = rebuildSessionEvents({ sourcePath, eventsPath: targetPath })
+    const result = rebuildSessionEvents({ eventsPath: targetPath })
 
     expect(result).toMatchObject({
       targetPath,
       backupPath: expect.stringContaining('events.jsonl.bak-'),
       sessionId: 'session_1',
-      events: 1,
+      events: 4,
       dryRun: false,
     })
     expect(result.backupPath && existsSync(result.backupPath)).toBe(true)
@@ -106,100 +172,80 @@ describe('runtime event replay', () => {
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line))
-    expect(rebuilt).toHaveLength(1)
+    expect(rebuilt).toHaveLength(4)
     expect(rebuilt[0]).toMatchObject({
       id: 'event_rebuilt_00000001',
       sessionId: 'session_1',
       sequence: 1,
-      type: 'message.completed',
+      type: 'runtime.started',
     })
     expect(rebuilt[0].createdAt).toBe('2026-07-03T00:00:00.001Z')
+    expect(JSON.stringify(rebuilt)).toContain('hello from provider sidecar')
   })
 
-  it('rejects provider JSONL with multiple top-level target runtime sessions', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-binding-test-'))
-    const sourcePath = tempFile(dir, 'codex-mixed.jsonl', [
-      { type: 'session_meta', payload: { id: 'thread_1' } },
-      {
-        type: 'response_item',
-        payload: {
-          type: 'message',
-          id: 'codex_msg_1',
-          role: 'assistant',
-          content: [{ type: 'output_text', text: 'first session' }],
-        },
-      },
-      { type: 'session_meta', payload: { id: 'thread_2' } },
-      {
-        type: 'response_item',
-        payload: {
-          type: 'message',
-          id: 'codex_msg_2',
-          role: 'assistant',
-          content: [{ type: 'output_text', text: 'second session' }],
-        },
-      },
-    ])
-
-    expect(() => runtimeEventsFromSource({ runtime: 'codex', sourcePath })).toThrow(
-      /multiple target runtime session ids \(thread_1, thread_2\)/,
-    )
-  })
-
-  it('allows Codex subagent session metadata inside one top-level target runtime session', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-subagent-binding-test-'))
-    const sourcePath = tempFile(dir, 'codex-subagent.jsonl', [
-      { type: 'session_meta', payload: { id: 'thread_1' } },
-      {
-        type: 'session_meta',
-        payload: {
-          id: 'agent_1',
-          thread_source: 'subagent',
-          source: { subagent: { thread_spawn: { parent_thread_id: 'thread_1' } } },
-        },
-      },
-      {
-        type: 'response_item',
-        payload: {
-          type: 'message',
-          id: 'codex_msg_1',
-          role: 'assistant',
-          content: [{ type: 'output_text', text: 'main session continues' }],
-        },
-      },
-    ])
-
-    const events = runtimeEventsFromSource({ runtime: 'codex', sourcePath })
-    expect(
-      events.some((event) =>
-        textFromMessageEvent(event as Parameters<typeof textFromMessageEvent>[0]).includes('main session continues'),
-      ),
-    ).toBe(true)
-  })
-
-  it('rejects bridge NDJSON with multiple target runtime resume tokens', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-binding-test-'))
-    const sourcePath = tempFile(dir, 'bridge-mixed.ndjson', [
-      { type: 'resumeToken', requestId: 'run_1', resumeToken: 'provider_session_1' },
+  it('extracts provider.event frames from captured bridge NDJSON', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-test-'))
+    const sourcePath = tempFile(dir, 'bridge.ndjson', [
+      { type: 'ready', requestId: 'run_1' },
       {
         type: 'runtime.event',
         requestId: 'run_1',
+        event: { type: 'message.completed', payload: { ignored: true } },
+      },
+      {
+        type: 'provider.event',
+        requestId: 'run_1',
+        runtime: 'codex',
         event: {
-          type: 'message.completed',
-          payload: {
-            message: {
-              id: 'msg_1',
-              role: 'assistant',
-              content: [{ type: 'text', text: 'hello from bridge' }],
-            },
-          },
+          type: 'item.completed',
+          item: { id: 'codex_msg', type: 'agent_message', text: 'hello from provider frame' },
         },
       },
-      { type: 'result', requestId: 'run_1', result: { resumeToken: 'provider_session_2' } },
+      { type: 'result', requestId: 'run_1', result: { resumeToken: 'provider_session_1' } },
+    ])
+
+    const events = runtimeEventsFromSource({ sourcePath, sourceFormat: 'bridge-ndjson' })
+
+    expect(JSON.stringify(events)).toContain('hello from provider frame')
+    expect(JSON.stringify(events)).not.toContain('ignored')
+  })
+
+  it('rejects bridge NDJSON that mixes provider events from multiple requests', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-mixed-test-'))
+    const sourcePath = tempFile(dir, 'bridge.ndjson', [
+      {
+        type: 'provider.event',
+        requestId: 'run_1',
+        runtime: 'codex',
+        event: { type: 'item.completed', item: { id: 'msg_1', type: 'agent_message', text: 'first' } },
+      },
+      {
+        type: 'provider.event',
+        requestId: 'run_2',
+        runtime: 'codex',
+        event: { type: 'item.completed', item: { id: 'msg_2', type: 'agent_message', text: 'second' } },
+      },
     ])
 
     expect(() => runtimeEventsFromSource({ sourcePath, sourceFormat: 'bridge-ndjson' })).toThrow(
-      /multiple target runtime session ids \(provider_session_1, provider_session_2\)/,
+      /multiple provider request ids: run_1, run_2/,
     )
+  })
+
+  it('rejects old raw provider JSONL sources', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-raw-reject-test-'))
+    const sourcePath = tempFile(dir, 'codex-raw.jsonl', [
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          id: 'codex_msg',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'old raw event' }],
+        },
+      },
+    ])
+
+    expect(() => runtimeEventsFromSource({ runtime: 'codex', sourcePath })).toThrow(/Unable to infer source format/)
   })
 })

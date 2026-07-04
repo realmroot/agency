@@ -24,4 +24,4 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run smoke:bridge
+      - run: pnpm run smoke:mock

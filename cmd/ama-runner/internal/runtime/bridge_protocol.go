@@ -59,7 +59,13 @@ func (bridgeProtocol) waitReady(reader *bridgeLineReader) error {
 	return nil
 }
 
-func (bridgeProtocol) readResult(reader *bridgeLineReader, requestID string, write EventWriter, onResumeToken func(string) error) (JSON, error) {
+func (bridgeProtocol) readResult(
+	reader *bridgeLineReader,
+	requestID string,
+	write EventWriter,
+	onResumeToken func(string) error,
+	onProviderEvent func(string, JSON) error,
+) (JSON, error) {
 	for {
 		line, err := reader.readLine()
 		if err != nil {
@@ -94,6 +100,21 @@ func (bridgeProtocol) readResult(reader *bridgeLineReader, requestID string, wri
 			}
 			if err := write(envelope.Event); err != nil {
 				return nil, err
+			}
+		case runtimebridge.BridgeMessageTypeProviderEvent:
+			if envelope.Runtime == "" {
+				return nil, fmt.Errorf("runtime bridge provider event missing runtime")
+			}
+			if envelope.Event == nil {
+				return nil, fmt.Errorf("runtime bridge provider event missing body")
+			}
+			if _, ok := envelope.Event["type"].(string); !ok {
+				return nil, fmt.Errorf("runtime bridge provider event missing type")
+			}
+			if onProviderEvent != nil {
+				if err := onProviderEvent(string(envelope.Runtime), envelope.Event); err != nil {
+					return nil, err
+				}
 			}
 		case runtimebridge.BridgeMessageTypeResult:
 			return envelope.Result, nil

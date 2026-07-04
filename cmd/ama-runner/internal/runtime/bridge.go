@@ -124,7 +124,13 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 		})
 	}
 
-	result, readErr := protocol.readResult(stdoutLines, requestID, writeSerialized, request.OnResumeToken)
+	result, readErr := protocol.readResult(
+		stdoutLines,
+		requestID,
+		writeSerialized,
+		request.OnResumeToken,
+		request.OnProviderEvent,
+	)
 	_ = stdin.Close()
 	if readErr != nil {
 		b.stopProcess(cmd)
@@ -218,7 +224,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 		return nil, err
 	}
 	noop := func(JSON) error { return nil }
-	return protocol.readResult(reader, requestID, noop, nil)
+	return protocol.readResult(reader, requestID, noop, nil, nil)
 }
 
 func commandEnvironment(request Request) ([]string, error) {

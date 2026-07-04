@@ -129,6 +129,14 @@ export const RuntimeBridgeEventMessageSchema = z
     event: RuntimeBridgeEventBodySchema,
   })
   .strict()
+export const RuntimeBridgeProviderEventMessageSchema = z
+  .object({
+    type: z.literal('provider.event'),
+    requestId: z.string(),
+    runtime: ExternalRuntimeNameSchema,
+    event: RuntimeBridgeEventBodySchema,
+  })
+  .strict()
 export const RuntimeBridgeResumeTokenMessageSchema = z
   .object({
     type: z.literal('resumeToken'),
@@ -154,6 +162,7 @@ export const RuntimeBridgeErrorMessageSchema = z
 export const RuntimeBridgeOutputMessageSchema = z.discriminatedUnion('type', [
   RuntimeBridgeReadyMessageSchema,
   RuntimeBridgeEventMessageSchema,
+  RuntimeBridgeProviderEventMessageSchema,
   RuntimeBridgeResumeTokenMessageSchema,
   RuntimeBridgeResultMessageSchema,
   RuntimeBridgeErrorMessageSchema,

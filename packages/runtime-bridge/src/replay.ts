@@ -1,19 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { RuntimeBridgeOutputMessageSchema, type RuntimeBridgeRunMessage } from '@ama/runtime-contracts/bridge-protocol'
-import { AmaEventSchema, SessionEventSchema } from '@ama/runtime-contracts/session-events'
 import { runtimeEvent, turnEnd } from './events/ama'
 import type { AmaRuntimeEvent } from './protocol'
-import { claudeCodeEventsFromJsonl } from './providers/claude-code'
-import { codexEventsFromJsonl } from './providers/codex'
-import { copilotEventsFromJsonl } from './providers/copilot'
+import { codexEventsFromProviderEvents } from './providers/codex'
 
-export type RuntimeReplaySourceFormat = 'auto' | 'ama-events' | 'bridge-ndjson' | 'provider-jsonl'
+export type RuntimeReplaySourceFormat = 'auto' | 'provider-events' | 'bridge-ndjson'
 
 export type RuntimeReplayInput = {
   runtime?: RuntimeBridgeRunMessage['runtime']
   sourcePath: string
   sourceFormat?: RuntimeReplaySourceFormat
-  home?: string
 }
 
 type JsonlRecord = {
@@ -25,177 +21,123 @@ type JsonObject = Record<string, unknown>
 
 export function runtimeEventsFromSource(input: RuntimeReplayInput): AmaRuntimeEvent[] {
   const records = readJsonl(input.sourcePath)
-  const format = resolveSourceFormat(records, input.sourceFormat ?? 'auto', input.runtime)
-  assertSingleTargetRuntimeSession(records, format, input.runtime, input.sourcePath)
+  const format = resolveSourceFormat(records, input.sourceFormat ?? 'auto')
   switch (format) {
-    case 'ama-events':
-      return eventsFromAmaJsonl(records, input.sourcePath)
+    case 'provider-events':
+      return eventsFromProviderEventRecords(records, input.sourcePath, input.runtime)
     case 'bridge-ndjson':
-      return eventsFromBridgeNdjson(records, input.sourcePath)
-    case 'provider-jsonl':
-      return withRuntimeLifecycle(eventsFromProviderJsonl(input))
+      return eventsFromBridgeNdjson(records, input.sourcePath, input.runtime)
     default:
       throw new Error(`Unsupported replay source format: ${format}`)
   }
 }
 
-function assertSingleTargetRuntimeSession(
-  records: JsonlRecord[],
-  format: Exclude<RuntimeReplaySourceFormat, 'auto'>,
-  runtime: RuntimeReplayInput['runtime'],
-  sourcePath: string,
-) {
-  const ids =
-    format === 'bridge-ndjson'
-      ? bridgeRuntimeSessionIds(records)
-      : format === 'provider-jsonl' && runtime
-        ? providerRuntimeSessionIds(records, runtime)
-        : []
-  const unique = [...new Set(ids)]
-  if (unique.length <= 1) {
-    return
-  }
-  throw new Error(
-    `Replay source ${sourcePath} contains multiple target runtime session ids (${unique.join(', ')}); one AMA session can be rebuilt from exactly one target runtime session`,
-  )
-}
-
 export function withRuntimeLifecycle(events: AmaRuntimeEvent[]): AmaRuntimeEvent[] {
-  const prefix: AmaRuntimeEvent[] = []
-  if (!events.some((event) => event.type === 'runtime.started')) prefix.push(runtimeEvent('runtime.started'))
-  if (!events.some((event) => event.type === 'turn.started'))
-    prefix.push(runtimeEvent('turn.started', { status: 'running' }))
-  const suffix = events.some((event) => event.type === 'turn.completed') ? [] : [turnEnd()]
-  return [...prefix, ...events, ...suffix]
-}
-
-function bridgeRuntimeSessionIds(records: JsonlRecord[]): string[] {
-  const ids: string[] = []
-  for (const record of records) {
-    const parsed = RuntimeBridgeOutputMessageSchema.safeParse(record.value)
-    if (!parsed.success) continue
-    if (parsed.data.type === 'resumeToken') {
-      ids.push(parsed.data.resumeToken)
-      continue
-    }
-    if (parsed.data.type === 'result') {
-      const resumeToken = stringValue(parsed.data.result.resumeToken)
-      if (resumeToken) ids.push(resumeToken)
-    }
+  const output = [...events]
+  if (!output.some((event) => event.type === 'runtime.started')) output.unshift(runtimeEvent('runtime.started'))
+  if (!output.some((event) => event.type === 'turn.started')) {
+    const runtimeIndex = output.findIndex((event) => event.type === 'runtime.started')
+    output.splice(runtimeIndex >= 0 ? runtimeIndex + 1 : 0, 0, runtimeEvent('turn.started', { status: 'running' }))
   }
-  return ids
+  if (!output.some((event) => event.type === 'turn.completed')) output.push(turnEnd())
+  return output
 }
 
-function providerRuntimeSessionIds(records: JsonlRecord[], runtime: RuntimeBridgeRunMessage['runtime']): string[] {
-  switch (runtime) {
-    case 'codex':
-      return codexTopLevelSessionIds(records)
-    case 'claude-code':
-      return records.map((record) => stringValue(objectValue(record.value).session_id)).filter(isString)
-    case 'copilot':
-      return copilotSessionIds(records)
-    default:
-      return []
-  }
+function eventsFromProviderEventRecords(
+  records: JsonlRecord[],
+  sourcePath: string,
+  runtimeOverride: RuntimeReplayInput['runtime'],
+): AmaRuntimeEvent[] {
+  const runtime = inferProviderEventsRuntime(records, runtimeOverride, sourcePath)
+  const providerEvents = records.map((record) => providerEventFromRecord(record, sourcePath))
+  return eventsFromCapturedProviderEvents(runtime, providerEvents)
 }
 
-function codexTopLevelSessionIds(records: JsonlRecord[]): string[] {
-  const ids: string[] = []
-  for (const record of records) {
-    const raw = objectValue(record.value)
-    if (raw.type !== 'session_meta') continue
-    const payload = objectValue(raw.payload)
-    if (isCodexSubagentSessionMeta(payload)) continue
-    const id = stringValue(payload.session_id) ?? stringValue(payload.id) ?? stringValue(payload.thread_id)
-    if (id) ids.push(id)
-  }
-  return ids
-}
-
-function isCodexSubagentSessionMeta(payload: JsonObject): boolean {
-  if (stringValue(payload.thread_source) === 'subagent') return true
-  if (stringValue(payload.parent_thread_id)) return true
-  const source = objectValue(payload.source)
-  const subagent = objectValue(source.subagent)
-  const threadSpawn = objectValue(subagent.thread_spawn)
-  return Boolean(stringValue(threadSpawn.parent_thread_id))
-}
-
-function copilotSessionIds(records: JsonlRecord[]): string[] {
-  const ids: string[] = []
-  for (const record of records) {
-    const raw = objectValue(record.value)
-    const data = objectValue(raw.data)
-    const id =
-      stringValue(raw.sessionId) ??
-      stringValue(raw.session_id) ??
-      stringValue(data.sessionId) ??
-      stringValue(data.session_id) ??
-      stringValue(data.conversationId)
-    if (id) ids.push(id)
-  }
-  return ids
-}
-
-function eventsFromProviderJsonl(input: RuntimeReplayInput): AmaRuntimeEvent[] {
-  if (!input.runtime) {
-    throw new Error('--runtime is required when replaying provider JSONL')
-  }
-  switch (input.runtime) {
-    case 'codex':
-      return codexEventsFromJsonl(input.sourcePath, input.home ? { home: input.home } : {})
-    case 'claude-code':
-      return claudeCodeEventsFromJsonl(input.sourcePath)
-    case 'copilot':
-      return copilotEventsFromJsonl(input.sourcePath)
-    default:
-      throw new Error(`Unsupported runtime provider: ${input.runtime}`)
-  }
-}
-
-function eventsFromAmaJsonl(records: JsonlRecord[], sourcePath: string): AmaRuntimeEvent[] {
-  return records.map((record) => {
-    const sessionEvent = SessionEventSchema.safeParse(record.value)
-    if (sessionEvent.success) {
-      return AmaEventSchema.parse({
-        type: sessionEvent.data.type,
-        payload: sessionEvent.data.payload,
-      }) as AmaRuntimeEvent
-    }
-    const event = AmaEventSchema.safeParse(record.value)
-    if (event.success) return event.data as AmaRuntimeEvent
-    throw new Error(`read AMA events JSONL ${sourcePath} line ${record.line}: not an AMA event record`)
-  })
-}
-
-function eventsFromBridgeNdjson(records: JsonlRecord[], sourcePath: string): AmaRuntimeEvent[] {
-  const events: AmaRuntimeEvent[] = []
+function eventsFromBridgeNdjson(
+  records: JsonlRecord[],
+  sourcePath: string,
+  runtimeOverride: RuntimeReplayInput['runtime'],
+): AmaRuntimeEvent[] {
+  const providerRecords: JsonlRecord[] = []
   for (const record of records) {
     const parsed = RuntimeBridgeOutputMessageSchema.safeParse(record.value)
     if (!parsed.success) {
       throw new Error(`read runtime bridge NDJSON ${sourcePath} line ${record.line}: invalid bridge output message`)
     }
-    if (parsed.data.type !== 'runtime.event') continue
-    const event = AmaEventSchema.safeParse(parsed.data.event)
-    if (!event.success) {
-      throw new Error(`read runtime bridge NDJSON ${sourcePath} line ${record.line}: invalid AMA runtime event`)
-    }
-    events.push(event.data as AmaRuntimeEvent)
+    if (parsed.data.type === 'provider.event') providerRecords.push({ line: record.line, value: parsed.data })
   }
-  return events
+  if (providerRecords.length === 0) {
+    throw new Error(`runtime bridge NDJSON ${sourcePath} contains no provider.event frames`)
+  }
+  const requestIds = [
+    ...new Set(
+      providerRecords
+        .map((record) => stringValue(objectValue(record.value).requestId))
+        .filter((requestId): requestId is string => Boolean(requestId)),
+    ),
+  ]
+  if (requestIds.length > 1) {
+    throw new Error(
+      `runtime bridge NDJSON ${sourcePath} contains multiple provider request ids: ${requestIds.join(', ')}`,
+    )
+  }
+  return eventsFromProviderEventRecords(providerRecords, sourcePath, runtimeOverride)
+}
+
+function eventsFromCapturedProviderEvents(
+  runtime: RuntimeBridgeRunMessage['runtime'],
+  providerEvents: unknown[],
+): AmaRuntimeEvent[] {
+  switch (runtime) {
+    case 'codex':
+      return withRuntimeLifecycle(codexEventsFromProviderEvents(providerEvents))
+    default:
+      throw new Error(`Rebuild from captured provider events is not implemented for runtime: ${runtime}`)
+  }
+}
+
+function inferProviderEventsRuntime(
+  records: JsonlRecord[],
+  runtimeOverride: RuntimeReplayInput['runtime'],
+  sourcePath: string,
+): RuntimeBridgeRunMessage['runtime'] {
+  const runtimes = [
+    ...new Set(
+      records
+        .map((record) => stringValue(objectValue(record.value).runtime))
+        .filter((runtime): runtime is RuntimeBridgeRunMessage['runtime'] => isRuntime(runtime)),
+    ),
+  ]
+  if (runtimeOverride && runtimes.some((runtime) => runtime !== runtimeOverride)) {
+    throw new Error(
+      `provider events ${sourcePath} contain runtime ${runtimes.join(', ')} but --runtime is ${runtimeOverride}`,
+    )
+  }
+  if (runtimeOverride) return runtimeOverride
+  const onlyRuntime = runtimes[0]
+  if (runtimes.length === 1 && onlyRuntime) return onlyRuntime
+  if (runtimes.length > 1) {
+    throw new Error(`provider events ${sourcePath} contain multiple runtimes: ${runtimes.join(', ')}`)
+  }
+  throw new Error(`provider events ${sourcePath} do not declare a runtime; pass --runtime`)
+}
+
+function providerEventFromRecord(record: JsonlRecord, sourcePath: string): JsonObject {
+  const event = objectValue(objectValue(record.value).event)
+  if (!event.type || typeof event.type !== 'string') {
+    throw new Error(`read provider events ${sourcePath} line ${record.line}: provider event is missing type`)
+  }
+  return event
 }
 
 function resolveSourceFormat(
   records: JsonlRecord[],
   requested: RuntimeReplaySourceFormat,
-  runtime: RuntimeReplayInput['runtime'],
 ): Exclude<RuntimeReplaySourceFormat, 'auto'> {
   if (requested !== 'auto') return requested
-  const first = records[0]?.value
-  if (SessionEventSchema.safeParse(first).success || AmaEventSchema.safeParse(first).success) return 'ama-events'
   if (records.some((record) => RuntimeBridgeOutputMessageSchema.safeParse(record.value).success)) return 'bridge-ndjson'
-  if (runtime) return 'provider-jsonl'
-  throw new Error('Unable to infer source format; pass --source-format or --runtime')
+  if (records.some((record) => objectValue(record.value).event !== undefined)) return 'provider-events'
+  throw new Error('Unable to infer source format; pass --source-format')
 }
 
 function objectValue(value: unknown): JsonObject {
@@ -206,8 +148,8 @@ function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value ? value : null
 }
 
-function isString(value: string | null): value is string {
-  return Boolean(value)
+function isRuntime(value: string | null): value is RuntimeBridgeRunMessage['runtime'] {
+  return value === 'codex' || value === 'claude-code' || value === 'copilot'
 }
 
 function readJsonl(filePath: string): JsonlRecord[] {

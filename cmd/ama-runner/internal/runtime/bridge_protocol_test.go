@@ -12,9 +12,11 @@ func TestBridgeProtocolReadsReadyEventsResultsErrorsAndLogs(t *testing.T) {
 	output := strings.Join([]string{
 		`{"type":"ready"}`,
 		`{"type":"resumeToken","requestId":"run_session_1","resumeToken":"thread_1"}`,
+		`{"type":"provider.event","requestId":"run_session_1","runtime":"codex","event":{"type":"item.completed","item":{"type":"collab_tool_call"}}}`,
 		`{"type":"runtime.event","requestId":"run_session_1","event":{"type":"message.completed","payload":{"message":{"id":"msg_1","role":"assistant","content":[{"type":"text","text":"ok"}]}}}}`,
 		`{"type":"resumeToken","requestId":"other","resumeToken":"ignored"}`,
 		`{"type":"runtime.event","requestId":"run_session_1","event":{"type":"runtime.error","payload":{"message":"bridge diagnostic"}}}`,
+		`{"type":"provider.event","requestId":"other","runtime":"codex","event":{"type":"ignored"}}`,
 		`{"type":"runtime.event","requestId":"other","event":{"type":"message.completed","payload":{"message":{"role":"assistant","content":"ignored"}}}}`,
 		`{"type":"result","requestId":"run_session_1","result":{"exitCode":0,"providerThreadId":"thread_1"}}`,
 	}, "\n")
@@ -23,12 +25,16 @@ func TestBridgeProtocolReadsReadyEventsResultsErrorsAndLogs(t *testing.T) {
 		t.Fatalf("expected bridge ready, got %v", err)
 	}
 	var events []string
+	var providerEvents []string
 	var resumeTokens []string
 	result, err := protocol.readResult(reader, "run_session_1", func(event JSON) error {
 		events = append(events, mustJSON(t, event))
 		return nil
 	}, func(resumeToken string) error {
 		resumeTokens = append(resumeTokens, resumeToken)
+		return nil
+	}, func(runtimeName string, event JSON) error {
+		providerEvents = append(providerEvents, runtimeName+":"+mustJSON(t, event))
 		return nil
 	})
 	if err != nil {
@@ -39,6 +45,9 @@ func TestBridgeProtocolReadsReadyEventsResultsErrorsAndLogs(t *testing.T) {
 	}
 	if len(resumeTokens) != 1 || resumeTokens[0] != "thread_1" {
 		t.Fatalf("expected scoped resume token callback, got %v", resumeTokens)
+	}
+	if len(providerEvents) != 1 || !strings.Contains(providerEvents[0], "codex") || !strings.Contains(providerEvents[0], "collab_tool_call") {
+		t.Fatalf("expected scoped provider event callback, got %v", providerEvents)
 	}
 	if result["providerThreadId"] != "thread_1" {
 		t.Fatalf("expected bridge result, got %#v", result)
@@ -64,7 +73,7 @@ func TestBridgeProtocolStopsBeforeEventsWhenResumeTokenPersistFails(t *testing.T
 		return nil
 	}, func(string) error {
 		return persistErr
-	})
+	}, nil)
 	if !errors.Is(err, persistErr) {
 		t.Fatalf("expected resume token persist error, got %v", err)
 	}
@@ -91,36 +100,36 @@ func TestBridgeProtocolErrorBranches(t *testing.T) {
 	if err := protocol.waitReady(reader); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "missing type") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "missing type") {
 		t.Fatalf("expected missing event type error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{"type":"runtime.event","requestId":"run_session_1"}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "missing body") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "missing body") {
 		t.Fatalf("expected missing event body error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{"type":"error","requestId":"run_session_1","error":{"message":"sdk failed"}}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "sdk failed") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "sdk failed") {
 		t.Fatalf("expected bridge error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{"type":"error","requestId":"run_session_1","error":{}}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "runtime bridge failed") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "runtime bridge failed") {
 		t.Fatalf("expected default bridge error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "invalid runtime bridge message") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "invalid runtime bridge message") {
 		t.Fatalf("expected invalid message json error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{"type":"log","requestId":"run_session_1"}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "unsupported runtime bridge message") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "unsupported runtime bridge message") {
 		t.Fatalf("expected unsupported message error, got %v", err)
 	}
 	writeErr := errors.New("write failed")
 	reader = protocol.lineReader(strings.NewReader(`{"type":"runtime.event","requestId":"run_session_1","event":{"type":"runtime.error","payload":{"message":"diag"}}}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return writeErr }, nil); !errors.Is(err, writeErr) {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return writeErr }, nil, nil); !errors.Is(err, writeErr) {
 		t.Fatalf("expected writer error, got %v", err)
 	}
 	reader = protocol.lineReader(strings.NewReader(`{"type":"runtime.event","requestId":"other","event":{"type":"message.completed","payload":{}}}` + "\n"))
-	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil); err == nil || !strings.Contains(err.Error(), "exited before result") {
+	if _, err := protocol.readResult(reader, "run_session_1", func(JSON) error { return nil }, nil, nil); err == nil || !strings.Contains(err.Error(), "exited before result") {
 		t.Fatalf("expected missing result error, got %v", err)
 	}
 }
@@ -142,7 +151,7 @@ func TestBridgeProtocolReadsLargeNativeRuntimeEvents(t *testing.T) {
 	result, err := protocol.readResult(reader, "run_session_1", func(value JSON) error {
 		event = value
 		return nil
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("expected large native event to pass through, got %v", err)
 	}

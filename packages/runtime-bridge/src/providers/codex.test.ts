@@ -1,6 +1,3 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
@@ -153,51 +150,45 @@ async function* subagentFunctionEvents() {
   }
 }
 
-function writeCodexChildSession(home: string, agentId: string) {
-  const sessionDir = join(home, '.codex', 'sessions', '2026', '07', '03')
-  mkdirSync(sessionDir, { recursive: true })
-  writeFileSync(
-    join(sessionDir, `rollout-2026-07-03T12-00-00-${agentId}.jsonl`),
-    [
-      JSON.stringify({
-        timestamp: '2026-07-03T12:00:00.000Z',
-        type: 'session_meta',
-        payload: {
-          id: agentId,
-          thread_source: 'subagent',
-          source: { subagent: { thread_spawn: { parent_thread_id: 'thread_1' } } },
-        },
-      }),
-      JSON.stringify({
-        timestamp: '2026-07-03T12:00:01.000Z',
-        type: 'response_item',
-        payload: {
-          type: 'message',
-          role: 'assistant',
-          content: [{ type: 'output_text', text: 'Inspecting the patch.' }],
-        },
-      }),
-      JSON.stringify({
-        timestamp: '2026-07-03T12:00:02.000Z',
-        type: 'response_item',
-        payload: {
-          type: 'function_call',
-          call_id: 'call_child_1',
-          name: 'exec_command',
-          arguments: JSON.stringify({ cmd: 'pnpm test' }),
-        },
-      }),
-      JSON.stringify({
-        timestamp: '2026-07-03T12:00:03.000Z',
-        type: 'response_item',
-        payload: {
-          type: 'function_call_output',
-          call_id: 'call_child_1',
-          output: 'tests passed',
-        },
-      }),
-    ].join('\n'),
-  )
+async function* collabSubagentEvents() {
+  yield {
+    type: 'item.started',
+    item: {
+      id: 'collab_spawn_1',
+      type: 'collab_tool_call',
+      tool: 'spawn_agent',
+      sender_thread_id: 'thread_parent',
+      receiver_thread_ids: [],
+      prompt: 'Review the patch',
+      agents_states: {},
+      status: 'in_progress',
+    },
+  }
+  yield {
+    type: 'item.completed',
+    item: {
+      id: 'collab_spawn_1',
+      type: 'collab_tool_call',
+      tool: 'spawn_agent',
+      sender_thread_id: 'thread_parent',
+      receiver_thread_ids: ['agent_1'],
+      prompt: 'Review the patch',
+      agents_states: { agent_1: { status: 'pending_init' } },
+      status: 'completed',
+    },
+  }
+  yield {
+    type: 'item.completed',
+    item: {
+      id: 'collab_wait_1',
+      type: 'collab_tool_call',
+      tool: 'wait',
+      sender_thread_id: 'thread_parent',
+      receiver_thread_ids: ['agent_1'],
+      agents_states: { agent_1: { status: 'completed', message: 'Review passed.' } },
+      status: 'completed',
+    },
+  }
 }
 
 async function* repeatedCommandEvents() {
@@ -405,14 +396,10 @@ describe('codexProvider', () => {
   })
 
   it('normalizes Codex sub-agent functions to the canonical AMA agent tool contract', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'codex-home-'))
-    writeCodexChildSession(home, 'agent_1')
     runStreamedMock.mockResolvedValue({ events: subagentFunctionEvents() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 
-    const handle = await codexProvider.execute(
-      request({ env: { HOME: '/home/agent', AMA_RUNTIME_BRIDGE_HOST_HOME: home } }),
-    )
+    const handle = await codexProvider.execute(request())
     const events = []
     for await (const event of handle.events) {
       events.push(event)
@@ -468,6 +455,22 @@ describe('codexProvider', () => {
         }),
       ]),
     )
+    expect(JSON.stringify(events)).not.toContain('Inspecting the patch.')
+    expect(JSON.stringify(events)).not.toContain('call_child_1')
+  })
+
+  it('normalizes Codex live collab tool calls to the canonical AMA agent tool contract', async () => {
+    runStreamedMock.mockResolvedValue({ events: collabSubagentEvents() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+
+    const handle = await codexProvider.execute(request())
+    const events = []
+    for await (const event of handle.events) {
+      events.push(event)
+    }
+
+    expect(JSON.stringify(events)).not.toContain('"spawn_agent"')
+    expect(JSON.stringify(events)).not.toContain('"wait"')
     expect(events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -475,21 +478,14 @@ describe('codexProvider', () => {
           payload: {
             message: expect.objectContaining({
               role: 'assistant',
-              parentToolCallId: 'call_spawn_1',
-              content: [{ type: 'text', text: 'Inspecting the patch.' }],
-            }),
-          },
-        }),
-        expect.objectContaining({
-          type: 'message.completed',
-          payload: {
-            message: expect.objectContaining({
-              role: 'assistant',
-              parentToolCallId: 'call_spawn_1',
               content: [
                 {
                   type: 'tool_call',
-                  toolCall: { id: 'call_child_1', name: 'bash', input: { command: 'pnpm test' } },
+                  toolCall: {
+                    id: 'collab_spawn_1',
+                    name: 'agent',
+                    input: { prompt: 'Review the patch' },
+                  },
                 },
               ],
             }),
@@ -500,14 +496,19 @@ describe('codexProvider', () => {
           payload: {
             message: expect.objectContaining({
               role: 'tool',
-              parentToolCallId: 'call_child_1',
+              parentToolCallId: 'collab_spawn_1',
               content: [
                 {
                   type: 'tool_result',
-                  toolCallId: 'call_child_1',
+                  toolCallId: 'collab_spawn_1',
                   result: {
-                    content: [{ type: 'text', text: 'tests passed' }],
-                    structuredContent: { output: 'tests passed' },
+                    content: [{ type: 'text', text: 'Review passed.' }],
+                    structuredContent: {
+                      agentId: 'agent_1',
+                      status: 'completed',
+                      provider: 'codex',
+                      rawStatus: { status: 'completed', message: 'Review passed.' },
+                    },
                   },
                 },
               ],
@@ -516,6 +517,23 @@ describe('codexProvider', () => {
         }),
       ]),
     )
+  })
+
+  it('emits raw Codex SDK stream events for rebuild sidecar capture', async () => {
+    runStreamedMock.mockResolvedValue({ events: commandEvents() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+    const providerEvents: Record<string, unknown>[] = []
+
+    const handle = await codexProvider.execute(request({ emitProviderEvent: (event) => providerEvents.push(event) }))
+    for await (const _event of handle.events) {
+      // drain
+    }
+
+    expect(providerEvents).toEqual([
+      expect.objectContaining({ type: 'turn.started' }),
+      expect.objectContaining({ type: 'item.started' }),
+      expect.objectContaining({ type: 'item.completed' }),
+    ])
   })
 
   it('does not emit model usage when Codex SDK events do not report the actual model', async () => {

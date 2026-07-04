@@ -21,7 +21,9 @@ export type RuntimeProviderHandle = {
   resolvePermission?(permissionId: string, allowed: boolean, reason?: string): Promise<void>
 }
 
-export type RuntimeProviderRequest = RuntimeBridgeRunMessage
+export type RuntimeProviderRequest = RuntimeBridgeRunMessage & {
+  emitProviderEvent?: (event: Record<string, unknown>) => void
+}
 
 export type RuntimeProvider = {
   readonly name: RuntimeBridgeRunMessage['runtime']

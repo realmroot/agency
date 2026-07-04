@@ -5,10 +5,10 @@
 // - builds and starts a real ama-runner process
 // - creates real control-plane resources over HTTP
 // - opens the real browser session WebSocket
-// - runs the focused session-socket smoke, including live prompt dispatch
+// - runs the focused session-socket integration check, including live prompt dispatch
 // - verifies live runner events and completed-session backfill after runner reconnect
 //
-//   pnpm run smoke:full
+//   pnpm run smoke:real
 
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -23,13 +23,14 @@ const PROVIDER = 'workers-ai'
 const MODEL = 'gpt-5.3-codex'
 const DONE_MARKER = 'AMA_FULL_SMOKE_DONE'
 const RESULT_MARKER = 'AMA_FULL_SMOKE_RUNTIME_OK'
+const SUBAGENT_RESULT = '4'
 const BACKFILL_REQUEST_ID = 'full_smoke_backfill'
 const timeoutMs = Number(process.env.AMA_FULL_SMOKE_TIMEOUT_MS ?? 5 * 60 * 1000)
 
 const packages = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] }
 
 function info(message) {
-  console.log(`[smoke:full] ${message}`)
+  console.log(`[smoke:real] ${message}`)
 }
 
 function fail(message, detail) {
@@ -373,6 +374,45 @@ function assertToolEvents(label, value) {
   }
 }
 
+function eventRecords(value) {
+  if (typeof value === 'string') {
+    return value
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+  }
+  if (Array.isArray(value)) return value.map(eventRecord).filter(Boolean)
+  return [eventRecord(value)].filter(Boolean)
+}
+
+function contentBlocks(record, type) {
+  const content = record?.payload?.message?.content
+  return Array.isArray(content) ? content.filter((block) => block?.type === type) : []
+}
+
+function assertAgentToolEvents(label, value) {
+  const records = eventRecords(value)
+  const agentToolCallIds = new Set(
+    records
+      .flatMap((record) => contentBlocks(record, 'tool_call'))
+      .filter((block) => block.toolCall?.name === 'agent')
+      .map((block) => block.toolCall?.id)
+      .filter(Boolean),
+  )
+  if (agentToolCallIds.size === 0) {
+    fail(`${label} is missing an agent tool_call content block`, JSON.stringify(value, null, 2))
+  }
+  const agentResults = records
+    .flatMap((record) => contentBlocks(record, 'tool_result'))
+    .filter((block) => agentToolCallIds.has(block.toolCallId))
+  if (agentResults.length === 0) {
+    fail(`${label} is missing an agent tool_result content block`, JSON.stringify(value, null, 2))
+  }
+  if (!agentResults.some((block) => JSON.stringify(block).includes(SUBAGENT_RESULT))) {
+    fail(`${label} agent tool_result does not include the expected sub-agent answer`, JSON.stringify(agentResults, null, 2))
+  }
+}
+
 function workspacePaths(workDir, sessionId) {
   const sessionDir = join(workDir, 'sessions', sessionId)
   return {
@@ -419,6 +459,7 @@ function assertWorkspace(workDir, sessionId) {
     fail('runner local event log does not include the final assistant marker', paths.eventLog)
   }
   assertToolEvents('runner local event log', eventLog)
+  assertAgentToolEvents('runner local event log', eventLog)
 }
 
 function recentOutput(output) {
@@ -426,7 +467,7 @@ function recentOutput(output) {
 }
 
 async function main() {
-  run('pnpm', ['run', 'smoke:session-socket'])
+  run('pnpm', ['exec', 'vitest', 'run', '--project', 'integration', 'server/integration/runner-relay.test.ts'])
 
   if (!commandExists('codex')) {
     fail('codex CLI is required for full smoke')
@@ -483,13 +524,21 @@ async function main() {
         spec: {
           systemPrompt: [
             'You are running the AMA full-chain smoke test.',
+            'Launch exactly one sub-agent/collaborating agent to independently answer the arithmetic question: what is 2+2?',
+            'Wait for that sub-agent to finish before completing the task.',
             `Write exactly "${RESULT_MARKER}\\n" to ama-full-smoke-result.txt in the workspace root.`,
             `When done, reply exactly "${DONE_MARKER}".`,
           ].join('\n'),
           provider: PROVIDER,
           model: MODEL,
           skills: [],
-          subagents: [],
+          subagents: [
+            {
+              name: 'arithmetic-checker',
+              description: 'Answers one arithmetic smoke-test question.',
+              systemPrompt: 'Answer the delegated arithmetic question exactly and do not modify files.',
+            },
+          ],
           mcpConnectors: [],
         },
       },
@@ -510,6 +559,8 @@ async function main() {
         },
         prompt: [
           'Run the full-chain AMA smoke test.',
+          `Launch exactly one sub-agent or collaborating agent and ask it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
+          'Wait for the sub-agent result before finishing.',
           `Ensure ama-full-smoke-result.txt contains exactly "${RESULT_MARKER}\\n".`,
           `Reply exactly "${DONE_MARKER}" and nothing else.`,
         ].join('\n'),
@@ -527,6 +578,7 @@ async function main() {
     )
     await socket.waitFor((frame) => frame.type === 'event' && hasAssistantText(frame, DONE_MARKER), DONE_MARKER)
     assertToolEvents('live browser socket events', socket.frames)
+    assertAgentToolEvents('live browser socket events', socket.frames)
 
     const completedSession = await waitFor(async () => {
       const current = await api(origin, token, `/api/v1/sessions/${sessionId}`)
@@ -549,6 +601,7 @@ async function main() {
       fail('browser socket backfill does not include the completed runtime event', JSON.stringify(firstBackfill, null, 2))
     }
     assertToolEvents('initial completed-session backfill', firstBackfill.events)
+    assertAgentToolEvents('initial completed-session backfill', firstBackfill.events)
 
     await stopProcess(runner.child)
     runner = null
@@ -576,8 +629,10 @@ async function main() {
         )
       }
       assertToolEvents('explicit backfill after runner reconnect', explicitBackfill.events)
+      assertAgentToolEvents('explicit backfill after runner reconnect', explicitBackfill.events)
     } else {
       assertToolEvents('automatic backfill after runner reconnect', reconnectBackfill.events)
+      assertAgentToolEvents('automatic backfill after runner reconnect', reconnectBackfill.events)
     }
 
     const types = eventTypes(socket.frames)

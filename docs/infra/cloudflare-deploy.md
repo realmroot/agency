@@ -109,26 +109,27 @@ path must not consume real model quota or depend on deployed origins:
 pnpm run e2e
 ```
 
-Run the full AMA smoke on a host that has at least one supported runtime CLI
-installed and authenticated (`codex`, `claude`, or `copilot`):
+Run the mock runtime smoke in CI. It is deterministic and does not consume model
+quota:
 
 ```bash
-pnpm run test:smoke
+pnpm run smoke:mock
 ```
 
-`test:smoke` starts a real `ama-runner` process against a local v1 control-plane
-stub and runs the selected local runtime through the embedded bridge. The control
-plane is fake; runner startup, lease claim, workspace preparation, runtime
-execution, local event storage, live relay, backfill, Codex follow-up prompts,
-runner interruption/resume, lease completion, and memory-store writeback are
-real. Set `AMA_SMOKE_RUNTIME=codex|claude-code|copilot` to force a specific
-runtime. The smoke mounts `https://github.com/saltbo/slink.git` by default to
-exercise real Git repository clone/mount behavior; set `AMA_SMOKE_GIT_TOKEN` only
-when you need to exercise session-scoped git credential isolation. This may
-consume real runtime/model quota and uses external network for the Git mount.
+Run the full real AMA smoke manually on a host with Codex installed and
+authenticated:
 
-`pnpm run smoke:bridge` is the cheap deterministic bridge check used by GitHub
-Actions. It is not a full AMA smoke.
+```bash
+pnpm run smoke:real
+```
+
+`smoke:real` boots the local Worker stack, builds and starts a real `ama-runner`,
+creates real control-plane resources over HTTP, opens the browser session socket,
+runs Codex through the embedded bridge, verifies workspace writes, live relay,
+completed-session backfill after runner reconnect, and verifies that a sub-agent
+run appears in canonical AMA events as an `agent` tool call and matching tool
+result. This may consume real runtime/model quota and uses external network for
+the Git mount.
 
 ## Cloudflare build settings
 

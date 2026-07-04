@@ -74,6 +74,12 @@ describe('RuntimeBridgeOutputMessageSchema', () => {
         requestId: 'run_1',
         event: { type: 'provider.custom', payload: { nested: { kept: true } } },
       },
+      {
+        type: 'provider.event',
+        requestId: 'run_1',
+        runtime: 'codex',
+        event: { type: 'item.completed', item: { type: 'collab_tool_call' } },
+      },
       { type: 'resumeToken', requestId: 'run_1', resumeToken: 'thread_1' },
       { type: 'result', requestId: 'run_1', result: { exitCode: 0 } },
       {

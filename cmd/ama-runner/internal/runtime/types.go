@@ -24,6 +24,10 @@ type Request struct {
 	// OnResumeToken is invoked as soon as the runtime learns (or rotates) its
 	// resume token, so the runner can persist it before the run completes.
 	OnResumeToken func(resumeToken string) error
+	// OnProviderEvent records raw provider SDK stream events for deterministic
+	// rebuilds. These records are not canonical session events and are not
+	// relayed directly to the session transcript.
+	OnProviderEvent func(runtimeName string, event JSON) error
 	// RegisterControlSender hands the runner a function that forwards opaque
 	// bridge control messages into the live runtime. The runner injects only the
 	// active requestId and does not interpret command-specific fields.

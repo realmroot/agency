@@ -83,6 +83,39 @@ func TestReadEventLogReturnsNilForMissingFile(t *testing.T) {
 	}
 }
 
+func TestProviderEventLogAppendReadAndValidate(t *testing.T) {
+	// [spec: runtime/provider-event-replay]
+	dir := t.TempDir()
+	first, err := AppendProviderEvent(dir, "codex", ama.JSON{"type": "item.completed", "item": ama.JSON{"id": "item_1"}})
+	if err != nil {
+		t.Fatalf("append provider event: %v", err)
+	}
+	second, err := AppendProviderEvent(dir, "codex", ama.JSON{"type": "turn.completed"})
+	if err != nil {
+		t.Fatalf("append second provider event: %v", err)
+	}
+	if first.Sequence != 1 || second.Sequence != 2 {
+		t.Fatalf("provider event sequences = %d,%d want 1,2", first.Sequence, second.Sequence)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "provider-events.jsonl")); err != nil {
+		t.Fatalf("provider event log missing: %v", err)
+	}
+
+	events, err := ReadProviderEventLog(ProviderEventLogPath(dir))
+	if err != nil {
+		t.Fatalf("read provider events: %v", err)
+	}
+	if len(events) != 2 || events[0].Runtime != "codex" || events[0].Event["type"] != "item.completed" {
+		t.Fatalf("unexpected provider events %#v", events)
+	}
+	if _, err := AppendProviderEvent(dir, "", ama.JSON{"type": "item.completed"}); err == nil || !strings.Contains(err.Error(), "runtime") {
+		t.Fatalf("expected missing runtime error, got %v", err)
+	}
+	if _, err := AppendProviderEvent(dir, "codex", ama.JSON{"event": "missing type"}); err == nil || !strings.Contains(err.Error(), "missing type") {
+		t.Fatalf("expected missing type error, got %v", err)
+	}
+}
+
 func TestEventLogAppendCoordinatesSequenceAcrossOpenStores(t *testing.T) {
 	dir := t.TempDir()
 	first, err := OpenEventLog(dir, "session_1")

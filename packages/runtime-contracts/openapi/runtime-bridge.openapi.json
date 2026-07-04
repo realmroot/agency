@@ -209,6 +209,7 @@
             "enum": [
               "ready",
               "runtime.event",
+              "provider.event",
               "resumeToken",
               "result",
               "error"
@@ -216,6 +217,7 @@
             "x-enum-varnames": [
               "BridgeMessageTypeReady",
               "BridgeMessageTypeRuntimeEvent",
+              "BridgeMessageTypeProviderEvent",
               "BridgeMessageTypeResumeToken",
               "BridgeMessageTypeResult",
               "BridgeMessageTypeError"
@@ -224,6 +226,9 @@
           "requestId": {
             "type": "string",
             "x-go-name": "RequestID"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/ExternalRuntimeName"
           },
           "event": {
             "$ref": "#/components/schemas/JSON"

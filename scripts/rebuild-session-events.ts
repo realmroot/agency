@@ -14,12 +14,11 @@ type ExternalRuntimeName = RuntimeBridgeRunMessage['runtime']
 
 type RebuildInput = {
   runtime?: ExternalRuntimeName
-  sourcePath: string
+  sourcePath?: string
   sourceFormat?: RuntimeReplaySourceFormat
   sessionId?: string
   eventsPath?: string
   workDir?: string
-  home?: string
   dryRun?: boolean
   backup?: boolean
 }
@@ -35,16 +34,16 @@ type RebuildResult = {
 }
 
 const RUNTIMES = new Set<ExternalRuntimeName>(['codex', 'claude-code', 'copilot'])
-const SOURCE_FORMATS = new Set<RuntimeReplaySourceFormat>(['auto', 'ama-events', 'bridge-ndjson', 'provider-jsonl'])
+const SOURCE_FORMATS = new Set<RuntimeReplaySourceFormat>(['auto', 'provider-events', 'bridge-ndjson'])
 
 export function rebuildSessionEvents(input: RebuildInput): RebuildResult {
   const targetPath = resolveTargetPath(input)
   const sessionId = input.sessionId ?? inferSessionId(targetPath)
+  const sourcePath = resolveSourcePath(input, targetPath)
   const events = runtimeEventsFromSource({
-    sourcePath: input.sourcePath,
+    sourcePath,
     sourceFormat: input.sourceFormat ?? 'auto',
     ...(input.runtime ? { runtime: input.runtime } : {}),
-    ...(input.home ? { home: input.home } : {}),
   })
   const baseCreatedAt = firstCreatedAt(targetPath) ?? new Date().toISOString()
   const records = buildSessionRecords(events, sessionId, baseCreatedAt)
@@ -97,6 +96,12 @@ export function resolveTargetPath(input: Pick<RebuildInput, 'eventsPath' | 'sess
   return join(resolve(input.workDir ?? defaultWorkDir()), 'sessions', input.sessionId, 'events.jsonl')
 }
 
+function resolveSourcePath(input: Pick<RebuildInput, 'sourcePath' | 'sessionId' | 'workDir'>, targetPath: string): string {
+  if (input.sourcePath) return resolve(input.sourcePath)
+  if (input.sessionId) return join(resolve(input.workDir ?? defaultWorkDir()), 'sessions', input.sessionId, 'provider-events.jsonl')
+  return join(dirname(targetPath), 'provider-events.jsonl')
+}
+
 function inferSessionId(eventsPath: string): string {
   const parts = eventsPath.split(/[\\/]/)
   const parent = parts.at(-2)
@@ -126,23 +131,21 @@ function timestampForPath(): string {
 
 function usage(): string {
   return `Usage:
-  pnpm exec tsx scripts/rebuild-session-events.ts --runtime <codex|claude-code|copilot> --source <provider.jsonl> --session-id <ama-session-id>
+  pnpm exec tsx scripts/rebuild-session-events.ts --session-id <ama-session-id>
 
 Options:
-  --runtime <name>          Runtime for provider-jsonl sources: codex, claude-code, copilot
-  --source <path>           Source JSONL path
-  --source-format <format>  auto, ama-events, bridge-ndjson, provider-jsonl (default: auto)
+  --runtime <name>          Runtime when provider-events records do not declare one: codex, claude-code, copilot
+  --source <path>           Source JSONL path. Defaults to provider-events.jsonl next to the target events.jsonl.
+  --source-format <format>  auto, provider-events, bridge-ndjson (default: auto)
   --session-id <id>         AMA session id. Default target is the runner store for this session.
   --events <path>           Exact target events.jsonl path. Session id is inferred from its parent directory unless --session-id is set.
   --work-dir <path>         AMA runner work dir. Defaults to $AMA_RUNNER_WORK_DIR or ~/.local/state/ama-runner/work
-  --home <path>             Host home for provider replay helpers, used by Codex to find child sessions.
   --dry-run                 Build and validate without writing
   --no-backup               Replace target without backing up the existing file
 
 Source formats:
-  provider-jsonl  Raw runtime provider events mapped through AMA's runtime bridge mappers.
-  bridge-ndjson   Captured runtime bridge stdout; runtime.event frames are extracted.
-  ama-events      Existing AMA SessionEvent/AmaEvent JSONL; records are renumbered and rewritten.
+  provider-events  Captured provider SDK stream records written by the AMA runner.
+  bridge-ndjson     Captured runtime bridge stdout; provider.event frames are extracted.
 `
 }
 
@@ -156,7 +159,6 @@ function parseCli(): RebuildInput {
       'session-id': { type: 'string' },
       events: { type: 'string' },
       'work-dir': { type: 'string' },
-      home: { type: 'string' },
       'dry-run': { type: 'boolean' },
       'no-backup': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -166,17 +168,15 @@ function parseCli(): RebuildInput {
     console.log(usage())
     process.exit(0)
   }
-  if (!values.source) throw new Error('--source is required')
   const runtime = parseRuntime(values.runtime)
   const sourceFormat = parseSourceFormat(values['source-format'])
   return {
-    sourcePath: resolve(values.source),
+    ...(values.source ? { sourcePath: resolve(values.source) } : {}),
     ...(runtime ? { runtime } : {}),
     ...(sourceFormat ? { sourceFormat } : {}),
     ...(values['session-id'] ? { sessionId: values['session-id'] } : {}),
     ...(values.events ? { eventsPath: values.events } : {}),
     ...(values['work-dir'] ? { workDir: values['work-dir'] } : {}),
-    ...(values.home ? { home: values.home } : {}),
     ...(values['dry-run'] !== undefined ? { dryRun: values['dry-run'] } : {}),
     backup: !values['no-backup'],
   }

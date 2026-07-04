@@ -185,14 +185,16 @@ function bridgeOutputMessageSchema() {
     required: ['type'],
     additionalProperties: false,
     properties: {
-      type: { type: 'string', enum: ['ready', 'runtime.event', 'resumeToken', 'result', 'error'] },
+      type: { type: 'string', enum: ['ready', 'runtime.event', 'provider.event', 'resumeToken', 'result', 'error'] },
       requestId: { type: 'string' },
+      runtime: { $ref: '#/components/schemas/ExternalRuntimeName' },
       event: { $ref: '#/components/schemas/JSON' },
       result: { $ref: '#/components/schemas/JSON' },
       error: { $ref: '#/components/schemas/RuntimeBridgeError' },
       resumeToken: { type: 'string' },
     },
   }
+  setPropertyRef(schema, 'runtime', 'ExternalRuntimeName')
   setPropertyRef(schema, 'event', 'JSON')
   setPropertyRef(schema, 'result', 'JSON')
   setPropertyRef(schema, 'error', 'RuntimeBridgeError')
@@ -201,6 +203,7 @@ function bridgeOutputMessageSchema() {
   setPropertyEnumNames(schema, 'type', [
     'BridgeMessageTypeReady',
     'BridgeMessageTypeRuntimeEvent',
+    'BridgeMessageTypeProviderEvent',
     'BridgeMessageTypeResumeToken',
     'BridgeMessageTypeResult',
     'BridgeMessageTypeError',

@@ -77,12 +77,15 @@ func TestRuntimeBridgeRunReadsEventsResumeTokenAndResult(t *testing.T) {
 echo '{"type":"ready"}'
 IFS= read -r request
 echo '{"type":"resumeToken","requestId":"run_session_1","resumeToken":"resume-token"}'
+echo '{"type":"provider.event","requestId":"run_session_1","runtime":"codex","event":{"type":"item.completed","item":{"id":"item_1"}}}'
 echo '{"type":"runtime.event","requestId":"other","event":{"type":"message.completed","ignored":true}}'
 echo '{"type":"runtime.event","requestId":"run_session_1","event":{"type":"message.completed","message":{"role":"assistant"}}}'
 echo '{"type":"result","requestId":"run_session_1","result":{"ok":true}}'
 echo 'bridge warning' >&2
 `)
 	var events []JSON
+	var providerEvents []JSON
+	var providerRuntime string
 	var resumeToken string
 	result, err := (Bridge{}).Run(context.Background(), Request{
 		SessionID:     "session_1",
@@ -97,6 +100,11 @@ echo 'bridge warning' >&2
 		WorkDir:       t.TempDir(),
 		OnResumeToken: func(value string) error {
 			resumeToken = value
+			return nil
+		},
+		OnProviderEvent: func(runtimeName string, event JSON) error {
+			providerRuntime = runtimeName
+			providerEvents = append(providerEvents, event)
 			return nil
 		},
 	}, func(event JSON) error {
@@ -114,6 +122,9 @@ echo 'bridge warning' >&2
 	}
 	if len(events) != 1 || events[0]["type"] != "message.completed" {
 		t.Fatalf("expected one matching runtime event, got %#v", events)
+	}
+	if providerRuntime != "codex" || len(providerEvents) != 1 || providerEvents[0]["type"] != "item.completed" {
+		t.Fatalf("expected one matching provider event, runtime=%q events=%#v", providerRuntime, providerEvents)
 	}
 }
 

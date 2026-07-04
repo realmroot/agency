@@ -61,6 +61,13 @@ Feature: Runtime
     Then the event is delivered without protocol-layer truncation
     And the runner terminates the bridge process instead of hanging if protocol reading fails
 
+  @runtime/provider-event-replay @usecase
+  Scenario: Capture provider stream events for deterministic session rebuild
+    Given a self-hosted external runtime exposes only live SDK stream events
+    When the runner receives provider stream events through the runtime bridge
+    Then the runner stores those provider events outside the canonical session event log
+    And rebuild maps the stored provider events through the same runtime mapper used during live execution
+
   @runtime/sandbox-toolset @usecase
   Scenario: Gate sandbox tools by the agent allow-list
     Given an agent declares a sandbox tool allow-list
