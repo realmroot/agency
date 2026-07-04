@@ -554,8 +554,10 @@ describe('session-runtime', () => {
     const mkdirOrder = mockSandbox.exec.mock.invocationCallOrder.find(
       (_, index) => mockSandbox.exec.mock.calls[index]?.[0] === "mkdir -p '/workspace/.home'",
     )
-    const cloneOrder = mockSandbox.exec.mock.invocationCallOrder.find(
-      (_, index) => String(mockSandbox.exec.mock.calls[index]?.[0]).includes(" clone 'https://github.com/saltbo/any-managed-agents.git'"),
+    const cloneOrder = mockSandbox.exec.mock.invocationCallOrder.find((_, index) =>
+      String(mockSandbox.exec.mock.calls[index]?.[0]).includes(
+        " clone 'https://github.com/saltbo/any-managed-agents.git'",
+      ),
     )
     expect(setEnvOrder).toBeLessThan(mkdirOrder!)
     expect(setEnvOrder).toBeLessThan(cloneOrder!)
