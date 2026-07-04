@@ -82,11 +82,11 @@ func (d *Daemon) Start(ctx context.Context) error {
 	if err := workspace.CleanupStale(ctx, d.Config.WorkDir, workspace.RuntimeRetention); err != nil {
 		return err
 	}
-	health, err := d.Client.System.Health(ctx)
+	configz, err := d.Client.Configz.Get(ctx)
 	if err != nil {
 		return err
 	}
-	if err := runnerauth.EnsureCompatibleHealth(health); err != nil {
+	if err := runnerauth.EnsureCompatibleConfig(configz); err != nil {
 		return err
 	}
 	if err := d.ensureRunnerID(ctx); err != nil {

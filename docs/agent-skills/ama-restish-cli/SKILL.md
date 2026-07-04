@@ -21,7 +21,7 @@ Use this skill when an agent needs terminal automation for Any Managed Agents re
 
    ```bash
    restish api configure ama "$AMA_ORIGIN/api/openapi.json"
-   restish ama get-health
+   restish ama read-configz
    ```
 
 4. Use JSON output when another tool will parse command output:
@@ -36,7 +36,7 @@ Use OpenAPI operation names or documented `/api/v1` paths. Do not invent local c
 
 | Resource | Read/list | Create/update | Archive/delete or command |
 | --- | --- | --- | --- |
-| Health | `getHealth` | n/a | n/a |
+| Config discovery | `readConfigz` | n/a | n/a |
 | Agents | `listAgents`, `readAgent`, `listAgentVersions`, `readAgentVersion`, `readAgentMemory`, `listAgentHandoffCandidates` | `createAgent`, `updateAgent`, `replaceAgentMemory` | use `updateAgent` state fields |
 | Environments | `listEnvironments`, `readEnvironment`, `listEnvironmentVersions`, `readEnvironmentVersion` | `createEnvironment`, `updateEnvironment` | use `updateEnvironment` state fields |
 | Sessions | `listSessions`, `readSession`, `listSessionEvents`, `connectSessionSocket`, message and approval operations | `createSession`, `updateSession`, `createSessionMessage` | use `updateSession` state fields |

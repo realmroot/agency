@@ -8,7 +8,11 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..types import UNSET, Unset
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.public_oidc_client_config import PublicOidcClientConfig
 
 
 
@@ -23,15 +27,15 @@ class PublicOidcConfigType0:
     """ 
         Attributes:
             issuer (str):  Example: https://id.example.com/api/auth.
-            client_id (str):  Example: client_abc123.
-            scope (str):  Example: openid email profile.
             resource (str):  Example: https://ama.example.com.
+            browser (PublicOidcClientConfig):
+            runner (PublicOidcClientConfig | Unset):
      """
 
     issuer: str
-    client_id: str
-    scope: str
     resource: str
+    browser: PublicOidcClientConfig
+    runner: PublicOidcClientConfig | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,23 +43,27 @@ class PublicOidcConfigType0:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.public_oidc_client_config import PublicOidcClientConfig
         issuer = self.issuer
 
-        client_id = self.client_id
-
-        scope = self.scope
-
         resource = self.resource
+
+        browser = self.browser.to_dict()
+
+        runner: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.runner, Unset):
+            runner = self.runner.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "issuer": issuer,
-            "clientId": client_id,
-            "scope": scope,
             "resource": resource,
+            "browser": browser,
         })
+        if runner is not UNSET:
+            field_dict["runner"] = runner
 
         return field_dict
 
@@ -63,20 +71,32 @@ class PublicOidcConfigType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.public_oidc_client_config import PublicOidcClientConfig
         d = dict(src_dict)
         issuer = d.pop("issuer")
 
-        client_id = d.pop("clientId")
-
-        scope = d.pop("scope")
-
         resource = d.pop("resource")
+
+        browser = PublicOidcClientConfig.from_dict(d.pop("browser"))
+
+
+
+
+        _runner = d.pop("runner", UNSET)
+        runner: PublicOidcClientConfig | Unset
+        if isinstance(_runner,  Unset):
+            runner = UNSET
+        else:
+            runner = PublicOidcClientConfig.from_dict(_runner)
+
+
+
 
         public_oidc_config_type_0 = cls(
             issuer=issuer,
-            client_id=client_id,
-            scope=scope,
             resource=resource,
+            browser=browser,
+            runner=runner,
         )
 
 

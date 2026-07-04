@@ -73,7 +73,6 @@ from .api.sessions import read_session as read_session_api
 from .api.sessions import read_session_approval as read_session_approval_api
 from .api.sessions import read_session_message as read_session_message_api
 from .api.sessions import update_session as update_session_api
-from .api.system import get_health as get_health_api
 from .api.triggers import create_trigger as create_trigger_api
 from .api.triggers import create_trigger_run as create_trigger_run_api
 from .api.triggers import delete_trigger as delete_trigger_api
@@ -253,7 +252,6 @@ class AmaClient:
         client: AuthenticatedClient | Client | None = None,
     ) -> None:
         self._core = _ClientCore(base_url, access_token, project_id, headers, client)
-        self.system = _SystemResource(self._core)
         self.configz = _ConfigzResource(self._core)
         self.auth = _AuthResource(self._core)
         self.projects = _ProjectsResource(self._core)
@@ -285,7 +283,7 @@ class AmaRunnerClient:
         client: AuthenticatedClient | Client | None = None,
     ) -> None:
         self._core = _ClientCore(base_url, access_token, project_id, headers, client)
-        self.system = _RunnerSystemResource(self._core)
+        self.configz = _RunnerConfigzResource(self._core)
         self.runners = _RunnerRunnersResource(self._core)
         self.work_items = _RunnerWorkItemsResource(self._core)
         self.leases = _RunnerLeasesResource(self._core)
@@ -357,14 +355,6 @@ def _unwrap(response: Any) -> Any:
         text = response.content.decode("utf-8", errors="replace") if response.content else ""
     raise AmaApiError(status, text, body)
 
-
-class _SystemResource:
-    def __init__(self, owner: _ClientCore) -> None:
-        self._owner = owner
-        self._client = owner.raw
-
-    def health(self) -> Any:
-        return _unwrap(get_health_api.sync_detailed(client=self._client))
 
 class _ConfigzResource:
     def __init__(self, owner: _ClientCore) -> None:
@@ -687,13 +677,13 @@ class _UsageResource:
     def get_summary(self, **query: Any) -> Any:
         return _unwrap(read_usage_summary_api.sync_detailed(client=self._client, **query))
 
-class _RunnerSystemResource:
+class _RunnerConfigzResource:
     def __init__(self, owner: _ClientCore) -> None:
         self._owner = owner
         self._client = owner.raw
 
-    def health(self) -> Any:
-        return _unwrap(get_health_api.sync_detailed(client=self._client))
+    def get(self) -> Any:
+        return _unwrap(read_configz_api.sync_detailed(client=self._client))
 
 class _RunnerRunnersResource:
     def __init__(self, owner: _ClientCore) -> None:

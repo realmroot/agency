@@ -193,14 +193,27 @@ func authRefreshServer(t *testing.T) *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
 		switch r.URL.Path {
-		case "/api/v1/health":
+		case "/api/v1/configz":
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status":         "ok",
-				"name":           "Any Managed Agents",
-				"runtime":        "cloudflare-workers",
-				"oidcIssuer":     "http://" + r.Host + "/issuer",
-				"runnerClientId": "runner-client",
-				"runnerScopes":   "openid profile email offline_access",
+				"version": 1,
+				"service": map[string]any{
+					"name":   "Any Managed Agents",
+					"origin": "http://" + r.Host,
+				},
+				"auth": map[string]any{
+					"oidc": map[string]any{
+						"issuer":   "http://" + r.Host + "/issuer",
+						"resource": "http://" + r.Host,
+						"browser": map[string]any{
+							"clientId": "browser-client",
+							"scopes":   []string{"openid", "email", "profile"},
+						},
+						"runner": map[string]any{
+							"clientId": "runner-client",
+							"scopes":   []string{"openid", "profile", "email", "offline_access"},
+						},
+					},
+				},
 			})
 		case "/issuer/.well-known/openid-configuration":
 			_ = json.NewEncoder(w).Encode(map[string]string{

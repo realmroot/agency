@@ -29,7 +29,7 @@ Authenticate the runner with FlareAuth/OIDC device login before starting the dae
 ama-runner auth login --api-server "https://ama.example.com"
 ```
 
-The command discovers the AMA control plane OIDC metadata from `/api/v1/health`, starts the provider device authorization flow for the registered runner client, prints the verification URL/code, and stores the returned token material in the local runner credential file. It never prints access or refresh tokens.
+The command discovers the AMA control plane OIDC metadata from `/api/v1/configz`, starts the provider device authorization flow for the registered runner client, prints the verification URL/code, and stores the returned token material in the local runner credential file. It never prints access or refresh tokens.
 
 By default, the config file is:
 
@@ -106,7 +106,7 @@ Do not use this adapter for untrusted workloads. Docker/OCI isolation should be 
 
 At startup, the daemon:
 
-1. Checks `/api/v1/health` for an AMA control plane.
+1. Checks `/api/v1/configz` for an AMA control plane.
 2. Loads the saved FlareAuth/OIDC device-login token unless an explicit token override is supplied.
 3. Registers a runner when no runner id is configured.
 4. Sends an active heartbeat with capabilities and adapter metadata.

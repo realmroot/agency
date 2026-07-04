@@ -4,14 +4,14 @@ Feature: API contracts
   filter consistently, the document drives restish and generated SDKs, and runtime
   session traffic stays on AMA endpoints rather than a bespoke CLI protocol.
 
-  # ── Health and OpenAPI generation (api: assembled server) ──
+  # ── Health probe and OpenAPI generation (api: assembled server) ──
 
   @api-contracts/health @api
-  Scenario: Health endpoint returns the product identity
+  Scenario: Health probe returns ok outside the versioned control-plane contract
     Given the Worker app is initialized
-    When a client requests the health endpoint
-    Then the response is 200 with the product name and runtime identity
-    And runner device-login metadata is published only when a runner client is configured
+    When a client requests the healthz endpoint
+    Then the response is 200 with plain text ok
+    And the versioned OpenAPI contract does not publish a health resource
 
   @api-contracts/openapi @api
   Scenario: Publish a generated OpenAPI document from control-plane routes

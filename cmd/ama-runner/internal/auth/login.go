@@ -40,20 +40,21 @@ func Login(ctx context.Context, command LoginCommand, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	health, err := client.System.Health(ctx)
+	configz, err := client.Configz.Get(ctx)
 	if err != nil {
 		return err
 	}
-	if err := EnsureCompatibleHealth(health); err != nil {
+	settings, err := RunnerOidcSettingsFromConfig(configz, command.APIServer)
+	if err != nil {
 		return err
 	}
 	authClient := DeviceAuthClient{HTTPClient: httpClient}
 	result, err := LoginWithDeviceAuthorization(ctx, authClient, DeviceLoginOptions{
 		APIServer:      command.APIServer,
-		Issuer:         StringValue(health.OidcIssuer),
-		Resource:       oidcResource(health.OidcResource, command.APIServer),
-		ClientID:       StringValue(health.RunnerClientId),
-		Scopes:         StringValue(health.RunnerScopes),
+		Issuer:         settings.Issuer,
+		Resource:       settings.Resource,
+		ClientID:       settings.ClientID,
+		Scopes:         settings.Scopes,
 		CredentialPath: command.CredentialPath,
 		Output:         output,
 		PollInterval:   time.Second,

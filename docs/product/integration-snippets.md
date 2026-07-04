@@ -9,14 +9,15 @@ export AMA_ORIGIN="https://ama.example.com"
 curl -fsS "$AMA_ORIGIN/api/openapi.json"
 ```
 
-The document contains `/api/v1` paths for agents, environments, sessions, providers, vaults, budgets, usage, audit, connectors, auth, and health. It is the source of truth for request fields, response fields, auth, and machine-readable output.
+The document contains `/api/v1` paths for config discovery, agents, environments, sessions, providers, vaults, budgets, usage, audit, connectors, and auth. It is the source of truth for request fields, response fields, auth, and machine-readable output.
 
 ## curl
 
 Use a OIDC provider-issued OIDC access token. The token is local to the operator session and must not be committed or shared.
 
 ```bash
-curl -fsS "$AMA_ORIGIN/api/v1/health"
+curl -fsS "$AMA_ORIGIN/api/healthz"
+curl -fsS "$AMA_ORIGIN/api/v1/configz"
 
 curl -fsS "$AMA_ORIGIN/api/v1/environments" \
   -H "content-type: application/json" \
@@ -40,7 +41,7 @@ Configure restish from the deployment OpenAPI document and keep JSON output enab
 
 ```bash
 restish api configure ama "$AMA_ORIGIN/api/openapi.json"
-restish ama get-health
+restish ama read-configz
 restish ama list-agents --rsh-output-format json
 printf '%s\n' '{"name":"Node workspace","hostingMode":"cloud","runtimeConfig":{"image":"node:24"},"packages":[{"name":"tsx","version":"latest"}]}' \
   | restish ama create-environment --rsh-output-format json
@@ -60,7 +61,7 @@ Common control-plane workflows map to these OpenAPI operations:
 
 | Workflow | Operation IDs | Paths |
 | --- | --- | --- |
-| Health | `getHealth` | `GET /api/v1/health` |
+| Config discovery | `readConfigz` | `GET /api/v1/configz` |
 | Agents | `listAgents`, `createAgent`, `readAgent`, `updateAgent`, `listAgentVersions`, `readAgentVersion`, `readAgentMemory`, `replaceAgentMemory`, `listAgentHandoffCandidates` | `/api/v1/agents` |
 | Environments | `listEnvironments`, `createEnvironment`, `readEnvironment`, `updateEnvironment`, `listEnvironmentVersions`, `readEnvironmentVersion` | `/api/v1/environments` |
 | Sessions | `listSessions`, `createSession`, `readSession`, `updateSession`, `connectSessionSocket`, `listSessionMessages`, `createSessionMessage`, `readSessionMessage`, `listSessionEvents`, approval operations | `/api/v1/sessions` |

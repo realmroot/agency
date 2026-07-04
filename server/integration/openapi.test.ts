@@ -23,7 +23,6 @@ interface OpenApiDocument {
 
 const METHODS = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const EXPECTED_RESTISH_OPERATIONS = {
-  System: ['getHealth'],
   Config: ['readConfigz'],
   Auth: ['createAuthSession', 'readAuthConfig'],
   Projects: ['listProjects', 'createProject'],
@@ -78,7 +77,8 @@ describe('[CF] OpenAPI documentation', () => {
 
     expect(doc.openapi).toBe('3.0.0')
     expect(doc.servers).toEqual([{ url: '/' }])
-    expect(doc.paths).toHaveProperty('/api/v1/health')
+    expect(doc.paths).not.toHaveProperty('/api/v1/health')
+    expect(doc.paths).not.toHaveProperty('/api/healthz')
     expect(doc.paths).toHaveProperty('/api/v1/configz')
     expect(doc.paths).toHaveProperty('/api/v1/projects')
     expect(doc.paths).toHaveProperty('/api/v1/auth/config')
@@ -221,7 +221,6 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths['/api/v1/triggers/{triggerId}/runs']).toHaveProperty('get')
     expect(doc.paths['/api/v1/triggers/{triggerId}/runs']).toHaveProperty('post')
 
-    expect(doc.paths['/api/v1/health'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/auth/config'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/auth/sessions'].post.security).toBeUndefined()
@@ -590,7 +589,7 @@ describe('[CF] OpenAPI documentation', () => {
     }
 
     // Anchor the public/protected split to known endpoints so the security model stays meaningful.
-    expect(doc.paths['/api/v1/health'].get.security).toBeUndefined()
+    expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ bearerAuth: [] }])
   })
 

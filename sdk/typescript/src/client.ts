@@ -212,10 +212,6 @@ export function createAmaClient(config: AmaClientConfig) {
   return {
     raw: client,
 
-    system: {
-      health: () => unwrap(ops.getHealth({ client })),
-    },
-
     configz: {
       get: () => unwrap(ops.readConfigz({ client })),
     },
@@ -352,8 +348,8 @@ export function createAmaRunnerClient(config: AmaClientConfig) {
   return {
     raw: client,
 
-    system: {
-      health: () => unwrap(ops.getHealth({ client })),
+    configz: {
+      get: () => unwrap(ops.readConfigz({ client })),
     },
 
     runners: {

@@ -79,30 +79,31 @@ func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
 	if strings.TrimSpace(s.saved.RefreshToken) == "" {
 		return "", fmt.Errorf("saved AMA runner token is expired; run ama-runner auth login again")
 	}
-	healthClient, err := sdkama.New(sdkama.ClientConfig{
+	configClient, err := sdkama.New(sdkama.ClientConfig{
 		BaseURL:    s.Config.APIServer,
 		HTTPClient: s.HTTPClient,
 	})
 	if err != nil {
 		return "", err
 	}
-	health, err := healthClient.System.Health(ctx)
+	configz, err := configClient.Configz.Get(ctx)
 	if err != nil {
 		return "", err
 	}
-	if err := EnsureCompatibleHealth(health); err != nil {
+	settings, err := RunnerOidcSettingsFromConfig(configz, s.Config.APIServer)
+	if err != nil {
 		return "", err
 	}
-	metadata, err := s.client.Discover(ctx, StringValue(health.OidcIssuer))
+	metadata, err := s.client.Discover(ctx, settings.Issuer)
 	if err != nil {
 		return "", err
 	}
 	token, err := s.client.RefreshToken(
 		ctx,
 		metadata.TokenEndpoint,
-		StringValue(health.RunnerClientId),
+		settings.ClientID,
 		s.saved.RefreshToken,
-		oidcResource(health.OidcResource, s.Config.APIServer),
+		settings.Resource,
 	)
 	if err != nil {
 		return "", err
@@ -125,9 +126,9 @@ func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
 	return next.AccessToken, nil
 }
 
-func oidcResource(value *string, fallback string) string {
-	if value != nil && strings.TrimSpace(*value) != "" {
-		return strings.TrimRight(strings.TrimSpace(*value), "/")
+func oidcResource(value string, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return strings.TrimRight(strings.TrimSpace(value), "/")
 	}
 	return strings.TrimRight(strings.TrimSpace(fallback), "/")
 }

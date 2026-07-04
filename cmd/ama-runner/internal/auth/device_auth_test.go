@@ -21,17 +21,13 @@ func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	server := loginTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/api/v1/health":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status":         "ok",
-				"name":           "Any Managed Agents",
-				"runtime":        "cloudflare-workers",
-				"timestamp":      time.Now().UTC().Format(time.RFC3339),
-				"oidcIssuer":     "http://" + r.Host,
-				"oidcResource":   "https://ama.example.test",
-				"runnerClientId": "runner-client",
-				"runnerScopes":   "openid offline_access",
-			})
+		case "/api/v1/configz":
+			_ = json.NewEncoder(w).Encode(testPublicConfig(
+				"http://"+r.Host,
+				"https://ama.example.test",
+				"runner-client",
+				[]string{"openid", "offline_access"},
+			))
 		case "/device":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"device_code":      "device",

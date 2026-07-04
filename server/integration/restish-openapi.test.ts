@@ -58,7 +58,7 @@ describe('[CF] restish/OpenAPI control-plane path [spec: api-contracts/restish]'
 
     expect(Array.from(operationIds)).toEqual(
       expect.arrayContaining([
-        'getHealth',
+        'readConfigz',
         'listAgents',
         'listEnvironments',
         'listSessions',

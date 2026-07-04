@@ -29,9 +29,6 @@ export interface RunnerChannel {
 export type AmaClient = ReturnType<typeof createAmaClient>;
 export declare function createAmaClient(config: AmaClientConfig): {
     raw: import("./generated/client/types.gen.js").Client;
-    system: {
-        health: () => Promise<types.HealthResponse>;
-    };
     configz: {
         get: () => Promise<types.PublicConfig>;
     };
@@ -153,8 +150,8 @@ export declare function createAmaClient(config: AmaClientConfig): {
 export type AmaRunnerClient = ReturnType<typeof createAmaRunnerClient>;
 export declare function createAmaRunnerClient(config: AmaClientConfig): {
     raw: import("./generated/client/types.gen.js").Client;
-    system: {
-        health: () => Promise<types.HealthResponse>;
+    configz: {
+        get: () => Promise<types.PublicConfig>;
     };
     runners: {
         list: (query?: types.ListRunnersData["query"]) => Promise<types.RunnerListResponse>;

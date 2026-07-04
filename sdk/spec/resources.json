@@ -3,9 +3,6 @@
   "facades": {
     "public": {
       "resources": [
-        { "name": "system", "methods": [
-          { "name": "health", "operationId": "getHealth" }
-        ] },
         { "name": "configz", "methods": [
           { "name": "get", "operationId": "readConfigz" }
         ] },
@@ -121,8 +118,8 @@
     },
     "runner": {
       "resources": [
-        { "name": "system", "methods": [
-          { "name": "health", "operationId": "getHealth" }
+        { "name": "configz", "methods": [
+          { "name": "get", "operationId": "readConfigz" }
         ] },
         { "name": "runners", "methods": [
           { "name": "list", "operationId": "listRunners" },

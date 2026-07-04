@@ -11,7 +11,7 @@ import { registerConfigzRoutes } from './http/configz'
 import { registerConnectorRoutes } from './http/connectors'
 import e2e from './http/e2e'
 import { registerEnvironmentRoutes } from './http/environments'
-import health from './http/health'
+import healthz from './http/healthz'
 import { registerLeaseRoutes } from './http/leases'
 import { registerMemoryStoreRoutes } from './http/memory-stores'
 import { registerProjectRoutes } from './http/projects'
@@ -81,7 +81,7 @@ export function createApp() {
   const memoryStores = registerMemoryStoreRoutes(createDepsApiRouter())
 
   const routes = app
-    .route('/api/v1/health', health)
+    .route('/api/healthz', healthz)
     .route('/api/v1/configz', configz)
     .route('/api/v1/e2e', e2e)
     .route('/api/v1/auth', auth)

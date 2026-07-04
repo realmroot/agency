@@ -8,10 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.public_config_version import PublicConfigVersion
 from typing import cast
 
 if TYPE_CHECKING:
   from ..models.public_auth_config import PublicAuthConfig
+  from ..models.public_service_config import PublicServiceConfig
 
 
 
@@ -25,9 +27,13 @@ T = TypeVar("T", bound="PublicConfig")
 class PublicConfig:
     """ 
         Attributes:
+            version (PublicConfigVersion):  Example: 1.
+            service (PublicServiceConfig):
             auth (PublicAuthConfig):
      """
 
+    version: PublicConfigVersion
+    service: PublicServiceConfig
     auth: PublicAuthConfig
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -37,12 +43,19 @@ class PublicConfig:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.public_auth_config import PublicAuthConfig
+        from ..models.public_service_config import PublicServiceConfig
+        version = self.version.value
+
+        service = self.service.to_dict()
+
         auth = self.auth.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "version": version,
+            "service": service,
             "auth": auth,
         })
 
@@ -53,13 +66,26 @@ class PublicConfig:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.public_auth_config import PublicAuthConfig
+        from ..models.public_service_config import PublicServiceConfig
         d = dict(src_dict)
+        version = PublicConfigVersion(d.pop("version"))
+
+
+
+
+        service = PublicServiceConfig.from_dict(d.pop("service"))
+
+
+
+
         auth = PublicAuthConfig.from_dict(d.pop("auth"))
 
 
 
 
         public_config = cls(
+            version=version,
+            service=service,
             auth=auth,
         )
 

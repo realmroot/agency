@@ -130,12 +130,13 @@ func (p *runnerIntegrationControlPlane) ServeHTTP(w http.ResponseWriter, r *http
 	p.mu.Unlock()
 
 	switch {
-	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/health":
-		writeRunnerIntegrationJSON(w, http.StatusOK, ama.HealthResponse{
-			Name:      "Any Managed Agents",
-			Runtime:   ama.CloudflareWorkers,
-			Status:    ama.Ok,
-			Timestamp: p.now,
+	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/configz":
+		writeRunnerIntegrationJSON(w, http.StatusOK, ama.PublicConfig{
+			Version: ama.N1,
+			Service: ama.PublicServiceConfig{
+				Name:   ama.AnyManagedAgents,
+				Origin: "https://ama.example.test",
+			},
 		})
 	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runners":
 		var body ama.CreateRunnerRequest

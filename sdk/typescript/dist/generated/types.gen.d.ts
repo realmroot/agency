@@ -548,26 +548,28 @@ export type RunnerChannelMessage = {
     eventId?: string;
     message: string;
 };
-export type HealthResponse = {
-    status: 'ok';
-    name: string;
-    runtime: 'cloudflare-workers';
-    oidcIssuer: string | null;
-    runnerClientId: string | null;
-    runnerScopes: string | null;
-    timestamp: string;
-};
 export type PublicConfig = {
+    version: 1;
+    service: PublicServiceConfig;
     auth: PublicAuthConfig;
+};
+export type PublicServiceConfig = {
+    name: 'Any Managed Agents';
+    origin: string;
 };
 export type PublicAuthConfig = {
     oidc: PublicOidcConfig;
 };
 export type PublicOidcConfig = {
     issuer: string;
-    clientId: string;
-    scope: string;
+    resource: string;
+    browser: PublicOidcClientConfig;
+    runner?: PublicOidcClientConfig;
 } | null;
+export type PublicOidcClientConfig = {
+    clientId: string;
+    scopes: Array<string>;
+};
 export type AuthConfig = {
     methods: Array<AuthMethod>;
 };
@@ -1803,19 +1805,6 @@ export type CreateVaultCredentialVersionRequest = {
         [key: string]: unknown;
     };
 };
-export type GetHealthData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/health';
-};
-export type GetHealthResponses = {
-    /**
-     * Worker health status
-     */
-    200: HealthResponse;
-};
-export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 export type ReadConfigzData = {
     body?: never;
     path?: never;
@@ -1863,7 +1852,7 @@ export type CreateAuthSessionErrors = {
 export type CreateAuthSessionError = CreateAuthSessionErrors[keyof CreateAuthSessionErrors];
 export type CreateAuthSessionResponses = {
     /**
-     * Session created. Sets an httpOnly session cookie.
+     * Bearer token accepted. Returns user, organization, and project context.
      */
     201: AuthSession;
 };
@@ -1876,7 +1865,7 @@ export type DeleteCurrentAuthSessionData = {
 };
 export type DeleteCurrentAuthSessionResponses = {
     /**
-     * Session cleared. Expires the httpOnly session cookie.
+     * Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider.
      */
     204: void;
 };

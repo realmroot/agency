@@ -19,16 +19,13 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
 		switch r.URL.Path {
-		case "/api/v1/health":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status":         "ok",
-				"name":           "Any Managed Agents",
-				"runtime":        "cloudflare-workers",
-				"oidcIssuer":     "http://" + r.Host + "/issuer",
-				"oidcResource":   "https://ama.example.test",
-				"runnerClientId": "runner-client",
-				"runnerScopes":   "openid profile email offline_access",
-			})
+		case "/api/v1/configz":
+			_ = json.NewEncoder(w).Encode(testPublicConfig(
+				"http://"+r.Host+"/issuer",
+				"https://ama.example.test",
+				"runner-client",
+				[]string{"openid", "profile", "email", "offline_access"},
+			))
 		case "/issuer/.well-known/openid-configuration":
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"issuer":                        "http://" + r.Host + "/issuer",

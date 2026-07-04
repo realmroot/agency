@@ -347,14 +347,18 @@ function createControlPlane(runtime, gitConfig) {
       if (!request.url?.endsWith('/channel') && request.headers.authorization !== `Bearer ${TOKEN}`) {
         state.unauthorized.push(`${request.method} ${request.url}`)
       }
-      if (request.method === 'GET' && request.url === '/api/v1/health') {
+      if (request.method === 'GET' && request.url === '/api/v1/configz') {
         return json(response, 200, {
-          status: 'ok',
-          name: 'Any Managed Agents',
-          runtime: 'cloudflare-workers',
-          oidcIssuer: 'https://issuer.example.test',
-          runnerClientId: 'runner-client',
-          runnerScopes: 'openid profile email offline_access',
+          version: 1,
+          service: { name: 'Any Managed Agents', origin: 'https://ama.example.test' },
+          auth: {
+            oidc: {
+              issuer: 'https://issuer.example.test',
+              resource: 'https://ama.example.test',
+              browser: { clientId: 'browser-client', scopes: ['openid', 'email', 'profile'] },
+              runner: { clientId: 'runner-client', scopes: ['openid', 'profile', 'email', 'offline_access'] },
+            },
+          },
         })
       }
       if (request.method === 'POST' && request.url === '/api/v1/runners') {
@@ -607,8 +611,12 @@ function createResumeControlPlane(runtime) {
       if (!request.url?.endsWith('/channel') && request.headers.authorization !== `Bearer ${TOKEN}`) {
         state.unauthorized.push(`${request.method} ${request.url}`)
       }
-      if (request.method === 'GET' && request.url === '/api/v1/health') {
-        return json(response, 200, { status: 'ok', name: 'Any Managed Agents', runtime: 'cloudflare-workers' })
+      if (request.method === 'GET' && request.url === '/api/v1/configz') {
+        return json(response, 200, {
+          version: 1,
+          service: { name: 'Any Managed Agents', origin: 'https://ama.example.test' },
+          auth: { oidc: null },
+        })
       }
       if (request.method === 'POST' && request.url === '/api/v1/runners') {
         state.runnerCreates.push(await collectBody(request))

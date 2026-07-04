@@ -135,7 +135,17 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       const url = String(input)
       if (url === '/api/v1/configz') {
         return new Response(
-          JSON.stringify({ auth: { oidc: { issuer: 'https://auth.example.com', clientId: 'client_1' } } }),
+          JSON.stringify({
+            version: 1,
+            service: { name: 'Any Managed Agents', origin: window.location.origin },
+            auth: {
+              oidc: {
+                issuer: 'https://auth.example.com',
+                resource: window.location.origin,
+                browser: { clientId: 'client_1', scopes: ['openid', 'email', 'profile'] },
+              },
+            },
+          }),
           { headers: { 'content-type': 'application/json' } },
         )
       }

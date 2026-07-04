@@ -177,9 +177,6 @@ from .find_tool_input import FindToolInput
 from .git_repository_volume import GitRepositoryVolume
 from .git_repository_volume_type import GitRepositoryVolumeType
 from .grep_tool_input import GrepToolInput
-from .health_response import HealthResponse
-from .health_response_runtime import HealthResponseRuntime
-from .health_response_status import HealthResponseStatus
 from .image_content_block import ImageContentBlock
 from .image_content_block_type import ImageContentBlockType
 from .json_content_block import JsonContentBlock
@@ -243,7 +240,11 @@ from .provider_model_metadata import ProviderModelMetadata
 from .provider_model_pricing import ProviderModelPricing
 from .public_auth_config import PublicAuthConfig
 from .public_config import PublicConfig
+from .public_config_version import PublicConfigVersion
+from .public_oidc_client_config import PublicOidcClientConfig
 from .public_oidc_config_type_0 import PublicOidcConfigType0
+from .public_service_config import PublicServiceConfig
+from .public_service_config_name import PublicServiceConfigName
 from .put_runner_heartbeat_request import PutRunnerHeartbeatRequest
 from .put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMetadata
 from .put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
@@ -698,9 +699,6 @@ __all__ = (
     "GitRepositoryVolume",
     "GitRepositoryVolumeType",
     "GrepToolInput",
-    "HealthResponse",
-    "HealthResponseRuntime",
-    "HealthResponseStatus",
     "ImageContentBlock",
     "ImageContentBlockType",
     "JsonContentBlock",
@@ -764,7 +762,11 @@ __all__ = (
     "ProviderModelPricing",
     "PublicAuthConfig",
     "PublicConfig",
+    "PublicConfigVersion",
+    "PublicOidcClientConfig",
     "PublicOidcConfigType0",
+    "PublicServiceConfig",
+    "PublicServiceConfigName",
     "PutRunnerHeartbeatRequest",
     "PutRunnerHeartbeatRequestMetadata",
     "PutRunnerHeartbeatRequestState",

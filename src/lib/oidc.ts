@@ -17,17 +17,25 @@ async function readOidcConfig() {
     throw new Error('Failed to load browser configuration')
   }
   const body = (await response.json()) as {
-    auth?: { oidc?: { issuer?: string; clientId?: string; scope?: string; resource?: string } | null }
+    auth?: {
+      oidc?: {
+        issuer?: string
+        resource?: string
+        browser?: { clientId?: string; scopes?: string[] }
+      } | null
+    }
   }
   const oidc = body.auth?.oidc
-  if (!oidc?.issuer || !oidc.clientId) {
+  const browser = oidc?.browser
+  const scopes = Array.isArray(browser?.scopes) ? browser.scopes.filter(Boolean) : []
+  if (!oidc?.issuer || !oidc.resource || !browser?.clientId || scopes.length === 0) {
     throw new Error('OIDC browser configuration is missing')
   }
   return {
     authority: oidc.issuer,
-    clientId: oidc.clientId,
-    scope: oidc.scope ?? 'openid email profile',
-    resource: oidc.resource ?? window.location.origin,
+    clientId: browser.clientId,
+    scope: scopes.join(' '),
+    resource: oidc.resource,
   }
 }
 

@@ -608,19 +608,15 @@ export type RunnerChannelMessage = {
     message: string;
 };
 
-export type HealthResponse = {
-    status: 'ok';
-    name: string;
-    runtime: 'cloudflare-workers';
-    oidcIssuer: string | null;
-    oidcResource: string | null;
-    runnerClientId: string | null;
-    runnerScopes: string | null;
-    timestamp: string;
+export type PublicConfig = {
+    version: 1;
+    service: PublicServiceConfig;
+    auth: PublicAuthConfig;
 };
 
-export type PublicConfig = {
-    auth: PublicAuthConfig;
+export type PublicServiceConfig = {
+    name: 'Any Managed Agents';
+    origin: string;
 };
 
 export type PublicAuthConfig = {
@@ -629,10 +625,15 @@ export type PublicAuthConfig = {
 
 export type PublicOidcConfig = {
     issuer: string;
-    clientId: string;
-    scope: string;
     resource: string;
+    browser: PublicOidcClientConfig;
+    runner?: PublicOidcClientConfig;
 } | null;
+
+export type PublicOidcClientConfig = {
+    clientId: string;
+    scopes: Array<string>;
+};
 
 export type AuthConfig = {
     methods: Array<AuthMethod>;
@@ -2030,22 +2031,6 @@ export type CreateVaultCredentialVersionRequest = {
         [key: string]: unknown;
     };
 };
-
-export type GetHealthData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/health';
-};
-
-export type GetHealthResponses = {
-    /**
-     * Worker health status
-     */
-    200: HealthResponse;
-};
-
-export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 
 export type ReadConfigzData = {
     body?: never;

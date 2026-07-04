@@ -38,12 +38,23 @@ describe('[CF] auth v1', () => {
     const res = await SELF.fetch('https://example.com/api/v1/configz')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
+      version: 1,
+      service: {
+        name: 'Any Managed Agents',
+        origin: 'https://example.com',
+      },
       auth: {
         oidc: {
           issuer: 'https://oidc.test',
-          clientId: 'ama-test',
-          scope: 'openid email profile',
           resource: 'https://example.com',
+          browser: {
+            clientId: 'ama-test',
+            scopes: ['openid', 'email', 'profile'],
+          },
+          runner: {
+            clientId: 'ama-runner-test',
+            scopes: ['openid', 'profile', 'email', 'offline_access'],
+          },
         },
       },
     })

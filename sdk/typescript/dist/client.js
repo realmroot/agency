@@ -169,9 +169,6 @@ export function createAmaClient(config) {
     const client = createConfiguredClient(config);
     return {
         raw: client,
-        system: {
-            health: () => unwrap(ops.getHealth({ client })),
-        },
         configz: {
             get: () => unwrap(ops.readConfigz({ client })),
         },
@@ -289,8 +286,8 @@ export function createAmaRunnerClient(config) {
     const client = createConfiguredClient(config);
     return {
         raw: client,
-        system: {
-            health: () => unwrap(ops.getHealth({ client })),
+        configz: {
+            get: () => unwrap(ops.readConfigz({ client })),
         },
         runners: {
             list: (query) => unwrap(ops.listRunners({ client, query })),

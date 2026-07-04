@@ -62,7 +62,7 @@ Restish is configured from the deployment document:
 ```bash
 export AMA_ORIGIN="https://ama.example.com"
 restish api configure ama "$AMA_ORIGIN/api/openapi.json"
-restish ama get-health
+restish ama read-configz
 ```
 
 Use the current AMA deployment origin and `/api` paths for control-plane operations. The implemented security scheme is a OIDC provider-issued OIDC access token declared as `bearerAuth`; do not document provider API keys as AMA control-plane credentials.

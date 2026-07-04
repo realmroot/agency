@@ -42,7 +42,7 @@ type fakeAMAServer struct {
 	lease             *fakeWork
 	runnerID          string
 	claims            int
-	healthErr         error
+	configErr         error
 	createErr         error
 	heartbeatErr      error
 	heartbeatStatus   int
@@ -56,7 +56,7 @@ type fakeAMAServer struct {
 	hubChannel        *fakeSessionChannel
 	channelErr        error
 	opens             int
-	health            *ama.HealthResponse
+	config            *ama.PublicConfig
 	server            *httptest.Server
 	sdk               *ama.RunnerClient
 }
@@ -74,18 +74,28 @@ func (f *fakeAMAServer) sdkClient() *ama.RunnerClient {
 	return sdk
 }
 
+func fakePublicConfig() ama.PublicConfig {
+	return ama.PublicConfig{
+		Version: ama.N1,
+		Service: ama.PublicServiceConfig{
+			Name:   ama.AnyManagedAgents,
+			Origin: "https://ama.example.test",
+		},
+	}
+}
+
 func (f *fakeAMAServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
-	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/health":
-		if f.healthErr != nil {
-			writeAPIError(w, http.StatusInternalServerError, f.healthErr)
+	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/configz":
+		if f.configErr != nil {
+			writeAPIError(w, http.StatusInternalServerError, f.configErr)
 			return
 		}
-		if f.health != nil {
-			writeJSON(w, http.StatusOK, f.health)
+		if f.config != nil {
+			writeJSON(w, http.StatusOK, f.config)
 			return
 		}
-		writeJSON(w, http.StatusOK, ama.HealthResponse{Name: "Any Managed Agents", Runtime: ama.CloudflareWorkers, Status: ama.Ok})
+		writeJSON(w, http.StatusOK, fakePublicConfig())
 	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runners":
 		if f.createErr != nil {
 			writeAPIError(w, http.StatusInternalServerError, f.createErr)
@@ -970,7 +980,7 @@ func TestStartFailsFastOnAMAServerSetupErrors(t *testing.T) {
 		client *fakeAMAServer
 		want   string
 	}{
-		{"health", &fakeAMAServer{healthErr: errors.New("bad health")}, "bad health"},
+		{"configz", &fakeAMAServer{configErr: errors.New("bad config")}, "bad config"},
 		{"create", &fakeAMAServer{createErr: errors.New("create failed")}, "create failed"},
 		{"heartbeat", &fakeAMAServer{heartbeatErr: errors.New("heartbeat failed")}, "heartbeat failed"},
 	}
@@ -986,7 +996,7 @@ func TestStartFailsFastOnAMAServerSetupErrors(t *testing.T) {
 	}
 }
 
-func TestStartFailsOnCleanupAndIncompatibleHealth(t *testing.T) {
+func TestStartFailsOnCleanupAndIncompatibleConfig(t *testing.T) {
 	t.Run("cleanup stale", func(t *testing.T) {
 		client := &fakeAMAServer{}
 		daemon := testDaemon(client, &fakeAdapter{})
@@ -998,11 +1008,13 @@ func TestStartFailsOnCleanupAndIncompatibleHealth(t *testing.T) {
 			t.Fatal("expected stale cleanup error")
 		}
 	})
-	t.Run("incompatible health", func(t *testing.T) {
-		client := &fakeAMAServer{health: &ama.HealthResponse{Name: "Other", Runtime: ama.CloudflareWorkers, Status: ama.Ok}}
+	t.Run("incompatible config", func(t *testing.T) {
+		config := fakePublicConfig()
+		config.Service.Name = "Other"
+		client := &fakeAMAServer{config: &config}
 		daemon := testDaemon(client, &fakeAdapter{})
 		if err := daemon.Start(context.Background()); err == nil {
-			t.Fatal("expected incompatible health error")
+			t.Fatal("expected incompatible config error")
 		}
 	})
 }

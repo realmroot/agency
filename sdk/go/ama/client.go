@@ -44,7 +44,6 @@ type clientCore struct {
 
 type Client struct {
 	core         *clientCore
-	System       SystemService
 	Configz      ConfigzService
 	Auth         AuthService
 	Projects     ProjectsService
@@ -64,7 +63,7 @@ type Client struct {
 
 type RunnerClient struct {
 	core      *clientCore
-	System    RunnerSystemService
+	Configz   RunnerConfigzService
 	Runners   RunnerRunnersService
 	WorkItems RunnerWorkItemsService
 	Leases    RunnerLeasesService
@@ -77,7 +76,6 @@ func New(config ClientConfig) (*Client, error) {
 		return nil, err
 	}
 	client := &Client{core: core}
-	client.System = SystemService{client: core}
 	client.Configz = ConfigzService{client: core}
 	client.Auth = AuthService{client: core}
 	client.Projects = ProjectsService{client: core}
@@ -102,7 +100,7 @@ func NewRunner(config ClientConfig) (*RunnerClient, error) {
 		return nil, err
 	}
 	client := &RunnerClient{core: core}
-	client.System = RunnerSystemService{client: core}
+	client.Configz = RunnerConfigzService{client: core}
 	client.Runners = RunnerRunnersService{client: core}
 	client.WorkItems = RunnerWorkItemsService{client: core}
 	client.Leases = RunnerLeasesService{client: core}
@@ -263,18 +261,6 @@ func accessToken(ctx context.Context, static string, provider AccessTokenProvide
 		return provider(ctx)
 	}
 	return static, nil
-}
-
-type SystemService struct {
-	client *clientCore
-}
-
-func (s SystemService) Health(ctx context.Context) (*HealthResponse, error) {
-	response, err := s.client.raw.GetHealthWithResponse(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200)
 }
 
 type ConfigzService struct {
@@ -981,12 +967,12 @@ func (s UsageService) GetSummary(ctx context.Context, params *ReadUsageSummaryPa
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401)
 }
 
-type RunnerSystemService struct {
+type RunnerConfigzService struct {
 	client *clientCore
 }
 
-func (s RunnerSystemService) Health(ctx context.Context) (*HealthResponse, error) {
-	response, err := s.client.raw.GetHealthWithResponse(ctx)
+func (s RunnerConfigzService) Get(ctx context.Context) (*PublicConfig, error) {
+	response, err := s.client.raw.ReadConfigzWithResponse(ctx)
 	if err != nil {
 		return nil, err
 	}

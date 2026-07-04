@@ -31,14 +31,13 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 				t.Fatalf("unexpected authorization header: %s", r.Header.Get("authorization"))
 			}
 			_, _ = w.Write([]byte(`{"ok":true}`))
-		case "/api/v1/health":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status":         "ok",
-				"name":           "Any Managed Agents",
-				"runtime":        "cloudflare-workers",
-				"oidcIssuer":     "http://" + r.Host + "/issuer",
-				"runnerClientId": "runner-client",
-			})
+		case "/api/v1/configz":
+			_ = json.NewEncoder(w).Encode(testPublicConfig(
+				"http://"+r.Host+"/issuer",
+				"http://"+r.Host,
+				"runner-client",
+				[]string{"openid", "profile", "email", "offline_access"},
+			))
 		case "/issuer/.well-known/openid-configuration":
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"issuer":                        "http://" + r.Host + "/issuer",

@@ -2318,73 +2318,48 @@
           }
         ]
       },
-      "HealthResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ok"
-            ],
-            "example": "ok"
-          },
-          "name": {
-            "type": "string",
-            "example": "Any Managed Agents"
-          },
-          "runtime": {
-            "type": "string",
-            "enum": [
-              "cloudflare-workers"
-            ],
-            "example": "cloudflare-workers"
-          },
-          "oidcIssuer": {
-            "type": "string",
-            "nullable": true,
-            "example": "https://id.example.com/api/auth"
-          },
-          "oidcResource": {
-            "type": "string",
-            "nullable": true,
-            "example": "https://ama.example.com"
-          },
-          "runnerClientId": {
-            "type": "string",
-            "nullable": true,
-            "example": "ama-runner"
-          },
-          "runnerScopes": {
-            "type": "string",
-            "nullable": true,
-            "example": "openid profile email offline_access"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-05-22T00:00:00.000Z"
-          }
-        },
-        "required": [
-          "status",
-          "name",
-          "runtime",
-          "oidcIssuer",
-          "oidcResource",
-          "runnerClientId",
-          "runnerScopes",
-          "timestamp"
-        ]
-      },
       "PublicConfig": {
         "type": "object",
         "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ],
+            "example": 1
+          },
+          "service": {
+            "$ref": "#/components/schemas/PublicServiceConfig"
+          },
           "auth": {
             "$ref": "#/components/schemas/PublicAuthConfig"
           }
         },
         "required": [
+          "version",
+          "service",
           "auth"
+        ]
+      },
+      "PublicServiceConfig": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "Any Managed Agents"
+            ],
+            "example": "Any Managed Agents"
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://ama.example.com"
+          }
+        },
+        "required": [
+          "name",
+          "origin"
         ]
       },
       "PublicAuthConfig": {
@@ -2407,25 +2382,46 @@
             "format": "uri",
             "example": "https://id.example.com/api/auth"
           },
-          "clientId": {
-            "type": "string",
-            "example": "client_abc123"
-          },
-          "scope": {
-            "type": "string",
-            "example": "openid email profile"
-          },
           "resource": {
             "type": "string",
             "format": "uri",
             "example": "https://ama.example.com"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/PublicOidcClientConfig"
+          },
+          "runner": {
+            "$ref": "#/components/schemas/PublicOidcClientConfig"
           }
         },
         "required": [
           "issuer",
+          "resource",
+          "browser"
+        ]
+      },
+      "PublicOidcClientConfig": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "example": "client_abc123"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "openid",
+              "email",
+              "profile"
+            ]
+          }
+        },
+        "required": [
           "clientId",
-          "scope",
-          "resource"
+          "scopes"
         ]
       },
       "AuthConfig": {
@@ -8330,27 +8326,6 @@
     "parameters": {}
   },
   "paths": {
-    "/api/v1/health": {
-      "get": {
-        "operationId": "getHealth",
-        "tags": [
-          "System"
-        ],
-        "summary": "Get Worker health",
-        "responses": {
-          "200": {
-            "description": "Worker health status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/configz": {
       "get": {
         "operationId": "readConfigz",

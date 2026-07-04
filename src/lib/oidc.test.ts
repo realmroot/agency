@@ -41,8 +41,28 @@ async function freshOidc() {
 
 function configzResponse(
   body = {
-    auth: { oidc: { issuer: 'https://auth.example.com', clientId: 'test-client-id', scope: 'openid email profile' } },
-  } as { auth: { oidc: { issuer: string; clientId: string; scope: string; resource?: string } } },
+    version: 1,
+    service: { name: 'Any Managed Agents', origin: window.location.origin },
+    auth: {
+      oidc: {
+        issuer: 'https://auth.example.com',
+        resource: window.location.origin,
+        browser: { clientId: 'test-client-id', scopes: ['openid', 'email', 'profile'] },
+        runner: null,
+      },
+    },
+  } as {
+    version: number
+    service: { name: string; origin: string }
+    auth: {
+      oidc: {
+        issuer: string
+        resource: string
+        browser: { clientId: string; scopes: string[] }
+        runner: { clientId: string; scopes: string[] } | null
+      }
+    }
+  },
 ) {
   return new Response(JSON.stringify(body), { status: 200 })
 }
@@ -356,12 +376,14 @@ describe('oidc helpers', () => {
         'fetch',
         vi.fn(async () =>
           configzResponse({
+            version: 1,
+            service: { name: 'Any Managed Agents', origin: 'https://ama.example.com' },
             auth: {
               oidc: {
                 issuer: 'https://auth.example.com',
-                clientId: 'cid',
-                scope: 'openid',
                 resource: 'https://ama.example.com',
+                browser: { clientId: 'cid', scopes: ['openid'] },
+                runner: null,
               },
             },
           }),
@@ -378,7 +400,20 @@ describe('oidc helpers', () => {
       vi.resetModules()
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => configzResponse({ auth: { oidc: { issuer: '', clientId: 'cid', scope: 'openid' } } })),
+        vi.fn(async () =>
+          configzResponse({
+            version: 1,
+            service: { name: 'Any Managed Agents', origin: window.location.origin },
+            auth: {
+              oidc: {
+                issuer: '',
+                resource: window.location.origin,
+                browser: { clientId: 'cid', scopes: ['openid'] },
+                runner: null,
+              },
+            },
+          }),
+        ),
       )
       const { getOidcManager } = await import('./oidc')
       await expect(getOidcManager()).rejects.toThrow('OIDC browser configuration is missing')
@@ -389,7 +424,18 @@ describe('oidc helpers', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async () =>
-          configzResponse({ auth: { oidc: { issuer: 'https://auth.example.com', clientId: '', scope: 'openid' } } }),
+          configzResponse({
+            version: 1,
+            service: { name: 'Any Managed Agents', origin: window.location.origin },
+            auth: {
+              oidc: {
+                issuer: 'https://auth.example.com',
+                resource: window.location.origin,
+                browser: { clientId: '', scopes: ['openid'] },
+                runner: null,
+              },
+            },
+          }),
         ),
       )
       const { getOidcManager } = await import('./oidc')

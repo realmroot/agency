@@ -943,36 +943,6 @@ func (e GitRepositoryVolumeType) Valid() bool {
 	}
 }
 
-// Defines values for HealthResponseRuntime.
-const (
-	CloudflareWorkers HealthResponseRuntime = "cloudflare-workers"
-)
-
-// Valid indicates whether the value is a known member of the HealthResponseRuntime enum.
-func (e HealthResponseRuntime) Valid() bool {
-	switch e {
-	case CloudflareWorkers:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for HealthResponseStatus.
-const (
-	Ok HealthResponseStatus = "ok"
-)
-
-// Valid indicates whether the value is a known member of the HealthResponseStatus enum.
-func (e HealthResponseStatus) Valid() bool {
-	switch e {
-	case Ok:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ImageContentBlockType.
 const (
 	Image ImageContentBlockType = "image"
@@ -1129,6 +1099,36 @@ func (e ProviderModelAvailability) Valid() bool {
 	case ProviderModelAvailabilityDisabled:
 		return true
 	case ProviderModelAvailabilityUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicConfigVersion.
+const (
+	N1 PublicConfigVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the PublicConfigVersion enum.
+func (e PublicConfigVersion) Valid() bool {
+	switch e {
+	case N1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicServiceConfigName.
+const (
+	AnyManagedAgents PublicServiceConfigName = "Any Managed Agents"
+)
+
+// Valid indicates whether the value is a known member of the PublicServiceConfigName enum.
+func (e PublicServiceConfigName) Valid() bool {
+	switch e {
+	case AnyManagedAgents:
 		return true
 	default:
 		return false
@@ -3847,24 +3847,6 @@ type GrepToolInput struct {
 	Pattern    string  `json:"pattern"`
 }
 
-// HealthResponse defines model for HealthResponse.
-type HealthResponse struct {
-	Name           string                `json:"name"`
-	OidcIssuer     *string               `json:"oidcIssuer"`
-	OidcResource   *string               `json:"oidcResource"`
-	RunnerClientId *string               `json:"runnerClientId"`
-	RunnerScopes   *string               `json:"runnerScopes"`
-	Runtime        HealthResponseRuntime `json:"runtime"`
-	Status         HealthResponseStatus  `json:"status"`
-	Timestamp      time.Time             `json:"timestamp"`
-}
-
-// HealthResponseRuntime defines model for HealthResponse.Runtime.
-type HealthResponseRuntime string
-
-// HealthResponseStatus defines model for HealthResponse.Status.
-type HealthResponseStatus string
-
 // ImageContentBlock defines model for ImageContentBlock.
 type ImageContentBlock struct {
 	Data      *string               `json:"data,omitempty"`
@@ -4121,16 +4103,36 @@ type PublicAuthConfig struct {
 
 // PublicConfig defines model for PublicConfig.
 type PublicConfig struct {
-	Auth PublicAuthConfig `json:"auth"`
+	Auth    PublicAuthConfig    `json:"auth"`
+	Service PublicServiceConfig `json:"service"`
+	Version PublicConfigVersion `json:"version"`
+}
+
+// PublicConfigVersion defines model for PublicConfig.Version.
+type PublicConfigVersion float32
+
+// PublicOidcClientConfig defines model for PublicOidcClientConfig.
+type PublicOidcClientConfig struct {
+	ClientId string   `json:"clientId"`
+	Scopes   []string `json:"scopes"`
 }
 
 // PublicOidcConfig defines model for PublicOidcConfig.
 type PublicOidcConfig struct {
-	ClientId string `json:"clientId"`
-	Issuer   string `json:"issuer"`
-	Resource string `json:"resource"`
-	Scope    string `json:"scope"`
+	Browser  PublicOidcClientConfig  `json:"browser"`
+	Issuer   string                  `json:"issuer"`
+	Resource string                  `json:"resource"`
+	Runner   *PublicOidcClientConfig `json:"runner,omitempty"`
 }
+
+// PublicServiceConfig defines model for PublicServiceConfig.
+type PublicServiceConfig struct {
+	Name   PublicServiceConfigName `json:"name"`
+	Origin string                  `json:"origin"`
+}
+
+// PublicServiceConfigName defines model for PublicServiceConfig.Name.
+type PublicServiceConfigName string
 
 // PutRunnerHeartbeatRequest defines model for PutRunnerHeartbeatRequest.
 type PutRunnerHeartbeatRequest struct {
@@ -8401,9 +8403,6 @@ type ClientInterface interface {
 	// ReadEnvironmentVersion request
 	ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetHealth request
-	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListLeases request
 	ListLeases(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -9032,18 +9031,6 @@ func (c *APIClient) ListEnvironmentVersions(ctx context.Context, environmentId s
 
 func (c *APIClient) ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadEnvironmentVersionRequest(c.Server, environmentId, version)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetHealthRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -11426,33 +11413,6 @@ func NewReadEnvironmentVersionRequest(server string, environmentId string, versi
 	}
 
 	operationPath := fmt.Sprintf("/api/v1/environments/%s/versions/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetHealthRequest generates requests for GetHealth
-func NewGetHealthRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/health")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -15356,9 +15316,6 @@ type ClientWithResponsesInterface interface {
 	// ReadEnvironmentVersionWithResponse request
 	ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error)
 
-	// GetHealthWithResponse request
-	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
-
 	// ListLeasesWithResponse request
 	ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error)
 
@@ -16424,36 +16381,6 @@ func (r ReadEnvironmentVersionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadEnvironmentVersionResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetHealthResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *HealthResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r GetHealthResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetHealthResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetHealthResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18881,15 +18808,6 @@ func (c *ClientWithResponses) ReadEnvironmentVersionWithResponse(ctx context.Con
 	return ParseReadEnvironmentVersionResponse(rsp)
 }
 
-// GetHealthWithResponse request returning *GetHealthResponse
-func (c *ClientWithResponses) GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error) {
-	rsp, err := c.GetHealth(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetHealthResponse(rsp)
-}
-
 // ListLeasesWithResponse request returning *ListLeasesResponse
 func (c *ClientWithResponses) ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error) {
 	rsp, err := c.ListLeases(ctx, params, reqEditors...)
@@ -20672,32 +20590,6 @@ func ParseReadEnvironmentVersionResponse(rsp *http.Response) (*ReadEnvironmentVe
 			return nil, err
 		}
 		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetHealthResponse parses an HTTP response from a GetHealthWithResponse call
-func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetHealthResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest HealthResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
 
 	}
 
