@@ -9,6 +9,8 @@ const mockSigninRedirect = vi.fn()
 const mockSigninRedirectCallback = vi.fn()
 const mockSignoutRedirect = vi.fn()
 const mockUserManagerConstructor = vi.fn()
+const mockRemoveUser = vi.fn()
+const jwtAccessToken = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature'
 
 vi.mock('oidc-client-ts', () => {
   // Must be a real class (constructor) — vi.fn() arrow fns are not constructors.
@@ -21,6 +23,7 @@ vi.mock('oidc-client-ts', () => {
     signinRedirect = mockSigninRedirect
     signinRedirectCallback = mockSigninRedirectCallback
     signoutRedirect = mockSignoutRedirect
+    removeUser = mockRemoveUser
   }
 
   return {
@@ -84,9 +87,20 @@ describe('oidc helpers', () => {
       const futureExpiry = Math.floor(Date.now() / 1000) + 3600
       window.localStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
-        JSON.stringify({ access_token: 'oidc_token_abc', expires_at: futureExpiry }),
+        JSON.stringify({ access_token: jwtAccessToken, expires_at: futureExpiry }),
       )
-      expect(getStoredAccessToken()).toBe('oidc_token_abc')
+      expect(getStoredAccessToken()).toBe(jwtAccessToken)
+    })
+
+    it('does not return opaque oidc access tokens', async () => {
+      const { getStoredAccessToken } = await freshOidc()
+      const futureExpiry = Math.floor(Date.now() / 1000) + 3600
+      window.localStorage.setItem(
+        'oidc.user:https://auth.example.com:test-client-id',
+        JSON.stringify({ access_token: 'opaque_token_abc', expires_at: futureExpiry }),
+      )
+      expect(getStoredAccessToken()).toBeNull()
+      expect(window.localStorage.getItem('oidc.user:https://auth.example.com:test-client-id')).toBeNull()
     })
 
     it('returns null when oidc token is expired', async () => {
@@ -103,9 +117,9 @@ describe('oidc helpers', () => {
       const { getStoredAccessToken } = await freshOidc()
       window.localStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
-        JSON.stringify({ access_token: 'no_expiry_token' }),
+        JSON.stringify({ access_token: jwtAccessToken }),
       )
-      expect(getStoredAccessToken()).toBe('no_expiry_token')
+      expect(getStoredAccessToken()).toBe(jwtAccessToken)
     })
 
     it('skips keys that do not start with oidc.user:', async () => {
@@ -149,12 +163,20 @@ describe('oidc helpers', () => {
 
     it('returns access_token from a valid user', async () => {
       const { getAccessToken } = await freshOidc()
-      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: 'live_token' })
+      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: jwtAccessToken })
       const token = await getAccessToken()
-      expect(token).toBe('live_token')
+      expect(token).toBe(jwtAccessToken)
       expect(mockUserManagerConstructor).toHaveBeenCalledWith(
         expect.objectContaining({ resource: window.location.origin }),
       )
+    })
+
+    it('removes current oidc user and returns null for opaque access tokens', async () => {
+      const { getAccessToken } = await freshOidc()
+      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: 'opaque_token' })
+      const token = await getAccessToken()
+      expect(token).toBeNull()
+      expect(mockRemoveUser).toHaveBeenCalled()
     })
   })
 
@@ -212,10 +234,18 @@ describe('oidc helpers', () => {
 
     it('returns the real user when manager returns a valid, non-expired user', async () => {
       const { getCurrentUser } = await freshOidc()
-      const fakeUser = { expired: false, access_token: 'oidc_real' } as unknown as User
+      const fakeUser = { expired: false, access_token: jwtAccessToken } as unknown as User
       mockGetUser.mockResolvedValueOnce(fakeUser)
       const user = await getCurrentUser()
       expect(user).toBe(fakeUser)
+    })
+
+    it('removes current oidc user and returns null for opaque access tokens', async () => {
+      const { getCurrentUser } = await freshOidc()
+      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: 'opaque_token' })
+      const user = await getCurrentUser()
+      expect(user).toBeNull()
+      expect(mockRemoveUser).toHaveBeenCalled()
     })
   })
 

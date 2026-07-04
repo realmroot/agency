@@ -42,6 +42,10 @@ async function oidcConfig() {
   }
 }
 
+function isSerializedJwt(token: string) {
+  return token.split('.').length === 3
+}
+
 export async function getOidcManager() {
   managerPromise ??= oidcConfig().then(
     (config) =>
@@ -70,6 +74,11 @@ export async function getAccessToken() {
   userPromise ??= manager.getUser()
   const user = await userPromise
   if (!user || user.expired) {
+    return null
+  }
+  if (!isSerializedJwt(user.access_token)) {
+    userPromise = undefined
+    await manager.removeUser()
     return null
   }
   return user.access_token
@@ -102,7 +111,15 @@ export async function getCurrentUser() {
   const manager = await getOidcManager()
   userPromise ??= manager.getUser()
   const user = await userPromise
-  return user && !user.expired ? user : null
+  if (!user || user.expired) {
+    return null
+  }
+  if (!isSerializedJwt(user.access_token)) {
+    userPromise = undefined
+    await manager.removeUser()
+    return null
+  }
+  return user
 }
 
 export function getStoredAccessToken() {
@@ -118,7 +135,10 @@ export function getStoredAccessToken() {
     try {
       const user = JSON.parse(raw) as { access_token?: string; expires_at?: number }
       if (user.access_token && (!user.expires_at || user.expires_at * 1000 > Date.now())) {
-        return user.access_token
+        if (isSerializedJwt(user.access_token)) {
+          return user.access_token
+        }
+        window.localStorage.removeItem(key)
       }
     } catch {}
   }
