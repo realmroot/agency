@@ -3851,6 +3851,7 @@ type GrepToolInput struct {
 type HealthResponse struct {
 	Name           string                `json:"name"`
 	OidcIssuer     *string               `json:"oidcIssuer"`
+	OidcResource   *string               `json:"oidcResource"`
 	RunnerClientId *string               `json:"runnerClientId"`
 	RunnerScopes   *string               `json:"runnerScopes"`
 	Runtime        HealthResponseRuntime `json:"runtime"`
@@ -4127,6 +4128,7 @@ type PublicConfig struct {
 type PublicOidcConfig struct {
 	ClientId string `json:"clientId"`
 	Issuer   string `json:"issuer"`
+	Resource string `json:"resource"`
 	Scope    string `json:"scope"`
 }
 

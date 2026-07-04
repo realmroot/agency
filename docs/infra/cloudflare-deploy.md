@@ -20,6 +20,9 @@ Required settings:
 - Issuer: `OIDC_ISSUER`
 - Client id: `OIDC_CLIENT_ID`
 - Client secret: store as Wrangler secret `OIDC_CLIENT_SECRET`
+- Resource audience: configure the public AMA origin as an enabled FlareAuth API
+  resource audience. AMA derives this value from the request origin so browser
+  and runner flows receive JWT access tokens for the origin they call.
 - Redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE

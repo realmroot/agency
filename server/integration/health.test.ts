@@ -12,6 +12,7 @@ describe('[CF] GET /api/v1/health [spec: api-contracts/health]', () => {
       name: 'Any Managed Agents',
       runtime: 'cloudflare-workers',
       oidcIssuer: 'https://oidc.test',
+      oidcResource: 'https://example.com',
       runnerClientId: 'ama-runner-test',
       runnerScopes: 'openid profile email offline_access',
     })
@@ -25,6 +26,7 @@ describe('[CF] GET /api/v1/health [spec: api-contracts/health]', () => {
       }),
     ).toMatchObject({
       oidcIssuer: 'https://oidc.test',
+      oidcResource: null,
       runnerClientId: null,
       runnerScopes: null,
     })

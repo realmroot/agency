@@ -26,6 +26,7 @@ type DeviceAuthClient struct {
 type DeviceLoginOptions struct {
 	APIServer      string
 	Issuer         string
+	Resource       string
 	ClientID       string
 	Scopes         string
 	CredentialPath string
@@ -85,7 +86,7 @@ func LoginWithDeviceAuthorization(
 		output = io.Discard
 	}
 	printDeviceInstructions(output, device)
-	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval)
+	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource)
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
@@ -179,6 +180,7 @@ func (c DeviceAuthClient) PollDeviceToken(
 	clientID string,
 	device deviceAuthorizationResponse,
 	fallbackInterval time.Duration,
+	resource string,
 ) (tokenResponse, error) {
 	interval := time.Duration(device.Interval) * time.Second
 	if interval <= 0 {
@@ -202,6 +204,9 @@ func (c DeviceAuthClient) PollDeviceToken(
 		values.Set("grant_type", deviceGrantType)
 		values.Set("device_code", device.DeviceCode)
 		values.Set("client_id", clientID)
+		if strings.TrimSpace(resource) != "" {
+			values.Set("resource", strings.TrimRight(resource, "/"))
+		}
 		var token tokenResponse
 		err := c.postForm(ctx, endpoint, values, &token)
 		if err == nil && token.Error == "" {
@@ -242,6 +247,7 @@ func (c DeviceAuthClient) RefreshToken(
 	endpoint string,
 	clientID string,
 	refreshToken string,
+	resource string,
 ) (tokenResponse, error) {
 	if strings.TrimSpace(refreshToken) == "" {
 		return tokenResponse{}, fmt.Errorf("OIDC refresh token is required")
@@ -250,6 +256,9 @@ func (c DeviceAuthClient) RefreshToken(
 	values.Set("grant_type", refreshGrantType)
 	values.Set("refresh_token", refreshToken)
 	values.Set("client_id", clientID)
+	if strings.TrimSpace(resource) != "" {
+		values.Set("resource", strings.TrimRight(resource, "/"))
+	}
 	var token tokenResponse
 	if err := c.postForm(ctx, endpoint, values, &token); err != nil {
 		return tokenResponse{}, err

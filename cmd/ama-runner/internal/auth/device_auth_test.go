@@ -28,6 +28,7 @@ func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
 				"runtime":        "cloudflare-workers",
 				"timestamp":      time.Now().UTC().Format(time.RFC3339),
 				"oidcIssuer":     "http://" + r.Host,
+				"oidcResource":   "https://ama.example.test",
 				"runnerClientId": "runner-client",
 				"runnerScopes":   "openid offline_access",
 			})
@@ -39,6 +40,9 @@ func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
 				"expires_in":       60,
 			})
 		case "/token":
+			if r.FormValue("resource") != "https://ama.example.test" {
+				t.Fatalf("unexpected token request resource: %s", r.Form.Encode())
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "access-token",
 				"refresh_token": "refresh-token",
@@ -92,7 +96,9 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 			})
 		case "/token":
 			polls += 1
-			if r.FormValue("grant_type") != deviceGrantType || r.FormValue("device_code") != "device-code" {
+			if r.FormValue("grant_type") != deviceGrantType ||
+				r.FormValue("device_code") != "device-code" ||
+				r.FormValue("resource") != "https://ama.example.test" {
 				t.Fatalf("unexpected token request form: %s", r.Form.Encode())
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -113,6 +119,7 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 	result, err := LoginWithDeviceAuthorization(context.Background(), DeviceAuthClient{HTTPClient: server.Client()}, DeviceLoginOptions{
 		APIServer:      "https://ama.example.test",
 		Issuer:         server.URL,
+		Resource:       "https://ama.example.test",
 		ClientID:       "runner-client",
 		Scopes:         "openid profile email offline_access",
 		CredentialPath: credentialPath,
@@ -184,7 +191,9 @@ func TestLoginWithDeviceAuthorizationFallsBackToJSONDeviceEndpoint(t *testing.T)
 				"expires_in":       60,
 			})
 		case "/token":
-			if r.FormValue("grant_type") != deviceGrantType || r.FormValue("device_code") != "device-code" {
+			if r.FormValue("grant_type") != deviceGrantType ||
+				r.FormValue("device_code") != "device-code" ||
+				r.FormValue("resource") != "https://ama.example.test" {
 				t.Fatalf("unexpected token request form: %s", r.Form.Encode())
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -204,6 +213,7 @@ func TestLoginWithDeviceAuthorizationFallsBackToJSONDeviceEndpoint(t *testing.T)
 	_, err := LoginWithDeviceAuthorization(context.Background(), DeviceAuthClient{HTTPClient: server.Client()}, DeviceLoginOptions{
 		APIServer:      "https://ama.example.test",
 		Issuer:         server.URL,
+		Resource:       "https://ama.example.test",
 		ClientID:       "runner-client",
 		Scopes:         "openid profile email offline_access",
 		CredentialPath: credentialPath,
@@ -433,6 +443,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err != nil || token.AccessToken != "token" || polls != 2 {
 			t.Fatalf("unexpected polling result token=%#v polls=%d err=%v", token, polls, err)
@@ -461,6 +472,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err != nil || token.AccessToken != "token" || polls != 3 {
 			t.Fatalf("unexpected polling result token=%#v polls=%d err=%v", token, polls, err)
@@ -479,6 +491,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "bad device code") {
 			t.Fatalf("expected provider error, got %v", err)
@@ -497,6 +510,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "expired") {
 			t.Fatalf("expected expired error, got %v", err)
@@ -515,6 +529,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "denied") {
 			t.Fatalf("expected denied error, got %v", err)
@@ -532,6 +547,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "access token") {
 			t.Fatalf("expected missing access token error, got %v", err)
@@ -545,6 +561,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: -1},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "expired") {
 			t.Fatalf("expected local expiry error, got %v", err)
@@ -560,6 +577,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			"runner-client",
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
+			"",
 		)
 		if err == nil || !strings.Contains(err.Error(), "context canceled") {
 			t.Fatalf("expected context cancellation, got %v", err)
@@ -657,14 +675,23 @@ func TestOIDCStatusErrorString(t *testing.T) {
 }
 
 func TestRefreshTokenValidationAndDefaults(t *testing.T) {
-	if _, err := (DeviceAuthClient{}).RefreshToken(context.Background(), "https://issuer.example.test/token", "runner-client", " "); err == nil {
+	if _, err := (DeviceAuthClient{}).RefreshToken(context.Background(), "https://issuer.example.test/token", "runner-client", " ", ""); err == nil {
 		t.Fatal("expected missing refresh token error")
 	}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.FormValue("resource") != "https://ama.example.test" {
+			t.Fatalf("unexpected refresh resource: %s", r.Form.Encode())
+		}
 		_, _ = w.Write([]byte(`{"access_token":"fresh"}`))
 	}))
 	defer server.Close()
-	token, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(context.Background(), server.URL, "runner-client", "refresh")
+	token, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(
+		context.Background(),
+		server.URL,
+		"runner-client",
+		"refresh",
+		"https://ama.example.test",
+	)
 	if err != nil {
 		t.Fatalf("expected refresh success, got %v", err)
 	}

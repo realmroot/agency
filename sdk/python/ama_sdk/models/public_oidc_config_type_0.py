@@ -25,11 +25,13 @@ class PublicOidcConfigType0:
             issuer (str):  Example: https://id.example.com/api/auth.
             client_id (str):  Example: client_abc123.
             scope (str):  Example: openid email profile.
+            resource (str):  Example: https://ama.example.com.
      """
 
     issuer: str
     client_id: str
     scope: str
+    resource: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,6 +45,8 @@ class PublicOidcConfigType0:
 
         scope = self.scope
 
+        resource = self.resource
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -50,6 +54,7 @@ class PublicOidcConfigType0:
             "issuer": issuer,
             "clientId": client_id,
             "scope": scope,
+            "resource": resource,
         })
 
         return field_dict
@@ -65,10 +70,13 @@ class PublicOidcConfigType0:
 
         scope = d.pop("scope")
 
+        resource = d.pop("resource")
+
         public_oidc_config_type_0 = cls(
             issuer=issuer,
             client_id=client_id,
             scope=scope,
+            resource=resource,
         )
 
 

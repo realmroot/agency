@@ -613,6 +613,7 @@ export type HealthResponse = {
     name: string;
     runtime: 'cloudflare-workers';
     oidcIssuer: string | null;
+    oidcResource: string | null;
     runnerClientId: string | null;
     runnerScopes: string | null;
     timestamp: string;
@@ -630,6 +631,7 @@ export type PublicOidcConfig = {
     issuer: string;
     clientId: string;
     scope: string;
+    resource: string;
 } | null;
 
 export type AuthConfig = {
@@ -2101,7 +2103,7 @@ export type CreateAuthSessionError = CreateAuthSessionErrors[keyof CreateAuthSes
 
 export type CreateAuthSessionResponses = {
     /**
-     * Session created. Sets an httpOnly session cookie.
+     * Bearer token accepted. Returns user, organization, and project context.
      */
     201: AuthSession;
 };
@@ -2117,7 +2119,7 @@ export type DeleteCurrentAuthSessionData = {
 
 export type DeleteCurrentAuthSessionResponses = {
     /**
-     * Session cleared. Expires the httpOnly session cookie.
+     * Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider.
      */
     204: void;
 };

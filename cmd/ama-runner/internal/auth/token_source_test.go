@@ -25,6 +25,7 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 				"name":           "Any Managed Agents",
 				"runtime":        "cloudflare-workers",
 				"oidcIssuer":     "http://" + r.Host + "/issuer",
+				"oidcResource":   "https://ama.example.test",
 				"runnerClientId": "runner-client",
 				"runnerScopes":   "openid profile email offline_access",
 			})
@@ -38,7 +39,8 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 			refreshes += 1
 			if r.FormValue("grant_type") != RefreshGrantType ||
 				r.FormValue("client_id") != "runner-client" ||
-				r.FormValue("refresh_token") != "old-refresh-token" {
+				r.FormValue("refresh_token") != "old-refresh-token" ||
+				r.FormValue("resource") != "https://ama.example.test" {
 				t.Fatalf("unexpected refresh form: %s", r.Form.Encode())
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{

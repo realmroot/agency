@@ -51,6 +51,7 @@ func Login(ctx context.Context, command LoginCommand, output io.Writer) error {
 	result, err := LoginWithDeviceAuthorization(ctx, authClient, DeviceLoginOptions{
 		APIServer:      command.APIServer,
 		Issuer:         StringValue(health.OidcIssuer),
+		Resource:       oidcResource(health.OidcResource, command.APIServer),
 		ClientID:       StringValue(health.RunnerClientId),
 		Scopes:         StringValue(health.RunnerScopes),
 		CredentialPath: command.CredentialPath,

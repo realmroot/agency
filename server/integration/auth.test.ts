@@ -43,6 +43,7 @@ describe('[CF] auth v1', () => {
           issuer: 'https://oidc.test',
           clientId: 'ama-test',
           scope: 'openid email profile',
+          resource: 'https://example.com',
         },
       },
     })

@@ -2344,6 +2344,11 @@
             "nullable": true,
             "example": "https://id.example.com/api/auth"
           },
+          "oidcResource": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://ama.example.com"
+          },
           "runnerClientId": {
             "type": "string",
             "nullable": true,
@@ -2365,6 +2370,7 @@
           "name",
           "runtime",
           "oidcIssuer",
+          "oidcResource",
           "runnerClientId",
           "runnerScopes",
           "timestamp"
@@ -2408,12 +2414,18 @@
           "scope": {
             "type": "string",
             "example": "openid email profile"
+          },
+          "resource": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://ama.example.com"
           }
         },
         "required": [
           "issuer",
           "clientId",
-          "scope"
+          "scope",
+          "resource"
         ]
       },
       "AuthConfig": {
@@ -8400,7 +8412,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Complete OIDC sign-in and create an httpOnly session cookie",
+        "summary": "Validate an OIDC bearer token and return auth context",
         "requestBody": {
           "required": true,
           "content": {
@@ -8413,7 +8425,7 @@
         },
         "responses": {
           "201": {
-            "description": "Session created. Sets an httpOnly session cookie.",
+            "description": "Bearer token accepted. Returns user, organization, and project context.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8485,10 +8497,10 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Sign out and clear the session cookie",
+        "summary": "Complete a local sign-out request",
         "responses": {
           "204": {
-            "description": "Session cleared. Expires the httpOnly session cookie."
+            "description": "Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider."
           }
         }
       }

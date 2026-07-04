@@ -84,7 +84,7 @@ def sync_detailed(
     body: CreateAuthSessionRequest,
 
 ) -> Response[AuthSession | ErrorResponse]:
-    """ Complete OIDC sign-in and create an httpOnly session cookie
+    """ Validate an OIDC bearer token and return auth context
 
     Args:
         body (CreateAuthSessionRequest):
@@ -115,7 +115,7 @@ def sync(
     body: CreateAuthSessionRequest,
 
 ) -> AuthSession | ErrorResponse | None:
-    """ Complete OIDC sign-in and create an httpOnly session cookie
+    """ Validate an OIDC bearer token and return auth context
 
     Args:
         body (CreateAuthSessionRequest):
@@ -141,7 +141,7 @@ async def asyncio_detailed(
     body: CreateAuthSessionRequest,
 
 ) -> Response[AuthSession | ErrorResponse]:
-    """ Complete OIDC sign-in and create an httpOnly session cookie
+    """ Validate an OIDC bearer token and return auth context
 
     Args:
         body (CreateAuthSessionRequest):
@@ -172,7 +172,7 @@ async def asyncio(
     body: CreateAuthSessionRequest,
 
 ) -> AuthSession | ErrorResponse | None:
-    """ Complete OIDC sign-in and create an httpOnly session cookie
+    """ Validate an OIDC bearer token and return auth context
 
     Args:
         body (CreateAuthSessionRequest):

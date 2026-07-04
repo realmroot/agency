@@ -97,7 +97,13 @@ func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	token, err := s.client.RefreshToken(ctx, metadata.TokenEndpoint, StringValue(health.RunnerClientId), s.saved.RefreshToken)
+	token, err := s.client.RefreshToken(
+		ctx,
+		metadata.TokenEndpoint,
+		StringValue(health.RunnerClientId),
+		s.saved.RefreshToken,
+		oidcResource(health.OidcResource, s.Config.APIServer),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -117,6 +123,13 @@ func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
 	}
 	s.saved = &next
 	return next.AccessToken, nil
+}
+
+func oidcResource(value *string, fallback string) string {
+	if value != nil && strings.TrimSpace(*value) != "" {
+		return strings.TrimRight(strings.TrimSpace(*value), "/")
+	}
+	return strings.TrimRight(strings.TrimSpace(fallback), "/")
 }
 
 func (s *TokenSource) needsRefresh(config runnerconfig.CredentialProfile) bool {

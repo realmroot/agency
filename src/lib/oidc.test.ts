@@ -8,10 +8,15 @@ const mockGetUser = vi.fn()
 const mockSigninRedirect = vi.fn()
 const mockSigninRedirectCallback = vi.fn()
 const mockSignoutRedirect = vi.fn()
+const mockUserManagerConstructor = vi.fn()
 
 vi.mock('oidc-client-ts', () => {
   // Must be a real class (constructor) — vi.fn() arrow fns are not constructors.
   class UserManagerMock {
+    constructor(settings: unknown) {
+      mockUserManagerConstructor(settings)
+    }
+
     getUser = mockGetUser
     signinRedirect = mockSigninRedirect
     signinRedirectCallback = mockSigninRedirectCallback
@@ -34,7 +39,7 @@ async function freshOidc() {
 function configzResponse(
   body = {
     auth: { oidc: { issuer: 'https://auth.example.com', clientId: 'test-client-id', scope: 'openid email profile' } },
-  },
+  } as { auth: { oidc: { issuer: string; clientId: string; scope: string; resource?: string } } },
 ) {
   return new Response(JSON.stringify(body), { status: 200 })
 }
@@ -147,6 +152,9 @@ describe('oidc helpers', () => {
       mockGetUser.mockResolvedValueOnce({ expired: false, access_token: 'live_token' })
       const token = await getAccessToken()
       expect(token).toBe('live_token')
+      expect(mockUserManagerConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ resource: window.location.origin }),
+      )
     })
   })
 
@@ -312,6 +320,30 @@ describe('oidc helpers', () => {
   // getOidcManager — config validation guard
   // ---------------------------------------------------------------------------
   describe('getOidcManager', () => {
+    it('uses configured OIDC resource when provided', async () => {
+      vi.resetModules()
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          configzResponse({
+            auth: {
+              oidc: {
+                issuer: 'https://auth.example.com',
+                clientId: 'cid',
+                scope: 'openid',
+                resource: 'https://ama.example.com',
+              },
+            },
+          }),
+        ),
+      )
+      const { getOidcManager } = await import('./oidc')
+      await getOidcManager()
+      expect(mockUserManagerConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({ resource: 'https://ama.example.com' }),
+      )
+    })
+
     it('throws when OIDC config has no authority', async () => {
       vi.resetModules()
       vi.stubGlobal(

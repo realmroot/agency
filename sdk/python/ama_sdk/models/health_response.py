@@ -30,6 +30,7 @@ class HealthResponse:
             name (str):  Example: Any Managed Agents.
             runtime (HealthResponseRuntime):  Example: cloudflare-workers.
             oidc_issuer (None | str):  Example: https://id.example.com/api/auth.
+            oidc_resource (None | str):  Example: https://ama.example.com.
             runner_client_id (None | str):  Example: ama-runner.
             runner_scopes (None | str):  Example: openid profile email offline_access.
             timestamp (datetime.datetime):  Example: 2026-05-22T00:00:00.000Z.
@@ -39,6 +40,7 @@ class HealthResponse:
     name: str
     runtime: HealthResponseRuntime
     oidc_issuer: None | str
+    oidc_resource: None | str
     runner_client_id: None | str
     runner_scopes: None | str
     timestamp: datetime.datetime
@@ -58,6 +60,9 @@ class HealthResponse:
         oidc_issuer: None | str
         oidc_issuer = self.oidc_issuer
 
+        oidc_resource: None | str
+        oidc_resource = self.oidc_resource
+
         runner_client_id: None | str
         runner_client_id = self.runner_client_id
 
@@ -74,6 +79,7 @@ class HealthResponse:
             "name": name,
             "runtime": runtime,
             "oidcIssuer": oidc_issuer,
+            "oidcResource": oidc_resource,
             "runnerClientId": runner_client_id,
             "runnerScopes": runner_scopes,
             "timestamp": timestamp,
@@ -106,6 +112,14 @@ class HealthResponse:
         oidc_issuer = _parse_oidc_issuer(d.pop("oidcIssuer"))
 
 
+        def _parse_oidc_resource(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        oidc_resource = _parse_oidc_resource(d.pop("oidcResource"))
+
+
         def _parse_runner_client_id(data: object) -> None | str:
             if data is None:
                 return data
@@ -132,6 +146,7 @@ class HealthResponse:
             name=name,
             runtime=runtime,
             oidc_issuer=oidc_issuer,
+            oidc_resource=oidc_resource,
             runner_client_id=runner_client_id,
             runner_scopes=runner_scopes,
             timestamp=timestamp,

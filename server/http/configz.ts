@@ -9,6 +9,7 @@ const PublicOidcConfigSchema = z
     issuer: z.string().url().openapi({ example: 'https://id.example.com/api/auth' }),
     clientId: z.string().openapi({ example: 'client_abc123' }),
     scope: z.string().openapi({ example: 'openid email profile' }),
+    resource: z.string().url().openapi({ example: 'https://ama.example.com' }),
   })
   .openapi('PublicOidcConfig')
 
@@ -42,7 +43,8 @@ export function registerConfigzRoutes(routes: ConfigzRoutes) {
   return routes.openapi(readConfigzRoute, (c) => {
     try {
       const { issuer, clientId } = requireOidcConfig(c.env)
-      return c.json({ auth: { oidc: { issuer, clientId, scope: 'openid email profile' } } }, 200)
+      const resource = new URL(c.req.url).origin
+      return c.json({ auth: { oidc: { issuer, clientId, scope: 'openid email profile', resource } } }, 200)
     } catch {
       return c.json({ auth: { oidc: null } }, 200)
     }

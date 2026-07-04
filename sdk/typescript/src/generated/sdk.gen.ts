@@ -34,7 +34,7 @@ export const readConfigz = <ThrowOnError extends boolean = false>(options?: Opti
 export const readAuthConfig = <ThrowOnError extends boolean = false>(options?: Options<ReadAuthConfigData, ThrowOnError>): RequestResult<ReadAuthConfigResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ReadAuthConfigResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/config', ...options });
 
 /**
- * Complete OIDC sign-in and create an httpOnly session cookie
+ * Validate an OIDC bearer token and return auth context
  */
 export const createAuthSession = <ThrowOnError extends boolean = false>(options: Options<CreateAuthSessionData, ThrowOnError>): RequestResult<CreateAuthSessionResponses, CreateAuthSessionErrors, ThrowOnError> => (options.client ?? client).post<CreateAuthSessionResponses, CreateAuthSessionErrors, ThrowOnError>({
     url: '/api/v1/auth/sessions',
@@ -46,7 +46,7 @@ export const createAuthSession = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
- * Sign out and clear the session cookie
+ * Complete a local sign-out request
  */
 export const deleteCurrentAuthSession = <ThrowOnError extends boolean = false>(options?: Options<DeleteCurrentAuthSessionData, ThrowOnError>): RequestResult<DeleteCurrentAuthSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).delete<DeleteCurrentAuthSessionResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/sessions/current', ...options });
 

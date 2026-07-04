@@ -4,6 +4,7 @@ interface OidcConfigResponse {
   authority: string
   clientId: string
   scope: string
+  resource: string
 }
 
 let managerPromise: Promise<UserManager> | undefined
@@ -16,7 +17,7 @@ async function readOidcConfig() {
     throw new Error('Failed to load browser configuration')
   }
   const body = (await response.json()) as {
-    auth?: { oidc?: { issuer?: string; clientId?: string; scope?: string } | null }
+    auth?: { oidc?: { issuer?: string; clientId?: string; scope?: string; resource?: string } | null }
   }
   const oidc = body.auth?.oidc
   if (!oidc?.issuer || !oidc.clientId) {
@@ -26,6 +27,7 @@ async function readOidcConfig() {
     authority: oidc.issuer,
     clientId: oidc.clientId,
     scope: oidc.scope ?? 'openid email profile',
+    resource: oidc.resource ?? window.location.origin,
   }
 }
 
@@ -50,6 +52,7 @@ export async function getOidcManager() {
         post_logout_redirect_uri: config.postLogoutRedirectUri,
         response_type: 'code',
         scope: config.scope,
+        resource: config.resource,
         automaticSilentRenew: true,
         userStore: new WebStorageStateStore({ store: window.localStorage }),
       }),
