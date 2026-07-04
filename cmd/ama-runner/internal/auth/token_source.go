@@ -54,7 +54,7 @@ func (s *TokenSource) AccessToken(ctx context.Context) (string, error) {
 		}
 		return s.saved.AccessToken, nil
 	}
-	return s.refreshLocked(ctx)
+	return s.refreshLocked(ctx, false)
 }
 
 func (s *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
@@ -63,7 +63,7 @@ func (s *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	if s.saved == nil {
 		return s.Config.Token, nil
 	}
-	return s.refreshLocked(ctx)
+	return s.refreshLocked(ctx, true)
 }
 
 func (s *TokenSource) CanRefresh() bool {
@@ -72,43 +72,72 @@ func (s *TokenSource) CanRefresh() bool {
 	return s.saved != nil && strings.TrimSpace(s.saved.RefreshToken) != ""
 }
 
-func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
+func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, error) {
 	if s.saved == nil {
 		return s.Config.Token, nil
 	}
-	if strings.TrimSpace(s.saved.RefreshToken) == "" {
-		return "", fmt.Errorf("saved AMA runner token is expired; run ama-runner auth login again")
+	previousAccessToken := s.saved.AccessToken
+	next, err := runnerconfig.UpdateCredentialProfile(
+		s.Config.CredentialPath,
+		s.Config.APIServer,
+		func(current runnerconfig.CredentialProfile) (runnerconfig.CredentialProfile, bool, error) {
+			if !force && !s.needsRefresh(current) {
+				if strings.TrimSpace(current.AccessToken) == "" {
+					return current, false, fmt.Errorf("saved AMA runner token is missing an access token")
+				}
+				return current, false, nil
+			}
+			if force && strings.TrimSpace(current.AccessToken) != "" && current.AccessToken != previousAccessToken && !s.needsRefresh(current) {
+				return current, false, nil
+			}
+			if strings.TrimSpace(current.RefreshToken) == "" {
+				return current, false, fmt.Errorf("saved AMA runner token is expired; run ama-runner auth login again")
+			}
+			refreshed, err := s.refreshCredentialProfile(ctx, current)
+			if err != nil {
+				return current, false, err
+			}
+			return refreshed, true, nil
+		},
+	)
+	if err != nil {
+		return "", err
 	}
+	s.saved = &next
+	return next.AccessToken, nil
+}
+
+func (s *TokenSource) refreshCredentialProfile(ctx context.Context, current runnerconfig.CredentialProfile) (runnerconfig.CredentialProfile, error) {
 	configClient, err := sdkama.New(sdkama.ClientConfig{
 		BaseURL:    s.Config.APIServer,
 		HTTPClient: s.HTTPClient,
 	})
 	if err != nil {
-		return "", err
+		return runnerconfig.CredentialProfile{}, err
 	}
 	configz, err := configClient.Configz.Get(ctx)
 	if err != nil {
-		return "", err
+		return runnerconfig.CredentialProfile{}, err
 	}
 	settings, err := RunnerOidcSettingsFromConfig(configz, s.Config.APIServer)
 	if err != nil {
-		return "", err
+		return runnerconfig.CredentialProfile{}, err
 	}
 	metadata, err := s.client.Discover(ctx, settings.Issuer)
 	if err != nil {
-		return "", err
+		return runnerconfig.CredentialProfile{}, err
 	}
 	token, err := s.client.RefreshToken(
 		ctx,
 		metadata.TokenEndpoint,
 		settings.ClientID,
-		s.saved.RefreshToken,
+		current.RefreshToken,
 		settings.Resource,
 	)
 	if err != nil {
-		return "", err
+		return runnerconfig.CredentialProfile{}, err
 	}
-	next := *s.saved
+	next := current
 	next.APIServer = strings.TrimRight(s.Config.APIServer, "/")
 	next.AccessToken = token.AccessToken
 	if strings.TrimSpace(token.RefreshToken) != "" {
@@ -119,11 +148,7 @@ func (s *TokenSource) refreshLocked(ctx context.Context) (string, error) {
 	if strings.TrimSpace(token.Scope) != "" {
 		next.Scope = token.Scope
 	}
-	if err := runnerconfig.SaveCredentialProfile(s.Config.CredentialPath, next); err != nil {
-		return "", err
-	}
-	s.saved = &next
-	return next.AccessToken, nil
+	return next, nil
 }
 
 func oidcResource(value string, fallback string) string {

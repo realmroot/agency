@@ -44,6 +44,7 @@ By default, the credential file is:
 - `$HOME/.config/ama-runner/credentials.json`
 
 The config directory is created with `0700` permissions and the credential file is written with `0600` permissions where the host filesystem supports POSIX modes. Treat the credential file as local operator credential material.
+The credential file is shared across runner config files by default. Saved profiles are keyed by AMA API server and OIDC account, and refresh writes are serialized with a local credential lock so multiple runner daemons can reuse one login safely.
 
 Required daemon configuration can come from environment variables, flags, or a JSON config file.
 
@@ -56,6 +57,8 @@ export AMA_ENVIRONMENT_ID="env_..."
 export AMA_RUNNER_ALLOW_UNSAFE_PROCESS="true"
 export AMA_RUNNER_WORKDIR="/var/lib/ama-runner/workspace"
 ```
+
+When running multiple daemons on one host, give each daemon a distinct `stateDir` and `workDir`. `stateDir` owns the process lock and runner identity; sharing it intentionally prevents two daemons from starting with the same local runner state.
 
 Useful flags:
 

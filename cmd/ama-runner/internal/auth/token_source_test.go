@@ -88,6 +88,75 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 	}
 }
 
+func TestTokenSourceReusesCredentialRefreshedByAnotherProcess(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("token source should not call control plane after shared credentials are refreshed; got %s", r.URL.Path)
+	}))
+	defer server.Close()
+
+	for _, tc := range []struct {
+		name       string
+		expiresAt  time.Time
+		readToken  func(*TokenSource) (string, error)
+		wantAccess string
+	}{
+		{
+			name:      "regular access token read [spec: runners/local-credential-refresh]",
+			expiresAt: time.Now().Add(-time.Minute),
+			readToken: func(source *TokenSource) (string, error) {
+				return source.AccessToken(context.Background())
+			},
+			wantAccess: "fresh-access-token",
+		},
+		{
+			name:      "forced refresh after unauthorized response [spec: runners/local-credential-refresh]",
+			expiresAt: time.Now().Add(time.Hour),
+			readToken: func(source *TokenSource) (string, error) {
+				return source.ForceRefresh(context.Background())
+			},
+			wantAccess: "fresh-access-token",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+				AccountID:    "acct_1",
+				APIServer:    server.URL,
+				AccessToken:  "stale-access-token",
+				RefreshToken: "old-refresh-token",
+				TokenType:    "Bearer",
+				ExpiresAt:    tc.expiresAt.UTC().Format(time.RFC3339),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			source, err := NewTokenSource(runnerconfig.Config{
+				CredentialPath: credentialPath,
+				APIServer:      server.URL,
+			}, server.Client())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+				AccountID:    "acct_1",
+				APIServer:    server.URL,
+				AccessToken:  "fresh-access-token",
+				RefreshToken: "new-refresh-token",
+				TokenType:    "Bearer",
+				ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			token, err := tc.readToken(source)
+			if err != nil {
+				t.Fatalf("expected shared refreshed token, got %v", err)
+			}
+			if token != tc.wantAccess {
+				t.Fatalf("unexpected token %q", token)
+			}
+		})
+	}
+}
+
 func TestTokenSourceExplicitTokenPaths(t *testing.T) {
 	source := &TokenSource{Config: runnerconfig.Config{Token: " explicit-token "}}
 	token, err := source.AccessToken(context.Background())

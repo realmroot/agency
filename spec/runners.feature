@@ -24,6 +24,12 @@ Feature: Runners
     And a device-login token cannot register a non-OIDC runner and a federated token cannot register a non-federated runner
     And raw secret material in runner metadata or capabilities is rejected
 
+  @runners/local-credential-refresh @domain
+  Scenario: Coordinate shared local runner credential refresh
+    Given multiple local runners use the same saved credential profile
+    When one runner refreshes the profile before another runner uses its stale in-memory token
+    Then the second runner reuses the refreshed credential from disk instead of reusing the old refresh token
+
   @runners/register @usecase
   Scenario: Register and manage a runner with safe references
     Given an operator registers a runner with usable environment and credential references
