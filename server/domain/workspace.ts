@@ -1,5 +1,5 @@
 import { gitRepositoryMountPath, normalizeGitRepositoryUrl } from './git-repository'
-import { isMemoryStoreAccess, memoryStoreIdFromRef, memoryStoreMountPath } from './memory-store'
+import { memoryStoreIdFromRef, memoryStoreMountPath } from './memory-store'
 import {
   type GitRepositoryVolume,
   isGitRepositoryVolume,
@@ -8,6 +8,7 @@ import {
   type Volume,
   type VolumeMount,
   volumeMountPath,
+  volumeMountReadOnly,
 } from './runtime/execution-inputs'
 
 export type WorkspaceSpec = {
@@ -39,9 +40,7 @@ export type WorkspaceManifestMount =
       name: string
       mountPath: string
       memoryRef: string
-      access: 'read_only' | 'read_write'
-      storeName?: string | undefined
-      description?: string | undefined
+      readOnly: boolean
       files: WorkspaceFile[]
     }
   | {
@@ -71,15 +70,11 @@ export function workspaceSystemPromptBlock(spec: WorkspaceSpec): string | null {
   })
   const memoryStores = spec.volumes.filter(isMemoryVolume).map((volume) => {
     const storeId = memoryStoreIdFromRef(String(volume.memoryRef ?? '')) ?? String(volume.memoryRef ?? '')
-    const access = volume.access === 'read_write' ? 'read_write' : 'read_only'
     const mountPath = relativeWorkspacePath(
       volumeMountPath(volume.name, spec.volumeMounts) ?? memoryStoreMountPath(storeId),
     )
-    const description =
-      typeof volume.description === 'string' && volume.description.trim()
-        ? `\n  Description: ${volume.description.trim()}`
-        : ''
-    return `- ${volume.storeName || volume.name || storeId} (${access}) at ${mountPath}${description}`
+    const readOnly = volumeMountReadOnly(volume.name, spec.volumeMounts)
+    return `- ${volume.name || storeId} (${readOnly ? 'readOnly' : 'writable'}) at ${mountPath}`
   })
   if (repositories.length === 0 && memoryStores.length === 0) {
     return null
@@ -104,7 +99,10 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
     if (!normalizedPath) {
       return { fields: { [`volumeMounts.${index}.mountPath`]: 'Volume mount path must stay under /workspace.' } }
     }
-    normalizedMounts.push({ ...mount, mountPath: normalizedPath })
+    if (mount.readOnly !== undefined && typeof mount.readOnly !== 'boolean') {
+      return { fields: { [`volumeMounts.${index}.readOnly`]: 'Use a boolean readOnly value.' } }
+    }
+    normalizedMounts.push({ ...mount, mountPath: normalizedPath, readOnly: mount.readOnly ?? true })
   }
   for (const [index, volume] of spec.volumes.entries()) {
     if (volumeNames.has(volume.name)) {
@@ -120,9 +118,6 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
       const storeId = typeof parsed.memoryRef === 'string' ? memoryStoreIdFromRef(parsed.memoryRef) : null
       if (!storeId) {
         return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use ama://memories/{storeId}.' } }
-      }
-      if (!isMemoryStoreAccess(parsed.access)) {
-        return { fields: { [`volumes.${index}.access`]: 'Use read_only or read_write.' } }
       }
       const mountIndex = normalizedMounts.findIndex((mount) => mount.name === parsed.name)
       if (mountIndex === -1) {
@@ -145,10 +140,6 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
         name: parsed.name,
         type: 'memory',
         memoryRef: parsed.memoryRef,
-        access: parsed.access,
-        ...(parsed.storeName ? { storeName: parsed.storeName } : {}),
-        ...(parsed.description ? { description: parsed.description } : {}),
-        ...(parsed.memories ? { memories: parsed.memories } : {}),
       } satisfies MemoryVolume)
       continue
     }

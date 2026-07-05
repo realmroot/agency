@@ -379,10 +379,6 @@ export type SessionSocketClientMessage = ({
 } & SessionSocketSteerMessage) | ({
     type: 'backfill';
 } & SessionSocketBackfillRequestMessage);
-export type RunnerMemorySnapshot = {
-    path: string;
-    content: string;
-};
 export type RunnerWorkspaceFile = {
     path: string;
     content: string;
@@ -400,7 +396,6 @@ export type RunnerWorkspaceMount = {
     credential?: RunnerGitCredential;
     memoryRef?: string;
     description?: string | null;
-    access?: string;
     readOnly?: boolean;
     files?: Array<RunnerWorkspaceFile>;
 };
@@ -415,9 +410,6 @@ export type RunnerVolume = {
     url?: string;
     ref?: string;
     memoryRef?: string;
-    description?: string | null;
-    access?: string;
-    memories?: Array<RunnerMemorySnapshot>;
 };
 export type RunnerVolumeMount = {
     name: string;
@@ -1261,9 +1253,6 @@ export type MemoryVolume = {
     name: string;
     type: 'memory';
     memoryRef: string;
-    access: 'read_only' | 'read_write';
-    storeName?: string;
-    description?: string;
 };
 export type VolumeMount = {
     name: string;

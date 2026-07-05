@@ -295,13 +295,6 @@ function safeVolumeView(volume: Record<string, unknown>) {
       name: volume.name,
       type: volume.type,
       memoryRef: volume.memoryRef,
-      description: volume.description,
-      access: volume.access,
-      memories: Array.isArray(volume.memories)
-        ? volume.memories.map((memory) =>
-            memory && typeof memory === 'object' ? { path: (memory as Record<string, unknown>).path } : memory,
-          )
-        : [],
     }
   }
   if (volume.type !== 'git_repository') {

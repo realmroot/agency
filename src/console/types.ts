@@ -51,7 +51,7 @@ export type SessionResourceFormEntry =
       id: string
       type: 'memory'
       memoryStoreId: string
-      access: 'read_only' | 'read_write'
+      readOnly: boolean
     }
 
 export interface VaultFormState {

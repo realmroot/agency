@@ -32,7 +32,7 @@ export type Volume = ArrayItem<Session['spec']['volumes']>
 export type VolumeMount = ArrayItem<Session['spec']['volumeMounts']>
 export type GitRepositoryVolume = Extract<Volume, { type: 'git_repository' }>
 export type MemoryStoreVolume = Extract<Volume, { type: 'memory' }>
-export type MemoryStoreAccess = MemoryStoreVolume['access']
+export type MemoryStoreReadOnly = VolumeMount['readOnly']
 
 export interface SessionListOptions extends ListOptions {
   state?: string

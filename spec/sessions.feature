@@ -47,9 +47,10 @@ Feature: Sessions
 	  @sessions/memory-store-resources @api
 	  Scenario: Create a session with attached memory stores
 	    Given a project has an active memory store with memories
-	    When the user creates a session with memory volumes and access modes
-    Then AMA resolves managed mount paths and snapshots memory store contents into the session
-    And store names, descriptions, access modes, and mount paths are included in the runtime system prompt context
+	    When the user creates a session with memory volumes and readOnly volumeMounts
+    Then AMA stores memory references in volumes and readOnly settings in volumeMounts
+    And runtime materialization mounts the current memory store contents
+    And memory volumeMount readOnly settings and mount paths are included in the runtime system prompt context
     And memory contents are mounted as files instead of injected into the prompt
 
   @sessions/reject-dependencies @api

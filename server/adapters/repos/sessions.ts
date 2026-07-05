@@ -21,6 +21,7 @@ import { leases, runners, sessionApprovals, sessionEvents, sessionMessages, sess
 import { insertCanonicalSessionEvent } from '../../db/session-event-store'
 import { domainSessionState, persistedSessionState } from '../../db/session-state'
 import { runtimePlacement } from '../../domain/runtime/driver'
+import { declaredVolumes } from '../../domain/runtime/execution-inputs'
 import {
   type ApprovalState,
   hostingModeFromSnapshot,
@@ -149,7 +150,7 @@ function serializeSession(row: SessionRow): Session {
       runtime,
       env: parseJson<Record<string, string>>(row.env) ?? {},
       envFrom: parseJson<Session['spec']['envFrom']>(row.envFrom) ?? [],
-      volumes: parseJson<Session['spec']['volumes']>(row.volumes) ?? [],
+      volumes: declaredVolumes(parseJson<Session['spec']['volumes']>(row.volumes) ?? []),
       volumeMounts: parseJson<Session['spec']['volumeMounts']>(row.volumeMounts) ?? [],
     },
     status: {

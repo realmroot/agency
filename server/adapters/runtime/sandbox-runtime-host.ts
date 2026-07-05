@@ -8,6 +8,7 @@ import {
   type Volume,
   type VolumeMount,
   volumeMountPath,
+  volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
 import type { WorkspaceGitCredential, WorkspaceManifest, WorkspaceManifestMount } from '@server/domain/workspace'
 import type {
@@ -144,10 +145,7 @@ export function workspaceVolumeManifest(manifest: WorkspaceManifest = { root: '/
           type: 'memory',
           memoryRef: mount.memoryRef,
           name: mount.name,
-          description: mount.description ?? null,
-          access: mount.access,
           mountPath: mount.mountPath,
-          memories: mount.files.map((file) => ({ path: file.path })),
           status: 'declared',
         }
       }
@@ -256,15 +254,15 @@ async function prepareCloudWorkspace(
   }
   if (pendingError) throw pendingError
 
-  for (const volume of values.manifest.mounts.filter(
+  for (const mount of values.manifest.mounts.filter(
     (mount): mount is Extract<WorkspaceManifestMount, { type: 'memory' }> => mount.type === 'memory',
   )) {
-    const mountPath = volume.mountPath
+    const mountPath = mount.mountPath
     if (!mountPath.startsWith('/workspace/.ama/memory-stores/')) {
       throw new Error(`Invalid memory mount path: ${mountPath}`)
     }
     await execOrThrow(sandbox, `mkdir -p ${shellQuote(mountPath)}`)
-    for (const memory of volume.files) {
+    for (const memory of mount.files) {
       const path = memory.path
       const content = memory.content
       if (!path || path.startsWith('/') || path.includes('..')) {
@@ -275,19 +273,19 @@ async function prepareCloudWorkspace(
       await execOrThrow(sandbox, `mkdir -p ${shellQuote(parentPath)}`)
       await sandbox.writeFile(fullPath, content, { encoding: 'utf-8' })
     }
-    if (volume.access === 'read_only') {
+    if (mount.readOnly) {
       await execOrThrow(sandbox, `chmod -R a-w ${shellQuote(mountPath)}`)
     }
   }
-  for (const volume of values.manifest.mounts.filter(
+  for (const mount of values.manifest.mounts.filter(
     (mount): mount is Extract<WorkspaceManifestMount, { type: 'secret' }> => mount.type === 'secret',
   )) {
-    const mountPath = volume.mountPath
+    const mountPath = mount.mountPath
     if (!mountPath.startsWith('/workspace/')) {
       throw new Error(`Invalid secret volume mount path: ${mountPath}`)
     }
     await execOrThrow(sandbox, `mkdir -p ${shellQuote(mountPath)}`)
-    for (const file of volume.files) {
+    for (const file of mount.files) {
       const path = file.path
       const content = file.content
       if (!path || path.startsWith('/') || path.includes('..')) {
@@ -298,7 +296,7 @@ async function prepareCloudWorkspace(
       await execOrThrow(sandbox, `mkdir -p ${shellQuote(parentPath)}`)
       await sandbox.writeFile(fullPath, content, { encoding: 'utf-8' })
     }
-    if (volume.readOnly) {
+    if (mount.readOnly) {
       await execOrThrow(sandbox, `chmod -R a-w ${shellQuote(mountPath)}`)
     }
   }
@@ -351,7 +349,7 @@ export async function readMemoryStoreMemories(
   const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
   const stores: Array<{ memoryRef: string; memories: Array<{ path: string; content: string }> }> = []
   for (const volume of input.volumes) {
-    if (volume.access !== 'read_write') {
+    if (volumeMountReadOnly(volume.name, input.volumeMounts)) {
       continue
     }
     const storeId = memoryStoreIdFromRef(volume.memoryRef)

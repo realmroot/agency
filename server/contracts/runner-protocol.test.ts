@@ -15,7 +15,6 @@ describe('runner protocol schemas', () => {
     expect(Object.keys(RUNNER_PROTOCOL_SCHEMAS).sort()).toEqual([
       'RunnerChannelMessage',
       'RunnerGitCredential',
-      'RunnerMemorySnapshot',
       'RunnerOpaqueJsonObject',
       'RunnerRuntimeRequest',
       'RunnerRuntimeToolCall',
@@ -61,7 +60,6 @@ describe('runner protocol schemas', () => {
             name: 'memory',
             type: 'memory',
             memoryRef: 'ama://memories/store_1',
-            memories: [{ path: 'notes.md', content: 'hi' }],
           },
         ],
         volumeMounts: [{ name: 'memory', mountPath: '/workspace/memory', readOnly: false }],

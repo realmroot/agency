@@ -53,7 +53,7 @@ export function CreateSessionSheet({
   const vaults = vaultsQuery.data?.data ?? EMPTY_RESOURCES
   const createSession = useMutation({
     mutationFn: () => {
-      const resources = sessionResourcesInput(form, memoryStores)
+      const resources = sessionResourcesInput(form)
       return api.createSession({
         spec: {
           agentId: form.agentId,

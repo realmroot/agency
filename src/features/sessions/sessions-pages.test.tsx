@@ -915,8 +915,8 @@ describe('SessionDetailView', () => {
     renderDetailView({
       spec: {
         ...buildSession().spec,
-        volumes: [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_only' }],
-        volumeMounts: [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/memstore_1' }],
+        volumes: [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
+        volumeMounts: [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: true }],
       },
     })
     const resourcesButtons = screen.getAllByRole('button', { name: 'Open session volumes' })

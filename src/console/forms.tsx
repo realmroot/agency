@@ -592,10 +592,7 @@ function SessionResourcesField({
       ),
     })
   }
-  function updateMemoryResource(
-    resourceId: string,
-    patch: { memoryStoreId?: string; access?: 'read_only' | 'read_write' },
-  ) {
+  function updateMemoryResource(resourceId: string, patch: { memoryStoreId?: string; readOnly?: boolean }) {
     setValue({
       ...value,
       resources: value.resources.map((resource) =>
@@ -613,7 +610,7 @@ function SessionResourcesField({
                 id: resource.id,
                 type: 'memory',
                 memoryStoreId: memoryStores[0]?.metadata.uid ?? '',
-                access: 'read_only',
+                readOnly: true,
               }
             : resource,
         ),
@@ -638,89 +635,87 @@ function SessionResourcesField({
       </div>
       <div className="space-y-3 rounded-md border p-3">
         {value.resources.length > 0 ? (
-          value.resources.map((resource) => (
-            <div key={resource.id} className="grid gap-3 rounded-md border bg-muted/20 p-3">
-              <div className="flex items-center gap-2">
-                <Select
-                  value={resource.type}
-                  onValueChange={(type) =>
-                    updateResourceType(resource.id, type as SessionFormState['resources'][number]['type'])
-                  }
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="git_repository">Git repository</SelectItem>
-                      <SelectItem value="memory">Memory</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => removeResource(resource.id)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-              {resource.type === 'git_repository' ? (
-                <div className="grid gap-3 sm:grid-cols-[1fr_10rem]">
-                  <Input
-                    aria-label="Git repository URL"
-                    placeholder="https://github.com/org/repo.git"
-                    value={resource.url}
-                    onChange={(event) => updateGitResource(resource.id, { url: event.target.value })}
-                  />
-                  <Input
-                    aria-label="Git repository ref"
-                    placeholder="main"
-                    value={resource.ref}
-                    onChange={(event) => updateGitResource(resource.id, { ref: event.target.value })}
-                  />
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-[1fr_10rem]">
+          value.resources.map((resource, index) => {
+            const readOnlySwitchId = domId('session-resource-read-only', `${resource.id}-${index}`)
+            return (
+              <div key={resource.id} className="grid gap-3 rounded-md border bg-muted/20 p-3">
+                <div className="flex items-center gap-2">
                   <Select
-                    value={resource.memoryStoreId}
-                    onValueChange={(memoryStoreId) => updateMemoryResource(resource.id, { memoryStoreId })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select memory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {memoryStores.map((store) => (
-                          <SelectItem key={store.metadata.uid} value={store.metadata.uid}>
-                            {store.metadata.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={resource.access}
-                    onValueChange={(access) =>
-                      updateMemoryResource(resource.id, { access: access as 'read_only' | 'read_write' })
+                    value={resource.type}
+                    onValueChange={(type) =>
+                      updateResourceType(resource.id, type as SessionFormState['resources'][number]['type'])
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-44">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="read_only">Read only</SelectItem>
-                        <SelectItem value="read_write">Read write</SelectItem>
+                        <SelectItem value="git_repository">Git repository</SelectItem>
+                        <SelectItem value="memory">Memory</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => removeResource(resource.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
-          ))
+                {resource.type === 'git_repository' ? (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_10rem]">
+                    <Input
+                      aria-label="Git repository URL"
+                      placeholder="https://github.com/org/repo.git"
+                      value={resource.url}
+                      onChange={(event) => updateGitResource(resource.id, { url: event.target.value })}
+                    />
+                    <Input
+                      aria-label="Git repository ref"
+                      placeholder="main"
+                      value={resource.ref}
+                      onChange={(event) => updateGitResource(resource.id, { ref: event.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <Select
+                      value={resource.memoryStoreId}
+                      onValueChange={(memoryStoreId) => updateMemoryResource(resource.id, { memoryStoreId })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select memory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {memoryStores.map((store) => (
+                            <SelectItem key={store.metadata.uid} value={store.metadata.uid}>
+                              {store.metadata.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <label
+                      htmlFor={readOnlySwitchId}
+                      className="flex min-h-10 items-center gap-2 rounded-md border px-3"
+                    >
+                      <Switch
+                        id={readOnlySwitchId}
+                        checked={resource.readOnly}
+                        onCheckedChange={(readOnly) => updateMemoryResource(resource.id, { readOnly })}
+                      />
+                      <span className="text-sm">Read only</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )
+          })
         ) : (
           <p className="text-sm text-muted-foreground">No resources attached.</p>
         )}
@@ -728,6 +723,11 @@ function SessionResourcesField({
       <FieldDescription>AMA manages mount paths for attached repositories and memory stores.</FieldDescription>
     </Field>
   )
+}
+
+function domId(prefix: string, value: string) {
+  const safe = value.replace(/[^A-Za-z0-9_-]/g, '-').replace(/^-+|-+$/g, '')
+  return `${prefix}-${safe || 'field'}`
 }
 
 function hostingModeLabel(value: Environment['spec']['type']) {

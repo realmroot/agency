@@ -1,8 +1,5 @@
 import type { ResourceMetadata, ResourcePhase } from './resource'
 
-export const MEMORY_STORE_ACCESS = ['read_only', 'read_write'] as const
-export type MemoryStoreAccess = (typeof MEMORY_STORE_ACCESS)[number]
-
 export interface MemoryStore {
   metadata: ResourceMetadata
   spec: MemoryStoreSpec
@@ -83,8 +80,4 @@ export function normalizeMemoryPath(path: string): string {
     throw new Error('Memory path segments may contain only letters, numbers, dots, underscores, and hyphens.')
   }
   return segments.join('/')
-}
-
-export function isMemoryStoreAccess(value: unknown): value is MemoryStoreAccess {
-  return value === 'read_only' || value === 'read_write'
 }

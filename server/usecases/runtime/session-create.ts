@@ -93,25 +93,16 @@ async function resolveMemoryVolumes(
       continue
     }
     const storeId = typeof volume.memoryRef === 'string' ? memoryStoreIdFromRef(volume.memoryRef) : null
-    const access = volume.access
-    if (access !== 'read_only' && access !== 'read_write') {
-      return { fields: { [`volumes.${index}.access`]: 'Use read_only or read_write.' } }
-    }
     if (!storeId) {
       return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use ama://memories/{storeId}.' } }
     }
-    const memoryStore = await store.findActiveMemoryStoreResource(auth.project.id, storeId, access)
-    if (!memoryStore) {
+    if (!(await store.activeMemoryStoreExists(auth.project.id, storeId))) {
       return { fields: { [`volumes.${index}.memoryRef`]: 'Memory store must exist and be active.' } }
     }
     resolved.push({
       name: volume.name,
       type: 'memory',
       memoryRef: amaMemoryRef(storeId),
-      access,
-      storeName: memoryStore.name,
-      ...(memoryStore.description ? { description: memoryStore.description } : {}),
-      memories: memoryStore.memories,
     } satisfies MemoryVolume)
   }
   return { volumes: resolved }

@@ -1,5 +1,5 @@
 import { gitRepositoryMountPath } from '@server/domain/git-repository'
-import { memoryStoreIdFromRef, memoryStoreMountPath } from '@server/domain/memory-store'
+import { memoryStoreIdFromRef } from '@server/domain/memory-store'
 import {
   type EnvFromEntry,
   isGitRepositoryVolume,
@@ -8,6 +8,7 @@ import {
   type Volume,
   type VolumeMount,
   volumeMountPath,
+  volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
 import type {
   WorkspaceFile,
@@ -93,15 +94,20 @@ export async function resolveRuntimeWorkspaceManifest(
     }
     if (isMemoryVolume(volume)) {
       const storeId = memoryStoreIdFromRef(volume.memoryRef)
+      if (!storeId) {
+        throw new Error(`Runtime memory store reference ${volume.memoryRef} cannot be resolved`)
+      }
+      const memoryStore = await repo.findActiveMemoryStoreResource(scope.projectId, storeId)
+      if (!memoryStore) {
+        throw new Error(`Runtime memory store reference ${volume.memoryRef} cannot be resolved`)
+      }
       mounts.push({
         type: 'memory',
         name: volume.name,
-        mountPath: mountPath ?? memoryStoreMountPath(storeId ?? volume.name),
-        memoryRef: volume.memoryRef,
-        access: volume.access,
-        ...(volume.storeName ? { storeName: volume.storeName } : {}),
-        ...(volume.description ? { description: volume.description } : {}),
-        files: memoryFiles(volume.memories),
+        mountPath: mountPath ?? memoryStore.mountPath,
+        memoryRef: memoryStore.memoryRef,
+        readOnly: volumeMountReadOnly(volume.name, volumeMounts),
+        files: memoryFiles(memoryStore.memories),
       })
       continue
     }
@@ -194,13 +200,10 @@ async function resolveSecretMount(
   return files
 }
 
-function memoryFiles(memories: Array<Record<string, unknown>> | undefined): WorkspaceFile[] {
-  if (!Array.isArray(memories)) {
-    return []
-  }
+function memoryFiles(memories: Array<{ path: string; content: string }>): WorkspaceFile[] {
   return memories.map((memory) => ({
-    path: String(memory.path ?? ''),
-    content: String(memory.content ?? ''),
+    path: memory.path,
+    content: memory.content,
   }))
 }
 

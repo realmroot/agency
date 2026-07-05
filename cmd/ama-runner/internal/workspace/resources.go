@@ -108,7 +108,7 @@ func materializeMemoryStore(sessionRoot string, volume protocol.WorkspaceMount) 
 			return "", err
 		}
 	}
-	if volume.Access == "read_only" {
+	if volume.ReadOnly {
 		if err := filepath.WalkDir(mountPath, func(path string, entry os.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr

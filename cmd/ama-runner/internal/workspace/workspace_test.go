@@ -144,7 +144,7 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 	workspace, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   workDir,
 		SessionID: "session_1",
-		Manifest: workspaceManifest(memoryMount("read_write", description, protocol.WorkspaceFile{
+		Manifest: workspaceManifest(memoryMount(false, description, protocol.WorkspaceFile{
 			Path:    "ak-maintainer-heartbeat.md",
 			Content: "initial heartbeat\n",
 		})),
@@ -180,8 +180,10 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 	if !strings.Contains(string(state), `"type": "memory"`) ||
 		!strings.Contains(string(state), `"memoryRef": "ama://memories/memstore_1"`) ||
 		!strings.Contains(string(state), `"status": "mounted"`) ||
+		strings.Contains(string(state), `"description"`) ||
+		strings.Contains(string(state), `"memories"`) ||
 		strings.Contains(string(state), "initial heartbeat") {
-		t.Fatalf("expected mounted memory state without memory content, got %s", string(state))
+		t.Fatalf("expected mounted memory state without memory metadata or content, got %s", string(state))
 	}
 }
 
@@ -302,7 +304,7 @@ func TestWorkspaceReadsWritableMemoryStores(t *testing.T) {
 	workspace, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   workDir,
 		SessionID: "session_1",
-		Manifest: workspaceManifest(memoryMount("read_write", "", protocol.WorkspaceFile{
+		Manifest: workspaceManifest(memoryMount(false, "", protocol.WorkspaceFile{
 			Path:    "notes/plan.md",
 			Content: "initial plan\n",
 		})),
@@ -334,14 +336,14 @@ func TestWorkspaceReadWritableMemoryStoresNilAndReadOnly(t *testing.T) {
 	if _, err := (&Workspace{memoryStores: []preparedMemoryStore{{
 		memoryRef: "ama://memories/missing",
 		path:      filepath.Join(t.TempDir(), "missing"),
-		access:    "read_write",
+		readOnly:  false,
 	}}}).ReadWritableMemoryStores(); err == nil {
 		t.Fatal("expected missing writable memory store error")
 	}
 	prepared, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   t.TempDir(),
 		SessionID: "session_1",
-		Manifest: workspaceManifest(memoryMount("read_only", "", protocol.WorkspaceFile{
+		Manifest: workspaceManifest(memoryMount(true, "", protocol.WorkspaceFile{
 			Path:    "notes.md",
 			Content: "readonly",
 		})),
@@ -423,7 +425,7 @@ func TestWorkspacePrepareUsesDefaultRootAndRecoversMountedState(t *testing.T) {
 		WorkDir:   workDir,
 		SessionID: "session_1",
 		Manifest: protocol.WorkspaceManifest{Mounts: []protocol.WorkspaceMount{
-			memoryMount("read_write", "", protocol.WorkspaceFile{Path: "notes.md", Content: "hello"}),
+			memoryMount(false, "", protocol.WorkspaceFile{Path: "notes.md", Content: "hello"}),
 		}},
 	})
 	if err != nil {
@@ -460,9 +462,9 @@ func TestAddMountedVolumesSkipsInvalidEntries(t *testing.T) {
 	workspace := &Workspace{}
 	addMountedVolumes(workDir, workspace, []mountedVolume{
 		{Type: "git_repository", URL: "https://github.com/saltbo/slink.git", LocalPath: "/tmp/repo"},
-		{Type: "memory", MemoryRef: "ama://memories/store_1", Access: "read_write"},
+		{Type: "memory", MemoryRef: "ama://memories/store_1", ReadOnly: false},
 		{Type: "git_repository", URL: "bad-url", LocalPath: "/tmp/repo"},
-		{Type: "memory", MemoryRef: "ama://memories/store_2", Access: "read_only", LocalPath: "/tmp/memory"},
+		{Type: "memory", MemoryRef: "ama://memories/store_2", ReadOnly: true, LocalPath: "/tmp/memory"},
 	})
 	if len(workspace.memoryStores) != 1 || workspace.memoryStores[0].memoryRef != "ama://memories/store_2" {
 		t.Fatalf("expected only valid local path memory mount, got %#v", workspace.memoryStores)
@@ -503,7 +505,7 @@ func TestPrepareWorkspaceRejectsUnsafeMemoryPath(t *testing.T) {
 	_, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   t.TempDir(),
 		SessionID: "session_1",
-		Manifest: workspaceManifest(memoryMount("read_write", "", protocol.WorkspaceFile{
+		Manifest: workspaceManifest(memoryMount(false, "", protocol.WorkspaceFile{
 			Path:    "../outside.md",
 			Content: "bad",
 		})),
@@ -568,7 +570,7 @@ func TestCleanupWorkspaceRemovesReadOnlyMemoryStore(t *testing.T) {
 	workspace, err := Prepare(context.Background(), PrepareRequest{
 		WorkDir:   t.TempDir(),
 		SessionID: "session_1",
-		Manifest: workspaceManifest(memoryMount("read_only", "", protocol.WorkspaceFile{
+		Manifest: workspaceManifest(memoryMount(true, "", protocol.WorkspaceFile{
 			Path:    "ak-maintainer-heartbeat.md",
 			Content: "initial heartbeat\n",
 		})),
@@ -813,7 +815,7 @@ func TestStaleWorkspaceRestoresMountedVolumesFromState(t *testing.T) {
 	state := `{
 		"volumes": [
 			{"type":"git_repository","url":"https://github.com/saltbo/zpan.git","localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "repo")) + `"},
-			{"type":"memory","memoryRef":"ama://memories/store_1","access":"read_write","localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "memory")) + `"},
+			{"type":"memory","memoryRef":"ama://memories/store_1","readOnly":false,"localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "memory")) + `"},
 			{"type":"git_repository","url":"not-url","localPath":"ignored"},
 			{"type":"memory","memoryRef":"missing-path"}
 		]
@@ -844,13 +846,13 @@ func gitRepositoryMount() protocol.WorkspaceMount {
 	}
 }
 
-func memoryMount(access string, description string, files ...protocol.WorkspaceFile) protocol.WorkspaceMount {
+func memoryMount(readOnly bool, description string, files ...protocol.WorkspaceFile) protocol.WorkspaceMount {
 	mount := protocol.WorkspaceMount{
 		Type:      "memory",
 		Name:      "maintainer-memory",
 		MountPath: "/workspace/.ama/memory-stores/memstore_1",
 		MemoryRef: "ama://memories/memstore_1",
-		Access:    access,
+		ReadOnly:  readOnly,
 		Files:     files,
 	}
 	if description != "" {

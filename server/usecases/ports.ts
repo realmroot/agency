@@ -1,7 +1,7 @@
 import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import type { ConnectorAvailability, ConnectorCatalogEntry, ConnectorCatalogTool } from '@server/domain/connector'
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
-import type { Memory, MemoryStore, MemoryStoreAccess } from '@server/domain/memory-store'
+import type { Memory, MemoryStore } from '@server/domain/memory-store'
 import type { CatalogModel } from '@server/domain/model-catalog'
 import type { ModelAvailability, ModelCatalogState } from '@server/domain/provider'
 import type { ResourceMetadata } from '@server/domain/resource'
@@ -440,7 +440,6 @@ export interface ResolvedMemoryStoreResource {
   memoryRef: string
   name: string
   description: string | null
-  access: MemoryStoreAccess
   mountPath: string
   memories: Array<{ path: string; content: string }>
 }
@@ -1736,11 +1735,8 @@ export interface SessionOrchestrationStore {
   // ── snapshot reads ──
   findAgent(projectId: string, agentId: string): Promise<AgentRow | null>
   findAgentVersion(agentId: string, versionId: string): Promise<AgentVersionRow | null>
-  findActiveMemoryStoreResource(
-    projectId: string,
-    storeId: string,
-    access: MemoryStoreAccess,
-  ): Promise<ResolvedMemoryStoreResource | null>
+  findActiveMemoryStoreResource(projectId: string, storeId: string): Promise<ResolvedMemoryStoreResource | null>
+  activeMemoryStoreExists(projectId: string, storeId: string): Promise<boolean>
   replaceMemoryStoreMemories(
     projectId: string,
     storeId: string,

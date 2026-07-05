@@ -17,10 +17,7 @@ export type WorkspaceVolume =
       type: 'memory'
       memoryRef: unknown
       name: unknown
-      description: unknown
-      access: unknown
       mountPath: unknown
-      memories: Array<{ path: unknown }>
       status: 'declared'
     }
   | {

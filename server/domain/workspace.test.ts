@@ -10,20 +10,16 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
           name: 'memory',
           type: 'memory',
           memoryRef: 'ama://memories/store_1',
-          storeName: 'Project memory',
-          description: 'Notes',
-          access: 'read_write',
         },
       ],
       [
         { name: 'repo', mountPath: '/workspace/src' },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1' },
+        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: false },
       ],
     )
     const block = workspaceSystemPromptBlock(spec)
     expect(block).toContain('https://github.com/saltbo/slink.git at src')
-    expect(block).toContain('Project memory (read_write) at .ama/memory-stores/store_1')
-    expect(block).toContain('Description: Notes')
+    expect(block).toContain('memory (writable) at .ama/memory-stores/store_1')
   })
 
   it('returns null when no prompt-visible volumes are present', () => {
@@ -35,16 +31,16 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       workspaceSpec(
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1', access: 'read_only' },
+          { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
         ],
         [
           { name: 'repo', mountPath: '/workspace' },
-          { name: 'memory', mountPath: '/external/memory' },
+          { name: 'memory', mountPath: '/external/memory', readOnly: true },
         ],
       ),
     )
     expect(block).toContain('https://github.com/saltbo/slink.git at .')
-    expect(block).toContain('memory (read_only) at /external/memory')
+    expect(block).toContain('memory (readOnly) at /external/memory')
   })
 
   it('uses default prompt mount paths when mounts are omitted', () => {
@@ -52,13 +48,13 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       workspaceSpec(
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: '', type: 'memory', memoryRef: 'ama://memories/store_1', access: 'read_write', description: '   ' },
+          { name: '', type: 'memory', memoryRef: 'ama://memories/store_1' },
         ],
         [],
       ),
     )
     expect(block).toContain('https://github.com/saltbo/slink.git at repos/github.com/saltbo/slink')
-    expect(block).toContain('store_1 (read_write) at .ama/memory-stores/store_1')
+    expect(block).toContain('store_1 (readOnly) at .ama/memory-stores/store_1')
   })
 
   it('builds prompt context for repository-only and memory-only workspaces', () => {
@@ -74,13 +70,13 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
 
     const memoryBlock = workspaceSystemPromptBlock(
       workspaceSpec(
-        [{ name: 'memory', type: 'memory', memoryRef: undefined as never, access: 'read_only' }],
-        [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/fallback' }],
+        [{ name: 'memory', type: 'memory', memoryRef: undefined as never }],
+        [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/fallback', readOnly: true }],
       ),
     )
     expect(memoryBlock).not.toContain('- Repositories:')
     expect(memoryBlock).toContain('- Memory stores:')
-    expect(memoryBlock).toContain('memory (read_only) at .ama/memory-stores/fallback')
+    expect(memoryBlock).toContain('memory (readOnly) at .ama/memory-stores/fallback')
   })
 
   it('normalizes valid git and memory volumes', () => {
@@ -94,19 +90,18 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
             ref: 'main',
             secretRef: 'ama://vaults/v/credentials/c/versions/ver',
           },
-          {
-            name: 'memory',
-            type: 'memory',
-            memoryRef: 'ama://memories/store_1',
-            access: 'read_only',
-            storeName: 'Store',
-            description: 'Notes',
-            memories: [{ path: 'notes.md', content: 'hello' }],
-          },
+          JSON.parse(`{
+            "name": "memory",
+            "type": "memory",
+            "memoryRef": "ama://memories/store_1",
+            "storeName": "Store",
+            "description": "Notes",
+            "memories": [{ "path": "notes.md", "content": "hello" }]
+          }`),
         ],
         [
           { name: 'repo', mountPath: 'src' },
-          { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1' },
+          { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
         ],
       ),
     )
@@ -123,15 +118,11 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
           name: 'memory',
           type: 'memory',
           memoryRef: 'ama://memories/store_1',
-          access: 'read_only',
-          storeName: 'Store',
-          description: 'Notes',
-          memories: [{ path: 'notes.md', content: 'hello' }],
         },
       ],
       volumeMounts: [
-        { name: 'repo', mountPath: '/workspace/src' },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1' },
+        { name: 'repo', mountPath: '/workspace/src', readOnly: true },
+        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
       ],
     })
   })
@@ -142,7 +133,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
         workspaceSpec(
           [
             { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-            { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1', access: 'read_only' },
+            { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
           ],
           [
             { name: 'repo', mountPath: '/workspace/repo' },
@@ -153,11 +144,11 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
     ).toEqual({
       volumes: [
         { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-        { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1', access: 'read_only' },
+        { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
       ],
       volumeMounts: [
-        { name: 'repo', mountPath: '/workspace/repo' },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1' },
+        { name: 'repo', mountPath: '/workspace/repo', readOnly: true },
+        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
       ],
     })
   })
@@ -182,19 +173,17 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
     ).toEqual({
       fields: { 'volumes.0.url': 'Use a safe HTTPS Git repository URL.' },
     })
-    expect(
-      normalizeWorkspaceSpec(
-        workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'bad', access: 'read_only' }], []),
-      ),
-    ).toEqual({ fields: { 'volumes.0.memoryRef': 'Memory reference must use ama://memories/{storeId}.' } })
+    expect(normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'bad' }], []))).toEqual({
+      fields: { 'volumes.0.memoryRef': 'Memory reference must use ama://memories/{storeId}.' },
+    })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m', access: 'write' as never }],
-          [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/m' }],
+          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }],
+          [JSON.parse('{ "name": "memory", "mountPath": "/workspace/.ama/memory-stores/m", "readOnly": "bad" }')],
         ),
       ),
-    ).toEqual({ fields: { 'volumes.0.access': 'Use read_only or read_write.' } })
+    ).toEqual({ fields: { 'volumeMounts.0.readOnly': 'Use a boolean readOnly value.' } })
     expect(normalizeWorkspaceSpec(workspaceSpec([], [{ name: 'bad', mountPath: 'bad//path' }]))).toEqual({
       fields: { 'volumeMounts.0.mountPath': 'Volume mount path must stay under /workspace.' },
     })
@@ -205,9 +194,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       fields: { 'volumeMounts.0.mountPath': 'Volume mount path must stay under /workspace.' },
     })
     expect(
-      normalizeWorkspaceSpec(
-        workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 1 as never, access: 'read_only' }], []),
-      ),
+      normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 1 as never }], [])),
     ).toEqual({ fields: { 'volumes.0.memoryRef': 'Memory reference must use ama://memories/{storeId}.' } })
   })
 
@@ -218,14 +205,12 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       ),
     ).toEqual({ fields: { 'volumes.0.name': 'Repository volume must have a matching volume mount.' } })
     expect(
-      normalizeWorkspaceSpec(
-        workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m', access: 'read_only' }], []),
-      ),
+      normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }], [])),
     ).toEqual({ fields: { 'volumes.0.name': 'Memory store volume must have a matching volume mount.' } })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m', access: 'read_only' }],
+          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }],
           [{ name: 'memory', mountPath: '/workspace/memory' }],
         ),
       ),
@@ -236,8 +221,8 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [
-            { name: 'memory1', type: 'memory', memoryRef: 'ama://memories/m1', access: 'read_only' },
-            { name: 'memory2', type: 'memory', memoryRef: 'ama://memories/m2', access: 'read_only' },
+            { name: 'memory1', type: 'memory', memoryRef: 'ama://memories/m1' },
+            { name: 'memory2', type: 'memory', memoryRef: 'ama://memories/m2' },
           ],
           [
             { name: 'memory1', mountPath: '/workspace/.ama/memory-stores/shared' },

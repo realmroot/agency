@@ -276,8 +276,8 @@ describe('[CF] /api/v1/leases', () => {
     expect(memoryRes.status).toBe(201)
     const runner = await registerActiveRunner(authorization, environment.id)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}`, access: 'read_write' }],
-      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}` }],
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
+      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
     })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -325,8 +325,8 @@ describe('[CF] /api/v1/leases', () => {
     const memoryStoreId = memoryStore.metadata.uid
     const runner = await registerActiveRunner(authorization, environment.id)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}`, access: 'read_write' }],
-      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}` }],
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
+      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
     })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)

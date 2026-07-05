@@ -25,18 +25,16 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_only' }],
-          [{ name: 'memory-memstore_1', mountPath: '/workspace/.ama/memory-stores/memstore_1' }],
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
+          [{ name: 'memory-memstore_1', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: true }],
         ),
       ).volumes,
-    ).toEqual([
-      { name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_only' },
-    ])
+    ).toEqual([{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }])
 
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_only' }],
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
           [{ name: 'memory-memstore_1', mountPath: '/workspace/custom' }],
         ),
       ),
@@ -45,28 +43,25 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     })
   })
 
-  it('requires access and unique store ids per session', () => {
+  it('requires readOnly and unique store ids per session', () => {
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
           [
-            {
-              name: 'memory-memstore_1',
-              type: 'memory',
-              memoryRef: 'ama://memories/memstore_1',
-              access: 'writer' as never,
-            },
+            JSON.parse(
+              '{ "name": "memory-memstore_1", "mountPath": "/workspace/.ama/memory-stores/memstore_1", "readOnly": "bad" }',
+            ),
           ],
-          [{ name: 'memory-memstore_1', mountPath: '/workspace/.ama/memory-stores/memstore_1' }],
         ),
       ),
-    ).toEqual({ fields: { 'volumes.0.access': 'Use read_only or read_write.' } })
+    ).toEqual({ fields: { 'volumeMounts.0.readOnly': 'Use a boolean readOnly value.' } })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
           [
-            { name: 'memory-a', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_only' },
-            { name: 'memory-b', type: 'memory', memoryRef: 'ama://memories/memstore_1', access: 'read_write' },
+            { name: 'memory-a', type: 'memory', memoryRef: 'ama://memories/memstore_1' },
+            { name: 'memory-b', type: 'memory', memoryRef: 'ama://memories/memstore_1' },
           ],
           [
             { name: 'memory-a', mountPath: '/workspace/.ama/memory-stores/memstore_1' },
@@ -77,7 +72,7 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     ).toEqual({ fields: { 'volumeMounts.1.mountPath': 'Mount path must be unique within a session.' } })
   })
 
-  it('adds store metadata to the runtime system prompt without memory contents', () => {
+  it('adds memory references to the runtime system prompt without store metadata or contents', () => {
     const augmented = agentSnapshotWithWorkspaceContext(
       agentSnapshot(),
       [
@@ -86,22 +81,17 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
           name: 'Team memory',
           type: 'memory',
           memoryRef: 'ama://memories/memstore_1',
-          description: 'Review conventions.',
-          access: 'read_write',
-          memories: [{ path: 'guide.md', content: 'secret memory content' }],
         },
       ],
       [
         { name: 'source', mountPath: '/workspace/repos/saltbo/agent-kanban' },
-        { name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1' },
+        { name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: false },
       ],
     )
     expect(augmented.systemPrompt).toContain('Base instructions.')
     expect(augmented.systemPrompt).toContain('Workspace layout:')
     expect(augmented.systemPrompt).toContain('https://github.com/saltbo/agent-kanban.git at repos/saltbo/agent-kanban')
     expect(augmented.systemPrompt).toContain('Team memory')
-    expect(augmented.systemPrompt).toContain('Review conventions.')
     expect(augmented.systemPrompt).toContain('.ama/memory-stores/memstore_1')
-    expect(augmented.systemPrompt).not.toContain('secret memory content')
   })
 })

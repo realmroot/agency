@@ -497,7 +497,7 @@ func TestAttachMemoryStoresBranches(t *testing.T) {
 		Manifest: protocol.WorkspaceManifest{Mounts: []protocol.WorkspaceMount{{
 			Type:      "memory",
 			MemoryRef: "ama://memories/store_1",
-			Access:    "read_write",
+			ReadOnly:  false,
 			Files:     []protocol.WorkspaceFile{{Path: "memory.md", Content: "remember"}},
 		}}},
 	})

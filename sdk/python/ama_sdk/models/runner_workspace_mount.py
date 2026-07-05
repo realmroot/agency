@@ -36,7 +36,6 @@ class RunnerWorkspaceMount:
             credential (RunnerGitCredential | Unset):
             memory_ref (str | Unset):  Example: ama://memories/memstore_abc123.
             description (None | str | Unset):
-            access (str | Unset):  Example: read_write.
             read_only (bool | Unset):
             files (list[RunnerWorkspaceFile] | Unset):
      """
@@ -49,7 +48,6 @@ class RunnerWorkspaceMount:
     credential: RunnerGitCredential | Unset = UNSET
     memory_ref: str | Unset = UNSET
     description: None | str | Unset = UNSET
-    access: str | Unset = UNSET
     read_only: bool | Unset = UNSET
     files: list[RunnerWorkspaceFile] | Unset = UNSET
 
@@ -82,8 +80,6 @@ class RunnerWorkspaceMount:
         else:
             description = self.description
 
-        access = self.access
-
         read_only = self.read_only
 
         files: list[dict[str, Any]] | Unset = UNSET
@@ -113,8 +109,6 @@ class RunnerWorkspaceMount:
             field_dict["memoryRef"] = memory_ref
         if description is not UNSET:
             field_dict["description"] = description
-        if access is not UNSET:
-            field_dict["access"] = access
         if read_only is not UNSET:
             field_dict["readOnly"] = read_only
         if files is not UNSET:
@@ -164,8 +158,6 @@ class RunnerWorkspaceMount:
         description = _parse_description(d.pop("description", UNSET))
 
 
-        access = d.pop("access", UNSET)
-
         read_only = d.pop("readOnly", UNSET)
 
         _files = d.pop("files", UNSET)
@@ -189,7 +181,6 @@ class RunnerWorkspaceMount:
             credential=credential,
             memory_ref=memory_ref,
             description=description,
-            access=access,
             read_only=read_only,
             files=files,
         )

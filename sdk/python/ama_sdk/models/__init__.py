@@ -211,7 +211,6 @@ from .memory_store_memory_status import MemoryStoreMemoryStatus
 from .memory_store_spec import MemoryStoreSpec
 from .memory_store_status import MemoryStoreStatus
 from .memory_volume import MemoryVolume
-from .memory_volume_access import MemoryVolumeAccess
 from .memory_volume_type import MemoryVolumeType
 from .message_event_payload import MessageEventPayload
 from .permission_denied_payload import PermissionDeniedPayload
@@ -283,7 +282,6 @@ from .runner_git_credential import RunnerGitCredential
 from .runner_heartbeat import RunnerHeartbeat
 from .runner_heartbeat_state import RunnerHeartbeatState
 from .runner_list_response import RunnerListResponse
-from .runner_memory_snapshot import RunnerMemorySnapshot
 from .runner_metadata import RunnerMetadata
 from .runner_opaque_json_object import RunnerOpaqueJsonObject
 from .runner_runtime_inventory import RunnerRuntimeInventory
@@ -734,7 +732,6 @@ __all__ = (
     "MemoryStoreSpec",
     "MemoryStoreStatus",
     "MemoryVolume",
-    "MemoryVolumeAccess",
     "MemoryVolumeType",
     "MessageEventPayload",
     "PermissionDeniedPayload",
@@ -806,7 +803,6 @@ __all__ = (
     "RunnerHeartbeat",
     "RunnerHeartbeatState",
     "RunnerListResponse",
-    "RunnerMemorySnapshot",
     "RunnerMetadata",
     "RunnerOpaqueJsonObject",
     "RunnerRuntimeInventory",

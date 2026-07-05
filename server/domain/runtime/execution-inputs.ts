@@ -32,14 +32,10 @@ export interface GitRepositoryVolume extends Record<string, unknown> {
   items?: SecretItem[] | undefined
 }
 
-export interface MemoryVolume extends Record<string, unknown> {
+export interface MemoryVolume {
   name: string
   type: 'memory'
   memoryRef: string
-  access: 'read_only' | 'read_write'
-  storeName?: string | undefined
-  description?: string | undefined
-  memories?: Array<Record<string, unknown>> | undefined
 }
 
 export interface VolumeMount {
@@ -67,6 +63,38 @@ export function isMemoryVolume(volume: Volume): volume is MemoryVolume {
   return volume.type === 'memory'
 }
 
+export function declaredVolumes(volumes: Volume[]): Volume[] {
+  return volumes.map((volume) => {
+    if (isMemoryVolume(volume)) {
+      return {
+        name: volume.name,
+        type: 'memory',
+        memoryRef: volume.memoryRef,
+      }
+    }
+    if (isGitRepositoryVolume(volume)) {
+      return {
+        name: volume.name,
+        type: 'git_repository',
+        url: volume.url,
+        ...(volume.ref ? { ref: volume.ref } : {}),
+        ...(volume.secretRef ? { secretRef: volume.secretRef } : {}),
+        ...(volume.items ? { items: volume.items } : {}),
+      }
+    }
+    return {
+      name: volume.name,
+      type: 'secret',
+      secretRef: volume.secretRef,
+      ...(volume.items ? { items: volume.items } : {}),
+    }
+  })
+}
+
 export function volumeMountPath(volumeName: string, volumeMounts: VolumeMount[]): string | null {
   return volumeMounts.find((mount) => mount.name === volumeName)?.mountPath ?? null
+}
+
+export function volumeMountReadOnly(volumeName: string, volumeMounts: VolumeMount[]): boolean {
+  return volumeMounts.find((mount) => mount.name === volumeName)?.readOnly ?? true
 }

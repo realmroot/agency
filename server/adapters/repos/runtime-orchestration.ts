@@ -340,7 +340,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       )
     },
 
-    async findActiveMemoryStoreResource(projectId, storeId, access) {
+    async findActiveMemoryStoreResource(projectId, storeId) {
       const store = await db
         .select()
         .from(memoryStores)
@@ -361,10 +361,20 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         memoryRef: amaMemoryRef(storeId),
         name: store.name,
         description: store.description,
-        access,
         mountPath: memoryStoreMountPath(storeId),
         memories,
       }
+    },
+
+    async activeMemoryStoreExists(projectId, storeId) {
+      const store = await db
+        .select({ id: memoryStores.id })
+        .from(memoryStores)
+        .where(
+          and(eq(memoryStores.id, storeId), eq(memoryStores.projectId, projectId), isNull(memoryStores.archivedAt)),
+        )
+        .get()
+      return Boolean(store)
     },
 
     async replaceMemoryStoreMemories(projectId, storeId, memories, updatedAt) {

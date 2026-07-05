@@ -9,15 +9,12 @@ import (
 )
 
 type Volume struct {
-	Type        string           `json:"type"`
-	Name        string           `json:"name"`
-	URL         string           `json:"url"`
-	Ref         string           `json:"ref"`
-	MemoryRef   string           `json:"memoryRef"`
-	Description *string          `json:"description"`
-	Access      string           `json:"access"`
-	SecretRef   string           `json:"secretRef"`
-	Memories    []MemorySnapshot `json:"memories"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	Ref       string `json:"ref"`
+	MemoryRef string `json:"memoryRef"`
+	SecretRef string `json:"secretRef"`
 }
 
 type VolumeMount struct {
@@ -50,7 +47,6 @@ type WorkspaceMount struct {
 	Credential  *WorkspaceGitCredential `json:"credential"`
 	MemoryRef   string                  `json:"memoryRef"`
 	Description *string                 `json:"description"`
-	Access      string                  `json:"access"`
 	ReadOnly    bool                    `json:"readOnly"`
 	Files       []WorkspaceFile         `json:"files"`
 }
@@ -219,7 +215,6 @@ func workspaceMountsFromSDK(mounts []ama.RunnerWorkspaceMount) []WorkspaceMount 
 			Credential:  workspaceGitCredentialFromSDK(mount.Credential),
 			MemoryRef:   stringValue(mount.MemoryRef),
 			Description: mount.Description,
-			Access:      stringValue(mount.Access),
 			ReadOnly:    boolValue(mount.ReadOnly),
 			Files:       workspaceFilesFromSDK(mount.Files),
 		}
@@ -256,15 +251,12 @@ func volumesFromSDK(volumes *[]ama.RunnerVolume) []Volume {
 
 func volumeFromSDK(volume ama.RunnerVolume) Volume {
 	return Volume{
-		Type:        string(volume.Type),
-		Name:        volume.Name,
-		URL:         stringValue(volume.Url),
-		Ref:         stringValue(volume.Ref),
-		MemoryRef:   stringValue(volume.MemoryRef),
-		Description: volume.Description,
-		Access:      stringValue(volume.Access),
-		SecretRef:   stringValue(volume.SecretRef),
-		Memories:    memorySnapshotsFromSDK(volume.Memories),
+		Type:      string(volume.Type),
+		Name:      volume.Name,
+		URL:       stringValue(volume.Url),
+		Ref:       stringValue(volume.Ref),
+		MemoryRef: stringValue(volume.MemoryRef),
+		SecretRef: stringValue(volume.SecretRef),
 	}
 }
 
@@ -278,15 +270,6 @@ func volumeMountsFromSDK(mounts *[]ama.RunnerVolumeMount) []VolumeMount {
 			MountPath: mount.MountPath,
 			ReadOnly:  boolValue(mount.ReadOnly),
 		}
-	})
-}
-
-func memorySnapshotsFromSDK(memories *[]ama.RunnerMemorySnapshot) []MemorySnapshot {
-	if memories == nil {
-		return nil
-	}
-	return lo.Map(*memories, func(memory ama.RunnerMemorySnapshot, _ int) MemorySnapshot {
-		return MemorySnapshot{Path: memory.Path, Content: memory.Content}
 	})
 }
 

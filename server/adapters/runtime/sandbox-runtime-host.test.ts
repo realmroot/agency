@@ -157,12 +157,27 @@ describe('session-runtime', () => {
             readOnly: true,
             files: [{ path: 'value', content: 'secret-value' }],
           },
+          {
+            name: 'memory',
+            type: 'memory',
+            mountPath: '/workspace/.ama/memory-stores/store_1',
+            memoryRef: 'ama://memories/store_1',
+            readOnly: false,
+            files: [{ path: 'notes.md', content: 'keep this out of the volume manifest' }],
+          },
         ],
       }),
     ).toEqual({
       version: 1,
       workspaceRoot: '/workspace',
       volumes: [
+        {
+          type: 'memory',
+          memoryRef: 'ama://memories/store_1',
+          name: 'memory',
+          mountPath: '/workspace/.ama/memory-stores/store_1',
+          status: 'declared',
+        },
         {
           type: 'secret',
           name: 'token',
@@ -501,7 +516,7 @@ describe('session-runtime', () => {
               type: 'memory',
               mountPath: '/workspace/.ama/memory-stores/memstore_1',
               memoryRef: 'ama://memories/memstore_1',
-              access: 'read_only',
+              readOnly: true,
               files: [{ path: 'guides/review.md', content: 'Review carefully.' }],
             },
             {

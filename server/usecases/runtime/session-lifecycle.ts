@@ -16,6 +16,7 @@ import {
   type MemoryVolume,
   type Volume,
   type VolumeMount,
+  volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
 import {
   type createEnvironmentSnapshot,
@@ -133,7 +134,7 @@ async function syncWritableMemoryStores(deps: LifecycleDeps, auth: AuthScope, se
   const volumes = JSON.parse(session.volumes) as Volume[]
   const volumeMounts = JSON.parse(session.volumeMounts) as VolumeMount[]
   const writableVolumes = volumes.filter(
-    (volume): volume is MemoryVolume => isMemoryVolume(volume) && volume.access === 'read_write',
+    (volume): volume is MemoryVolume => isMemoryVolume(volume) && !volumeMountReadOnly(volume.name, volumeMounts),
   )
   if (writableVolumes.length === 0) {
     return

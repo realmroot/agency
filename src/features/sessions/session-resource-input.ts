@@ -1,10 +1,7 @@
 import type { SessionFormState } from '@/console/types'
-import type { MemoryStore, SessionInput } from '@/lib/amarpc'
+import type { SessionInput } from '@/lib/amarpc'
 
-export function sessionResourcesInput(
-  form: SessionFormState,
-  memoryStores: Array<Pick<MemoryStore, 'metadata'>>,
-): Pick<SessionInput['spec'], 'volumes' | 'volumeMounts'> {
+export function sessionResourcesInput(form: SessionFormState): Pick<SessionInput['spec'], 'volumes' | 'volumeMounts'> {
   const volumes: NonNullable<SessionInput['spec']['volumes']> = []
   const volumeMounts: NonNullable<SessionInput['spec']['volumeMounts']> = []
   for (const vaultId of form.credentialVaultIds) {
@@ -27,20 +24,16 @@ export function sessionResourcesInput(
       return
     }
     if (!resource.memoryStoreId) return
-    const store = memoryStores.find((candidate) => candidate.metadata.uid === resource.memoryStoreId)
     const name = safeVolumeName('memory', resource.memoryStoreId)
     volumes.push({
       name,
       type: 'memory',
       memoryRef: `ama://memories/${encodeURIComponent(resource.memoryStoreId)}`,
-      access: resource.access,
-      ...(store?.metadata.name ? { storeName: store.metadata.name } : {}),
-      ...(store?.metadata.description ? { description: store.metadata.description } : {}),
     })
     volumeMounts.push({
       name,
       mountPath: `/workspace/.ama/memory-stores/${resource.memoryStoreId}`,
-      readOnly: resource.access !== 'read_write',
+      readOnly: resource.readOnly,
     })
   })
   return { volumes, volumeMounts }

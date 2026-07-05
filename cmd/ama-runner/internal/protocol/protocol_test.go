@@ -245,7 +245,6 @@ func TestParseWorkPayloadMapsWorkspaceManifest(t *testing.T) {
 					"url":         "https://example.test/repo.git",
 					"ref":         "main",
 					"description": description,
-					"access":      "read_write",
 					"readOnly":    true,
 					"credential":  ama.JSON{"username": "user", "password": "pass"},
 					"files": []ama.JSON{
@@ -285,9 +284,6 @@ func TestRunnerChannelMessageAccessors(t *testing.T) {
 			Url:       ptr("https://example.test/repo.git"),
 			Ref:       ptr("main"),
 			SecretRef: ptr("ama-secret://vault/git"),
-			Memories: &[]ama.RunnerMemorySnapshot{
-				{Path: "memory.md", Content: "memory"},
-			},
 		},
 	}
 	mounts := []ama.RunnerVolumeMount{{Name: "repo", MountPath: "/workspace/repo", ReadOnly: &readOnly}}
@@ -320,7 +316,7 @@ func TestRunnerChannelMessageAccessors(t *testing.T) {
 		t.Fatalf("unexpected sandbox request: %#v", sandbox)
 	}
 	volume := SandboxRequestVolumes(sandbox)[0]
-	if volume.Name != "repo" || volume.URL != "https://example.test/repo.git" || volume.Memories[0].Content != "memory" {
+	if volume.Name != "repo" || volume.URL != "https://example.test/repo.git" {
 		t.Fatalf("unexpected volume: %#v", volume)
 	}
 	mount := SandboxRequestVolumeMounts(sandbox)[0]
@@ -360,15 +356,14 @@ func TestWorkspaceSDKConvertersHandleNilAndOptionalFields(t *testing.T) {
 		},
 	})
 	if len(mounts) != 1 || mounts[0].Credential != nil || mounts[0].Files != nil ||
-		mounts[0].Description != nil || mounts[0].Access != "" || mounts[0].ReadOnly {
+		mounts[0].Description != nil || mounts[0].ReadOnly {
 		t.Fatalf("unexpected optional workspace mount fields: %#v", mounts)
 	}
 
 	volumes := volumesFromSDK(nil)
 	mountList := volumeMountsFromSDK(nil)
-	memories := memorySnapshotsFromSDK(nil)
-	if volumes != nil || mountList != nil || memories != nil {
-		t.Fatalf("expected nil converters to stay nil: %#v %#v %#v", volumes, mountList, memories)
+	if volumes != nil || mountList != nil {
+		t.Fatalf("expected nil converters to stay nil: %#v %#v", volumes, mountList)
 	}
 }
 

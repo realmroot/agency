@@ -1000,24 +1000,6 @@ func (e LeaseState) Valid() bool {
 	}
 }
 
-// Defines values for MemoryVolumeAccess.
-const (
-	ReadOnly  MemoryVolumeAccess = "read_only"
-	ReadWrite MemoryVolumeAccess = "read_write"
-)
-
-// Valid indicates whether the value is a known member of the MemoryVolumeAccess enum.
-func (e MemoryVolumeAccess) Valid() bool {
-	switch e {
-	case ReadOnly:
-		return true
-	case ReadWrite:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MemoryVolumeType.
 const (
 	Memory MemoryVolumeType = "memory"
@@ -3945,16 +3927,10 @@ type MemoryStoreStatus struct {
 
 // MemoryVolume defines model for MemoryVolume.
 type MemoryVolume struct {
-	Access      MemoryVolumeAccess `json:"access"`
-	Description *string            `json:"description,omitempty"`
-	MemoryRef   string             `json:"memoryRef"`
-	Name        string             `json:"name"`
-	StoreName   *string            `json:"storeName,omitempty"`
-	Type        MemoryVolumeType   `json:"type"`
+	MemoryRef string           `json:"memoryRef"`
+	Name      string           `json:"name"`
+	Type      MemoryVolumeType `json:"type"`
 }
-
-// MemoryVolumeAccess defines model for MemoryVolume.Access.
-type MemoryVolumeAccess string
 
 // MemoryVolumeType defines model for MemoryVolume.Type.
 type MemoryVolumeType string
@@ -4359,12 +4335,6 @@ type RunnerListResponse struct {
 	Pagination ListPagination `json:"pagination"`
 }
 
-// RunnerMemorySnapshot defines model for RunnerMemorySnapshot.
-type RunnerMemorySnapshot struct {
-	Content string `json:"content"`
-	Path    string `json:"path"`
-}
-
 // RunnerOpaqueJsonObject defines model for RunnerOpaqueJsonObject.
 type RunnerOpaqueJsonObject map[string]*interface{}
 
@@ -4419,15 +4389,12 @@ type RunnerToolCall struct {
 
 // RunnerVolume defines model for RunnerVolume.
 type RunnerVolume struct {
-	Access      *string                 `json:"access,omitempty"`
-	Description *string                 `json:"description,omitempty"`
-	Memories    *[]RunnerMemorySnapshot `json:"memories,omitempty"`
-	MemoryRef   *string                 `json:"memoryRef,omitempty"`
-	Name        string                  `json:"name"`
-	Ref         *string                 `json:"ref,omitempty"`
-	SecretRef   *string                 `json:"secretRef,omitempty"`
-	Type        RunnerVolumeType        `json:"type"`
-	Url         *string                 `json:"url,omitempty"`
+	MemoryRef *string          `json:"memoryRef,omitempty"`
+	Name      string           `json:"name"`
+	Ref       *string          `json:"ref,omitempty"`
+	SecretRef *string          `json:"secretRef,omitempty"`
+	Type      RunnerVolumeType `json:"type"`
+	Url       *string          `json:"url,omitempty"`
 }
 
 // RunnerVolumeType defines model for RunnerVolume.Type.
@@ -4486,7 +4453,6 @@ type RunnerWorkspaceManifestRoot string
 
 // RunnerWorkspaceMount defines model for RunnerWorkspaceMount.
 type RunnerWorkspaceMount struct {
-	Access      *string                  `json:"access,omitempty"`
 	Credential  *RunnerGitCredential     `json:"credential,omitempty"`
 	Description *string                  `json:"description,omitempty"`
 	Files       *[]RunnerWorkspaceFile   `json:"files,omitempty"`

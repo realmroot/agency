@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  amaMemoryRef,
-  isMemoryStoreAccess,
-  memoryStoreIdFromRef,
-  memoryStoreMountPath,
-  normalizeMemoryPath,
-} from './memory-store'
+import { amaMemoryRef, memoryStoreIdFromRef, memoryStoreMountPath, normalizeMemoryPath } from './memory-store'
 
 describe('[spec: sessions/memory-store-resources] memory store domain helpers', () => {
   it('builds managed mount paths under the AMA memory root', () => {
@@ -30,11 +24,5 @@ describe('[spec: sessions/memory-store-resources] memory store domain helpers', 
     expect(() => normalizeMemoryPath('.ama/system.md')).toThrow('clean relative segments')
     expect(() => normalizeMemoryPath('bad path.md')).toThrow('letters, numbers, dots, underscores, and hyphens')
     expect(() => normalizeMemoryPath('bad\\path.md')).toThrow('invalid characters')
-  })
-
-  it('narrows memory store access values', () => {
-    expect(isMemoryStoreAccess('read_only')).toBe(true)
-    expect(isMemoryStoreAccess('read_write')).toBe(true)
-    expect(isMemoryStoreAccess('write')).toBe(false)
   })
 })

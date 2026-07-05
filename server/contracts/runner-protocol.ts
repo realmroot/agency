@@ -4,14 +4,6 @@ const JsonObjectSchema = z.record(z.string(), z.unknown())
 const StringMapSchema = z.record(z.string(), z.string())
 const RunnerOpaqueJsonObjectSchema = z.object({}).catchall(z.unknown()).openapi('RunnerOpaqueJsonObject')
 
-export const RunnerMemorySnapshotSchema = z
-  .object({
-    path: z.string().openapi({ example: 'notes/plan.md' }),
-    content: z.string().openapi({ example: 'Project notes' }),
-  })
-  .strict()
-  .openapi('RunnerMemorySnapshot')
-
 export const RunnerWorkspaceFileSchema = z
   .object({
     path: z.string().openapi({ example: 'notes/plan.md' }),
@@ -38,7 +30,6 @@ export const RunnerWorkspaceMountSchema = z
     credential: RunnerGitCredentialSchema.optional(),
     memoryRef: z.string().optional().openapi({ example: 'ama://memories/memstore_abc123' }),
     description: z.string().nullable().optional(),
-    access: z.string().optional().openapi({ example: 'read_write' }),
     readOnly: z.boolean().optional(),
     files: z.array(RunnerWorkspaceFileSchema).optional(),
   })
@@ -61,9 +52,6 @@ export const RunnerVolumeSchema = z
     url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
     memoryRef: z.string().optional().openapi({ example: 'ama://memories/memstore_abc123' }),
-    description: z.string().nullable().optional(),
-    access: z.string().optional().openapi({ example: 'read_write' }),
-    memories: z.array(RunnerMemorySnapshotSchema).optional(),
   })
   .strict()
   .openapi('RunnerVolume')
@@ -227,7 +215,6 @@ export const RunnerChannelMessageSchema = z
   .openapi('RunnerChannelMessage')
 
 export const RUNNER_PROTOCOL_SCHEMAS = {
-  RunnerMemorySnapshot: RunnerMemorySnapshotSchema,
   RunnerWorkspaceFile: RunnerWorkspaceFileSchema,
   RunnerGitCredential: RunnerGitCredentialSchema,
   RunnerWorkspaceMount: RunnerWorkspaceMountSchema,

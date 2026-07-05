@@ -1598,24 +1598,6 @@
           }
         }
       },
-      "RunnerMemorySnapshot": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "example": "notes/plan.md"
-          },
-          "content": {
-            "type": "string",
-            "example": "Project notes"
-          }
-        },
-        "required": [
-          "path",
-          "content"
-        ],
-        "additionalProperties": false
-      },
       "RunnerWorkspaceFile": {
         "type": "object",
         "properties": {
@@ -1691,10 +1673,6 @@
             "type": "string",
             "nullable": true
           },
-          "access": {
-            "type": "string",
-            "example": "read_write"
-          },
           "readOnly": {
             "type": "boolean"
           },
@@ -1765,20 +1743,6 @@
           "memoryRef": {
             "type": "string",
             "example": "ama://memories/memstore_abc123"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "access": {
-            "type": "string",
-            "example": "read_write"
-          },
-          "memories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RunnerMemorySnapshot"
-            }
           }
         },
         "required": [
@@ -5800,27 +5764,12 @@
             "type": "string",
             "minLength": 1,
             "example": "ama://memories/memstore_abc123"
-          },
-          "access": {
-            "type": "string",
-            "enum": [
-              "read_only",
-              "read_write"
-            ],
-            "example": "read_only"
-          },
-          "storeName": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
           }
         },
         "required": [
           "name",
           "type",
-          "memoryRef",
-          "access"
+          "memoryRef"
         ],
         "additionalProperties": false
       },

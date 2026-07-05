@@ -713,7 +713,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 			"name":      "maintainer-memory",
 			"mountPath": "/workspace/.ama/memory-stores/memstore_1",
 			"memoryRef": "ama://memories/memstore_1",
-			"access":    "read_write",
+			"readOnly":  false,
 			"files": []any{ama.JSON{
 				"path":    "ak-maintainer-heartbeat.md",
 				"content": "initial heartbeat\n",

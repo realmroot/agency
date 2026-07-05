@@ -4,12 +4,14 @@ import type { Env } from '../../env'
 
 const secretVersionForResolutionMock = vi.fn()
 const vaultVersionsForResolutionMock = vi.fn()
+const findActiveMemoryStoreResourceMock = vi.fn()
 const decryptSecretValueMock = vi.fn()
 
 vi.mock('../repos/runtime-orchestration', () => ({
   createRuntimeOrchestrationRepo: () => ({
     secretVersionForResolution: secretVersionForResolutionMock,
     vaultVersionsForResolution: vaultVersionsForResolutionMock,
+    findActiveMemoryStoreResource: findActiveMemoryStoreResourceMock,
   }),
 }))
 
@@ -31,6 +33,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
   beforeEach(() => {
     secretVersionForResolutionMock.mockReset()
     vaultVersionsForResolutionMock.mockReset()
+    findActiveMemoryStoreResourceMock.mockReset()
     decryptSecretValueMock.mockReset()
   })
 
@@ -191,6 +194,14 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
       .mockResolvedValueOnce('git-user')
       .mockResolvedValueOnce('git-pass')
       .mockResolvedValueOnce('secret-config')
+    findActiveMemoryStoreResourceMock.mockResolvedValueOnce({
+      type: 'memory',
+      memoryRef: 'ama://memories/store_1',
+      name: 'Memory',
+      description: 'Notes',
+      mountPath: '/workspace/.ama/memory-stores/store_1',
+      memories: [{ path: 'notes.md', content: 'hello' }],
+    })
     const gateway = createRuntimeSecretGateway(env, fakeDb)
     await expect(
       gateway.resolveWorkspaceManifest(
@@ -211,10 +222,6 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
             name: 'memory',
             type: 'memory',
             memoryRef: 'ama://memories/store_1',
-            access: 'read_write',
-            storeName: 'Memory',
-            description: 'Notes',
-            memories: [{ path: 'notes.md', content: 'hello' }],
           },
           {
             name: 'secret',
@@ -225,6 +232,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         ],
         [
           { name: 'repo', mountPath: '/workspace/repo' },
+          { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: false },
           { name: 'secret', mountPath: '/workspace/.ama/secrets/custom' },
         ],
       ),
@@ -244,9 +252,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
           name: 'memory',
           mountPath: '/workspace/.ama/memory-stores/store_1',
           memoryRef: 'ama://memories/store_1',
-          access: 'read_write',
-          storeName: 'Memory',
-          description: 'Notes',
+          readOnly: false,
           files: [{ path: 'notes.md', content: 'hello' }],
         },
         {
@@ -307,14 +313,22 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     })
   })
 
-  it('materializes public git repositories and empty memory files', async () => {
+  it('materializes public git repositories and memory files', async () => {
+    findActiveMemoryStoreResourceMock.mockResolvedValueOnce({
+      type: 'memory',
+      memoryRef: 'ama://memories/store_1',
+      name: 'Memory',
+      description: null,
+      mountPath: '/workspace/.ama/memory-stores/store_1',
+      memories: [],
+    })
     const gateway = createRuntimeSecretGateway(env, fakeDb)
     await expect(
       gateway.resolveWorkspaceManifest(
         scope,
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: 'memory', type: 'memory', memoryRef: 'not-a-ref', access: 'read_only' },
+          { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
         ],
         [],
       ),
@@ -330,9 +344,9 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         {
           type: 'memory',
           name: 'memory',
-          mountPath: '/workspace/.ama/memory-stores/memory',
-          memoryRef: 'not-a-ref',
-          access: 'read_only',
+          mountPath: '/workspace/.ama/memory-stores/store_1',
+          memoryRef: 'ama://memories/store_1',
+          readOnly: true,
           files: [],
         },
       ],

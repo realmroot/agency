@@ -329,11 +329,9 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
             type: 'memory',
             name: 'Team memory',
             memoryRef: 'ama://memories/memstore_1',
-            description: 'Shared runbook',
-            access: 'read_write',
           },
         ],
-        volumeMounts: [{ name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1' }],
+        volumeMounts: [{ name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: false }],
       },
     })
 

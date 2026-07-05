@@ -808,11 +808,11 @@ describe('[CF] /api/v1/sessions', () => {
         runtime: 'ama',
         volumes: [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git', ref: 'main' },
-          { name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}`, access: 'read_write' },
+          { name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` },
         ],
         volumeMounts: [
           { name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' },
-          { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}` },
+          { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
         ],
         envFrom: [
           {
@@ -845,13 +845,12 @@ describe('[CF] /api/v1/sessions', () => {
         type: 'memory',
         memoryRef: `ama://memories/${memoryStoreId}`,
         name: 'memory',
-        access: 'read_write',
       }),
     )
     expect(created.spec.volumeMounts).toContainEqual({
       name: 'memory',
       mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`,
-      readOnly: true,
+      readOnly: false,
     })
     expect(created).toMatchObject({
       spec: {
@@ -908,21 +907,17 @@ describe('[CF] /api/v1/sessions', () => {
         name: 'memory',
         type: 'memory',
         memoryRef: `ama://memories/${memoryStoreId}`,
-        storeName: 'Team memory',
-        description: 'Review conventions',
-        access: 'read_write',
-        memories: [{ path: 'guides/review.md', content: 'Review for correctness first.' }],
       },
     ])
     expect(storedPayload.volumeMounts).toEqual([
       { name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban', readOnly: true },
-      { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: true },
+      { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
     ])
     expect(storedPayload.agentSnapshot.systemPrompt).toContain('Workspace layout:')
     expect(storedPayload.agentSnapshot.systemPrompt).toContain(
       'https://github.com/saltbo/agent-kanban.git at repos/saltbo/agent-kanban',
     )
-    expect(storedPayload.agentSnapshot.systemPrompt).toContain('Team memory')
+    expect(storedPayload.agentSnapshot.systemPrompt).toContain('memory (writable)')
     expect(storedPayload.agentSnapshot.systemPrompt).toContain(`.ama/memory-stores/${memoryStoreId}`)
     expect(storedPayload.agentSnapshot.systemPrompt).not.toContain('Review for correctness first.')
     expect(storedPayload.provider).toBe('workers-ai')
@@ -938,9 +933,18 @@ describe('[CF] /api/v1/sessions', () => {
     const payload = workItem.payload as {
       env: Record<string, string>
       envFrom: Array<Record<string, unknown>>
+      workspaceManifest: { mounts: Array<Record<string, unknown>> }
     }
     // Lease materialization resolves the vault value into the runner env.
     expect(payload.env.AK_AGENT_KEY).toBe('raw-github-token')
+    expect(payload.workspaceManifest.mounts).toContainEqual({
+      type: 'memory',
+      name: 'memory',
+      mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`,
+      memoryRef: `ama://memories/${memoryStoreId}`,
+      readOnly: false,
+      files: [{ path: 'guides/review.md', content: 'Review for correctness first.' }],
+    })
   })
 
   it('normalizes Git repository volumes and rejects unsafe workspace inputs', async () => {

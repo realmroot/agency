@@ -14,8 +14,9 @@ Feature: Memory Stores
 	  @memory-stores/session-binding @api
 	  Scenario: Attach memory stores to a session as managed resources
 	    Given a project has an active memory store with memories
-	    When the user creates a session with a memory volume and access mode
-    Then the session snapshots the store name, description, managed mount path, access, and memory contents
+	    When the user creates a session with a memory volume and readOnly volumeMount
+    Then the session stores the memory reference in the volume and readOnly setting in the volumeMount
+    And runtime materialization mounts the current memory store contents
     And callers cannot provide a memory store mount path
     And archived or cross-project stores are rejected before runtime allocation
 
@@ -23,5 +24,5 @@ Feature: Memory Stores
   Scenario: Manage and attach memory stores in the console
     Given the user opens the Memory Stores console
     When they create a store, add a memory, and create a session
-    Then the store can be selected in the session form with read-only or read-write access
+    Then the store can be selected in the session form with the volumeMount readOnly setting
     And the session detail shows the attached memory store without exposing memory content in the resource summary

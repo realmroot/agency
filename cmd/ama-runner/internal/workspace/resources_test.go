@@ -116,7 +116,7 @@ func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 	root := t.TempDir()
 	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
 		MemoryRef: "ama://memories/store_1",
-		Access:    "read_only",
+		ReadOnly:  true,
 		Files:     []protocol.WorkspaceFile{{Path: "notes/plan.md", Content: "ship"}},
 	})
 	if err != nil {

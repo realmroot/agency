@@ -1,6 +1,5 @@
 import { z } from '@hono/zod-openapi'
 import { normalizeGitRepositoryUrl } from '../domain/git-repository'
-import { MEMORY_STORE_ACCESS } from '../domain/memory-store'
 import { RuntimeSchema } from './environment-contracts'
 
 // Shared execution-spec building blocks that Session and Trigger both use
@@ -66,9 +65,6 @@ export const MemoryVolumeSchema = z
     name: VolumeNameSchema.openapi({ example: 'team-memory' }),
     type: z.literal('memory'),
     memoryRef: MemoryRefSchema,
-    access: z.enum(MEMORY_STORE_ACCESS).openapi({ example: 'read_only' }),
-    storeName: z.string().optional(),
-    description: z.string().optional(),
   })
   .strict()
   .openapi('MemoryVolume')

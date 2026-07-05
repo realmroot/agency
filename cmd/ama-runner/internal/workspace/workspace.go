@@ -43,7 +43,7 @@ type preparedWorktree struct {
 type preparedMemoryStore struct {
 	memoryRef string
 	path      string
-	access    string
+	readOnly  bool
 }
 
 var repositoryCacheLocks sync.Map
@@ -58,18 +58,16 @@ func repositoryCacheLock(cacheDir string) *sync.Mutex {
 }
 
 type mountedVolume struct {
-	Type        string                   `json:"type"`
-	URL         string                   `json:"url,omitempty"`
-	Ref         string                   `json:"ref,omitempty"`
-	MemoryRef   string                   `json:"memoryRef,omitempty"`
-	Name        string                   `json:"name,omitempty"`
-	Description *string                  `json:"description,omitempty"`
-	Access      string                   `json:"access,omitempty"`
-	MountPath   string                   `json:"mountPath,omitempty"`
-	LocalPath   string                   `json:"localPath,omitempty"`
-	Memories    []protocol.WorkspaceFile `json:"memories,omitempty"`
-	Files       []protocol.WorkspaceFile `json:"files,omitempty"`
-	Status      string                   `json:"status"`
+	Type      string                   `json:"type"`
+	URL       string                   `json:"url,omitempty"`
+	Ref       string                   `json:"ref,omitempty"`
+	MemoryRef string                   `json:"memoryRef,omitempty"`
+	Name      string                   `json:"name,omitempty"`
+	ReadOnly  bool                     `json:"readOnly,omitempty"`
+	MountPath string                   `json:"mountPath,omitempty"`
+	LocalPath string                   `json:"localPath,omitempty"`
+	Files     []protocol.WorkspaceFile `json:"files,omitempty"`
+	Status    string                   `json:"status"`
 }
 
 func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
@@ -132,17 +130,15 @@ func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
 			return nil, err
 		}
 		mounted = append(mounted, mountedVolume{
-			Type:        volume.Type,
-			MemoryRef:   volume.MemoryRef,
-			Name:        volume.Name,
-			Description: volume.Description,
-			Access:      volume.Access,
-			MountPath:   volume.MountPath,
-			LocalPath:   localPath,
-			Memories:    fileManifestEntries(volume.Files),
-			Status:      "mounted",
+			Type:      volume.Type,
+			MemoryRef: volume.MemoryRef,
+			Name:      volume.Name,
+			ReadOnly:  volume.ReadOnly,
+			MountPath: volume.MountPath,
+			LocalPath: localPath,
+			Status:    "mounted",
 		})
-		memoryStores = append(memoryStores, preparedMemoryStore{memoryRef: volume.MemoryRef, path: localPath, access: volume.Access})
+		memoryStores = append(memoryStores, preparedMemoryStore{memoryRef: volume.MemoryRef, path: localPath, readOnly: volume.ReadOnly})
 	}
 	for _, volume := range secretVolumeList {
 		localPath, err := materializeSecretMount(workspace.Root, volume)
@@ -267,7 +263,7 @@ func (w *Workspace) ReadWritableMemoryStores() ([]MemoryStoreSnapshot, error) {
 	}
 	stores := make([]MemoryStoreSnapshot, 0, len(w.memoryStores))
 	for _, store := range w.memoryStores {
-		if store.access != "read_write" {
+		if store.readOnly {
 			continue
 		}
 		memories, err := readMemoryFiles(store.path)
@@ -474,7 +470,7 @@ func addMountedVolumes(workDir string, workspace *Workspace, volumes []mountedVo
 			workspace.memoryStores = append(workspace.memoryStores, preparedMemoryStore{
 				memoryRef: volume.MemoryRef,
 				path:      volume.LocalPath,
-				access:    volume.Access,
+				readOnly:  volume.ReadOnly,
 			})
 		}
 	}
