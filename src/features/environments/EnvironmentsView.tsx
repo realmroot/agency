@@ -1,8 +1,16 @@
 import { Archive } from 'lucide-react'
-import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ConfirmAction, EmptyState, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import {
+  ConfirmAction,
+  DescriptionCell,
+  EmptyState,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+  TruncatedTooltipText,
+} from '@/console/components'
 import { archivedLabel, formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Environment } from '@/lib/amarpc'
@@ -39,14 +47,25 @@ export function EnvironmentsView({
       viewportRef={pagination.viewportRef}
       footer={<TablePagination pagination={pagination} />}
     >
+      <colgroup>
+        <col className="w-[9rem] md:w-[14rem]" />
+        <col />
+        <col className="w-[6.5rem]" />
+        <col className="hidden md:table-column md:w-[8rem]" />
+        <col className="hidden lg:table-column lg:w-[12rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[13rem]" />
+        <col className="hidden lg:table-column lg:w-[10rem]" />
+        <col className="w-[4.5rem]" />
+      </colgroup>
       <TableHeader>
         <TableRow>
           <TableHead>Environment</TableHead>
+          <TableHead>Description</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Networking</TableHead>
-          <TableHead>Packages</TableHead>
-          <TableHead>Updated</TableHead>
+          <TableHead className="hidden md:table-cell">Type</TableHead>
+          <TableHead className="hidden lg:table-cell">Networking</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Packages</TableHead>
+          <TableHead className="hidden lg:table-cell">Updated</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -54,14 +73,14 @@ export function EnvironmentsView({
         {environments.map((environment) => (
           <TableRow key={environment.metadata.uid}>
             <TableCell className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link className="truncate font-medium hover:underline" to={`/environments/${environment.metadata.uid}`}>
-                  {environment.metadata.name}
-                </Link>
-                <span className="truncate text-xs text-muted-foreground">
-                  {environment.metadata.description ?? environment.metadata.uid}
-                </span>
-              </div>
+              <ResourceIdentityCell
+                name={environment.metadata.name}
+                id={environment.metadata.uid}
+                to={`/environments/${environment.metadata.uid}`}
+              />
+            </TableCell>
+            <TableCell className="min-w-0">
+              <DescriptionCell value={environment.metadata.description} />
             </TableCell>
             <TableCell>
               <div className="flex gap-1">
@@ -69,10 +88,14 @@ export function EnvironmentsView({
                 <StatusBadge value={`v${environment.status.version}`} />
               </div>
             </TableCell>
-            <TableCell>{environment.spec.type}</TableCell>
-            <TableCell className="max-w-48 truncate">{networkSummary(environment)}</TableCell>
-            <TableCell className="max-w-56 truncate">{packageSummary(environment) || 'None'}</TableCell>
-            <TableCell>{formatDate(environment.metadata.updatedAt)}</TableCell>
+            <TableCell className="hidden md:table-cell">{environment.spec.type}</TableCell>
+            <TableCell className="hidden min-w-0 lg:table-cell">
+              <TruncatedTooltipText value={networkSummary(environment)} />
+            </TableCell>
+            <TableCell className="hidden min-w-0 2xl:table-cell">
+              <TruncatedTooltipText value={packageSummary(environment) || 'None'} />
+            </TableCell>
+            <TableCell className="hidden lg:table-cell">{formatDate(environment.metadata.updatedAt)}</TableCell>
             <TableCell>
               <div className="flex justify-end">
                 <ConfirmAction

@@ -1,8 +1,18 @@
+import { Archive, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ConfirmAction, EmptyState, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  ConfirmAction,
+  EmptyState,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+  TruncatedTooltipText,
+} from '@/console/components'
 import { formatDate, formatDuration, isArchived } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Session } from '@/lib/amarpc'
@@ -10,12 +20,14 @@ import type { Session } from '@/lib/amarpc'
 export function SessionsView({
   sessions,
   pagination,
+  agentNameById,
   selectedIds,
   setSelectedIds,
   onArchive,
 }: {
   sessions: Session[]
   pagination: ClientPagination<Session>
+  agentNameById?: Map<string, string>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
   onArchive: (id: string) => void
@@ -35,21 +47,19 @@ export function SessionsView({
   return (
     <TableSurface
       tableId="sessions"
-      tableClassName="min-w-[1120px] table-fixed"
       viewportRef={pagination.viewportRef}
       footer={<TablePagination pagination={pagination} />}
     >
       <colgroup>
-        <col className="w-10" />
-        <col className="w-[260px]" />
-        <col className="w-[120px]" />
-        <col className="w-[220px]" />
-        <col className="w-[170px]" />
-        <col className="w-[145px]" />
-        <col className="w-[145px]" />
-        <col className="w-[110px]" />
-        <col className="w-[110px]" />
-        <col className="w-[140px]" />
+        <col className="w-[2.75rem]" />
+        <col className="w-[8rem] md:w-[13rem]" />
+        <col className="w-[5.5rem]" />
+        <col />
+        <col className="hidden lg:table-column lg:w-[12rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[10rem]" />
+        <col className="hidden lg:table-column lg:w-[10rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[8rem]" />
+        <col className="w-[5.5rem]" />
       </colgroup>
       <TableHeader>
         <TableRow>
@@ -64,11 +74,10 @@ export function SessionsView({
           <TableHead>Session</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Agent</TableHead>
-          <TableHead>Agent provider/model</TableHead>
-          <TableHead>Hosting / runtime</TableHead>
-          <TableHead>Started</TableHead>
-          <TableHead>Updated</TableHead>
-          <TableHead>Duration</TableHead>
+          <TableHead className="hidden lg:table-cell">Hosting / runtime</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Started</TableHead>
+          <TableHead className="hidden lg:table-cell">Updated</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Duration</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -84,14 +93,11 @@ export function SessionsView({
               />
             </TableCell>
             <TableCell className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link className="truncate font-medium hover:underline" to={`/sessions/${session.metadata.uid}`}>
-                  {session.metadata.name}
-                </Link>
-                <span className="truncate text-xs text-muted-foreground">
-                  {`${session.metadata.uid} · ${session.status.bindings.agent.snapshot.provider} / ${session.status.bindings.agent.snapshot.model ?? 'None'}`}
-                </span>
-              </div>
+              <ResourceIdentityCell
+                name={session.metadata.name}
+                id={session.metadata.uid}
+                to={`/sessions/${session.metadata.uid}`}
+              />
             </TableCell>
             <TableCell className="min-w-0">
               <StatusBadge
@@ -100,31 +106,30 @@ export function SessionsView({
               />
             </TableCell>
             <TableCell className="min-w-0">
-              <span className="block truncate">{`${session.status.bindings.agent.snapshot.systemPrompt ?? session.spec.agentId} · ${session.spec.agentId}`}</span>
+              <SessionAgentIdentity session={session} agentName={agentNameById?.get(session.spec.agentId)} />
             </TableCell>
-            <TableCell className="min-w-0">
-              <span className="block truncate">{`${session.status.bindings.agent.snapshot.provider} / ${session.status.bindings.agent.snapshot.model ?? 'None'}`}</span>
+            <TableCell className="hidden min-w-0 lg:table-cell">
+              <TruncatedTooltipText
+                value={`${hostingRuntimeLabel(session)} · ${session.spec.environmentId ?? 'None'}`}
+              />
             </TableCell>
-            <TableCell className="min-w-0">
-              <span className="block truncate">
-                {`${hostingRuntimeLabel(session)} · ${session.spec.environmentId ?? 'None'}`}
-              </span>
-            </TableCell>
-            <TableCell className="min-w-0">
+            <TableCell className="hidden min-w-0 2xl:table-cell">
               <span className="block truncate">{formatDate(session.status.startedAt)}</span>
             </TableCell>
-            <TableCell className="min-w-0">
+            <TableCell className="hidden min-w-0 lg:table-cell">
               <span className="block truncate">{formatDate(session.metadata.updatedAt)}</span>
             </TableCell>
-            <TableCell className="min-w-0">
+            <TableCell className="hidden min-w-0 2xl:table-cell">
               <span className="block truncate">
                 {formatDuration(session.status.startedAt, session.status.closedAt)}
               </span>
             </TableCell>
             <TableCell>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <Link to={`/sessions/${session.metadata.uid}`}>Open</Link>
+                <Button type="button" variant="outline" size="icon" aria-label="Open session" asChild>
+                  <Link to={`/sessions/${session.metadata.uid}`}>
+                    <ExternalLink data-icon="inline-start" />
+                  </Link>
                 </Button>
                 {!isArchived(session) ? (
                   <ConfirmAction
@@ -134,8 +139,8 @@ export function SessionsView({
                     destructive
                     onConfirm={() => onArchive(session.metadata.uid)}
                   >
-                    <Button type="button" variant="ghost" size="sm">
-                      Archive
+                    <Button type="button" variant="outline" size="icon" aria-label="Archive">
+                      <Archive data-icon="inline-start" />
                     </Button>
                   </ConfirmAction>
                 ) : null}
@@ -145,6 +150,28 @@ export function SessionsView({
         ))}
       </TableBody>
     </TableSurface>
+  )
+}
+
+function SessionAgentIdentity({ session, agentName }: { session: Session; agentName?: string | undefined }) {
+  const snapshot = session.status.bindings.agent.snapshot
+  const providerModel = `${snapshot.provider} / ${snapshot.model ?? 'None'}`
+  const displayName = agentName ?? session.spec.agentId
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${displayName} ${session.spec.agentId}. Provider/model: ${providerModel}`}
+            className="w-full min-w-0 cursor-help border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <ResourceIdentityCell name={displayName} id={session.spec.agentId} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs whitespace-normal break-words">{providerModel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 

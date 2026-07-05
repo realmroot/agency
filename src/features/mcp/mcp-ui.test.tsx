@@ -176,8 +176,8 @@ describe('MCP catalog UI', () => {
         />
       </MemoryRouter>,
     )
-    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('Setup: None')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'None' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'None · Setup: None' })).toBeTruthy()
   })
 
   it('loads the catalog page without querying project connection resources', async () => {

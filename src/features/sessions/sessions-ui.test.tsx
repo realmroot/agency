@@ -183,7 +183,9 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
     expect(screen.queryByText('Runtime crashed')).toBeNull()
     expect(badgeTrigger.getAttribute('aria-label')).toBe('error: Runtime crashed')
     expect(screen.getByText('1-10 of 11')).toBeTruthy()
-    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-auto')
+    expect(table.closest('[data-slot="table-container"]')?.className).toContain('overflow-hidden')
+    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-y-auto')
+    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-x-hidden')
     expect(table.closest('[data-slot="table-container"]')?.parentElement?.parentElement?.className).toContain(
       'overflow-hidden',
     )
@@ -228,13 +230,15 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
     const badgeTrigger = screen.getByLabelText('error: Runtime crashed')
     expect(screen.queryByText('Runtime crashed')).toBeNull()
     expect(badgeTrigger.getAttribute('aria-label')).toBe('error: Runtime crashed')
-    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-auto')
+    expect(table.closest('[data-slot="table-container"]')?.className).toContain('overflow-hidden')
+    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-y-auto')
+    expect(table.closest('[data-slot="table-container"]')?.parentElement?.className).toContain('overflow-x-hidden')
     expect(table.closest('[data-slot="table-container"]')?.parentElement?.parentElement?.className).toContain(
       'overflow-hidden',
     )
   })
 
-  it('renders session rows from Agent provider/model, hosting snapshots, and session runtime', () => {
+  it('renders session rows with agent identity and provider/model tooltip metadata', () => {
     const session = buildSession({
       environmentSnapshot: {
         ...buildSession().status.bindings.environment.snapshot!,
@@ -263,6 +267,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
             previous: vi.fn(),
             next: vi.fn(),
           }}
+          agentNameById={new Map([['agent_1', 'Coding agent']])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
           onArchive={vi.fn()}
@@ -270,10 +275,14 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Agent provider/model')).toBeTruthy()
+    expect(screen.queryByText('Agent provider/model')).toBeNull()
     expect(screen.getByText('Hosting / runtime')).toBeTruthy()
-    expect(screen.getAllByText('workers-ai / @cf/moonshotai/kimi-k2.6').length).toBeGreaterThan(0)
-    expect(screen.getByText('Self-hosted / codex · env_1')).toBeTruthy()
+    expect(screen.getByText('Coding agent')).toBeTruthy()
+    expect(screen.getByText('agent_1')).toBeTruthy()
+    expect(
+      screen.getByLabelText('Coding agent agent_1. Provider/model: workers-ai / @cf/moonshotai/kimi-k2.6'),
+    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Self-hosted / codex · env_1' })).toBeTruthy()
     expect(screen.queryByText(/legacy-provider|legacy-model/)).toBeNull()
   })
 

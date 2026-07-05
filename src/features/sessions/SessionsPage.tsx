@@ -43,6 +43,24 @@ export function SessionsPage() {
       query.state.data?.data.some((session) => session.status.phase === 'pending') ? 2000 : false,
     /* v8 ignore stop */
   })
+  const activeAgentsQuery = useQuery({
+    queryKey: queryKeys.agents.list(false),
+    queryFn: () => api.listAgents(),
+  })
+  const archivedAgentsQuery = useQuery({
+    queryKey: queryKeys.agents.list(true),
+    queryFn: () => api.listAgents({ archived: true }),
+  })
+  const agentNameById = useMemo(() => {
+    const names = new Map<string, string>()
+    for (const agent of activeAgentsQuery.data?.data ?? []) {
+      names.set(agent.metadata.uid, agent.metadata.name)
+    }
+    for (const agent of archivedAgentsQuery.data?.data ?? []) {
+      names.set(agent.metadata.uid, agent.metadata.name)
+    }
+    return names
+  }, [activeAgentsQuery.data?.data, archivedAgentsQuery.data?.data])
   const sessions = useMemo(() => {
     const filtered = (sessionsQuery.data?.data ?? []).filter(
       (session) =>
@@ -179,6 +197,7 @@ export function SessionsPage() {
       <SessionsView
         sessions={pagination.items}
         pagination={pagination}
+        agentNameById={agentNameById}
         selectedIds={selectedIds}
         setSelectedIds={setSelectedIds}
         onArchive={actions.archiveSession}

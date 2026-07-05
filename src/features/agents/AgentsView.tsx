@@ -1,8 +1,16 @@
 import { Archive, Play } from 'lucide-react'
-import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ConfirmAction, EmptyState, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import {
+  ConfirmAction,
+  DescriptionCell,
+  EmptyState,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+  TruncatedTooltipText,
+} from '@/console/components'
 import { archivedLabel, formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Agent } from '@/lib/amarpc'
@@ -27,14 +35,25 @@ export function AgentsView({
       viewportRef={pagination.viewportRef}
       footer={<TablePagination pagination={pagination} />}
     >
+      <colgroup>
+        <col className="w-[9rem] md:w-[14rem]" />
+        <col />
+        <col className="w-[6.5rem]" />
+        <col className="hidden lg:table-column lg:w-[13rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[11rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[11rem]" />
+        <col className="hidden lg:table-column lg:w-[10rem]" />
+        <col className="w-[5.5rem]" />
+      </colgroup>
       <TableHeader>
         <TableRow>
           <TableHead>Agent</TableHead>
+          <TableHead>Description</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Model</TableHead>
-          <TableHead>Skills</TableHead>
-          <TableHead>Tools</TableHead>
-          <TableHead>Updated</TableHead>
+          <TableHead className="hidden lg:table-cell">Model</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Skills</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Tools</TableHead>
+          <TableHead className="hidden lg:table-cell">Updated</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -42,14 +61,14 @@ export function AgentsView({
         {agents.map((agent) => (
           <TableRow key={agent.metadata.uid}>
             <TableCell className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link className="truncate font-medium hover:underline" to={`/agents/${agent.metadata.uid}`}>
-                  {agent.metadata.name}
-                </Link>
-                <span className="truncate text-xs text-muted-foreground">
-                  {agent.metadata.description ?? agent.metadata.uid}
-                </span>
-              </div>
+              <ResourceIdentityCell
+                name={agent.metadata.name}
+                id={agent.metadata.uid}
+                to={`/agents/${agent.metadata.uid}`}
+              />
+            </TableCell>
+            <TableCell className="min-w-0">
+              <DescriptionCell value={agent.metadata.description} />
             </TableCell>
             <TableCell>
               <div className="flex gap-1">
@@ -57,10 +76,16 @@ export function AgentsView({
                 <StatusBadge value={`v${agent.status.version}`} />
               </div>
             </TableCell>
-            <TableCell className="max-w-64 truncate">{`${agent.spec.provider ?? 'None'} / ${agent.spec.model ?? 'None'}`}</TableCell>
-            <TableCell className="max-w-48 truncate">{agent.spec.skills.join(', ') || 'None'}</TableCell>
-            <TableCell className="max-w-48 truncate">{agent.spec.allowedTools.join(', ') || 'None'}</TableCell>
-            <TableCell>{formatDate(agent.metadata.updatedAt)}</TableCell>
+            <TableCell className="hidden min-w-0 lg:table-cell">
+              <TruncatedTooltipText value={`${agent.spec.provider ?? 'None'} / ${agent.spec.model ?? 'None'}`} />
+            </TableCell>
+            <TableCell className="hidden min-w-0 2xl:table-cell">
+              <TruncatedTooltipText value={agent.spec.skills.join(', ') || 'None'} />
+            </TableCell>
+            <TableCell className="hidden min-w-0 2xl:table-cell">
+              <TruncatedTooltipText value={agent.spec.allowedTools.join(', ') || 'None'} />
+            </TableCell>
+            <TableCell className="hidden lg:table-cell">{formatDate(agent.metadata.updatedAt)}</TableCell>
             <TableCell>
               <div className="flex justify-end gap-2">
                 <Button

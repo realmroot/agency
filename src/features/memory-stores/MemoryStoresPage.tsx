@@ -1,11 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive, Brain } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ConfirmAction, EmptyState, PageHeader, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import {
+  ConfirmAction,
+  DescriptionCell,
+  EmptyState,
+  PageHeader,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+} from '@/console/components'
 import { archivedLabel, formatDate } from '@/console/format'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { api } from '@/lib/amarpc'
@@ -50,12 +58,21 @@ export function MemoryStoresPage() {
           viewportRef={pagination.viewportRef}
           footer={<TablePagination pagination={pagination} />}
         >
+          <colgroup>
+            <col className="w-[9rem] md:w-[14rem]" />
+            <col />
+            <col className="w-[6.5rem]" />
+            <col className="hidden lg:table-column lg:w-[10rem]" />
+            <col className="hidden md:table-column md:w-[10rem]" />
+            <col className="w-[4.5rem]" />
+          </colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>Store</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Updated</TableHead>
+              <TableHead className="hidden lg:table-cell">Created</TableHead>
+              <TableHead className="hidden md:table-cell">Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -63,20 +80,20 @@ export function MemoryStoresPage() {
             {pagination.items.map((store) => (
               <TableRow key={store.metadata.uid}>
                 <TableCell className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Link className="truncate font-medium hover:underline" to={`/memory-stores/${store.metadata.uid}`}>
-                      {store.metadata.name}
-                    </Link>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {store.metadata.description ?? store.metadata.uid}
-                    </span>
-                  </div>
+                  <ResourceIdentityCell
+                    name={store.metadata.name}
+                    id={store.metadata.uid}
+                    to={`/memory-stores/${store.metadata.uid}`}
+                  />
+                </TableCell>
+                <TableCell className="min-w-0">
+                  <DescriptionCell value={store.metadata.description} />
                 </TableCell>
                 <TableCell>
                   <StatusBadge value={archivedLabel(store)} />
                 </TableCell>
-                <TableCell>{formatDate(store.metadata.createdAt)}</TableCell>
-                <TableCell>{formatDate(store.metadata.updatedAt)}</TableCell>
+                <TableCell className="hidden lg:table-cell">{formatDate(store.metadata.createdAt)}</TableCell>
+                <TableCell className="hidden md:table-cell">{formatDate(store.metadata.updatedAt)}</TableCell>
                 <TableCell>
                   <div className="flex justify-end">
                     <ConfirmAction

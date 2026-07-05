@@ -4,7 +4,15 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { EmptyState, PageHeader, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import {
+  DescriptionCell,
+  EmptyState,
+  PageHeader,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+} from '@/console/components'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { api } from '@/lib/amarpc'
 import { errorMessage } from '@/lib/errors'
@@ -59,20 +67,33 @@ export function ProvidersPage() {
           viewportRef={pagination.viewportRef}
           footer={<TablePagination pagination={pagination} />}
         >
+          <colgroup>
+            <col className="w-[8rem] md:w-[16rem]" />
+            <col />
+            <col className="hidden md:table-column md:w-[10rem]" />
+            <col className="hidden md:table-column md:w-[6.5rem]" />
+            <col className="w-[7rem]" />
+          </colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>Model</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Context</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className="hidden md:table-cell">Vendor</TableHead>
+              <TableHead className="hidden md:table-cell">Context</TableHead>
               <TableHead>Availability</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pagination.items.map((model) => (
               <TableRow key={model.id}>
-                <TableCell className="font-mono text-xs">{model.modelId}</TableCell>
-                <TableCell>{model.providerId}</TableCell>
-                <TableCell className="tabular-nums">{model.contextWindow ?? '—'}</TableCell>
+                <TableCell className="min-w-0">
+                  <ResourceIdentityCell name={model.displayName} id={model.modelId} />
+                </TableCell>
+                <TableCell className="min-w-0">
+                  <DescriptionCell value={`Catalog model from ${model.providerId}`} />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{model.providerId}</TableCell>
+                <TableCell className="hidden tabular-nums md:table-cell">{model.contextWindow ?? '—'}</TableCell>
                 <TableCell>
                   <StatusBadge value={model.availability} />
                 </TableCell>

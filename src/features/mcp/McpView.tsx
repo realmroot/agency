@@ -1,7 +1,14 @@
-import { Link } from 'react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { StatusBadge, TableEmpty, TablePagination, TableSurface } from '@/console/components'
+import {
+  DescriptionCell,
+  ResourceIdentityCell,
+  StatusBadge,
+  TableEmpty,
+  TablePagination,
+  TableSurface,
+  TruncatedTooltipText,
+} from '@/console/components'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Connector } from '@/lib/amarpc'
 
@@ -33,23 +40,32 @@ export function McpView({
             tableId="mcp-connectors"
             viewportRef={connectorPagination.viewportRef}
             footer={<TablePagination pagination={connectorPagination} />}
-            tableClassName="min-w-[960px]"
           >
+            <colgroup>
+              <col className="w-[9rem] md:w-[14rem]" />
+              <col />
+              <col className="hidden md:table-column md:w-[9rem]" />
+              <col className="w-[7rem]" />
+              <col className="hidden lg:table-column lg:w-[13rem]" />
+              <col className="hidden 2xl:table-column 2xl:w-[15rem]" />
+            </colgroup>
             <TableHeader>
               <TableRow>
                 <TableHead>Connector</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead>Trust level</TableHead>
-                <TableHead>Capabilities</TableHead>
-                <TableHead>Auth and setup</TableHead>
+                <TableHead className="hidden lg:table-cell">Capabilities</TableHead>
+                <TableHead className="hidden 2xl:table-cell">Auth and setup</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {connectors.length === 0 ? (
-                <TableEmpty colSpan={5}>No MCP connectors match the current catalog filters.</TableEmpty>
+                <TableEmpty colSpan={6}>No MCP connectors match the current catalog filters.</TableEmpty>
               ) : (
                 connectors.map((connector) => {
                   const disabledReason = connectorDisabledReason(connector)
+                  const description = disabledReason ?? connector.description
                   return (
                     <TableRow
                       key={connector.id}
@@ -58,36 +74,28 @@ export function McpView({
                       className={disabledReason ? 'opacity-60' : undefined}
                     >
                       <TableCell className="min-w-0">
-                        <div className="flex min-w-0 flex-col">
-                          <div className="flex min-w-0 items-center gap-2">
-                            {disabledReason ? (
-                              <span className="truncate font-medium">{connector.name}</span>
-                            ) : (
-                              <Link
-                                to={`/settings/mcp/${connector.id}`}
-                                className="truncate font-medium underline-offset-4 hover:underline"
-                              >
-                                {connector.name}
-                              </Link>
-                            )}
-                            <span className="truncate text-xs text-muted-foreground">{connector.id}</span>
-                          </div>
-                          <span className="truncate text-xs text-muted-foreground">{connector.description}</span>
-                          {disabledReason ? <span className="text-xs text-destructive">{disabledReason}</span> : null}
-                        </div>
+                        <ResourceIdentityCell
+                          name={connector.name}
+                          id={connector.id}
+                          to={disabledReason ? undefined : `/settings/mcp/${connector.id}`}
+                        />
                       </TableCell>
-                      <TableCell>{connector.category}</TableCell>
+                      <TableCell className="min-w-0">
+                        <DescriptionCell value={description} />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{connector.category}</TableCell>
                       <TableCell>
                         <StatusBadge value={connector.trustLevel} />
                       </TableCell>
-                      <TableCell className="max-w-56 truncate">{connector.capabilities.join(', ') || 'None'}</TableCell>
-                      <TableCell className="max-w-56 min-w-0">
-                        <div className="flex min-w-0 flex-col text-xs">
-                          <span className="truncate">{connector.supportedAuthModes.join(', ') || 'None'}</span>
-                          <span className="truncate text-muted-foreground">
-                            Setup: {connector.setupRequirements.join(', ') || 'None'}
-                          </span>
-                        </div>
+                      <TableCell className="hidden min-w-0 lg:table-cell">
+                        <TruncatedTooltipText value={connector.capabilities.join(', ') || 'None'} />
+                      </TableCell>
+                      <TableCell className="hidden min-w-0 2xl:table-cell">
+                        <TruncatedTooltipText
+                          value={`${connector.supportedAuthModes.join(', ') || 'None'} · Setup: ${
+                            connector.setupRequirements.join(', ') || 'None'
+                          }`}
+                        />
                       </TableCell>
                     </TableRow>
                   )

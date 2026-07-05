@@ -1,5 +1,5 @@
 import { Bot, ChevronLeft, ChevronRight } from 'lucide-react'
-import { type ReactNode, type RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { Link, useMatch } from 'react-router'
 import {
   AlertDialog,
@@ -15,7 +15,7 @@ import {
 import { Badge as UiBadge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { ColumnResizeProvider, Table } from '@/components/ui/table'
+import { Table } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { ClientPagination } from './use-client-pagination'
@@ -135,53 +135,6 @@ export function PageHeader({
   )
 }
 
-const WIDTHS_KEY = 'ama:table-widths:'
-
-function loadWidths(tableId: string): number[] | null {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(WIDTHS_KEY + tableId) ?? 'null') as unknown
-    return Array.isArray(parsed) && parsed.every((value) => typeof value === 'number') ? (parsed as number[]) : null
-  } catch {
-    return null
-  }
-}
-
-function saveWidths(tableId: string, widths: number[]) {
-  try {
-    window.localStorage.setItem(WIDTHS_KEY + tableId, JSON.stringify(widths))
-  } catch {
-    // storage may be unavailable (private mode / quota); width persistence is best-effort.
-  }
-}
-
-// Columns render auto-sized once, then their natural widths are fixed so the
-// table no longer collapses every column to an equal table-fixed share, and each
-// becomes drag-resizable. A tableId persists the user's widths across reloads.
-function useColumnWidths(tableId: string | undefined, tableRef: RefObject<HTMLTableElement | null>) {
-  const [widths, setWidths] = useState<number[] | null>(null)
-  useLayoutEffect(() => {
-    if (widths) return
-    const ths = tableRef.current?.querySelectorAll<HTMLTableCellElement>(':scope > thead > tr:first-child > th')
-    if (!ths?.length) return
-    const measured = Array.from(ths, (th) => Math.round(th.getBoundingClientRect().width))
-    const persisted = tableId ? loadWidths(tableId) : null
-    setWidths(persisted && persisted.length === measured.length ? persisted : measured)
-  }, [widths, tableId, tableRef])
-  const setWidth = useCallback(
-    (columnIndex: number, width: number) => {
-      setWidths((prev) => {
-        if (!prev) return prev
-        const next = [...prev]
-        next[columnIndex] = Math.max(80, Math.round(width))
-        if (tableId) saveWidths(tableId, next)
-        return next
-      })
-    },
-    [tableId],
-  )
-  return { widths, setWidth }
-}
-
 export function TableSurface({
   children,
   footer,
@@ -195,36 +148,93 @@ export function TableSurface({
   viewportRef?: RefObject<HTMLDivElement | null>
   className?: string
   tableClassName?: string
-  // Persists drag-resized column widths under this id (omit for ephemeral widths).
+  // Stable identifier for tests and diagnostics.
   tableId?: string
 }) {
-  const tableRef = useRef<HTMLTableElement>(null)
-  const { widths, setWidth } = useColumnWidths(tableId, tableRef)
   return (
     <div
       className={cn(
         'flex max-h-[calc(100dvh-17rem)] min-h-0 flex-col overflow-hidden rounded-lg border bg-background',
         className,
       )}
+      data-table-id={tableId}
     >
-      <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto">
-        <Table ref={tableRef} className={cn('min-w-[760px]', widths ? 'table-fixed' : 'table-auto', tableClassName)}>
-          <ColumnResizeProvider value={widths ? { setWidth } : null}>
-            {widths ? (
-              <colgroup>
-                {widths.map((width, columnIndex) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: columns are positional, index is the stable identity
-                  <col key={columnIndex} style={{ width: `${width}px` }} />
-                ))}
-              </colgroup>
-            ) : null}
-            {children}
-          </ColumnResizeProvider>
-        </Table>
+      <div ref={viewportRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <Table className={cn('table-fixed', tableClassName)}>{children}</Table>
       </div>
       {footer ? <div className="shrink-0 border-t bg-background px-3 py-2">{footer}</div> : null}
     </div>
   )
+}
+
+export function ResourceIdentityCell({
+  name,
+  id,
+  to,
+  className,
+}: {
+  name: string
+  id: string
+  to?: string | undefined
+  className?: string | undefined
+}) {
+  return (
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
+      {to ? (
+        <Link className="truncate font-medium hover:underline" to={to}>
+          {name}
+        </Link>
+      ) : (
+        <span className="truncate font-medium">{name}</span>
+      )}
+      <span className="truncate font-mono text-[11px] text-muted-foreground">{id}</span>
+    </div>
+  )
+}
+
+export function TruncatedTooltipText({
+  value,
+  fallback = 'No description',
+  className,
+  contentClassName,
+}: {
+  value: string | null | undefined
+  fallback?: string | undefined
+  className?: string | undefined
+  contentClassName?: string | undefined
+}) {
+  const text = value?.trim() ? value : fallback
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={text}
+            className={cn(
+              'block w-full min-w-0 cursor-help truncate border-0 bg-transparent p-0 text-left text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              className,
+            )}
+          >
+            {text}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className={cn('max-w-xs whitespace-normal break-words', contentClassName)}>
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
+export function DescriptionCell({
+  value,
+  className,
+}: {
+  value: string | null | undefined
+  className?: string | undefined
+}) {
+  return <TruncatedTooltipText value={value} className={className} />
 }
 
 export function TablePagination<T>({ pagination }: { pagination: ClientPagination<T> }) {

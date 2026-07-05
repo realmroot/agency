@@ -1,8 +1,16 @@
 import { Archive } from 'lucide-react'
-import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ConfirmAction, EmptyState, StatusBadge, TablePagination, TableSurface } from '@/console/components'
+import {
+  ConfirmAction,
+  DescriptionCell,
+  EmptyState,
+  ResourceIdentityCell,
+  StatusBadge,
+  TablePagination,
+  TableSurface,
+  TruncatedTooltipText,
+} from '@/console/components'
 import { archivedLabel, formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Vault } from '@/lib/amarpc'
@@ -25,14 +33,25 @@ export function VaultsView({
       viewportRef={pagination.viewportRef}
       footer={<TablePagination pagination={pagination} />}
     >
+      <colgroup>
+        <col className="w-[9rem] md:w-[14rem]" />
+        <col />
+        <col className="w-[6.5rem]" />
+        <col className="hidden md:table-column md:w-[8rem]" />
+        <col className="hidden lg:table-column lg:w-[11rem]" />
+        <col className="hidden 2xl:table-column 2xl:w-[10rem]" />
+        <col className="hidden lg:table-column lg:w-[10rem]" />
+        <col className="w-[4.5rem]" />
+      </colgroup>
       <TableHeader>
         <TableRow>
           <TableHead>Vault</TableHead>
+          <TableHead>Description</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Scope</TableHead>
-          <TableHead>Project</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead>Updated</TableHead>
+          <TableHead className="hidden md:table-cell">Scope</TableHead>
+          <TableHead className="hidden lg:table-cell">Project</TableHead>
+          <TableHead className="hidden 2xl:table-cell">Created</TableHead>
+          <TableHead className="hidden lg:table-cell">Updated</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -40,24 +59,26 @@ export function VaultsView({
         {vaults.map((vault) => (
           <TableRow key={vault.metadata.uid}>
             <TableCell className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link className="truncate font-medium hover:underline" to={`/vaults/${vault.metadata.uid}`}>
-                  {vault.metadata.name}
-                </Link>
-                <span className="truncate text-xs text-muted-foreground">
-                  {vault.metadata.description ?? vault.metadata.uid}
-                </span>
-              </div>
+              <ResourceIdentityCell
+                name={vault.metadata.name}
+                id={vault.metadata.uid}
+                to={`/vaults/${vault.metadata.uid}`}
+              />
+            </TableCell>
+            <TableCell className="min-w-0">
+              <DescriptionCell value={vault.metadata.description} />
             </TableCell>
             <TableCell>
               <StatusBadge value={archivedLabel(vault)} />
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               <StatusBadge value={vault.spec.scope} />
             </TableCell>
-            <TableCell className="max-w-48 truncate">{vault.metadata.projectId ?? 'Organization'}</TableCell>
-            <TableCell>{formatDate(vault.metadata.createdAt)}</TableCell>
-            <TableCell>{formatDate(vault.metadata.updatedAt)}</TableCell>
+            <TableCell className="hidden min-w-0 lg:table-cell">
+              <TruncatedTooltipText value={vault.metadata.projectId ?? 'Organization'} />
+            </TableCell>
+            <TableCell className="hidden 2xl:table-cell">{formatDate(vault.metadata.createdAt)}</TableCell>
+            <TableCell className="hidden lg:table-cell">{formatDate(vault.metadata.updatedAt)}</TableCell>
             <TableCell>
               <div className="flex justify-end">
                 <ConfirmAction

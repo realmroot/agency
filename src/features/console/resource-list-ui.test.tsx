@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientPagination } from '@/console/use-client-pagination'
@@ -50,7 +50,7 @@ function connector(overrides: Partial<Connector> = {}): Connector {
 }
 
 describe('resource list UI contracts [spec: web-console/resource-lists]', () => {
-  it('renders MCP catalog rows on one line', () => {
+  it('renders MCP catalog rows with identity and description separated', () => {
     const connectors = [connector()]
     render(
       <MemoryRouter>
@@ -60,7 +60,9 @@ describe('resource list UI contracts [spec: web-console/resource-lists]', () => 
 
     const connectorCell = screen.getByText('GitHub').closest('td')
     expect(connectorCell).toBeTruthy()
-    expect(connectorCell?.querySelector('p')).toBeNull()
+    expect(within(connectorCell as HTMLElement).getByText('github')).toBeTruthy()
+    const description = screen.getByRole('button', { name: 'Repository access' })
+    expect(description.closest('td')).not.toBe(connectorCell)
     expect(screen.getAllByText('1-1 of 1')).toHaveLength(1)
   })
 })

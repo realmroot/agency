@@ -474,9 +474,7 @@ describe('SessionsView', () => {
       </MemoryRouter>,
     )
 
-    // Both model-display cells show "None" when model is null
-    const noneCells = screen.getAllByText(/workers-ai \/ None/)
-    expect(noneCells.length).toBeGreaterThan(0)
+    expect(screen.getByLabelText('agent_1 agent_1. Provider/model: workers-ai / None')).toBeTruthy()
   })
 
   it('falls back to agentId when agent name is unavailable', () => {
@@ -510,7 +508,10 @@ describe('SessionsView', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Do the work\. · agent_fallback_id/)).toBeTruthy()
+    expect(screen.getAllByText('agent_fallback_id').length).toBeGreaterThanOrEqual(2)
+    expect(
+      screen.getByLabelText('agent_fallback_id agent_fallback_id. Provider/model: workers-ai / @cf/meta/llama'),
+    ).toBeTruthy()
   })
 
   it('renders "None" for null environmentId in hosting column', () => {
