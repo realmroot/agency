@@ -116,6 +116,47 @@ func TestProviderEventLogAppendReadAndValidate(t *testing.T) {
 	}
 }
 
+func TestProviderEventLogReadValidationAndMissingFile(t *testing.T) {
+	missing := ProviderEventLogPath(filepath.Join(t.TempDir(), "missing"))
+	events, err := ReadProviderEventLog(missing)
+	if err != nil {
+		t.Fatalf("missing provider log should not error, got %v", err)
+	}
+	if events != nil {
+		t.Fatalf("missing provider log should return nil events, got %#v", events)
+	}
+
+	logPath := ProviderEventLogPath(t.TempDir())
+	if err := os.WriteFile(logPath, []byte("\n{\"sequence\":1,\"runtime\":\"codex\",\"event\":{\"type\":\"turn.completed\"}}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	events, err = ReadProviderEventLog(logPath)
+	if err != nil {
+		t.Fatalf("read provider log with blanks and no trailing newline: %v", err)
+	}
+	if len(events) != 1 || events[0].Sequence != 1 || events[0].Event["type"] != "turn.completed" {
+		t.Fatalf("unexpected provider events %#v", events)
+	}
+
+	invalidPath := ProviderEventLogPath(t.TempDir())
+	if err := os.WriteFile(invalidPath, []byte("{\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadProviderEventLog(invalidPath); err == nil || !strings.Contains(err.Error(), "line 1") {
+		t.Fatalf("expected invalid provider log line error, got %v", err)
+	}
+}
+
+func TestAppendProviderEventReturnsDirectoryError(t *testing.T) {
+	parentFile := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(parentFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AppendProviderEvent(filepath.Join(parentFile, "session"), "codex", ama.JSON{"type": "turn.completed"}); err == nil {
+		t.Fatal("expected provider event directory error")
+	}
+}
+
 func TestEventLogAppendCoordinatesSequenceAcrossOpenStores(t *testing.T) {
 	dir := t.TempDir()
 	first, err := OpenEventLog(dir, "session_1")

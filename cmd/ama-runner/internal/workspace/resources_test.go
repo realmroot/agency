@@ -141,6 +141,28 @@ func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 	}
 }
 
+func TestMaterializeMemoryStoreWritableUsesCustomMountPath(t *testing.T) {
+	root := t.TempDir()
+	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+		MemoryRef: "ama://memories/store_1",
+		MountPath: "/workspace/shared/notes",
+		Files:     []protocol.WorkspaceFile{{Path: "daily/plan.md", Content: "ship"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize writable memory: %v", err)
+	}
+	if path != filepath.Join(root, "shared", "notes") {
+		t.Fatalf("unexpected writable memory mount path %q", path)
+	}
+	fileInfo, err := os.Stat(filepath.Join(path, "daily", "plan.md"))
+	if err != nil {
+		t.Fatalf("stat writable memory file: %v", err)
+	}
+	if fileInfo.Mode().Perm() != 0o644 {
+		t.Fatalf("writable memory file mode = %o, want 0644", fileInfo.Mode().Perm())
+	}
+}
+
 func TestReadMemoryFilesReadsNestedFilesAndPropagatesErrors(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "notes"), 0o755); err != nil {
@@ -238,6 +260,31 @@ func TestMaterializeGitRepositoryUsesCacheAndExistingMount(t *testing.T) {
 	}
 }
 
+func TestMaterializeGitRepositoryAddsWorktreeWithFakeGit(t *testing.T) {
+	installWorkspaceFakeGit(t)
+	workDir := t.TempDir()
+	sessionRoot := t.TempDir()
+	volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"}
+	repositoryURL, err := parseGitRepositoryURL(volume.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := repositoryCacheDir(workDir, repositoryURL)
+	if err := os.MkdirAll(filepath.Join(cacheDir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gotMount, gotCache, err := materializeGitRepository(context.Background(), workDir, sessionRoot, volume, "")
+	if err != nil {
+		t.Fatalf("materialize git worktree: %v", err)
+	}
+	if gotCache != cacheDir {
+		t.Fatalf("unexpected cache dir %q", gotCache)
+	}
+	if _, err := os.Stat(gotMount); err != nil {
+		t.Fatalf("expected fake worktree at %q: %v", gotMount, err)
+	}
+}
+
 func TestEnsureRepositoryCacheClonesWithFakeGit(t *testing.T) {
 	installWorkspaceFakeGit(t)
 	cacheDir := filepath.Join(t.TempDir(), "repositories", "github.com", "saltbo", "slink")
@@ -252,9 +299,7 @@ func TestEnsureRepositoryCacheClonesWithFakeGit(t *testing.T) {
 
 func installWorkspaceFakeGit(t *testing.T) {
 	t.Helper()
-	dir := t.TempDir()
-	gitPath := filepath.Join(dir, "git")
-	script := `#!/bin/sh
+	installWorkspaceScriptedGit(t, `#!/bin/sh
 set -eu
 last=""
 for arg in "$@"; do last="$arg"; done
@@ -288,7 +333,13 @@ case "$*" in
     exit 0
     ;;
 esac
-`
+`)
+}
+
+func installWorkspaceScriptedGit(t *testing.T, script string) {
+	t.Helper()
+	dir := t.TempDir()
+	gitPath := filepath.Join(dir, "git")
 	if err := os.WriteFile(gitPath, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -358,6 +409,36 @@ func TestConfigureWorkspaceGitCredentialsUsesSessionStore(t *testing.T) {
 	}
 	if err := configureWorkspaceGitCredentials(context.Background(), "", []preparedWorktree{{cacheDir: cacheDir, path: worktreeDir}}); err != nil {
 		t.Fatalf("expected empty credentials path to skip configuration, got %v", err)
+	}
+	if err := configureWorkspaceGitCredentials(context.Background(), credentialsPath, nil); err != nil {
+		t.Fatalf("expected empty worktrees to skip configuration, got %v", err)
+	}
+}
+
+func TestConfigureWorktreeCredentialHelperPropagatesGitErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		failMatch  string
+		wantConfig string
+	}{
+		{name: "enable worktree config", failMatch: "extensions.worktreeConfig", wantConfig: "extensions.worktreeConfig"},
+		{name: "replace inherited helpers", failMatch: "--replace-all", wantConfig: "--replace-all"},
+		{name: "add session helper", failMatch: "--add", wantConfig: "--add"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			installWorkspaceScriptedGit(t, `#!/bin/sh
+set -eu
+case "$*" in
+  *`+tc.failMatch+`*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+			err := configureWorktreeCredentialHelper(context.Background(), t.TempDir(), filepath.Join(t.TempDir(), "git-credentials"))
+			if err == nil || !strings.Contains(err.Error(), tc.wantConfig) {
+				t.Fatalf("expected %q git error, got %v", tc.wantConfig, err)
+			}
+		})
 	}
 }
 

@@ -57,6 +57,17 @@ func TestWorkspaceSafety(t *testing.T) {
 	}
 }
 
+func TestOpenRejectsSessionSymlinkEscape(t *testing.T) {
+	workDir := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(workDir, SessionsDirName)); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
+	if _, err := Open(workDir, "session_1"); err == nil || !strings.Contains(err.Error(), "stay under workspace") {
+		t.Fatalf("expected symlink escape rejection, got %v", err)
+	}
+}
+
 func TestPrepareWorkspaceMountsGitRepositoryWorktree(t *testing.T) {
 	workDir := t.TempDir()
 	sourceDir := filepath.Join(t.TempDir(), "source")
@@ -270,6 +281,22 @@ func TestPrepareWorkspaceReturnsMountErrors(t *testing.T) {
 	}
 }
 
+func TestPrepareWorkspaceReturnsStateWriteError(t *testing.T) {
+	workDir := t.TempDir()
+	statePath := filepath.Join(workDir, SessionsDirName, "session_1", SessionStateFileName)
+	if err := os.MkdirAll(statePath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Prepare(context.Background(), PrepareRequest{
+		WorkDir:   workDir,
+		SessionID: "session_1",
+		Manifest:  protocol.WorkspaceManifest{},
+	})
+	if err == nil {
+		t.Fatal("expected state write error")
+	}
+}
+
 func TestWorkspaceReadsWritableMemoryStores(t *testing.T) {
 	workDir := t.TempDir()
 	workspace, err := Prepare(context.Background(), PrepareRequest{
@@ -354,6 +381,35 @@ func TestWorkspaceCleanupNilAndSkipMissingGitCache(t *testing.T) {
 	}
 }
 
+func TestWorkspaceCleanupAggregatesGitErrors(t *testing.T) {
+	installWorkspaceScriptedGit(t, `#!/bin/sh
+set -eu
+case "$*" in
+  *"worktree remove"*|*"worktree prune"*) exit 9 ;;
+  *) exit 0 ;;
+esac
+`)
+	root := t.TempDir()
+	cacheDir := t.TempDir()
+	worktreePath := filepath.Join(root, "repo")
+	if err := os.MkdirAll(filepath.Join(cacheDir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(worktreePath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	err := (&Workspace{
+		Root: root,
+		worktrees: []preparedWorktree{{
+			cacheDir: cacheDir,
+			path:     worktreePath,
+		}},
+	}).Cleanup(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "cleanup runtime workspace failed") {
+		t.Fatalf("expected aggregated cleanup error, got %v", err)
+	}
+}
+
 func TestEnsureUnderWorkspaceRejectsOutsidePaths(t *testing.T) {
 	root := t.TempDir()
 	if err := ensureUnderWorkspace(root, filepath.Dir(root)); err == nil {
@@ -403,6 +459,7 @@ func TestAddMountedVolumesSkipsInvalidEntries(t *testing.T) {
 	workDir := t.TempDir()
 	workspace := &Workspace{}
 	addMountedVolumes(workDir, workspace, []mountedVolume{
+		{Type: "git_repository", URL: "https://github.com/saltbo/slink.git", LocalPath: "/tmp/repo"},
 		{Type: "memory", MemoryRef: "ama://memories/store_1", Access: "read_write"},
 		{Type: "git_repository", URL: "bad-url", LocalPath: "/tmp/repo"},
 		{Type: "memory", MemoryRef: "ama://memories/store_2", Access: "read_only", LocalPath: "/tmp/memory"},
@@ -410,8 +467,8 @@ func TestAddMountedVolumesSkipsInvalidEntries(t *testing.T) {
 	if len(workspace.memoryStores) != 1 || workspace.memoryStores[0].memoryRef != "ama://memories/store_2" {
 		t.Fatalf("expected only valid local path memory mount, got %#v", workspace.memoryStores)
 	}
-	if len(workspace.worktrees) != 0 {
-		t.Fatalf("expected invalid git mount skipped, got %#v", workspace.worktrees)
+	if len(workspace.worktrees) != 1 || workspace.worktrees[0].path != "/tmp/repo" {
+		t.Fatalf("expected valid git mount restored, got %#v", workspace.worktrees)
 	}
 }
 
@@ -544,6 +601,16 @@ func TestCleanupStaleHandlesRetentionMissingAndRecentWorkspaces(t *testing.T) {
 	}
 	if _, err := os.Stat(recent.Root); err != nil {
 		t.Fatalf("recent workspace should remain, got %v", err)
+	}
+}
+
+func TestCleanupStaleReturnsReadDirError(t *testing.T) {
+	workDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workDir, SessionsDirName), []byte("not a dir"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupStale(context.Background(), workDir, time.Hour); err == nil {
+		t.Fatal("expected cleanup stale read dir error")
 	}
 }
 
