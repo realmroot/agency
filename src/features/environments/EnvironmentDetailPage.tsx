@@ -70,6 +70,11 @@ export function EnvironmentDetailPage() {
     queryKey: queryKeys.sessions.list(false),
     queryFn: () => api.listSessions(),
   })
+  const runnersQuery = useQuery({
+    queryKey: queryKeys.runners.list({ environmentId: environmentId ?? '' }),
+    queryFn: () => api.listRunners({ environmentId: environmentId as string }),
+    enabled: Boolean(environmentId),
+  })
   const environment = environmentQuery.data ?? null
   const updateEnvironment = useMutation({
     mutationFn: (input: EnvironmentFormState) =>
@@ -119,6 +124,7 @@ export function EnvironmentDetailPage() {
       <EnvironmentDetailView
         environment={environment}
         sessions={sessionsQuery.data?.data ?? []}
+        runners={runnersQuery.data?.data ?? []}
         onArchive={actions.archiveEnvironment}
       />
       <Sheet open={editing} onOpenChange={setEditing}>

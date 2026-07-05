@@ -26,3 +26,4 @@ Feature: Memory Stores
     When they create a store, add a memory, and create a session
     Then the store can be selected in the session form with the volumeMount readOnly setting
     And the session detail shows the attached memory store without exposing memory content in the resource summary
+    And the memory store detail shows memory files in a file explorer with selected file content

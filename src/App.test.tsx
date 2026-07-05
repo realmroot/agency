@@ -44,6 +44,15 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
+async function activateTab(name: string) {
+  const tab = screen.getByRole('tab', { name })
+  fireEvent.pointerDown(tab, { button: 0, ctrlKey: false })
+  fireEvent.mouseDown(tab)
+  fireEvent.mouseUp(tab)
+  fireEvent.click(tab)
+  await waitFor(() => expect(tab.getAttribute('data-state')).toBe('active'))
+}
+
 function installMockRuntimeWebSocket(options: { closeAfterAgentEnd?: boolean; initialEvents?: SessionEvent[] } = {}) {
   const sentCommands: unknown[] = []
   const socketUrls: string[] = []
@@ -667,7 +676,7 @@ describe('App', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'Coding agent' })).toBeTruthy()
-    expect(await screen.findByText('Agent model configuration')).toBeTruthy()
+    expect(await screen.findByText('Agent configuration')).toBeTruthy()
     expect(await screen.findByText('ama@coding-agent')).toBeTruthy()
     expect(screen.queryByText('Sandbox policy')).toBeNull()
     fireEvent.click(screen.getByRole('tab', { name: 'Sessions' }))
@@ -739,6 +748,7 @@ describe('App', () => {
     const { unmount } = render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'Node workspace' })).toBeTruthy()
+    await activateTab('Sessions')
     expect(await screen.findByText('Sessions using this environment')).toBeTruthy()
 
     unmount()

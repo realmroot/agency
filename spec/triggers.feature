@@ -82,3 +82,10 @@ Feature: Triggers
     When the OpenAPI document is requested
     Then it includes the triggers collection, item, and runs paths
     And the legacy scheduled-agent-triggers namespace is gone
+
+  @triggers/console-list @web
+  Scenario: Browse triggers with readable agent identity
+    Given a project has triggers and agents
+    When the user opens the triggers page
+    Then trigger rows show the selected agent name, id, provider, and model instead of only the agent id
+    And trigger search can match the trigger name, agent id, or agent name

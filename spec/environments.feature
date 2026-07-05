@@ -87,4 +87,4 @@ Feature: Environments
     When the user opens the environment detail page
     Then the header shows name, status, current version, type, and timestamps
     And variable declarations are shown without raw secret values
-    And sessions that selected the environment are listed
+    And runners and sessions that selected the environment are listed in separate tabs

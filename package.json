@@ -69,6 +69,7 @@
     "openid-client": "^6.8.4",
     "radix-ui": "^1.4.3",
     "react": "^19.2.5",
+    "react-arborist": "^3.13.1",
     "react-dom": "^19.2.5",
     "react-markdown": "^10.1.0",
     "react-router": "^7.15.1",

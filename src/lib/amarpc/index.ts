@@ -8,6 +8,7 @@ export * from './environments'
 export * from './memory-stores'
 export * from './projects'
 export * from './providers'
+export * from './runners'
 export * from './sessions'
 export * from './triggers'
 export * from './usage'
@@ -21,6 +22,7 @@ import { environmentsApi } from './environments'
 import { memoryStoresApi } from './memory-stores'
 import { projectsApi } from './projects'
 import { providersApi } from './providers'
+import { runnersApi } from './runners'
 import { sessionsApi } from './sessions'
 import { triggersApi } from './triggers'
 import { usageApi } from './usage'
@@ -34,6 +36,7 @@ export const api = {
   ...triggersApi,
   ...sessionsApi,
   ...providersApi,
+  ...runnersApi,
   ...vaultsApi,
   ...memoryStoresApi,
   ...connectorsApi,

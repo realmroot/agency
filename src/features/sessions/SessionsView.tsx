@@ -3,7 +3,6 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   ConfirmAction,
   EmptyState,
@@ -15,6 +14,7 @@ import {
 } from '@/console/components'
 import { formatDate, formatDuration, isArchived } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
+import { AgentIdentityCell } from '@/features/console/agent-identity-cell'
 import type { Session } from '@/lib/amarpc'
 
 export function SessionsView({
@@ -106,7 +106,12 @@ export function SessionsView({
               />
             </TableCell>
             <TableCell className="min-w-0">
-              <SessionAgentIdentity session={session} agentName={agentNameById?.get(session.spec.agentId)} />
+              <AgentIdentityCell
+                agentId={session.spec.agentId}
+                agentName={agentNameById?.get(session.spec.agentId)}
+                provider={session.status.bindings.agent.snapshot.provider}
+                model={session.status.bindings.agent.snapshot.model}
+              />
             </TableCell>
             <TableCell className="hidden min-w-0 lg:table-cell">
               <TruncatedTooltipText
@@ -150,28 +155,6 @@ export function SessionsView({
         ))}
       </TableBody>
     </TableSurface>
-  )
-}
-
-function SessionAgentIdentity({ session, agentName }: { session: Session; agentName?: string | undefined }) {
-  const snapshot = session.status.bindings.agent.snapshot
-  const providerModel = `${snapshot.provider} / ${snapshot.model ?? 'None'}`
-  const displayName = agentName ?? session.spec.agentId
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label={`${displayName} ${session.spec.agentId}. Provider/model: ${providerModel}`}
-            className="w-full min-w-0 cursor-help border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ResourceIdentityCell name={displayName} id={session.spec.agentId} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs whitespace-normal break-words">{providerModel}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   )
 }
 

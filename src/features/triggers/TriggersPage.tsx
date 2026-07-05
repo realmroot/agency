@@ -26,15 +26,25 @@ export function TriggersPage() {
     queryKey: queryKeys.triggers.list(),
     queryFn: () => api.listTriggers(),
   })
+  const agentsQuery = useQuery({
+    queryKey: queryKeys.agents.list(false),
+    queryFn: () => api.listAgents(),
+  })
   const allTriggers = useMemo(() => triggersQuery.data?.data ?? [], [triggersQuery.data?.data])
+  const agentById = useMemo(
+    () => new Map((agentsQuery.data?.data ?? []).map((agent) => [agent.metadata.uid, agent])),
+    [agentsQuery.data?.data],
+  )
   const triggers = useMemo(
     () =>
-      allTriggers.filter(
-        (trigger) =>
-          matchesSearch(search, trigger.metadata.name, trigger.spec.template.spec.agentId) &&
-          (status === 'all' || triggerStatus(trigger.spec.suspend) === status),
-      ),
-    [allTriggers, search, status],
+      allTriggers.filter((trigger) => {
+        const agent = agentById.get(trigger.spec.template.spec.agentId)
+        return (
+          matchesSearch(search, trigger.metadata.name, trigger.spec.template.spec.agentId, agent?.metadata.name) &&
+          (status === 'all' || triggerStatus(trigger.spec.suspend) === status)
+        )
+      }),
+    [agentById, allTriggers, search, status],
   )
   const pagination = useClientPagination(triggers)
   return (
@@ -77,6 +87,7 @@ export function TriggersPage() {
         onPause={actions.pauseTrigger}
         onResume={actions.resumeTrigger}
         onDelete={actions.deleteTrigger}
+        agentById={agentById}
       />
       <CreateTriggerSheet open={creating} onOpenChange={setCreating} />
     </div>

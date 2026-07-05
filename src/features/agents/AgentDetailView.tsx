@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmAction, DetailSection, EmptyState, Meta, MetaGrid, StatusBadge } from '@/console/components'
-import { archivedLabel, formatDate, isArchived, stringifyJson } from '@/console/format'
-import { JsonBlock } from '@/features/console/json-block'
+import { archivedLabel, formatDate, isArchived } from '@/console/format'
 import { RelatedResourcesTable } from '@/features/console/related-resources-table'
 import type { Agent, AgentVersion, Session } from '@/lib/amarpc'
 
@@ -65,8 +64,8 @@ function AgentDetailContent({
         </TabsList>
         <TabsContent value="agent" className="mt-4">
           <DetailSection
-            title="Agent model configuration"
-            description="Immutable provider, model, and tool settings captured by the selected agent version."
+            title="Agent configuration"
+            description="Provider, model, instructions, and tool policy captured by the selected immutable version."
             actions={
               <>
                 <StatusBadge value={archivedLabel(agent)} />
@@ -103,23 +102,19 @@ function AgentDetailContent({
               </>
             }
           >
-            <div className="grid gap-4">
-              <MetaGrid>
+            <div className="flex flex-col gap-4">
+              <MetaGrid columns={4}>
                 <Meta label="Version" value={`v${currentVersionNumber}`} />
                 <Meta label="Created" value={formatDate(currentCreatedAt)} />
                 <Meta label="Provider" value={currentSpec.provider ?? 'None'} />
                 <Meta label="Model" value={currentSpec.model ?? 'None'} />
+              </MetaGrid>
+              <ReadOnlyTextField label="System prompt" value={currentSpec.systemPrompt || 'None'} />
+              <MetaGrid>
                 <Meta label="Skills" value={currentSpec.skills.join(', ') || 'None'} />
                 <Meta label="Allowed tools" value={currentSpec.allowedTools.join(', ') || 'None'} />
                 <Meta label="MCP connectors" value={currentSpec.mcpConnectors.join(', ') || 'None'} />
               </MetaGrid>
-              <JsonBlock
-                value={stringifyJson({
-                  systemPrompt: currentSpec.systemPrompt,
-                  provider: currentSpec.provider,
-                  model: currentSpec.model,
-                })}
-              />
             </div>
           </DetailSection>
         </TabsContent>
@@ -127,6 +122,15 @@ function AgentDetailContent({
           <RelatedResourcesTable title="Sessions" empty="No sessions have used this agent yet." items={agentSessions} />
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+function ReadOnlyTextField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-muted/60 px-3 py-2">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">{value}</p>
     </div>
   )
 }

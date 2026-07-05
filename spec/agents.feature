@@ -95,3 +95,10 @@ Feature: Agents
     Then rows show name, model, tools, status, version, and updated time
     And the page supports search, filters, and navigation to agent detail
     And creating an agent returns to the list with the new row visible
+
+  @agents/console-detail @web
+  Scenario: Inspect agent detail without raw runtime JSON
+    Given a project has an agent with model configuration and instructions
+    When the user opens the agent detail page
+    Then the selected version shows provider, model, tools, skills, MCP connectors, and system prompt as readable fields
+    And sessions that selected the agent are listed separately

@@ -35,6 +35,10 @@ export const queryKeys = {
     detail: (id: string) => ['providers', 'detail', id] as const,
     models: ['providers', 'models'] as const,
   },
+  runners: {
+    all: ['runners'] as const,
+    list: (filters: Record<string, string | boolean | undefined> = {}) => ['runners', 'list', filters] as const,
+  },
   vaults: {
     all: ['vaults'] as const,
     list: (includeArchived = false) => ['vaults', 'list', { includeArchived }] as const,

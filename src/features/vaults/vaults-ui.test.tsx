@@ -117,6 +117,15 @@ async function selectCredentialType(label: string) {
   fireEvent.click(await screen.findByRole('option', { name: label }))
 }
 
+async function activateTab(name: string) {
+  const tab = screen.getByRole('tab', { name })
+  fireEvent.pointerDown(tab, { button: 0, ctrlKey: false })
+  fireEvent.mouseDown(tab)
+  fireEvent.mouseUp(tab)
+  fireEvent.click(tab)
+  await waitFor(() => expect(tab.getAttribute('data-state')).toBe('active'))
+}
+
 // ─── VaultsView ─────────────────────────────────────────────────────────────
 
 describe('[spec: vaults/console-list] VaultsView', () => {
@@ -255,6 +264,8 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
     )
 
     expect(screen.getByText('Credential metadata')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Credentials' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Activity' })).toBeInTheDocument()
     expect(screen.getByText('Raw secret values are not returned by the control plane.')).toBeInTheDocument()
     expect(screen.getByText('OpenAI key')).toBeInTheDocument()
     expect(screen.getByText('v2')).toBeInTheDocument()
@@ -536,7 +547,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
     expect(screen.getByText('Not returned')).toBeInTheDocument()
   })
 
-  it('renders audit records section with history', () => {
+  it('renders audit records section with history', async () => {
     const record = auditRecord()
     render(
       <MemoryRouter>
@@ -552,12 +563,13 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
       </MemoryRouter>,
     )
 
+    await activateTab('Activity')
     expect(screen.getByText('Audit history')).toBeInTheDocument()
     expect(screen.getByText('vault.create')).toBeInTheDocument()
     expect(screen.getByText('success')).toBeInTheDocument()
   })
 
-  it('shows audit record resourceType when resourceId is null', () => {
+  it('shows audit record resourceType when resourceId is null', async () => {
     const record = auditRecord({ resourceId: null })
     render(
       <MemoryRouter>
@@ -573,10 +585,11 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
       </MemoryRouter>,
     )
 
+    await activateTab('Activity')
     expect(screen.getByText('vault')).toBeInTheDocument()
   })
 
-  it('shows No audit history when no audit records exist', () => {
+  it('shows No audit history when no audit records exist', async () => {
     render(
       <MemoryRouter>
         <VaultDetailView
@@ -591,6 +604,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
       </MemoryRouter>,
     )
 
+    await activateTab('Activity')
     expect(screen.getByText('No audit history')).toBeInTheDocument()
     expect(screen.getByText('Vault and credential changes will appear here.')).toBeInTheDocument()
   })
@@ -1563,6 +1577,7 @@ describe('[spec: vaults/console-detail-page] VaultDetailPage', () => {
     )
 
     await screen.findByText('Provider credentials')
+    await activateTab('Activity')
     await waitFor(() => expect(screen.getByText('vault.create')).toBeInTheDocument())
     expect(screen.getByText('vault.update')).toBeInTheDocument()
     expect(screen.queryByText('audit_no_match')).toBeNull()

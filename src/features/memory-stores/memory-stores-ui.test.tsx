@@ -97,7 +97,7 @@ function setupMemoryStoreHandlers(stores: MemoryStore[] = [], memories: MemorySt
   )
 }
 
-describe('[spec: sessions/memory-store-resources] memory store UI', () => {
+describe('[spec: memory-stores/console] [spec: sessions/memory-store-resources] memory store UI', () => {
   it('renders an empty memory store list', async () => {
     setupMemoryStoreHandlers()
     renderWithClient(<MemoryStoresPage />)
@@ -175,6 +175,32 @@ describe('[spec: sessions/memory-store-resources] memory store UI', () => {
     expect(await screen.findByText('Add Memory')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(screen.queryByText('Add Memory')).toBeNull())
+  })
+
+  it('renders memory files as an explorer and shows selected file content', async () => {
+    setupMemoryStoreHandlers(
+      [store()],
+      [
+        memory({ id: 'memory_review', path: 'guides/review.md', content: 'Review checklist' }),
+        memory({ id: 'memory_plan', path: 'notes/plan.md', content: 'Planning notes' }),
+      ],
+    )
+    renderWithClient(
+      <Routes>
+        <Route path="/memory-stores/:storeId" element={<MemoryStoreDetailPage />} />
+      </Routes>,
+      ['/memory-stores/memstore_1'],
+    )
+
+    expect(await screen.findByLabelText('Memory files')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'guides folder' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'notes folder' })).toBeTruthy()
+    expect(screen.getByText('Review checklist')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'notes/plan.md file' }))
+
+    expect(screen.getByText('notes/plan.md')).toBeTruthy()
+    expect(screen.getByText('Planning notes')).toBeTruthy()
   })
 
   it('renders memory store detail without a route param', () => {

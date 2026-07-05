@@ -60,18 +60,21 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
     expect(screen.getByText('Agent not found')).toBeInTheDocument()
   })
 
-  it('renders agent model configuration for a loaded agent', () => {
-    const agent = buildAgent()
+  it('renders agent configuration fields without raw runtime JSON', () => {
+    const agent = buildAgent({ systemPrompt: 'Act as the project coding agent.' })
     render(
       <MemoryRouter>
         <AgentDetailView agent={agent} versions={[]} sessions={[]} />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Agent model configuration')).toBeInTheDocument()
+    expect(screen.getByText('Agent configuration')).toBeInTheDocument()
     expect(screen.getByText('workers-ai')).toBeInTheDocument()
     expect(screen.getByText('@cf/moonshotai/kimi-k2.6')).toBeInTheDocument()
+    expect(screen.getByText('System prompt')).toBeInTheDocument()
+    expect(screen.getByText('Act as the project coding agent.')).toBeInTheDocument()
     expect(screen.getByText('ama@coding-agent')).toBeInTheDocument()
     expect(screen.getByText('read, write')).toBeInTheDocument()
+    expect(screen.queryByText(/"systemPrompt"/)).toBeNull()
   })
 
   it('renders the sessions tab with related sessions', async () => {
@@ -169,7 +172,7 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
         <AgentDetailView agent={agent} versions={[]} sessions={[]} />
       </MemoryRouter>,
     )
-    expect(screen.getByText('Agent model configuration')).toBeInTheDocument()
+    expect(screen.getByText('Agent configuration')).toBeInTheDocument()
   })
 
   it('renders MCP connectors value', () => {

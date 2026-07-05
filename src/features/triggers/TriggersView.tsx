@@ -9,11 +9,11 @@ import {
   StatusBadge,
   TablePagination,
   TableSurface,
-  TruncatedTooltipText,
 } from '@/console/components'
 import { formatRelativeTime } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Trigger } from '@/lib/amarpc'
+import { AgentIdentityCell } from '@/features/console/agent-identity-cell'
+import type { Agent, Trigger } from '@/lib/amarpc'
 
 export function formatInterval(intervalSeconds: number) {
   if (intervalSeconds % 86400 === 0) {
@@ -41,12 +41,14 @@ export function TriggersView({
   onPause,
   onResume,
   onDelete,
+  agentById,
 }: {
   triggers: Trigger[]
   pagination: ClientPagination<Trigger>
   onPause: (id: string) => void
   onResume: (id: string) => void
   onDelete: (id: string) => void
+  agentById?: Map<string, Agent> | undefined
 }) {
   if (triggers.length === 0) {
     return <EmptyState title="No triggers" body="Schedule a trigger to dispatch an agent on a recurring interval." />
@@ -93,7 +95,7 @@ export function TriggersView({
               <DescriptionCell value={trigger.metadata.description} />
             </TableCell>
             <TableCell className="hidden min-w-0 lg:table-cell">
-              <TruncatedTooltipText value={trigger.spec.template.spec.agentId} />
+              <TriggerAgentIdentity trigger={trigger} agent={agentById?.get(trigger.spec.template.spec.agentId)} />
             </TableCell>
             <TableCell className="hidden md:table-cell">{triggerTiming(trigger)}</TableCell>
             <TableCell>
@@ -145,5 +147,17 @@ export function TriggersView({
         ))}
       </TableBody>
     </TableSurface>
+  )
+}
+
+function TriggerAgentIdentity({ trigger, agent }: { trigger: Trigger; agent?: Agent | undefined }) {
+  const agentId = trigger.spec.template.spec.agentId
+  return (
+    <AgentIdentityCell
+      agentId={agentId}
+      agentName={agent?.metadata.name}
+      provider={agent?.spec.provider}
+      model={agent?.spec.model}
+    />
   )
 }

@@ -51,12 +51,13 @@ function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
 }
 
-function setupTriggerHandlers(triggers: Trigger[] = []) {
+function setupTriggerHandlers(triggers: Trigger[] = [], agents: Agent[] = [agent()]) {
   const collection = createCollection<Trigger>(triggers)
   server.use(
     ...resourceHandlers('triggers', collection, (body, idx) =>
       trigger({ id: `trigger_new_${idx}`, name: String(body.name ?? 'New'), ...body }),
     ),
+    http.get('*/api/v1/agents', () => HttpResponse.json(listEnvelope(agents))),
   )
   return { collection }
 }
@@ -117,6 +118,7 @@ describe('[spec: triggers/console-list] TriggersView', () => {
 
   it('renders rows with name, agent, schedule, status, and a pause action when active', () => {
     const triggers = [trigger()]
+    const triggerAgent = agent({ name: 'Research agent' })
     render(
       <MemoryRouter>
         <TriggersView
@@ -125,6 +127,7 @@ describe('[spec: triggers/console-list] TriggersView', () => {
           onPause={vi.fn()}
           onResume={vi.fn()}
           onDelete={vi.fn()}
+          agentById={new Map([[triggerAgent.metadata.uid, triggerAgent]])}
         />
       </MemoryRouter>,
     )
@@ -132,7 +135,13 @@ describe('[spec: triggers/console-list] TriggersView', () => {
     expect(screen.getByRole('link', { name: 'Daily research heartbeat' }).getAttribute('href')).toBe(
       '/triggers/trigger_1',
     )
+    expect(screen.getByText('Research agent')).toBeTruthy()
     expect(screen.getByText('agent_1')).toBeTruthy()
+    expect(
+      screen.getByRole('button', {
+        name: 'Research agent agent_1. Provider/model: workers-ai / @cf/moonshotai/kimi-k2.6',
+      }),
+    ).toBeTruthy()
     expect(screen.getByText('every 1d')).toBeTruthy()
     expect(screen.getByText('active')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Pause trigger' })).toBeTruthy()
@@ -273,8 +282,8 @@ describe('[spec: triggers/console-list] TriggersView', () => {
 // ─── TriggersPage ────────────────────────────────────────────────────────────
 
 describe('[spec: triggers/console-page] TriggersPage', () => {
-  function renderPage(triggers: Trigger[] = [], initialPath = '/') {
-    setupTriggerHandlers(triggers)
+  function renderPage(triggers: Trigger[] = [], initialPath = '/', agents: Agent[] = [agent()]) {
+    setupTriggerHandlers(triggers, agents)
     const client = makeQueryClient()
     return render(
       <QueryClientProvider client={client}>
@@ -315,6 +324,24 @@ describe('[spec: triggers/console-page] TriggersPage', () => {
     expect(screen.queryByText('Beta trigger')).toBeNull()
   })
 
+  it('filters triggers by agent name', async () => {
+    renderPage(
+      [
+        trigger({ id: 'trigger_1', name: 'Alpha trigger', agentId: 'agent_a' }),
+        trigger({ id: 'trigger_2', name: 'Beta trigger', agentId: 'agent_b' }),
+      ],
+      '/',
+      [agent({ id: 'agent_a', name: 'Research agent' }), agent({ id: 'agent_b', name: 'Review agent' })],
+    )
+    await screen.findByText('Alpha trigger')
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search triggers' }), { target: { value: 'Review' } })
+
+    expect(screen.queryByText('Alpha trigger')).toBeNull()
+    expect(screen.getByText('Beta trigger')).toBeTruthy()
+    expect(screen.getByText('Review agent')).toBeTruthy()
+  })
+
   it('filters triggers to paused when status=paused is set', async () => {
     renderPage(
       [
@@ -332,6 +359,7 @@ describe('[spec: triggers/console-page] TriggersPage', () => {
     let patchedBody: Record<string, unknown> | null = null
     const collection = createCollection<Trigger>([trigger()])
     server.use(
+      http.get('*/api/v1/agents', () => HttpResponse.json(listEnvelope([agent()]))),
       http.get('*/api/v1/triggers', () =>
         HttpResponse.json({ data: collection.list(), pagination: { limit: 50, hasMore: false, nextCursor: null } }),
       ),

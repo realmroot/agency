@@ -6,9 +6,14 @@ import type { ClientPagination } from '@/console/use-client-pagination'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { EnvironmentDetailView } from '@/features/environments/EnvironmentDetailView'
 import { EnvironmentsView } from '@/features/environments/EnvironmentsView'
-import type { Environment, Session } from '@/lib/amarpc'
+import type { Environment, Runner, Session } from '@/lib/amarpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
-import { type EnvironmentOverrides, environment as resourceEnvironment } from '@/test/resource-fixtures'
+import {
+  type EnvironmentOverrides,
+  type RunnerOverrides,
+  environment as resourceEnvironment,
+  runner as resourceRunner,
+} from '@/test/resource-fixtures'
 import { buildTestSession, type TestSessionOverrides } from '@/testing/session'
 import { CreateEnvironmentSheet } from './CreateEnvironmentSheet'
 import { EnvironmentDetailPage } from './EnvironmentDetailPage'
@@ -38,6 +43,10 @@ function environment(overrides: EnvironmentOverrides = {}): Environment {
 
 function buildSession(overrides: TestSessionOverrides = {}): Session {
   return buildTestSession({ environmentId: 'env_1', ...overrides })
+}
+
+function runner(overrides: RunnerOverrides = {}): Runner {
+  return resourceRunner({ environmentId: 'env_1', ...overrides })
 }
 
 function pagination<T>(items: T[]): ClientPagination<T> {
@@ -81,11 +90,20 @@ function stubPointerEvents() {
   })
 }
 
+async function activateTab(name: string) {
+  const tab = screen.getByRole('tab', { name })
+  fireEvent.pointerDown(tab, { button: 0, ctrlKey: false })
+  fireEvent.mouseDown(tab)
+  fireEvent.mouseUp(tab)
+  fireEvent.click(tab)
+  await waitFor(() => expect(tab.getAttribute('data-state')).toBe('active'))
+}
+
 // ─── MSW handler factories ────────────────────────────────────────────────────
 
 // Register environment collection handlers for tests that need the full
 // CRUD surface (EnvironmentsPage, EnvironmentDetailPage, CreateEnvironmentSheet).
-function setupEnvironmentHandlers(envs: Environment[] = [], sessions: Session[] = []) {
+function setupEnvironmentHandlers(envs: Environment[] = [], sessions: Session[] = [], runners: Runner[] = []) {
   const envCollection = createCollection<Environment>(envs)
 
   server.use(
@@ -99,9 +117,18 @@ function setupEnvironmentHandlers(envs: Environment[] = [], sessions: Session[] 
         pagination: { limit: 50, hasMore: false, nextCursor: null },
       }),
     ),
+    http.get('*/api/v1/runners', ({ request }) => {
+      const url = new URL(request.url)
+      const environmentId = url.searchParams.get('environmentId')
+      const data = environmentId ? runners.filter((runner) => runner.environmentId === environmentId) : runners
+      return HttpResponse.json({
+        data,
+        pagination: { limit: 50, hasMore: false, nextCursor: null },
+      })
+    }),
   )
 
-  return { envCollection, sessions }
+  return { envCollection, sessions, runners }
 }
 
 // ─── EnvironmentsView ────────────────────────────────────────────────────────
@@ -260,7 +287,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
 // ─── EnvironmentDetailView ───────────────────────────────────────────────────
 
 describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
-  it('shows the profile header and policy facts without raw secret values', () => {
+  it('shows the profile header and policy facts without raw secret values', async () => {
     const session = buildSession()
     render(
       <MemoryRouter>
@@ -272,7 +299,23 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     expect(screen.getByText('v2')).toBeTruthy()
     expect(screen.getByText('self_hosted')).toBeTruthy()
     expect(screen.getByText('Limited: registry.npmjs.org')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Runners' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Sessions' })).toBeTruthy()
+    await activateTab('Sessions')
     expect(screen.getByText('Sessions using this environment')).toBeTruthy()
+  })
+
+  it('shows runners bound to the environment on the runners tab', () => {
+    render(
+      <MemoryRouter>
+        <EnvironmentDetailView environment={environment()} sessions={[]} runners={[runner()]} onArchive={vi.fn()} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Mac mini runner')).toBeTruthy()
+    expect(screen.getByText('runner_1')).toBeTruthy()
+    expect(screen.getByText('1/2')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'codex:ready@0.42.0' })).toBeTruthy()
   })
 
   it('shows empty state when environment is null', () => {
@@ -360,7 +403,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     expect(screen.queryByText('Archive')).toBeNull()
   })
 
-  it('filters sessions to only those bound to the current environment', () => {
+  it('filters sessions to only those bound to the current environment', async () => {
     const boundSession = buildSession({ id: 'session_bound', environmentId: 'env_1' })
     const otherSession = buildSession({ id: 'session_other', environmentId: 'env_other' })
     render(
@@ -373,6 +416,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
       </MemoryRouter>,
     )
 
+    await activateTab('Sessions')
     expect(screen.getAllByText('session_bound').length).toBeGreaterThan(0)
     expect(screen.queryByText('session_other')).toBeNull()
   })
@@ -756,7 +800,7 @@ describe('[spec: environments/console-page] EnvironmentsPage', () => {
 // ─── EnvironmentDetailPage ───────────────────────────────────────────────────
 
 describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () => {
-  function renderDetailPage(env: Environment | null, sessions: Session[] = []) {
+  function renderDetailPage(env: Environment | null, sessions: Session[] = [], runners: Runner[] = []) {
     const envCollection = createCollection<Environment>(env ? [env] : [])
 
     server.use(
@@ -769,6 +813,15 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
           pagination: { limit: 50, hasMore: false, nextCursor: null },
         }),
       ),
+      http.get('*/api/v1/runners', ({ request }) => {
+        const url = new URL(request.url)
+        const environmentId = url.searchParams.get('environmentId')
+        const data = environmentId ? runners.filter((runner) => runner.environmentId === environmentId) : runners
+        return HttpResponse.json({
+          data,
+          pagination: { limit: 50, hasMore: false, nextCursor: null },
+        })
+      }),
     )
 
     const client = makeQueryClient()

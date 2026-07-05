@@ -7,6 +7,7 @@ import type {
   MemoryStore,
   MemoryStoreMemory,
   ResourceMetadata,
+  Runner,
   Trigger,
   TriggerSchedule,
   Vault,
@@ -291,6 +292,48 @@ export function memory(overrides: MemoryOverrides = {}): MemoryStoreMemory {
     status: {
       phase: overrides.archivedAt ? 'archived' : 'active',
     },
+  }
+}
+
+export type RunnerOverrides = {
+  id?: string
+  projectId?: string
+  name?: string
+  capabilities?: string[]
+  environmentId?: string | null
+  secretRef?: Runner['secretRef']
+  authMode?: Runner['authMode']
+  state?: Runner['state']
+  currentLoad?: number
+  maxConcurrent?: number
+  runtimeUsage?: Runner['runtimeUsage']
+  runtimeInventory?: Runner['runtimeInventory']
+  metadata?: Runner['metadata']
+  lastHeartbeatAt?: string | null
+  archivedAt?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function runner(overrides: RunnerOverrides = {}): Runner {
+  return {
+    id: overrides.id ?? 'runner_1',
+    projectId: overrides.projectId ?? 'project_1',
+    name: overrides.name ?? 'Mac mini runner',
+    capabilities: overrides.capabilities ?? ['codex', 'node'],
+    environmentId: overrides.environmentId === undefined ? 'env_1' : overrides.environmentId,
+    secretRef: overrides.secretRef ?? null,
+    authMode: overrides.authMode ?? 'oidc',
+    state: overrides.state ?? 'active',
+    currentLoad: overrides.currentLoad ?? 1,
+    maxConcurrent: overrides.maxConcurrent ?? 2,
+    runtimeUsage: overrides.runtimeUsage ?? [],
+    runtimeInventory: overrides.runtimeInventory ?? [{ runtime: 'codex', version: '0.42.0', state: 'ready' }],
+    metadata: overrides.metadata ?? {},
+    lastHeartbeatAt: overrides.lastHeartbeatAt === undefined ? now : overrides.lastHeartbeatAt,
+    archivedAt: overrides.archivedAt === undefined ? null : overrides.archivedAt,
+    createdAt: overrides.createdAt ?? now,
+    updatedAt: overrides.updatedAt ?? now,
   }
 }
 

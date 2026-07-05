@@ -65,3 +65,4 @@ Feature: Vaults
     When the user opens the vaults list and a vault detail
     Then rows show display name, scope, status, and timestamps with a deliberate create action
     And credential names, versions, and usage references are visible while raw secret values are redacted
+    And vault detail separates credential metadata and activity history into tabs
