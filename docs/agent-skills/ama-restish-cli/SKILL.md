@@ -41,7 +41,7 @@ Use OpenAPI operation names or documented `/api/v1` paths. Do not invent local c
 | Environments | `listEnvironments`, `readEnvironment`, `listEnvironmentVersions`, `readEnvironmentVersion` | `createEnvironment`, `updateEnvironment` | use `updateEnvironment` state fields |
 | Sessions | `listSessions`, `readSession`, `listSessionEvents`, `connectSessionSocket`, message and approval operations | `createSession`, `updateSession`, `createSessionMessage` | use `updateSession` state fields |
 | Providers | `listProviders`, `listModels`, `readProvider`, `listProviderModels` | `refreshCatalog` | n/a |
-| Vaults | `listVaults`, `readVault`, `listVaultCredentials`, `readVaultCredential`, `listVaultCredentialVersions`, `readVaultCredentialVersion` | `createVault`, `updateVault`, `createVaultCredential`, `updateVaultCredential`, `createVaultCredentialVersion` | `deleteVaultCredentialVersion` |
+| Vaults | `listVaults`, `readVault`, `listVaultCredentials`, `readVaultCredential`, `listVaultCredentialVersions`, `readVaultCredentialVersion` | `createVault`, `updateVault`, `createVaultCredential`, `updateVaultCredential`, `updateVaultCredentialSecret` | n/a |
 | Budgets | `listBudgets`, `readBudget` | `createBudget`, `updateBudget` | `deleteBudget` |
 | Usage | `listUsageRecords`, `readUsageRecord`, `readUsageSummary` | n/a | n/a |
 | Audit | `listAuditRecords`, `readAuditRecord` | n/a | n/a |
@@ -76,7 +76,7 @@ If SDK artifacts change, run `pnpm run openapi:generate` and `pnpm run openapi:c
 
 ## Safety Boundaries
 
-- Confirm ids before destructive `update*` state changes or `deleteVaultCredentialVersion`.
+- Confirm ids before destructive `update*` state changes.
 - Treat vault values and auth tokens as secrets. Never paste raw secret values into notes, commits, or screenshots.
 - Runtime interaction remains behind AMA session endpoints and canonical AMA events. Use `connectSessionSocket` or generated SDK stream helpers for live task traffic.
 - Do not add a `bin`, shell wrapper, package-manager global command, or project-specific command surface for AMA control-plane work.

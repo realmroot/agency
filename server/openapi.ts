@@ -52,7 +52,7 @@ export function listResponseSchema<T extends z.ZodType>(name: string, itemSchema
 export const SecretRefSchema = z
   .string()
   .min(1)
-  .openapi({ example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123' })
+  .openapi({ example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123' })
 
 export const NullableSecretRefSchema = SecretRefSchema.nullable().openapi('NullableSecretRef')
 

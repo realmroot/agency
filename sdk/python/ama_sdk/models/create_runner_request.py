@@ -30,8 +30,7 @@ class CreateRunnerRequest:
             name (str):  Example: mac-mini-build-runner.
             capabilities (list[str] | Unset):  Example: ['node', 'git'].
             environment_id (str | Unset):  Example: env_abc123.
-            secret_ref (str | Unset):  Example:
-                ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123.
+            secret_ref (str | Unset):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
             auth_mode (CreateRunnerRequestAuthMode | Unset):  Example: bearer.
             max_concurrent (int | Unset):  Example: 2.
             metadata (CreateRunnerRequestMetadata | Unset):  Example: {'pool': 'default'}.

@@ -194,10 +194,11 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths['/api/v1/vaults/{vaultId}/credentials']).toHaveProperty('post')
     expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}']).toHaveProperty('get')
     expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}']).toHaveProperty('patch')
+    expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}']).toHaveProperty('put')
     expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions']).toHaveProperty('get')
-    expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions']).toHaveProperty('post')
+    expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions']).not.toHaveProperty('post')
     expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}']).toHaveProperty('get')
-    expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}']).toHaveProperty(
+    expect(doc.paths['/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}']).not.toHaveProperty(
       'delete',
     )
     expect(doc.paths['/api/v1/memory-stores']).toHaveProperty('get')
@@ -316,7 +317,7 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.components?.schemas).toHaveProperty('CreateVaultRequest')
     expect(doc.components?.schemas).toHaveProperty('UpdateVaultRequest')
     expect(doc.components?.schemas).toHaveProperty('CreateVaultCredentialRequest')
-    expect(doc.components?.schemas).toHaveProperty('CreateVaultCredentialVersionRequest')
+    expect(doc.components?.schemas).toHaveProperty('UpdateVaultCredentialSecretRequest')
     expect(doc.components?.schemas).toHaveProperty('Provider')
     expect(doc.components?.schemas).toHaveProperty('ProviderModel')
     expect(doc.components?.schemas).toHaveProperty('Connector')

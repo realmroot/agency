@@ -389,7 +389,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
     )
 
     expect(screen.queryByRole('button', { name: 'Add credential' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Rotate credential' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Update credential secret' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Revoke credential' })).toBeNull()
   })
 
@@ -431,7 +431,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
     expect(onAddCredential).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onRotate with credential when Rotate button is clicked', () => {
+  it('calls onRotate with credential when update secret button is clicked', () => {
     const onRotate = vi.fn()
     const cred = credential()
     render(
@@ -448,7 +448,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate credential' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Update credential secret' }))
     expect(onRotate).toHaveBeenCalledWith(cred)
   })
 
@@ -494,7 +494,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole('button', { name: 'Rotate credential' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Update credential secret' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Revoke credential' })).toBeNull()
   })
 
@@ -1184,8 +1184,8 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
       </QueryClientProvider>,
     )
 
-    expect(screen.getAllByText('Rotate credential').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Create a new active version for OpenAI key/)).toBeInTheDocument()
+    expect(screen.getAllByText('Update credential secret').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Replace the secret material for OpenAI key/)).toBeInTheDocument()
   })
 
   it('does not render sheet when credential is null', () => {
@@ -1198,7 +1198,7 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
       </QueryClientProvider>,
     )
 
-    expect(screen.queryByText('Rotate credential')).toBeNull()
+    expect(screen.queryByText('Update credential secret')).toBeNull()
   })
 
   it('disables submit when string data is empty', () => {
@@ -1211,7 +1211,7 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
       </QueryClientProvider>,
     )
 
-    const btn = screen.getByRole('button', { name: /Rotate credential/i })
+    const btn = screen.getByRole('button', { name: /Update credential secret/i })
     expect(btn.hasAttribute('disabled')).toBe(true)
   })
 
@@ -1227,16 +1227,16 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"new-secret"}' } })
 
-    const btn = screen.getByRole('button', { name: /Rotate credential/i })
+    const btn = screen.getByRole('button', { name: /Update credential secret/i })
     expect(btn.hasAttribute('disabled')).toBe(false)
   })
 
-  it('calls POST /api/v1/vaults/:vaultId/credentials/:credentialId/versions on valid submit', async () => {
+  it('calls PUT /api/v1/vaults/:vaultId/credentials/:credentialId on valid submit', async () => {
     let capturedBody: Record<string, unknown> = {}
     server.use(
-      http.post('*/api/v1/vaults/vault_1/credentials/vaultcred_1/versions', async ({ request }) => {
+      http.put('*/api/v1/vaults/vault_1/credentials/vaultcred_1', async ({ request }) => {
         capturedBody = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json({ id: 'vaultver_new' }, { status: 201 })
+        return HttpResponse.json({ id: 'vaultver_new' }, { status: 200 })
       }),
       http.get('*/api/v1/vaults/vault_1', () => HttpResponse.json(vault())),
       http.get('*/api/v1/vaults/vault_1/credentials', () =>
@@ -1255,16 +1255,16 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
     )
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"rotated-secret"}' } })
-    fireEvent.click(screen.getByRole('button', { name: /Rotate credential/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Update credential secret/i }))
 
     await waitFor(() => expect(capturedBody.stringData).toEqual({ value: 'rotated-secret' }))
     expect(capturedBody.stringData).toEqual({ value: 'rotated-secret' })
   })
 
-  it('closes sheet after successful rotation', async () => {
+  it('closes sheet after successful secret update', async () => {
     server.use(
-      http.post('*/api/v1/vaults/vault_1/credentials/vaultcred_1/versions', () =>
-        HttpResponse.json({ id: 'vaultver_new' }, { status: 201 }),
+      http.put('*/api/v1/vaults/vault_1/credentials/vaultcred_1', () =>
+        HttpResponse.json({ id: 'vaultver_new' }, { status: 200 }),
       ),
       http.get('*/api/v1/vaults/vault_1', () => HttpResponse.json(vault())),
       http.get('*/api/v1/vaults/vault_1/credentials', () =>
@@ -1283,15 +1283,15 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
     )
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"rotated-secret"}' } })
-    fireEvent.click(screen.getByRole('button', { name: /Rotate credential/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Update credential secret/i }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
   })
 
-  it('shows toast error when POST /api/v1/vaults/:vaultId/credentials/:id/versions returns 500', async () => {
+  it('shows toast error when PUT /api/v1/vaults/:vaultId/credentials/:id returns 500', async () => {
     server.use(
-      http.post('*/api/v1/vaults/vault_1/credentials/vaultcred_1/versions', () =>
-        HttpResponse.json({ error: 'Rotation failed' }, { status: 500 }),
+      http.put('*/api/v1/vaults/vault_1/credentials/vaultcred_1', () =>
+        HttpResponse.json({ error: 'Secret update failed' }, { status: 500 }),
       ),
     )
 
@@ -1305,18 +1305,18 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
     )
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"rotated-secret"}' } })
-    fireEvent.click(screen.getByRole('button', { name: /Rotate credential/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /Rotate credential/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Update credential secret/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Update credential secret/i })).toBeInTheDocument())
   })
 
-  it('shows rotating state on button while mutation is pending', async () => {
+  it('shows updating state on button while mutation is pending', async () => {
     let resolveRequest: () => void
     server.use(
-      http.post('*/api/v1/vaults/vault_1/credentials/vaultcred_1/versions', async () => {
+      http.put('*/api/v1/vaults/vault_1/credentials/vaultcred_1', async () => {
         await new Promise<void>((resolve) => {
           resolveRequest = resolve
         })
-        return HttpResponse.json({ id: 'vaultver_new' }, { status: 201 })
+        return HttpResponse.json({ id: 'vaultver_new' }, { status: 200 })
       }),
     )
 
@@ -1330,9 +1330,9 @@ describe('[spec: vaults/rotate-credential-sheet] RotateCredentialSheet', () => {
     )
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"rotated-secret"}' } })
-    fireEvent.click(screen.getByRole('button', { name: /Rotate credential/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Update credential secret/i }))
 
-    await waitFor(() => expect(screen.getByText('Rotating credential')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Updating credential secret')).toBeInTheDocument())
     resolveRequest!()
   })
 })
@@ -1429,8 +1429,8 @@ describe('[spec: vaults/console-detail-page] VaultDetailPage', () => {
         credentials.put(cred)
         return HttpResponse.json(cred, { status: 201 })
       }),
-      http.post('*/api/v1/vaults/:vaultId/credentials/:credentialId/versions', () =>
-        HttpResponse.json({ id: 'vaultver_new' }, { status: 201 }),
+      http.put('*/api/v1/vaults/:vaultId/credentials/:credentialId', () =>
+        HttpResponse.json({ id: 'vaultver_new' }, { status: 200 }),
       ),
     )
 
@@ -1476,8 +1476,8 @@ describe('[spec: vaults/console-detail-page] VaultDetailPage', () => {
   it('opens RotateCredentialSheet when onRotate is triggered', async () => {
     setupDetailPage(vault(), [credential()])
     await screen.findByText('OpenAI key')
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate credential' }))
-    await waitFor(() => expect(screen.getByText(/Create a new active version for OpenAI key/)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Update credential secret' }))
+    await waitFor(() => expect(screen.getByText(/Replace the secret material for OpenAI key/)).toBeInTheDocument())
   })
 
   it('calls PATCH /api/v1/vaults/:vaultId/credentials/:id when onRevoke is triggered', async () => {
@@ -1493,17 +1493,17 @@ describe('[spec: vaults/console-detail-page] VaultDetailPage', () => {
     await waitFor(() => expect(credentials.get('vaultcred_1')?.status.phase).toBe('revoked'))
   })
 
-  it('closes RotateCredentialSheet after successful rotation', async () => {
+  it('closes RotateCredentialSheet after successful secret update', async () => {
     setupDetailPage(vault(), [credential()])
     await screen.findByText('OpenAI key')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rotate credential' }))
-    await waitFor(() => expect(screen.getByText(/Create a new active version for OpenAI key/)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Update credential secret' }))
+    await waitFor(() => expect(screen.getByText(/Replace the secret material for OpenAI key/)).toBeInTheDocument())
 
     fireEvent.change(screen.getByLabelText('New string data'), { target: { value: '{"value":"new-secret"}' } })
-    fireEvent.click(screen.getByRole('button', { name: /Rotate credential/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Update credential secret/i }))
 
-    await waitFor(() => expect(screen.queryByText(/Create a new active version for OpenAI key/)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/Replace the secret material for OpenAI key/)).toBeNull())
   })
 
   it('filters audit records to only those matching the vault id and sorts by date descending', async () => {

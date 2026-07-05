@@ -66,12 +66,12 @@ Common control-plane workflows map to these OpenAPI operations:
 | Environments | `listEnvironments`, `createEnvironment`, `readEnvironment`, `updateEnvironment`, `listEnvironmentVersions`, `readEnvironmentVersion` | `/api/v1/environments` |
 | Sessions | `listSessions`, `createSession`, `readSession`, `updateSession`, `connectSessionSocket`, `listSessionMessages`, `createSessionMessage`, `readSessionMessage`, `listSessionEvents`, approval operations | `/api/v1/sessions` |
 | Providers | `listProviders`, `listModels`, `refreshCatalog`, `readProvider`, `listProviderModels` | `/api/v1/providers` |
-| Vaults | `listVaults`, `createVault`, `readVault`, `updateVault`, credential and version operations | `/api/v1/vaults` |
+| Vaults | `listVaults`, `createVault`, `readVault`, `updateVault`, credential operations, read-only version operations | `/api/v1/vaults` |
 | Budgets | budget operations | `/api/v1/budgets` |
 | Usage | `listUsageRecords`, `readUsageRecord`, `readUsageSummary` | `/api/v1/usage-records`, `/api/v1/usage-summary` |
 | Audit | `listAuditRecords`, `readAuditRecord` | `/api/v1/audit-records` |
 
-Archive and stop flows use the resource `update*` operations with the relevant state fields. Confirm the target id before destructive updates or delete operations such as budget deletes and vault credential version deletes.
+Archive and stop flows use the resource `update*` operations with the relevant state fields. Confirm the target id before destructive updates or delete operations such as budget deletes.
 
 Standard resource responses for agents, environments, vaults, memory stores, triggers, and their child resources use `{ metadata, spec, status }`. Use `resource.metadata.uid` as the stable id in follow-up calls.
 

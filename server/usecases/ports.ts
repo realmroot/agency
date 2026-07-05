@@ -400,15 +400,6 @@ export class VaultSecretError extends Error {
   }
 }
 
-// Thrown when a credential version cannot be deleted: it is the active version
-// or pinned by live runtime metadata. The http layer maps it to 409.
-export class VaultVersionReferencedError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'VaultVersionReferencedError'
-  }
-}
-
 export interface VaultListQuery {
   organizationId: string
   projectId: string
@@ -597,8 +588,6 @@ export interface VaultRepo {
     previousActiveVersionId: string | null,
     timestamp: string,
   ): Promise<CredentialVersion>
-  deleteVersion(versionId: string): Promise<void>
-  versionHasActiveReferences(version: CredentialVersion): Promise<boolean>
 }
 
 // Secret-store boundary. Stores a secret value for a credential version and

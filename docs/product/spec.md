@@ -120,7 +120,7 @@ Session `volumes` may include GitHub repository declarations, mounted through `v
   "owner": "saltbo",
   "repo": "any-managed-agents",
   "ref": "main",
-  "secretRef": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+  "secretRef": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
 }
 ```
 

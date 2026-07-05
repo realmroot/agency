@@ -132,14 +132,13 @@ export declare function createAmaClient(config: AmaClientConfig): {
         createCredential: (vaultId: string, body: types.CreateVaultCredentialRequest) => Promise<types.VaultCredential>;
         getCredential: (vaultId: string, credentialId: string) => Promise<types.VaultCredential>;
         updateCredential: (vaultId: string, credentialId: string, body: types.UpdateVaultCredentialRequest) => Promise<types.VaultCredential>;
+        updateCredentialSecret: (vaultId: string, credentialId: string, body: types.UpdateVaultCredentialSecretRequest) => Promise<types.VaultCredential>;
         listCredentialVersions: (vaultId: string, credentialId: string, query?: types.ListVaultCredentialVersionsData["query"]) => Promise<types.VaultCredentialVersionListResponse>;
-        createCredentialVersion: (vaultId: string, credentialId: string, body: types.CreateVaultCredentialVersionRequest) => Promise<types.VaultCredential>;
         getCredentialVersion: (vaultId: string, credentialId: string, versionId: string) => Promise<{
             metadata: types.ResourceMetadata;
             spec: types.VaultCredentialVersionSpec;
             status: types.VaultCredentialVersionStatus;
         } | null>;
-        deleteCredentialVersion: (vaultId: string, credentialId: string, versionId: string) => Promise<void>;
     };
     usage: {
         listRecords: (query?: types.ListUsageRecordsData["query"]) => Promise<types.UsageRecordListResponse>;

@@ -4133,7 +4133,7 @@
         "type": "string",
         "nullable": true,
         "minLength": 1,
-        "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+        "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
       },
       "RuntimeUsage": {
         "type": "object",
@@ -4244,7 +4244,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
           },
           "authMode": {
             "type": "string",
@@ -8304,25 +8304,7 @@
         },
         "additionalProperties": false
       },
-      "VaultCredentialVersionListResponse": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VaultCredentialVersion"
-            }
-          },
-          "pagination": {
-            "$ref": "#/components/schemas/ListPagination"
-          }
-        },
-        "required": [
-          "data",
-          "pagination"
-        ]
-      },
-      "CreateVaultCredentialVersionRequest": {
+      "UpdateVaultCredentialSecretRequest": {
         "type": "object",
         "properties": {
           "stringData": {
@@ -8356,6 +8338,24 @@
           "stringData"
         ],
         "additionalProperties": false
+      },
+      "VaultCredentialVersionListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VaultCredentialVersion"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/ListPagination"
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
       }
     },
     "parameters": {}
@@ -15011,6 +15011,101 @@
             }
           }
         }
+      },
+      "put": {
+        "operationId": "updateVaultCredentialSecret",
+        "tags": [
+          "Vaults"
+        ],
+        "summary": "Update a vault credential secret",
+        "description": "Updates credential secret material. AMA records version snapshots internally for auditability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "vault_abc123"
+            },
+            "required": true,
+            "name": "vaultId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "vaultcred_abc123"
+            },
+            "required": true,
+            "name": "credentialId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVaultCredentialSecretRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated credential",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultCredential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credential not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Credential unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions": {
@@ -15143,100 +15238,6 @@
             }
           }
         }
-      },
-      "post": {
-        "operationId": "createVaultCredentialVersion",
-        "tags": [
-          "Vaults"
-        ],
-        "summary": "Rotate a vault credential by creating a new version",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "vault_abc123"
-            },
-            "required": true,
-            "name": "vaultId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "vaultcred_abc123"
-            },
-            "required": true,
-            "name": "credentialId",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateVaultCredentialVersionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created credential version",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VaultCredential"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Credential not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Credential unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}": {
@@ -15303,93 +15304,6 @@
           },
           "404": {
             "description": "Credential version not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "deleteVaultCredentialVersion",
-        "tags": [
-          "Vaults"
-        ],
-        "summary": "Delete an unused vault credential version",
-        "description": "Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "vault_abc123"
-            },
-            "required": true,
-            "name": "vaultId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "vaultcred_abc123"
-            },
-            "required": true,
-            "name": "credentialId",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "vaultver_abc123"
-            },
-            "required": true,
-            "name": "versionId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Credential version deleted"
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Credential version not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Credential version still referenced",
             "content": {
               "application/json": {
                 "schema": {

@@ -112,5 +112,5 @@ actions:
     remove: true
   - target: $.components.schemas['UpdateVaultCredentialRequest']['properties']['metadata'].additionalProperties.nullable
     remove: true
-  - target: $.components.schemas['CreateVaultCredentialVersionRequest']['properties']['metadata'].additionalProperties.nullable
+  - target: $.components.schemas['UpdateVaultCredentialSecretRequest']['properties']['metadata'].additionalProperties.nullable
     remove: true

@@ -942,7 +942,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(init?.method).toBe('POST')
     })
 
-    it('rotateVaultCredential posts to versions sub-resource', async () => {
+    it('updateVaultCredentialSecret puts to the credential resource', async () => {
       const rotated = credential({
         id: 'cred_1',
         vaultId: 'vault_1',
@@ -977,10 +977,13 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       })
       const fetchMock = makeJsonFetch(rotated)
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.rotateVaultCredential('vault_1', 'cred_1', { stringData: { value: 'newsecret' } })
+      const result = await api.updateVaultCredentialSecret('vault_1', 'cred_1', {
+        stringData: { value: 'newsecret' },
+      })
       expect(result.status.activeVersion?.metadata.uid).toBe('ver_1')
-      const url = fetchMock.mock.calls[0]?.[0] as string
-      expect(url).toContain('/api/v1/vaults/vault_1/credentials/cred_1/versions')
+      const [url, init] = fetchMock.mock.calls[0]!
+      expect(url as string).toContain('/api/v1/vaults/vault_1/credentials/cred_1')
+      expect(init?.method).toBe('PUT')
     })
 
     it('revokeVaultCredential patches with state:revoked', async () => {

@@ -2,8 +2,8 @@ import { resourceMetadata } from '@server/domain/resource'
 import type { Credential, CredentialVersion, Vault } from '@server/domain/vault'
 import { describe, expect, it } from 'vitest'
 import type { Deps } from './deps'
-import { VaultSecretError, VaultVersionReferencedError } from './ports'
-import { createCredential, deleteCredentialVersion, rotateCredential } from './vaults'
+import { VaultSecretError } from './ports'
+import { createCredential, rotateCredential } from './vaults'
 
 function vault(
   overrides: {
@@ -119,8 +119,6 @@ function fakeDeps(
     listVersions: async () => ({ rows: [], hasMore: false }),
     findVersion: async () => null,
     insertVersionRotation: async (ver) => version({ metadata: { uid: ver.id }, spec: { version: ver.version } }),
-    deleteVersion: async () => {},
-    versionHasActiveReferences: async () => false,
     ...overrides.vaults,
   }
   const secretStore: Deps['secretStore'] = {
@@ -280,40 +278,6 @@ describe('[spec: vaults/credential-rotate] rotateCredential', () => {
       VaultSecretError,
     )
   })
-})
-
-describe('[spec: vaults/credential-delete] deleteCredentialVersion', () => {
-  it('refuses to delete the active version', async () => {
-    await expect(
-      deleteCredentialVersion(
-        fakeDeps(),
-        credential({ status: { activeVersionId: 'vaultver_2' } }),
-        version({ metadata: { uid: 'vaultver_2' } }),
-      ),
-    ).rejects.toBeInstanceOf(VaultVersionReferencedError)
-  })
-
-  it('refuses to delete a version pinned by live runtime metadata', async () => {
-    const deps = fakeDeps({ vaults: { versionHasActiveReferences: async () => true } })
-    await expect(
-      deleteCredentialVersion(deps, credential({ status: { activeVersionId: 'vaultver_1' } }), version()),
-    ).rejects.toBeInstanceOf(VaultVersionReferencedError)
-  })
-
-  it('deletes the version row after reference checks pass', async () => {
-    let deletedVersionId: string | null = null
-    const deps = fakeDeps({
-      vaults: {
-        versionHasActiveReferences: async () => false,
-        deleteVersion: async (versionId) => {
-          deletedVersionId = versionId
-        },
-      },
-    })
-    await deleteCredentialVersion(deps, credential({ status: { activeVersionId: 'vaultver_1' } }), version())
-    expect(deletedVersionId).toBe('vaultver_2')
-  })
-
   it('uses a fallback message when the secret-store throws a non-Error during rotation', async () => {
     const deps = fakeDeps({
       secretStore: {

@@ -122,7 +122,7 @@ describe('[CF] /api/v1/vaults', () => {
     await expect(restoreRes.json()).resolves.toMatchObject({ metadata: { uid: createdId, archivedAt: null } })
   })
 
-  it('stores credential secret references only, redacts every response, rotates, revokes, and hard-deletes versions', async () => {
+  it('stores credential secret references only, redacts every response, updates secrets, and exposes read-only versions', async () => {
     const rawSecret = 'raw-secret-material'
     const rotatedSecret = 'rotated-secret-material'
     const thirdSecret = 'third-secret-material'
@@ -200,18 +200,17 @@ describe('[CF] /api/v1/vaults', () => {
       .first<{ count: number }>()
     expect(credentialCount?.count).toBe(1)
 
-    const rotateRes = await jsonFetch(`/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions`, authorization, {
-      method: 'POST',
+    const updateSecretRes = await jsonFetch(`/api/v1/vaults/${vaultId}/credentials/${credentialId}`, authorization, {
+      method: 'PUT',
       body: JSON.stringify({ stringData: { value: rotatedSecret } }),
     })
-    expect(rotateRes.status).toBe(201)
-    const rotated = (await rotateRes.json()) as {
+    expect(updateSecretRes.status).toBe(200)
+    const rotated = (await updateSecretRes.json()) as {
       status: {
         activeVersionId: string
         activeVersion: { metadata: { uid: string }; spec: { version: number }; status: { phase: string } }
       }
     }
-    const secondVersionId = rotated.status.activeVersion.metadata.uid
     expect(rotated.status.activeVersion.spec.version).toBe(2)
     expect(JSON.stringify(rotated)).not.toContain(rotatedSecret)
 
@@ -240,55 +239,16 @@ describe('[CF] /api/v1/vaults', () => {
       status: { phase: 'superseded' },
     })
 
-    const deleteSupersededRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions/${firstVersionId}`,
-      authorization,
-      { method: 'DELETE' },
-    )
-    expect(deleteSupersededRes.status).toBe(204)
-
-    const thirdRotateRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions`,
-      authorization,
-      {
-        method: 'POST',
-        body: JSON.stringify({ stringData: { value: thirdSecret } }),
-      },
-    )
-    expect(thirdRotateRes.status).toBe(201)
-    const thirdRotated = (await thirdRotateRes.json()) as {
+    const thirdUpdateRes = await jsonFetch(`/api/v1/vaults/${vaultId}/credentials/${credentialId}`, authorization, {
+      method: 'PUT',
+      body: JSON.stringify({ stringData: { value: thirdSecret } }),
+    })
+    expect(thirdUpdateRes.status).toBe(200)
+    const thirdRotated = (await thirdUpdateRes.json()) as {
       status: { activeVersion: { metadata: { uid: string } } }
     }
     const thirdVersionId = thirdRotated.status.activeVersion.metadata.uid
     expect(JSON.stringify(thirdRotated)).not.toContain(thirdSecret)
-
-    const deleteActiveRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions/${thirdVersionId}`,
-      authorization,
-      { method: 'DELETE' },
-    )
-    expect(deleteActiveRes.status).toBe(409)
-    await expect(deleteActiveRes.json()).resolves.toMatchObject({
-      error: { type: 'conflict', message: 'Active credential version cannot be deleted' },
-    })
-
-    const deleteUnusedRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions/${secondVersionId}`,
-      authorization,
-      { method: 'DELETE' },
-    )
-    expect(deleteUnusedRes.status).toBe(204)
-
-    const deletedVersionRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions/${secondVersionId}`,
-      authorization,
-    )
-    expect(deletedVersionRes.status).toBe(404)
-
-    const deletedVersionRow = await env.DB.prepare('SELECT id FROM vault_credential_versions WHERE id = ?')
-      .bind(secondVersionId)
-      .first()
-    expect(deletedVersionRow).toBeNull()
 
     const versionsRes = await SELF.fetch(
       `https://example.com/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions`,
@@ -301,7 +261,6 @@ describe('[CF] /api/v1/vaults', () => {
     const versions = (await authenticatedVersionsRes.json()) as {
       data: Array<{ metadata: { uid: string }; status: { phase: string } }>
     }
-    expect(versions.data).not.toContainEqual(expect.objectContaining({ metadata: { uid: secondVersionId } }))
     expect(JSON.stringify(versions)).not.toContain(rawSecret)
     expect(JSON.stringify(versions)).not.toContain(rotatedSecret)
     expect(JSON.stringify(versions)).not.toContain(thirdSecret)
@@ -352,14 +311,10 @@ describe('[CF] /api/v1/vaults', () => {
       ],
     })
 
-    const rotateRevokedRes = await jsonFetch(
-      `/api/v1/vaults/${vaultId}/credentials/${credentialId}/versions`,
-      authorization,
-      {
-        method: 'POST',
-        body: JSON.stringify({ stringData: { value: 'after-revoke' } }),
-      },
-    )
+    const rotateRevokedRes = await jsonFetch(`/api/v1/vaults/${vaultId}/credentials/${credentialId}`, authorization, {
+      method: 'PUT',
+      body: JSON.stringify({ stringData: { value: 'after-revoke' } }),
+    })
     expect(rotateRevokedRes.status).toBe(409)
     await expect(rotateRevokedRes.json()).resolves.toMatchObject({
       error: { type: 'conflict', message: 'Credential is not active' },

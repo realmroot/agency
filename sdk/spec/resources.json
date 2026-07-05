@@ -104,10 +104,9 @@
           { "name": "createCredential", "operationId": "createVaultCredential" },
           { "name": "getCredential", "operationId": "readVaultCredential" },
           { "name": "updateCredential", "operationId": "updateVaultCredential" },
+          { "name": "updateCredentialSecret", "operationId": "updateVaultCredentialSecret" },
           { "name": "listCredentialVersions", "operationId": "listVaultCredentialVersions" },
-          { "name": "createCredentialVersion", "operationId": "createVaultCredentialVersion" },
-          { "name": "getCredentialVersion", "operationId": "readVaultCredentialVersion" },
-          { "name": "deleteCredentialVersion", "operationId": "deleteVaultCredentialVersion" }
+          { "name": "getCredentialVersion", "operationId": "readVaultCredentialVersion" }
         ] },
         { "name": "usage", "methods": [
           { "name": "listRecords", "operationId": "listUsageRecords" },

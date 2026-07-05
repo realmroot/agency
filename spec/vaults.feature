@@ -23,13 +23,6 @@ Feature: Vaults
     And tampered ciphertext fails authenticated decryption with a safe error
     And the plaintext value is never embedded in the stored payload
 
-  @vaults/version-delete @domain
-  Scenario: Protect referenced credential versions from deletion
-    Given a credential version
-    When a version delete is evaluated
-    Then a reference pinning the exact version blocks deletion
-    And references without a pinned version or to other credentials do not block it
-
   # ── Lifecycle (usecase: business branches over fake ports) ──
 
   @vaults/credential-create @usecase
@@ -46,13 +39,6 @@ Feature: Vaults
     Then the next version becomes active and supersedes the previous version
     And historical sessions keep safe references to the version they used
 
-  @vaults/credential-delete @usecase
-  Scenario: Delete a credential version safely
-    Given a vault has credentials
-    When the user deletes a credential version
-    Then deleting the active version or a version pinned by live runtime metadata is refused
-    And an unreferenced version deletes its stored secret before its row
-
   # ── API contract (api: assembled server, real D1, redaction, tenancy) ──
 
   @vaults/api-crud @api
@@ -61,7 +47,7 @@ Feature: Vaults
     When the user creates, lists, reads, updates, and archives project-scoped vaults and their credentials
     Then vault and credential responses expose only safe metadata and reference fields
     And secret values are accepted only on create or rotate and are never returned
-    And rotate, revoke, and version hard-delete require confirmation and stay auditable
+    And credential versions are read-only snapshots created by AMA when credential secret material changes
 
   @vaults/api-tenancy @api
   Scenario: Scope vault credentials to organization and project

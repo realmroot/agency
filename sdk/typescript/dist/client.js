@@ -270,10 +270,9 @@ export function createAmaClient(config) {
             createCredential: (vaultId, body) => unwrap(ops.createVaultCredential({ client, path: { vaultId }, body })),
             getCredential: (vaultId, credentialId) => unwrap(ops.readVaultCredential({ client, path: { vaultId, credentialId } })),
             updateCredential: (vaultId, credentialId, body) => unwrap(ops.updateVaultCredential({ client, path: { vaultId, credentialId }, body })),
+            updateCredentialSecret: (vaultId, credentialId, body) => unwrap(ops.updateVaultCredentialSecret({ client, path: { vaultId, credentialId }, body })),
             listCredentialVersions: (vaultId, credentialId, query) => unwrap(ops.listVaultCredentialVersions({ client, path: { vaultId, credentialId }, query })),
-            createCredentialVersion: (vaultId, credentialId, body) => unwrap(ops.createVaultCredentialVersion({ client, path: { vaultId, credentialId }, body })),
             getCredentialVersion: (vaultId, credentialId, versionId) => unwrap(ops.readVaultCredentialVersion({ client, path: { vaultId, credentialId, versionId } })),
-            deleteCredentialVersion: (vaultId, credentialId, versionId) => unwrap(ops.deleteVaultCredentialVersion({ client, path: { vaultId, credentialId, versionId } })),
         },
         usage: {
             listRecords: (query) => unwrap(ops.listUsageRecords({ client, query })),

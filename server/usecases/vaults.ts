@@ -8,7 +8,7 @@ import type {
 } from '@server/domain/vault'
 import { secretReference } from '@server/domain/vault'
 import type { Deps } from './deps'
-import { VaultSecretError, VaultVersionReferencedError } from './ports'
+import { VaultSecretError } from './ports'
 
 // Merges the safe reference metadata with the stored secret metadata
 // (ciphertext) the gateway returned.
@@ -123,23 +123,6 @@ export async function rotateCredential(
     },
     version,
   }
-}
-
-// Deletes an unused credential version. The active version and versions pinned
-// by live runtime metadata cannot be deleted; raises
-// VaultVersionReferencedError, mapped to 409.
-export async function deleteCredentialVersion(
-  deps: Deps,
-  credential: Credential,
-  version: CredentialVersion,
-): Promise<void> {
-  if (credential.status.activeVersionId === version.metadata.uid) {
-    throw new VaultVersionReferencedError('Active credential version cannot be deleted')
-  }
-  if (await deps.vaults.versionHasActiveReferences(version)) {
-    throw new VaultVersionReferencedError('Credential version is referenced by active runtime metadata')
-  }
-  await deps.vaults.deleteVersion(version.metadata.uid)
 }
 
 function secretError(error: unknown) {

@@ -326,10 +326,9 @@ export function createAmaClient(config: AmaClientConfig) {
       createCredential: (vaultId: string, body: types.CreateVaultCredentialRequest) => unwrap(ops.createVaultCredential({ client, path: { vaultId }, body })),
       getCredential: (vaultId: string, credentialId: string) => unwrap(ops.readVaultCredential({ client, path: { vaultId, credentialId } })),
       updateCredential: (vaultId: string, credentialId: string, body: types.UpdateVaultCredentialRequest) => unwrap(ops.updateVaultCredential({ client, path: { vaultId, credentialId }, body })),
+      updateCredentialSecret: (vaultId: string, credentialId: string, body: types.UpdateVaultCredentialSecretRequest) => unwrap(ops.updateVaultCredentialSecret({ client, path: { vaultId, credentialId }, body })),
       listCredentialVersions: (vaultId: string, credentialId: string, query?: types.ListVaultCredentialVersionsData['query']) => unwrap(ops.listVaultCredentialVersions({ client, path: { vaultId, credentialId }, query })),
-      createCredentialVersion: (vaultId: string, credentialId: string, body: types.CreateVaultCredentialVersionRequest) => unwrap(ops.createVaultCredentialVersion({ client, path: { vaultId, credentialId }, body })),
       getCredentialVersion: (vaultId: string, credentialId: string, versionId: string) => unwrap(ops.readVaultCredentialVersion({ client, path: { vaultId, credentialId, versionId } })),
-      deleteCredentialVersion: (vaultId: string, credentialId: string, versionId: string) => unwrap(ops.deleteVaultCredentialVersion({ client, path: { vaultId, credentialId, versionId } })),
     },
 
     usage: {

@@ -86,8 +86,6 @@ from .api.usage import read_usage_record as read_usage_record_api
 from .api.usage import read_usage_summary as read_usage_summary_api
 from .api.vaults import create_vault as create_vault_api
 from .api.vaults import create_vault_credential as create_vault_credential_api
-from .api.vaults import create_vault_credential_version as create_vault_credential_version_api
-from .api.vaults import delete_vault_credential_version as delete_vault_credential_version_api
 from .api.vaults import list_vault_credential_versions as list_vault_credential_versions_api
 from .api.vaults import list_vault_credentials as list_vault_credentials_api
 from .api.vaults import list_vaults as list_vaults_api
@@ -96,6 +94,7 @@ from .api.vaults import read_vault_credential as read_vault_credential_api
 from .api.vaults import read_vault_credential_version as read_vault_credential_version_api
 from .api.vaults import update_vault as update_vault_api
 from .api.vaults import update_vault_credential as update_vault_credential_api
+from .api.vaults import update_vault_credential_secret as update_vault_credential_secret_api
 from .api.work_items import list_work_items as list_work_items_api
 from .api.work_items import read_work_item as read_work_item_api
 
@@ -651,17 +650,14 @@ class _VaultsResource:
     def update_credential(self, vault_id: str, credential_id: str, body: Any) -> Any:
         return _unwrap(update_vault_credential_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, client=self._client, body=body))
 
+    def update_credential_secret(self, vault_id: str, credential_id: str, body: Any) -> Any:
+        return _unwrap(update_vault_credential_secret_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, client=self._client, body=body))
+
     def list_credential_versions(self, vault_id: str, credential_id: str, **query: Any) -> Any:
         return _unwrap(list_vault_credential_versions_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, client=self._client, **query))
 
-    def create_credential_version(self, vault_id: str, credential_id: str, body: Any) -> Any:
-        return _unwrap(create_vault_credential_version_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, client=self._client, body=body))
-
     def get_credential_version(self, vault_id: str, credential_id: str, version_id: str) -> Any:
         return _unwrap(read_vault_credential_version_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, version_id=version_id, client=self._client))
-
-    def delete_credential_version(self, vault_id: str, credential_id: str, version_id: str) -> Any:
-        return _unwrap(delete_vault_credential_version_api.sync_detailed(vault_id=vault_id, credential_id=credential_id, version_id=version_id, client=self._client))
 
 class _UsageResource:
     def __init__(self, owner: _ClientCore) -> None:

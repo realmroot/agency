@@ -8,7 +8,6 @@ import type {
   VaultScope,
   VersionState,
 } from '@server/domain/vault'
-import { secretRefPinsVersion } from '@server/domain/vault'
 import type {
   CreateCredentialInput,
   CreateVaultInput,
@@ -23,14 +22,12 @@ import type {
 } from '@server/usecases/ports'
 import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { sessions, vaultCredentials, vaultCredentialVersions, vaults } from '../../db/schema'
+import { vaultCredentials, vaultCredentialVersions, vaults } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type VaultRow = typeof vaults.$inferSelect
 type CredentialRow = typeof vaultCredentials.$inferSelect
 type CredentialVersionRow = typeof vaultCredentialVersions.$inferSelect
-
-const ACTIVE_SESSION_STATES = ['idle', 'running'] as const
 
 function newId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
@@ -42,14 +39,6 @@ function parseJson<T>(value: string) {
 
 function stringify(value: unknown) {
   return JSON.stringify(value)
-}
-
-function parseRefArray(value: string | null): unknown[] {
-  if (!value) {
-    return []
-  }
-  const parsed: unknown = JSON.parse(value)
-  return Array.isArray(parsed) ? (parsed as unknown[]) : []
 }
 
 function vaultRecordFrom(row: VaultRow): Vault {
@@ -413,48 +402,6 @@ export function createVaultRepo(db: Db): VaultRepo {
           .where(eq(vaultCredentials.id, version.credentialId)),
       ])
       return versionRecordFrom(versionRow)
-    },
-
-    async deleteVersion(versionId) {
-      await db.delete(vaultCredentialVersions).where(eq(vaultCredentialVersions.id, versionId))
-    },
-
-    async versionHasActiveReferences(version: CredentialVersion) {
-      const sessionFilters = [
-        eq(sessions.organizationId, version.spec.organizationId),
-        version.metadata.pid ? eq(sessions.projectId, version.metadata.pid) : undefined,
-        or(eq(sessions.state, ACTIVE_SESSION_STATES[0]), eq(sessions.state, ACTIVE_SESSION_STATES[1])),
-      ].filter((filter) => filter !== undefined)
-      const sessionReferences = await db
-        .select({
-          envFrom: sessions.envFrom,
-          volumes: sessions.volumes,
-          environmentSnapshot: sessions.environmentSnapshot,
-        })
-        .from(sessions)
-        .where(and(...sessionFilters))
-      return sessionReferences.some((row) => {
-        const envFromPins = parseRefArray(row.envFrom).some((entry) => {
-          const ref = entry && typeof entry === 'object' ? (entry as { secretRef?: unknown }).secretRef : null
-          return secretRefPinsVersion(ref, {
-            id: version.metadata.uid,
-            credentialId: version.spec.credentialId,
-            vaultId: version.spec.vaultId,
-          })
-        })
-        const volumePins = parseRefArray(row.volumes).some((entry) => {
-          const ref = entry && typeof entry === 'object' ? (entry as { secretRef?: unknown }).secretRef : null
-          return secretRefPinsVersion(ref, {
-            id: version.metadata.uid,
-            credentialId: version.spec.credentialId,
-            vaultId: version.spec.vaultId,
-          })
-        })
-        if (envFromPins || volumePins) {
-          return true
-        }
-        return false
-      })
     },
   }
 }

@@ -3522,13 +3522,6 @@ type CreateVaultCredentialRequest struct {
 // CreateVaultCredentialRequestType defines model for CreateVaultCredentialRequest.Type.
 type CreateVaultCredentialRequestType string
 
-// CreateVaultCredentialVersionRequest defines model for CreateVaultCredentialVersionRequest.
-type CreateVaultCredentialVersionRequest struct {
-	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
-	ReferenceName *string                 `json:"referenceName,omitempty"`
-	StringData    map[string]string       `json:"stringData"`
-}
-
 // CreateVaultRequest defines model for CreateVaultRequest.
 type CreateVaultRequest struct {
 	Metadata struct {
@@ -5371,6 +5364,13 @@ type UpdateVaultCredentialRequest struct {
 // UpdateVaultCredentialRequestState defines model for UpdateVaultCredentialRequest.State.
 type UpdateVaultCredentialRequestState string
 
+// UpdateVaultCredentialSecretRequest defines model for UpdateVaultCredentialSecretRequest.
+type UpdateVaultCredentialSecretRequest struct {
+	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
+	ReferenceName *string                 `json:"referenceName,omitempty"`
+	StringData    map[string]string       `json:"stringData"`
+}
+
 // UpdateVaultRequest defines model for UpdateVaultRequest.
 type UpdateVaultRequest struct {
 	Archived *bool                   `json:"archived,omitempty"`
@@ -5985,8 +5985,8 @@ type CreateVaultCredentialJSONRequestBody = CreateVaultCredentialRequest
 // UpdateVaultCredentialJSONRequestBody defines body for UpdateVaultCredential for application/json ContentType.
 type UpdateVaultCredentialJSONRequestBody = UpdateVaultCredentialRequest
 
-// CreateVaultCredentialVersionJSONRequestBody defines body for CreateVaultCredentialVersion for application/json ContentType.
-type CreateVaultCredentialVersionJSONRequestBody = CreateVaultCredentialVersionRequest
+// UpdateVaultCredentialSecretJSONRequestBody defines body for UpdateVaultCredentialSecret for application/json ContentType.
+type UpdateVaultCredentialSecretJSONRequestBody = UpdateVaultCredentialSecretRequest
 
 // Getter for additional properties for ProviderModelPricing. Returns the specified
 // element and whether it was found
@@ -8632,16 +8632,13 @@ type ClientInterface interface {
 
 	UpdateVaultCredential(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// UpdateVaultCredentialSecretWithBody request with any body
+	UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListVaultCredentialVersions request
 	ListVaultCredentialVersions(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateVaultCredentialVersionWithBody request with any body
-	CreateVaultCredentialVersionWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CreateVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, body CreateVaultCredentialVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteVaultCredentialVersion request
-	DeleteVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadVaultCredentialVersion request
 	ReadVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -10021,44 +10018,32 @@ func (c *APIClient) UpdateVaultCredential(ctx context.Context, vaultId string, c
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialSecretRequestWithBody(c.Server, vaultId, credentialId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialSecretRequest(c.Server, vaultId, credentialId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ListVaultCredentialVersions(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListVaultCredentialVersionsRequest(c.Server, vaultId, credentialId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) CreateVaultCredentialVersionWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultCredentialVersionRequestWithBody(c.Server, vaultId, credentialId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) CreateVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, body CreateVaultCredentialVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultCredentialVersionRequest(c.Server, vaultId, credentialId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) DeleteVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteVaultCredentialVersionRequest(c.Server, vaultId, credentialId, versionId)
 	if err != nil {
 		return nil, err
 	}
@@ -14751,6 +14736,60 @@ func NewUpdateVaultCredentialRequestWithBody(server string, vaultId string, cred
 	return req, nil
 }
 
+// NewUpdateVaultCredentialSecretRequest calls the generic UpdateVaultCredentialSecret builder with application/json body
+func NewUpdateVaultCredentialSecretRequest(server string, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateVaultCredentialSecretRequestWithBody(server, vaultId, credentialId, "application/json", bodyReader)
+}
+
+// NewUpdateVaultCredentialSecretRequestWithBody generates requests for UpdateVaultCredentialSecret with any type of body
+func NewUpdateVaultCredentialSecretRequestWithBody(server string, vaultId string, credentialId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vaultId", vaultId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "credentialId", credentialId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/vaults/%s/credentials/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListVaultCredentialVersionsRequest generates requests for ListVaultCredentialVersions
 func NewListVaultCredentialVersionsRequest(server string, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams) (*http.Request, error) {
 	var err error
@@ -14860,108 +14899,6 @@ func NewListVaultCredentialVersionsRequest(server string, vaultId string, creden
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewCreateVaultCredentialVersionRequest calls the generic CreateVaultCredentialVersion builder with application/json body
-func NewCreateVaultCredentialVersionRequest(server string, vaultId string, credentialId string, body CreateVaultCredentialVersionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateVaultCredentialVersionRequestWithBody(server, vaultId, credentialId, "application/json", bodyReader)
-}
-
-// NewCreateVaultCredentialVersionRequestWithBody generates requests for CreateVaultCredentialVersion with any type of body
-func NewCreateVaultCredentialVersionRequestWithBody(server string, vaultId string, credentialId string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vaultId", vaultId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "credentialId", credentialId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/vaults/%s/credentials/%s/versions", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewDeleteVaultCredentialVersionRequest generates requests for DeleteVaultCredentialVersion
-func NewDeleteVaultCredentialVersionRequest(server string, vaultId string, credentialId string, versionId string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vaultId", vaultId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "credentialId", credentialId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam2 string
-
-	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "versionId", versionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/vaults/%s/credentials/%s/versions/%s", pathParam0, pathParam1, pathParam2)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -15545,16 +15482,13 @@ type ClientWithResponsesInterface interface {
 
 	UpdateVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error)
 
+	// UpdateVaultCredentialSecretWithBodyWithResponse request with any body
+	UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
+
+	UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
+
 	// ListVaultCredentialVersionsWithResponse request
 	ListVaultCredentialVersionsWithResponse(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*ListVaultCredentialVersionsResponse, error)
-
-	// CreateVaultCredentialVersionWithBodyWithResponse request with any body
-	CreateVaultCredentialVersionWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialVersionResponse, error)
-
-	CreateVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, body CreateVaultCredentialVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialVersionResponse, error)
-
-	// DeleteVaultCredentialVersionWithResponse request
-	DeleteVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*DeleteVaultCredentialVersionResponse, error)
 
 	// ReadVaultCredentialVersionWithResponse request
 	ReadVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*ReadVaultCredentialVersionResponse, error)
@@ -18329,6 +18263,40 @@ func (r UpdateVaultCredentialResponse) ContentType() string {
 	return ""
 }
 
+type UpdateVaultCredentialSecretResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *VaultCredential
+	JSON400      *ErrorResponse
+	JSON401      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateVaultCredentialSecretResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateVaultCredentialSecretResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateVaultCredentialSecretResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListVaultCredentialVersionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -18356,73 +18324,6 @@ func (r ListVaultCredentialVersionsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListVaultCredentialVersionsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type CreateVaultCredentialVersionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *VaultCredential
-	JSON400      *ErrorResponse
-	JSON401      *ErrorResponse
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateVaultCredentialVersionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateVaultCredentialVersionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateVaultCredentialVersionResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type DeleteVaultCredentialVersionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *ErrorResponse
-	JSON401      *ErrorResponse
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteVaultCredentialVersionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteVaultCredentialVersionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteVaultCredentialVersionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -19523,6 +19424,23 @@ func (c *ClientWithResponses) UpdateVaultCredentialWithResponse(ctx context.Cont
 	return ParseUpdateVaultCredentialResponse(rsp)
 }
 
+// UpdateVaultCredentialSecretWithBodyWithResponse request with arbitrary body returning *UpdateVaultCredentialSecretResponse
+func (c *ClientWithResponses) UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
+	rsp, err := c.UpdateVaultCredentialSecretWithBody(ctx, vaultId, credentialId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateVaultCredentialSecretResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
+	rsp, err := c.UpdateVaultCredentialSecret(ctx, vaultId, credentialId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateVaultCredentialSecretResponse(rsp)
+}
+
 // ListVaultCredentialVersionsWithResponse request returning *ListVaultCredentialVersionsResponse
 func (c *ClientWithResponses) ListVaultCredentialVersionsWithResponse(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*ListVaultCredentialVersionsResponse, error) {
 	rsp, err := c.ListVaultCredentialVersions(ctx, vaultId, credentialId, params, reqEditors...)
@@ -19530,32 +19448,6 @@ func (c *ClientWithResponses) ListVaultCredentialVersionsWithResponse(ctx contex
 		return nil, err
 	}
 	return ParseListVaultCredentialVersionsResponse(rsp)
-}
-
-// CreateVaultCredentialVersionWithBodyWithResponse request with arbitrary body returning *CreateVaultCredentialVersionResponse
-func (c *ClientWithResponses) CreateVaultCredentialVersionWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialVersionResponse, error) {
-	rsp, err := c.CreateVaultCredentialVersionWithBody(ctx, vaultId, credentialId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateVaultCredentialVersionResponse(rsp)
-}
-
-func (c *ClientWithResponses) CreateVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, body CreateVaultCredentialVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialVersionResponse, error) {
-	rsp, err := c.CreateVaultCredentialVersion(ctx, vaultId, credentialId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateVaultCredentialVersionResponse(rsp)
-}
-
-// DeleteVaultCredentialVersionWithResponse request returning *DeleteVaultCredentialVersionResponse
-func (c *ClientWithResponses) DeleteVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*DeleteVaultCredentialVersionResponse, error) {
-	rsp, err := c.DeleteVaultCredentialVersion(ctx, vaultId, credentialId, versionId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteVaultCredentialVersionResponse(rsp)
 }
 
 // ReadVaultCredentialVersionWithResponse request returning *ReadVaultCredentialVersionResponse
@@ -23292,6 +23184,60 @@ func ParseUpdateVaultCredentialResponse(rsp *http.Response) (*UpdateVaultCredent
 	return response, nil
 }
 
+// ParseUpdateVaultCredentialSecretResponse parses an HTTP response from a UpdateVaultCredentialSecretWithResponse call
+func ParseUpdateVaultCredentialSecretResponse(rsp *http.Response) (*UpdateVaultCredentialSecretResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateVaultCredentialSecretResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VaultCredential
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListVaultCredentialVersionsResponse parses an HTTP response from a ListVaultCredentialVersionsWithResponse call
 func ParseListVaultCredentialVersionsResponse(rsp *http.Response) (*ListVaultCredentialVersionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -23333,107 +23279,6 @@ func ParseListVaultCredentialVersionsResponse(rsp *http.Response) (*ListVaultCre
 			return nil, err
 		}
 		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateVaultCredentialVersionResponse parses an HTTP response from a CreateVaultCredentialVersionWithResponse call
-func ParseCreateVaultCredentialVersionResponse(rsp *http.Response) (*CreateVaultCredentialVersionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateVaultCredentialVersionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest VaultCredential
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteVaultCredentialVersionResponse parses an HTTP response from a DeleteVaultCredentialVersionWithResponse call
-func ParseDeleteVaultCredentialVersionResponse(rsp *http.Response) (*DeleteVaultCredentialVersionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteVaultCredentialVersionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
 
 	}
 

@@ -907,6 +907,14 @@ func (s VaultsService) UpdateCredential(ctx context.Context, vaultID string, cre
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON404)
 }
 
+func (s VaultsService) UpdateCredentialSecret(ctx context.Context, vaultID string, credentialID string, body UpdateVaultCredentialSecretRequest) (*VaultCredential, error) {
+	response, err := s.client.raw.UpdateVaultCredentialSecretWithResponse(ctx, vaultID, credentialID, body)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON404, response.JSON409)
+}
+
 func (s VaultsService) ListCredentialVersions(ctx context.Context, vaultID string, credentialID string, params *ListVaultCredentialVersionsParams) (*VaultCredentialVersionListResponse, error) {
 	response, err := s.client.raw.ListVaultCredentialVersionsWithResponse(ctx, vaultID, credentialID, params)
 	if err != nil {
@@ -915,28 +923,12 @@ func (s VaultsService) ListCredentialVersions(ctx context.Context, vaultID strin
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON404)
 }
 
-func (s VaultsService) CreateCredentialVersion(ctx context.Context, vaultID string, credentialID string, body CreateVaultCredentialVersionRequest) (*VaultCredential, error) {
-	response, err := s.client.raw.CreateVaultCredentialVersionWithResponse(ctx, vaultID, credentialID, body)
-	if err != nil {
-		return nil, err
-	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON404, response.JSON409)
-}
-
 func (s VaultsService) GetCredentialVersion(ctx context.Context, vaultID string, credentialID string, versionID string) (*VaultCredentialVersion, error) {
 	response, err := s.client.raw.ReadVaultCredentialVersionWithResponse(ctx, vaultID, credentialID, versionID)
 	if err != nil {
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON404)
-}
-
-func (s VaultsService) DeleteCredentialVersion(ctx context.Context, vaultID string, credentialID string, versionID string) error {
-	response, err := s.client.raw.DeleteVaultCredentialVersionWithResponse(ctx, vaultID, credentialID, versionID)
-	if err != nil {
-		return err
-	}
-	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON400, response.JSON401, response.JSON404, response.JSON409)
 }
 
 type UsageService struct {

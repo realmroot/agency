@@ -125,7 +125,7 @@ export function VaultDetailView({
                               type="button"
                               variant="outline"
                               size="icon"
-                              aria-label="Rotate credential"
+                              aria-label="Update credential secret"
                               onClick={() => onRotate(credential)}
                             >
                               <RefreshCw data-icon="inline-start" />

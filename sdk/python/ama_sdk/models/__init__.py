@@ -115,9 +115,6 @@ from .create_vault_credential_request_secret import CreateVaultCredentialRequest
 from .create_vault_credential_request_secret_metadata import CreateVaultCredentialRequestSecretMetadata
 from .create_vault_credential_request_secret_string_data import CreateVaultCredentialRequestSecretStringData
 from .create_vault_credential_request_type import CreateVaultCredentialRequestType
-from .create_vault_credential_version_request import CreateVaultCredentialVersionRequest
-from .create_vault_credential_version_request_metadata import CreateVaultCredentialVersionRequestMetadata
-from .create_vault_credential_version_request_string_data import CreateVaultCredentialVersionRequestStringData
 from .create_vault_request import CreateVaultRequest
 from .create_vault_request_metadata import CreateVaultRequestMetadata
 from .create_vault_request_spec import CreateVaultRequestSpec
@@ -477,6 +474,9 @@ from .update_trigger_request_spec_template_spec import UpdateTriggerRequestSpecT
 from .update_vault_credential_request import UpdateVaultCredentialRequest
 from .update_vault_credential_request_metadata import UpdateVaultCredentialRequestMetadata
 from .update_vault_credential_request_state import UpdateVaultCredentialRequestState
+from .update_vault_credential_secret_request import UpdateVaultCredentialSecretRequest
+from .update_vault_credential_secret_request_metadata import UpdateVaultCredentialSecretRequestMetadata
+from .update_vault_credential_secret_request_string_data import UpdateVaultCredentialSecretRequestStringData
 from .update_vault_request import UpdateVaultRequest
 from .update_vault_request_spec import UpdateVaultRequestSpec
 from .update_vault_request_spec_scope import UpdateVaultRequestSpecScope
@@ -638,9 +638,6 @@ __all__ = (
     "CreateVaultCredentialRequestSecretMetadata",
     "CreateVaultCredentialRequestSecretStringData",
     "CreateVaultCredentialRequestType",
-    "CreateVaultCredentialVersionRequest",
-    "CreateVaultCredentialVersionRequestMetadata",
-    "CreateVaultCredentialVersionRequestStringData",
     "CreateVaultRequest",
     "CreateVaultRequestMetadata",
     "CreateVaultRequestSpec",
@@ -1000,6 +997,9 @@ __all__ = (
     "UpdateVaultCredentialRequest",
     "UpdateVaultCredentialRequestMetadata",
     "UpdateVaultCredentialRequestState",
+    "UpdateVaultCredentialSecretRequest",
+    "UpdateVaultCredentialSecretRequestMetadata",
+    "UpdateVaultCredentialSecretRequestStringData",
     "UpdateVaultRequest",
     "UpdateVaultRequestSpec",
     "UpdateVaultRequestSpecScope",

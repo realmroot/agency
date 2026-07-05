@@ -830,19 +830,13 @@ export const updateVaultCredential = (options) => (options.client ?? client).pat
     }
 });
 /**
- * List vault credential versions
+ * Update a vault credential secret
+ *
+ * Updates credential secret material. AMA records version snapshots internally for auditability.
  */
-export const listVaultCredentialVersions = (options) => (options.client ?? client).get({
+export const updateVaultCredentialSecret = (options) => (options.client ?? client).put({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions',
-    ...options
-});
-/**
- * Rotate a vault credential by creating a new version
- */
-export const createVaultCredentialVersion = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions',
+    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -850,13 +844,11 @@ export const createVaultCredentialVersion = (options) => (options.client ?? clie
     }
 });
 /**
- * Delete an unused vault credential version
- *
- * Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.
+ * List vault credential versions
  */
-export const deleteVaultCredentialVersion = (options) => (options.client ?? client).delete({
+export const listVaultCredentialVersions = (options) => (options.client ?? client).get({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}',
+    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions',
     ...options
 });
 /**

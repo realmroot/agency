@@ -146,21 +146,6 @@ export function vaultIdFromRef(secretRef: string): string | null {
   return vaultId && rest.length === 0 ? decodeURIComponent(vaultId) : null
 }
 
-export function secretRefPinsVersion(
-  secretRef: unknown,
-  version: { id: string; credentialId: string; vaultId: string },
-) {
-  return (
-    typeof secretRef === 'string' &&
-    secretRef ===
-      credentialVersionSecretRef({
-        vaultId: version.vaultId,
-        credentialId: version.credentialId,
-        versionId: version.id,
-      })
-  )
-}
-
 export function secretRefIdentity(secretRef: string): SecretRefIdentity | null {
   let parsed: URL
   try {

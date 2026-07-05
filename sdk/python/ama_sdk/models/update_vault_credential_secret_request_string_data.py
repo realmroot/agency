@@ -14,19 +14,19 @@ from ..types import UNSET, Unset
 
 
 
-T = TypeVar("T", bound="CreateVaultCredentialVersionRequestMetadata")
+T = TypeVar("T", bound="UpdateVaultCredentialSecretRequestStringData")
 
 
 
 @_attrs_define
-class CreateVaultCredentialVersionRequestMetadata:
+class UpdateVaultCredentialSecretRequestStringData:
     """ 
         Example:
-            {'source': 'console'}
+            {'token': 'redacted-input-only'}
 
      """
 
-    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+    additional_properties: dict[str, str] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -44,21 +44,21 @@ class CreateVaultCredentialVersionRequestMetadata:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        create_vault_credential_version_request_metadata = cls(
+        update_vault_credential_secret_request_string_data = cls(
         )
 
 
-        create_vault_credential_version_request_metadata.additional_properties = d
-        return create_vault_credential_version_request_metadata
+        update_vault_credential_secret_request_string_data.additional_properties = d
+        return update_vault_credential_secret_request_string_data
 
     @property
     def additional_keys(self) -> list[str]:
         return list(self.additional_properties.keys())
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> str:
         return self.additional_properties[key]
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: str) -> None:
         self.additional_properties[key] = value
 
     def __delitem__(self, key: str) -> None:

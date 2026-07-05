@@ -9,6 +9,8 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.update_vault_credential_secret_request import UpdateVaultCredentialSecretRequest
+from ...models.vault_credential import VaultCredential
 from typing import cast
 
 
@@ -16,29 +18,38 @@ from typing import cast
 def _get_kwargs(
     vault_id: str,
     credential_id: str,
-    version_id: str,
+    *,
+    body: UpdateVaultCredentialSecretRequest,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+
 
     
 
     
 
     _kwargs: dict[str, Any] = {
-        "method": "delete",
-        "url": "/api/v1/vaults/{vault_id}/credentials/{credential_id}/versions/{version_id}".format(vault_id=quote(str(vault_id), safe=""),credential_id=quote(str(credential_id), safe=""),version_id=quote(str(version_id), safe=""),),
+        "method": "put",
+        "url": "/api/v1/vaults/{vault_id}/credentials/{credential_id}".format(vault_id=quote(str(vault_id), safe=""),credential_id=quote(str(credential_id), safe=""),),
     }
 
+    _kwargs["json"] = body.to_dict()
 
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | ErrorResponse | None:
-    if response.status_code == 204:
-        response_204 = cast(Any, None)
-        return response_204
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | VaultCredential | None:
+    if response.status_code == 200:
+        response_200 = VaultCredential.from_dict(response.json())
+
+
+
+        return response_200
 
     if response.status_code == 400:
         response_400 = ErrorResponse.from_dict(response.json())
@@ -74,7 +85,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | ErrorResponse]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | VaultCredential]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -86,33 +97,33 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     vault_id: str,
     credential_id: str,
-    version_id: str,
     *,
     client: AuthenticatedClient,
+    body: UpdateVaultCredentialSecretRequest,
 
-) -> Response[Any | ErrorResponse]:
-    """ Delete an unused vault credential version
+) -> Response[ErrorResponse | VaultCredential]:
+    """ Update a vault credential secret
 
-     Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.
+     Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: vault_abc123.
         credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        body (UpdateVaultCredentialSecretRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | ErrorResponse]
+        Response[ErrorResponse | VaultCredential]
      """
 
 
     kwargs = _get_kwargs(
         vault_id=vault_id,
 credential_id=credential_id,
-version_id=version_id,
+body=body,
 
     )
 
@@ -125,67 +136,67 @@ version_id=version_id,
 def sync(
     vault_id: str,
     credential_id: str,
-    version_id: str,
     *,
     client: AuthenticatedClient,
+    body: UpdateVaultCredentialSecretRequest,
 
-) -> Any | ErrorResponse | None:
-    """ Delete an unused vault credential version
+) -> ErrorResponse | VaultCredential | None:
+    """ Update a vault credential secret
 
-     Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.
+     Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: vault_abc123.
         credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        body (UpdateVaultCredentialSecretRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | ErrorResponse
+        ErrorResponse | VaultCredential
      """
 
 
     return sync_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
-version_id=version_id,
 client=client,
+body=body,
 
     ).parsed
 
 async def asyncio_detailed(
     vault_id: str,
     credential_id: str,
-    version_id: str,
     *,
     client: AuthenticatedClient,
+    body: UpdateVaultCredentialSecretRequest,
 
-) -> Response[Any | ErrorResponse]:
-    """ Delete an unused vault credential version
+) -> Response[ErrorResponse | VaultCredential]:
+    """ Update a vault credential secret
 
-     Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.
+     Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: vault_abc123.
         credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        body (UpdateVaultCredentialSecretRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | ErrorResponse]
+        Response[ErrorResponse | VaultCredential]
      """
 
 
     kwargs = _get_kwargs(
         vault_id=vault_id,
 credential_id=credential_id,
-version_id=version_id,
+body=body,
 
     )
 
@@ -198,33 +209,33 @@ version_id=version_id,
 async def asyncio(
     vault_id: str,
     credential_id: str,
-    version_id: str,
     *,
     client: AuthenticatedClient,
+    body: UpdateVaultCredentialSecretRequest,
 
-) -> Any | ErrorResponse | None:
-    """ Delete an unused vault credential version
+) -> ErrorResponse | VaultCredential | None:
+    """ Update a vault credential secret
 
-     Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.
+     Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: vault_abc123.
         credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        body (UpdateVaultCredentialSecretRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | ErrorResponse
+        ErrorResponse | VaultCredential
      """
 
 
     return (await asyncio_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
-version_id=version_id,
 client=client,
+body=body,
 
     )).parsed

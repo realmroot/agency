@@ -20,7 +20,7 @@ export type VaultCredentialListResponse = RpcResponseType<VaultsRpc[':vaultId'][
 export type VaultCredential = ListItem<VaultCredentialListResponse>
 export type VaultCredentialInput = RpcRequestType<VaultsRpc[':vaultId']['credentials']['$post']>['json']
 export type VaultCredentialSecretInput = RpcRequestType<
-  VaultsRpc[':vaultId']['credentials'][':credentialId']['versions']['$post']
+  VaultsRpc[':vaultId']['credentials'][':credentialId']['$put']
 >['json']
 export type VaultCredentialVersion = NonNullable<VaultCredential['status']['activeVersion']>
 export type VaultCredentialVersionSpec = VaultCredentialVersion['spec']
@@ -59,11 +59,11 @@ export const vaultsApi = {
         json: input as RpcJson<(typeof v1.vaults)[':vaultId']['credentials']['$post']>,
       }),
     ),
-  rotateVaultCredential: (vaultId: string, credentialId: string, secret: VaultCredentialSecretInput) =>
+  updateVaultCredentialSecret: (vaultId: string, credentialId: string, secret: VaultCredentialSecretInput) =>
     rpcRequest<VaultCredential>(
-      v1.vaults[':vaultId'].credentials[':credentialId'].versions.$post({
+      v1.vaults[':vaultId'].credentials[':credentialId'].$put({
         param: { vaultId, credentialId },
-        json: secret as RpcJson<(typeof v1.vaults)[':vaultId']['credentials'][':credentialId']['versions']['$post']>,
+        json: secret as RpcJson<(typeof v1.vaults)[':vaultId']['credentials'][':credentialId']['$put']>,
       }),
     ),
   revokeVaultCredential: (vaultId: string, credentialId: string, revokeReason?: string) =>

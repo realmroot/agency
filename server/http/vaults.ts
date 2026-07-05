@@ -28,8 +28,8 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import { VaultSecretError, VaultVersionReferencedError } from '../usecases/ports'
-import { createCredential, deleteCredentialVersion, rotateCredential } from '../usecases/vaults'
+import { VaultSecretError } from '../usecases/ports'
+import { createCredential, rotateCredential } from '../usecases/vaults'
 import { requestId } from './request-context'
 
 type VaultRoutes = OpenAPIHono<DepsEnv>
@@ -156,7 +156,7 @@ const CreateCredentialSchema = z
   })
   .openapi('CreateVaultCredentialRequest')
 
-const CreateCredentialVersionSchema = SecretMaterialSchema.openapi('CreateVaultCredentialVersionRequest')
+const UpdateCredentialSecretSchema = SecretMaterialSchema.openapi('UpdateVaultCredentialSecretRequest')
 
 const UpdateCredentialSchema = z
   .object({
@@ -365,6 +365,27 @@ const updateCredentialRoute = createRoute({
   },
 })
 
+const updateCredentialSecretRoute = createRoute({
+  method: 'put',
+  path: '/{vaultId}/credentials/{credentialId}',
+  operationId: 'updateVaultCredentialSecret',
+  tags: ['Vaults'],
+  summary: 'Update a vault credential secret',
+  description: 'Updates credential secret material. AMA records version snapshots internally for auditability.',
+  ...AuthenticatedOperation,
+  request: {
+    params: CredentialParamsSchema,
+    body: { required: true, content: { 'application/json': { schema: UpdateCredentialSecretSchema } } },
+  },
+  responses: {
+    200: { description: 'Updated credential', content: { 'application/json': { schema: CredentialSchema } } },
+    400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Credential not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Credential unavailable', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
 const listVersionsRoute = createRoute({
   method: 'get',
   path: '/{vaultId}/credentials/{credentialId}/versions',
@@ -384,26 +405,6 @@ const listVersionsRoute = createRoute({
   },
 })
 
-const createVersionRoute = createRoute({
-  method: 'post',
-  path: '/{vaultId}/credentials/{credentialId}/versions',
-  operationId: 'createVaultCredentialVersion',
-  tags: ['Vaults'],
-  summary: 'Rotate a vault credential by creating a new version',
-  ...AuthenticatedOperation,
-  request: {
-    params: CredentialParamsSchema,
-    body: { required: true, content: { 'application/json': { schema: CreateCredentialVersionSchema } } },
-  },
-  responses: {
-    201: { description: 'Created credential version', content: { 'application/json': { schema: CredentialSchema } } },
-    400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    404: { description: 'Credential not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: { description: 'Credential unavailable', content: { 'application/json': { schema: ErrorResponseSchema } } },
-  },
-})
-
 const readVersionRoute = createRoute({
   method: 'get',
   path: '/{vaultId}/credentials/{credentialId}/versions/{versionId}',
@@ -417,30 +418,6 @@ const readVersionRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: {
       description: 'Credential version not found',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-  },
-})
-
-const deleteVersionRoute = createRoute({
-  method: 'delete',
-  path: '/{vaultId}/credentials/{credentialId}/versions/{versionId}',
-  operationId: 'deleteVaultCredentialVersion',
-  tags: ['Vaults'],
-  summary: 'Delete an unused vault credential version',
-  description: 'Hard delete. The active version and versions pinned by live runtime metadata cannot be deleted.',
-  ...AuthenticatedOperation,
-  request: { params: VersionParamsSchema },
-  responses: {
-    204: { description: 'Credential version deleted' },
-    400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    404: {
-      description: 'Credential version not found',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    409: {
-      description: 'Credential version still referenced',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
@@ -719,6 +696,42 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       })
       return c.json(serialized, 200)
     })
+    .openapi(updateCredentialSecretRoute, async (c) => {
+      const { vaultId, credentialId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) {
+        return auth
+      }
+      const vault = await deps.vaults.find(vaultId, visibility(auth))
+      const credential = vault ? await deps.vaults.findCredential(vault.metadata.uid, credentialId) : null
+      if (!vault || !credential) {
+        return credentialNotFound(c)
+      }
+      if (vault.metadata.archivedAt !== null || credential.status.phase !== 'active') {
+        return c.json({ error: { type: 'conflict', message: 'Credential is not active' } }, 409)
+      }
+      const before = serializeCredential(credential, await deps.vaults.activeVersion(credential))
+      let result: Awaited<ReturnType<typeof rotateCredential>>
+      try {
+        result = await rotateCredential(deps, credential, body)
+      } catch (error) {
+        return secretErrorOr(c, error)
+      }
+      const serialized = serializeCredential(result.credential, result.version)
+      await deps.audit.record(auth, {
+        action: 'vault_credential.secret.update',
+        resourceType: 'vault_credential',
+        resourceId: credential.metadata.uid,
+        outcome: 'success',
+        requestId: requestId(c),
+        metadata: { vaultId: vault.metadata.uid, activeVersionId: result.version.metadata.uid },
+        before,
+        after: serialized,
+      })
+      return c.json(serialized, 200)
+    })
     .openapi(listVersionsRoute, async (c) => {
       const { vaultId, credentialId } = c.req.valid('param')
       const { state, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
@@ -754,42 +767,6 @@ export function registerVaultRoutes(routes: VaultRoutes) {
         200,
       )
     })
-    .openapi(createVersionRoute, async (c) => {
-      const { vaultId, credentialId } = c.req.valid('param')
-      const body = c.req.valid('json')
-      const deps = c.get('deps')
-      const auth = await requireAuth(c)
-      if (auth instanceof Response) {
-        return auth
-      }
-      const vault = await deps.vaults.find(vaultId, visibility(auth))
-      const credential = vault ? await deps.vaults.findCredential(vault.metadata.uid, credentialId) : null
-      if (!vault || !credential) {
-        return credentialNotFound(c)
-      }
-      if (vault.metadata.archivedAt !== null || credential.status.phase !== 'active') {
-        return c.json({ error: { type: 'conflict', message: 'Credential is not active' } }, 409)
-      }
-      const before = serializeCredential(credential, await deps.vaults.activeVersion(credential))
-      let result: Awaited<ReturnType<typeof rotateCredential>>
-      try {
-        result = await rotateCredential(deps, credential, body)
-      } catch (error) {
-        return secretErrorOr(c, error)
-      }
-      const serialized = serializeCredential(result.credential, result.version)
-      await deps.audit.record(auth, {
-        action: 'vault_credential.rotate',
-        resourceType: 'vault_credential',
-        resourceId: credential.metadata.uid,
-        outcome: 'success',
-        requestId: requestId(c),
-        metadata: { vaultId: vault.metadata.uid, versionId: result.version.metadata.uid },
-        before,
-        after: serialized,
-      })
-      return c.json(serialized, 201)
-    })
     .openapi(readVersionRoute, async (c) => {
       const { vaultId, credentialId, versionId } = c.req.valid('param')
       const deps = c.get('deps')
@@ -804,38 +781,6 @@ export function registerVaultRoutes(routes: VaultRoutes) {
         return versionNotFound(c)
       }
       return c.json(serializeVersion(version), 200)
-    })
-    .openapi(deleteVersionRoute, async (c) => {
-      const { vaultId, credentialId, versionId } = c.req.valid('param')
-      const deps = c.get('deps')
-      const auth = await requireAuth(c)
-      if (auth instanceof Response) {
-        return auth
-      }
-      const vault = await deps.vaults.find(vaultId, visibility(auth))
-      const credential = vault ? await deps.vaults.findCredential(vault.metadata.uid, credentialId) : null
-      const version = credential ? await deps.vaults.findVersion(credential.metadata.uid, versionId) : null
-      if (!vault || !credential || !version) {
-        return versionNotFound(c)
-      }
-      try {
-        await deleteCredentialVersion(deps, credential, version)
-      } catch (error) {
-        if (error instanceof VaultVersionReferencedError) {
-          return c.json({ error: { type: 'conflict', message: error.message } }, 409)
-        }
-        return secretErrorOr(c, error)
-      }
-      await deps.audit.record(auth, {
-        action: 'vault_credential_version.delete',
-        resourceType: 'vault_credential_version',
-        resourceId: version.metadata.uid,
-        outcome: 'success',
-        requestId: requestId(c),
-        metadata: { vaultId: vault.metadata.uid, credentialId: credential.metadata.uid },
-        before: serializeVersion(version),
-      })
-      return c.body(null, 204)
     })
 }
 

@@ -6,7 +6,6 @@ import {
   credentialVersionSecretRef,
   secretReference,
   secretRefIdentity,
-  secretRefPinsVersion,
   stripStoredSecretMetadata,
   validateSecretData,
   vaultIdFromRef,
@@ -120,24 +119,6 @@ describe('[spec: vaults/secret-reference] credentialDataKeys', () => {
       'token',
     ])
     expect(credentialDataKeys({ dataKeys: ['ok', 1], encryptedSecretData: null })).toEqual([])
-  })
-})
-
-describe('[spec: vaults/version-delete] secretRefPinsVersion', () => {
-  const version = { vaultId: 'vault_1', credentialId: 'cred_1', id: 'ver_1' }
-
-  it('matches a reference pinning the exact version', () => {
-    expect(secretRefPinsVersion('ama://vaults/vault_1/credentials/cred_1/versions/ver_1', version)).toBe(true)
-  })
-
-  it('ignores a secret reference without a pinned version', () => {
-    expect(secretRefPinsVersion('ama://vaults/vault_1/credentials/cred_1', version)).toBe(false)
-  })
-
-  it('ignores a reference to a different credential or version', () => {
-    expect(secretRefPinsVersion('ama://vaults/vault_1/credentials/cred_2/versions/ver_1', version)).toBe(false)
-    expect(secretRefPinsVersion('ama://vaults/vault_1/credentials/cred_1/versions/ver_2', version)).toBe(false)
-    expect(secretRefPinsVersion(null, version)).toBe(false)
   })
 })
 

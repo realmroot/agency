@@ -2024,12 +2024,7 @@ export type UpdateVaultCredentialRequest = {
     };
 };
 
-export type VaultCredentialVersionListResponse = {
-    data: Array<VaultCredentialVersion>;
-    pagination: ListPagination;
-};
-
-export type CreateVaultCredentialVersionRequest = {
+export type UpdateVaultCredentialSecretRequest = {
     stringData: {
         [key: string]: string;
     };
@@ -2037,6 +2032,11 @@ export type CreateVaultCredentialVersionRequest = {
     metadata?: {
         [key: string]: unknown;
     };
+};
+
+export type VaultCredentialVersionListResponse = {
+    data: Array<VaultCredentialVersion>;
+    pagination: ListPagination;
 };
 
 export type ReadConfigzData = {
@@ -5008,6 +5008,46 @@ export type UpdateVaultCredentialResponses = {
 
 export type UpdateVaultCredentialResponse = UpdateVaultCredentialResponses[keyof UpdateVaultCredentialResponses];
 
+export type UpdateVaultCredentialSecretData = {
+    body: UpdateVaultCredentialSecretRequest;
+    path: {
+        vaultId: string;
+        credentialId: string;
+    };
+    query?: never;
+    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}';
+};
+
+export type UpdateVaultCredentialSecretErrors = {
+    /**
+     * Validation error
+     */
+    400: ErrorResponse;
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * Credential not found
+     */
+    404: ErrorResponse;
+    /**
+     * Credential unavailable
+     */
+    409: ErrorResponse;
+};
+
+export type UpdateVaultCredentialSecretError = UpdateVaultCredentialSecretErrors[keyof UpdateVaultCredentialSecretErrors];
+
+export type UpdateVaultCredentialSecretResponses = {
+    /**
+     * Updated credential
+     */
+    200: VaultCredential;
+};
+
+export type UpdateVaultCredentialSecretResponse = UpdateVaultCredentialSecretResponses[keyof UpdateVaultCredentialSecretResponses];
+
 export type ListVaultCredentialVersionsData = {
     body?: never;
     path: {
@@ -5049,87 +5089,6 @@ export type ListVaultCredentialVersionsResponses = {
 };
 
 export type ListVaultCredentialVersionsResponse = ListVaultCredentialVersionsResponses[keyof ListVaultCredentialVersionsResponses];
-
-export type CreateVaultCredentialVersionData = {
-    body: CreateVaultCredentialVersionRequest;
-    path: {
-        vaultId: string;
-        credentialId: string;
-    };
-    query?: never;
-    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions';
-};
-
-export type CreateVaultCredentialVersionErrors = {
-    /**
-     * Validation error
-     */
-    400: ErrorResponse;
-    /**
-     * Authentication required
-     */
-    401: ErrorResponse;
-    /**
-     * Credential not found
-     */
-    404: ErrorResponse;
-    /**
-     * Credential unavailable
-     */
-    409: ErrorResponse;
-};
-
-export type CreateVaultCredentialVersionError = CreateVaultCredentialVersionErrors[keyof CreateVaultCredentialVersionErrors];
-
-export type CreateVaultCredentialVersionResponses = {
-    /**
-     * Created credential version
-     */
-    201: VaultCredential;
-};
-
-export type CreateVaultCredentialVersionResponse = CreateVaultCredentialVersionResponses[keyof CreateVaultCredentialVersionResponses];
-
-export type DeleteVaultCredentialVersionData = {
-    body?: never;
-    path: {
-        vaultId: string;
-        credentialId: string;
-        versionId: string;
-    };
-    query?: never;
-    url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}';
-};
-
-export type DeleteVaultCredentialVersionErrors = {
-    /**
-     * Validation error
-     */
-    400: ErrorResponse;
-    /**
-     * Authentication required
-     */
-    401: ErrorResponse;
-    /**
-     * Credential version not found
-     */
-    404: ErrorResponse;
-    /**
-     * Credential version still referenced
-     */
-    409: ErrorResponse;
-};
-
-export type DeleteVaultCredentialVersionError = DeleteVaultCredentialVersionErrors[keyof DeleteVaultCredentialVersionErrors];
-
-export type DeleteVaultCredentialVersionResponses = {
-    /**
-     * Credential version deleted
-     */
-    204: void;
-};
-
-export type DeleteVaultCredentialVersionResponse = DeleteVaultCredentialVersionResponses[keyof DeleteVaultCredentialVersionResponses];
 
 export type ReadVaultCredentialVersionData = {
     body?: never;

@@ -24,9 +24,9 @@ export function RotateCredentialSheet({
 }) {
   const queryClient = useQueryClient()
   const [stringData, setStringData] = useState('')
-  const rotateCredential = useMutation({
+  const updateCredentialSecret = useMutation({
     mutationFn: (credentialId: string) =>
-      api.rotateVaultCredential(vaultId, credentialId, {
+      api.updateVaultCredentialSecret(vaultId, credentialId, {
         stringData: Object.fromEntries(
           Object.entries(parseJsonObject(stringData, 'String data')).map(([key, value]) => [key, String(value)]),
         ),
@@ -34,7 +34,7 @@ export function RotateCredentialSheet({
     onSuccess: () => {
       onOpenChange(false)
       setStringData('')
-      toast.success('Credential rotated')
+      toast.success('Credential secret updated')
       void queryClient.invalidateQueries({ queryKey: queryKeys.vaults.detail(vaultId) })
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -44,19 +44,19 @@ export function RotateCredentialSheet({
     /* v8 ignore start -- credential is null only when sheet is closed; form can't be submitted then */
     if (!credential || stringData.trim() === '') return
     /* v8 ignore stop */
-    rotateCredential.mutate(credential.metadata.uid)
+    updateCredentialSecret.mutate(credential.metadata.uid)
   }
 
   return (
     <Sheet open={credential !== null} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Rotate credential</SheetTitle>
+          <SheetTitle>Update credential secret</SheetTitle>
           <SheetDescription>
             {/* v8 ignore start -- sheet is only open when credential !== null; the null fallback never renders */}
             {credential
-              ? `Create a new active version for ${credential.metadata.name}. The previous version is kept as a safe reference for auditability.`
-              : 'Create a new active credential version.'}
+              ? `Replace the secret material for ${credential.metadata.name}. AMA records the change for auditability.`
+              : 'Replace credential secret material.'}
             {/* v8 ignore stop */}
           </SheetDescription>
         </SheetHeader>
@@ -74,9 +74,9 @@ export function RotateCredentialSheet({
                 <FieldDescription>JSON object accepted only in this request and stored encrypted.</FieldDescription>
               </Field>
             </FieldGroup>
-            <Button type="submit" disabled={stringData.trim() === '' || rotateCredential.isPending}>
+            <Button type="submit" disabled={stringData.trim() === '' || updateCredentialSecret.isPending}>
               <RotateCcwKey data-icon="inline-start" />
-              {rotateCredential.isPending ? 'Rotating credential' : 'Rotate credential'}
+              {updateCredentialSecret.isPending ? 'Updating credential secret' : 'Update credential secret'}
             </Button>
           </form>
         </div>

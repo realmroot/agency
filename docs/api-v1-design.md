@@ -68,9 +68,9 @@ v1 不兼容旧版（旧路径全部删除，无兼容层）。
 ### 1.4 凭据引用统一
 
 唯一机制：Vault 体系。控制面资源选择用
-`credentialRef: { credentialId, versionId? }`；运行时输入、envFrom、volume
+`credentialRef: { credentialId }`；运行时输入、envFrom、volume
 挂载用 URL 形态 `secretRef`，例如
-`ama://vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}` 或
+`ama://vaults/{vaultId}/credentials/{credentialId}` 或
 `ama://vaults/{vaultId}`。
 废除：`credentialSecretRef`（Provider/Runner 裸字符串）、`secretRefs`
 （Environment）、`vaultRefs`（Session）、`runtimeSecretEnv[].ref` 裸字符串。
@@ -207,9 +207,9 @@ GET              /api/v1/triggers/{triggerId}/runs/{runId}
 GET|POST         /api/v1/vaults
 GET|PATCH        /api/v1/vaults/{vaultId}                 归档 = PATCH
 GET|POST         /api/v1/vaults/{vaultId}/credentials
-GET|PATCH        /api/v1/vaults/{vaultId}/credentials/{credentialId}    吊销 = PATCH {state:'revoked'}
-GET|POST         /api/v1/vaults/{vaultId}/credentials/{credentialId}/versions    轮换 = POST → 201
-GET|DELETE       /api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}
+GET|PATCH|PUT    /api/v1/vaults/{vaultId}/credentials/{credentialId}    PUT 更新 secret；PATCH 吊销/metadata
+GET              /api/v1/vaults/{vaultId}/credentials/{credentialId}/versions
+GET              /api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}
 ```
 
 ### Connectors
