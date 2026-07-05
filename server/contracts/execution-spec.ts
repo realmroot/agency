@@ -101,9 +101,9 @@ export const VolumeMountSchema = z
 export const EnvFromEntrySchema = z
   .object({
     type: z.literal('secret').openapi({ example: 'secret' }),
-    name: z.string().min(1).max(120).openapi({ example: 'API_TOKEN' }),
+    name: z.string().min(1).max(120).optional().openapi({ example: 'API_TOKEN' }),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123',
+      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
     }),
     key: z.string().min(1).max(253).optional().openapi({ example: 'token' }),
   })

@@ -231,8 +231,8 @@ function errorBody(type: string, message: string, details?: Record<string, unkno
 function normalizeEnvFrom(entries: z.infer<typeof EnvFromEntrySchema>[]): EnvFromEntry[] {
   return entries.map((entry) => ({
     type: 'secret',
-    name: entry.name,
     secretRef: entry.secretRef,
+    ...(entry.name !== undefined ? { name: entry.name } : {}),
     ...(entry.key ? { key: entry.key } : {}),
   }))
 }

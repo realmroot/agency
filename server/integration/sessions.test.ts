@@ -1074,6 +1074,10 @@ describe('[CF] /api/v1/sessions', () => {
             secretRef: gitSecretRef,
             key: 'GH_TOKEN',
           },
+          {
+            type: 'secret',
+            secretRef: appSecretRef,
+          },
         ],
         volumes: [
           {
@@ -1117,6 +1121,8 @@ describe('[CF] /api/v1/sessions', () => {
     }
 
     expect(payload.env.SERVICE_PASSWORD).toBe('git-password')
+    expect(payload.env.alpha).toBe('secret-alpha')
+    expect(payload.env.beta).toBe('secret-beta')
     expect(payload).not.toHaveProperty('envFrom')
     expect(payload).not.toHaveProperty('volumes')
     expect(payload).not.toHaveProperty('volumeMounts')
@@ -1232,6 +1238,24 @@ describe('[CF] /api/v1/sessions', () => {
       },
     })
     expect(duplicateNameText).not.toContain('raw-github-token')
+
+    const keyWithoutNameRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: agent.id,
+        environmentId: environment.id,
+        runtime: 'ama',
+        prompt: 'Reject unnamed env secret key projection',
+        envFrom: [{ type: 'secret', key: 'GH_TOKEN', secretRef: credential.activeVersion.secretRef }],
+      }),
+    })
+    expect(keyWithoutNameRes.status).toBe(400)
+    await expect(keyWithoutNameRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'validation_error',
+        details: { fields: { 'envFrom.0.key': expect.any(String) } },
+      },
+    })
   })
 
   it('preserves canonical session environment snapshots for read contracts', async () => {

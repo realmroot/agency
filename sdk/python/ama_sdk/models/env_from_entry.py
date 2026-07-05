@@ -25,14 +25,14 @@ class EnvFromEntry:
     """ 
         Attributes:
             type_ (EnvFromEntryType):  Example: secret.
-            name (str):  Example: API_TOKEN.
-            secret_ref (str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123.
+            secret_ref (str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
+            name (str | Unset):  Example: API_TOKEN.
             key (str | Unset):  Example: token.
      """
 
     type_: EnvFromEntryType
-    name: str
     secret_ref: str
+    name: str | Unset = UNSET
     key: str | Unset = UNSET
 
 
@@ -42,9 +42,9 @@ class EnvFromEntry:
     def to_dict(self) -> dict[str, Any]:
         type_ = self.type_.value
 
-        name = self.name
-
         secret_ref = self.secret_ref
+
+        name = self.name
 
         key = self.key
 
@@ -53,9 +53,10 @@ class EnvFromEntry:
 
         field_dict.update({
             "type": type_,
-            "name": name,
             "secretRef": secret_ref,
         })
+        if name is not UNSET:
+            field_dict["name"] = name
         if key is not UNSET:
             field_dict["key"] = key
 
@@ -71,16 +72,16 @@ class EnvFromEntry:
 
 
 
-        name = d.pop("name")
-
         secret_ref = d.pop("secretRef")
+
+        name = d.pop("name", UNSET)
 
         key = d.pop("key", UNSET)
 
         env_from_entry = cls(
             type_=type_,
-            name=name,
             secret_ref=secret_ref,
+            name=name,
             key=key,
         )
 

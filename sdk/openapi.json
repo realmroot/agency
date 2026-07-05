@@ -5639,7 +5639,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
           },
           "key": {
             "type": "string",
@@ -5650,7 +5650,6 @@
         },
         "required": [
           "type",
-          "name",
           "secretRef"
         ],
         "additionalProperties": false

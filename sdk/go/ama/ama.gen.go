@@ -3556,7 +3556,7 @@ type EditToolInput struct {
 // EnvFromEntry defines model for EnvFromEntry.
 type EnvFromEntry struct {
 	Key       *string          `json:"key,omitempty"`
-	Name      string           `json:"name"`
+	Name      *string          `json:"name,omitempty"`
 	SecretRef string           `json:"secretRef"`
 	Type      EnvFromEntryType `json:"type"`
 }

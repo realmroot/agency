@@ -129,13 +129,17 @@ async function resolveEnvFromEntries(
     if (entry.type !== 'secret') {
       return { fields: { [`${field}.type`]: 'Use secret.' } }
     }
-    if (!ENV_NAME_PATTERN.test(entry.name)) {
-      return { fields: { [`${field}.name`]: 'Use a valid environment variable name.' } }
+    if (entry.name !== undefined) {
+      if (!ENV_NAME_PATTERN.test(entry.name)) {
+        return { fields: { [`${field}.name`]: 'Use a valid environment variable name.' } }
+      }
+      if (names.has(entry.name)) {
+        return { fields: { [`${field}.name`]: 'Secret environment variable names must be unique.' } }
+      }
+      names.add(entry.name)
+    } else if (entry.key !== undefined) {
+      return { fields: { [`${field}.key`]: 'Secret data key requires name.' } }
     }
-    if (names.has(entry.name)) {
-      return { fields: { [`${field}.name`]: 'Secret environment variable names must be unique.' } }
-    }
-    names.add(entry.name)
     const secretRef = entry.secretRef
     const version = await store.secretVersionForResolution(auth.organization.id, auth.project.id, secretRef)
     if (version?.state !== 'active') {
@@ -147,8 +151,8 @@ async function resolveEnvFromEntries(
     }
     entries.push({
       type: 'secret',
-      name: entry.name,
       secretRef,
+      ...(entry.name !== undefined ? { name: entry.name } : {}),
       ...(entry.key ? { key: entry.key } : {}),
     })
   }

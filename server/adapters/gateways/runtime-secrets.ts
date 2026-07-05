@@ -23,6 +23,8 @@ import { createRuntimeOrchestrationRepo } from '../repos/runtime-orchestration'
 
 type Db = ReturnType<typeof drizzle>
 
+const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
+
 // Resolves envFrom secret handles into env values. Both
 // dispatch paths use this seam: self-hosted lease materialization and cloud
 // session startup. AMA versions decrypt the stored ciphertext.
@@ -38,7 +40,7 @@ export async function resolveEnvFrom(
   const repo = createRuntimeOrchestrationRepo(db)
   for (const entry of items) {
     if (entry.type !== 'secret') {
-      throw new Error(`Runtime envFrom ${entry.name} has unsupported type ${entry.type}`)
+      throw new Error(`Runtime envFrom entry has unsupported type ${entry.type}`)
     }
     const { secretRef } = entry
     const version = await repo.secretVersionForResolution(scope.organizationId, scope.projectId, secretRef)
@@ -50,7 +52,16 @@ export async function resolveEnvFrom(
       throw new Error(`Runtime secret reference ${secretRef} is revoked by vault policy`)
     }
     const data = await decryptVersionData(env, version.metadata, secretRef)
-    resolved[entry.name] = secretValueForEnv(entry, data, secretRef)
+    if (entry.name === undefined) {
+      if (entry.key !== undefined) {
+        throw new Error(`Runtime secret reference ${secretRef} requires name when key is specified`)
+      }
+      for (const [name, value] of Object.entries(data)) {
+        addResolvedEnv(resolved, name, value, secretRef)
+      }
+    } else {
+      addResolvedEnv(resolved, entry.name, secretValueForEnv(entry, data, secretRef), secretRef)
+    }
   }
   return resolved
 }
@@ -67,7 +78,9 @@ export async function resolveRuntimeWorkspaceManifest(
   for (const volume of volumes) {
     const mountPath = volumeMountPath(volume.name, volumeMounts)
     if (isGitRepositoryVolume(volume)) {
-      const credential = volume.secretRef ? await resolveGitCredential(env, repo, scope, volume.secretRef, volume.items) : undefined
+      const credential = volume.secretRef
+        ? await resolveGitCredential(env, repo, scope, volume.secretRef, volume.items)
+        : undefined
       mounts.push({
         type: 'git_repository',
         name: volume.name,
@@ -155,7 +168,9 @@ async function resolveSecretMount(
     if (version.state !== 'active') {
       throw new Error(`Runtime secret reference ${secretRef} cannot be resolved`)
     }
-    return filesFromSecretData(projectSecretData(await decryptVersionData(env, version.metadata, secretRef), items, secretRef))
+    return filesFromSecretData(
+      projectSecretData(await decryptVersionData(env, version.metadata, secretRef), items, secretRef),
+    )
   }
   if (items && items.length > 0) {
     throw new Error(`Runtime secret reference ${secretRef} cannot use items without a credential reference`)
@@ -215,6 +230,16 @@ function secretValueForEnv(entry: EnvFromEntry, data: Record<string, string>, se
   return value
 }
 
+function addResolvedEnv(resolved: Record<string, string>, name: string, value: string, secretRef: string) {
+  if (!ENV_NAME_PATTERN.test(name)) {
+    throw new Error(`Runtime secret reference ${secretRef} projects invalid environment variable ${name}`)
+  }
+  if (Object.hasOwn(resolved, name)) {
+    throw new Error(`Runtime secret reference ${secretRef} projects duplicate environment variable ${name}`)
+  }
+  resolved[name] = value
+}
+
 function projectSecretData(data: Record<string, string>, items: SecretItem[] | undefined, secretRef: string) {
   if (!items || items.length === 0) {
     return data
@@ -226,7 +251,7 @@ function projectSecretData(data: Record<string, string>, items: SecretItem[] | u
       throw new Error(`Runtime secret reference ${secretRef} has no data key ${item.key}`)
     }
     const path = safeFilePath(item.path)
-    if (Object.prototype.hasOwnProperty.call(projected, path)) {
+    if (Object.hasOwn(projected, path)) {
       throw new Error(`Runtime secret reference ${secretRef} projects duplicate item path ${path}`)
     }
     projected[path] = value

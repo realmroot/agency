@@ -4,7 +4,7 @@
 
 export interface EnvFromEntry {
   type: 'secret'
-  name: string
+  name?: string | undefined
   secretRef: string
   key?: string | undefined
 }

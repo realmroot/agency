@@ -1380,7 +1380,7 @@ export type ExecutionEnv = {
 
 export type EnvFromEntry = {
     type: 'secret';
-    name: string;
+    name?: string;
     secretRef: string;
     key?: string;
 };

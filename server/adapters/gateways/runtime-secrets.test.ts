@@ -101,6 +101,52 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     ).resolves.toEqual({ TOKEN: 'secret-token' })
   })
 
+  it('expands all credential data keys when envFrom only declares secretRef', async () => {
+    secretVersionForResolutionMock.mockResolvedValueOnce({
+      state: 'active',
+      metadata: JSON.stringify({ encryptedSecretData: { API_TOKEN: 'cipher-token', SERVICE_URL: 'cipher-url' } }),
+      secretRef: 'ref',
+    })
+    decryptSecretValueMock.mockResolvedValueOnce('secret-token').mockResolvedValueOnce('https://service.test')
+    const gateway = createRuntimeSecretGateway(env, fakeDb)
+    await expect(gateway.resolveEnv(scope, [{ type: 'secret', secretRef: 'ref' }])).resolves.toEqual({
+      API_TOKEN: 'secret-token',
+      SERVICE_URL: 'https://service.test',
+    })
+  })
+
+  it('rejects duplicate or invalid credential data keys during envFrom expansion', async () => {
+    const gateway = createRuntimeSecretGateway(env, fakeDb)
+    secretVersionForResolutionMock
+      .mockResolvedValueOnce({
+        state: 'active',
+        metadata: JSON.stringify({ encryptedSecretData: { token: 'cipher-explicit' } }),
+        secretRef: 'ref-explicit',
+      })
+      .mockResolvedValueOnce({
+        state: 'active',
+        metadata: JSON.stringify({ encryptedSecretData: { TOKEN: 'cipher-token' } }),
+        secretRef: 'ref-duplicate',
+      })
+    decryptSecretValueMock.mockResolvedValueOnce('explicit-token').mockResolvedValueOnce('secret-token')
+    await expect(
+      gateway.resolveEnv(scope, [
+        { type: 'secret', name: 'TOKEN', key: 'token', secretRef: 'ref-explicit' },
+        { type: 'secret', secretRef: 'ref-duplicate' },
+      ]),
+    ).rejects.toThrow('duplicate environment variable TOKEN')
+
+    secretVersionForResolutionMock.mockResolvedValueOnce({
+      state: 'active',
+      metadata: JSON.stringify({ encryptedSecretData: { 'bad-key': 'cipher' } }),
+      secretRef: 'ref-invalid',
+    })
+    decryptSecretValueMock.mockResolvedValueOnce('secret')
+    await expect(gateway.resolveEnv(scope, [{ type: 'secret', secretRef: 'ref-invalid' }])).rejects.toThrow(
+      'invalid environment variable bad-key',
+    )
+  })
+
   it('rejects invalid encrypted metadata and missing env data keys', async () => {
     const gateway = createRuntimeSecretGateway(env, fakeDb)
     secretVersionForResolutionMock.mockResolvedValueOnce({ state: 'active', metadata: '{}', secretRef: 'ref' })
@@ -170,7 +216,12 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
             description: 'Notes',
             memories: [{ path: 'notes.md', content: 'hello' }],
           },
-          { name: 'secret', type: 'secret', secretRef: 'secret-ref', items: [{ key: 'APP_CONFIG', path: 'config.json' }] },
+          {
+            name: 'secret',
+            type: 'secret',
+            secretRef: 'secret-ref',
+            items: [{ key: 'APP_CONFIG', path: 'config.json' }],
+          },
         ],
         [
           { name: 'repo', mountPath: '/workspace/repo' },
