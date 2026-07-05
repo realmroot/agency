@@ -83,3 +83,75 @@ func TestRunnerOidcSettingsFromConfig(t *testing.T) {
 		t.Fatalf("unexpected runner settings: %#v", settings)
 	}
 }
+
+func TestRunnerOidcSettingsFromConfigRejectsIncompleteOIDCSettings(t *testing.T) {
+	base := func() *sdkama.PublicConfig {
+		return &sdkama.PublicConfig{
+			Version: sdkama.N1,
+			Service: sdkama.PublicServiceConfig{
+				Name:   sdkama.AnyManagedAgents,
+				Origin: "https://ama.example.test",
+			},
+			Auth: sdkama.PublicAuthConfig{
+				Oidc: &sdkama.PublicOidcConfig{
+					Issuer: "https://issuer.example.test",
+					Runner: &sdkama.PublicOidcClientConfig{
+						ClientId: "runner-client",
+						Scopes:   []string{"openid"},
+					},
+				},
+			},
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(*sdkama.PublicConfig)
+		want   string
+	}{
+		{
+			name: "missing oidc",
+			mutate: func(config *sdkama.PublicConfig) {
+				config.Auth.Oidc = nil
+			},
+			want: "missing OIDC settings",
+		},
+		{
+			name: "missing issuer",
+			mutate: func(config *sdkama.PublicConfig) {
+				config.Auth.Oidc.Issuer = " "
+			},
+			want: "missing OIDC issuer",
+		},
+		{
+			name: "missing runner client",
+			mutate: func(config *sdkama.PublicConfig) {
+				config.Auth.Oidc.Runner = nil
+			},
+			want: "missing runner OIDC client",
+		},
+		{
+			name: "missing runner client id",
+			mutate: func(config *sdkama.PublicConfig) {
+				config.Auth.Oidc.Runner.ClientId = " "
+			},
+			want: "missing runner OIDC client",
+		},
+		{
+			name: "missing runner scopes",
+			mutate: func(config *sdkama.PublicConfig) {
+				config.Auth.Oidc.Runner.Scopes = []string{" "}
+			},
+			want: "missing runner OIDC scopes",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			config := base()
+			tc.mutate(config)
+			_, err := RunnerOidcSettingsFromConfig(config, "https://fallback.example.test")
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected %q error, got %v", tc.want, err)
+			}
+		})
+	}
+}

@@ -346,6 +346,32 @@ func TestRunnerChannelMessageAccessorsHandleMissingFields(t *testing.T) {
 	}
 }
 
+func TestWorkspaceSDKConvertersHandleNilAndOptionalFields(t *testing.T) {
+	manifest := workspaceManifestFromSDK(nil)
+	if manifest.Root != "/workspace" || len(manifest.Mounts) != 0 {
+		t.Fatalf("unexpected default workspace manifest: %#v", manifest)
+	}
+
+	mounts := workspaceMountsFromSDK([]ama.RunnerWorkspaceMount{
+		{
+			Type:      ama.RunnerWorkspaceMountTypeMemory,
+			Name:      "memory",
+			MountPath: "/workspace/memory",
+		},
+	})
+	if len(mounts) != 1 || mounts[0].Credential != nil || mounts[0].Files != nil ||
+		mounts[0].Description != nil || mounts[0].Access != "" || mounts[0].ReadOnly {
+		t.Fatalf("unexpected optional workspace mount fields: %#v", mounts)
+	}
+
+	volumes := volumesFromSDK(nil)
+	mountList := volumeMountsFromSDK(nil)
+	memories := memorySnapshotsFromSDK(nil)
+	if volumes != nil || mountList != nil || memories != nil {
+		t.Fatalf("expected nil converters to stay nil: %#v %#v %#v", volumes, mountList, memories)
+	}
+}
+
 func ptr(value string) *string {
 	return &value
 }
