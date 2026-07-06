@@ -463,6 +463,12 @@ func (a *fakeAdapter) lastRequest() sandbox.ToolRequest {
 	return a.requests[len(a.requests)-1]
 }
 
+func (a *fakeAdapter) requestCount() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return len(a.requests)
+}
+
 func (a *fakeRuntimeAdapter) Run(ctx context.Context, request runtime.Request, write runtime.EventWriter) (runtime.JSON, error) {
 	a.request = request
 	if a.inspect != nil {
@@ -645,7 +651,7 @@ func TestRunOnceDispatchesCodexRuntimeThroughAdapterAndCompletesSessionLease(t *
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for the first canonical runtime event to be relayed over the hub channel.
-	waitForChannelWriteCount(t, hubChannel, 1, done)
+	waitForChannelWriteCount(t, hubChannel, 1)
 	if err := <-done; err != nil {
 		t.Fatalf("expected codex run success, got %v", err)
 	}
@@ -741,7 +747,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 	daemon.Config.WorkDir = workDir
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
-	waitForChannelWriteCount(t, hubChannel, 1, done)
+	waitForChannelWriteCount(t, hubChannel, 1)
 	if err := <-done; err != nil {
 		t.Fatalf("expected codex run success, got %v", err)
 	}
@@ -782,7 +788,7 @@ func TestRunOnceFailsCodexLeaseOnRuntimeAdapterFailure(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for the initial user prompt and runtime.error to be relayed.
-	waitForChannelWriteCount(t, hubChannel, 2, done)
+	waitForChannelWriteCount(t, hubChannel, 2)
 	if err := <-done; err == nil || !strings.Contains(err.Error(), "codex runtime bridge failed") {
 		t.Fatalf("expected codex bridge error after failed lease update, got %v", err)
 	}
@@ -849,7 +855,7 @@ func TestRunOnceLaunchesClaudeCodeRuntimeAndCompletesLease(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for the initial user prompt to be relayed.
-	waitForChannelWriteCount(t, hubChannel, 2, done)
+	waitForChannelWriteCount(t, hubChannel, 2)
 	if err := <-done; err != nil {
 		t.Fatalf("expected claude runtime success, got %v", err)
 	}
@@ -896,7 +902,7 @@ func TestRunOnceCompletesExternalRuntimeWhenSuccessfulResultHasCompletionWarning
 			done := make(chan error, 1)
 			go func() { done <- daemon.RunOnce(context.Background()) }()
 			// Wait for the prompt and default runtime message before asserting completion.
-			waitForChannelWriteCount(t, hubChannel, 2, done)
+			waitForChannelWriteCount(t, hubChannel, 2)
 			if err := <-done; err != nil {
 				t.Fatalf("expected successful runtime result to complete despite warning, got %v", err)
 			}
@@ -911,7 +917,7 @@ func TestRunOnceCompletesExternalRuntimeWhenSuccessfulResultHasCompletionWarning
 	}
 }
 
-func waitForChannelWriteCount(t *testing.T, channel *fakeSessionChannel, count int, done <-chan error) {
+func waitForChannelWriteCount(t *testing.T, channel *fakeSessionChannel, count int) {
 	t.Helper()
 	deadline := time.After(time.Second)
 	for {
@@ -919,10 +925,26 @@ func waitForChannelWriteCount(t *testing.T, channel *fakeSessionChannel, count i
 			return
 		}
 		select {
-		case err := <-done:
-			t.Fatalf("run finished before write %d: %v", count, err)
 		case <-deadline:
-			t.Fatalf("timed out waiting for write %d", count)
+			t.Fatalf("timed out waiting for write %d, got %d", count, channel.writeCount())
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+}
+
+func waitForSandboxRequest(t *testing.T, adapter *fakeAdapter, done <-chan error) {
+	t.Helper()
+	deadline := time.After(time.Second)
+	for {
+		if adapter.requestCount() > 0 {
+			return
+		}
+		select {
+		case err := <-done:
+			t.Fatalf("run finished before sandbox request: %v", err)
+		case <-deadline:
+			t.Fatal("timed out waiting for sandbox request")
 		default:
 			time.Sleep(time.Millisecond)
 		}
@@ -1459,7 +1481,7 @@ func TestContextCancellationMarksLeaseCancelled(t *testing.T) {
 	go func() {
 		done <- daemon.RunOnce(ctx)
 	}()
-	time.Sleep(5 * time.Millisecond)
+	waitForSandboxRequest(t, adapter, done)
 	cancel()
 	err := <-done
 	if err != nil {
@@ -2091,7 +2113,7 @@ func TestRunOnceFailsLeaseWhenSessionExceedsMaxDuration(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for the initial user prompt and runtime.error to be relayed.
-	waitForChannelWriteCount(t, hubChannel, 2, done)
+	waitForChannelWriteCount(t, hubChannel, 2)
 	err := <-done
 	if err == nil || !strings.Contains(err.Error(), "exceeded max duration") {
 		t.Fatalf("expected session timeout error, got %v", err)
@@ -2165,7 +2187,7 @@ func TestRunOnceDispatchesCopilotRuntimeThroughAdapter(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for at least one event to be relayed over the hub channel.
-	waitForChannelWriteCount(t, hubChannel, 1, done)
+	waitForChannelWriteCount(t, hubChannel, 1)
 	if err := <-done; err != nil {
 		t.Fatalf("expected copilot run success, got %v", err)
 	}
@@ -2236,7 +2258,7 @@ func TestRunOnceFailsCopilotLeaseOnRuntimeAdapterFailure(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- daemon.RunOnce(context.Background()) }()
 	// Wait for the initial user prompt and runtime.error to be relayed.
-	waitForChannelWriteCount(t, hubChannel, 2, done)
+	waitForChannelWriteCount(t, hubChannel, 2)
 	err := <-done
 	if err == nil || !strings.Contains(err.Error(), "copilot runtime bridge failed") {
 		t.Fatalf("expected copilot failure to be returned, got %v", err)
