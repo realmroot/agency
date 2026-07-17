@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -123,7 +124,13 @@ func TestPrepareWorkspaceMountsGitRepositoryWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(state), `"status": "mounted"`) || !strings.Contains(string(state), repoPath) {
+	var savedState struct {
+		Volumes []mountedVolume `json:"volumes"`
+	}
+	if err := json.Unmarshal(state, &savedState); err != nil {
+		t.Fatal(err)
+	}
+	if len(savedState.Volumes) != 1 || savedState.Volumes[0].Status != "mounted" || savedState.Volumes[0].LocalPath != repoPath {
 		t.Fatalf("expected mounted volume state, got %s", string(state))
 	}
 	if err := workspace.Cleanup(context.Background()); err != nil {
