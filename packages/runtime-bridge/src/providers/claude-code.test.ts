@@ -5,10 +5,11 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   query: vi.fn(),
 }))
 
+vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
+
 vi.mock('./cli-host', () => ({
   hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
-  resolveCliPath: () => undefined,
   sdkEnv: (request: RuntimeProviderRequest) => request.env,
 }))
 

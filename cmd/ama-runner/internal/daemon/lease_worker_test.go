@@ -353,7 +353,7 @@ func TestLeaseWorkerRunAssignedHandlesFailureAndCancellationStates(t *testing.T)
 	work := approvedLease()
 	work.workItem.Payload = ama.JSON{"protocol": "bad"}
 	client := &fakeAMAServer{lease: work}
-	relay := runnersession.NewRelay(client, "runner_1", "test", t.TempDir())
+	relay := runnersession.NewRelay(client, "runner_1", t.TempDir())
 	daemon := testDaemon(client, &fakeAdapter{})
 	worker := daemon.leaseWorker()
 	worker.Relay = relay

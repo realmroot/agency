@@ -85,8 +85,7 @@ The Windows runner is also a foreground process, matching macOS and Linux. Start
 .\ama-runner.exe `
   --api-server $env:AMA_API_SERVER `
   --project-id $env:AMA_PROJECT_ID `
-  --environment-id $env:AMA_ENVIRONMENT_ID `
-  --allow-unsafe-process
+  --environment-id $env:AMA_ENVIRONMENT_ID
 ```
 
 Node.js and the desired runtime CLIs (`codex`, `claude`, and/or `copilot`) must be installed on `PATH`. The runner resolves Windows `.exe` and `.cmd` launchers through `PATHEXT`.
@@ -101,7 +100,7 @@ Timing defaults:
 
 The daemon loads the saved device-login access token at startup when `AMA_TOKEN` is not provided. `AMA_TOKEN` remains available for tests and temporary process-local overrides, and it takes precedence over the saved token. Operators should prefer `ama-runner auth login` for normal self-hosted runners.
 
-The daemon fails fast when the API server, token, environment binding, work directory, unsafe adapter acknowledgement, or timing values are invalid. Runner registration stores only OIDC subject/client binding metadata, safe capabilities, environment binding metadata, heartbeat/load state, and secret references; raw token material is not stored in D1 or returned by runner APIs. Runner device-login tokens are accepted only for runner registration and runtime runner APIs, not for general control-plane resources such as environments, agents, sessions, providers, or vaults.
+The daemon fails fast when the API server, token, environment binding, work directory, timing values, or an unsafe adapter acknowledgement required by the host is invalid. Windows CLI-only runners do not enable the AMA process adapter and therefore do not require `--allow-unsafe-process`. Runner registration stores only OIDC subject/client binding metadata, safe capabilities, environment binding metadata, heartbeat/load state, and secret references; raw token material is not stored in D1 or returned by runner APIs. Runner device-login tokens are accepted only for runner registration and runtime runner APIs, not for general control-plane resources such as environments, agents, sessions, providers, or vaults.
 
 ## Local Executor Boundary
 

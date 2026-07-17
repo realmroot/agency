@@ -1,6 +1,6 @@
 //go:build windows
 
-package runtime
+package processtree
 
 import (
 	"os/exec"
@@ -12,13 +12,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type bridgeProcess struct {
+type Process struct {
 	cmd  *exec.Cmd
 	job  windows.Handle
 	once sync.Once
 }
 
-func startBridgeProcess(cmd *exec.Cmd) (*bridgeProcess, error) {
+func Start(cmd *exec.Cmd) (*Process, error) {
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
 		return nil, err
@@ -56,11 +56,15 @@ func startBridgeProcess(cmd *exec.Cmd) (*bridgeProcess, error) {
 		_ = windows.CloseHandle(job)
 		return nil, err
 	}
-	return &bridgeProcess{cmd: cmd, job: job}, nil
+	return &Process{cmd: cmd, job: job}, nil
 }
 
-func (p *bridgeProcess) Stop(grace time.Duration) {
-	if p == nil || p.cmd.Process == nil {
+func (p *Process) Wait() error {
+	return p.cmd.Wait()
+}
+
+func (p *Process) Stop(grace time.Duration) {
+	if p == nil || p.cmd == nil || p.cmd.Process == nil {
 		return
 	}
 	_ = windows.GenerateConsoleCtrlEvent(windows.CTRL_BREAK_EVENT, uint32(p.cmd.Process.Pid))
@@ -70,11 +74,13 @@ func (p *bridgeProcess) Stop(grace time.Duration) {
 	_ = windows.TerminateJobObject(p.job, 1)
 }
 
-func (p *bridgeProcess) Close() {
+func (p *Process) Close() error {
 	if p == nil {
-		return
+		return nil
 	}
+	var err error
 	p.once.Do(func() {
-		_ = windows.CloseHandle(p.job)
+		err = windows.CloseHandle(p.job)
 	})
+	return err
 }

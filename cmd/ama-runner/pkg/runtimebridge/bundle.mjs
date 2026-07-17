@@ -163,7 +163,7 @@ var require_index_min = __commonJS({
 var require_lib = __commonJS({
   "node_modules/.pnpm/which@4.0.0/node_modules/which/lib/index.js"(exports, module) {
     var { isexe, sync: isexeSync } = require_index_min();
-    var { join: join31, delimiter, sep: sep11, posix } = __require("path");
+    var { join: join32, delimiter, sep: sep11, posix } = __require("path");
     var isWindows = process.platform === "win32";
     var rSlash = new RegExp(`[${posix.sep}${sep11 === posix.sep ? "" : sep11}]`.replace(/(\\)/g, "\\$1"));
     var rRel = new RegExp(`^\\.${rSlash.source}`);
@@ -192,7 +192,7 @@ var require_lib = __commonJS({
     var getPathPart = (raw, cmd) => {
       const pathPart = /^".*"$/.test(raw) ? raw.slice(1, -1) : raw;
       const prefix = !pathPart && rRel.test(cmd) ? cmd.slice(0, 2) : "";
-      return prefix + join31(pathPart, cmd);
+      return prefix + join32(pathPart, cmd);
     };
     var which2 = async (cmd, opt = {}) => {
       const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt);
@@ -18421,6 +18421,51 @@ function toolResultText(result) {
   }).join("");
 }
 
+// packages/runtime-bridge/src/host/cli.ts
+var import_which = __toESM(require_lib(), 1);
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, extname, join } from "node:path";
+var WINDOWS_SCRIPT_EXTENSIONS = /* @__PURE__ */ new Set([".cmd", ".bat"]);
+function resolveCliPath(bin) {
+  const resolved = import_which.default.sync(bin, { nothrow: true }) ?? void 0;
+  if (!resolved || process.platform !== "win32" || !WINDOWS_SCRIPT_EXTENSIONS.has(extname(resolved).toLowerCase())) {
+    return resolved;
+  }
+  const script = npmShimScript(resolved);
+  if (!script) return void 0;
+  return bin === "codex" ? codexNativeExecutable(script) : script;
+}
+function npmShimScript(shimPath) {
+  try {
+    const contents = readFileSync(shimPath, "utf8");
+    const match = contents.match(/%~?dp0%?[\\/]([^"\r\n]+\.(?:[cm]?js))/i);
+    if (!match?.[1]) return void 0;
+    const relativePath = match[1].split(/[\\/]/).filter(Boolean);
+    const target = join(dirname(shimPath), ...relativePath);
+    return existsSync(target) ? target : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function codexNativeExecutable(scriptPath) {
+  const packageRoot = dirname(dirname(scriptPath));
+  const packageJson = join(packageRoot, "package.json");
+  if (!existsSync(packageJson)) return void 0;
+  const target = process.arch === "arm64" ? "aarch64-pc-windows-msvc" : "x86_64-pc-windows-msvc";
+  const platformPackage = process.arch === "arm64" ? "@openai/codex-win32-arm64" : "@openai/codex-win32-x64";
+  try {
+    const platformPackageJson = createRequire(packageJson).resolve(`${platformPackage}/package.json`);
+    const vendorRoot = join(dirname(platformPackageJson), "vendor", target);
+    for (const candidate of [join(vendorRoot, "bin", "codex.exe"), join(vendorRoot, "codex", "codex.exe")]) {
+      if (existsSync(candidate)) return candidate;
+    }
+  } catch {
+    return void 0;
+  }
+  return void 0;
+}
+
 // packages/runtime-bridge/src/protocol.ts
 function bridgeError(message, code, details) {
   return { message, ...code ? { code } : {}, ...details !== void 0 ? { details } : {} };
@@ -18503,36 +18548,10 @@ function subagentSummaries(value) {
   });
 }
 
-// packages/runtime-bridge/src/providers/cli-host.ts
-var import_which = __toESM(require_lib(), 1);
-function hostHome(env2) {
-  return typeof env2.AMA_RUNTIME_BRIDGE_HOST_HOME === "string" && env2.AMA_RUNTIME_BRIDGE_HOST_HOME ? env2.AMA_RUNTIME_BRIDGE_HOST_HOME : void 0;
-}
-function sdkEnv(request3) {
-  const home = hostHome(request3.env);
-  const sessionHome = request3.env.HOME;
-  return {
-    ...request3.env,
-    ...home ? {
-      HOME: home,
-      AMA_WORKSPACE_HOME: sessionHome,
-      GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
-      GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
-      GIT_CONFIG_NOSYSTEM: "1"
-    } : {}
-  };
-}
-function resolveCliPath(bin) {
-  return import_which.default.sync(bin, { nothrow: true }) ?? void 0;
-}
-function objectValue2(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-
 // packages/runtime-bridge/src/providers/claude-code.ts
 import { execSync } from "node:child_process";
-import { readFileSync as readFileSync2 } from "node:fs";
-import { join } from "node:path";
+import { readFileSync as readFileSync3 } from "node:fs";
+import { join as join2 } from "node:path";
 
 // node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.141_@cfworker+json-schema@4.1.1_zod@4.4.3/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs
 import { createRequire as $S } from "node:module";
@@ -37857,6 +37876,28 @@ function Z_($, Q) {
   return null;
 }
 
+// packages/runtime-bridge/src/providers/cli-host.ts
+function hostHome(env2) {
+  return typeof env2.AMA_RUNTIME_BRIDGE_HOST_HOME === "string" && env2.AMA_RUNTIME_BRIDGE_HOST_HOME ? env2.AMA_RUNTIME_BRIDGE_HOST_HOME : void 0;
+}
+function sdkEnv(request3) {
+  const home = hostHome(request3.env);
+  const sessionHome = request3.env.HOME;
+  return {
+    ...request3.env,
+    ...home ? {
+      HOME: home,
+      AMA_WORKSPACE_HOME: sessionHome,
+      GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
+      GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
+      GIT_CONFIG_NOSYSTEM: "1"
+    } : {}
+  };
+}
+function objectValue2(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
 // packages/runtime-bridge/src/providers/claude-code.ts
 var CLAUDE_USAGE_API = "https://api.anthropic.com/api/oauth/usage";
 var CLAUDE_WINDOW_LABELS = {
@@ -38008,7 +38049,7 @@ function readClaudeOAuthToken(home) {
   }
   if (!home) return void 0;
   try {
-    return parseClaudeOAuthToken(readFileSync2(join(home, ".claude", ".credentials.json"), "utf8"));
+    return parseClaudeOAuthToken(readFileSync3(join2(home, ".claude", ".credentials.json"), "utf8"));
   } catch {
     return void 0;
   }
@@ -38240,8 +38281,8 @@ var claudeCodeProvider = {
 };
 
 // packages/runtime-bridge/src/providers/codex.ts
-import { readFileSync as readFileSync3 } from "node:fs";
-import { join as join2 } from "node:path";
+import { readFileSync as readFileSync4 } from "node:fs";
+import { join as join3 } from "node:path";
 
 // node_modules/.pnpm/@openai+codex-sdk@0.142.5/node_modules/@openai/codex-sdk/dist/index.js
 import { promises as fs } from "fs";
@@ -38251,7 +38292,7 @@ import { spawn } from "child_process";
 import { statSync as statSync2 } from "fs";
 import path2 from "path";
 import readline from "readline";
-import { createRequire } from "module";
+import { createRequire as createRequire2 } from "module";
 async function createOutputSchemaFile(schema) {
   if (schema === void 0) {
     return { cleanup: async () => {
@@ -38391,7 +38432,7 @@ var PLATFORM_PACKAGE_BY_TARGET = {
   "x86_64-pc-windows-msvc": "@openai/codex-win32-x64",
   "aarch64-pc-windows-msvc": "@openai/codex-win32-arm64"
 };
-var moduleRequire = createRequire(import.meta.url);
+var moduleRequire = createRequire2(import.meta.url);
 var CodexExec = class {
   executablePath;
   pathDirs;
@@ -38672,7 +38713,7 @@ function findCodexPath() {
   let vendorRoot;
   try {
     const codexPackageJsonPath = moduleRequire.resolve(`${CODEX_NPM_NAME}/package.json`);
-    const codexRequire = createRequire(codexPackageJsonPath);
+    const codexRequire = createRequire2(codexPackageJsonPath);
     const platformPackageJsonPath = codexRequire.resolve(`${platformPackage}/package.json`);
     vendorRoot = path2.join(path2.dirname(platformPackageJsonPath), "vendor");
   } catch {
@@ -38775,7 +38816,7 @@ var CODEX_USAGE_API = "https://chatgpt.com/backend-api/wham/usage";
 function codexAccessToken(home) {
   if (!home) return null;
   try {
-    const auth = JSON.parse(readFileSync3(join2(home, ".codex", "auth.json"), "utf8"));
+    const auth = JSON.parse(readFileSync4(join3(home, ".codex", "auth.json"), "utf8"));
     return auth.tokens?.access_token ?? auth.access_token ?? null;
   } catch {
     return null;
@@ -39340,7 +39381,7 @@ var codexProvider = {
     if (!home) return null;
     let raw;
     try {
-      raw = readFileSync3(join2(home, ".codex", "models_cache.json"), "utf8");
+      raw = readFileSync4(join3(home, ".codex", "models_cache.json"), "utf8");
     } catch {
       return null;
     }
@@ -215364,10 +215405,10 @@ Awr();
 var import_node2 = __toESM(require_node(), 1);
 import { spawn as spawn3 } from "node:child_process";
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { existsSync as existsSync12 } from "node:fs";
-import { createRequire as createRequire2 } from "node:module";
+import { existsSync as existsSync13 } from "node:fs";
+import { createRequire as createRequire3 } from "node:module";
 import { Socket as Socket3 } from "node:net";
-import { dirname as dirname8, join as join30 } from "node:path";
+import { dirname as dirname9, join as join31 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // node_modules/.pnpm/@github+copilot-sdk@0.2.2/node_modules/@github/copilot-sdk/dist/generated/rpc.js
@@ -216422,13 +216463,13 @@ function getBundledCliPath() {
   if (typeof import.meta.resolve === "function") {
     const sdkUrl = import.meta.resolve("@github/copilot/sdk");
     const sdkPath = fileURLToPath(sdkUrl);
-    return join30(dirname8(dirname8(sdkPath)), "index.js");
+    return join31(dirname9(dirname9(sdkPath)), "index.js");
   }
-  const req = createRequire2(__filename);
+  const req = createRequire3(__filename);
   const searchPaths = req.resolve.paths("@github/copilot") ?? [];
   for (const base of searchPaths) {
-    const candidate = join30(base, "@github", "copilot", "index.js");
-    if (existsSync12(candidate)) {
+    const candidate = join31(base, "@github", "copilot", "index.js");
+    if (existsSync13(candidate)) {
       return candidate;
     }
   }
@@ -217375,7 +217416,7 @@ var CopilotClient = class _CopilotClient {
             t7.captureContent
           );
       }
-      if (!existsSync12(this.options.cliPath)) {
+      if (!existsSync13(this.options.cliPath)) {
         throw new Error(
           `Copilot CLI not found at ${this.options.cliPath}. Ensure @github/copilot is installed.`
         );

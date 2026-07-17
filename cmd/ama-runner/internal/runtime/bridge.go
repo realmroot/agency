@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/processtree"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/runtimebridge"
 )
 
@@ -61,7 +62,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	var stderrText bytes.Buffer
 	cmd.Stderr = &stderrText
-	process, err := startBridgeProcess(cmd)
+	process, err := processtree.Start(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	if err := stdin.WriteJSON(runRequest); err != nil {
 		process.Stop(b.ShutdownGraceInterval)
-		_ = cmd.Wait()
+		_ = process.Wait()
 		return nil, err
 	}
 	if request.RegisterControlSender != nil {
@@ -134,7 +135,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	if readErr != nil {
 		process.Stop(b.ShutdownGraceInterval)
 	}
-	waitErr := cmd.Wait()
+	waitErr := process.Wait()
 
 	final := JSON{"stderr": stderrText.String(), "exitCode": exitCode(waitErr)}
 	for key, value := range result {
@@ -205,7 +206,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	if err != nil {
 		return nil, err
 	}
-	process, err := startBridgeProcess(cmd)
+	process, err := processtree.Start(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	defer func() {
 		_ = stdin.Close()
 		process.Stop(0)
-		_ = cmd.Wait()
+		_ = process.Wait()
 	}()
 
 	reader := protocol.lineReader(stdout)
@@ -361,10 +362,10 @@ func appendRuntimeBridgeHostEnv(env []string) []string {
 	return env
 }
 
-func (b Bridge) waitOrStopProcess(process *bridgeProcess, grace time.Duration) error {
+func (b Bridge) waitOrStopProcess(process *processtree.Process, grace time.Duration) error {
 	done := make(chan error, 1)
 	go func() {
-		done <- process.cmd.Wait()
+		done <- process.Wait()
 	}()
 	select {
 	case err := <-done:

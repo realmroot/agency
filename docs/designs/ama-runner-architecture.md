@@ -10,13 +10,15 @@ reports lease state through the Go AMA SDK.
 - Keep packages by capability, not by layer names.
 - Keep CLI command assembly in `cmd/ama-runner/cmd`; keep config loading and
   credential helpers in `internal/cli` and `internal/config`.
-- Keep the daemon package responsible for process lifecycle, lease orchestration,
+- Keep the daemon package responsible for runner lifecycle, lease orchestration,
   and relay wiring.
 - Keep reusable runner build metadata in `pkg/version`.
 - Keep generated cross-language session event vocabulary in `pkg/sessionevent`.
 - Keep sandbox mechanics in `internal/sandbox`.
 - Keep CLI-backed runtime mechanics in `internal/runtime`.
 - Keep workspace materialization in `internal/workspace`.
+- Keep host-specific primitives in narrow `internal/sys/*` packages. Their
+  callers must not branch on operating-system names or import OS-specific APIs.
 - Do not introduce a runner-side AMA Server client abstraction. Runner code calls
   the Go SDK facade directly.
 - Do not add objects unless they own a real lifecycle or invariant. A struct that
@@ -128,6 +130,20 @@ Go client for the embedded TypeScript runtime bridge:
 
 The bridge owns provider/runtime semantics in TypeScript. Go owns only the local
 process boundary, environment boundary, and conversion into runner callbacks.
+
+### `sys/host`, `sys/lockfile`, `sys/processtree`, and `sys/userdirs`
+
+Host integration primitives:
+
+- reports build platform and host-supported runtime capabilities
+- resolves native user configuration and state directories
+- serializes credential and daemon ownership with native file locks
+- starts and terminates complete process trees through Unix process groups or Windows Job Objects
+
+Each package exposes one platform-neutral contract and keeps its Unix and Windows
+implementations in build-tagged files. Config, daemon, runtime, and sandbox code
+consume those contracts without importing `syscall`, `x/sys/windows`, or checking
+`runtime.GOOS`.
 
 ### `runtime.Runner`
 

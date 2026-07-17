@@ -18,6 +18,7 @@ import {
   turnEnd,
   usageEvent,
 } from '../events/ama'
+import { resolveCliPath } from '../host/cli'
 import {
   type AmaRuntimeEvent,
   agentSystemPrompt,
@@ -27,7 +28,7 @@ import {
   type RuntimeProviderRequest,
   type RuntimeUsageWindow,
 } from '../protocol'
-import { hostHome, objectValue, resolveCliPath, sdkEnv } from './cli-host'
+import { hostHome, objectValue, sdkEnv } from './cli-host'
 
 const CLAUDE_USAGE_API = 'https://api.anthropic.com/api/oauth/usage'
 const CLAUDE_WINDOW_LABELS: Record<string, string> = {

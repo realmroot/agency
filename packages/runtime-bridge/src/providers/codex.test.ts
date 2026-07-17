@@ -22,12 +22,13 @@ vi.mock('@openai/codex-sdk', () => ({
   },
 }))
 
+vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
+
 vi.mock('./cli-host', () => ({
   arrayValue: (value: unknown) => (Array.isArray(value) ? value : []),
   hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
   normalizeProviderUsage: (value: Record<string, unknown>) => value,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
-  resolveCliPath: () => undefined,
   sdkEnv: (request: RuntimeProviderRequest) => request.env,
 }))
 

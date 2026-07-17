@@ -9,6 +9,7 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
 	runnersession "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/session"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
 	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
@@ -1382,8 +1383,11 @@ func TestNewDaemonWiresSDKClientAndAdapters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected daemon construction success, got %v", err)
 	}
-	if daemon.Client == nil || daemon.Channels == nil || daemon.Adapter == nil {
+	if daemon.Client == nil || daemon.Channels == nil {
 		t.Fatalf("expected daemon dependencies wired, got %#v", daemon)
+	}
+	if (daemon.Adapter != nil) != host.SupportsAMARuntime() {
+		t.Fatalf("expected daemon adapter availability to match host support, got %T", daemon.Adapter)
 	}
 	if daemon.Build.Version != "test" {
 		t.Fatalf("expected build info retained, got %#v", daemon.Build)
@@ -2034,8 +2038,12 @@ func TestHeartbeatReportsRuntimeInventoryWithStatusAndDiagnostics(t *testing.T) 
 	for _, entry := range inventory {
 		byRuntime[entry.Runtime] = entry
 	}
-	if got := byRuntime["ama"]; got.State != "ready" || stringValue(got.Detail) == "" {
-		t.Fatalf("expected ready ama runtime inventory, got %#v", got)
+	if host.SupportsAMARuntime() {
+		if got := byRuntime["ama"]; got.State != "ready" || stringValue(got.Detail) == "" {
+			t.Fatalf("expected ready ama runtime inventory, got %#v", got)
+		}
+	} else if _, ok := byRuntime["ama"]; ok {
+		t.Fatal("expected host without AMA support to omit its inventory entry")
 	}
 	if got := byRuntime["codex"]; got.State != "ready" || stringValue(got.Version) != "0.42.0" || stringValue(got.Detail) == "" {
 		t.Fatalf("expected ready codex inventory with version and detail, got %#v", got)
@@ -2077,7 +2085,7 @@ func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) 
 	}
 }
 
-func TestHeartbeatAdvertisesOnlyAMAWhenNoCLIRuntimesAreInstalled(t *testing.T) {
+func TestHeartbeatAdvertisesOnlyHostRuntimesWhenNoCLIRuntimesAreInstalled(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeInventory = runtimeInventoryFor()
@@ -2085,7 +2093,10 @@ func TestHeartbeatAdvertisesOnlyAMAWhenNoCLIRuntimesAreInstalled(t *testing.T) {
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
 	got := heartbeatCapabilities(client.heartbeats[0])
-	want := []string{amaRuntimeCapability}
+	var want []string
+	if host.SupportsAMARuntime() {
+		want = []string{amaRuntimeCapability}
+	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("expected only base capabilities %v, got %v", want, got)
 	}

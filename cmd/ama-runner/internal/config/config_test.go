@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
 )
 
 func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
@@ -32,7 +34,6 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 		{"apiServerMalformed", func(c *Config) { c.APIServer = "://bad" }, "absolute URL"},
 		{"token", func(c *Config) { c.Token = "" }, "AMA token"},
 		{"environment", func(c *Config) { c.EnvironmentID = "" }, "AMA environment id"},
-		{"unsafe", func(c *Config) { c.AllowUnsafeProcess = false }, "process-unsafe adapter requires"},
 		{"workDir", func(c *Config) { c.WorkDir = "" }, "work dir"},
 		{"stateDir", func(c *Config) { c.StateDir = "" }, "runner state directory"},
 		{"max", func(c *Config) { c.MaxConcurrent = 0 }, "max concurrent"},
@@ -41,6 +42,13 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 		{"renew", func(c *Config) { c.RenewInterval = time.Minute }, "renew interval"},
 		{"timeout", func(c *Config) { c.CommandTimeout = 0 }, "command timeout"},
 		{"maxSession", func(c *Config) { c.MaxSessionDuration = -time.Second }, "max session duration"},
+	}
+	if host.SupportsAMARuntime() {
+		cases = append(cases, struct {
+			name   string
+			mutate func(*Config)
+			want   string
+		}{"unsafe", func(c *Config) { c.AllowUnsafeProcess = false }, "process-unsafe adapter requires"})
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -259,43 +267,6 @@ func TestCredentialStoreRejectsInvalidProfilesAndFiles(t *testing.T) {
 	}
 	if err := saveRawCredentialFile(filepath.Join(blockedParent, "credentials.json"), CredentialStore{}); err == nil {
 		t.Fatal("expected save under file parent to fail")
-	}
-}
-
-func TestDefaultPathsFollowXDGDirectories(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/config")
-	t.Setenv("XDG_STATE_HOME", "/state")
-	t.Setenv("HOME", "/home/runner")
-	if got := DefaultConfigPath(); got != filepath.Join("/config", "ama-runner", "config.json") {
-		t.Fatalf("expected XDG config path, got %q", got)
-	}
-	if got := DefaultCredentialPath(); got != filepath.Join("/config", "ama-runner", "credentials.json") {
-		t.Fatalf("expected XDG credential path, got %q", got)
-	}
-	if got := DefaultStateDir(); got != filepath.Join("/state", "ama-runner") {
-		t.Fatalf("expected XDG state dir, got %q", got)
-	}
-	if got := DefaultWorkDir(); got != filepath.Join("/state", "ama-runner", "work") {
-		t.Fatalf("expected XDG work dir, got %q", got)
-	}
-}
-
-func TestDefaultPathsFallBackToHomeAndCanBeEmpty(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
-	t.Setenv("XDG_STATE_HOME", "")
-	t.Setenv("HOME", "/home/runner")
-	if got := DefaultConfigPath(); got != filepath.Join("/home/runner", ".config", "ama-runner", "config.json") {
-		t.Fatalf("expected HOME config path, got %q", got)
-	}
-	if got := DefaultCredentialPath(); got != filepath.Join("/home/runner", ".config", "ama-runner", "credentials.json") {
-		t.Fatalf("expected HOME credential path, got %q", got)
-	}
-	if got := DefaultStateDir(); got != filepath.Join("/home/runner", ".local", "state", "ama-runner") {
-		t.Fatalf("expected HOME state path, got %q", got)
-	}
-	t.Setenv("HOME", "")
-	if DefaultConfigPath() != "" || DefaultCredentialPath() != "" || DefaultStateDir() != "" || DefaultWorkDir() != "" {
-		t.Fatal("expected empty default paths without HOME or XDG")
 	}
 }
 

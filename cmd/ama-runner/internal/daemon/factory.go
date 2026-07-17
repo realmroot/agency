@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"net/http"
-	"runtime"
 	"time"
 
 	runnerauth "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/auth"
@@ -34,14 +33,11 @@ func New(config runnerconfig.Config, build version.Info) (*Daemon, error) {
 	if err != nil {
 		return nil, err
 	}
-	daemon := &Daemon{
+	return &Daemon{
 		Config:   config,
 		Client:   client,
 		Channels: client.Runners,
+		Adapter:  sandbox.NewHostAdapter(config.CommandTimeout, config.ShutdownGraceInterval),
 		Build:    build,
-	}
-	if runtime.GOOS != "windows" {
-		daemon.Adapter = sandbox.ProcessAdapter{CommandTimeout: config.CommandTimeout, ShutdownGraceInterval: config.ShutdownGraceInterval}
-	}
-	return daemon, nil
+	}, nil
 }

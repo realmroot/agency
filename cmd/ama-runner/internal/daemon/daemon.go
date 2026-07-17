@@ -8,13 +8,13 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
 	runnersession "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/session"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
 	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 	"github.com/samber/lo"
 	"log/slog"
 	"os"
-	goruntime "runtime"
 	"strings"
 	"sync"
 	"time"
@@ -240,7 +240,7 @@ func (d *Daemon) startRelay(ctx context.Context) {
 	if d.relay != nil {
 		return
 	}
-	d.relay = runnersession.NewRelay(d.Channels, d.RunnerID, runnerconfig.ProcessUnsafeAdapter, d.Config.WorkDir, d.runAssignedWork)
+	d.relay = runnersession.NewRelay(d.Channels, d.RunnerID, d.Config.WorkDir, d.runAssignedWork)
 	go d.relay.Run(ctx)
 }
 
@@ -423,15 +423,16 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 		return "", err
 	}
 	build := d.buildInfo()
+	hostInfo := host.Current()
 	runner, err := d.Client.Runners.Create(ctx, ama.CreateRunnerRequest{
 		Name:          displayName(),
 		Capabilities:  lo.ToPtr(d.refreshCapabilities()),
 		EnvironmentId: lo.EmptyableToPtr(d.Config.EnvironmentID),
 		MaxConcurrent: lo.ToPtr(d.Config.MaxConcurrent),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  sandboxAdapterName(),
-			"os":              goruntime.GOOS,
-			"arch":            goruntime.GOARCH,
+			"sandboxAdapter":  sandbox.HostAdapterName(),
+			"os":              hostInfo.OS,
+			"arch":            hostInfo.Arch,
 			"machineId":       machineID,
 			"hostname":        displayName(),
 			"runnerVersion":   build.Version,
@@ -452,15 +453,16 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 	}
 	capabilities := d.refreshCapabilities()
 	build := d.buildInfo()
+	hostInfo := host.Current()
 	_, err = d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, ama.PutRunnerHeartbeatRequest{
 		State:            lo.ToPtr(ama.PutRunnerHeartbeatRequestStateActive),
 		Capabilities:     lo.ToPtr(capabilities),
 		RuntimeUsage:     lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
 		RuntimeInventory: lo.ToPtr(runnerRuntimeInventory(d.currentRuntimeInventory())),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  sandboxAdapterName(),
-			"os":              goruntime.GOOS,
-			"arch":            goruntime.GOARCH,
+			"sandboxAdapter":  sandbox.HostAdapterName(),
+			"os":              hostInfo.OS,
+			"arch":            hostInfo.Arch,
 			"machineId":       machineID,
 			"hostname":        displayName(),
 			"runnerVersion":   build.Version,
@@ -480,15 +482,15 @@ func (d *Daemon) sendOfflineHeartbeat(ctx context.Context) error {
 }
 
 func (d *Daemon) refreshCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().RefreshCapabilities(), supportsAMARuntime())
+	return runnerCapabilities(d.runtimeInventory().RefreshCapabilities(), host.SupportsAMARuntime())
 }
 
 func (d *Daemon) currentCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().CurrentCapabilities(), supportsAMARuntime())
+	return runnerCapabilities(d.runtimeInventory().CurrentCapabilities(), host.SupportsAMARuntime())
 }
 
 func (d *Daemon) currentRuntimeInventory() []runtime.RuntimeInventoryEntry {
-	return withAMARuntimeInventory(d.runtimeInventory().CurrentRuntimeInventory(), supportsAMARuntime())
+	return withAMARuntimeInventory(d.runtimeInventory().CurrentRuntimeInventory(), host.SupportsAMARuntime())
 }
 
 func (d *Daemon) setRuntimeUsageSnapshot(snapshot *runtime.UsageSnapshot) {
@@ -524,17 +526,6 @@ func withAMARuntimeInventory(inventory []runtime.RuntimeInventoryEntry, supports
 		State:   runtime.RuntimeInventoryStateReady,
 		Detail:  "AMA runtime is available",
 	}}, inventory...)
-}
-
-func supportsAMARuntime() bool {
-	return goruntime.GOOS != "windows"
-}
-
-func sandboxAdapterName() string {
-	if supportsAMARuntime() {
-		return runnerconfig.ProcessUnsafeAdapter
-	}
-	return "none"
 }
 
 func runnerRuntimeInventory(inventory []runtime.RuntimeInventoryEntry) []ama.RunnerRuntimeInventory {

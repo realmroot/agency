@@ -12,6 +12,7 @@ import {
   toolResultMessage,
   turnEnd,
 } from '../events/ama'
+import { resolveCliPath } from '../host/cli'
 import {
   type AmaRuntimeEvent,
   agentSystemPrompt,
@@ -20,7 +21,7 @@ import {
   type RuntimeProviderRequest,
   type RuntimeUsageWindow,
 } from '../protocol'
-import { hostHome, objectValue, resolveCliPath, sdkEnv } from './cli-host'
+import { hostHome, objectValue, sdkEnv } from './cli-host'
 
 const CODEX_USAGE_API = 'https://chatgpt.com/backend-api/wham/usage'
 

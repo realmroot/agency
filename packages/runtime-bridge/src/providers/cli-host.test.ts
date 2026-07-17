@@ -1,12 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
-const whichSyncMock = vi.fn<(command: string, options?: unknown) => string | null>()
-vi.mock('which', () => ({
-  default: { sync: (command: string, options?: unknown) => whichSyncMock(command, options) },
-}))
-
-const { arrayValue, hostHome, normalizeProviderUsage, objectValue, resolveCliPath, sdkEnv } = await import('./cli-host')
+const { arrayValue, hostHome, normalizeProviderUsage, objectValue, sdkEnv } = await import('./cli-host')
 
 function request(env: Record<string, string>): RuntimeProviderRequest {
   return {
@@ -19,11 +14,6 @@ function request(env: Record<string, string>): RuntimeProviderRequest {
     prompt: 'hello',
   }
 }
-
-afterEach(() => {
-  vi.restoreAllMocks()
-  whichSyncMock.mockReset()
-})
 
 describe('hostHome', () => {
   it('returns the host home when set to a non-empty string', () => {
@@ -54,19 +44,6 @@ describe('sdkEnv', () => {
     expect(env.GH_CONFIG_DIR).toBeUndefined()
     expect(env.GIT_CONFIG_GLOBAL).toBeUndefined()
     expect(env.GIT_CONFIG_NOSYSTEM).toBeUndefined()
-  })
-})
-
-describe('resolveCliPath', () => {
-  it('resolves the binary through the cross-platform host lookup', () => {
-    whichSyncMock.mockReturnValue('/usr/local/bin/codex')
-    expect(resolveCliPath('codex')).toBe('/usr/local/bin/codex')
-    expect(whichSyncMock).toHaveBeenCalledWith('codex', { nothrow: true })
-  })
-
-  it('returns undefined when the binary is not found', () => {
-    whichSyncMock.mockReturnValue(null)
-    expect(resolveCliPath('claude')).toBeUndefined()
   })
 })
 

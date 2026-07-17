@@ -1,6 +1,6 @@
 //go:build !windows
 
-package runtime
+package processtree
 
 import (
 	"os/exec"
@@ -8,20 +8,24 @@ import (
 	"time"
 )
 
-type bridgeProcess struct {
+type Process struct {
 	cmd *exec.Cmd
 }
 
-func startBridgeProcess(cmd *exec.Cmd) (*bridgeProcess, error) {
+func Start(cmd *exec.Cmd) (*Process, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	return &bridgeProcess{cmd: cmd}, nil
+	return &Process{cmd: cmd}, nil
 }
 
-func (p *bridgeProcess) Stop(grace time.Duration) {
-	if p == nil || p.cmd.Process == nil {
+func (p *Process) Wait() error {
+	return p.cmd.Wait()
+}
+
+func (p *Process) Stop(grace time.Duration) {
+	if p == nil || p.cmd == nil || p.cmd.Process == nil {
 		return
 	}
 	_ = syscall.Kill(-p.cmd.Process.Pid, syscall.SIGTERM)
@@ -31,4 +35,6 @@ func (p *bridgeProcess) Stop(grace time.Duration) {
 	_ = syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL)
 }
 
-func (p *bridgeProcess) Close() {}
+func (p *Process) Close() error {
+	return nil
+}

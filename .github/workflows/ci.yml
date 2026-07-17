@@ -166,7 +166,7 @@ jobs:
       - name: Run Windows AMA runner tests
         if: runner.os == 'Windows'
         working-directory: cmd/ama-runner
-        run: go test ./... -run Windows
+        run: go test ./...
       - name: Smoke AMA runner binary
         if: runner.os != 'Windows'
         working-directory: cmd/ama-runner
@@ -183,7 +183,7 @@ jobs:
           & "$env:RUNNER_TEMP/ama-runner.exe" version --json
       - name: Smoke runtime bridge and native CLI lookup
         run: |
-          pnpm exec vitest run packages/runtime-bridge/src/providers/cli-host.platform.test.ts
+          pnpm exec vitest run packages/runtime-bridge/src/host/cli.platform.test.ts
           pnpm run smoke:mock
 
   ama-runner-cross-build:

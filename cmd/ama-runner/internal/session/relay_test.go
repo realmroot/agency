@@ -101,7 +101,7 @@ func (h *closeCountingHandle) Close(context.Context) error {
 }
 
 func TestRelayEventDropsWhenNotConnected(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	// conn is nil; relayEvent must not panic and must return without writing
 	hub.RelayEvent(context.Background(), "session_1", ama.JSON{"type": "message.completed", "payload": ama.JSON{"text": "hi"}}, nil)
 	// No assertions needed beyond "did not panic"
@@ -109,7 +109,7 @@ func TestRelayEventDropsWhenNotConnected(t *testing.T) {
 
 func TestRelayEventWritesSessionTaggedFrame(t *testing.T) {
 	ch := newFakeChannel()
-	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", "process-unsafe", t.TempDir())
+	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", t.TempDir())
 	hub.setConn(ch)
 
 	hub.RelayEvent(context.Background(), "session_42", ama.JSON{"type": "message.completed", "payload": ama.JSON{"text": "ok"}}, &RelayStamp{
@@ -147,7 +147,7 @@ func TestRelayEventWritesSessionTaggedFrame(t *testing.T) {
 
 func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
 	workDir := t.TempDir()
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 
@@ -186,7 +186,7 @@ func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
 
 func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
 	workDir := t.TempDir()
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
@@ -218,7 +218,7 @@ func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
 }
 
 func TestRelayRoutesStopCommandToRegisteredSession(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 
@@ -240,7 +240,7 @@ func TestRelayRoutesStopCommandToRegisteredSession(t *testing.T) {
 }
 
 func TestRelayRoutesPermissionCommandToRegisteredSession(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 
@@ -262,7 +262,7 @@ func TestRelayRoutesPermissionCommandToRegisteredSession(t *testing.T) {
 }
 
 func TestRelayDropsCommandForUnregisteredSession(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	// No session registered — must not panic
 	hub.routeCommand(protocol.RunnerChannelMessage{
 		Type:      "session.command",
@@ -272,7 +272,7 @@ func TestRelayDropsCommandForUnregisteredSession(t *testing.T) {
 }
 
 func TestRelayDropsCommandWithEmptySessionID(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	// A command with no sessionId must be silently dropped
 	hub.routeCommand(protocol.RunnerChannelMessage{
 		Type:    "session.command",
@@ -281,7 +281,7 @@ func TestRelayDropsCommandWithEmptySessionID(t *testing.T) {
 }
 
 func TestRelayRoutesUnknownCommandTypeOpaque(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 	var received string
@@ -300,7 +300,7 @@ func TestRelayRoutesUnknownCommandTypeOpaque(t *testing.T) {
 }
 
 func TestRelayRoutesPromptCommandWithEmptyMessageOpaque(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 	var received []string
@@ -321,7 +321,7 @@ func TestRelayRoutesPromptCommandWithEmptyMessageOpaque(t *testing.T) {
 func TestRelayHandleWorkAssignedDispatchesValidAssignment(t *testing.T) {
 	var gotLeaseID string
 	var gotWorkItemID string
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir(), func(_ context.Context, lease *ama.Lease, workItem *ama.WorkItem) {
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir(), func(_ context.Context, lease *ama.Lease, workItem *ama.WorkItem) {
 		gotLeaseID = lease.Id
 		gotWorkItemID = workItem.Id
 	})
@@ -343,7 +343,7 @@ func TestRelayHandleWorkAssignedDispatchesValidAssignment(t *testing.T) {
 
 func TestRelayHandleWorkAssignedDropsInvalidFrames(t *testing.T) {
 	var calls int
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir(), func(context.Context, *ama.Lease, *ama.WorkItem) {
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir(), func(context.Context, *ama.Lease, *ama.WorkItem) {
 		calls += 1
 	})
 
@@ -356,13 +356,13 @@ func TestRelayHandleWorkAssignedDropsInvalidFrames(t *testing.T) {
 }
 
 func TestRelayHandleWorkAssignedNoHandler(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.handleWorkAssigned(context.Background(), json.RawMessage(`{"lease":{"id":"lease_1"},"workItem":{"id":"work_1"}}`))
 }
 
 func TestRelayHandlesSandboxRequest(t *testing.T) {
 	ch := newFakeChannel()
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	toolCallID := "call_1"
 	toolName := "bash"
 	input := map[string]any{"command": "echo ok"}
@@ -400,7 +400,7 @@ func TestRelayHandlesSandboxRequest(t *testing.T) {
 func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 	t.Run("inactive session", func(t *testing.T) {
 		ch := newFakeChannel()
-		hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+		hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 		hub.handleSandboxRequest(context.Background(), ch, protocol.RunnerChannelMessage{
 			Type:      "sandbox.request",
 			RequestId: ptr("request_1"),
@@ -415,7 +415,7 @@ func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 	})
 	t.Run("wrong handler type", func(t *testing.T) {
 		ch := newFakeChannel()
-		hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+		hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 		hub.Register("session_1", NewHostHandle("session_1"))
 		hub.handleSandboxRequest(context.Background(), ch, protocol.RunnerChannelMessage{
 			Type:      "sandbox.request",
@@ -431,7 +431,7 @@ func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 	})
 	t.Run("handler error", func(t *testing.T) {
 		ch := newFakeChannel()
-		hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+		hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 		hub.Register("session_1", NewSandboxHandle("session_1", nil, &fakeSandboxAdapter{}, nil))
 		hub.handleSandboxRequest(context.Background(), ch, protocol.RunnerChannelMessage{
 			Type:      "sandbox.request",
@@ -449,7 +449,7 @@ func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 
 func TestRelayUnregisterClosesHandle(t *testing.T) {
 	handle := &closeCountingHandle{}
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.Register("session_1", handle)
 	hub.Unregister("session_1")
 	hub.Unregister("session_1")
@@ -461,7 +461,7 @@ func TestRelayUnregisterClosesHandle(t *testing.T) {
 
 func TestRelayUnregisterLogsCloseError(t *testing.T) {
 	handle := &closeCountingHandle{err: errors.New("close failed")}
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.Register("session_1", handle)
 	hub.Unregister("session_1")
 	if handle.calls != 1 {
@@ -471,7 +471,7 @@ func TestRelayUnregisterLogsCloseError(t *testing.T) {
 
 func TestRelayNotifyWorkFinishedWritesTerminalStates(t *testing.T) {
 	ch := newFakeChannel()
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.setConn(ch)
 
 	for _, tc := range []struct {
@@ -493,7 +493,7 @@ func TestRelayNotifyWorkFinishedWritesTerminalStates(t *testing.T) {
 }
 
 func TestRelayNotifyWorkFinishedDropsWhenDisconnectedOrWriteFails(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed")
 	hub.setConn(&errWriteChannel{})
 	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed")
@@ -530,7 +530,7 @@ func TestRelayHandlesBackfillForCompletedSession(t *testing.T) {
 	}
 	f.Close()
 
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	// No live session registered — hub must serve from disk.
 
 	conn := newFakeChannel()
@@ -563,7 +563,7 @@ func TestRelayHandlesBackfillForCompletedSession(t *testing.T) {
 
 func TestRelayHandlesBackfillForSessionWithNoLog(t *testing.T) {
 	workDir := t.TempDir()
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 
 	conn := newFakeChannel()
 	hub.handleBackfillRequest(context.Background(), conn, protocol.RunnerChannelMessage{
@@ -584,7 +584,7 @@ func TestRelayHandlesBackfillForSessionWithNoLog(t *testing.T) {
 }
 
 func TestRelayHandlesBackfillWithEmptySessionID(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	conn := newFakeChannel()
 	// Empty sessionId must return an empty events list without error
 	hub.handleBackfillRequest(context.Background(), conn, protocol.RunnerChannelMessage{
@@ -613,7 +613,7 @@ func TestRelayWaitForChannelAcceptedReturnsReadError(t *testing.T) {
 		newFakeChannel(ama.JSON{"type": "runner.channel.accepted"}),
 	}, count: new(int)}
 
-	hub := NewRelay(opener, "runner_1", "test", t.TempDir())
+	hub := NewRelay(opener, "runner_1", t.TempDir())
 	done := make(chan struct{})
 	go func() {
 		hub.Run(ctx)
@@ -644,7 +644,7 @@ func TestRelayWaitForChannelAcceptedReturnsReadError(t *testing.T) {
 func TestRelayEventLogsWhenWriteFails(t *testing.T) {
 	// relayEvent must log and not panic when conn.WriteJSON returns an error.
 	ch := &errWriteChannel{}
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	hub.setConn(ch)
 	// Must not panic.
 	hub.RelayEvent(context.Background(), "session_1", ama.JSON{"type": "message.completed", "payload": ama.JSON{}}, nil)
@@ -679,7 +679,7 @@ func TestRelayHandlesBackfillWithReadError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hub := NewRelay(&fakeOpener{}, "runner_1", "test", workDir)
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	conn := newFakeChannel()
 	hub.handleBackfillRequest(context.Background(), conn, protocol.RunnerChannelMessage{
 		Type:      "session.backfill_request",
@@ -706,7 +706,7 @@ func TestRelayConnectsAndDisconnectsGracefully(t *testing.T) {
 	ch := newFakeChannel(
 		ama.JSON{"type": "runner.channel.accepted"},
 	)
-	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", t.TempDir())
 
 	done := make(chan struct{})
 	go func() {
@@ -753,7 +753,7 @@ func TestRelayReconnectsAfterConnectionDrop(t *testing.T) {
 		ama.JSON{"type": "runner.channel.accepted"},
 	)
 	opener := &countingOpener{channels: []*fakeChannel{ch1, ch2}, count: &connCount}
-	hub := NewRelay(opener, "runner_1", "test", t.TempDir())
+	hub := NewRelay(opener, "runner_1", t.TempDir())
 	// Shrink reconnect delay to avoid 3s wait in test.
 	// We can't set the constant, but we can rely on the test waiting for 2 opens.
 
@@ -785,7 +785,7 @@ func TestRelayReadLoopDropsNonObjectMessages(t *testing.T) {
 		// Push a JSON array — valid JSON but not an object; readLoop must drop and continue.
 		[]any{1, 2, 3},
 	)
-	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", t.TempDir())
 	done := make(chan struct{})
 	go func() {
 		hub.Run(ctx)
@@ -828,7 +828,7 @@ func TestRelayReadLoopIgnoresAdvisoryMessages(t *testing.T) {
 		// Session channel error advisory.
 		ama.JSON{"type": "session.channel.error", "message": "some error"},
 	)
-	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", t.TempDir())
 	done := make(chan struct{})
 	go func() {
 		hub.Run(ctx)
@@ -870,7 +870,7 @@ func TestRelayWaitForChannelAcceptedDiscardsNonAcceptedFrames(t *testing.T) {
 		// Accepted frame second.
 		ama.JSON{"type": "runner.channel.accepted"},
 	)
-	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", "test", t.TempDir())
+	hub := NewRelay(&fakeOpener{channel: ch}, "runner_1", t.TempDir())
 	done := make(chan struct{})
 	go func() {
 		hub.Run(ctx)

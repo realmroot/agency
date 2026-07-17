@@ -5,10 +5,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
-)
 
-const ProcessUnsafeAdapter = "process-unsafe"
-const processUnsafeAdapter = ProcessUnsafeAdapter
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
+)
 
 type Config struct {
 	ConfigPath            string        `json:"-" mapstructure:"config"`
@@ -45,7 +44,7 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.EnvironmentID) == "" {
 		return fmt.Errorf("AMA environment id is required")
 	}
-	if !c.AllowUnsafeProcess {
+	if host.SupportsAMARuntime() && !c.AllowUnsafeProcess {
 		return fmt.Errorf("process-unsafe adapter requires AMA_RUNNER_ALLOW_UNSAFE_PROCESS=true or --allow-unsafe-process")
 	}
 	if strings.TrimSpace(c.WorkDir) == "" {

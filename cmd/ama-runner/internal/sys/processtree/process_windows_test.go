@@ -1,6 +1,6 @@
 //go:build windows
 
-package runtime
+package processtree
 
 import (
 	"os/exec"
@@ -8,19 +8,19 @@ import (
 	"time"
 )
 
-func TestWindowsBridgeProcessJobStopsTheProcess(t *testing.T) {
+func TestStopTerminatesWindowsJob(t *testing.T) {
 	cmd := exec.Command("cmd.exe", "/d", "/s", "/c", "ping -n 30 127.0.0.1 >nul")
-	process, err := startBridgeProcess(cmd)
+	process, err := Start(cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer process.Close()
 	process.Stop(0)
 	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
+	go func() { done <- process.Wait() }()
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Fatal("Windows bridge process did not stop with its Job Object")
+		t.Fatal("Windows Job Object did not stop its process tree")
 	}
 }

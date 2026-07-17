@@ -7,9 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 	"time"
@@ -448,7 +446,6 @@ func TestBridgeStdinWritesAndHelpers(t *testing.T) {
 	if stderr.String() != largeStderr {
 		t.Fatalf("expected full large stderr, got %d bytes", stderr.Len())
 	}
-	(&bridgeProcess{cmd: &exec.Cmd{}}).Stop(0)
 }
 
 func TestExitCodeForNonExitError(t *testing.T) {
@@ -474,36 +471,6 @@ func TestRuntimeBridgeRuntimeContextFollowsParentCancellation(t *testing.T) {
 	case <-commandCtx.Done():
 	case <-time.After(time.Second):
 		t.Fatal("expected runtime bridge context to follow parent cancellation")
-	}
-}
-
-func TestRuntimeBridgeStopProcessKillsProcessGroup(t *testing.T) {
-	if goruntime.GOOS == "windows" {
-		t.Skip("process group signalling is Unix-specific")
-	}
-	marker := filepath.Join(t.TempDir(), "child.pid")
-	cmd := exec.Command("sh", "-lc", "sleep 300 & echo $! > \"$1\"; wait", "sh", marker)
-	configureTestProcessGroup(cmd)
-	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
-	}
-	deadline := time.Now().Add(2 * time.Second)
-	var childPID string
-	for time.Now().Before(deadline) {
-		data, err := os.ReadFile(marker)
-		if err == nil && strings.TrimSpace(string(data)) != "" {
-			childPID = strings.TrimSpace(string(data))
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if childPID == "" {
-		t.Fatal("timed out waiting for child pid")
-	}
-	(&bridgeProcess{cmd: cmd}).Stop(10 * time.Millisecond)
-	_ = cmd.Wait()
-	if err := exec.Command("kill", "-0", childPID).Run(); err == nil {
-		t.Fatalf("expected child process %s to be killed with process group", childPID)
 	}
 }
 

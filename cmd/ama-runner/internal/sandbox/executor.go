@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/processtree"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 )
 
@@ -37,9 +37,6 @@ type ProcessAdapter struct {
 }
 
 func (a ProcessAdapter) Execute(ctx context.Context, request ToolRequest) (ToolResult, error) {
-	if runtime.GOOS == "windows" {
-		return ToolResult{}, fmt.Errorf("ama runtime is not supported on windows")
-	}
 	switch request.ToolName {
 	case "bash":
 		return a.exec(ctx, request)
@@ -97,23 +94,24 @@ func (a ProcessAdapter) command(ctx context.Context, request ToolRequest, comman
 	cmd := exec.CommandContext(commandCtx, "sh", "-lc", command)
 	cmd.Dir = request.WorkDir
 	cmd.Env = env
-	configureProcessCommand(cmd)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	process, err := processtree.Start(cmd)
+	if err != nil {
 		return ToolResult{}, err
 	}
+	defer process.Close()
 	done := make(chan error, 1)
 	go func() {
-		done <- cmd.Wait()
+		done <- process.Wait()
 	}()
 	var waitErr error
 	select {
 	case waitErr = <-done:
 	case <-commandCtx.Done():
-		a.stopProcess(cmd)
+		process.Stop(a.ShutdownGraceInterval)
 		waitErr = <-done
 	}
 	exitCode := 0
@@ -213,13 +211,6 @@ func (a ProcessAdapter) edit(request ToolRequest) (ToolResult, error) {
 		return ToolResult{}, err
 	}
 	return ToolResult{Output: map[string]any{"ok": true, "path": path}}, nil
-}
-
-func (a ProcessAdapter) stopProcess(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	stopProcessCommand(cmd, a.ShutdownGraceInterval)
 }
 
 func StringInput(input map[string]any, key string) (string, bool) {

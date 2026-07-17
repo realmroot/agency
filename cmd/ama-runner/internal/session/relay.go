@@ -36,7 +36,6 @@ type Opener interface {
 type Relay struct {
 	opener   Opener
 	runnerID string
-	executor string
 	assign   AssignmentHandler
 	// storeDir is {WorkDir}/sessions; a session's log is storeDir/{sessionId}/events.jsonl.
 	storeDir string
@@ -60,7 +59,7 @@ type RelayStamp struct {
 	CreatedAt string
 }
 
-func NewRelay(opener Opener, runnerID string, executor string, workDir string, assignmentHandlers ...AssignmentHandler) *Relay {
+func NewRelay(opener Opener, runnerID string, workDir string, assignmentHandlers ...AssignmentHandler) *Relay {
 	var assign AssignmentHandler
 	if len(assignmentHandlers) > 0 {
 		assign = assignmentHandlers[0]
@@ -68,7 +67,6 @@ func NewRelay(opener Opener, runnerID string, executor string, workDir string, a
 	return &Relay{
 		opener:   opener,
 		runnerID: runnerID,
-		executor: executor,
 		assign:   assign,
 		storeDir: filepath.Join(workDir, workspace.SessionsDirName),
 		sessions: map[string]Handle{},

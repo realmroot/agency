@@ -1,6 +1,7 @@
 import { stdin, stdout } from 'node:process'
 import { createInterface } from 'node:readline'
 import { assertAmaRuntimeEvent } from './events/ama'
+import { resolveCliPath } from './host/cli'
 import {
   type AmaRuntimeEvent,
   bridgeError,
@@ -10,7 +11,6 @@ import {
   type RuntimeInventoryEntry,
   type RuntimeProviderHandle,
 } from './protocol'
-import { resolveCliPath } from './providers/cli-host'
 import { getProvider, listProviders } from './providers/registry'
 import { isE2eBridgeTest, probeFailureStatus, runE2eBridgeTest, TEST_MODE_RUNTIME_MODELS } from './run-modes'
 
