@@ -32,7 +32,7 @@ func TestWindowsJunctionEscapeIsRejected(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
 	junction := filepath.Join(root, "junction")
-	if output, err := exec.Command("cmd.exe", "/d", "/s", "/c", "mklink /J \""+junction+"\" \""+outside+"\"").CombinedOutput(); err != nil {
+	if output, err := exec.Command("cmd.exe", "/d", "/c", "mklink", "/J", junction, outside).CombinedOutput(); err != nil {
 		t.Fatalf("create junction: %v: %s", err, output)
 	}
 	resolved, err := filepath.EvalSymlinks(junction)
