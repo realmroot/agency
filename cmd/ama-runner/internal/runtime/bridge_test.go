@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -61,11 +62,21 @@ func TestRuntimeBridgeRejectsMissingRuntimeAndNode(t *testing.T) {
 
 func installFakeNode(t *testing.T, script string) string {
 	t.Helper()
-	fakeNode := filepath.Join(t.TempDir(), "node")
-	if err := os.WriteFile(fakeNode, []byte(script), 0o755); err != nil {
+	dir := t.TempDir()
+	scriptPath := filepath.Join(dir, "node.sh")
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("PATH", filepath.Dir(fakeNode)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	fakeNode := filepath.Join(dir, "node")
+	if runtime.GOOS == "windows" {
+		fakeNode += ".cmd"
+		if err := os.WriteFile(fakeNode, []byte("@echo off\r\nsh \"%~dp0node.sh\" %*\r\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := os.Rename(scriptPath, fakeNode); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return fakeNode
 }
 

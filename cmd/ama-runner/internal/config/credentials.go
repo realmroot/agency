@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/securefile"
 )
 
 type CredentialProfile struct {
@@ -380,5 +382,5 @@ func saveRawCredentialFile(path string, store CredentialStore) error {
 		return err
 	}
 	data = append(data, '\n')
-	return os.WriteFile(path, data, 0o600)
+	return securefile.Write(path, data)
 }

@@ -227,7 +227,7 @@ func TestPrepareWorkspaceMountsSecretFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o400 {
+	if info.Mode().Perm()&0o222 != 0 {
 		t.Fatalf("expected read-only secret file, got %v", info.Mode().Perm())
 	}
 	state, err := os.ReadFile(filepath.Join(workspace.Dir, SessionStateFileName))

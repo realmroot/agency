@@ -398,10 +398,17 @@ func CleanupStale(ctx context.Context, workDir string, retention time.Duration) 
 		return nil
 	}
 	sessionsDir := filepath.Join(workDir, SessionsDirName)
-	entries, err := os.ReadDir(sessionsDir)
+	info, err := os.Stat(sessionsDir)
 	if os.IsNotExist(err) {
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("runtime sessions path is not a directory: %s", sessionsDir)
+	}
+	entries, err := os.ReadDir(sessionsDir)
 	if err != nil {
 		return err
 	}

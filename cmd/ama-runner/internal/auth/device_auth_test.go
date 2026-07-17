@@ -15,6 +15,7 @@ import (
 	"time"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/securefile"
 )
 
 func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
@@ -135,12 +136,8 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 		t.Fatalf("login output omitted device instructions: %s", output.String())
 	}
 
-	info, err := os.Stat(credentialPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("expected 0600 credential permissions, got %v", info.Mode().Perm())
+	if err := securefile.CheckPrivate(credentialPath); err != nil {
+		t.Fatalf("expected private credential permissions: %v", err)
 	}
 	saved, err := runnerconfig.LoadActiveCredentialProfile(credentialPath)
 	if err != nil {

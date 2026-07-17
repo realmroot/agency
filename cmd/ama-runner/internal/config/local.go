@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/securefile"
 	"time"
 
 	"github.com/spf13/viper"
@@ -97,7 +99,7 @@ func SaveLocalConfigValue(path string, key string, value string) error {
 		return err
 	}
 	data = append(data, '\n')
-	return os.WriteFile(path, data, 0o600)
+	return securefile.Write(path, data)
 }
 
 func filterLocalConfig(values map[string]any) map[string]any {

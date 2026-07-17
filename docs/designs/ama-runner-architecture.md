@@ -17,6 +17,8 @@ reports lease state through the Go AMA SDK.
 - Keep sandbox mechanics in `internal/sandbox`.
 - Keep CLI-backed runtime mechanics in `internal/runtime`.
 - Keep workspace materialization in `internal/workspace`.
+- Keep protocol-level `/workspace` path parsing in `internal/workspacepath` so
+  logical paths have identical semantics on every host.
 - Keep host-specific primitives in narrow `internal/sys/*` packages. Their
   callers must not branch on operating-system names or import OS-specific APIs.
 - Do not introduce a runner-side AMA Server client abstraction. Runner code calls
@@ -131,13 +133,15 @@ Go client for the embedded TypeScript runtime bridge:
 The bridge owns provider/runtime semantics in TypeScript. Go owns only the local
 process boundary, environment boundary, and conversion into runner callbacks.
 
-### `sys/host`, `sys/lockfile`, `sys/processtree`, and `sys/userdirs`
+### `sys/host`, `sys/lockfile`, `sys/processtree`, `sys/securefile`, and `sys/userdirs`
 
 Host integration primitives:
 
 - reports build platform and host-supported runtime capabilities
 - resolves native user configuration and state directories
 - serializes credential and daemon ownership with native file locks
+- writes credential and local configuration files with Unix owner-only modes or
+  a protected Windows DACL for the current user and LocalSystem
 - starts and terminates complete process trees through Unix process groups or Windows Job Objects
 
 Each package exposes one platform-neutral contract and keeps its Unix and Windows

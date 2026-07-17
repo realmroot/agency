@@ -57,6 +57,7 @@ func TestMaterializeReturnsCacheDirectoryError(t *testing.T) {
 	}
 	t.Setenv("XDG_CACHE_HOME", cacheFile)
 	t.Setenv("HOME", cacheFile)
+	t.Setenv("LOCALAPPDATA", cacheFile)
 	if _, err := Materialize(); err == nil {
 		t.Fatal("expected cache directory error")
 	}
@@ -65,6 +66,7 @@ func TestMaterializeReturnsCacheDirectoryError(t *testing.T) {
 func TestMaterializeFallsBackToTempDirWithoutUserCacheDir(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", "")
 	t.Setenv("HOME", "")
+	t.Setenv("LOCALAPPDATA", "")
 	path, err := Materialize()
 	if err != nil {
 		t.Fatalf("expected temp dir fallback, got %v", err)

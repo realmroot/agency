@@ -62,6 +62,27 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 	}
 }
 
+func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
+	configRoot := filepath.Join(t.TempDir(), "config")
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("APPDATA", configRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	if got := DefaultConfigPath(); got != filepath.Join(configRoot, appDirectoryName, "config.json") {
+		t.Fatalf("config path = %q", got)
+	}
+	if got := DefaultCredentialPath(); got != filepath.Join(configRoot, appDirectoryName, "credentials.json") {
+		t.Fatalf("credential path = %q", got)
+	}
+	if got := DefaultStateDir(); got != filepath.Join(stateRoot, appDirectoryName) {
+		t.Fatalf("state directory = %q", got)
+	}
+	if got := DefaultWorkDir(); got != filepath.Join(stateRoot, appDirectoryName, "work") {
+		t.Fatalf("work directory = %q", got)
+	}
+}
+
 func TestCredentialStoreSwitchesAccountsAndProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	profiles := []CredentialProfile{

@@ -270,7 +270,9 @@ func TestCredentialPathDefaultAndEnvironment(t *testing.T) {
 
 func TestRunConfigPathUsesDefaultWhenUnset(t *testing.T) {
 	t.Setenv("AMA_RUNNER_CONFIG", "")
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	configHome := filepath.Join(t.TempDir(), "config")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("APPDATA", configHome)
 	command := runConfigTestCommand(t)
 	got, err := runConfigPath(command)
 	if err != nil {

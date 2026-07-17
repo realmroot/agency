@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
+
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 )
 
@@ -95,6 +97,7 @@ func TestProcessCommandEnvironmentUsesSessionPrivateDirs(t *testing.T) {
 }
 
 func TestProcessAdapterExecutesSandboxExecInWorkdir(t *testing.T) {
+	requireProcessAdapter(t)
 	workDir := t.TempDir()
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
 	result, err := adapter.Execute(context.Background(), ToolRequest{
@@ -115,6 +118,7 @@ func TestProcessAdapterExecutesSandboxExecInWorkdir(t *testing.T) {
 }
 
 func TestProcessAdapterMergesRequestEnvironment(t *testing.T) {
+	requireProcessAdapter(t)
 	workDir := t.TempDir()
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
 	result, err := adapter.Execute(context.Background(), ToolRequest{
@@ -246,6 +250,7 @@ func TestProcessAdapterEditValidatesInputs(t *testing.T) {
 }
 
 func TestProcessAdapterFindSupportsGlob(t *testing.T) {
+	requireProcessAdapter(t)
 	if _, err := exec.LookPath("rg"); err != nil {
 		t.Skip("rg is required for find glob support")
 	}
@@ -276,6 +281,7 @@ func TestProcessAdapterFindSupportsGlob(t *testing.T) {
 }
 
 func TestProcessAdapterListAndGrep(t *testing.T) {
+	requireProcessAdapter(t)
 	if _, err := exec.LookPath("rg"); err != nil {
 		t.Skip("rg is required for grep support")
 	}
@@ -375,6 +381,7 @@ func TestSandboxInputHelpers(t *testing.T) {
 }
 
 func TestProcessAdapterExecReportsFailureAndTimeout(t *testing.T) {
+	requireProcessAdapter(t)
 	workDir := t.TempDir()
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
 	result, err := adapter.Execute(context.Background(), ToolRequest{
@@ -400,6 +407,7 @@ func TestProcessAdapterExecReportsFailureAndTimeout(t *testing.T) {
 }
 
 func TestProcessAdapterDoesNotExposeDaemonAMAEnvironment(t *testing.T) {
+	requireProcessAdapter(t)
 	operatorHome := t.TempDir()
 	t.Setenv("AMA_TOKEN", "secret-token")
 	t.Setenv("AMA_ORIGIN", "https://ama.example.com")
@@ -720,6 +728,7 @@ func TestProcessAdapterRejectsSymlinkEscapes(t *testing.T) {
 }
 
 func TestProcessAdapterReportsCommandFailureAndTimeout(t *testing.T) {
+	requireProcessAdapter(t)
 	adapter := ProcessAdapter{CommandTimeout: 500 * time.Millisecond, ShutdownGraceInterval: 50 * time.Millisecond}
 	failed, err := adapter.Execute(context.Background(), ToolRequest{
 		ToolName: "bash",
@@ -739,6 +748,13 @@ func TestProcessAdapterReportsCommandFailureAndTimeout(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "deadline") {
 		t.Fatalf("expected timeout error, got %v", err)
+	}
+}
+
+func requireProcessAdapter(t *testing.T) {
+	t.Helper()
+	if !host.SupportsAMARuntime() {
+		t.Skip("process adapter is unavailable on this host")
 	}
 }
 

@@ -662,20 +662,12 @@ func ptr[T any](value T) *T {
 }
 
 func TestRelayHandlesBackfillWithReadError(t *testing.T) {
-	// handleBackfillRequest must include the error in the response when ReadEventLog fails.
-	// We can trigger this with a session directory that exists as a file (not a dir), making
-	// the events.jsonl path a file inside a file — which causes os.Open to fail with a non-ErrNotExist error.
 	workDir := t.TempDir()
-	// Create "sessions/bad_session" as a regular file (not a directory), so
-	// EventLogPath resolves to "sessions/bad_session/events.jsonl" which
-	// can't be opened because "bad_session" is a file, not a directory.
-	sessionsDir := filepath.Join(workDir, "sessions")
-	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
+	sessionDir := filepath.Join(workDir, "sessions", "bad_session")
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// "bad_session" is a file blocking the directory path.
-	badSession := filepath.Join(sessionsDir, "bad_session")
-	if err := os.WriteFile(badSession, []byte("not a dir"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(sessionDir, "events.jsonl"), []byte("not json\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

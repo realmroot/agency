@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -81,15 +82,15 @@ func TestMaterializeSecretMountReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat secret file: %v", err)
 	}
-	if info.Mode().Perm() != 0o400 {
-		t.Fatalf("secret file mode = %o, want 0400", info.Mode().Perm())
+	if info.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("secret file remains writable: %o", info.Mode().Perm())
 	}
 	dirInfo, err := os.Stat(filepath.Join(path, "nested"))
 	if err != nil {
 		t.Fatalf("stat secret dir: %v", err)
 	}
-	if dirInfo.Mode().Perm() != 0o500 {
-		t.Fatalf("secret dir mode = %o, want 0500", dirInfo.Mode().Perm())
+	if dirInfo.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("secret directory remains writable: %o", dirInfo.Mode().Perm())
 	}
 }
 
@@ -126,8 +127,8 @@ func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat memory file: %v", err)
 	}
-	if fileInfo.Mode().Perm() != 0o444 {
-		t.Fatalf("memory file mode = %o, want 0444", fileInfo.Mode().Perm())
+	if fileInfo.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("memory file remains writable: %o", fileInfo.Mode().Perm())
 	}
 	if err := resetMemoryStorePermissions(path); err != nil {
 		t.Fatalf("reset memory permissions: %v", err)
@@ -136,8 +137,8 @@ func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat reset memory file: %v", err)
 	}
-	if fileInfo.Mode().Perm() != 0o644 {
-		t.Fatalf("reset memory file mode = %o, want 0644", fileInfo.Mode().Perm())
+	if fileInfo.Mode().Perm()&0o200 == 0 {
+		t.Fatalf("reset memory file is not writable: %o", fileInfo.Mode().Perm())
 	}
 }
 
@@ -158,8 +159,8 @@ func TestMaterializeMemoryStoreWritableUsesCustomMountPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat writable memory file: %v", err)
 	}
-	if fileInfo.Mode().Perm() != 0o644 {
-		t.Fatalf("writable memory file mode = %o, want 0644", fileInfo.Mode().Perm())
+	if fileInfo.Mode().Perm()&0o200 == 0 {
+		t.Fatalf("writable memory file is not writable: %o", fileInfo.Mode().Perm())
 	}
 }
 
@@ -339,8 +340,17 @@ esac
 func installWorkspaceScriptedGit(t *testing.T, script string) {
 	t.Helper()
 	dir := t.TempDir()
-	gitPath := filepath.Join(dir, "git")
-	if err := os.WriteFile(gitPath, []byte(script), 0o755); err != nil {
+	scriptPath := filepath.Join(dir, "git.sh")
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	executablePath := filepath.Join(dir, "git")
+	if runtime.GOOS == "windows" {
+		executablePath += ".cmd"
+		if err := os.WriteFile(executablePath, []byte("@echo off\r\nsh \"%~dp0git.sh\" %*\r\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := os.Rename(scriptPath, executablePath); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))

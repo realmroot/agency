@@ -13,6 +13,7 @@ import (
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/processtree"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspacepath"
 )
 
 type ToolRequest struct {
@@ -440,16 +441,9 @@ func WorkspaceRootAndRelativePath(workDir string, path string) (string, string, 
 	if err != nil {
 		return "", "", err
 	}
-	candidate := path
-	if strings.HasPrefix(candidate, "/workspace/") {
-		candidate = strings.TrimPrefix(candidate, "/workspace/")
-	}
-	if filepath.IsAbs(candidate) {
-		return "", "", fmt.Errorf("sandbox file paths must stay under workspace")
-	}
-	relative := filepath.Clean(candidate)
-	if relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("sandbox file paths must stay under workspace")
+	relative, err := workspacepath.Relative(path, false)
+	if err != nil {
+		return "", "", fmt.Errorf("sandbox file paths must stay under workspace: %w", err)
 	}
 	return root, relative, nil
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspacepath"
 	"github.com/samber/lo"
 )
 
@@ -175,19 +176,9 @@ func resetMemoryStorePermissions(root string) error {
 }
 
 func localMountPathForWorkspacePath(sessionRoot string, mountPath string) (string, error) {
-	relative := strings.TrimSpace(mountPath)
-	if strings.HasPrefix(relative, "/workspace/") {
-		relative = strings.TrimPrefix(relative, "/workspace/")
-	}
-	if relative == "" || relative == "/workspace" {
-		return "", fmt.Errorf("secret volume mount path is required")
-	}
-	if filepath.IsAbs(relative) {
-		return "", fmt.Errorf("secret volume mount path must be under /workspace")
-	}
-	clean := filepath.Clean(relative)
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("secret volume mount path must stay inside the session workspace")
+	clean, err := workspacepath.Relative(mountPath, false)
+	if err != nil {
+		return "", fmt.Errorf("invalid secret volume mount path: %w", err)
 	}
 	resolved := filepath.Join(sessionRoot, clean)
 	if err := ensureUnderWorkspace(sessionRoot, resolved); err != nil {
@@ -275,16 +266,9 @@ func resolveWorktreeRef(ctx context.Context, cacheDir string, requestedRef strin
 }
 
 func localMountPath(sessionRoot string, mountPath string) (string, error) {
-	relative := strings.TrimSpace(mountPath)
-	if strings.HasPrefix(relative, "/workspace/") {
-		relative = strings.TrimPrefix(relative, "/workspace/")
-	}
-	if relative == "" || relative == "/workspace" || filepath.IsAbs(relative) {
-		return "", fmt.Errorf("mount path must be under /workspace")
-	}
-	clean := filepath.Clean(relative)
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("mount path must stay inside the session workspace")
+	clean, err := workspacepath.Relative(mountPath, false)
+	if err != nil {
+		return "", fmt.Errorf("invalid mount path: %w", err)
 	}
 	resolved := filepath.Join(sessionRoot, clean)
 	if err := ensureUnderWorkspace(sessionRoot, resolved); err != nil {

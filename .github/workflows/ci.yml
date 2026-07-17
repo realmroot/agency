@@ -166,10 +166,7 @@ jobs:
       - name: Run Windows AMA runner tests
         if: runner.os == 'Windows'
         working-directory: cmd/ama-runner
-        run: |
-          go test ./... -run '^$'
-          go test ./internal/sys/...
-          go test ./internal/config ./internal/sandbox ./internal/workspace -run '^TestWindows'
+        run: go test ./...
       - name: Smoke AMA runner binary
         if: runner.os != 'Windows'
         working-directory: cmd/ama-runner

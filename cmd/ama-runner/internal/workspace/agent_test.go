@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -157,8 +158,17 @@ exit 0
 func installFakeNpx(t *testing.T, script string) {
 	t.Helper()
 	dir := t.TempDir()
-	path := filepath.Join(dir, "npx")
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+	scriptPath := filepath.Join(dir, "npx.sh")
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	executablePath := filepath.Join(dir, "npx")
+	if runtime.GOOS == "windows" {
+		executablePath += ".cmd"
+		if err := os.WriteFile(executablePath, []byte("@echo off\r\nsh \"%~dp0npx.sh\" %*\r\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := os.Rename(scriptPath, executablePath); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))

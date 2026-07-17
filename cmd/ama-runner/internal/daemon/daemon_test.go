@@ -835,7 +835,7 @@ func TestRuntimeSessionWorkspaceFailureFinalizesLease(t *testing.T) {
 		t.Fatalf("expected failed lease, got %#v", client.updates)
 	}
 	serializedEvents := mustJSON(t, hubChannel.writtenMessages())
-	if !strings.Contains(serializedEvents, "runtime.error") || !strings.Contains(serializedEvents, "mount path must be under /workspace") {
+	if !strings.Contains(serializedEvents, "runtime.error") || !strings.Contains(serializedEvents, "path must be under /workspace") {
 		t.Fatalf("expected relayed runtime error for workspace failure, got %s", serializedEvents)
 	}
 }
