@@ -30,15 +30,20 @@ jobs:
           build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           ldflags="-s -w -X main.runnerVersion=${version} -X main.runnerCommit=${GITHUB_SHA} -X main.runnerBuildDate=${build_date}"
           mkdir -p dist
-          for target in darwin/arm64 darwin/amd64 linux/arm64 linux/amd64; do
+          for target in darwin/arm64 darwin/amd64 linux/arm64 linux/amd64 windows/amd64; do
             os="${target%/*}"
             arch="${target#*/}"
             name="ama-runner-v${version}-${os}-${arch}"
-            GOOS="$os" GOARCH="$arch" go build -ldflags "$ldflags" -o "dist/${name}/ama-runner" .
-            tar -C "dist/${name}" -czf "dist/${name}.tar.gz" ama-runner
+            if [[ "$os" == "windows" ]]; then
+              GOOS="$os" GOARCH="$arch" go build -ldflags "$ldflags" -o "dist/${name}/ama-runner.exe" .
+              (cd "dist/${name}" && zip -q "../${name}.zip" ama-runner.exe)
+            else
+              GOOS="$os" GOARCH="$arch" go build -ldflags "$ldflags" -o "dist/${name}/ama-runner" .
+              tar -C "dist/${name}" -czf "dist/${name}.tar.gz" ama-runner
+            fi
             rm -rf "dist/${name}"
           done
-          (cd dist && sha256sum *.tar.gz > checksums.txt)
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
 
       - name: Publish GitHub release
         shell: bash
@@ -47,6 +52,6 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#ama-runner-v}"
-          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/checksums.txt \
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip dist/checksums.txt \
             --title "ama-runner v${version}" \
             --notes "ama-runner v${version}"

@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import which from 'which'
 import type { RuntimeProviderRequest } from '../protocol'
 
 // Shared CLI-host plumbing for the SDK-backed providers (claude-code, codex,
@@ -34,13 +34,9 @@ export function sdkEnv(request: RuntimeProviderRequest): Record<string, string> 
   }
 }
 
-/** Resolves a CLI binary's absolute path via `which`, else undefined. */
+/** Resolves a CLI binary's absolute path using host PATH/PATHEXT, else undefined. */
 export function resolveCliPath(bin: string): string | undefined {
-  try {
-    return execSync(`which ${bin}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined
-  } catch {
-    return undefined
-  }
+  return which.sync(bin, { nothrow: true }) ?? undefined
 }
 
 /** True iff value is a plain (non-array) object; returns it narrowed, else {}. */

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AMA_RUNNER_SANDBOX_CAPABILITY,
   RUNTIME_CATALOG,
   RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX,
   runnerSupportsRuntimeProviderModel,
@@ -36,12 +35,10 @@ describe('runtimeProviderModelCapability', () => {
 })
 
 describe('runtimeRequiredRunnerCapability', () => {
-  it('requires the runner sandbox capability for ama regardless of model', () => {
-    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', null)).toBe(AMA_RUNNER_SANDBOX_CAPABILITY)
-    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', undefined)).toBe(AMA_RUNNER_SANDBOX_CAPABILITY)
-    expect(runtimeRequiredRunnerCapability('ama', 'moonshotai', '@cf/moonshotai/kimi-k2.6')).toBe(
-      AMA_RUNNER_SANDBOX_CAPABILITY,
-    )
+  it('requires the ama runtime capability regardless of model', () => {
+    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', null)).toBe('ama')
+    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', undefined)).toBe('ama')
+    expect(runtimeRequiredRunnerCapability('ama', 'moonshotai', '@cf/moonshotai/kimi-k2.6')).toBe('ama')
   })
 
   it('requires the bare runtime capability for non-ama runtimes when no model is pinned', () => {
@@ -113,16 +110,9 @@ describe('runnerSupportsRuntimeProviderModel', () => {
     expect(runnerSupportsRuntimeProviderModel(['claude-code'], 'claude-code', 'anthropic', 'claude-opus-4')).toBe(true)
   })
 
-  it('requires ama-sandbox for ama because the runner does not host the loop', () => {
-    expect(runnerSupportsRuntimeProviderModel(['ama'], 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(false)
-    expect(
-      runnerSupportsRuntimeProviderModel(
-        [AMA_RUNNER_SANDBOX_CAPABILITY],
-        'ama',
-        'workers-ai',
-        '@cf/moonshotai/kimi-k2.6',
-      ),
-    ).toBe(true)
+  it('requires the ama runtime capability for ama', () => {
+    expect(runnerSupportsRuntimeProviderModel(['ama'], 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(true)
+    expect(runnerSupportsRuntimeProviderModel(['codex'], 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(false)
   })
 
   it('returns false when model is given but runner has no matching capability', () => {

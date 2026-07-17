@@ -136,6 +136,79 @@ jobs:
               sys.exit(1)
           PY
 
+  ama-runner-platforms:
+    name: AMA Runner (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: cmd/ama-runner/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run AMA runner tests
+        if: runner.os != 'Windows'
+        working-directory: cmd/ama-runner
+        run: go test -race ./...
+      - name: Run Windows AMA runner tests
+        if: runner.os == 'Windows'
+        working-directory: cmd/ama-runner
+        run: go test ./... -run Windows
+      - name: Smoke AMA runner binary
+        if: runner.os != 'Windows'
+        working-directory: cmd/ama-runner
+        shell: bash
+        run: |
+          go build -o "$RUNNER_TEMP/ama-runner" .
+          "$RUNNER_TEMP/ama-runner" version --json
+      - name: Smoke Windows AMA runner binary
+        if: runner.os == 'Windows'
+        working-directory: cmd/ama-runner
+        shell: pwsh
+        run: |
+          go build -o "$env:RUNNER_TEMP/ama-runner.exe" .
+          & "$env:RUNNER_TEMP/ama-runner.exe" version --json
+      - name: Smoke runtime bridge and native CLI lookup
+        run: |
+          pnpm exec vitest run packages/runtime-bridge/src/providers/cli-host.platform.test.ts
+          pnpm run smoke:mock
+
+  ama-runner-cross-build:
+    name: AMA Runner Cross Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: cmd/ama-runner/go.sum
+      - name: Build supported targets
+        working-directory: cmd/ama-runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            suffix=""
+            if [[ "$os" == "windows" ]]; then suffix=".exe"; fi
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -o "/tmp/ama-runner-${os}-${arch}${suffix}" .
+          done
+
   integration:
     name: Workerd Integration
     runs-on: ubuntu-latest

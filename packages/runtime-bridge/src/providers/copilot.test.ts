@@ -18,7 +18,7 @@ vi.mock('./cli-host', () => ({
 const { CopilotEventMapper } = await import('./copilot')
 
 describe('CopilotEventMapper', () => {
-  it('maps Copilot tool requests to canonical AMA sandbox tools', () => {
+  it('maps Copilot tool requests to canonical AMA runtime tools', () => {
     const mapper = new CopilotEventMapper()
     const events = mapper.map({
       type: 'assistant.message',

@@ -204,7 +204,7 @@ func (p *runnerIntegrationControlPlane) runner(state ama.RunnerState) ama.Runner
 		EnvironmentId:    lo.ToPtr("env_integration"),
 		AuthMode:         ama.Bearer,
 		State:            state,
-		Capabilities:     []string{"ama-sandbox"},
+		Capabilities:     []string{"ama"},
 		MaxConcurrent:    1,
 		CurrentLoad:      0,
 		Metadata:         map[string]any{},

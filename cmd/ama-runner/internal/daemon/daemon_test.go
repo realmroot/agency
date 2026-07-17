@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-const amaSandboxCapability = "ama-sandbox"
+const amaRuntimeCapability = "ama"
 
 // fakeWork pairs a v1 lease with the work item the runner fetches after
 // claiming it; the lease no longer embeds the work item.
@@ -283,6 +283,7 @@ type fakeAdapter struct {
 }
 
 type fakeRuntimeAdapter struct {
+	mu            sync.Mutex
 	request       runtime.Request
 	events        []RuntimeEvent
 	result        ama.JSON
@@ -470,7 +471,9 @@ func (a *fakeAdapter) requestCount() int {
 }
 
 func (a *fakeRuntimeAdapter) Run(ctx context.Context, request runtime.Request, write runtime.EventWriter) (runtime.JSON, error) {
+	a.mu.Lock()
 	a.request = request
+	a.mu.Unlock()
 	if a.inspect != nil {
 		if err := a.inspect(request); err != nil {
 			return nil, err
@@ -498,6 +501,12 @@ func (a *fakeRuntimeAdapter) Run(ctx context.Context, request runtime.Request, w
 		}
 	}
 	return runtime.JSON(a.result), a.err
+}
+
+func (a *fakeRuntimeAdapter) lastRequest() runtime.Request {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.request
 }
 
 func TestRunOnceSendsHeartbeatAndCompletesApprovedToolWork(t *testing.T) {
@@ -580,7 +589,7 @@ func TestRunOnceCancelsSessionChannelWhenContextIsCancelled(t *testing.T) {
 	hubChannel := newFakeSessionChannel(ama.JSON{"type": "runner.channel.accepted"})
 	client := &fakeAMAServer{lease: codexSessionStartLease("run until cancelled"), hubChannel: hubChannel}
 	daemon := testDaemon(client, &fakeAdapter{})
-	// External runtimes run via the bridge runtime adapter; block it until the run context is
+	// CLI-backed runtimes run via the bridge runtime adapter; block it until the run context is
 	// cancelled so this exercises the channel cancellation path.
 	runtimeAdapter := &fakeRuntimeAdapter{waitForCancel: true}
 	daemon.RuntimeAdapter = runtimeAdapter
@@ -955,7 +964,7 @@ func waitForRuntimeRequest(t *testing.T, adapter *fakeRuntimeAdapter, done <-cha
 	t.Helper()
 	deadline := time.After(time.Second)
 	for {
-		if adapter.request.SessionID != "" {
+		if adapter.lastRequest().SessionID != "" {
 			return
 		}
 		select {
@@ -1113,8 +1122,9 @@ func TestStartReRegistersWhenHeartbeatReportsRunnerGone(t *testing.T) {
 	for {
 		client.mu.Lock()
 		creates := len(client.creates)
+		heartbeats := len(client.heartbeats)
 		client.mu.Unlock()
-		if creates > 0 {
+		if creates > 0 && heartbeats >= 2 {
 			cancel()
 			break
 		}
@@ -1249,7 +1259,7 @@ func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
 	daemon := testDaemon(client, &fakeAdapter{})
 
 	if err := daemon.RunOnce(context.Background()); err != nil {
-		t.Fatalf("expected AMA sandbox session start success, got %v", err)
+		t.Fatalf("expected AMA runtime session start success, got %v", err)
 	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "completed" {
 		t.Fatalf("expected completed lease update, got %#v", client.updates)
@@ -1855,7 +1865,7 @@ func sessionStartLease() *fakeWork {
 				"provider":                 "workers-ai",
 				"model":                    "@cf/moonshotai/kimi-k2.6",
 				"runtimeDriver":            "ama-self-hosted",
-				"requiredRunnerCapability": amaSandboxCapability,
+				"requiredRunnerCapability": amaRuntimeCapability,
 			},
 		},
 	}
@@ -1956,7 +1966,7 @@ func externalRuntimeSessionStartLease(runtimeName string, provider string, model
 	work.workItem.Payload["provider"] = provider
 	work.workItem.Payload["model"] = model
 	work.workItem.Payload["runtimeDriver"] = runtimeName + "-self-hosted"
-	work.workItem.Payload["prompt"] = "Run external runtime"
+	work.workItem.Payload["prompt"] = "Run CLI-backed runtime"
 	work.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:" + runtimeName + ":" + provider + ":" + model
 	return work
 }
@@ -2024,8 +2034,8 @@ func TestHeartbeatReportsRuntimeInventoryWithStatusAndDiagnostics(t *testing.T) 
 	for _, entry := range inventory {
 		byRuntime[entry.Runtime] = entry
 	}
-	if _, ok := byRuntime["ama"]; ok {
-		t.Fatalf("expected ama to be absent from runtime inventory because it is cloud-loop, got %#v", byRuntime["ama"])
+	if got := byRuntime["ama"]; got.State != "ready" || stringValue(got.Detail) == "" {
+		t.Fatalf("expected ready ama runtime inventory, got %#v", got)
 	}
 	if got := byRuntime["codex"]; got.State != "ready" || stringValue(got.Version) != "0.42.0" || stringValue(got.Detail) == "" {
 		t.Fatalf("expected ready codex inventory with version and detail, got %#v", got)
@@ -2067,7 +2077,7 @@ func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) 
 	}
 }
 
-func TestHeartbeatAdvertisesNoExternalRuntimesWhenNoCLIsAreInstalled(t *testing.T) {
+func TestHeartbeatAdvertisesOnlyAMAWhenNoCLIRuntimesAreInstalled(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeInventory = runtimeInventoryFor()
@@ -2075,7 +2085,7 @@ func TestHeartbeatAdvertisesNoExternalRuntimesWhenNoCLIsAreInstalled(t *testing.
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
 	got := heartbeatCapabilities(client.heartbeats[0])
-	want := []string{amaSandboxCapability}
+	want := []string{amaRuntimeCapability}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("expected only base capabilities %v, got %v", want, got)
 	}

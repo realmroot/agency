@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
-const execSyncMock = vi.fn<(command: string, options?: unknown) => string>()
-vi.mock('node:child_process', () => ({
-  execSync: (command: string, options?: unknown) => execSyncMock(command, options),
+const whichSyncMock = vi.fn<(command: string, options?: unknown) => string | null>()
+vi.mock('which', () => ({
+  default: { sync: (command: string, options?: unknown) => whichSyncMock(command, options) },
 }))
 
 const { arrayValue, hostHome, normalizeProviderUsage, objectValue, resolveCliPath, sdkEnv } = await import('./cli-host')
@@ -22,7 +22,7 @@ function request(env: Record<string, string>): RuntimeProviderRequest {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  execSyncMock.mockReset()
+  whichSyncMock.mockReset()
 })
 
 describe('hostHome', () => {
@@ -58,22 +58,15 @@ describe('sdkEnv', () => {
 })
 
 describe('resolveCliPath', () => {
-  it('shells `which <bin>` and trims the result', () => {
-    execSyncMock.mockReturnValue('/usr/local/bin/codex\n')
+  it('resolves the binary through the cross-platform host lookup', () => {
+    whichSyncMock.mockReturnValue('/usr/local/bin/codex')
     expect(resolveCliPath('codex')).toBe('/usr/local/bin/codex')
-    expect(execSyncMock).toHaveBeenCalledWith('which codex', expect.anything())
+    expect(whichSyncMock).toHaveBeenCalledWith('codex', { nothrow: true })
   })
 
   it('returns undefined when the binary is not found', () => {
-    execSyncMock.mockImplementation(() => {
-      throw new Error('not found')
-    })
+    whichSyncMock.mockReturnValue(null)
     expect(resolveCliPath('claude')).toBeUndefined()
-  })
-
-  it('returns undefined when `which` yields an empty line', () => {
-    execSyncMock.mockReturnValue('   \n')
-    expect(resolveCliPath('copilot')).toBeUndefined()
   })
 })
 

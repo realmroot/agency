@@ -31,6 +31,12 @@ describe('[spec: runners/eligibility] runnerCapabilityEligible', () => {
     expect(runnerCapabilityEligible([], { type: 'maintenance' })).toBe(true)
   })
 
+  it('requires the ama runtime for local tool work', () => {
+    const work = { type: 'tool.execute', toolName: 'bash' }
+    expect(runnerCapabilityEligible([], work)).toBe(false)
+    expect(runnerCapabilityEligible(['ama'], work)).toBe(true)
+  })
+
   it('rejects session starts that declare no required capability', () => {
     expect(runnerCapabilityEligible(['node'], { type: 'session.start' })).toBe(false)
   })
@@ -74,6 +80,12 @@ describe('runnerRuntimeReady', () => {
         requiredRunnerCapability: CLAUDE_CAP,
       }),
     ).toBe(true)
+  })
+
+  it('requires a ready ama inventory entry for ama work', () => {
+    const work = { type: 'session.start', requiredRunnerCapability: 'ama' }
+    expect(runnerRuntimeReady([{ runtime: 'ama', state: 'unhealthy' }], work)).toBe(false)
+    expect(runnerRuntimeReady([{ runtime: 'ama', state: 'ready' }], work)).toBe(true)
   })
 })
 

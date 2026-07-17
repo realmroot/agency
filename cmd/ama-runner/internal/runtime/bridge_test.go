@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -449,7 +448,7 @@ func TestBridgeStdinWritesAndHelpers(t *testing.T) {
 	if stderr.String() != largeStderr {
 		t.Fatalf("expected full large stderr, got %d bytes", stderr.Len())
 	}
-	Bridge{}.stopProcess(&exec.Cmd{})
+	(&bridgeProcess{cmd: &exec.Cmd{}}).Stop(0)
 }
 
 func TestExitCodeForNonExitError(t *testing.T) {
@@ -484,7 +483,7 @@ func TestRuntimeBridgeStopProcessKillsProcessGroup(t *testing.T) {
 	}
 	marker := filepath.Join(t.TempDir(), "child.pid")
 	cmd := exec.Command("sh", "-lc", "sleep 300 & echo $! > \"$1\"; wait", "sh", marker)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	configureTestProcessGroup(cmd)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -501,7 +500,7 @@ func TestRuntimeBridgeStopProcessKillsProcessGroup(t *testing.T) {
 	if childPID == "" {
 		t.Fatal("timed out waiting for child pid")
 	}
-	Bridge{ShutdownGraceInterval: 10 * time.Millisecond}.stopProcess(cmd)
+	(&bridgeProcess{cmd: cmd}).Stop(10 * time.Millisecond)
 	_ = cmd.Wait()
 	if err := exec.Command("kill", "-0", childPID).Run(); err == nil {
 		t.Fatalf("expected child process %s to be killed with process group", childPID)

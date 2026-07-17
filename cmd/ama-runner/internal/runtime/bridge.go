@@ -9,10 +9,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	goruntime "runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
@@ -49,9 +47,6 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	cmd := exec.CommandContext(commandCtx, nodePath, bridgePath)
 	cmd.Dir = request.WorkDir
 	cmd.Env = env
-	if goruntime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
 	stdinWriter, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -64,14 +59,16 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	var stderrText bytes.Buffer
 	cmd.Stderr = &stderrText
-	if err := cmd.Start(); err != nil {
+	process, err := startBridgeProcess(cmd)
+	if err != nil {
 		return nil, err
 	}
+	defer process.Close()
 	processDone := make(chan struct{})
 	go func() {
 		select {
 		case <-commandCtx.Done():
-			b.stopProcess(cmd)
+			process.Stop(b.ShutdownGraceInterval)
 		case <-processDone:
 		}
 	}()
@@ -86,7 +83,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	stdoutLines := protocol.lineReader(stdoutReader)
 	if err := protocol.waitReady(stdoutLines); err != nil {
-		_ = b.waitOrStopProcess(cmd, runtimeBridgeReadyFailureGrace)
+		_ = b.waitOrStopProcess(process, runtimeBridgeReadyFailureGrace)
 		if stderrText.Len() > 0 {
 			return nil, fmt.Errorf("%w: %s", err, stderrText.String())
 		}
@@ -110,7 +107,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 		runRequest.Model = request.Model
 	}
 	if err := stdin.WriteJSON(runRequest); err != nil {
-		b.stopProcess(cmd)
+		process.Stop(b.ShutdownGraceInterval)
 		_ = cmd.Wait()
 		return nil, err
 	}
@@ -133,7 +130,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	)
 	_ = stdin.Close()
 	if readErr != nil {
-		b.stopProcess(cmd)
+		process.Stop(b.ShutdownGraceInterval)
 	}
 	waitErr := cmd.Wait()
 
@@ -205,14 +202,14 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	if err != nil {
 		return nil, err
 	}
-	if err := cmd.Start(); err != nil {
+	process, err := startBridgeProcess(cmd)
+	if err != nil {
 		return nil, err
 	}
+	defer process.Close()
 	defer func() {
 		_ = stdin.Close()
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
-		}
+		process.Stop(0)
 		_ = cmd.Wait()
 	}()
 
@@ -341,7 +338,19 @@ func appendRuntimeBridgeHostEnv(env []string) []string {
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		env = append(env, "AMA_RUNTIME_BRIDGE_HOST_HOME="+home)
 	}
-	for _, key := range []string{"VOLTA_HOME", "NODE_PATH", "PNPM_HOME", "NVM_DIR", "AMA_RUNTIME_BRIDGE_TEST_MODE"} {
+	for _, key := range []string{
+		"PATHEXT",
+		"USERPROFILE",
+		"APPDATA",
+		"LOCALAPPDATA",
+		"HOMEDRIVE",
+		"HOMEPATH",
+		"VOLTA_HOME",
+		"NODE_PATH",
+		"PNPM_HOME",
+		"NVM_DIR",
+		"AMA_RUNTIME_BRIDGE_TEST_MODE",
+	} {
 		if value, ok := os.LookupEnv(key); ok && value != "" {
 			env = append(env, key+"="+value)
 		}
@@ -349,29 +358,16 @@ func appendRuntimeBridgeHostEnv(env []string) []string {
 	return env
 }
 
-func (b Bridge) stopProcess(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	if goruntime.GOOS != "windows" {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-		time.Sleep(b.ShutdownGraceInterval)
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		return
-	}
-	_ = cmd.Process.Kill()
-}
-
-func (b Bridge) waitOrStopProcess(cmd *exec.Cmd, grace time.Duration) error {
+func (b Bridge) waitOrStopProcess(process *bridgeProcess, grace time.Duration) error {
 	done := make(chan error, 1)
 	go func() {
-		done <- cmd.Wait()
+		done <- process.cmd.Wait()
 	}()
 	select {
 	case err := <-done:
 		return err
 	case <-time.After(grace):
-		b.stopProcess(cmd)
+		process.Stop(b.ShutdownGraceInterval)
 		return <-done
 	}
 }

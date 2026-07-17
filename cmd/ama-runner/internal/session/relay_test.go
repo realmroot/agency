@@ -717,9 +717,9 @@ func TestRelayConnectsAndDisconnectsGracefully(t *testing.T) {
 	// Wait for hub to connect (conn becomes non-nil)
 	deadline := time.After(time.Second)
 	for {
-		hub.mu.Lock()
+		hub.writeMu.Lock()
 		connected := hub.conn != nil
-		hub.mu.Unlock()
+		hub.writeMu.Unlock()
 		if connected {
 			break
 		}
@@ -795,9 +795,9 @@ func TestRelayReadLoopDropsNonObjectMessages(t *testing.T) {
 	// Wait for hub to connect (non-nil conn), then cancel so the run loop exits cleanly.
 	deadline := time.After(time.Second)
 	for {
-		hub.mu.Lock()
+		hub.writeMu.Lock()
 		connected := hub.conn != nil
-		hub.mu.Unlock()
+		hub.writeMu.Unlock()
 		if connected {
 			break
 		}
@@ -838,9 +838,9 @@ func TestRelayReadLoopIgnoresAdvisoryMessages(t *testing.T) {
 	// Wait for hub to connect, then cancel.
 	deadline := time.After(time.Second)
 	for {
-		hub.mu.Lock()
+		hub.writeMu.Lock()
 		connected := hub.conn != nil
-		hub.mu.Unlock()
+		hub.writeMu.Unlock()
 		if connected {
 			break
 		}
@@ -879,9 +879,9 @@ func TestRelayWaitForChannelAcceptedDiscardsNonAcceptedFrames(t *testing.T) {
 	// Hub must connect (non-nil conn) after discarding the stray frame.
 	deadline := time.After(time.Second)
 	for {
-		hub.mu.Lock()
+		hub.writeMu.Lock()
 		connected := hub.conn != nil
-		hub.mu.Unlock()
+		hub.writeMu.Unlock()
 		if connected {
 			break
 		}

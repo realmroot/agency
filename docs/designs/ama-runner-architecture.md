@@ -15,7 +15,7 @@ reports lease state through the Go AMA SDK.
 - Keep reusable runner build metadata in `pkg/version`.
 - Keep generated cross-language session event vocabulary in `pkg/sessionevent`.
 - Keep sandbox mechanics in `internal/sandbox`.
-- Keep external runtime mechanics in `internal/runtime`.
+- Keep CLI-backed runtime mechanics in `internal/runtime`.
 - Keep workspace materialization in `internal/workspace`.
 - Do not introduce a runner-side AMA Server client abstraction. Runner code calls
   the Go SDK facade directly.
@@ -75,9 +75,9 @@ Single work lease orchestration:
 - checks required runner capability
 - renews the active lease
 - runs tool work through `sandbox.SandboxAdapter`
-- prepares session workspaces for AMA sandbox and external runtime sessions
-- starts AMA sandbox sessions by registering a `session.SandboxHandle`
-- starts external runtime sessions through `runtime.Runner`
+- prepares session workspaces for AMA and CLI-backed runtime sessions
+- starts AMA runtime sessions by registering a `session.SandboxHandle` for first-party tool execution
+- starts CLI-backed runtime sessions through `runtime.Runner`
 - completes, fails, cancels, or interrupts the lease through `ama.Client`
 
 This is intentionally one object, not a stack of lifecycle/executor/finalizer
@@ -90,8 +90,8 @@ Runner-hosted session relay:
 - one shared runner channel
 - session command routing by session id
 - event backfill from local event store
-- command delivery to external runtime sessions
-- sandbox request execution for AMA sandbox sessions
+- command delivery to CLI-backed runtime sessions
+- sandbox request execution for AMA runtime sessions
 
 The relay lives in `internal/session` because it is runner-hosted session
 transport and server protocol wiring. It owns relay socket dispatch, live session
@@ -108,12 +108,13 @@ Persisted runner identity:
 
 ### `runtime.Inventory`
 
-Advertised external runtime inventory:
+Advertised runtime inventory:
 
+- reports the first-party AMA runtime when the host supports its tool executor
 - detects local runtime CLIs from the runtime registry
 - asks `runtime.Bridge` to probe model availability
 - tracks usage windows
-- builds external runtime capabilities and runtime inventory for heartbeat metadata
+- builds runtime capabilities and inventory for heartbeat metadata
 
 ### `runtime.Bridge`
 
@@ -130,7 +131,7 @@ process boundary, environment boundary, and conversion into runner callbacks.
 
 ### `runtime.Runner`
 
-External runtime session execution:
+CLI-backed runtime session execution:
 
 - uses an injected adapter for tests or `runtime.Bridge` by default
 - applies the session duration context

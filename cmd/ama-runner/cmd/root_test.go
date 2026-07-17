@@ -240,7 +240,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 			_, _ = w.Write([]byte(`{"version":1,"service":{"name":"Any Managed Agents","origin":"https://ama.example.test"},"auth":{"oidc":{"issuer":"https://issuer.example.test","resource":"https://ama.example.test","browser":{"clientId":"browser-client","scopes":["openid","email","profile"]},"runner":{"clientId":"runner-client","scopes":["openid","profile","email","offline_access"]}}}}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runners":
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"id":"runner_1","name":"runner","capabilities":["ama-sandbox"],"state":"offline","currentLoad":0,"maxConcurrent":1}`))
+			_, _ = w.Write([]byte(`{"id":"runner_1","name":"runner","capabilities":["ama"],"state":"offline","currentLoad":0,"maxConcurrent":1}`))
 		case r.Method == http.MethodPut && r.URL.Path == "/api/v1/runners/runner_1/heartbeat":
 			heartbeatCount += 1
 			if heartbeatCount == 1 {
