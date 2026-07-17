@@ -23,6 +23,7 @@ type Bridge struct {
 
 const runtimeInventoryTimeout = 30 * time.Second
 const runtimeBridgeReadyFailureGrace = 2 * time.Second
+const runtimeBridgePipeWaitDelay = 500 * time.Millisecond
 
 func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JSON, error) {
 	if request.Runtime == "" {
@@ -45,6 +46,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	env = appendRuntimeBridgeHostEnv(env)
 	cmd := exec.CommandContext(commandCtx, nodePath, bridgePath)
+	cmd.WaitDelay = runtimeBridgePipeWaitDelay
 	cmd.Dir = request.WorkDir
 	cmd.Env = env
 	stdinWriter, err := cmd.StdinPipe()
@@ -191,6 +193,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	commandCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, nodePath, bridgePath)
+	cmd.WaitDelay = runtimeBridgePipeWaitDelay
 	cmd.Env = os.Environ()
 	stdinWriter, err := cmd.StdinPipe()
 	if err != nil {
