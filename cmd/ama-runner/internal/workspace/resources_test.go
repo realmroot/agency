@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -195,14 +196,14 @@ func TestResetMemoryStorePermissionsIgnoresEmptyAndMissingRoots(t *testing.T) {
 
 func TestDefaultMountPathHelpers(t *testing.T) {
 	gitPath, err := defaultGitMountPath(protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"})
-	if err != nil || gitPath != filepath.Join("repos", "github.com", "saltbo", "slink") {
+	if err != nil || gitPath != path.Join("repos", "github.com", "saltbo", "slink") {
 		t.Fatalf("unexpected git mount path %q err=%v", gitPath, err)
 	}
 	if _, err := defaultGitMountPath(protocol.WorkspaceMount{URL: "ssh://github.com/saltbo/slink.git"}); err == nil {
 		t.Fatal("expected unsafe git URL error")
 	}
 	memoryPath, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
-	if err != nil || memoryPath != filepath.Join(".ama", "memory-stores", "store_1") {
+	if err != nil || memoryPath != path.Join(".ama", "memory-stores", "store_1") {
 		t.Fatalf("unexpected memory mount path %q err=%v", memoryPath, err)
 	}
 	if coalesce(" value ", "fallback") != " value " || coalesce(" ", "fallback") != "fallback" {

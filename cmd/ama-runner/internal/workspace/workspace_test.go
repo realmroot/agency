@@ -106,7 +106,7 @@ func TestPrepareWorkspaceMountsGitRepositoryWorktree(t *testing.T) {
 		t.Fatalf("expected workspace root cwd, got %q", workspace.Cwd)
 	}
 	repoPath := filepath.Join(workspace.Root, "repos", "github.com", "saltbo", "zpan")
-	if data, err := os.ReadFile(filepath.Join(repoPath, "README.md")); err != nil || string(data) != "zpan\n" {
+	if data, err := os.ReadFile(filepath.Join(repoPath, "README.md")); err != nil || strings.TrimSpace(string(data)) != "zpan" {
 		t.Fatalf("expected mounted repo content, got %q err=%v", string(data), err)
 	}
 	gitFile, err := os.Stat(filepath.Join(repoPath, ".git"))
@@ -778,7 +778,7 @@ func TestPrepareWorkspaceSerializesSharedRepositoryCache(t *testing.T) {
 	}
 	for workspace := range workspaces {
 		repoPath := filepath.Join(workspace.Root, "repos", "github.com", "saltbo", "zpan")
-		if data, err := os.ReadFile(filepath.Join(repoPath, "README.md")); err != nil || string(data) != "zpan\n" {
+		if data, err := os.ReadFile(filepath.Join(repoPath, "README.md")); err != nil || strings.TrimSpace(string(data)) != "zpan" {
 			t.Fatalf("expected mounted repo content, got %q err=%v", string(data), err)
 		}
 		if err := workspace.Cleanup(context.Background()); err != nil {

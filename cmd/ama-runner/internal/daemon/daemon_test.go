@@ -1255,6 +1255,9 @@ func TestRunOnceReturnsWhenNoLeaseIsAvailable(t *testing.T) {
 }
 
 func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
+	if !host.SupportsAMARuntime() {
+		t.Skip("AMA runtime is unavailable on this host")
+	}
 	lease := sessionStartLease()
 	client := &fakeAMAServer{lease: lease, hubChannel: newFakeSessionChannel(ama.JSON{"type": "runner.channel.accepted"})}
 	daemon := testDaemon(client, &fakeAdapter{})
@@ -1275,6 +1278,9 @@ func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
 }
 
 func TestRunOnceFailsAMASandboxSessionWhenAdapterMissing(t *testing.T) {
+	if !host.SupportsAMARuntime() {
+		t.Skip("AMA runtime is unavailable on this host")
+	}
 	lease := sessionStartLease()
 	client := &fakeAMAServer{lease: lease, hubChannel: newFakeSessionChannel(ama.JSON{"type": "runner.channel.accepted"})}
 	daemon := testDaemon(client, nil)

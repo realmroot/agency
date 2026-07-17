@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -283,7 +284,7 @@ func defaultGitMountPath(volume protocol.WorkspaceMount) (string, error) {
 		return "", err
 	}
 	path := strings.TrimSuffix(strings.Trim(repositoryURL.Path, "/"), ".git")
-	return filepath.Join("repos", repositoryURL.Hostname(), filepath.FromSlash(path)), nil
+	return pathpkg.Join("repos", repositoryURL.Hostname(), path), nil
 }
 
 func defaultMemoryStoreMountPath(volume protocol.WorkspaceMount) (string, error) {
@@ -291,7 +292,7 @@ func defaultMemoryStoreMountPath(volume protocol.WorkspaceMount) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(".ama", "memory-stores", storeID), nil
+	return pathpkg.Join(".ama", "memory-stores", storeID), nil
 }
 
 func coalesce(value string, fallback string) string {
