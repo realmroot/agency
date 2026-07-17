@@ -2,7 +2,7 @@ Feature: Runners
   Self-hosted environments are serviced by registered runtime runners that lease
   AMA-owned session work. AMA queues work without a Cloudflare Sandbox, runners
   claim leases for eligible work, provide sandbox execution for AMA sessions,
-  run external runtimes over a runner-owned channel, and the work queue recovers
+  run CLI-backed runtimes over a runner-owned channel, and the work queue recovers
   expired leases. AMA stays the control plane and canonical event store;
   runner-local runtime endpoints are never exposed.
 
@@ -14,7 +14,7 @@ Feature: Runners
     When a runner is evaluated for the work
     Then only a runner advertising the exact capability with ready runtime inventory is eligible
     And session starts that declare no required capability are not claimable
-    And unscoped non-session work is claimable by any runner
+    And local sandbox tool work requires the AMA runtime while other unscoped non-session work is claimable by any runner
 
   @runners/auth-binding @domain
   Scenario: Bind runner registration to its OIDC or federated token
@@ -52,6 +52,8 @@ Feature: Runners
     When the operator registers a runner and sends a heartbeat
     Then the runner stores only safe metadata and never the raw credential value
     And the heartbeat reports supported runtimes with version, availability state, and safe diagnostics
+    And host platform metadata is diagnostic while runtime inventory remains authoritative for scheduling
+    And Windows omits the unsupported AMA runtime while still reporting detected CLI-backed runtimes
     And quota-governed runtimes whose usage probe is unavailable are reported as limited
     And disabled runners cannot heartbeat themselves active and every runner endpoint requires authentication
 

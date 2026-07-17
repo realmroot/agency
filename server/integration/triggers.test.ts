@@ -1,10 +1,9 @@
 import { SELF } from 'cloudflare:test'
-import { AMA_RUNNER_SANDBOX_CAPABILITY } from '@server/domain/runtime-catalog'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
 
-const AMA_RUNNER_CAPABILITY = AMA_RUNNER_SANDBOX_CAPABILITY
+const AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {

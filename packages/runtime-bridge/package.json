@@ -2,5 +2,11 @@
   "name": "@ama/runtime-bridge",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "which": "4.0.0"
+  },
+  "devDependencies": {
+    "@types/which": "3.0.4"
+  }
 }

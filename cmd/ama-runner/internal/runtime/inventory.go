@@ -28,7 +28,7 @@ type Inventory struct {
 func (inv *Inventory) RefreshCapabilities() []string {
 	snapshot, err := inv.load(context.Background(), false)
 	if err != nil {
-		slog.Warn("runtime bridge inventory failed; runner advertises no external runtimes", "error", err)
+		slog.Warn("runtime bridge inventory failed; runner advertises no CLI-backed runtimes", "error", err)
 		snapshot = &InventorySnapshot{}
 	}
 	capabilities := runtimeCapabilities(snapshot)
@@ -39,7 +39,7 @@ func (inv *Inventory) RefreshCapabilities() []string {
 	inv.advertisedInventory = inventory
 	inv.capabilityMu.Unlock()
 	if changed && len(capabilities) == 0 {
-		slog.Warn("no external runtimes detected; runner advertises no external runtimes and will receive no runtime work",
+		slog.Warn("no CLI-backed runtimes detected; runner advertises no CLI-backed runtimes and will receive no CLI-backed runtime work",
 			"binaries", runtimeBinaries(snapshot))
 	}
 	return capabilities

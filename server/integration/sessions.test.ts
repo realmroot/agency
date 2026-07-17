@@ -1,12 +1,12 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
-import { AMA_RUNNER_SANDBOX_CAPABILITY, runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
+import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runtimeErrorMessage } from '../http/sessions'
 import { defaultClaims, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 import { seedPolicy } from './policy-seed'
 
-const DEFAULT_AMA_RUNNER_CAPABILITY = AMA_RUNNER_SANDBOX_CAPABILITY
+const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
   const requestInit = normalizeTestRequest(path, init)

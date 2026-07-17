@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
@@ -38,6 +37,9 @@ type ProcessAdapter struct {
 }
 
 func (a ProcessAdapter) Execute(ctx context.Context, request ToolRequest) (ToolResult, error) {
+	if runtime.GOOS == "windows" {
+		return ToolResult{}, fmt.Errorf("ama runtime is not supported on windows")
+	}
 	switch request.ToolName {
 	case "bash":
 		return a.exec(ctx, request)
@@ -95,9 +97,7 @@ func (a ProcessAdapter) command(ctx context.Context, request ToolRequest, comman
 	cmd := exec.CommandContext(commandCtx, "sh", "-lc", command)
 	cmd.Dir = request.WorkDir
 	cmd.Env = env
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
+	configureProcessCommand(cmd)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -219,13 +219,7 @@ func (a ProcessAdapter) stopProcess(cmd *exec.Cmd) {
 	if cmd.Process == nil {
 		return
 	}
-	if runtime.GOOS != "windows" {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-		time.Sleep(a.ShutdownGraceInterval)
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		return
-	}
-	_ = cmd.Process.Kill()
+	stopProcessCommand(cmd, a.ShutdownGraceInterval)
 }
 
 func StringInput(input map[string]any, key string) (string, bool) {
@@ -366,7 +360,7 @@ func ProcessCommandEnvironment(workDir string) ([]string, error) {
 		"TEMP=" + tempDir,
 		"TMP=" + tempDir,
 	}
-	for _, key := range []string{"PATH", "SystemRoot", "ComSpec"} {
+	for _, key := range []string{"PATH", "PATHEXT", "SystemRoot", "ComSpec"} {
 		if value, ok := os.LookupEnv(key); ok {
 			env = append(env, key+"="+value)
 		}

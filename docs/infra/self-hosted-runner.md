@@ -21,6 +21,8 @@ replace github.com/saltbo/any-managed-agents/sdk/go => ../../sdk/go
 
 All AMA API calls go through `sdk/go/ama`. The daemon uses `ama.NewRunner` for runner protocol calls and does not maintain a separate API client outside SDK transport configuration.
 
+Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64. Windows arm64 is compile-checked but is not a supported release target yet.
+
 ## Login And Configuration
 
 Authenticate the runner with FlareAuth/OIDC device login before starting the daemon:
@@ -42,6 +44,12 @@ By default, the credential file is:
 - `$AMA_RUNNER_CREDENTIALS` when set
 - `$XDG_CONFIG_HOME/ama-runner/credentials.json`
 - `$HOME/.config/ama-runner/credentials.json`
+
+On Windows, Go's native user directories are used instead:
+
+- `%APPDATA%\ama-runner\config.json`
+- `%APPDATA%\ama-runner\credentials.json`
+- `%LOCALAPPDATA%\ama-runner` for state, workspaces, and session logs
 
 The config directory is created with `0700` permissions and the credential file is written with `0600` permissions where the host filesystem supports POSIX modes. Treat the credential file as local operator credential material.
 The credential file is shared across runner config files by default. Saved profiles are keyed by AMA API server and OIDC account, and refresh writes are serialized with a local credential lock so multiple runner daemons can reuse one login safely.
@@ -71,6 +79,18 @@ ama-runner \
   --work-dir /var/lib/ama-runner/workspace
 ```
 
+The Windows runner is also a foreground process, matching macOS and Linux. Start it from PowerShell and stop it with `Ctrl-C`:
+
+```powershell
+.\ama-runner.exe `
+  --api-server $env:AMA_API_SERVER `
+  --project-id $env:AMA_PROJECT_ID `
+  --environment-id $env:AMA_ENVIRONMENT_ID `
+  --allow-unsafe-process
+```
+
+Node.js and the desired runtime CLIs (`codex`, `claude`, and/or `copilot`) must be installed on `PATH`. The runner resolves Windows `.exe` and `.cmd` launchers through `PATHEXT`.
+
 Timing defaults:
 
 - Lease duration: `60s`
@@ -85,9 +105,9 @@ The daemon fails fast when the API server, token, environment binding, work dire
 
 ## Local Executor Boundary
 
-The only v1 adapter is `process-unsafe`. It is marked unsafe because it executes commands directly on the host with the configured work directory as the workspace boundary.
+The AMA runtime uses the `process-unsafe` adapter on Linux and macOS. It is marked unsafe because it executes commands directly on the host with the configured work directory as the workspace boundary. Windows does not advertise the AMA runtime and cannot receive AMA runtime or standalone sandbox-tool work; it can advertise and run the installed Codex, Claude Code, and Copilot runtimes.
 
-`process-unsafe` supports approved AMA sandbox tool work for:
+`process-unsafe` supports approved AMA runtime tool work for:
 
 - `bash`
 - `read`
@@ -99,7 +119,7 @@ The only v1 adapter is `process-unsafe`. It is marked unsafe because it executes
 - `fetch`
 - `web_search`
 
-The adapter captures stdout, stderr, exit code, structured output, and errors. File reads/writes are constrained to the configured work directory, including symlink boundary checks. Command cancellation uses context cancellation and process-group termination on Unix-like hosts.
+The adapter captures stdout, stderr, exit code, structured output, and errors. File reads/writes are constrained to the configured work directory, including symlink boundary checks. Command cancellation uses context cancellation and process-group termination on Unix-like hosts. Windows runtime cancellation uses a Job Object so the Node bridge and its provider CLI child processes terminate together.
 
 `bash` starts child commands with an explicit minimal environment. AMA control-plane credentials and `AMA_*` runner/operator configuration are not passed to leased commands. `HOME` and temp directories are set to runner-controlled directories inside the configured workspace so host operator config paths are not inherited.
 
@@ -120,7 +140,7 @@ At startup, the daemon:
 
 `204` lease responses mean no eligible work is available. Authentication failures, runner-token binding failures, unsupported payload protocols, unsupported sandbox backends, and incompatible control planes are fatal.
 
-Current AMA self-hosted session creation queues `session.start` work. The daemon handles that work as a cloud-owned session handoff: it uploads a structured `runner.session.started` event and completes the lease without launching Pi/PyAgent locally. Approved AMA sandbox tool payloads are the only work items that enter the local process adapter.
+Current AMA self-hosted session creation queues `session.start` work. The daemon handles that work as a cloud-owned session handoff: it uploads a structured `runner.session.started` event and completes the lease without launching Pi/PyAgent locally. Approved AMA runtime tool payloads are the only work items that enter the local process adapter.
 
 ## Cancellation Status
 

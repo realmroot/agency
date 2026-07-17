@@ -35,6 +35,218 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// node_modules/.pnpm/isexe@3.1.5/node_modules/isexe/dist/commonjs/index.min.js
+var require_index_min = __commonJS({
+  "node_modules/.pnpm/isexe@3.1.5/node_modules/isexe/dist/commonjs/index.min.js"(exports) {
+    "use strict";
+    var a = (t7, e7) => () => (e7 || t7((e7 = { exports: {} }).exports, e7), e7.exports);
+    var _10 = a((i) => {
+      "use strict";
+      Object.defineProperty(i, "__esModule", { value: true });
+      i.sync = i.isexe = void 0;
+      var M10 = __require("node:fs"), x10 = __require("node:fs/promises"), q = async (t7, e7 = {}) => {
+        let { ignoreErrors: r = false } = e7;
+        try {
+          return d7(await (0, x10.stat)(t7), e7);
+        } catch (s2) {
+          let n2 = s2;
+          if (r || n2.code === "EACCES") return false;
+          throw n2;
+        }
+      };
+      i.isexe = q;
+      var m10 = (t7, e7 = {}) => {
+        let { ignoreErrors: r = false } = e7;
+        try {
+          return d7((0, M10.statSync)(t7), e7);
+        } catch (s2) {
+          let n2 = s2;
+          if (r || n2.code === "EACCES") return false;
+          throw n2;
+        }
+      };
+      i.sync = m10;
+      var d7 = (t7, e7) => t7.isFile() && A(t7, e7), A = (t7, e7) => {
+        let r = e7.uid ?? process.getuid?.(), s2 = e7.groups ?? process.getgroups?.() ?? [], n2 = e7.gid ?? process.getgid?.() ?? s2[0];
+        if (r === void 0 || n2 === void 0) throw new Error("cannot get uid or gid");
+        let u = /* @__PURE__ */ new Set([n2, ...s2]), c = t7.mode, S10 = t7.uid, P10 = t7.gid, f10 = parseInt("100", 8), l10 = parseInt("010", 8), j = parseInt("001", 8), C10 = f10 | l10;
+        return !!(c & j || c & l10 && u.has(P10) || c & f10 && S10 === r || c & C10 && r === 0);
+      };
+    });
+    var g10 = a((o2) => {
+      "use strict";
+      Object.defineProperty(o2, "__esModule", { value: true });
+      o2.sync = o2.isexe = void 0;
+      var T10 = __require("node:fs"), I10 = __require("node:fs/promises"), D10 = __require("node:path"), F10 = async (t7, e7 = {}) => {
+        let { ignoreErrors: r = false } = e7;
+        try {
+          return y10(await (0, I10.stat)(t7), t7, e7);
+        } catch (s2) {
+          let n2 = s2;
+          if (r || n2.code === "EACCES") return false;
+          throw n2;
+        }
+      };
+      o2.isexe = F10;
+      var L10 = (t7, e7 = {}) => {
+        let { ignoreErrors: r = false } = e7;
+        try {
+          return y10((0, T10.statSync)(t7), t7, e7);
+        } catch (s2) {
+          let n2 = s2;
+          if (r || n2.code === "EACCES") return false;
+          throw n2;
+        }
+      };
+      o2.sync = L10;
+      var B10 = (t7, e7) => {
+        let { pathExt: r = process.env.PATHEXT || "" } = e7, s2 = r.split(D10.delimiter);
+        if (s2.indexOf("") !== -1) return true;
+        for (let n2 of s2) {
+          let u = n2.toLowerCase(), c = t7.substring(t7.length - u.length).toLowerCase();
+          if (u && c === u) return true;
+        }
+        return false;
+      }, y10 = (t7, e7, r) => t7.isFile() && B10(e7, r);
+    });
+    var p = a((h10) => {
+      "use strict";
+      Object.defineProperty(h10, "__esModule", { value: true });
+    });
+    var v10 = exports && exports.__createBinding || (Object.create ? (function(t7, e7, r, s2) {
+      s2 === void 0 && (s2 = r);
+      var n2 = Object.getOwnPropertyDescriptor(e7, r);
+      (!n2 || ("get" in n2 ? !e7.__esModule : n2.writable || n2.configurable)) && (n2 = { enumerable: true, get: function() {
+        return e7[r];
+      } }), Object.defineProperty(t7, s2, n2);
+    }) : (function(t7, e7, r, s2) {
+      s2 === void 0 && (s2 = r), t7[s2] = e7[r];
+    }));
+    var G = exports && exports.__setModuleDefault || (Object.create ? (function(t7, e7) {
+      Object.defineProperty(t7, "default", { enumerable: true, value: e7 });
+    }) : function(t7, e7) {
+      t7.default = e7;
+    });
+    var w = exports && exports.__importStar || /* @__PURE__ */ (function() {
+      var t7 = function(e7) {
+        return t7 = Object.getOwnPropertyNames || function(r) {
+          var s2 = [];
+          for (var n2 in r) Object.prototype.hasOwnProperty.call(r, n2) && (s2[s2.length] = n2);
+          return s2;
+        }, t7(e7);
+      };
+      return function(e7) {
+        if (e7 && e7.__esModule) return e7;
+        var r = {};
+        if (e7 != null) for (var s2 = t7(e7), n2 = 0; n2 < s2.length; n2++) s2[n2] !== "default" && v10(r, e7, s2[n2]);
+        return G(r, e7), r;
+      };
+    })();
+    var X = exports && exports.__exportStar || function(t7, e7) {
+      for (var r in t7) r !== "default" && !Object.prototype.hasOwnProperty.call(e7, r) && v10(e7, t7, r);
+    };
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.sync = exports.isexe = exports.posix = exports.win32 = void 0;
+    var E10 = w(_10());
+    exports.posix = E10;
+    var O10 = w(g10());
+    exports.win32 = O10;
+    X(p(), exports);
+    var H = process.env._ISEXE_TEST_PLATFORM_ || process.platform;
+    var b8 = H === "win32" ? O10 : E10;
+    exports.isexe = b8.isexe;
+    exports.sync = b8.sync;
+  }
+});
+
+// node_modules/.pnpm/which@4.0.0/node_modules/which/lib/index.js
+var require_lib = __commonJS({
+  "node_modules/.pnpm/which@4.0.0/node_modules/which/lib/index.js"(exports, module) {
+    var { isexe, sync: isexeSync } = require_index_min();
+    var { join: join31, delimiter, sep: sep11, posix } = __require("path");
+    var isWindows = process.platform === "win32";
+    var rSlash = new RegExp(`[${posix.sep}${sep11 === posix.sep ? "" : sep11}]`.replace(/(\\)/g, "\\$1"));
+    var rRel = new RegExp(`^\\.${rSlash.source}`);
+    var getNotFoundError = (cmd) => Object.assign(new Error(`not found: ${cmd}`), { code: "ENOENT" });
+    var getPathInfo = (cmd, {
+      path: optPath = process.env.PATH,
+      pathExt: optPathExt = process.env.PATHEXT,
+      delimiter: optDelimiter = delimiter
+    }) => {
+      const pathEnv = cmd.match(rSlash) ? [""] : [
+        // windows always checks the cwd first
+        ...isWindows ? [process.cwd()] : [],
+        ...(optPath || /* istanbul ignore next: very unusual */
+        "").split(optDelimiter)
+      ];
+      if (isWindows) {
+        const pathExtExe = optPathExt || [".EXE", ".CMD", ".BAT", ".COM"].join(optDelimiter);
+        const pathExt = pathExtExe.split(optDelimiter).flatMap((item) => [item, item.toLowerCase()]);
+        if (cmd.includes(".") && pathExt[0] !== "") {
+          pathExt.unshift("");
+        }
+        return { pathEnv, pathExt, pathExtExe };
+      }
+      return { pathEnv, pathExt: [""] };
+    };
+    var getPathPart = (raw, cmd) => {
+      const pathPart = /^".*"$/.test(raw) ? raw.slice(1, -1) : raw;
+      const prefix = !pathPart && rRel.test(cmd) ? cmd.slice(0, 2) : "";
+      return prefix + join31(pathPart, cmd);
+    };
+    var which2 = async (cmd, opt = {}) => {
+      const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt);
+      const found = [];
+      for (const envPart of pathEnv) {
+        const p = getPathPart(envPart, cmd);
+        for (const ext2 of pathExt) {
+          const withExt = p + ext2;
+          const is2 = await isexe(withExt, { pathExt: pathExtExe, ignoreErrors: true });
+          if (is2) {
+            if (!opt.all) {
+              return withExt;
+            }
+            found.push(withExt);
+          }
+        }
+      }
+      if (opt.all && found.length) {
+        return found;
+      }
+      if (opt.nothrow) {
+        return null;
+      }
+      throw getNotFoundError(cmd);
+    };
+    var whichSync = (cmd, opt = {}) => {
+      const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt);
+      const found = [];
+      for (const pathEnvPart of pathEnv) {
+        const p = getPathPart(pathEnvPart, cmd);
+        for (const ext2 of pathExt) {
+          const withExt = p + ext2;
+          const is2 = isexeSync(withExt, { pathExt: pathExtExe, ignoreErrors: true });
+          if (is2) {
+            if (!opt.all) {
+              return withExt;
+            }
+            found.push(withExt);
+          }
+        }
+      }
+      if (opt.all && found.length) {
+        return found;
+      }
+      if (opt.nothrow) {
+        return null;
+      }
+      throw getNotFoundError(cmd);
+    };
+    module.exports = which2;
+    which2.sync = whichSync;
+  }
+});
+
 // node_modules/.pnpm/vscode-jsonrpc@8.2.1/node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is = __commonJS({
   "node_modules/.pnpm/vscode-jsonrpc@8.2.1/node_modules/vscode-jsonrpc/lib/common/is.js"(exports) {
@@ -18292,7 +18504,7 @@ function subagentSummaries(value) {
 }
 
 // packages/runtime-bridge/src/providers/cli-host.ts
-import { execSync } from "node:child_process";
+var import_which = __toESM(require_lib(), 1);
 function hostHome(env2) {
   return typeof env2.AMA_RUNTIME_BRIDGE_HOST_HOME === "string" && env2.AMA_RUNTIME_BRIDGE_HOST_HOME ? env2.AMA_RUNTIME_BRIDGE_HOST_HOME : void 0;
 }
@@ -18311,18 +18523,14 @@ function sdkEnv(request3) {
   };
 }
 function resolveCliPath(bin) {
-  try {
-    return execSync(`which ${bin}`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || void 0;
-  } catch {
-    return void 0;
-  }
+  return import_which.default.sync(bin, { nothrow: true }) ?? void 0;
 }
 function objectValue2(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 // packages/runtime-bridge/src/providers/claude-code.ts
-import { execSync as execSync2 } from "node:child_process";
+import { execSync } from "node:child_process";
 import { readFileSync as readFileSync2 } from "node:fs";
 import { join } from "node:path";
 
@@ -37788,7 +37996,7 @@ function parseClaudeOAuthToken(raw) {
 function readClaudeOAuthToken(home) {
   if (process.platform === "darwin") {
     try {
-      const raw = execSync2('security find-generic-password -s "Claude Code-credentials" -w', {
+      const raw = execSync('security find-generic-password -s "Claude Code-credentials" -w', {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
         env: home ? { ...process.env, HOME: home } : process.env
@@ -39164,7 +39372,7 @@ var codexProvider = {
 };
 
 // packages/runtime-bridge/src/providers/copilot.ts
-import { execSync as execSync3 } from "node:child_process";
+import { execSync as execSync2 } from "node:child_process";
 
 // node_modules/.pnpm/@github+copilot@1.0.60/node_modules/@github/copilot/sdk/index.js
 import __module from "module";
@@ -217561,7 +217769,7 @@ var approveAll = () => ({ kind: "approved" });
 var COPILOT_USER_API = "https://api.github.com/copilot_internal/user";
 function readGhToken(home) {
   try {
-    return execSync3("gh auth token", {
+    return execSync2("gh auth token", {
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "ignore"],
       env: home ? { ...process.env, HOME: home } : process.env

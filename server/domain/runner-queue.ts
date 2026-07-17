@@ -1,5 +1,4 @@
 import {
-  AMA_RUNNER_SANDBOX_CAPABILITY,
   RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX,
   transitionalRuntimeLevelRuntimes,
 } from '@server/domain/runtime-catalog'
@@ -21,10 +20,20 @@ export function hasSecretMaterial(value: unknown): boolean {
   return Object.entries(value).some(([key, child]) => secretKey(key) || hasSecretMaterial(child))
 }
 
-// The capability a session-start work item requires of a runner, if any. Other
-// work types carry no runtime requirement.
+// The runtime capability a work item requires of a runner, if any. Session
+// starts declare it explicitly; local AMA tool calls are recognized by shape.
 export function requiredRunnerCapability(payload: Record<string, unknown>): string | null {
-  return typeof payload.requiredRunnerCapability === 'string' ? payload.requiredRunnerCapability : null
+  if (typeof payload.requiredRunnerCapability === 'string') {
+    return payload.requiredRunnerCapability
+  }
+  if (
+    payload.type !== 'session.start' &&
+    (typeof payload.toolName === 'string' ||
+      (payload.toolCall !== null && typeof payload.toolCall === 'object' && !Array.isArray(payload.toolCall)))
+  ) {
+    return 'ama'
+  }
+  return null
 }
 
 // Whether a runner's advertised capabilities can claim the work item. Unscoped
@@ -135,9 +144,6 @@ export function runnerRuntimeReady(
   }
   const required = requiredRunnerCapability(payload)
   if (required === null) {
-    return true
-  }
-  if (required === AMA_RUNNER_SANDBOX_CAPABILITY) {
     return true
   }
   const readyRuntimes = [...new Set(inventory.filter((entry) => entry.state === 'ready').map((entry) => entry.runtime))]

@@ -15,7 +15,7 @@ vi.mock('./cli-host', () => ({
 const { ClaudeEventMapper } = await import('./claude-code')
 
 describe('ClaudeEventMapper', () => {
-  it('maps Claude Code builtin tool calls to canonical AMA sandbox tools', () => {
+  it('maps Claude Code builtin tool calls to canonical AMA runtime tools', () => {
     const mapper = new ClaudeEventMapper()
     const events = mapper.map({
       type: 'assistant',

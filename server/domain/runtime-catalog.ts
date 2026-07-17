@@ -1,5 +1,4 @@
 export const RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX = 'runtime-provider-model'
-export const AMA_RUNNER_SANDBOX_CAPABILITY = 'ama-sandbox'
 
 export type RuntimeHostingMode = 'cloud' | 'self_hosted'
 export type RuntimeName = 'ama' | 'claude-code' | 'codex' | 'copilot'
@@ -42,7 +41,7 @@ export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
 ]
 
 // Runtimes whose active bridge handle accepts mid-run prompt injection over the
-// runner session channel. The external runtime bridge implements `send` for
+// runner session channel. The CLI-backed runtime bridge implements `send` for
 // claude-code, codex, and copilot, while ama owns continuation turns natively.
 const LIVE_PROMPT_RUNTIMES: ReadonlySet<RuntimeName> = new Set(['ama', 'claude-code', 'codex', 'copilot'])
 
@@ -56,7 +55,7 @@ export function runtimeProviderModelCapability(runtime: RuntimeName, provider: s
 
 export function runtimeRequiredRunnerCapability(runtime: RuntimeName, provider: string, model?: string | null) {
   if (runtime === 'ama') {
-    return AMA_RUNNER_SANDBOX_CAPABILITY
+    return runtime
   }
   if (!model) {
     return runtime
@@ -96,7 +95,7 @@ export function runnerSupportsRuntimeProviderModel(
   model?: string | null,
 ) {
   if (runtime === 'ama') {
-    return capabilities.includes(AMA_RUNNER_SANDBOX_CAPABILITY)
+    return capabilities.includes(runtime)
   }
   if (!model) {
     return (

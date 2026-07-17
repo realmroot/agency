@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	"log/slog"
 	"os"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"time"
@@ -428,7 +429,9 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 		EnvironmentId: lo.EmptyableToPtr(d.Config.EnvironmentID),
 		MaxConcurrent: lo.ToPtr(d.Config.MaxConcurrent),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  runnerconfig.ProcessUnsafeAdapter,
+			"sandboxAdapter":  sandboxAdapterName(),
+			"os":              goruntime.GOOS,
+			"arch":            goruntime.GOARCH,
 			"machineId":       machineID,
 			"hostname":        displayName(),
 			"runnerVersion":   build.Version,
@@ -455,7 +458,9 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 		RuntimeUsage:     lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
 		RuntimeInventory: lo.ToPtr(runnerRuntimeInventory(d.currentRuntimeInventory())),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  runnerconfig.ProcessUnsafeAdapter,
+			"sandboxAdapter":  sandboxAdapterName(),
+			"os":              goruntime.GOOS,
+			"arch":            goruntime.GOARCH,
 			"machineId":       machineID,
 			"hostname":        displayName(),
 			"runnerVersion":   build.Version,
@@ -475,15 +480,15 @@ func (d *Daemon) sendOfflineHeartbeat(ctx context.Context) error {
 }
 
 func (d *Daemon) refreshCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().RefreshCapabilities())
+	return runnerCapabilities(d.runtimeInventory().RefreshCapabilities(), supportsAMARuntime())
 }
 
 func (d *Daemon) currentCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().CurrentCapabilities())
+	return runnerCapabilities(d.runtimeInventory().CurrentCapabilities(), supportsAMARuntime())
 }
 
 func (d *Daemon) currentRuntimeInventory() []runtime.RuntimeInventoryEntry {
-	return d.runtimeInventory().CurrentRuntimeInventory()
+	return withAMARuntimeInventory(d.runtimeInventory().CurrentRuntimeInventory(), supportsAMARuntime())
 }
 
 func (d *Daemon) setRuntimeUsageSnapshot(snapshot *runtime.UsageSnapshot) {
@@ -502,9 +507,34 @@ func (d *Daemon) runUsageCollector(ctx context.Context) {
 	d.runtimeInventory().RunUsageCollector(ctx)
 }
 
-func runnerCapabilities(runtimeCapabilities []string) []string {
-	capabilities := []string{"ama-sandbox"}
-	return append(capabilities, runtimeCapabilities...)
+func runnerCapabilities(runtimeCapabilities []string, supportsAMA bool) []string {
+	capabilities := append([]string(nil), runtimeCapabilities...)
+	if supportsAMA && !lo.Contains(capabilities, "ama") {
+		capabilities = append([]string{"ama"}, capabilities...)
+	}
+	return capabilities
+}
+
+func withAMARuntimeInventory(inventory []runtime.RuntimeInventoryEntry, supportsAMA bool) []runtime.RuntimeInventoryEntry {
+	if !supportsAMA || lo.ContainsBy(inventory, func(entry runtime.RuntimeInventoryEntry) bool { return entry.Runtime == "ama" }) {
+		return inventory
+	}
+	return append([]runtime.RuntimeInventoryEntry{{
+		Runtime: "ama",
+		State:   runtime.RuntimeInventoryStateReady,
+		Detail:  "AMA runtime is available",
+	}}, inventory...)
+}
+
+func supportsAMARuntime() bool {
+	return goruntime.GOOS != "windows"
+}
+
+func sandboxAdapterName() string {
+	if supportsAMARuntime() {
+		return runnerconfig.ProcessUnsafeAdapter
+	}
+	return "none"
 }
 
 func runnerRuntimeInventory(inventory []runtime.RuntimeInventoryEntry) []ama.RunnerRuntimeInventory {

@@ -1,9 +1,9 @@
 // Smoke test for the runner-side runtime surface.
 //
-// AMA is intentionally not a runner-loop runtime: the cloud owns the Pi loop and
-// a self-hosted runner only provides the sandbox executor. This smoke keeps that
-// boundary explicit by exercising the external SDK bridge in deterministic test
-// mode and asserting that the bridge no longer accepts `ama` as a provider.
+// AMA is the first-party runtime and is executed through the runner's Go tool
+// adapter. Codex, Claude Code, and Copilot are CLI-backed runtimes hosted by the
+// Node bridge. This smoke exercises that bridge in deterministic test mode and
+// asserts that AMA is not accidentally routed through the CLI-backed provider path.
 //
 //   pnpm run smoke:mock
 import { spawn } from 'node:child_process'
@@ -202,7 +202,7 @@ async function livePermissionFlow() {
 }
 
 async function amaRejectedByBridge() {
-  console.log('\n[ama] cloud-loop boundary')
+  console.log('\n[ama] first-party runtime boundary')
   const bridge = startBridge()
   await bridge.waitReady()
   const requestId = 'run_ama_rejected'

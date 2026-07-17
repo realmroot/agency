@@ -95,7 +95,7 @@ export function validateAllowedTools(tools: string[]): FieldErrors | null {
     }
     names.add(tool)
     if (!isAmaSandboxToolName(tool)) {
-      return { allowedTools: `Tool is not supported by the AMA sandbox runtime: ${tool}` }
+      return { allowedTools: `Tool is not supported by the AMA runtime: ${tool}` }
     }
   }
   return null
