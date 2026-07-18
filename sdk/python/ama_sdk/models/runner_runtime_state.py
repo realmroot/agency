@@ -1,6 +1,6 @@
 from enum import Enum
 
-class RunnerRuntimeInventoryState(str, Enum):
+class RunnerRuntimeState(str, Enum):
     LIMITED = "limited"
     MISSING = "missing"
     READY = "ready"

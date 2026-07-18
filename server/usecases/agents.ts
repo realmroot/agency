@@ -47,7 +47,7 @@ async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
 // and a self-hosted agent legitimately pins a runner-native model id (e.g.
 // `opus`) that never appears in the global catalog. Model validity is therefore
 // resolved at session creation, where the environment — and thus whether the
-// catalog (cloud) or the runner's capabilities (self-hosted) is authoritative —
+// catalog (cloud) or the runner's runtime declarations (self-hosted) is authoritative —
 // is known.
 async function validateProviderRef(deps: Deps, projectId: string, provider: string | null) {
   if (!provider) {

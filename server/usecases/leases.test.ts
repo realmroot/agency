@@ -1,4 +1,3 @@
-import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
 import type { WorkspaceManifest } from '@server/domain/workspace'
 import { describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
@@ -20,7 +19,7 @@ const auth: AuthScope = {
   permissions: [],
 }
 
-const CAP = runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4')
+const RUNTIME_REQUIREMENT = { runtime: 'claude-code', model: 'claude-opus-4' }
 const scope = { organizationId: 'org_1', projectId: 'project_1' }
 
 function runner(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
@@ -29,7 +28,6 @@ function runner(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
     organizationId: 'org_1',
     projectId: 'project_1',
     name: 'Runner',
-    capabilities: [CAP],
     environmentId: null,
     secretRef: null,
     authMode: 'oidc',
@@ -37,7 +35,7 @@ function runner(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
     currentLoad: 0,
     maxConcurrent: 2,
     runtimeUsage: [],
-    runtimeInventory: [],
+    runtimes: [{ runtime: 'claude-code', models: ['claude-opus-4'], state: 'ready' }],
     metadata: {},
     oidcSubject: 'sub_1',
     oidcClientId: 'cid',
@@ -67,7 +65,7 @@ function candidate(overrides: Partial<WorkItemClaimCandidate> = {}): WorkItemCla
     availableAt: '2026-01-01T00:00:00.000Z',
     environmentId: null,
     sessionId: 'session_1',
-    rawPayload: { type: 'session.start', requiredRunnerCapability: CAP },
+    rawPayload: { type: 'session.start', runtimeRequirement: RUNTIME_REQUIREMENT },
     ...overrides,
   }
 }
@@ -125,9 +123,9 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
     expect((error as RunnerConflictError).status).toBe(404)
   })
 
-  it('conflicts when the runner is not capability-eligible', async () => {
+  it('conflicts when the runner does not report the required runtime', async () => {
     await expect(
-      claimLease(fakeDeps({}), auth, runner({ capabilities: ['node'] }), {
+      claimLease(fakeDeps({}), auth, runner({ runtimes: [] }), {
         workItemId: 'work_1',
         leaseDurationSeconds: 60,
       }),
@@ -160,7 +158,7 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
           leases: {
             claimCandidate: async () =>
               candidate({
-                rawPayload: { type: 'session.start', requiredRunnerCapability: CAP, envFrom: [{}] },
+                rawPayload: { type: 'session.start', runtimeRequirement: RUNTIME_REQUIREMENT, envFrom: [{}] },
               }),
             failClaim,
           },
@@ -185,7 +183,7 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
             candidate({
               rawPayload: {
                 type: 'session.start',
-                requiredRunnerCapability: CAP,
+                runtimeRequirement: RUNTIME_REQUIREMENT,
                 volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' }],
               },
             }),
@@ -201,6 +199,29 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
       [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' }],
       [],
     )
+  })
+
+  it('validates workspace mounts at claim time without volume definitions', async () => {
+    const resolveWorkspaceManifest = vi.fn(async () => ({ root: '/workspace', mounts: [] }) satisfies WorkspaceManifest)
+    await claimLease(
+      fakeDeps({
+        leases: {
+          claimCandidate: async () =>
+            candidate({
+              rawPayload: {
+                type: 'session.start',
+                runtimeRequirement: RUNTIME_REQUIREMENT,
+                volumeMounts: [{ name: 'workspace', mountPath: '/workspace' }],
+              },
+            }),
+        },
+        resolveWorkspaceManifest,
+      }),
+      auth,
+      runner(),
+      { workItemId: 'work_1', leaseDurationSeconds: 60 },
+    )
+    expect(resolveWorkspaceManifest).toHaveBeenCalledWith(scope, [], [{ name: 'workspace', mountPath: '/workspace' }])
   })
 
   it('uses the default lease duration when leaseDurationSeconds is not provided', async () => {
@@ -255,13 +276,13 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
     ).rejects.toThrow('Runner is not eligible for this work item')
   })
 
-  it('conflicts when the runner runtime inventory has no ready entry for the required runtime', async () => {
+  it('conflicts when the runner has no ready entry for the required runtime', async () => {
     await expect(
       claimLease(
         fakeDeps({}),
         auth,
         runner({
-          runtimeInventory: [{ runtime: 'node', state: 'ready', metadata: {} } as never],
+          runtimes: [{ runtime: 'node', models: [], state: 'ready' }],
         }),
         { workItemId: 'work_1', leaseDurationSeconds: 60 },
       ),
@@ -276,7 +297,7 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
           leases: {
             claimCandidate: async () =>
               candidate({
-                rawPayload: { type: 'session.start', requiredRunnerCapability: CAP, envFrom: [{}] },
+                rawPayload: { type: 'session.start', runtimeRequirement: RUNTIME_REQUIREMENT, envFrom: [{}] },
               }),
             failClaim,
           },

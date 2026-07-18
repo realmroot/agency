@@ -23,7 +23,7 @@ export const emptyAgent: AgentFormState = {
   description: 'Executes development work in a managed sandbox.',
   systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
   provider: 'workers-ai',
-  model: '@cf/moonshotai/kimi-k2.6',
+  model: '',
   skills: 'ama@coding-agent',
   allowedTools: DEFAULT_ALLOWED_TOOLS,
   mcpConnectors: '',

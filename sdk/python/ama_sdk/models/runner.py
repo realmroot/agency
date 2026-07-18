@@ -15,7 +15,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.runner_metadata import RunnerMetadata
-  from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+  from ..models.runner_runtime import RunnerRuntime
   from ..models.runtime_usage import RuntimeUsage
 
 
@@ -33,7 +33,6 @@ class Runner:
             id (str):  Example: runner_abc123.
             project_id (str):  Example: project_abc123.
             name (str):  Example: mac-mini-build-runner.
-            capabilities (list[str]):  Example: ['node', 'git', 'bash'].
             environment_id (None | str):  Example: env_abc123.
             secret_ref (None | str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
             auth_mode (RunnerAuthMode):  Example: oidc.
@@ -41,7 +40,7 @@ class Runner:
             current_load (int):
             max_concurrent (int):  Example: 2.
             runtime_usage (list[RuntimeUsage]):
-            runtime_inventory (list[RunnerRuntimeInventory]):
+            runtimes (list[RunnerRuntime]):
             metadata (RunnerMetadata):  Example: {'pool': 'default'}.
             last_heartbeat_at (datetime.datetime | None):
             archived_at (datetime.datetime | None):
@@ -52,7 +51,6 @@ class Runner:
     id: str
     project_id: str
     name: str
-    capabilities: list[str]
     environment_id: None | str
     secret_ref: None | str
     auth_mode: RunnerAuthMode
@@ -60,7 +58,7 @@ class Runner:
     current_load: int
     max_concurrent: int
     runtime_usage: list[RuntimeUsage]
-    runtime_inventory: list[RunnerRuntimeInventory]
+    runtimes: list[RunnerRuntime]
     metadata: RunnerMetadata
     last_heartbeat_at: datetime.datetime | None
     archived_at: datetime.datetime | None
@@ -74,17 +72,13 @@ class Runner:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.runner_metadata import RunnerMetadata
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         id = self.id
 
         project_id = self.project_id
 
         name = self.name
-
-        capabilities = self.capabilities
-
-
 
         environment_id: None | str
         environment_id = self.environment_id
@@ -107,10 +101,10 @@ class Runner:
 
 
 
-        runtime_inventory = []
-        for runtime_inventory_item_data in self.runtime_inventory:
-            runtime_inventory_item = runtime_inventory_item_data.to_dict()
-            runtime_inventory.append(runtime_inventory_item)
+        runtimes = []
+        for runtimes_item_data in self.runtimes:
+            runtimes_item = runtimes_item_data.to_dict()
+            runtimes.append(runtimes_item)
 
 
 
@@ -139,7 +133,6 @@ class Runner:
             "id": id,
             "projectId": project_id,
             "name": name,
-            "capabilities": capabilities,
             "environmentId": environment_id,
             "secretRef": secret_ref,
             "authMode": auth_mode,
@@ -147,7 +140,7 @@ class Runner:
             "currentLoad": current_load,
             "maxConcurrent": max_concurrent,
             "runtimeUsage": runtime_usage,
-            "runtimeInventory": runtime_inventory,
+            "runtimes": runtimes,
             "metadata": metadata,
             "lastHeartbeatAt": last_heartbeat_at,
             "archivedAt": archived_at,
@@ -162,7 +155,7 @@ class Runner:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.runner_metadata import RunnerMetadata
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         d = dict(src_dict)
         id = d.pop("id")
@@ -170,9 +163,6 @@ class Runner:
         project_id = d.pop("projectId")
 
         name = d.pop("name")
-
-        capabilities = cast(list[str], d.pop("capabilities"))
-
 
         def _parse_environment_id(data: object) -> None | str:
             if data is None:
@@ -214,14 +204,14 @@ class Runner:
             runtime_usage.append(runtime_usage_item)
 
 
-        runtime_inventory = []
-        _runtime_inventory = d.pop("runtimeInventory")
-        for runtime_inventory_item_data in (_runtime_inventory):
-            runtime_inventory_item = RunnerRuntimeInventory.from_dict(runtime_inventory_item_data)
+        runtimes = []
+        _runtimes = d.pop("runtimes")
+        for runtimes_item_data in (_runtimes):
+            runtimes_item = RunnerRuntime.from_dict(runtimes_item_data)
 
 
 
-            runtime_inventory.append(runtime_inventory_item)
+            runtimes.append(runtimes_item)
 
 
         metadata = RunnerMetadata.from_dict(d.pop("metadata"))
@@ -279,7 +269,6 @@ class Runner:
             id=id,
             project_id=project_id,
             name=name,
-            capabilities=capabilities,
             environment_id=environment_id,
             secret_ref=secret_ref,
             auth_mode=auth_mode,
@@ -287,7 +276,7 @@ class Runner:
             current_load=current_load,
             max_concurrent=max_concurrent,
             runtime_usage=runtime_usage,
-            runtime_inventory=runtime_inventory,
+            runtimes=runtimes,
             metadata=metadata,
             last_heartbeat_at=last_heartbeat_at,
             archived_at=archived_at,

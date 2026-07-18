@@ -14,7 +14,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMetadata
-  from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+  from ..models.runner_runtime import RunnerRuntime
   from ..models.runtime_usage import RuntimeUsage
 
 
@@ -30,16 +30,14 @@ class PutRunnerHeartbeatRequest:
     """ 
         Attributes:
             state (PutRunnerHeartbeatRequestState | Unset):  Example: active.
-            capabilities (list[str] | Unset):  Example: ['node', 'git'].
             runtime_usage (list[RuntimeUsage] | Unset):
-            runtime_inventory (list[RunnerRuntimeInventory] | Unset):
+            runtimes (list[RunnerRuntime] | Unset):
             metadata (PutRunnerHeartbeatRequestMetadata | Unset):  Example: {'hostname': 'runner-1'}.
      """
 
     state: PutRunnerHeartbeatRequestState | Unset = UNSET
-    capabilities: list[str] | Unset = UNSET
     runtime_usage: list[RuntimeUsage] | Unset = UNSET
-    runtime_inventory: list[RunnerRuntimeInventory] | Unset = UNSET
+    runtimes: list[RunnerRuntime] | Unset = UNSET
     metadata: PutRunnerHeartbeatRequestMetadata | Unset = UNSET
 
 
@@ -48,17 +46,11 @@ class PutRunnerHeartbeatRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMetadata
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         state: str | Unset = UNSET
         if not isinstance(self.state, Unset):
             state = self.state.value
-
-
-        capabilities: list[str] | Unset = UNSET
-        if not isinstance(self.capabilities, Unset):
-            capabilities = self.capabilities
-
 
 
         runtime_usage: list[dict[str, Any]] | Unset = UNSET
@@ -70,12 +62,12 @@ class PutRunnerHeartbeatRequest:
 
 
 
-        runtime_inventory: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.runtime_inventory, Unset):
-            runtime_inventory = []
-            for runtime_inventory_item_data in self.runtime_inventory:
-                runtime_inventory_item = runtime_inventory_item_data.to_dict()
-                runtime_inventory.append(runtime_inventory_item)
+        runtimes: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.runtimes, Unset):
+            runtimes = []
+            for runtimes_item_data in self.runtimes:
+                runtimes_item = runtimes_item_data.to_dict()
+                runtimes.append(runtimes_item)
 
 
 
@@ -90,12 +82,10 @@ class PutRunnerHeartbeatRequest:
         })
         if state is not UNSET:
             field_dict["state"] = state
-        if capabilities is not UNSET:
-            field_dict["capabilities"] = capabilities
         if runtime_usage is not UNSET:
             field_dict["runtimeUsage"] = runtime_usage
-        if runtime_inventory is not UNSET:
-            field_dict["runtimeInventory"] = runtime_inventory
+        if runtimes is not UNSET:
+            field_dict["runtimes"] = runtimes
         if metadata is not UNSET:
             field_dict["metadata"] = metadata
 
@@ -106,7 +96,7 @@ class PutRunnerHeartbeatRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMetadata
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         d = dict(src_dict)
         _state = d.pop("state", UNSET)
@@ -117,9 +107,6 @@ class PutRunnerHeartbeatRequest:
             state = PutRunnerHeartbeatRequestState(_state)
 
 
-
-
-        capabilities = cast(list[str], d.pop("capabilities", UNSET))
 
 
         _runtime_usage = d.pop("runtimeUsage", UNSET)
@@ -134,16 +121,16 @@ class PutRunnerHeartbeatRequest:
                 runtime_usage.append(runtime_usage_item)
 
 
-        _runtime_inventory = d.pop("runtimeInventory", UNSET)
-        runtime_inventory: list[RunnerRuntimeInventory] | Unset = UNSET
-        if _runtime_inventory is not UNSET:
-            runtime_inventory = []
-            for runtime_inventory_item_data in _runtime_inventory:
-                runtime_inventory_item = RunnerRuntimeInventory.from_dict(runtime_inventory_item_data)
+        _runtimes = d.pop("runtimes", UNSET)
+        runtimes: list[RunnerRuntime] | Unset = UNSET
+        if _runtimes is not UNSET:
+            runtimes = []
+            for runtimes_item_data in _runtimes:
+                runtimes_item = RunnerRuntime.from_dict(runtimes_item_data)
 
 
 
-                runtime_inventory.append(runtime_inventory_item)
+                runtimes.append(runtimes_item)
 
 
         _metadata = d.pop("metadata", UNSET)
@@ -158,9 +145,8 @@ class PutRunnerHeartbeatRequest:
 
         put_runner_heartbeat_request = cls(
             state=state,
-            capabilities=capabilities,
             runtime_usage=runtime_usage,
-            runtime_inventory=runtime_inventory,
+            runtimes=runtimes,
             metadata=metadata,
         )
 

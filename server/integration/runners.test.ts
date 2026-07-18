@@ -2,7 +2,6 @@ import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
 
-const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
@@ -85,7 +84,6 @@ describe('[CF] /api/v1/runners', () => {
       body: JSON.stringify({
         name: 'Local runner',
         environmentId: environment.id,
-        capabilities: ['node', 'git', 'bash', DEFAULT_AMA_RUNNER_CAPABILITY],
         secretRef: credential.activeVersion.secretRef,
         maxConcurrent: 2,
         metadata: { pool: 'default' },
@@ -96,7 +94,7 @@ describe('[CF] /api/v1/runners', () => {
     expect(runner).toMatchObject({
       state: 'offline',
       environmentId: environment.id,
-      capabilities: ['node', 'git', 'bash', DEFAULT_AMA_RUNNER_CAPABILITY],
+      runtimes: [],
       secretRef: credential.activeVersion.secretRef,
       maxConcurrent: 2,
       archivedAt: null,
@@ -119,14 +117,13 @@ describe('[CF] /api/v1/runners', () => {
       method: 'PUT',
       body: JSON.stringify({
         state: 'active',
-        capabilities: ['node', 'git', 'bash', 'workspace', DEFAULT_AMA_RUNNER_CAPABILITY],
         runtimeUsage: [
           {
             runtime: 'claude-code',
             windows: [{ label: '5-Hour', utilization: 23, resetsAt: '2026-06-12T08:30:00.000Z' }],
           },
         ],
-        runtimeInventory: [{ runtime: 'claude-code', version: '2.0.1', state: 'ready' }],
+        runtimes: [{ runtime: 'claude-code', models: ['claude-sonnet-4-6'], version: '2.0.1', state: 'ready' }],
       }),
     })
     expect(putHeartbeatRes.status).toBe(200)
@@ -136,7 +133,7 @@ describe('[CF] /api/v1/runners', () => {
       state: 'active',
       currentLoad: 0,
       runtimeUsage: [{ runtime: 'claude-code', windows: [{ label: '5-Hour', utilization: 23 }] }],
-      runtimeInventory: [{ runtime: 'claude-code', version: '2.0.1', state: 'ready' }],
+      runtimes: [{ runtime: 'claude-code', models: ['claude-sonnet-4-6'], version: '2.0.1', state: 'ready' }],
       lastHeartbeatAt: expect.any(String),
     })
 
@@ -150,7 +147,7 @@ describe('[CF] /api/v1/runners', () => {
       id: runnerId,
       state: 'active',
       currentLoad: 0,
-      capabilities: ['node', 'git', 'bash', 'workspace', DEFAULT_AMA_RUNNER_CAPABILITY],
+      runtimes: [{ runtime: 'claude-code', models: ['claude-sonnet-4-6'], version: '2.0.1', state: 'ready' }],
       lastHeartbeatAt: expect.any(String),
     })
   })
@@ -173,7 +170,7 @@ describe('[CF] /api/v1/runners', () => {
     })
   })
 
-  it('rejects raw secret material in runner metadata and capabilities', async () => {
+  it('rejects raw secret material in runner metadata', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/runners', authorization, {
       method: 'POST',
@@ -192,7 +189,7 @@ describe('[CF] /api/v1/runners', () => {
     const authorization = await signIn()
     const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
       method: 'POST',
-      body: JSON.stringify({ name: 'Managed runner', capabilities: ['node'] }),
+      body: JSON.stringify({ name: 'Managed runner' }),
     })
     expect(runnerRes.status).toBe(201)
     const runner = (await runnerRes.json()) as { id: string }
@@ -203,7 +200,6 @@ describe('[CF] /api/v1/runners', () => {
         name: 'Renamed runner',
         state: 'draining',
         maxConcurrent: 4,
-        capabilities: ['node', 'git'],
       }),
     })
     expect(patchRes.status).toBe(200)
@@ -212,7 +208,6 @@ describe('[CF] /api/v1/runners', () => {
       name: 'Renamed runner',
       state: 'draining',
       maxConcurrent: 4,
-      capabilities: ['node', 'git'],
       archivedAt: null,
     })
 
@@ -370,7 +365,6 @@ describe('[CF] /api/v1/runners', () => {
       body: JSON.stringify({
         name: 'OIDC device runner',
         environmentId: environment.id,
-        capabilities: ['bash', DEFAULT_AMA_RUNNER_CAPABILITY],
       }),
     })
     expect(runnerRes.status).toBe(201)

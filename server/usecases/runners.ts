@@ -13,14 +13,13 @@ import {
   type CreateRunnerInput,
   type RunnerAuthRecord,
   RunnerConflictError,
+  type RunnerRuntime,
   RunnerValidationError,
-  type RuntimeInventoryEntry,
   type RuntimeUsage,
 } from './ports'
 
 export interface RegisterRunnerInput {
   name: string
-  capabilities: string[]
   environmentId: string | undefined
   secretRef: string | undefined
   authMode: RunnerAuthMode | undefined
@@ -42,7 +41,7 @@ export async function registerRunner(
   oidc: RunnerOidcContext,
   input: RegisterRunnerInput,
 ): Promise<RegisterRunnerResult> {
-  if (hasSecretMaterial(input.metadata) || hasSecretMaterial(input.capabilities)) {
+  if (hasSecretMaterial(input.metadata)) {
     throw new RunnerValidationError('Runner metadata must not contain raw secret material')
   }
   const environmentId = environmentIdForRegistration(oidc, input.environmentId)
@@ -71,7 +70,6 @@ export async function registerRunner(
     organizationId: auth.organization.id,
     projectId: auth.project.id,
     name: input.name,
-    capabilities: input.capabilities,
     environmentId: environmentId ?? null,
     secretRef: input.secretRef ?? null,
     authMode,
@@ -108,7 +106,6 @@ export async function registerRunner(
 
 export interface UpdateRunnerPatch {
   name?: string
-  capabilities?: string[]
   state?: 'active' | 'draining' | 'disabled'
   maxConcurrent?: number
   metadata?: Record<string, unknown>
@@ -123,7 +120,7 @@ export async function updateRunner(
   runner: RunnerAuthRecord,
   patch: UpdateRunnerPatch,
 ): Promise<RunnerAuthRecord> {
-  if (hasSecretMaterial(patch.metadata) || hasSecretMaterial(patch.capabilities)) {
+  if (hasSecretMaterial(patch.metadata)) {
     throw new RunnerValidationError('Runner metadata must not contain raw secret material')
   }
   const timestamp = new Date().toISOString()
@@ -134,7 +131,6 @@ export async function updateRunner(
     runner.id,
     {
       name: patch.name ?? runner.name,
-      capabilities: patch.capabilities ?? runner.capabilities,
       state: patch.state ?? runner.state,
       maxConcurrent: patch.maxConcurrent ?? runner.maxConcurrent,
       metadata: patch.metadata ?? runner.metadata,
@@ -146,9 +142,8 @@ export async function updateRunner(
 
 export interface HeartbeatPatch {
   state?: 'active' | 'draining' | 'offline'
-  capabilities?: string[]
   runtimeUsage?: RuntimeUsage[]
-  runtimeInventory?: RuntimeInventoryEntry[]
+  runtimes?: RunnerRuntime[]
   metadata?: Record<string, unknown>
 }
 
@@ -167,7 +162,7 @@ export async function recordRunnerHeartbeat(
   if (runner.state === 'disabled') {
     throw new RunnerConflictError('Disabled runners cannot heartbeat until re-enabled by an operator')
   }
-  if (hasSecretMaterial(patch.metadata) || hasSecretMaterial(patch.runtimeInventory)) {
+  if (hasSecretMaterial(patch.metadata) || hasSecretMaterial(patch.runtimes)) {
     throw new RunnerValidationError('Runner heartbeat metadata must not contain raw secret material')
   }
   const timestamp = new Date().toISOString()
@@ -176,9 +171,8 @@ export async function recordRunnerHeartbeat(
     runner.id,
     {
       state: patch.state ?? 'active',
-      capabilities: patch.capabilities ?? runner.capabilities,
       runtimeUsage: patch.runtimeUsage ?? runner.runtimeUsage,
-      runtimeInventory: patch.runtimeInventory ?? runner.runtimeInventory,
+      runtimes: patch.runtimes ?? runner.runtimes,
       metadata: patch.metadata ?? runner.metadata,
     },
     timestamp,

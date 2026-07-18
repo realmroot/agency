@@ -131,8 +131,12 @@ export function CoreStep({ draft, errors, setField }: StepProps) {
       <Field data-invalid={errors.model || errors.provider ? true : undefined}>
         <FieldLabel htmlFor="builder-model">Model</FieldLabel>
         <Select
-          {...(selectedModelKey ? { value: selectedModelKey } : {})}
+          value={selectedModelKey || '__none__'}
           onValueChange={(key) => {
+            if (key === '__none__') {
+              setField('model', '')
+              return
+            }
             const [provider, ...rest] = key.split('::')
             setField('provider', provider ?? '')
             setField('model', rest.join('::'))
@@ -143,6 +147,7 @@ export function CoreStep({ draft, errors, setField }: StepProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
+              <SelectItem value="__none__">No model selected</SelectItem>
               {models.map((model) => (
                 <SelectItem
                   key={`${model.providerId}::${model.modelId}`}
@@ -160,7 +165,7 @@ export function CoreStep({ draft, errors, setField }: StepProps) {
           </SelectContent>
         </Select>
         <FieldDescription>
-          Models come from the global vendor catalog. Picking one pins both the vendor and the model.
+          Leave this empty to let the runtime choose. Picking a model pins its vendor and model id.
         </FieldDescription>
         {errors.provider ? <FieldError>{errors.provider}</FieldError> : null}
         {errors.model ? <FieldError>{errors.model}</FieldError> : null}

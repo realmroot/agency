@@ -22,7 +22,7 @@ type Bridge struct {
 	ShutdownGraceInterval time.Duration
 }
 
-const runtimeInventoryTimeout = 30 * time.Second
+const runtimesTimeout = 30 * time.Second
 const runtimeBridgeReadyFailureGrace = 2 * time.Second
 const runtimeBridgePipeWaitDelay = 500 * time.Millisecond
 
@@ -175,7 +175,7 @@ func (b Bridge) Inventory(ctx context.Context, includeUsage bool) (*InventorySna
 		RequestID:    requestID,
 		Env:          map[string]string{"AMA_RUNTIME_BRIDGE_HOST_HOME": hostHome},
 		IncludeUsage: includeUsage,
-	}, runtimeInventoryTimeout)
+	}, runtimesTimeout)
 	if err != nil {
 		return nil, err
 	}

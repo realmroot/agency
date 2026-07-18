@@ -112,7 +112,7 @@ Persisted runner identity:
 
 ### `runtime.Inventory`
 
-Advertised runtime inventory:
+Reported runtimes:
 
 - reports the first-party AMA runtime when the host supports its tool executor
 - detects local runtime CLIs from the runtime registry

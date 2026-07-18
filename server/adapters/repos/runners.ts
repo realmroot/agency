@@ -6,7 +6,7 @@ import type {
   RunnerHeartbeatFields,
   RunnerListQuery,
   RunnerRepo,
-  RuntimeInventoryEntry,
+  RunnerRuntime,
   RuntimeUsage,
   UpdateRunnerFields,
 } from '@server/usecases/ports'
@@ -74,7 +74,6 @@ async function recordFrom(db: Db, row: RunnerRow): Promise<RunnerAuthRecord> {
     organizationId: row.organizationId,
     projectId: row.projectId,
     name: row.name,
-    capabilities: parseJson<string[]>(row.capabilities) ?? [],
     environmentId: row.environmentId,
     secretRef: await secretRefFromColumns(db, row),
     // DB text column constrained to the auth-mode set by every write path.
@@ -83,7 +82,7 @@ async function recordFrom(db: Db, row: RunnerRow): Promise<RunnerAuthRecord> {
     currentLoad: row.currentLoad,
     maxConcurrent: row.maxConcurrent,
     runtimeUsage: parseRawJson<RuntimeUsage[]>(row.runtimeUsage) ?? [],
-    runtimeInventory: parseRawJson<RuntimeInventoryEntry[]>(row.runtimeInventory) ?? [],
+    runtimes: parseRawJson<RunnerRuntime[]>(row.runtimes) ?? [],
     metadata: parseJson<Record<string, unknown>>(row.metadata) ?? {},
     oidcSubject: row.oidcSubject,
     oidcClientId: row.oidcClientId,
@@ -100,7 +99,6 @@ function columnsFromInput(input: CreateRunnerInput) {
     organizationId: input.organizationId,
     projectId: input.projectId,
     name: input.name,
-    capabilities: stringify(input.capabilities),
     environmentId: input.environmentId,
     credentialId: identity?.credentialId ?? null,
     credentialVersionId: identity?.versionId ?? null,
@@ -185,7 +183,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         state: 'offline',
         currentLoad: 0,
         runtimeUsage: '[]',
-        runtimeInventory: '[]',
+        runtimes: '[]',
         lastHeartbeatAt: null,
         archivedAt: null,
         createdAt: timestamp,
@@ -216,7 +214,6 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         .update(runners)
         .set({
           name: fields.name,
-          capabilities: stringify(fields.capabilities),
           state: fields.state as RunnerStateColumn,
           maxConcurrent: fields.maxConcurrent,
           metadata: stringify(fields.metadata),
@@ -236,9 +233,8 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         .update(runners)
         .set({
           state: fields.state as RunnerStateColumn,
-          capabilities: stringify(fields.capabilities),
           runtimeUsage: stringify(fields.runtimeUsage),
-          runtimeInventory: stringify(fields.runtimeInventory),
+          runtimes: stringify(fields.runtimes),
           metadata: stringify(fields.metadata),
           lastHeartbeatAt: timestamp,
           updatedAt: timestamp,

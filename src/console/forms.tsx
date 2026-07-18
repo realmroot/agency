@@ -336,9 +336,8 @@ export function AllowedToolsField({
   )
 }
 
-// The model catalog is now global: a single dropdown lists every available
-// model across all vendors. Selecting a model pins both the vendor (provider)
-// and the model id, since an agent must reference a concrete vendor + model.
+// The model catalog is global. Selecting a model pins both its vendor and id;
+// leaving it empty lets the runtime choose without inventing a model value.
 function AgentProviderModelFields({
   value,
   setValue,
@@ -357,8 +356,12 @@ function AgentProviderModelFields({
     <Field>
       <FieldLabel htmlFor="field-model">Model</FieldLabel>
       <Select
-        {...(selectedModelKey ? { value: selectedModelKey } : {})}
+        value={selectedModelKey || '__none__'}
         onValueChange={(key) => {
+          if (key === '__none__') {
+            setValue({ ...value, model: '' })
+            return
+          }
           const [provider, ...rest] = key.split('::')
           setValue({ ...value, provider: provider ?? '', model: rest.join('::') })
         }}
@@ -368,6 +371,7 @@ function AgentProviderModelFields({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
+            <SelectItem value="__none__">No model selected</SelectItem>
             {models.map((model) => (
               <SelectItem key={`${model.providerId}::${model.modelId}`} value={`${model.providerId}::${model.modelId}`}>
                 {model.displayName || model.modelId} ({model.providerId})
@@ -382,7 +386,7 @@ function AgentProviderModelFields({
         </SelectContent>
       </Select>
       <FieldDescription>
-        Models come from the global vendor catalog. Picking one pins both the vendor and the model.
+        Leave this empty to let the runtime choose. Picking a model pins its vendor and model id.
       </FieldDescription>
     </Field>
   )

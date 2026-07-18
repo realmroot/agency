@@ -18,6 +18,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -248,7 +249,6 @@ func writeAPIError(w http.ResponseWriter, status int, err error) {
 func fakeRunnerResource(id string, name string) ama.Runner {
 	return ama.Runner{
 		AuthMode:      ama.Oidc,
-		Capabilities:  []string{},
 		CreatedAt:     time.Now(),
 		CurrentLoad:   0,
 		Id:            id,
@@ -654,7 +654,7 @@ func TestRunOnceDispatchesCodexRuntimeThroughAdapterAndCompletesSessionLease(t *
 	}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeAdapter = runtimeAdapter
-	daemon.RuntimeInventory = runtimeInventoryFor(runtimeEntry("codex", true, nil, nil, "ready", "", "ready"))
+	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"))
 	daemon.Config.WorkDir = workDir
 	// Run in a goroutine: the hub connects asynchronously, so wait for relay
 	// events to appear on hubChannel before asserting.
@@ -1326,8 +1326,8 @@ func TestDaemonSlotAccountingAndDefaults(t *testing.T) {
 	if daemon.identityStore().Config.WorkDir != daemon.Config.WorkDir {
 		t.Fatal("expected default identity store to use daemon config")
 	}
-	if daemon.runtimeInventory() == nil {
-		t.Fatal("expected default runtime inventory")
+	if daemon.runtimes() == nil {
+		t.Fatal("expected default runtime catalog")
 	}
 }
 
@@ -1457,20 +1457,20 @@ func TestRunOnceFailsFastOnUnapprovedWorkAfterMarkingLeaseFailed(t *testing.T) {
 	}
 }
 
-func TestRunOnceFailsLeaseWhenRequiredCapabilityDoesNotMatch(t *testing.T) {
+func TestRunOnceFailsLeaseWhenRuntimeRequirementDoesNotMatch(t *testing.T) {
 	lease := sessionStartLease()
-	lease.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:missing-runtime:provider:model"
+	lease.workItem.Payload["runtimeRequirement"] = ama.JSON{"runtime": "missing-runtime", "model": "model"}
 	client := &fakeAMAServer{lease: lease}
 	daemon := testDaemon(client, &fakeAdapter{})
-	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "required capability") {
-		t.Fatalf("expected required capability error, got %v", err)
+	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "runtime requirement") {
+		t.Fatalf("expected runtime requirement error, got %v", err)
 	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "failed" {
 		t.Fatalf("expected failed lease update, got %#v", client.updates)
 	}
 	message, _ := updateError(client.updates[0])["message"].(string)
-	if !strings.Contains(message, "required capability") {
-		t.Fatalf("expected capability error, got %#v", updateError(client.updates[0]))
+	if !strings.Contains(message, "runtime requirement") {
+		t.Fatalf("expected runtime requirement error, got %#v", updateError(client.updates[0]))
 	}
 }
 
@@ -1525,10 +1525,10 @@ func TestDaemonStartReturnsWorkDirError(t *testing.T) {
 	}
 }
 
-func TestDaemonRuntimeInventoryDefaultsAndUsageRefresh(t *testing.T) {
+func TestDaemonRuntimeCatalogDefaultsAndUsageRefresh(t *testing.T) {
 	calls := 0
 	daemon := Daemon{Config: runnerconfig.Config{}}
-	daemon.RuntimeInventory = &runtime.Inventory{
+	daemon.RuntimeCatalog = &runtime.Inventory{
 		Load: func(_ context.Context, includeUsage bool) (*runtime.InventorySnapshot, error) {
 			calls++
 			if !includeUsage {
@@ -1552,8 +1552,8 @@ func TestDaemonRuntimeInventoryDefaultsAndUsageRefresh(t *testing.T) {
 	}
 
 	defaulted := Daemon{Config: runnerconfig.Config{}}
-	if defaulted.runtimeInventory() == nil || defaulted.RuntimeInventory == nil {
-		t.Fatal("expected runtime inventory to be initialized")
+	if defaulted.runtimes() == nil || defaulted.RuntimeCatalog == nil {
+		t.Fatal("expected runtime catalog to be initialized")
 	}
 }
 
@@ -1797,7 +1797,7 @@ func testDaemon(client *fakeAMAServer, adapter sandbox.SandboxAdapter) Daemon {
 		Client:   client.sdkClient(),
 		Channels: client,
 		Adapter:  adapter,
-		RuntimeInventory: runtimeInventoryFor(
+		RuntimeCatalog: runtimesFor(
 			runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "ready", "", "ready"),
 			runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"),
 			runtimeEntry("copilot", true, []string{"copilot-cli"}, nil, "ready", "", "ready"),
@@ -1806,7 +1806,7 @@ func testDaemon(client *fakeAMAServer, adapter sandbox.SandboxAdapter) Daemon {
 	}
 }
 
-func runtimeInventoryFor(entries ...runtime.InventoryRuntime) *runtime.Inventory {
+func runtimesFor(entries ...runtime.InventoryRuntime) *runtime.Inventory {
 	return &runtime.Inventory{
 		Load: func(context.Context, bool) (*runtime.InventorySnapshot, error) {
 			return &runtime.InventorySnapshot{Runtimes: append([]runtime.InventoryRuntime(nil), entries...)}, nil
@@ -1866,16 +1866,16 @@ func sessionStartLease() *fakeWork {
 			Type:      "session.start",
 			State:     ama.WorkItemStateLeased,
 			Payload: ama.JSON{
-				"protocol":                 "ama-runner-work",
-				"type":                     "session.start",
-				"sessionId":                "session_1",
-				"hostingMode":              "self_hosted",
-				"runtime":                  "ama",
-				"runtimeConfig":            map[string]any{},
-				"provider":                 "workers-ai",
-				"model":                    "@cf/moonshotai/kimi-k2.6",
-				"runtimeDriver":            "ama-self-hosted",
-				"requiredRunnerCapability": amaRuntimeCapability,
+				"protocol":           "ama-runner-work",
+				"type":               "session.start",
+				"sessionId":          "session_1",
+				"hostingMode":        "self_hosted",
+				"runtime":            "ama",
+				"runtimeConfig":      map[string]any{},
+				"provider":           "workers-ai",
+				"model":              "@cf/moonshotai/kimi-k2.6",
+				"runtimeDriver":      "ama-self-hosted",
+				"runtimeRequirement": ama.JSON{"runtime": amaRuntimeCapability},
 			},
 		},
 	}
@@ -1888,7 +1888,7 @@ func codexSessionStartLease(prompt string) *fakeWork {
 	work.workItem.Payload["provider"] = "provider_codex"
 	work.workItem.Payload["model"] = "gpt-5.3-codex"
 	work.workItem.Payload["runtimeDriver"] = "codex-self-hosted"
-	work.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:codex:*:gpt-5.3-codex"
+	work.workItem.Payload["runtimeRequirement"] = ama.JSON{"runtime": "codex", "model": "gpt-5.3-codex"}
 	work.workItem.Payload["prompt"] = prompt
 	return work
 }
@@ -1937,13 +1937,6 @@ func heartbeatMetadata(request ama.PutRunnerHeartbeatRequest) ama.JSON {
 	return *request.Metadata
 }
 
-func heartbeatCapabilities(request ama.PutRunnerHeartbeatRequest) []string {
-	if request.Capabilities == nil {
-		return nil
-	}
-	return *request.Capabilities
-}
-
 func heartbeatState(request ama.PutRunnerHeartbeatRequest) string {
 	if request.State == nil {
 		return ""
@@ -1951,16 +1944,15 @@ func heartbeatState(request ama.PutRunnerHeartbeatRequest) string {
 	return string(*request.State)
 }
 
-func heartbeatInventory(request ama.PutRunnerHeartbeatRequest) []ama.RunnerRuntimeInventory {
-	if request.RuntimeInventory == nil {
+func heartbeatRuntimes(request ama.PutRunnerHeartbeatRequest) []ama.RunnerRuntime {
+	if request.Runtimes == nil {
 		return nil
 	}
-	return *request.RuntimeInventory
+	return *request.Runtimes
 }
 
 func claudeCodeSessionStartLease() *fakeWork {
 	work := externalRuntimeSessionStartLease("claude-code", "anthropic", "claude-sonnet-4-6", map[string]any{"permissionMode": "acceptEdits"})
-	work.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:claude-code:*:claude-sonnet-4-6"
 	work.workItem.Payload["prompt"] = "Run Claude Code"
 	return work
 }
@@ -1977,61 +1969,62 @@ func externalRuntimeSessionStartLease(runtimeName string, provider string, model
 	work.workItem.Payload["model"] = model
 	work.workItem.Payload["runtimeDriver"] = runtimeName + "-self-hosted"
 	work.workItem.Payload["prompt"] = "Run CLI-backed runtime"
-	work.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:" + runtimeName + ":" + provider + ":" + model
+	work.workItem.Payload["runtimeRequirement"] = ama.JSON{"runtime": runtimeName, "model": model}
 	return work
 }
 
-func TestHeartbeatRefreshesRuntimeCapabilitiesFromBridgeInventory(t *testing.T) {
+func TestHeartbeatRefreshesRuntimesFromBridge(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"))
+	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"))
 	if err := daemon.heartbeat(context.Background()); err != nil {
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
-	first := heartbeatCapabilities(client.heartbeats[0])
-	if !lo.Contains(first, "codex") || !lo.Contains(first, "runtime-provider-model:codex:*:gpt-5.3-codex") {
-		t.Fatalf("expected codex capabilities, got %v", first)
+	first := heartbeatRuntimes(client.heartbeats[0])
+	if !lo.ContainsBy(first, func(entry ama.RunnerRuntime) bool { return entry.Runtime == "codex" }) {
+		t.Fatalf("expected codex runtime, got %v", first)
 	}
-	if lo.Contains(first, "claude-code") || lo.Contains(first, "copilot") {
+	if lo.ContainsBy(first, func(entry ama.RunnerRuntime) bool {
+		return entry.Runtime == "claude-code" || entry.Runtime == "copilot"
+	}) {
 		t.Fatalf("expected missing CLIs to be excluded, got %v", first)
 	}
 
-	daemon.RuntimeInventory = runtimeInventoryFor(
+	daemon.RuntimeCatalog = runtimesFor(
 		runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"),
 		runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "ready", "", "ready"),
 	)
 	if err := daemon.heartbeat(context.Background()); err != nil {
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
-	second := heartbeatCapabilities(client.heartbeats[1])
-	if !lo.Contains(second, "claude-code") || !lo.Contains(second, "runtime-provider-model:claude-code:*:claude-sonnet-4-6") {
-		t.Fatalf("expected claude-code capabilities after installing the CLI, got %v", second)
+	second := heartbeatRuntimes(client.heartbeats[1])
+	if !lo.ContainsBy(second, func(entry ama.RunnerRuntime) bool { return entry.Runtime == "claude-code" }) {
+		t.Fatalf("expected claude-code runtime after installing the CLI, got %v", second)
 	}
 }
 
 func TestHeartbeatAdvertisesEnumeratedBridgeModels(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, []string{"gpt-5.3-codex", "gpt-5.3-codex-mini"}, "ready", "0.42.0", "host CLI enumerated 2 models"))
+	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, []string{"gpt-5.3-codex", "gpt-5.3-codex-mini"}, "ready", "0.42.0", "host CLI enumerated 2 models"))
 	for range 2 {
 		if err := daemon.heartbeat(context.Background()); err != nil {
 			t.Fatalf("expected heartbeat success, got %v", err)
 		}
 	}
 	for _, heartbeat := range client.heartbeats {
-		capabilities := heartbeatCapabilities(heartbeat)
-		if !lo.Contains(capabilities, "codex") ||
-			!lo.Contains(capabilities, "runtime-provider-model:codex:*:gpt-5.3-codex") ||
-			!lo.Contains(capabilities, "runtime-provider-model:codex:*:gpt-5.3-codex-mini") {
-			t.Fatalf("expected enumerated codex model capabilities, got %v", capabilities)
+		inventory := heartbeatRuntimes(heartbeat)
+		codexInventory, found := lo.Find(inventory, func(entry ama.RunnerRuntime) bool { return entry.Runtime == "codex" })
+		if !found || !slices.Equal(codexInventory.Models, []string{"gpt-5.3-codex", "gpt-5.3-codex-mini"}) {
+			t.Fatalf("expected enumerated codex models in reported runtimes, got %#v", inventory)
 		}
 	}
 }
 
-func TestHeartbeatReportsRuntimeInventoryWithStatusAndDiagnostics(t *testing.T) {
+func TestHeartbeatReportsRuntimeCatalogWithStatusAndDiagnostics(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor(
+	daemon.RuntimeCatalog = runtimesFor(
 		runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, []string{"gpt-5.3-codex"}, "ready", "0.42.0", "host CLI enumerated 1 models"),
 		runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "unauthenticated", "", "host CLI exposed no models; authenticate the runtime CLI"),
 		runtimeEntry("copilot", false, []string{"copilot-cli"}, nil, "missing", "", "copilot CLI not found on PATH"),
@@ -2039,14 +2032,14 @@ func TestHeartbeatReportsRuntimeInventoryWithStatusAndDiagnostics(t *testing.T) 
 	if err := daemon.heartbeat(context.Background()); err != nil {
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
-	inventory := heartbeatInventory(client.heartbeats[0])
-	byRuntime := map[string]ama.RunnerRuntimeInventory{}
+	inventory := heartbeatRuntimes(client.heartbeats[0])
+	byRuntime := map[string]ama.RunnerRuntime{}
 	for _, entry := range inventory {
 		byRuntime[entry.Runtime] = entry
 	}
 	if host.SupportsAMARuntime() {
 		if got := byRuntime["ama"]; got.State != "ready" || stringValue(got.Detail) == "" {
-			t.Fatalf("expected ready ama runtime inventory, got %#v", got)
+			t.Fatalf("expected ready ama runtime declaration, got %#v", got)
 		}
 	} else if _, ok := byRuntime["ama"]; ok {
 		t.Fatal("expected host without AMA support to omit its inventory entry")
@@ -2068,7 +2061,7 @@ func TestHeartbeatReportsRuntimeInventoryWithStatusAndDiagnostics(t *testing.T) 
 func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor(runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, []string{"claude-sonnet-4-6"}, "ready", "2.1.185", "host CLI enumerated 1 models"))
+	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, []string{"claude-sonnet-4-6"}, "ready", "2.1.185", "host CLI enumerated 1 models"))
 	usageUnavailableDetail := "Claude Code quota usage unavailable; scheduling paused until the usage probe succeeds"
 	daemon.setRuntimeUsageSnapshot(&runtime.UsageSnapshot{
 		Limited: map[string]string{"claude-code": usageUnavailableDetail},
@@ -2078,33 +2071,34 @@ func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) 
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
 
-	inventory := heartbeatInventory(client.heartbeats[0])
-	byRuntime := map[string]ama.RunnerRuntimeInventory{}
+	inventory := heartbeatRuntimes(client.heartbeats[0])
+	byRuntime := map[string]ama.RunnerRuntime{}
 	for _, entry := range inventory {
 		byRuntime[entry.Runtime] = entry
 	}
 	if got := byRuntime["claude-code"]; got.State != "limited" || stringValue(got.Detail) != usageUnavailableDetail {
 		t.Fatalf("expected usage-unavailable claude-code to be limited, got %#v", got)
 	}
-	if !lo.Contains(heartbeatCapabilities(client.heartbeats[0]), "runtime-provider-model:claude-code:*:claude-sonnet-4-6") {
-		t.Fatalf("expected model capability to remain advertised for diagnostics and recovery, got %v", heartbeatCapabilities(client.heartbeats[0]))
+	if !lo.ContainsBy(heartbeatRuntimes(client.heartbeats[0]), func(entry ama.RunnerRuntime) bool { return entry.Runtime == "claude-code" }) {
+		t.Fatalf("expected limited runtime to remain visible for diagnostics and recovery, got %v", heartbeatRuntimes(client.heartbeats[0]))
 	}
 }
 
 func TestHeartbeatAdvertisesOnlyHostRuntimesWhenNoCLIRuntimesAreInstalled(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor()
+	daemon.RuntimeCatalog = runtimesFor()
 	if err := daemon.heartbeat(context.Background()); err != nil {
 		t.Fatalf("expected heartbeat success, got %v", err)
 	}
-	got := heartbeatCapabilities(client.heartbeats[0])
+	got := heartbeatRuntimes(client.heartbeats[0])
 	var want []string
 	if host.SupportsAMARuntime() {
 		want = []string{amaRuntimeCapability}
 	}
-	if strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("expected only base capabilities %v, got %v", want, got)
+	gotNames := lo.Map(got, func(entry ama.RunnerRuntime, _ int) string { return entry.Runtime })
+	if strings.Join(gotNames, ",") != strings.Join(want, ",") {
+		t.Fatalf("expected only host runtimes %v, got %v", want, got)
 	}
 }
 
@@ -2112,19 +2106,19 @@ func TestRunOnceFailsLeaseWhenRuntimeCLIIsMissing(t *testing.T) {
 	lease := codexSessionStartLease("build")
 	client := &fakeAMAServer{lease: lease}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeInventory = runtimeInventoryFor(
+	daemon.RuntimeCatalog = runtimesFor(
 		runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "ready", "", "ready"),
 		runtimeEntry("copilot", true, []string{"copilot-cli"}, nil, "ready", "", "ready"),
 	)
-	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "required capability") {
-		t.Fatalf("expected required capability error, got %v", err)
+	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "runtime requirement") {
+		t.Fatalf("expected runtime requirement error, got %v", err)
 	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "failed" {
 		t.Fatalf("expected failed lease update, got %#v", client.updates)
 	}
 	message, _ := updateError(client.updates[0])["message"].(string)
-	if !strings.Contains(message, "required capability") {
-		t.Fatalf("expected capability error for missing codex CLI, got %#v", updateError(client.updates[0]))
+	if !strings.Contains(message, "runtime requirement") {
+		t.Fatalf("expected runtime requirement error for missing codex CLI, got %#v", updateError(client.updates[0]))
 	}
 }
 
@@ -2310,7 +2304,7 @@ func copilotSessionStartLease(prompt string) *fakeWork {
 	lease.workItem.Payload["provider"] = "provider_copilot"
 	lease.workItem.Payload["model"] = "copilot-cli"
 	lease.workItem.Payload["runtimeDriver"] = "copilot-self-hosted"
-	lease.workItem.Payload["requiredRunnerCapability"] = "runtime-provider-model:copilot:*:copilot-cli"
+	lease.workItem.Payload["runtimeRequirement"] = ama.JSON{"runtime": "copilot", "model": "copilot-cli"}
 	lease.workItem.Payload["prompt"] = prompt
 	return lease
 }

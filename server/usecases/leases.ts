@@ -1,4 +1,4 @@
-import { runnerCapabilityEligible, runnerRuntimeReady } from '@server/domain/runner-queue'
+import { runnerSupportsWork } from '@server/domain/runner-queue'
 import type { EnvFromEntry, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
 import type { Deps } from './deps'
 import {
@@ -18,7 +18,7 @@ export interface ClaimLeaseRequest {
 
 // Claims a specific available work item for an already-authorized runner: the
 // runner must be active, the work item available and environment-compatible,
-// and the runner capability/runtime-ready for the work. The atomic slot
+// and one of its ready runtimes must support the work. The atomic slot
 // reservation + work-item flip lives in the repo; claim-time secret resolution
 // fails the lease when a referenced credential cannot be resolved so a runner
 // never receives an unrunnable session. Throws RunnerConflictError for every
@@ -44,13 +44,7 @@ export async function claimLease(
   if (runner.environmentId && candidate.environmentId && candidate.environmentId !== runner.environmentId) {
     throw new RunnerConflictError('Runner is not eligible for this work item')
   }
-  if (
-    !runnerCapabilityEligible(runner.capabilities, candidate.rawPayload) ||
-    !runnerRuntimeReady(
-      runner.runtimeInventory.map((entry) => ({ runtime: entry.runtime, state: entry.state })),
-      candidate.rawPayload,
-    )
-  ) {
+  if (!runnerSupportsWork(runner.runtimes, candidate.rawPayload)) {
     throw new RunnerConflictError('Runner is not eligible for this work item')
   }
   const claimed = await deps.leases.claim(

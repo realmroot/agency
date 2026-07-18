@@ -635,7 +635,6 @@ export const runners = sqliteTable(
       .notNull()
       .references(() => projects.id),
     name: text('name').notNull(),
-    capabilities: text('capabilities').notNull().default('[]'),
     environmentId: text('environment_id').references(() => environments.id),
     // Vault credential ref (nullable). Existence validated in the usecase
     // (secretRefUsable). Intentionally NOT a FK: a hard FK would reject
@@ -658,7 +657,7 @@ export const runners = sqliteTable(
     // Heartbeat-reported diagnostic snapshots (value objects, never reverse-queried)
     // — KEEP as JSON per the api-v1-design header.
     runtimeUsage: text('runtime_usage').notNull().default('[]'),
-    runtimeInventory: text('runtime_inventory').notNull().default('[]'),
+    runtimes: text('runtimes').notNull().default('[]'),
     metadata: text('metadata').notNull().default('{}'),
     lastHeartbeatAt: text('last_heartbeat_at'),
     archivedAt: text('archived_at'),

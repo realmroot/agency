@@ -20,51 +20,44 @@ type Inventory struct {
 	runtimeUsage       []RuntimeUsage
 	runtimeUsageLimits map[string]string
 
-	capabilityMu           sync.Mutex
-	advertisedCapabilities []string
-	advertisedInventory    []RuntimeInventoryEntry
+	runtimesMu         sync.Mutex
+	runtimesLoaded     bool
+	advertisedRuntimes []RunnerRuntime
 }
 
-func (inv *Inventory) RefreshCapabilities() []string {
+func (inv *Inventory) RefreshRuntimes() []RunnerRuntime {
 	snapshot, err := inv.load(context.Background(), false)
 	if err != nil {
 		slog.Warn("runtime bridge inventory failed; runner advertises no CLI-backed runtimes", "error", err)
 		snapshot = &InventorySnapshot{}
 	}
-	capabilities := runtimeCapabilities(snapshot)
-	inventory := runtimeInventory(snapshot)
-	inv.capabilityMu.Lock()
-	changed := !slices.Equal(inv.advertisedCapabilities, capabilities)
-	inv.advertisedCapabilities = capabilities
-	inv.advertisedInventory = inventory
-	inv.capabilityMu.Unlock()
-	if changed && len(capabilities) == 0 {
+	entries := runtimes(snapshot)
+	inv.runtimesMu.Lock()
+	changedToEmpty := inv.advertisedRuntimes == nil || len(inv.advertisedRuntimes) > 0
+	inv.runtimesLoaded = true
+	inv.advertisedRuntimes = entries
+	inv.runtimesMu.Unlock()
+	if changedToEmpty && len(entries) == 0 {
 		slog.Warn("no CLI-backed runtimes detected; runner advertises no CLI-backed runtimes and will receive no CLI-backed runtime work",
 			"binaries", runtimeBinaries(snapshot))
 	}
-	return capabilities
+	return inv.CurrentRuntimes()
 }
 
-func (inv *Inventory) CurrentCapabilities() []string {
-	inv.capabilityMu.Lock()
-	capabilities := append([]string(nil), inv.advertisedCapabilities...)
-	inv.capabilityMu.Unlock()
-	if capabilities == nil {
-		return inv.RefreshCapabilities()
+func (inv *Inventory) CurrentRuntimes() []RunnerRuntime {
+	inv.runtimesMu.Lock()
+	loaded := inv.runtimesLoaded
+	entries := append([]RunnerRuntime(nil), inv.advertisedRuntimes...)
+	inv.runtimesMu.Unlock()
+	if !loaded {
+		return inv.RefreshRuntimes()
 	}
-	return capabilities
-}
-
-func (inv *Inventory) CurrentRuntimeInventory() []RuntimeInventoryEntry {
-	inv.capabilityMu.Lock()
-	inventory := append([]RuntimeInventoryEntry(nil), inv.advertisedInventory...)
-	inv.capabilityMu.Unlock()
 
 	inv.usageMu.Lock()
 	limits := cloneUsageLimits(inv.runtimeUsageLimits)
 	inv.usageMu.Unlock()
 
-	return runtimeInventoryWithUsageLimits(inventory, limits)
+	return runtimesWithUsageLimits(entries, limits)
 }
 
 func (inv *Inventory) SetUsageSnapshot(snapshot *UsageSnapshot) {
@@ -131,47 +124,31 @@ func runtimeBinaries(snapshot *InventorySnapshot) []string {
 	})
 }
 
-func runtimeCapabilities(snapshot *InventorySnapshot) []string {
+func runtimes(snapshot *InventorySnapshot) []RunnerRuntime {
 	if snapshot == nil {
 		return nil
 	}
-	capabilities := []string{}
+	inventory := make([]RunnerRuntime, 0, len(snapshot.Runtimes))
 	for _, item := range snapshot.Runtimes {
-		if !item.Installed {
-			continue
-		}
 		models := item.Models
 		if len(models) == 0 {
 			models = item.FallbackModels
 		}
-		capabilities = append(capabilities, item.Runtime)
-		for _, model := range models {
-			capabilities = append(capabilities, "runtime-provider-model:"+item.Runtime+":*:"+model)
-		}
-	}
-	return capabilities
-}
-
-func runtimeInventory(snapshot *InventorySnapshot) []RuntimeInventoryEntry {
-	if snapshot == nil {
-		return nil
-	}
-	inventory := make([]RuntimeInventoryEntry, 0, len(snapshot.Runtimes))
-	for _, item := range snapshot.Runtimes {
 		state := item.Status
 		if state == "" {
 			if item.Installed {
-				state = RuntimeInventoryStateUnhealthy
+				state = RuntimeStateUnhealthy
 			} else {
-				state = RuntimeInventoryStateMissing
+				state = RuntimeStateMissing
 			}
 		}
 		detail := item.Detail
 		if detail == "" {
 			detail = "runtime bridge inventory returned no diagnostics"
 		}
-		inventory = append(inventory, RuntimeInventoryEntry{
+		inventory = append(inventory, RunnerRuntime{
 			Runtime: item.Runtime,
+			Models:  append([]string(nil), models...),
 			Version: item.Version,
 			State:   state,
 			Detail:  detail,
@@ -197,20 +174,20 @@ func usageSnapshotFromInventory(snapshot *InventorySnapshot) *UsageSnapshot {
 	return &UsageSnapshot{Usage: usage, Limited: limited}
 }
 
-func runtimeInventoryWithUsageLimits(inventory []RuntimeInventoryEntry, limits map[string]string) []RuntimeInventoryEntry {
+func runtimesWithUsageLimits(inventory []RunnerRuntime, limits map[string]string) []RunnerRuntime {
 	if len(limits) == 0 {
 		return inventory
 	}
-	result := append([]RuntimeInventoryEntry(nil), inventory...)
+	result := append([]RunnerRuntime(nil), inventory...)
 	for i, entry := range result {
-		if entry.State != RuntimeInventoryStateReady {
+		if entry.State != RuntimeStateReady {
 			continue
 		}
 		detail, limited := limits[entry.Runtime]
 		if !limited {
 			continue
 		}
-		result[i].State = RuntimeInventoryStateLimited
+		result[i].State = RuntimeStateLimited
 		result[i].Detail = detail
 	}
 	return result

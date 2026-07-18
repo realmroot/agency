@@ -35,7 +35,7 @@ import {
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
 import { newId, now, requestIdFrom, stringify } from '@server/domain/runtime/util'
-import { runtimeRequiredRunnerCapability } from '@server/domain/runtime-catalog'
+import { runtimeRequirement } from '@server/domain/runtime-catalog'
 import { environmentHostingMode } from '@server/domain/runtime-session'
 import { hasSecretMaterial, sessionUserMetadata } from '@server/domain/session'
 import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
@@ -384,9 +384,9 @@ function selfHostedSessionWorkItem(
     prompt: values.prompt ?? null,
     resume: values.resume ?? false,
     resumeToken: values.resumeToken ?? null,
-    requiredRunnerCapability:
+    runtimeRequirement:
       values.environmentSnapshot?.type === 'self_hosted'
-        ? runtimeRequiredRunnerCapability(values.runtime, values.agentSnapshot.provider, values.agentSnapshot.model)
+        ? runtimeRequirement(values.runtime, values.agentSnapshot.model)
         : null,
   }
   return {
@@ -578,7 +578,7 @@ export async function createSessionForAgent(
   // so they resolve to nothing and must pin an environment explicitly.
   const environmentId =
     requestedEnvironmentId ??
-    (await store.resolveEnvironmentForRuntime(auth.project.id, options.runtime, providerId, agentVersion.model))
+    (await store.resolveEnvironmentForRuntime(auth.project.id, options.runtime, agentVersion.model))
   if (!environmentId) {
     return {
       ok: false,

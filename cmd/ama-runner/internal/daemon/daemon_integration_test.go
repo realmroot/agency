@@ -48,7 +48,7 @@ func TestDaemonRunOnceExecutesSandboxWorkThroughControlPlane(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create daemon: %v", err)
 	}
-	daemon.RuntimeInventory = &runnerruntime.Inventory{
+	daemon.RuntimeCatalog = &runnerruntime.Inventory{
 		Load: func(context.Context, bool) (*runnerruntime.InventorySnapshot, error) {
 			return &runnerruntime.InventorySnapshot{}, nil
 		},
@@ -154,11 +154,11 @@ func (p *runnerIntegrationControlPlane) ServeHTTP(w http.ResponseWriter, r *http
 		p.heartbeat = &body
 		p.mu.Unlock()
 		writeRunnerIntegrationJSON(w, http.StatusOK, ama.RunnerHeartbeat{
-			RunnerId:         p.runnerID,
-			State:            ama.RunnerHeartbeatState(lo.FromPtr(body.State)),
-			CurrentLoad:      0,
-			RuntimeInventory: lo.FromPtr(body.RuntimeInventory),
-			RuntimeUsage:     lo.FromPtr(body.RuntimeUsage),
+			RunnerId:     p.runnerID,
+			State:        ama.RunnerHeartbeatState(lo.FromPtr(body.State)),
+			CurrentLoad:  0,
+			Runtimes:     lo.FromPtr(body.Runtimes),
+			RuntimeUsage: lo.FromPtr(body.RuntimeUsage),
 		})
 	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/runners/"+p.runnerID+"/channel":
 		p.handleRunnerChannel(w, r)
@@ -200,20 +200,19 @@ func (p *runnerIntegrationControlPlane) ServeHTTP(w http.ResponseWriter, r *http
 
 func (p *runnerIntegrationControlPlane) runner(state ama.RunnerState) ama.Runner {
 	return ama.Runner{
-		Id:               p.runnerID,
-		Name:             "Integration runner",
-		ProjectId:        "project_integration",
-		EnvironmentId:    lo.ToPtr("env_integration"),
-		AuthMode:         ama.Bearer,
-		State:            state,
-		Capabilities:     []string{"ama"},
-		MaxConcurrent:    1,
-		CurrentLoad:      0,
-		Metadata:         map[string]any{},
-		RuntimeInventory: []ama.RunnerRuntimeInventory{},
-		RuntimeUsage:     []ama.RuntimeUsage{},
-		CreatedAt:        p.now,
-		UpdatedAt:        p.now,
+		Id:            p.runnerID,
+		Name:          "Integration runner",
+		ProjectId:     "project_integration",
+		EnvironmentId: lo.ToPtr("env_integration"),
+		AuthMode:      ama.Bearer,
+		State:         state,
+		MaxConcurrent: 1,
+		CurrentLoad:   0,
+		Metadata:      map[string]any{},
+		Runtimes:      []ama.RunnerRuntime{},
+		RuntimeUsage:  []ama.RuntimeUsage{},
+		CreatedAt:     p.now,
+		UpdatedAt:     p.now,
 	}
 }
 

@@ -1,6 +1,5 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
-import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runtimeErrorMessage } from '../http/sessions'
 import { defaultClaims, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
@@ -201,23 +200,27 @@ async function createProviderModel(_authorization: string, model: string) {
   return { providerId, model }
 }
 
-async function registerRunner(authorization: string, environmentId: string, capabilities: string[]) {
+async function registerRunner(authorization: string, environmentId: string, _runtimeNames: string[]) {
   const res = await jsonFetch('/api/v1/runners', authorization, {
     method: 'POST',
     body: JSON.stringify({
       name: `Runtime support runner ${crypto.randomUUID()}`,
       environmentId,
-      capabilities,
     }),
   })
   expect(res.status).toBe(201)
   return (await res.json()) as { id: string }
 }
 
-async function heartbeatRunner(authorization: string, runnerId: string, capabilities: string[]) {
+async function heartbeatRunner(
+  authorization: string,
+  runnerId: string,
+  runtimeNames: string[],
+  runtimes = runtimeNames.map((runtime) => ({ runtime, models: [], state: 'ready' })),
+) {
   const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, authorization, {
     method: 'PUT',
-    body: JSON.stringify({ state: 'active', capabilities }),
+    body: JSON.stringify({ state: 'active', runtimes }),
   })
   expect(res.status).toBe(200)
 }
@@ -2255,8 +2258,20 @@ describe('[CF] /api/v1/sessions', () => {
     })
     const agent = await createAgent(authorization, { provider: providerId, model, mcpConnectors: [] })
 
-    const wrongCapability = runtimeProviderModelCapability('codex', providerId, 'gpt-5.3-codex-mini')
-    const wrongRunner = await registerRunner(authorization, environment.id, [wrongCapability])
+    const wrongRunner = await registerRunner(authorization, environment.id, ['codex'])
+    const exactRunner = await registerRunner(authorization, environment.id, ['codex'])
+    await heartbeatRunner(
+      authorization,
+      wrongRunner.id,
+      ['codex'],
+      [{ runtime: 'codex', models: ['gpt-5.3-codex-mini'], state: 'ready' }],
+    )
+    await heartbeatRunner(
+      authorization,
+      exactRunner.id,
+      ['codex'],
+      [{ runtime: 'codex', models: [model], state: 'ready' }],
+    )
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
@@ -2274,17 +2289,12 @@ describe('[CF] /api/v1/sessions', () => {
     }
     expect(session).toMatchObject({ status: { phase: 'pending', reason: 'waiting-for-runner' } })
 
-    const exactCapability = runtimeProviderModelCapability('codex', '*', model)
-    const exactRunner = await registerRunner(authorization, environment.id, [exactCapability])
-
-    await heartbeatRunner(authorization, wrongRunner.id, [wrongCapability])
     // Runners enumerate their host models, so model-specific declarations are
     // authoritative: a runner declaring only other model ids must not take
     // the work.
     const wrongLease = await claimLease(authorization, wrongRunner.id)
     expect(wrongLease).toBeNull()
 
-    await heartbeatRunner(authorization, exactRunner.id, [exactCapability])
     const exactLease = await claimLease(authorization, exactRunner.id)
     expect(exactLease).toBeTruthy()
   })
@@ -2408,10 +2418,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('leases model-specific work to runners that only declare the bare runtime capability', async () => {
-    // TRANSITIONAL coverage: runners deployed before host model enumeration
-    // declare the bare runtime plus one hardcoded model. They must keep
-    // claiming work for other models until the fleet updates.
+  it('does not lease model-specific work without a matching reported runtime model', async () => {
     const authorization = await signIn()
     const model = 'gpt-5.3-codex'
     const { providerId } = await createProviderModel(authorization, model)
@@ -2432,12 +2439,16 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(createRes.status).toBe(201)
 
-    const legacyCapabilities = ['codex', runtimeProviderModelCapability('codex', '*', 'gpt-5.3-codex-mini')]
-    const legacyRunner = await registerRunner(authorization, environment.id, legacyCapabilities)
-    await heartbeatRunner(authorization, legacyRunner.id, legacyCapabilities)
+    const legacyRunner = await registerRunner(authorization, environment.id, ['codex'])
+    await heartbeatRunner(
+      authorization,
+      legacyRunner.id,
+      ['codex'],
+      [{ runtime: 'codex', models: ['gpt-5.3-codex-mini'], state: 'ready' }],
+    )
 
     const lease = await claimLease(authorization, legacyRunner.id)
-    expect(lease).toBeTruthy()
+    expect(lease).toBeNull()
   })
 
   it('lists session approvals with explicit states', async () => {

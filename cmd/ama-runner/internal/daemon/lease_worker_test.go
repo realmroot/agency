@@ -234,13 +234,13 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 			t.Fatalf("expected update error, got %v", err)
 		}
 	})
-	t.Run("capability failure update", func(t *testing.T) {
-		work := approvedLease()
-		work.workItem.Payload["requiredRunnerCapability"] = "missing"
+	t.Run("runtime requirement failure update", func(t *testing.T) {
+		work := sessionStartLease()
+		work.workItem.Payload["runtimeRequirement"] = ama.JSON{"runtime": "missing"}
 		client := &fakeAMAServer{lease: work, updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
-		worker.CurrentCapabilities = func() []string { return nil }
+		worker.CurrentRuntimes = nil
 		err := worker.runClaimedWork(context.Background(), work.lease, work.workItem)
 		if err == nil || !strings.Contains(err.Error(), updateErr.Error()) {
 			t.Fatalf("expected update error, got %v", err)
@@ -326,26 +326,22 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 	})
 }
 
-func TestLeaseWorkerCapabilityHelpers(t *testing.T) {
+func TestLeaseWorkerRuntimeRequirementHelpers(t *testing.T) {
 	worker := LeaseWorker{}
-	if !worker.supportsRequiredCapability("") {
-		t.Fatal("empty capability should be supported")
+	if worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex"}) {
+		t.Fatal("missing runner inventory providers should reject the requirement")
 	}
-	if worker.supportsRequiredCapability("codex") {
-		t.Fatal("nil capability provider should reject non-empty requirement")
+	worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+		return []runtime.RunnerRuntime{{Runtime: "codex", Models: []string{"gpt-5"}, State: runtime.RuntimeStateReady}}
 	}
-	worker.CurrentCapabilities = func() []string { return []string{"codex"} }
-	if !worker.supportsRequiredCapability("runtime-provider-model:codex:*:gpt-5") {
-		t.Fatal("runtime capability should satisfy provider-model requirement")
+	if !worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex", Model: "gpt-5"}) {
+		t.Fatal("matching ready runtime should satisfy the requirement")
 	}
-	if worker.supportsRequiredCapability("runtime-provider-model") {
-		t.Fatal("malformed provider-model capability should be rejected")
+	if worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex", Model: "other"}) {
+		t.Fatal("non-matching model should be rejected")
 	}
-	if got := requiredRuntimeCapability("runtime-provider-model:codex:*:gpt-5"); got != "codex" {
-		t.Fatalf("expected codex runtime capability, got %q", got)
-	}
-	if got := requiredRuntimeCapability("bad"); got != "" {
-		t.Fatalf("expected empty runtime capability, got %q", got)
+	if !worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex"}) {
+		t.Fatal("empty model should accept a ready runtime")
 	}
 }
 

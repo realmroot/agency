@@ -13,6 +13,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.runner_runtime_requirement import RunnerRuntimeRequirement
   from ..models.runner_tool_call import RunnerToolCall
   from ..models.runner_work_payload_agent_snapshot import RunnerWorkPayloadAgentSnapshot
   from ..models.runner_work_payload_env import RunnerWorkPayloadEnv
@@ -44,7 +45,7 @@ class RunnerWorkPayload:
             agent_snapshot (RunnerWorkPayloadAgentSnapshot | Unset):
             environment_snapshot (None | RunnerWorkPayloadEnvironmentSnapshotType0 | Unset):
             runtime_driver (str | Unset):  Example: codex-self-hosted.
-            required_runner_capability (None | str | Unset):
+            runtime_requirement (RunnerRuntimeRequirement | Unset):
             env (RunnerWorkPayloadEnv | Unset):
             workspace_manifest (RunnerWorkspaceManifest | Unset):
             prompt (None | str | Unset):
@@ -68,7 +69,7 @@ class RunnerWorkPayload:
     agent_snapshot: RunnerWorkPayloadAgentSnapshot | Unset = UNSET
     environment_snapshot: None | RunnerWorkPayloadEnvironmentSnapshotType0 | Unset = UNSET
     runtime_driver: str | Unset = UNSET
-    required_runner_capability: None | str | Unset = UNSET
+    runtime_requirement: RunnerRuntimeRequirement | Unset = UNSET
     env: RunnerWorkPayloadEnv | Unset = UNSET
     workspace_manifest: RunnerWorkspaceManifest | Unset = UNSET
     prompt: None | str | Unset = UNSET
@@ -85,6 +86,7 @@ class RunnerWorkPayload:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.runner_runtime_requirement import RunnerRuntimeRequirement
         from ..models.runner_tool_call import RunnerToolCall
         from ..models.runner_work_payload_agent_snapshot import RunnerWorkPayloadAgentSnapshot
         from ..models.runner_work_payload_env import RunnerWorkPayloadEnv
@@ -127,11 +129,9 @@ class RunnerWorkPayload:
 
         runtime_driver = self.runtime_driver
 
-        required_runner_capability: None | str | Unset
-        if isinstance(self.required_runner_capability, Unset):
-            required_runner_capability = UNSET
-        else:
-            required_runner_capability = self.required_runner_capability
+        runtime_requirement: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.runtime_requirement, Unset):
+            runtime_requirement = self.runtime_requirement.to_dict()
 
         env: dict[str, Any] | Unset = UNSET
         if not isinstance(self.env, Unset):
@@ -196,8 +196,8 @@ class RunnerWorkPayload:
             field_dict["environmentSnapshot"] = environment_snapshot
         if runtime_driver is not UNSET:
             field_dict["runtimeDriver"] = runtime_driver
-        if required_runner_capability is not UNSET:
-            field_dict["requiredRunnerCapability"] = required_runner_capability
+        if runtime_requirement is not UNSET:
+            field_dict["runtimeRequirement"] = runtime_requirement
         if env is not UNSET:
             field_dict["env"] = env
         if workspace_manifest is not UNSET:
@@ -225,6 +225,7 @@ class RunnerWorkPayload:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.runner_runtime_requirement import RunnerRuntimeRequirement
         from ..models.runner_tool_call import RunnerToolCall
         from ..models.runner_work_payload_agent_snapshot import RunnerWorkPayloadAgentSnapshot
         from ..models.runner_work_payload_env import RunnerWorkPayloadEnv
@@ -297,14 +298,14 @@ class RunnerWorkPayload:
 
         runtime_driver = d.pop("runtimeDriver", UNSET)
 
-        def _parse_required_runner_capability(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+        _runtime_requirement = d.pop("runtimeRequirement", UNSET)
+        runtime_requirement: RunnerRuntimeRequirement | Unset
+        if isinstance(_runtime_requirement,  Unset):
+            runtime_requirement = UNSET
+        else:
+            runtime_requirement = RunnerRuntimeRequirement.from_dict(_runtime_requirement)
 
-        required_runner_capability = _parse_required_runner_capability(d.pop("requiredRunnerCapability", UNSET))
+
 
 
         _env = d.pop("env", UNSET)
@@ -387,7 +388,7 @@ class RunnerWorkPayload:
             agent_snapshot=agent_snapshot,
             environment_snapshot=environment_snapshot,
             runtime_driver=runtime_driver,
-            required_runner_capability=required_runner_capability,
+            runtime_requirement=runtime_requirement,
             env=env,
             workspace_manifest=workspace_manifest,
             prompt=prompt,

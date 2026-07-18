@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   RUNTIME_CATALOG,
-  RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX,
-  runnerSupportsRuntimeProviderModel,
+  type RuntimeSupport,
   runtimeCatalogSupportsProviderModel,
-  runtimeProviderModelCapability,
-  runtimeRequiredRunnerCapability,
+  runtimeRequirement,
   runtimeSupportsHostingMode,
   runtimeSupportsLivePrompts,
-  transitionalRuntimeLevelRuntimes,
+  runtimesSupport,
 } from './runtime-catalog'
 
 describe('runtimeSupportsLivePrompts', () => {
@@ -20,103 +18,30 @@ describe('runtimeSupportsLivePrompts', () => {
   })
 })
 
-describe('runtimeProviderModelCapability', () => {
-  it('constructs a capability string from runtime, provider, and model', () => {
-    expect(runtimeProviderModelCapability('ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(
-      `${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:ama:workers-ai:@cf/moonshotai/kimi-k2.6`,
-    )
+describe('runtimeRequirement', () => {
+  it('keeps an explicit CLI runtime model as structured data', () => {
+    expect(runtimeRequirement('copilot', 'gpt-4.1')).toEqual({ runtime: 'copilot', model: 'gpt-4.1' })
   })
 
-  it('constructs a wildcard capability for self-hosted runtimes', () => {
-    expect(runtimeProviderModelCapability('claude-code', '*', '*')).toBe(
-      `${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:claude-code:*:*`,
-    )
-  })
-})
-
-describe('runtimeRequiredRunnerCapability', () => {
-  it('requires the ama runtime capability regardless of model', () => {
-    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', null)).toBe('ama')
-    expect(runtimeRequiredRunnerCapability('ama', 'workers-ai', undefined)).toBe('ama')
-    expect(runtimeRequiredRunnerCapability('ama', 'moonshotai', '@cf/moonshotai/kimi-k2.6')).toBe('ama')
+  it('does not invent a model when none is selected', () => {
+    expect(runtimeRequirement('copilot', null)).toEqual({ runtime: 'copilot' })
   })
 
-  it('requires the bare runtime capability for non-ama runtimes when no model is pinned', () => {
-    expect(runtimeRequiredRunnerCapability('codex', 'openai', null)).toBe('codex')
-    expect(runtimeRequiredRunnerCapability('copilot', 'github')).toBe('copilot')
-  })
-
-  it('normalizes provider to wildcard for wildcard-provider catalog entries', () => {
-    // claude-code has providerModels with provider: '*', so capability uses '*' as provider
-    expect(runtimeRequiredRunnerCapability('claude-code', 'anthropic', 'claude-opus-4')).toBe(
-      runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4'),
-    )
-  })
-
-  it('normalizes provider to wildcard for wildcard-model catalog entries', () => {
-    // codex and copilot also have provider:'*' and model:'*'
-    expect(runtimeRequiredRunnerCapability('codex', 'openai', 'gpt-4o')).toBe(
-      runtimeProviderModelCapability('codex', '*', 'gpt-4o'),
-    )
-  })
-
-  it('uses the concrete provider when no catalog entry matches', () => {
-    // @ts-expect-error testing unknown runtime
-    expect(runtimeRequiredRunnerCapability('unknown-runtime', 'some-provider', 'some-model')).toBe(
-      `${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:unknown-runtime:some-provider:some-model`,
-    )
+  it('leaves AMA model routing to the control plane catalog', () => {
+    expect(runtimeRequirement('ama', '@cf/moonshotai/kimi-k2.6')).toEqual({ runtime: 'ama' })
   })
 })
 
-describe('transitionalRuntimeLevelRuntimes', () => {
-  it('returns all runtimes whose catalog entry uses a wildcard model', () => {
-    const names = transitionalRuntimeLevelRuntimes()
-    // Every runtime now declares a wildcard model (ama validates against the
-    // global catalog instead of a pinned list), so all of them appear.
-    expect(names).toContain('ama')
-    expect(names).toContain('claude-code')
-    expect(names).toContain('codex')
-    expect(names).toContain('copilot')
-  })
-})
+describe('runtimesSupport', () => {
+  const runtimes = [{ runtime: 'copilot', state: 'ready', models: ['auto', 'gpt-4.1'] }] satisfies RuntimeSupport
 
-describe('runnerSupportsRuntimeProviderModel', () => {
-  const CLAUDE_CAP = runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4')
-  const AMA_CAP = runtimeProviderModelCapability('ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')
-
-  it('returns true when no model given and runner declares the bare runtime name', () => {
-    expect(runnerSupportsRuntimeProviderModel(['claude-code'], 'claude-code', 'anthropic')).toBe(true)
+  it('matches a ready runtime and exact selected model', () => {
+    expect(runtimesSupport(runtimes, 'copilot', 'gpt-4.1')).toBe(true)
+    expect(runtimesSupport(runtimes, 'copilot', 'unsupported-model')).toBe(false)
   })
 
-  it('returns true when no model given and runner declares a matching runtime-provider-model capability', () => {
-    expect(runnerSupportsRuntimeProviderModel([CLAUDE_CAP], 'claude-code', 'anthropic')).toBe(true)
-  })
-
-  it('returns false when no model given and runner has no matching capability', () => {
-    expect(runnerSupportsRuntimeProviderModel([AMA_CAP], 'claude-code', 'anthropic')).toBe(false)
-  })
-
-  it('returns true when runner capabilities include the exact model capability', () => {
-    expect(runnerSupportsRuntimeProviderModel([CLAUDE_CAP], 'claude-code', '*', 'claude-opus-4')).toBe(true)
-  })
-
-  it('returns true when runner capabilities include a wildcard-provider model capability', () => {
-    const wildcard = runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4')
-    expect(runnerSupportsRuntimeProviderModel([wildcard], 'claude-code', 'anthropic', 'claude-opus-4')).toBe(true)
-  })
-
-  it('uses transitional bare-runtime fallback for wildcard-model runtimes', () => {
-    // claude-code is a wildcard-model runtime, so bare capability counts
-    expect(runnerSupportsRuntimeProviderModel(['claude-code'], 'claude-code', 'anthropic', 'claude-opus-4')).toBe(true)
-  })
-
-  it('requires the ama runtime capability for ama', () => {
-    expect(runnerSupportsRuntimeProviderModel(['ama'], 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(true)
-    expect(runnerSupportsRuntimeProviderModel(['codex'], 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(false)
-  })
-
-  it('returns false when model is given but runner has no matching capability', () => {
-    expect(runnerSupportsRuntimeProviderModel([AMA_CAP], 'claude-code', 'anthropic', 'claude-opus-4')).toBe(false)
+  it('requires only the ready runtime when model is null', () => {
+    expect(runtimesSupport(runtimes, 'copilot', null)).toBe(true)
   })
 })
 

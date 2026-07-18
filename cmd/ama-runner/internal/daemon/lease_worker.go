@@ -22,14 +22,14 @@ import (
 )
 
 type LeaseWorker struct {
-	Config              runnerconfig.Config
-	Client              *ama.RunnerClient
-	SandboxAdapter      sandbox.SandboxAdapter
-	RuntimeAdapter      runtime.Adapter
-	RuntimeBridge       runtime.Bridge
-	Relay               *runnersession.Relay
-	RunnerID            string
-	CurrentCapabilities func() []string
+	Config          runnerconfig.Config
+	Client          *ama.RunnerClient
+	SandboxAdapter  sandbox.SandboxAdapter
+	RuntimeAdapter  runtime.Adapter
+	RuntimeBridge   runtime.Bridge
+	Relay           *runnersession.Relay
+	RunnerID        string
+	CurrentRuntimes func() []runtime.RunnerRuntime
 }
 
 // resumeTokenBox shares the latest runtime resume token between the runtime adapter
@@ -134,8 +134,8 @@ func (r LeaseWorker) runClaimedWork(ctx context.Context, lease *ama.Lease, workI
 		}
 		return err
 	}
-	if !r.supportsRequiredCapability(payload.RequiredRunnerCapability) {
-		err := fmt.Errorf("runner does not advertise required capability %q", payload.RequiredRunnerCapability)
+	if payload.Type == "session.start" && !r.supportsRuntimeRequirement(payload.RuntimeRequirement) {
+		err := fmt.Errorf("runner does not satisfy runtime requirement %#v", payload.RuntimeRequirement)
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
 			return finishErr
 		}
@@ -147,37 +147,17 @@ func (r LeaseWorker) runClaimedWork(ctx context.Context, lease *ama.Lease, workI
 	return r.runTool(ctx, lease, workItem, payload)
 }
 
-func (r LeaseWorker) supportsRequiredCapability(required string) bool {
-	if required == "" {
-		return true
-	}
-	if r.CurrentCapabilities == nil {
+func (r LeaseWorker) supportsRuntimeRequirement(required *protocol.RuntimeRequirement) bool {
+	if required == nil || r.CurrentRuntimes == nil {
 		return false
 	}
-	capabilities := r.CurrentCapabilities()
-	for _, capability := range capabilities {
-		if capability == required {
-			return true
-		}
-	}
-	runtimeName := requiredRuntimeCapability(required)
-	if runtimeName == "" {
-		return false
-	}
-	for _, capability := range capabilities {
-		if capability == runtimeName {
+	for _, entry := range r.CurrentRuntimes() {
+		if entry.Runtime == required.Runtime && entry.State == runtime.RuntimeStateReady &&
+			(required.Model == "" || lo.Contains(entry.Models, required.Model)) {
 			return true
 		}
 	}
 	return false
-}
-
-func requiredRuntimeCapability(required string) string {
-	parts := strings.Split(required, ":")
-	if len(parts) == 4 && parts[0] == "runtime-provider-model" {
-		return parts[1]
-	}
-	return ""
 }
 
 func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem, payload protocol.WorkPayload) error {

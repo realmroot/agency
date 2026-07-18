@@ -1,15 +1,11 @@
-import {
-  RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX,
-  transitionalRuntimeLevelRuntimes,
-} from '@server/domain/runtime-catalog'
+import type { RuntimeRequirement, RuntimeSupport } from '@server/domain/runtime-catalog'
 
 function secretKey(key: string) {
   return /secret|token|password|api[_-]?key/i.test(key)
 }
 
-// Runner-scoped secret detection: key-name based only (runner metadata and
-// capabilities are operator-supplied diagnostic fields, so a secret-shaped key
-// is the signal). Distinct from the agent/environment string-scanning variant.
+// Runner-scoped secret detection is key-name based. Distinct from the
+// agent/environment string-scanning variant.
 export function hasSecretMaterial(value: unknown): boolean {
   if (!value || typeof value !== 'object') {
     return false
@@ -20,51 +16,27 @@ export function hasSecretMaterial(value: unknown): boolean {
   return Object.entries(value).some(([key, child]) => secretKey(key) || hasSecretMaterial(child))
 }
 
-// The runtime capability a work item requires of a runner, if any. Session
+// The runtime a work item requires of a runner, if any. Session
 // starts declare it explicitly; local AMA tool calls are recognized by shape.
-export function requiredRunnerCapability(payload: Record<string, unknown>): string | null {
-  if (typeof payload.requiredRunnerCapability === 'string') {
-    return payload.requiredRunnerCapability
+export function workRuntimeRequirement(payload: Record<string, unknown>): RuntimeRequirement | null {
+  const requirement = payload.runtimeRequirement
+  if (requirement && typeof requirement === 'object' && !Array.isArray(requirement)) {
+    const { runtime, model } = requirement as Record<string, unknown>
+    if (typeof runtime === 'string' && runtime) {
+      return {
+        runtime: runtime as RuntimeRequirement['runtime'],
+        ...(typeof model === 'string' && model ? { model } : {}),
+      }
+    }
   }
   if (
     payload.type !== 'session.start' &&
     (typeof payload.toolName === 'string' ||
       (payload.toolCall !== null && typeof payload.toolCall === 'object' && !Array.isArray(payload.toolCall)))
   ) {
-    return 'ama'
+    return { runtime: 'ama' }
   }
   return null
-}
-
-// Whether a runner's advertised capabilities can claim the work item. Unscoped
-// work is claimable by anyone except session starts, which always carry a
-// runtime requirement.
-export function runnerCapabilityEligible(capabilities: string[], payload: Record<string, unknown>): boolean {
-  const required = requiredRunnerCapability(payload)
-  if (required === null) {
-    return payload.type !== 'session.start'
-  }
-  const eligible = new Set(capabilities)
-  for (const capability of capabilities) {
-    if (capability.startsWith(`${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:`)) {
-      const runtime = capability.split(':')[1]
-      if (runtime) {
-        eligible.add(runtime)
-      }
-    }
-  }
-  if (eligible.has(required)) {
-    return true
-  }
-  // TRANSITIONAL: runners deployed before host model enumeration declare the
-  // bare runtime name. A declared bare runtime capability still claims
-  // model-specific session work for wildcard-model runtimes so those runners
-  // don't strand work. Removable once the runner fleet advertises enumerated
-  // per-model capabilities.
-  return transitionalRuntimeLevelRuntimes().some(
-    (runtime) =>
-      capabilities.includes(runtime) && required.startsWith(`${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:${runtime}:`),
-  )
 }
 
 // The OIDC binding claims a runner-registration request carries. Built by the
@@ -131,23 +103,17 @@ export function runnerMachineId(metadata: Record<string, unknown> | undefined): 
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-// Lease readiness gate: once a runner reports runtime inventory, runtime
-// session work is leased only when the required runtime has a ready inventory
-// entry. Runners that have not reported inventory yet are transitional and
-// fall back to capability matching alone.
-export function runnerRuntimeReady(
-  inventory: Array<{ runtime: string; state: string }>,
-  payload: Record<string, unknown>,
-): boolean {
-  if (inventory.length === 0) {
-    return true
-  }
-  const required = requiredRunnerCapability(payload)
+// Lease readiness gate: runtime session work is leased only when the runner
+// reports the required runtime as ready and enumerates any selected model.
+export function runnerSupportsWork(runtimes: RuntimeSupport, payload: Record<string, unknown>): boolean {
+  const required = workRuntimeRequirement(payload)
   if (required === null) {
-    return true
+    return payload.type !== 'session.start'
   }
-  const readyRuntimes = [...new Set(inventory.filter((entry) => entry.state === 'ready').map((entry) => entry.runtime))]
-  return readyRuntimes.some(
-    (runtime) => required === runtime || required.startsWith(`${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:${runtime}:`),
+  return runtimes.some(
+    (entry) =>
+      entry.runtime === required.runtime &&
+      entry.state === 'ready' &&
+      (required.model === undefined || entry.models.includes(required.model)),
   )
 }

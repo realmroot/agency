@@ -284,9 +284,11 @@ from .runner_heartbeat_state import RunnerHeartbeatState
 from .runner_list_response import RunnerListResponse
 from .runner_metadata import RunnerMetadata
 from .runner_opaque_json_object import RunnerOpaqueJsonObject
-from .runner_runtime_inventory import RunnerRuntimeInventory
-from .runner_runtime_inventory_state import RunnerRuntimeInventoryState
+from .runner_runtime import RunnerRuntime
 from .runner_runtime_request import RunnerRuntimeRequest
+from .runner_runtime_requirement import RunnerRuntimeRequirement
+from .runner_runtime_requirement_runtime import RunnerRuntimeRequirementRuntime
+from .runner_runtime_state import RunnerRuntimeState
 from .runner_runtime_tool_call import RunnerRuntimeToolCall
 from .runner_runtime_tool_call_arguments import RunnerRuntimeToolCallArguments
 from .runner_runtime_tool_call_input import RunnerRuntimeToolCallInput
@@ -805,9 +807,11 @@ __all__ = (
     "RunnerListResponse",
     "RunnerMetadata",
     "RunnerOpaqueJsonObject",
-    "RunnerRuntimeInventory",
-    "RunnerRuntimeInventoryState",
+    "RunnerRuntime",
     "RunnerRuntimeRequest",
+    "RunnerRuntimeRequirement",
+    "RunnerRuntimeRequirementRuntime",
+    "RunnerRuntimeState",
     "RunnerRuntimeToolCall",
     "RunnerRuntimeToolCallArguments",
     "RunnerRuntimeToolCallInput",

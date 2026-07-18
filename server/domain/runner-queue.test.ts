@@ -1,18 +1,13 @@
-import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
 import { describe, expect, it } from 'vitest'
 import {
   environmentIdForRegistration,
   hasSecretMaterial,
   type RunnerOidcContext,
   runnerAuthModeForRegistration,
-  runnerCapabilityEligible,
   runnerMachineId,
   runnerOidcBindingFields,
-  runnerRuntimeReady,
+  runnerSupportsWork,
 } from './runner-queue'
-
-const CLAUDE_CAP = runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4')
-const AMA_CAP = runtimeProviderModelCapability('ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')
 
 function oidc(overrides: Partial<RunnerOidcContext> = {}): RunnerOidcContext {
   return {
@@ -26,66 +21,66 @@ function oidc(overrides: Partial<RunnerOidcContext> = {}): RunnerOidcContext {
   }
 }
 
-describe('[spec: runners/eligibility] runnerCapabilityEligible', () => {
+describe('[spec: runners/eligibility] runnerSupportsWork', () => {
   it('claims unscoped non-session work for any runner', () => {
-    expect(runnerCapabilityEligible([], { type: 'maintenance' })).toBe(true)
+    expect(runnerSupportsWork([], { type: 'maintenance' })).toBe(true)
   })
 
   it('requires the ama runtime for local tool work', () => {
     const work = { type: 'tool.execute', toolName: 'bash' }
-    expect(runnerCapabilityEligible([], work)).toBe(false)
-    expect(runnerCapabilityEligible(['ama'], work)).toBe(true)
+    expect(runnerSupportsWork([], work)).toBe(false)
+    expect(runnerSupportsWork([{ runtime: 'ama', state: 'ready', models: [] }], work)).toBe(true)
   })
 
-  it('rejects session starts that declare no required capability', () => {
-    expect(runnerCapabilityEligible(['node'], { type: 'session.start' })).toBe(false)
-  })
-
-  it('matches the exact required capability', () => {
-    expect(runnerCapabilityEligible([AMA_CAP], { type: 'session.start', requiredRunnerCapability: AMA_CAP })).toBe(true)
-  })
-
-  it('rejects when the required capability is absent', () => {
-    expect(runnerCapabilityEligible([AMA_CAP], { type: 'session.start', requiredRunnerCapability: CLAUDE_CAP })).toBe(
-      false,
-    )
-  })
-
-  it('lets a bare wildcard-runtime capability claim model-specific work (transitional)', () => {
-    expect(
-      runnerCapabilityEligible(['claude-code'], { type: 'session.start', requiredRunnerCapability: CLAUDE_CAP }),
-    ).toBe(true)
+  it('rejects session starts that declare no runtime requirement', () => {
+    expect(runnerSupportsWork([], { type: 'session.start' })).toBe(false)
   })
 })
 
-describe('runnerRuntimeReady', () => {
-  it('passes when the runner reports no inventory yet', () => {
-    expect(runnerRuntimeReady([], { type: 'session.start', requiredRunnerCapability: CLAUDE_CAP })).toBe(true)
+describe('runnerSupportsWork runtime matching', () => {
+  it('rejects session work when the runner reports no inventory', () => {
+    expect(
+      runnerSupportsWork([], {
+        type: 'session.start',
+        runtimeRequirement: { runtime: 'claude-code', model: 'claude-opus-4' },
+      }),
+    ).toBe(false)
   })
 
   it('passes unscoped work regardless of inventory', () => {
-    expect(runnerRuntimeReady([{ runtime: 'codex', state: 'unhealthy' }], { type: 'maintenance' })).toBe(true)
+    expect(runnerSupportsWork([{ runtime: 'codex', state: 'unhealthy', models: [] }], { type: 'maintenance' })).toBe(
+      true,
+    )
   })
 
-  it('requires a ready inventory entry for the required runtime', () => {
+  it('requires a ready inventory entry with the selected model', () => {
     expect(
-      runnerRuntimeReady([{ runtime: 'claude-code', state: 'unauthenticated' }], {
+      runnerSupportsWork([{ runtime: 'claude-code', state: 'ready', models: ['sonnet'] }], {
         type: 'session.start',
-        requiredRunnerCapability: CLAUDE_CAP,
+        runtimeRequirement: { runtime: 'claude-code', model: 'opus' },
       }),
     ).toBe(false)
     expect(
-      runnerRuntimeReady([{ runtime: 'claude-code', state: 'ready' }], {
+      runnerSupportsWork([{ runtime: 'claude-code', state: 'ready', models: ['opus', 'sonnet'] }], {
         type: 'session.start',
-        requiredRunnerCapability: CLAUDE_CAP,
+        runtimeRequirement: { runtime: 'claude-code', model: 'opus' },
+      }),
+    ).toBe(true)
+  })
+
+  it('requires only the ready runtime when no model is selected', () => {
+    expect(
+      runnerSupportsWork([{ runtime: 'copilot', state: 'ready', models: ['auto'] }], {
+        type: 'session.start',
+        runtimeRequirement: { runtime: 'copilot' },
       }),
     ).toBe(true)
   })
 
   it('requires a ready ama inventory entry for ama work', () => {
-    const work = { type: 'session.start', requiredRunnerCapability: 'ama' }
-    expect(runnerRuntimeReady([{ runtime: 'ama', state: 'unhealthy' }], work)).toBe(false)
-    expect(runnerRuntimeReady([{ runtime: 'ama', state: 'ready' }], work)).toBe(true)
+    const work = { type: 'session.start', runtimeRequirement: { runtime: 'ama' } }
+    expect(runnerSupportsWork([{ runtime: 'ama', state: 'unhealthy', models: [] }], work)).toBe(false)
+    expect(runnerSupportsWork([{ runtime: 'ama', state: 'ready', models: [] }], work)).toBe(true)
   })
 })
 
@@ -158,19 +153,5 @@ describe('[spec: runners/auth-binding] runner registration binding', () => {
     expect(runnerMachineId({ machineId: '  mac-1 ' })).toBe('mac-1')
     expect(runnerMachineId({ machineId: '' })).toBeNull()
     expect(runnerMachineId(undefined)).toBeNull()
-  })
-})
-
-describe('[spec: runners/eligibility] runnerCapabilityEligible capability expansion', () => {
-  it('expands runtime-provider-model capabilities to bare runtime names for eligibility', () => {
-    // A runner declaring a model-specific capability should also be eligible for
-    // work items that require just the bare runtime name
-    const modelCap = runtimeProviderModelCapability('codex', '*', 'gpt-4o')
-    expect(
-      runnerCapabilityEligible([modelCap], {
-        type: 'session.start',
-        requiredRunnerCapability: 'codex',
-      }),
-    ).toBe(true)
   })
 })

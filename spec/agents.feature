@@ -11,6 +11,7 @@ Feature: Agents
     Then the agent is stored with a current version, project id, timestamps, and archive state
     And the first version snapshots the normalized runtime configuration
     And the agent defaults to the project default provider without forcing a model
+    And an unselected model remains null without a synthetic default model id
 
   @agents/update @usecase
   Scenario: Version an agent on runtime-relevant change

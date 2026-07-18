@@ -74,28 +74,33 @@ type RunnerSessionCommand = json.RawMessage
 type RunnerRuntimeRequest = ama.RunnerRuntimeRequest
 type RunnerRuntimeToolCall = ama.RunnerRuntimeToolCall
 
+type RuntimeRequirement struct {
+	Runtime string `json:"runtime"`
+	Model   string `json:"model"`
+}
+
 type WorkPayload struct {
-	Protocol                 string            `json:"protocol"`
-	Type                     string            `json:"type"`
-	SessionID                string            `json:"sessionId"`
-	HostingMode              string            `json:"hostingMode"`
-	Runtime                  string            `json:"runtime"`
-	RuntimeConfig            map[string]any    `json:"runtimeConfig"`
-	WorkspaceManifest        WorkspaceManifest `json:"workspaceManifest"`
-	Provider                 string            `json:"provider"`
-	Model                    string            `json:"model"`
-	AgentSnapshot            map[string]any    `json:"agentSnapshot"`
-	RuntimeDriver            string            `json:"runtimeDriver"`
-	RequiredRunnerCapability string            `json:"requiredRunnerCapability"`
-	Env                      map[string]string `json:"env"`
-	Prompt                   *string           `json:"prompt"`
-	Resume                   bool              `json:"resume"`
-	ResumeToken              string            `json:"resumeToken"`
-	Approved                 bool              `json:"approved"`
-	ToolCallID               string            `json:"toolCallId"`
-	ToolName                 string            `json:"toolName"`
-	Input                    map[string]any    `json:"input"`
-	ToolCall                 *ToolCall         `json:"toolCall"`
+	Protocol           string              `json:"protocol"`
+	Type               string              `json:"type"`
+	SessionID          string              `json:"sessionId"`
+	HostingMode        string              `json:"hostingMode"`
+	Runtime            string              `json:"runtime"`
+	RuntimeConfig      map[string]any      `json:"runtimeConfig"`
+	WorkspaceManifest  WorkspaceManifest   `json:"workspaceManifest"`
+	Provider           string              `json:"provider"`
+	Model              string              `json:"model"`
+	AgentSnapshot      map[string]any      `json:"agentSnapshot"`
+	RuntimeDriver      string              `json:"runtimeDriver"`
+	RuntimeRequirement *RuntimeRequirement `json:"runtimeRequirement"`
+	Env                map[string]string   `json:"env"`
+	Prompt             *string             `json:"prompt"`
+	Resume             bool                `json:"resume"`
+	ResumeToken        string              `json:"resumeToken"`
+	Approved           bool                `json:"approved"`
+	ToolCallID         string              `json:"toolCallId"`
+	ToolName           string              `json:"toolName"`
+	Input              map[string]any      `json:"input"`
+	ToolCall           *ToolCall           `json:"toolCall"`
 }
 
 type ToolCall struct {
@@ -129,8 +134,8 @@ func ParseWorkPayload(payload any) (WorkPayload, error) {
 		if normalized.Runtime == "" || normalized.Provider == "" || normalized.RuntimeConfig == nil {
 			return WorkPayload{}, fmt.Errorf("session.start work item must include runtime, runtimeConfig, and provider")
 		}
-		if normalized.RequiredRunnerCapability == "" {
-			return WorkPayload{}, fmt.Errorf("session.start work item must include requiredRunnerCapability")
+		if normalized.RuntimeRequirement == nil || normalized.RuntimeRequirement.Runtime == "" {
+			return WorkPayload{}, fmt.Errorf("session.start work item must include runtimeRequirement")
 		}
 		return normalized, nil
 	}
@@ -157,27 +162,37 @@ func ParseWorkPayload(payload any) (WorkPayload, error) {
 
 func workPayloadFromSDK(payload ama.RunnerWorkPayload) WorkPayload {
 	return WorkPayload{
-		Protocol:                 runnerWorkPayloadProtocol(payload.Protocol),
-		Type:                     stringValue(payload.Type),
-		SessionID:                stringValue(payload.SessionId),
-		HostingMode:              stringValue(payload.HostingMode),
-		Runtime:                  stringValue(payload.Runtime),
-		RuntimeConfig:            jsonMap(payload.RuntimeConfig),
-		WorkspaceManifest:        workspaceManifestFromSDK(payload.WorkspaceManifest),
-		Provider:                 stringValue(payload.Provider),
-		Model:                    stringValue(payload.Model),
-		AgentSnapshot:            jsonMap(payload.AgentSnapshot),
-		RuntimeDriver:            stringValue(payload.RuntimeDriver),
-		RequiredRunnerCapability: stringValue(payload.RequiredRunnerCapability),
-		Env:                      stringMap(payload.Env),
-		Prompt:                   payload.Prompt,
-		Resume:                   boolValue(payload.Resume),
-		ResumeToken:              stringValue(payload.ResumeToken),
-		Approved:                 boolValue(payload.Approved),
-		ToolCallID:               stringValue(payload.ToolCallId),
-		ToolName:                 stringValue(payload.ToolName),
-		Input:                    jsonMap(payload.Input),
-		ToolCall:                 toolCallFromSDK(payload.ToolCall),
+		Protocol:           runnerWorkPayloadProtocol(payload.Protocol),
+		Type:               stringValue(payload.Type),
+		SessionID:          stringValue(payload.SessionId),
+		HostingMode:        stringValue(payload.HostingMode),
+		Runtime:            stringValue(payload.Runtime),
+		RuntimeConfig:      jsonMap(payload.RuntimeConfig),
+		WorkspaceManifest:  workspaceManifestFromSDK(payload.WorkspaceManifest),
+		Provider:           stringValue(payload.Provider),
+		Model:              stringValue(payload.Model),
+		AgentSnapshot:      jsonMap(payload.AgentSnapshot),
+		RuntimeDriver:      stringValue(payload.RuntimeDriver),
+		RuntimeRequirement: runtimeRequirementFromSDK(payload.RuntimeRequirement),
+		Env:                stringMap(payload.Env),
+		Prompt:             payload.Prompt,
+		Resume:             boolValue(payload.Resume),
+		ResumeToken:        stringValue(payload.ResumeToken),
+		Approved:           boolValue(payload.Approved),
+		ToolCallID:         stringValue(payload.ToolCallId),
+		ToolName:           stringValue(payload.ToolName),
+		Input:              jsonMap(payload.Input),
+		ToolCall:           toolCallFromSDK(payload.ToolCall),
+	}
+}
+
+func runtimeRequirementFromSDK(requirement *ama.RunnerRuntimeRequirement) *RuntimeRequirement {
+	if requirement == nil {
+		return nil
+	}
+	return &RuntimeRequirement{
+		Runtime: string(requirement.Runtime),
+		Model:   stringValue(requirement.Model),
 	}
 }
 

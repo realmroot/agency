@@ -21,15 +21,15 @@ import (
 )
 
 type Daemon struct {
-	Config           runnerconfig.Config
-	Client           *ama.RunnerClient
-	Channels         runnersession.Opener
-	Adapter          sandbox.SandboxAdapter
-	RuntimeAdapter   runtime.Adapter
-	RuntimeBridge    runtime.Bridge
-	IdentityStore    *IdentityStore
-	RuntimeInventory *runtime.Inventory
-	Build            version.Info
+	Config         runnerconfig.Config
+	Client         *ama.RunnerClient
+	Channels       runnersession.Opener
+	Adapter        sandbox.SandboxAdapter
+	RuntimeAdapter runtime.Adapter
+	RuntimeBridge  runtime.Bridge
+	IdentityStore  *IdentityStore
+	RuntimeCatalog *runtime.Inventory
+	Build          version.Info
 	// relay owns the runner's single per-runner relay channel for all sessions.
 	// Started once the runner id is known and kept
 	// open for the runner's lifetime; nil until Start wires it.
@@ -56,14 +56,14 @@ func (d *Daemon) identityStore() IdentityStore {
 	return IdentityStore{Config: d.Config}
 }
 
-func (d *Daemon) runtimeInventory() *runtime.Inventory {
-	if d.RuntimeInventory != nil {
-		return d.RuntimeInventory
+func (d *Daemon) runtimes() *runtime.Inventory {
+	if d.RuntimeCatalog != nil {
+		return d.RuntimeCatalog
 	}
-	d.RuntimeInventory = &runtime.Inventory{
+	d.RuntimeCatalog = &runtime.Inventory{
 		RuntimeBridge: d.runtimeBridge(),
 	}
-	return d.RuntimeInventory
+	return d.RuntimeCatalog
 }
 
 func (d *Daemon) buildInfo() version.Info {
@@ -100,9 +100,9 @@ func (d *Daemon) Start(ctx context.Context) error {
 		return err
 	}
 	// One-time readiness line so logs show the runner came up and is connected
-	// even when it is idle. List runtime names only — not the full capability
-	// token matrix (runtime×provider×model), which is internal scheduling data.
-	runtimeNames := lo.Map(d.currentRuntimeInventory(), func(item runtime.RuntimeInventoryEntry, _ int) string {
+	// even when it is idle. List runtime names only; model declarations remain
+	// available in the heartbeat for scheduling and diagnostics.
+	runtimeNames := lo.Map(d.currentRuntimes(), func(item runtime.RunnerRuntime, _ int) string {
 		return item.Runtime
 	})
 	slog.Info("runner ready; waiting for work assignments",
@@ -310,14 +310,14 @@ func (d *Daemon) leaseWorker() LeaseWorker {
 	relay := d.relay
 	d.mu.Unlock()
 	return LeaseWorker{
-		Config:              d.Config,
-		Client:              d.Client,
-		SandboxAdapter:      d.Adapter,
-		RuntimeAdapter:      d.RuntimeAdapter,
-		RuntimeBridge:       d.runtimeBridge(),
-		Relay:               relay,
-		RunnerID:            d.RunnerID,
-		CurrentCapabilities: d.currentCapabilities,
+		Config:          d.Config,
+		Client:          d.Client,
+		SandboxAdapter:  d.Adapter,
+		RuntimeAdapter:  d.RuntimeAdapter,
+		RuntimeBridge:   d.runtimeBridge(),
+		Relay:           relay,
+		RunnerID:        d.RunnerID,
+		CurrentRuntimes: d.currentRuntimes,
 	}
 }
 
@@ -426,7 +426,6 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 	hostInfo := host.Current()
 	runner, err := d.Client.Runners.Create(ctx, ama.CreateRunnerRequest{
 		Name:          displayName(),
-		Capabilities:  lo.ToPtr(d.refreshCapabilities()),
 		EnvironmentId: lo.EmptyableToPtr(d.Config.EnvironmentID),
 		MaxConcurrent: lo.ToPtr(d.Config.MaxConcurrent),
 		Metadata: lo.ToPtr(ama.JSON{
@@ -451,14 +450,13 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	capabilities := d.refreshCapabilities()
+	runtimes := d.refreshRuntimes()
 	build := d.buildInfo()
 	hostInfo := host.Current()
 	_, err = d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, ama.PutRunnerHeartbeatRequest{
-		State:            lo.ToPtr(ama.PutRunnerHeartbeatRequestStateActive),
-		Capabilities:     lo.ToPtr(capabilities),
-		RuntimeUsage:     lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
-		RuntimeInventory: lo.ToPtr(runnerRuntimeInventory(d.currentRuntimeInventory())),
+		State:        lo.ToPtr(ama.PutRunnerHeartbeatRequestStateActive),
+		RuntimeUsage: lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
+		Runtimes:     lo.ToPtr(runnerRuntimes(runtimes)),
 		Metadata: lo.ToPtr(ama.JSON{
 			"sandboxAdapter":  sandbox.HostAdapterName(),
 			"os":              hostInfo.OS,
@@ -481,59 +479,49 @@ func (d *Daemon) sendOfflineHeartbeat(ctx context.Context) error {
 	return err
 }
 
-func (d *Daemon) refreshCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().RefreshCapabilities(), host.SupportsAMARuntime())
+func (d *Daemon) refreshRuntimes() []runtime.RunnerRuntime {
+	return withAMARuntime(d.runtimes().RefreshRuntimes(), host.SupportsAMARuntime())
 }
 
-func (d *Daemon) currentCapabilities() []string {
-	return runnerCapabilities(d.runtimeInventory().CurrentCapabilities(), host.SupportsAMARuntime())
-}
-
-func (d *Daemon) currentRuntimeInventory() []runtime.RuntimeInventoryEntry {
-	return withAMARuntimeInventory(d.runtimeInventory().CurrentRuntimeInventory(), host.SupportsAMARuntime())
+func (d *Daemon) currentRuntimes() []runtime.RunnerRuntime {
+	return withAMARuntime(d.runtimes().CurrentRuntimes(), host.SupportsAMARuntime())
 }
 
 func (d *Daemon) setRuntimeUsageSnapshot(snapshot *runtime.UsageSnapshot) {
-	d.runtimeInventory().SetUsageSnapshot(snapshot)
+	d.runtimes().SetUsageSnapshot(snapshot)
 }
 
 func (d *Daemon) getRuntimeUsage() []runtime.RuntimeUsage {
-	return d.runtimeInventory().Usage()
+	return d.runtimes().Usage()
 }
 
 func (d *Daemon) refreshRuntimeUsage(ctx context.Context) {
-	d.runtimeInventory().RefreshUsage(ctx)
+	d.runtimes().RefreshUsage(ctx)
 }
 
 func (d *Daemon) runUsageCollector(ctx context.Context) {
-	d.runtimeInventory().RunUsageCollector(ctx)
+	d.runtimes().RunUsageCollector(ctx)
 }
 
-func runnerCapabilities(runtimeCapabilities []string, supportsAMA bool) []string {
-	capabilities := append([]string(nil), runtimeCapabilities...)
-	if supportsAMA && !lo.Contains(capabilities, "ama") {
-		capabilities = append([]string{"ama"}, capabilities...)
-	}
-	return capabilities
-}
-
-func withAMARuntimeInventory(inventory []runtime.RuntimeInventoryEntry, supportsAMA bool) []runtime.RuntimeInventoryEntry {
-	if !supportsAMA || lo.ContainsBy(inventory, func(entry runtime.RuntimeInventoryEntry) bool { return entry.Runtime == "ama" }) {
+func withAMARuntime(inventory []runtime.RunnerRuntime, supportsAMA bool) []runtime.RunnerRuntime {
+	if !supportsAMA || lo.ContainsBy(inventory, func(entry runtime.RunnerRuntime) bool { return entry.Runtime == "ama" }) {
 		return inventory
 	}
-	return append([]runtime.RuntimeInventoryEntry{{
+	return append([]runtime.RunnerRuntime{{
 		Runtime: "ama",
-		State:   runtime.RuntimeInventoryStateReady,
+		Models:  []string{},
+		State:   runtime.RuntimeStateReady,
 		Detail:  "AMA runtime is available",
 	}}, inventory...)
 }
 
-func runnerRuntimeInventory(inventory []runtime.RuntimeInventoryEntry) []ama.RunnerRuntimeInventory {
-	return lo.Map(inventory, func(entry runtime.RuntimeInventoryEntry, _ int) ama.RunnerRuntimeInventory {
-		return ama.RunnerRuntimeInventory{
+func runnerRuntimes(runtimes []runtime.RunnerRuntime) []ama.RunnerRuntime {
+	return lo.Map(runtimes, func(entry runtime.RunnerRuntime, _ int) ama.RunnerRuntime {
+		return ama.RunnerRuntime{
 			Runtime: entry.Runtime,
+			Models:  entry.Models,
 			Version: lo.EmptyableToPtr(entry.Version),
-			State:   ama.RunnerRuntimeInventoryState(entry.State),
+			State:   ama.RunnerRuntimeState(entry.State),
 			Detail:  lo.ToPtr(entry.Detail),
 		}
 	})

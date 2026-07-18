@@ -59,6 +59,10 @@ describe('agent builder model', () => {
     expect(input.spec).not.toHaveProperty('provider')
   })
 
+  it('keeps an unselected model null', () => {
+    expect(toAgentInput({ ...validDraft, model: '' }).spec.model).toBeNull()
+  })
+
   it('maps API validation errors to builder fields', () => {
     const error = {
       details: {

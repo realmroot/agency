@@ -19,13 +19,11 @@
 //    same session socket.
 
 import { SELF } from 'cloudflare:test'
-import { runtimeProviderModelCapability } from '@server/domain/runtime-catalog'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
-// claude-code is a self_hosted-only wildcard-provider/model runtime. Runners
-// declare the '*' provider segment for wildcard-model runtimes.
-const CLAUDE_CODE_CAPABILITY = runtimeProviderModelCapability('claude-code', '*', 'claude-opus-4-5')
+const CLAUDE_CODE_RUNTIME = 'claude-code'
+const CLAUDE_CODE_MODEL = 'claude-opus-4-5'
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
   return await SELF.fetch(`https://example.com${path}`, {
@@ -92,7 +90,6 @@ async function registerRunner(authorization: string, environmentId: string) {
     body: JSON.stringify({
       name: `Relay test runner ${crypto.randomUUID()}`,
       environmentId,
-      capabilities: [CLAUDE_CODE_CAPABILITY],
     }),
   })
   if (res.status !== 201) throw new Error(`Runner registration failed: ${res.status} ${await res.text()}`)
@@ -102,7 +99,10 @@ async function registerRunner(authorization: string, environmentId: string) {
 async function heartbeatRunner(authorization: string, runnerId: string) {
   const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, authorization, {
     method: 'PUT',
-    body: JSON.stringify({ state: 'active', capabilities: [CLAUDE_CODE_CAPABILITY] }),
+    body: JSON.stringify({
+      state: 'active',
+      runtimes: [{ runtime: CLAUDE_CODE_RUNTIME, models: [CLAUDE_CODE_MODEL], state: 'ready' }],
+    }),
   })
   if (res.status !== 200) throw new Error(`Heartbeat failed: ${res.status} ${await res.text()}`)
 }

@@ -114,7 +114,6 @@ function EnvironmentRunnersTable({ runners }: { runners: Runner[] }) {
           <col className="w-[7rem]" />
           <col className="hidden md:table-column md:w-[7rem]" />
           <col />
-          <col className="hidden lg:table-column lg:w-[14rem]" />
           <col className="hidden xl:table-column xl:w-[11rem]" />
           <col className="hidden lg:table-column lg:w-[11rem]" />
         </colgroup>
@@ -123,15 +122,14 @@ function EnvironmentRunnersTable({ runners }: { runners: Runner[] }) {
             <TableHead>Runner</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Load</TableHead>
-            <TableHead>Inventory</TableHead>
-            <TableHead className="hidden lg:table-cell">Capabilities</TableHead>
+            <TableHead>Runtimes</TableHead>
             <TableHead className="hidden xl:table-cell">Heartbeat</TableHead>
             <TableHead className="hidden lg:table-cell">Updated</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {runners.length === 0 ? (
-            <TableEmpty colSpan={7}>No runners are registered for this environment.</TableEmpty>
+            <TableEmpty colSpan={6}>No runners are registered for this environment.</TableEmpty>
           ) : (
             runners.map((runner) => (
               <TableRow key={runner.id}>
@@ -145,10 +143,7 @@ function EnvironmentRunnersTable({ runners }: { runners: Runner[] }) {
                   {runner.currentLoad}/{runner.maxConcurrent}
                 </TableCell>
                 <TableCell className="min-w-0">
-                  <TruncatedTooltipText value={runtimeInventorySummary(runner)} fallback="None" />
-                </TableCell>
-                <TableCell className="hidden min-w-0 lg:table-cell">
-                  <TruncatedTooltipText value={runner.capabilities.join(', ')} fallback="None" />
+                  <TruncatedTooltipText value={runtimesSummary(runner)} fallback="None" />
                 </TableCell>
                 <TableCell className="hidden xl:table-cell">{formatDate(runner.lastHeartbeatAt)}</TableCell>
                 <TableCell className="hidden lg:table-cell">{formatDate(runner.updatedAt)}</TableCell>
@@ -161,8 +156,8 @@ function EnvironmentRunnersTable({ runners }: { runners: Runner[] }) {
   )
 }
 
-function runtimeInventorySummary(runner: Runner) {
-  return runner.runtimeInventory
+function runtimesSummary(runner: Runner) {
+  return runner.runtimes
     .map((entry) => `${entry.runtime}:${entry.state}${entry.version ? `@${entry.version}` : ''}`)
     .join(', ')
 }

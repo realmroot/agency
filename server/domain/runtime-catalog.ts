@@ -1,7 +1,17 @@
-export const RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX = 'runtime-provider-model'
-
 export type RuntimeHostingMode = 'cloud' | 'self_hosted'
 export type RuntimeName = 'ama' | 'claude-code' | 'codex' | 'copilot'
+export type RunnerRuntimeState = 'ready' | 'missing' | 'unauthenticated' | 'unauthorized' | 'limited' | 'unhealthy'
+
+export type RuntimeRequirement = {
+  runtime: RuntimeName
+  model?: string
+}
+
+export type RuntimeSupport = Array<{
+  runtime: string
+  models: string[]
+  state: RunnerRuntimeState
+}>
 
 type RuntimeCatalogEntry = {
   runtime: RuntimeName
@@ -10,7 +20,7 @@ type RuntimeCatalogEntry = {
 }
 
 // Self-hosted CLI runtimes accept any model ('*'): the host CLI owns the
-// model universe and a lease fails naturally if the host cannot serve it.
+// model universe and reports its concrete model inventory at heartbeat time.
 // Pinning a single id here rejected legitimate models (e.g. opus on
 // claude-code) at session creation. Cloud stays pinned to platform models.
 export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
@@ -19,7 +29,7 @@ export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
     hostingModes: ['cloud', 'self_hosted'],
     // Models are no longer hardcoded here. Cloud validates the provider/model
     // against the GLOBAL catalog (server/domain/model-catalog.ts populated by
-    // discovery), and self-hosted gates on the runner's declared capabilities —
+    // discovery), and self-hosted gates on the runner's reported runtimes —
     // so ama declares a wildcard like the other runtimes.
     providerModels: [{ provider: '*', model: '*' }],
   },
@@ -49,70 +59,20 @@ export function runtimeSupportsLivePrompts(runtime: RuntimeName) {
   return LIVE_PROMPT_RUNTIMES.has(runtime)
 }
 
-export function runtimeProviderModelCapability(runtime: RuntimeName, provider: string, model: string) {
-  return `${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:${runtime}:${provider}:${model}`
+export function runtimeRequirement(runtime: RuntimeName, model?: string | null): RuntimeRequirement {
+  return {
+    runtime,
+    ...(runtime !== 'ama' && model ? { model } : {}),
+  }
 }
 
-export function runtimeRequiredRunnerCapability(runtime: RuntimeName, provider: string, model?: string | null) {
-  if (runtime === 'ama') {
-    return runtime
-  }
-  if (!model) {
-    return runtime
-  }
-  const entry = RUNTIME_CATALOG.find((item) => item.runtime === runtime)
-  // Wildcard-provider entries (including wildcard-model ones) normalize the
-  // provider segment to '*': runners enumerate host models without knowing
-  // platform provider ids, so they declare '*' as the provider.
-  // The `candidate.model === model` arm matches a wildcard-provider entry pinned
-  // to a specific model; no current RUNTIME_CATALOG entry has that shape (every
-  // wildcard-provider runtime is wildcard-model), so v8 cannot reach it — a
-  // catalog-growth guard, not dead code.
-  /* v8 ignore start */
-  const wildcard = entry?.providerModels.find(
-    (candidate) => candidate.provider === '*' && (candidate.model === '*' || candidate.model === model),
+export function runtimesSupport(runtimes: RuntimeSupport, runtime: RuntimeName, model?: string | null) {
+  return runtimes.some(
+    (entry) =>
+      entry.runtime === runtime &&
+      entry.state === 'ready' &&
+      (!model || runtime === 'ama' || entry.models.includes(model)),
   )
-  /* v8 ignore stop */
-  return runtimeProviderModelCapability(runtime, wildcard ? '*' : provider, model)
-}
-
-// TRANSITIONAL: runners deployed before host model enumeration declare the
-// bare runtime name plus a single hardcoded model, so the specific model
-// capability may be missing even though the host CLI serves the model. For
-// wildcard-model runtimes the bare runtime capability therefore still counts
-// as model support. Removable once the runner fleet advertises enumerated
-// per-model capabilities.
-export function transitionalRuntimeLevelRuntimes(): RuntimeName[] {
-  return RUNTIME_CATALOG.filter((entry) => entry.providerModels.some((candidate) => candidate.model === '*')).map(
-    (entry) => entry.runtime,
-  )
-}
-
-export function runnerSupportsRuntimeProviderModel(
-  capabilities: string[],
-  runtime: RuntimeName,
-  provider: string,
-  model?: string | null,
-) {
-  if (runtime === 'ama') {
-    return capabilities.includes(runtime)
-  }
-  if (!model) {
-    return (
-      capabilities.includes(runtime) ||
-      capabilities.some((capability) =>
-        capability.startsWith(`${RUNTIME_PROVIDER_MODEL_CAPABILITY_PREFIX}:${runtime}:`),
-      )
-    )
-  }
-  if (
-    capabilities.includes(runtimeProviderModelCapability(runtime, provider, model)) ||
-    capabilities.includes(runtimeProviderModelCapability(runtime, '*', model))
-  ) {
-    return true
-  }
-  // TRANSITIONAL fallback — see transitionalRuntimeLevelRuntimes.
-  return transitionalRuntimeLevelRuntimes().includes(runtime) && capabilities.includes(runtime)
 }
 
 export function runtimeCatalogSupportsProviderModel(
@@ -127,7 +87,7 @@ export function runtimeCatalogSupportsProviderModel(
   }
   // Every runtime entry now declares a wildcard provider/model, so a hosting-mode
   // match suffices here — the real provider/model gating is the global catalog
-  // (cloud) and runner capabilities (self-hosted). The concrete-match arms below
+  // (cloud) and runner runtimes (self-hosted). The concrete-match arms below
   // are a growth guard for a future pinned catalog entry.
   if (entry.providerModels.every((capability) => capability.provider === '*' && capability.model === '*')) {
     return true

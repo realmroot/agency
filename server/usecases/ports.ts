@@ -7,6 +7,7 @@ import type { ModelAvailability, ModelCatalogState } from '@server/domain/provid
 import type { ResourceMetadata } from '@server/domain/resource'
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
 import type { EnvFromEntry, MemoryVolume, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
+import type { RunnerRuntimeState } from '@server/domain/runtime-catalog'
 import type {
   MessageDelivery,
   MessageState,
@@ -1151,10 +1152,11 @@ export interface RuntimeUsage {
   windows: RuntimeUsageWindow[]
 }
 
-export interface RuntimeInventoryEntry {
+export interface RunnerRuntime {
   runtime: string
+  models: string[]
   version?: string
-  state: string
+  state: RunnerRuntimeState
   detail?: string
 }
 
@@ -1162,7 +1164,6 @@ export interface RunnerRecord {
   id: string
   projectId: string
   name: string
-  capabilities: string[]
   environmentId: string | null
   secretRef: string | null
   authMode: RunnerAuthMode
@@ -1170,7 +1171,7 @@ export interface RunnerRecord {
   currentLoad: number
   maxConcurrent: number
   runtimeUsage: RuntimeUsage[]
-  runtimeInventory: RuntimeInventoryEntry[]
+  runtimes: RunnerRuntime[]
   metadata: Record<string, unknown>
   lastHeartbeatAt: string | null
   archivedAt: string | null
@@ -1207,7 +1208,6 @@ export interface CreateRunnerInput {
   organizationId: string
   projectId: string
   name: string
-  capabilities: string[]
   environmentId: string | null
   secretRef: string | null
   authMode: RunnerAuthMode
@@ -1219,7 +1219,6 @@ export interface CreateRunnerInput {
 
 export interface UpdateRunnerFields {
   name: string
-  capabilities: string[]
   state: string
   maxConcurrent: number
   metadata: Record<string, unknown>
@@ -1228,9 +1227,8 @@ export interface UpdateRunnerFields {
 
 export interface RunnerHeartbeatFields {
   state: string
-  capabilities: string[]
   runtimeUsage: RuntimeUsage[]
-  runtimeInventory: RuntimeInventoryEntry[]
+  runtimes: RunnerRuntime[]
   metadata: Record<string, unknown>
 }
 
@@ -1746,19 +1744,14 @@ export interface SessionOrchestrationStore {
   findEnvironment(projectId: string, environmentId: string): Promise<EnvironmentRow | null>
   findEnvironmentVersion(projectId: string, versionId: string): Promise<EnvironmentVersionRow | null>
 
-  // ── runtime/runner capability validation ──
-  activeRunnerCapabilities(projectId: string, environmentId: string): Promise<string[]>
+  // ── runner runtime validation ──
+  activeRunnerRuntimes(projectId: string, environmentId: string): Promise<RunnerRuntime[][]>
   // Resolves an environment whose active runner can serve the runtime (and,
-  // when possible, the provider/model), for sessions created without a pinned
+  // when selected, the exact model), for sessions created without a pinned
   // environment. Returns null when none exists — e.g. a cloud runtime with no
   // runner — so the caller can require an explicit environmentId. Prefers a
-  // model-declaring runner, then one with spare capacity.
-  resolveEnvironmentForRuntime(
-    projectId: string,
-    runtime: RuntimeName,
-    providerId: string,
-    model: string | null,
-  ): Promise<string | null>
+  // model-serving runner, then one with spare capacity.
+  resolveEnvironmentForRuntime(projectId: string, runtime: RuntimeName, model: string | null): Promise<string | null>
 
   // ── MCP manifest resolution ──
   mcpCatalogEntries(connectorIds: string[]): Promise<ConnectorRecord[]>

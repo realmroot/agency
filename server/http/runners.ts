@@ -25,7 +25,6 @@ type RunnerRoutes = OpenAPIHono<DepsEnv>
 const RUNNER_STATES = ['active', 'draining', 'disabled', 'offline'] as const
 
 const JsonObjectSchema = z.record(z.string(), z.unknown())
-const CapabilitySchema = z.string().min(1).max(120)
 
 const RuntimeUsageWindowSchema = z
   .object({
@@ -42,31 +41,27 @@ const RuntimeUsageSchema = z
   })
   .openapi('RuntimeUsage')
 
-const RUNTIME_INVENTORY_STATES = [
-  'ready',
-  'missing',
-  'unauthenticated',
-  'unauthorized',
-  'limited',
-  'unhealthy',
-] as const
+const RUNTIME_STATES = ['ready', 'missing', 'unauthenticated', 'unauthorized', 'limited', 'unhealthy'] as const
 
-const RuntimeInventorySchema = z
+const RunnerRuntimeSchema = z
   .object({
     runtime: z.string().min(1).max(60).openapi({ example: 'codex' }),
+    models: z
+      .array(z.string().min(1).max(200))
+      .max(100)
+      .openapi({ example: ['gpt-5.3-codex'] }),
     version: z.string().max(120).optional().openapi({ example: '0.42.0' }),
-    state: z.enum(RUNTIME_INVENTORY_STATES).openapi({ example: 'ready' }),
+    state: z.enum(RUNTIME_STATES).openapi({ example: 'ready' }),
     detail: z.string().max(400).optional().openapi({ example: 'host CLI enumerated 2 models' }),
   })
   .strict()
-  .openapi('RunnerRuntimeInventory')
+  .openapi('RunnerRuntime')
 
 const RunnerSchema = z
   .object({
     id: z.string().openapi({ example: 'runner_abc123' }),
     projectId: z.string().openapi({ example: 'project_abc123' }),
     name: z.string().openapi({ example: 'mac-mini-build-runner' }),
-    capabilities: z.array(CapabilitySchema).openapi({ example: ['node', 'git', 'bash'] }),
     environmentId: z.string().nullable().openapi({ example: 'env_abc123' }),
     secretRef: NullableSecretRefSchema,
     authMode: z.enum(RUNNER_AUTH_MODES).openapi({ example: 'oidc' }),
@@ -74,7 +69,7 @@ const RunnerSchema = z
     currentLoad: z.number().int().openapi({ example: 0 }),
     maxConcurrent: z.number().int().openapi({ example: 2 }),
     runtimeUsage: z.array(RuntimeUsageSchema).openapi({ example: [] }),
-    runtimeInventory: z.array(RuntimeInventorySchema).openapi({ example: [] }),
+    runtimes: z.array(RunnerRuntimeSchema).openapi({ example: [] }),
     metadata: JsonObjectSchema.openapi({ example: { pool: 'default' } }),
     lastHeartbeatAt: z.string().datetime().nullable(),
     archivedAt: z.string().datetime().nullable(),
@@ -90,7 +85,7 @@ const RunnerHeartbeatSchema = z
     state: z.enum(RUNNER_STATES).openapi({ example: 'active' }),
     currentLoad: z.number().int().openapi({ example: 1 }),
     runtimeUsage: z.array(RuntimeUsageSchema).openapi({ example: [] }),
-    runtimeInventory: z.array(RuntimeInventorySchema).openapi({ example: [] }),
+    runtimes: z.array(RunnerRuntimeSchema).openapi({ example: [] }),
     lastHeartbeatAt: z.string().datetime().nullable(),
   })
   .openapi('RunnerHeartbeat')
@@ -98,11 +93,6 @@ const RunnerHeartbeatSchema = z
 const CreateRunnerSchema = z
   .object({
     name: z.string().min(1).max(120).openapi({ example: 'mac-mini-build-runner' }),
-    capabilities: z
-      .array(CapabilitySchema)
-      .max(100)
-      .optional()
-      .openapi({ example: ['node', 'git'] }),
     environmentId: z.string().min(1).optional().openapi({ example: 'env_abc123' }),
     secretRef: SecretRefSchema.optional(),
     authMode: z.enum(RUNNER_AUTH_MODES).optional().openapi({ example: 'bearer' }),
@@ -115,7 +105,6 @@ const CreateRunnerSchema = z
 const UpdateRunnerSchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    capabilities: z.array(CapabilitySchema).max(100).optional(),
     state: z.enum(['active', 'draining', 'disabled']).optional(),
     maxConcurrent: z.number().int().min(1).max(100).optional(),
     metadata: JsonObjectSchema.optional(),
@@ -127,13 +116,8 @@ const UpdateRunnerSchema = z
 const PutHeartbeatSchema = z
   .object({
     state: z.enum(['active', 'draining', 'offline']).optional().openapi({ example: 'active' }),
-    capabilities: z
-      .array(CapabilitySchema)
-      .max(100)
-      .optional()
-      .openapi({ example: ['node', 'git'] }),
     runtimeUsage: z.array(RuntimeUsageSchema).max(20).optional(),
-    runtimeInventory: z.array(RuntimeInventorySchema).max(20).optional(),
+    runtimes: z.array(RunnerRuntimeSchema).max(20).optional(),
     metadata: JsonObjectSchema.optional().openapi({ example: { hostname: 'runner-1' } }),
   })
   .strict()
@@ -156,26 +140,28 @@ const RunnerListQuerySchema = listQuerySchema().extend({
 
 const RunnerListResponseSchema = listResponseSchema('RunnerListResponse', RunnerSchema)
 
-type RuntimeInventoryDto = z.infer<typeof RuntimeInventorySchema>
+type RunnerRuntimeDto = z.infer<typeof RunnerRuntimeSchema>
 
-// Drops absent optional keys so the strict port RuntimeInventoryEntry shape is
+// Drops absent optional keys so the strict port RunnerRuntime shape is
 // satisfied under exactOptionalPropertyTypes.
-function normalizeInventory(inventory: RuntimeInventoryDto[]) {
-  return inventory.map((entry) => ({
+function normalizeRuntimes(runtimes: RunnerRuntimeDto[]) {
+  return runtimes.map((entry) => ({
     runtime: entry.runtime,
+    models: entry.models,
     state: entry.state,
     ...(entry.version !== undefined ? { version: entry.version } : {}),
     ...(entry.detail !== undefined ? { detail: entry.detail } : {}),
   }))
 }
 
-// The stored runtime inventory carries free-form state strings; the wire schema
+// Stored runtime declarations carry free-form state strings; the wire schema
 // pins them to the inventory-state enum.
-function serializeInventory(inventory: RunnerAuthRecord['runtimeInventory']): RuntimeInventoryDto[] {
-  return inventory.map((entry) => ({
+function serializeRuntimes(runtimes: RunnerAuthRecord['runtimes']): RunnerRuntimeDto[] {
+  return runtimes.map((entry) => ({
     runtime: entry.runtime,
+    models: entry.models,
     ...(entry.version !== undefined ? { version: entry.version } : {}),
-    state: entry.state as RuntimeInventoryDto['state'],
+    state: entry.state as RunnerRuntimeDto['state'],
     ...(entry.detail !== undefined ? { detail: entry.detail } : {}),
   }))
 }
@@ -186,7 +172,6 @@ function serializeRunner(runner: RunnerAuthRecord) {
     id: runner.id,
     projectId: runner.projectId,
     name: runner.name,
-    capabilities: runner.capabilities,
     environmentId: runner.environmentId,
     secretRef: runner.secretRef,
     authMode: runner.authMode,
@@ -194,7 +179,7 @@ function serializeRunner(runner: RunnerAuthRecord) {
     currentLoad: runner.currentLoad,
     maxConcurrent: runner.maxConcurrent,
     runtimeUsage: runner.runtimeUsage,
-    runtimeInventory: serializeInventory(runner.runtimeInventory),
+    runtimes: serializeRuntimes(runner.runtimes),
     metadata: runner.metadata,
     lastHeartbeatAt: runner.lastHeartbeatAt,
     archivedAt: runner.archivedAt,
@@ -209,7 +194,7 @@ function serializeHeartbeat(runner: RunnerAuthRecord) {
     state: runner.state as (typeof RUNNER_STATES)[number],
     currentLoad: runner.currentLoad,
     runtimeUsage: runner.runtimeUsage,
-    runtimeInventory: serializeInventory(runner.runtimeInventory),
+    runtimes: serializeRuntimes(runner.runtimes),
     lastHeartbeatAt: runner.lastHeartbeatAt,
   }
 }
@@ -439,7 +424,6 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       try {
         const { runner, reregistered } = await registerRunner(deps, auth, runnerOidcContext(c.env, auth), {
           name: body.name,
-          capabilities: body.capabilities ?? [],
           ...(body.environmentId ? { environmentId: body.environmentId } : { environmentId: undefined }),
           ...(body.secretRef ? { secretRef: body.secretRef } : { secretRef: undefined }),
           ...(body.authMode ? { authMode: body.authMode } : { authMode: undefined }),
@@ -543,7 +527,6 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       try {
         const result = await updateRunner(deps, auth.project.id, runner, {
           ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.capabilities !== undefined ? { capabilities: body.capabilities } : {}),
           ...(body.state !== undefined ? { state: body.state } : {}),
           ...(body.maxConcurrent !== undefined ? { maxConcurrent: body.maxConcurrent } : {}),
           ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
@@ -588,11 +571,8 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       try {
         const updated = await recordRunnerHeartbeat(deps, auth.project.id, runner, {
           ...(body.state !== undefined ? { state: body.state } : {}),
-          ...(body.capabilities !== undefined ? { capabilities: body.capabilities } : {}),
           ...(body.runtimeUsage !== undefined ? { runtimeUsage: body.runtimeUsage } : {}),
-          ...(body.runtimeInventory !== undefined
-            ? { runtimeInventory: normalizeInventory(body.runtimeInventory) }
-            : {}),
+          ...(body.runtimes !== undefined ? { runtimes: normalizeRuntimes(body.runtimes) } : {}),
           ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
         })
         return c.json(serializeHeartbeat(updated), 200)

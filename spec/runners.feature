@@ -9,11 +9,12 @@ Feature: Runners
   # ── Eligibility and registration (domain + usecase: matching, binding) ──
 
   @runners/eligibility @domain
-  Scenario: Match runners to work by capability and ready runtime inventory
-    Given a work item declares a required runtime, provider, and model capability
+  Scenario: Match runners to work by structured runtime declarations
+    Given a work item declares a structured runtime and optional model requirement
     When a runner is evaluated for the work
-    Then only a runner advertising the exact capability with ready runtime inventory is eligible
-    And session starts that declare no required capability are not claimable
+    Then only a runner reporting that ready runtime and exact selected model in its runtimes list is eligible
+    And a null model requires only the ready runtime without inventing a model id
+    And session starts that declare no runtime requirement are not claimable
     And local sandbox tool work requires the AMA runtime while other unscoped non-session work is claimable by any runner
 
   @runners/auth-binding @domain
@@ -22,7 +23,7 @@ Feature: Runners
     When the registration auth mode and environment are resolved
     Then the auth mode and bound environment follow the token binding
     And a device-login token cannot register a non-OIDC runner and a federated token cannot register a non-federated runner
-    And raw secret material in runner metadata or capabilities is rejected
+    And raw secret material in runner metadata or runtime diagnostics is rejected
 
   @runners/local-credential-refresh @domain
   Scenario: Coordinate shared local runner credential refresh
@@ -41,18 +42,19 @@ Feature: Runners
   Scenario: Claim a lease only for eligible available work
     Given a runner attempts to claim a work item
     When the claim is evaluated
-    Then inactive runners, missing work, ineligible capability, at-capacity, and lost-race claims are rejected
+    Then inactive runners, missing work, unsupported runtime requirements, at-capacity, and lost-race claims are rejected
     And claim-time secret resolution failure fails the claim cleanly
 
-  # ── Heartbeat and inventory (api: assembled server, real D1) ──
+  # ── Heartbeat and runtimes (api: assembled server, real D1) ──
 
   @runners/heartbeat @api
-  Scenario: Register a runner and report runtime inventory through the heartbeat singleton
+  Scenario: Register a runner and report supported runtimes through the heartbeat singleton
     Given a self-hosted environment and a vault credential reference
     When the operator registers a runner and sends a heartbeat
     Then the runner stores only safe metadata and never the raw credential value
-    And the heartbeat reports supported runtimes with version, availability state, and safe diagnostics
-    And host platform metadata is diagnostic while runtime inventory remains authoritative for scheduling
+    And the heartbeat reports one runtimes list with each runtime's models, version, availability state, and safe diagnostics
+    And the runner resource does not expose a generic capabilities field or a legacy runtimeInventory field
+    And host platform metadata is diagnostic while the runtimes list remains authoritative for scheduling
     And Windows omits the unsupported AMA runtime while still reporting detected CLI-backed runtimes
     And quota-governed runtimes whose usage probe is unavailable are reported as limited
     And disabled runners cannot heartbeat themselves active and every runner endpoint requires authentication

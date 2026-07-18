@@ -244,11 +244,6 @@ describe('CoreStep', () => {
     expect(screen.getByText('Provider is required.')).toBeInTheDocument()
   })
 
-  it('renders model error when errors.model is set', () => {
-    renderCoreStep({ errors: { model: 'Model is required.' } })
-    expect(screen.getByText('Model is required.')).toBeInTheDocument()
-  })
-
   it('renders name error when errors.name is set', () => {
     renderCoreStep({ errors: { name: 'Name is required.' } })
     expect(screen.getByText('Name is required.')).toBeInTheDocument()
@@ -265,11 +260,13 @@ describe('CoreStep', () => {
   })
 
   it('renders catalog display name when available', async () => {
-    renderCoreStep({}, [buildProviderModel({ displayName: 'Kimi Latest', availability: 'available' })])
+    renderCoreStep({ draft: { ...emptyBuilderDraft, provider: 'workers-ai', model: '@cf/moonshotai/kimi-k2.6' } }, [
+      buildProviderModel({ displayName: 'Kimi Latest', availability: 'available' }),
+    ])
     expect(await screen.findByText(/Kimi Latest/)).toBeInTheDocument()
   })
 
-  it('renders default model when model is in empty catalog', () => {
+  it('renders a selected model when the catalog is empty', () => {
     const draft = { ...emptyBuilderDraft, provider: 'workers-ai', model: '@cf/moonshotai/kimi-k2.6' }
     renderCoreStep({ draft })
     expect(screen.getByText(/@cf\/moonshotai\/kimi-k2\.6/)).toBeInTheDocument()

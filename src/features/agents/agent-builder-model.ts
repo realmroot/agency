@@ -29,14 +29,13 @@ export interface AgentBuilderDraft {
 }
 
 export const DEFAULT_BUILDER_PROVIDER = 'workers-ai'
-export const DEFAULT_BUILDER_MODEL = '@cf/moonshotai/kimi-k2.6'
 
 export const emptyBuilderDraft: AgentBuilderDraft = {
   name: '',
   description: '',
   systemPrompt: '',
   provider: DEFAULT_BUILDER_PROVIDER,
-  model: DEFAULT_BUILDER_MODEL,
+  model: '',
   allowedTools: '',
   mcpConnectors: [],
   sandboxEnabled: false,
@@ -112,7 +111,6 @@ export function coreStepErrors(draft: AgentBuilderDraft): BuilderFieldErrors {
   if (!draft.name.trim()) errors.name = 'Name is required.'
   else if (draft.name.trim().length > 120) errors.name = 'Name must be 120 characters or fewer.'
   if (!draft.systemPrompt.trim()) errors.systemPrompt = 'System prompt is required.'
-  if (!draft.model.trim()) errors.model = 'Model is required.'
   if (!draft.provider.trim()) errors.provider = 'Provider is required.'
   return errors
 }
@@ -136,7 +134,7 @@ export function toAgentInput(draft: AgentBuilderDraft): AgentInput {
     spec: {
       systemPrompt: draft.systemPrompt.trim(),
       ...providerPatch(draft.provider),
-      model: draft.model.trim(),
+      model: draft.model.trim() || null,
       skills: draft.sandboxEnabled ? parseTools(draft.skills) : [],
       allowedTools: parseTools(draft.allowedTools),
       mcpConnectors: draft.mcpConnectors,

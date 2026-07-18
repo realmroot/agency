@@ -10,7 +10,6 @@ import {
   apiErrorToBuilder,
   type BuilderFieldErrors,
   coreStepErrors,
-  DEFAULT_BUILDER_MODEL,
   DEFAULT_BUILDER_PROVIDER,
   draftFromGoal,
   emptyBuilderDraft,
@@ -26,6 +25,7 @@ import {
   QuickstartIntegrationStep,
   QuickstartProviderStep,
 } from './QuickstartSteps'
+
 import {
   defaultQuickstartEnvironmentForm,
   firstIncompleteStep,
@@ -40,6 +40,8 @@ import {
   resolveQuickstartStep,
   SAFE_EXAMPLE_PROMPT,
 } from './quickstart-model'
+
+const QUICKSTART_WORKERS_AI_MODEL = '@cf/moonshotai/kimi-k2.6'
 
 const STEP_DESCRIPTIONS: Record<QuickstartStep, string> = {
   provider: 'Confirm the model provider. The seeded Workers AI provider needs no credential.',
@@ -133,7 +135,7 @@ export function QuickstartPage() {
           systemPrompt:
             'You are the Workers AI starter agent. Respond helpfully and stay inside the session workspace.',
           ...providerPatch(DEFAULT_BUILDER_PROVIDER),
-          model: DEFAULT_BUILDER_MODEL,
+          model: QUICKSTART_WORKERS_AI_MODEL,
         },
       })
       const environment = await api.createEnvironment(

@@ -13,7 +13,7 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+  from ..models.runner_runtime import RunnerRuntime
   from ..models.runtime_usage import RuntimeUsage
 
 
@@ -32,7 +32,7 @@ class RunnerHeartbeat:
             state (RunnerHeartbeatState):  Example: active.
             current_load (int):  Example: 1.
             runtime_usage (list[RuntimeUsage]):
-            runtime_inventory (list[RunnerRuntimeInventory]):
+            runtimes (list[RunnerRuntime]):
             last_heartbeat_at (datetime.datetime | None):
      """
 
@@ -40,7 +40,7 @@ class RunnerHeartbeat:
     state: RunnerHeartbeatState
     current_load: int
     runtime_usage: list[RuntimeUsage]
-    runtime_inventory: list[RunnerRuntimeInventory]
+    runtimes: list[RunnerRuntime]
     last_heartbeat_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -49,7 +49,7 @@ class RunnerHeartbeat:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         runner_id = self.runner_id
 
@@ -64,10 +64,10 @@ class RunnerHeartbeat:
 
 
 
-        runtime_inventory = []
-        for runtime_inventory_item_data in self.runtime_inventory:
-            runtime_inventory_item = runtime_inventory_item_data.to_dict()
-            runtime_inventory.append(runtime_inventory_item)
+        runtimes = []
+        for runtimes_item_data in self.runtimes:
+            runtimes_item = runtimes_item_data.to_dict()
+            runtimes.append(runtimes_item)
 
 
 
@@ -85,7 +85,7 @@ class RunnerHeartbeat:
             "state": state,
             "currentLoad": current_load,
             "runtimeUsage": runtime_usage,
-            "runtimeInventory": runtime_inventory,
+            "runtimes": runtimes,
             "lastHeartbeatAt": last_heartbeat_at,
         })
 
@@ -95,7 +95,7 @@ class RunnerHeartbeat:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.runner_runtime_inventory import RunnerRuntimeInventory
+        from ..models.runner_runtime import RunnerRuntime
         from ..models.runtime_usage import RuntimeUsage
         d = dict(src_dict)
         runner_id = d.pop("runnerId")
@@ -117,14 +117,14 @@ class RunnerHeartbeat:
             runtime_usage.append(runtime_usage_item)
 
 
-        runtime_inventory = []
-        _runtime_inventory = d.pop("runtimeInventory")
-        for runtime_inventory_item_data in (_runtime_inventory):
-            runtime_inventory_item = RunnerRuntimeInventory.from_dict(runtime_inventory_item_data)
+        runtimes = []
+        _runtimes = d.pop("runtimes")
+        for runtimes_item_data in (_runtimes):
+            runtimes_item = RunnerRuntime.from_dict(runtimes_item_data)
 
 
 
-            runtime_inventory.append(runtime_inventory_item)
+            runtimes.append(runtimes_item)
 
 
         def _parse_last_heartbeat_at(data: object) -> datetime.datetime | None:
@@ -150,7 +150,7 @@ class RunnerHeartbeat:
             state=state,
             current_load=current_load,
             runtime_usage=runtime_usage,
-            runtime_inventory=runtime_inventory,
+            runtimes=runtimes,
             last_heartbeat_at=last_heartbeat_at,
         )
 

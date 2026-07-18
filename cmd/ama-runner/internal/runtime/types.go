@@ -71,20 +71,21 @@ type UsageSnapshot struct {
 	Limited map[string]string
 }
 
-type RuntimeInventoryEntry struct {
+type RunnerRuntime struct {
 	Runtime string
+	Models  []string
 	Version string
 	State   string
 	Detail  string
 }
 
 const (
-	RuntimeInventoryStateReady           = "ready"
-	RuntimeInventoryStateLimited         = "limited"
-	RuntimeInventoryStateMissing         = "missing"
-	RuntimeInventoryStateUnhealthy       = "unhealthy"
-	RuntimeInventoryStateUnauthenticated = "unauthenticated"
-	RuntimeInventoryStateUnauthorized    = "unauthorized"
+	RuntimeStateReady           = "ready"
+	RuntimeStateLimited         = "limited"
+	RuntimeStateMissing         = "missing"
+	RuntimeStateUnhealthy       = "unhealthy"
+	RuntimeStateUnauthenticated = "unauthenticated"
+	RuntimeStateUnauthorized    = "unauthorized"
 )
 
 type RuntimeUsage struct {

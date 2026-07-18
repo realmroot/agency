@@ -1861,9 +1861,8 @@
             "type": "string",
             "example": "codex-self-hosted"
           },
-          "requiredRunnerCapability": {
-            "type": "string",
-            "nullable": true
+          "runtimeRequirement": {
+            "$ref": "#/components/schemas/RunnerRuntimeRequirement"
           },
           "env": {
             "type": "object",
@@ -1906,6 +1905,28 @@
             "$ref": "#/components/schemas/RunnerToolCall"
           }
         },
+        "additionalProperties": false
+      },
+      "RunnerRuntimeRequirement": {
+        "type": "object",
+        "properties": {
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "ama",
+              "claude-code",
+              "codex",
+              "copilot"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "runtime"
+        ],
         "additionalProperties": false
       },
       "RunnerRuntimeToolCall": {
@@ -3982,19 +4003,6 @@
             "type": "string",
             "example": "mac-mini-build-runner"
           },
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "example": [
-              "node",
-              "git",
-              "bash"
-            ]
-          },
           "environmentId": {
             "type": "string",
             "nullable": true,
@@ -4038,10 +4046,10 @@
             },
             "example": []
           },
-          "runtimeInventory": {
+          "runtimes": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RunnerRuntimeInventory"
+              "$ref": "#/components/schemas/RunnerRuntime"
             },
             "example": []
           },
@@ -4077,7 +4085,6 @@
           "id",
           "projectId",
           "name",
-          "capabilities",
           "environmentId",
           "secretRef",
           "authMode",
@@ -4085,7 +4092,7 @@
           "currentLoad",
           "maxConcurrent",
           "runtimeUsage",
-          "runtimeInventory",
+          "runtimes",
           "metadata",
           "lastHeartbeatAt",
           "archivedAt",
@@ -4140,7 +4147,7 @@
           "resetsAt"
         ]
       },
-      "RunnerRuntimeInventory": {
+      "RunnerRuntime": {
         "type": "object",
         "properties": {
           "runtime": {
@@ -4148,6 +4155,18 @@
             "minLength": 1,
             "maxLength": 60,
             "example": "codex"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "maxItems": 100,
+            "example": [
+              "gpt-5.3-codex"
+            ]
           },
           "version": {
             "type": "string",
@@ -4174,6 +4193,7 @@
         },
         "required": [
           "runtime",
+          "models",
           "state"
         ],
         "additionalProperties": false
@@ -4186,19 +4206,6 @@
             "minLength": 1,
             "maxLength": 120,
             "example": "mac-mini-build-runner"
-          },
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "maxItems": 100,
-            "example": [
-              "node",
-              "git"
-            ]
           },
           "environmentId": {
             "type": "string",
@@ -4267,15 +4274,6 @@
             "minLength": 1,
             "maxLength": 120
           },
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "maxItems": 100
-          },
           "state": {
             "type": "string",
             "enum": [
@@ -4329,10 +4327,10 @@
             },
             "example": []
           },
-          "runtimeInventory": {
+          "runtimes": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RunnerRuntimeInventory"
+              "$ref": "#/components/schemas/RunnerRuntime"
             },
             "example": []
           },
@@ -4347,7 +4345,7 @@
           "state",
           "currentLoad",
           "runtimeUsage",
-          "runtimeInventory",
+          "runtimes",
           "lastHeartbeatAt"
         ]
       },
@@ -4363,19 +4361,6 @@
             ],
             "example": "active"
           },
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "maxItems": 100,
-            "example": [
-              "node",
-              "git"
-            ]
-          },
           "runtimeUsage": {
             "type": "array",
             "items": {
@@ -4383,10 +4368,10 @@
             },
             "maxItems": 20
           },
-          "runtimeInventory": {
+          "runtimes": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RunnerRuntimeInventory"
+              "$ref": "#/components/schemas/RunnerRuntime"
             },
             "maxItems": 20
           },

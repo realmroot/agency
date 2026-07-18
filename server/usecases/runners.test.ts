@@ -27,7 +27,6 @@ function runnerRecord(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthReco
     organizationId: 'org_1',
     projectId: 'project_1',
     name: 'Runner',
-    capabilities: [],
     environmentId: null,
     secretRef: null,
     authMode: 'bearer',
@@ -35,7 +34,7 @@ function runnerRecord(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthReco
     currentLoad: 0,
     maxConcurrent: 1,
     runtimeUsage: [],
-    runtimeInventory: [],
+    runtimes: [],
     metadata: {},
     oidcSubject: null,
     oidcClientId: null,
@@ -67,7 +66,6 @@ describe('[spec: runners/register] registerRunner', () => {
   it('inserts a new runner when references are usable', async () => {
     const result = await registerRunner(fakeDeps(), auth, consoleOidc, {
       name: 'Local runner',
-      capabilities: ['node'],
       environmentId: 'env_1',
       secretRef: 'ama://vaults/vault_1/credentials/cred_1',
       authMode: 'bearer',
@@ -82,7 +80,6 @@ describe('[spec: runners/register] registerRunner', () => {
     await expect(
       registerRunner(fakeDeps(), auth, consoleOidc, {
         name: 'Leaky',
-        capabilities: [],
         environmentId: undefined,
         secretRef: undefined,
         authMode: 'bearer',
@@ -96,7 +93,6 @@ describe('[spec: runners/register] registerRunner', () => {
     await expect(
       registerRunner(fakeDeps({ environmentUsable: async () => false }), auth, consoleOidc, {
         name: 'Runner',
-        capabilities: [],
         environmentId: 'env_missing',
         secretRef: undefined,
         authMode: 'bearer',
@@ -114,7 +110,6 @@ describe('[spec: runners/register] registerRunner', () => {
         consoleOidc,
         {
           name: 'Runner',
-          capabilities: [],
           environmentId: undefined,
           secretRef: 'ama://vaults/vault_1/credentials/cred_missing',
           authMode: 'bearer',
@@ -133,7 +128,6 @@ describe('[spec: runners/register] registerRunner', () => {
       { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
       {
         name: 'Federated runner',
-        capabilities: [],
         environmentId: undefined,
         secretRef: undefined,
         authMode: 'federated',
@@ -154,7 +148,6 @@ describe('[spec: runners/register] registerRunner', () => {
         { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
         {
           name: 'Bad mode',
-          capabilities: [],
           environmentId: undefined,
           secretRef: undefined,
           authMode: 'oidc',
@@ -173,7 +166,6 @@ describe('[spec: runners/register] registerRunner', () => {
         consoleOidc,
         {
           name: 'Runner',
-          capabilities: [],
           environmentId: undefined,
           secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_bad',
           authMode: 'bearer',
@@ -198,7 +190,6 @@ describe('[spec: runners/register] registerRunner', () => {
         { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
         {
           name: 'Conflicting runner',
-          capabilities: [],
           environmentId: undefined,
           secretRef: undefined,
           authMode: 'federated',
@@ -234,9 +225,9 @@ describe('updateRunner', () => {
     expect(updated.archivedAt).toBeNull()
   })
 
-  it('rejects secret material in capabilities', async () => {
+  it('rejects secret material in metadata', async () => {
     await expect(
-      updateRunner(fakeDeps(), 'project_1', runnerRecord(), { capabilities: [{ token: 'x' } as never] }),
+      updateRunner(fakeDeps(), 'project_1', runnerRecord(), { metadata: { token: 'x' } }),
     ).rejects.toBeInstanceOf(RunnerValidationError)
   })
 })
@@ -261,10 +252,10 @@ describe('recordRunnerHeartbeat', () => {
     ).rejects.toBeInstanceOf(RunnerConflictError)
   })
 
-  it('rejects secret material in runtimeInventory', async () => {
+  it('rejects secret material in runtimes', async () => {
     await expect(
       recordRunnerHeartbeat(fakeDeps(), 'project_1', runnerRecord(), {
-        runtimeInventory: [{ secretToken: 'raw' } as never],
+        runtimes: [{ secretToken: 'raw' } as never],
       }),
     ).rejects.toBeInstanceOf(RunnerValidationError)
   })

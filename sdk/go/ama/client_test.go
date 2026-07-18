@@ -35,7 +35,6 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"archivedAt": null,
 			"authMode": "oidc",
-			"capabilities": [],
 			"createdAt": "2026-01-01T00:00:00Z",
 			"currentLoad": 0,
 			"environmentId": null,
@@ -45,7 +44,7 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 			"metadata": {},
 			"name": "runner-a",
 			"projectId": "project_1",
-			"runtimeInventory": [],
+			"runtimes": [],
 			"runtimeUsage": [],
 			"secretRef": null,
 			"state": "active",

@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-func TestRunnerCapabilitiesComeFromBridgeInventory(t *testing.T) {
-	got := runtimeCapabilities(&InventorySnapshot{Runtimes: []InventoryRuntime{
+func TestRunnerRuntimesComeFromBridgeInventory(t *testing.T) {
+	got := runtimes(&InventorySnapshot{Runtimes: []InventoryRuntime{
 		{
 			Runtime:        "codex",
 			Installed:      true,
@@ -27,60 +27,63 @@ func TestRunnerCapabilitiesComeFromBridgeInventory(t *testing.T) {
 			FallbackModels: []string{"copilot-cli"},
 		},
 	}})
-	want := []string{
-		"codex",
-		"runtime-provider-model:codex:*:gpt-5.3-codex",
-		"runtime-provider-model:codex:*:gpt-5.3-codex-mini",
-		"claude-code",
-		"runtime-provider-model:claude-code:*:claude-sonnet-4-6",
+	want := []string{"codex", "claude-code", "copilot"}
+	if strings.Join(runtimeNames(got), ",") != strings.Join(want, ",") {
+		t.Fatalf("expected runtimes %v, got %v", want, got)
 	}
-	if strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("expected capabilities %v, got %v", want, got)
-	}
-	if slices.Contains(got, "copilot") {
-		t.Fatalf("expected missing runtime to be excluded, got %v", got)
+	if got[2].State != RuntimeStateMissing {
+		t.Fatalf("expected missing runtime to remain visible with state, got %v", got)
 	}
 }
 
-func TestRuntimeInventoryComesFromBridgeInventory(t *testing.T) {
-	got := runtimeInventory(&InventorySnapshot{Runtimes: []InventoryRuntime{
+func runtimeNames(entries []RunnerRuntime) []string {
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Runtime)
+	}
+	return names
+}
+
+func TestRuntimeCatalogComesFromBridgeInventory(t *testing.T) {
+	got := runtimes(&InventorySnapshot{Runtimes: []InventoryRuntime{
 		{
 			Runtime:   "codex",
 			Installed: true,
-			Status:    RuntimeInventoryStateReady,
+			Models:    []string{"gpt-5.3-codex"},
+			Status:    RuntimeStateReady,
 			Version:   "1.0.0",
 			Detail:    "ready",
 		},
 		{
 			Runtime:   "copilot",
 			Installed: false,
-			Status:    RuntimeInventoryStateMissing,
+			Status:    RuntimeStateMissing,
 			Detail:    "copilot CLI not found on PATH",
 		},
 	}})
 	if len(got) != 2 {
 		t.Fatalf("expected inventory entries, got %#v", got)
 	}
-	if got[0].Runtime != "codex" || got[0].State != RuntimeInventoryStateReady || got[0].Version != "1.0.0" {
+	if got[0].Runtime != "codex" || got[0].State != RuntimeStateReady || got[0].Version != "1.0.0" || !slices.Equal(got[0].Models, []string{"gpt-5.3-codex"}) {
 		t.Fatalf("unexpected ready inventory %#v", got[0])
 	}
-	if got[1].Runtime != "copilot" || got[1].State != RuntimeInventoryStateMissing {
+	if got[1].Runtime != "copilot" || got[1].State != RuntimeStateMissing {
 		t.Fatalf("unexpected missing inventory %#v", got[1])
 	}
 }
 
-func TestRuntimeInventoryDefaultsStateAndDetail(t *testing.T) {
-	got := runtimeInventory(&InventorySnapshot{Runtimes: []InventoryRuntime{
+func TestRuntimeCatalogDefaultsStateAndDetail(t *testing.T) {
+	got := runtimes(&InventorySnapshot{Runtimes: []InventoryRuntime{
 		{Runtime: "codex", Installed: true},
 		{Runtime: "copilot", Installed: false},
 	}})
-	if got[0].State != RuntimeInventoryStateUnhealthy || got[0].Detail == "" {
+	if got[0].State != RuntimeStateUnhealthy || got[0].Detail == "" {
 		t.Fatalf("expected installed runtime without status to be unhealthy with detail, got %#v", got[0])
 	}
-	if got[1].State != RuntimeInventoryStateMissing || got[1].Detail == "" {
+	if got[1].State != RuntimeStateMissing || got[1].Detail == "" {
 		t.Fatalf("expected missing runtime without status to be missing with detail, got %#v", got[1])
 	}
-	if runtimeInventory(nil) != nil || runtimeCapabilities(nil) != nil || runtimeBinaries(nil) != nil {
+	if runtimes(nil) != nil || runtimeBinaries(nil) != nil {
 		t.Fatal("expected nil snapshots to return nil derived values")
 	}
 }
@@ -96,7 +99,7 @@ func TestRuntimeBinariesReturnsOnlyConfiguredBinaries(t *testing.T) {
 	}
 }
 
-func TestInventoryRefreshCapabilitiesUsesInjectedInventory(t *testing.T) {
+func TestInventoryRefreshRuntimesUsesInjectedInventory(t *testing.T) {
 	calls := 0
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {
@@ -106,35 +109,35 @@ func TestInventoryRefreshCapabilitiesUsesInjectedInventory(t *testing.T) {
 				Installed:      true,
 				FallbackModels: []string{"gpt-5.3-codex"},
 				Models:         []string{"gpt-5.3-codex-mini"},
-				Status:         RuntimeInventoryStateReady,
+				Status:         RuntimeStateReady,
 				Detail:         "ready",
 			}}}, nil
 		},
 	}
-	got := inv.RefreshCapabilities()
+	got := inv.RefreshRuntimes()
 	if calls != 1 {
 		t.Fatalf("expected inventory call, got %d", calls)
 	}
-	if strings.Join(got, ",") != "codex,runtime-provider-model:codex:*:gpt-5.3-codex-mini" {
-		t.Fatalf("unexpected capabilities %v", got)
+	if strings.Join(runtimeNames(got), ",") != "codex" {
+		t.Fatalf("unexpected runtimes %v", got)
 	}
 }
 
-func TestInventoryRefreshCapabilitiesStoresEmptySnapshotOnFailure(t *testing.T) {
+func TestInventoryRefreshRuntimesStoresEmptySnapshotOnFailure(t *testing.T) {
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {
 			return nil, errors.New("bridge failed")
 		},
 	}
-	if got := inv.RefreshCapabilities(); len(got) != 0 {
-		t.Fatalf("expected empty capabilities, got %#v", got)
+	if got := inv.RefreshRuntimes(); len(got) != 0 {
+		t.Fatalf("expected empty runtimes, got %#v", got)
 	}
-	if got := inv.CurrentCapabilities(); len(got) != 0 {
-		t.Fatalf("expected stored empty capabilities, got %#v", got)
+	if got := inv.CurrentRuntimes(); len(got) != 0 {
+		t.Fatalf("expected stored empty runtimes, got %#v", got)
 	}
 }
 
-func TestInventoryCurrentCapabilitiesRefreshesWhenUninitialized(t *testing.T) {
+func TestInventoryCurrentRuntimesRefreshesWhenUninitialized(t *testing.T) {
 	calls := 0
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {
@@ -146,35 +149,35 @@ func TestInventoryCurrentCapabilitiesRefreshesWhenUninitialized(t *testing.T) {
 			}}}, nil
 		},
 	}
-	if got := inv.CurrentCapabilities(); strings.Join(got, ",") != "codex,runtime-provider-model:codex:*:gpt-5.3-codex" {
-		t.Fatalf("unexpected current capabilities %v", got)
+	if got := inv.CurrentRuntimes(); strings.Join(runtimeNames(got), ",") != "codex" {
+		t.Fatalf("unexpected current runtimes %v", got)
 	}
 	if calls != 1 {
 		t.Fatalf("expected lazy refresh, got %d calls", calls)
 	}
 }
 
-func TestInventoryCurrentCapabilitiesReturnsStoredCopy(t *testing.T) {
+func TestInventoryCurrentRuntimesReturnsStoredCopy(t *testing.T) {
 	inv := &Inventory{}
-	inv.advertisedCapabilities = []string{"codex"}
-	got := inv.CurrentCapabilities()
-	got[0] = "mutated"
-	if inv.CurrentCapabilities()[0] != "codex" {
-		t.Fatal("current capabilities must return a copy")
+	inv.advertisedRuntimes = []RunnerRuntime{{Runtime: "codex"}}
+	got := inv.CurrentRuntimes()
+	got[0].Runtime = "mutated"
+	if inv.CurrentRuntimes()[0].Runtime != "codex" {
+		t.Fatal("current runtimes must return a copy")
 	}
 }
 
-func TestInventoryRefreshCapabilitiesClearsOnInventoryFailure(t *testing.T) {
+func TestInventoryRefreshRuntimesClearsOnInventoryFailure(t *testing.T) {
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {
 			return nil, errors.New("bridge failed")
 		},
 	}
-	got := inv.RefreshCapabilities()
+	got := inv.RefreshRuntimes()
 	if len(got) != 0 {
-		t.Fatalf("expected empty capabilities, got %v", got)
+		t.Fatalf("expected empty runtimes, got %v", got)
 	}
-	if gotInventory := inv.CurrentRuntimeInventory(); len(gotInventory) != 0 {
+	if gotInventory := inv.CurrentRuntimes(); len(gotInventory) != 0 {
 		t.Fatalf("expected empty inventory, got %#v", gotInventory)
 	}
 }
@@ -204,11 +207,11 @@ func TestInventoryRefreshUsageUsesBridgeInventory(t *testing.T) {
 	if got := inv.Usage(); len(got) != 1 || got[0].Runtime != "claude-code" {
 		t.Fatalf("expected usage from bridge inventory, got %#v", got)
 	}
-	gotInventory := runtimeInventoryWithUsageLimits([]RuntimeInventoryEntry{{
+	gotInventory := runtimesWithUsageLimits([]RunnerRuntime{{
 		Runtime: "codex",
-		State:   RuntimeInventoryStateReady,
+		State:   RuntimeStateReady,
 	}}, inv.runtimeUsageLimits)
-	if gotInventory[0].State != RuntimeInventoryStateLimited {
+	if gotInventory[0].State != RuntimeStateLimited {
 		t.Fatalf("expected limited inventory, got %#v", gotInventory)
 	}
 }
@@ -295,9 +298,9 @@ func TestInventoryUsageSnapshotOwnsCopiedState(t *testing.T) {
 	if again[0].Windows[0].Utilization != 0.5 {
 		t.Fatalf("expected inventory to own usage copy, got %#v", again)
 	}
-	gotInventory := runtimeInventoryWithUsageLimits([]RuntimeInventoryEntry{{
+	gotInventory := runtimesWithUsageLimits([]RunnerRuntime{{
 		Runtime: "claude-code",
-		State:   RuntimeInventoryStateReady,
+		State:   RuntimeStateReady,
 	}}, inv.runtimeUsageLimits)
 	if gotInventory[0].Detail != "limited" {
 		t.Fatalf("expected inventory to own limit copy, got %#v", gotInventory)
@@ -315,11 +318,11 @@ func TestInventoryNilUsageSnapshotClearsState(t *testing.T) {
 	if got := inv.Usage(); len(got) != 0 {
 		t.Fatalf("expected usage to clear, got %#v", got)
 	}
-	gotInventory := runtimeInventoryWithUsageLimits([]RuntimeInventoryEntry{{
+	gotInventory := runtimesWithUsageLimits([]RunnerRuntime{{
 		Runtime: "claude-code",
-		State:   RuntimeInventoryStateReady,
+		State:   RuntimeStateReady,
 	}}, inv.runtimeUsageLimits)
-	if gotInventory[0].State != RuntimeInventoryStateReady {
+	if gotInventory[0].State != RuntimeStateReady {
 		t.Fatalf("expected usage limits to clear, got %#v", gotInventory)
 	}
 }

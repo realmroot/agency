@@ -28,7 +28,6 @@ class CreateRunnerRequest:
     """ 
         Attributes:
             name (str):  Example: mac-mini-build-runner.
-            capabilities (list[str] | Unset):  Example: ['node', 'git'].
             environment_id (str | Unset):  Example: env_abc123.
             secret_ref (str | Unset):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
             auth_mode (CreateRunnerRequestAuthMode | Unset):  Example: bearer.
@@ -37,7 +36,6 @@ class CreateRunnerRequest:
      """
 
     name: str
-    capabilities: list[str] | Unset = UNSET
     environment_id: str | Unset = UNSET
     secret_ref: str | Unset = UNSET
     auth_mode: CreateRunnerRequestAuthMode | Unset = UNSET
@@ -51,12 +49,6 @@ class CreateRunnerRequest:
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_runner_request_metadata import CreateRunnerRequestMetadata
         name = self.name
-
-        capabilities: list[str] | Unset = UNSET
-        if not isinstance(self.capabilities, Unset):
-            capabilities = self.capabilities
-
-
 
         environment_id = self.environment_id
 
@@ -79,8 +71,6 @@ class CreateRunnerRequest:
         field_dict.update({
             "name": name,
         })
-        if capabilities is not UNSET:
-            field_dict["capabilities"] = capabilities
         if environment_id is not UNSET:
             field_dict["environmentId"] = environment_id
         if secret_ref is not UNSET:
@@ -101,9 +91,6 @@ class CreateRunnerRequest:
         from ..models.create_runner_request_metadata import CreateRunnerRequestMetadata
         d = dict(src_dict)
         name = d.pop("name")
-
-        capabilities = cast(list[str], d.pop("capabilities", UNSET))
-
 
         environment_id = d.pop("environmentId", UNSET)
 
@@ -133,7 +120,6 @@ class CreateRunnerRequest:
 
         create_runner_request = cls(
             name=name,
-            capabilities=capabilities,
             environment_id=environment_id,
             secret_ref=secret_ref,
             auth_mode=auth_mode,

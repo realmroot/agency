@@ -95,7 +95,7 @@ an explicit selected `runtime`. They claim queued work from
 canonical AMA session events, and complete, fail, or cancel the lease.
 
 Runner authentication material must live in Cloudflare Secrets or an approved
-external vault. D1 stores runner metadata, capabilities, heartbeat/load state,
+external vault. D1 stores runner metadata, supported runtimes and models, heartbeat/load state,
 work item payloads, lease state, safe result/error metadata, and secret
 references only. Do not expose runner host ports, runner-local preview URLs, or
 runner-local filesystem paths as product endpoints.

@@ -5,8 +5,8 @@
 
 import type { RuntimeName } from '@server/contracts/environment-contracts'
 import { runtimeDriver } from '@server/domain/runtime/driver'
-import { type AgentSnapshot, type EnvironmentSnapshot, parseJson } from '@server/domain/runtime/session-snapshot'
-import { runnerSupportsRuntimeProviderModel, runtimeCatalogSupportsProviderModel } from '@server/domain/runtime-catalog'
+import type { AgentSnapshot, EnvironmentSnapshot } from '@server/domain/runtime/session-snapshot'
+import { runtimeCatalogSupportsProviderModel, runtimesSupport } from '@server/domain/runtime-catalog'
 import type { AuthScope, ProviderRepo, SessionOrchestrationStore } from '../ports'
 
 type ProvisioningDeps = {
@@ -34,19 +34,15 @@ export async function validateRuntimeProviderModel(
       ? Boolean(await deps.providers.findModel(provider, model))
       : Boolean(await deps.providers.findBySlug(provider))
   }
-  // self_hosted: the catalog is a loose pre-filter; the runner's declared
-  // capabilities do the real gating.
+  // self_hosted: the catalog is a loose pre-filter; the runner's structured
+  // runtimes list does the real gating.
   if (!runtimeCatalogSupportsProviderModel(hostingMode, runtime, provider, model)) {
     return false
   }
-  const activeRunnerCapabilities = await deps.sessionOrchestration.activeRunnerCapabilities(
-    auth.project.id,
-    environmentId,
-  )
+  const activeRunnerRuntimes = await deps.sessionOrchestration.activeRunnerRuntimes(auth.project.id, environmentId)
   return (
-    activeRunnerCapabilities.some((capabilities) =>
-      runnerSupportsRuntimeProviderModel(parseJson<string[]>(capabilities) ?? [], runtime, provider, model),
-    ) || activeRunnerCapabilities.length === 0
+    activeRunnerRuntimes.some((runtimes) => runtimesSupport(runtimes, runtime, model)) ||
+    activeRunnerRuntimes.length === 0
   )
 }
 

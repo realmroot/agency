@@ -28,7 +28,6 @@ class UpdateRunnerRequest:
     """ 
         Attributes:
             name (str | Unset):
-            capabilities (list[str] | Unset):
             state (UpdateRunnerRequestState | Unset):
             max_concurrent (int | Unset):
             metadata (UpdateRunnerRequestMetadata | Unset):
@@ -36,7 +35,6 @@ class UpdateRunnerRequest:
      """
 
     name: str | Unset = UNSET
-    capabilities: list[str] | Unset = UNSET
     state: UpdateRunnerRequestState | Unset = UNSET
     max_concurrent: int | Unset = UNSET
     metadata: UpdateRunnerRequestMetadata | Unset = UNSET
@@ -49,12 +47,6 @@ class UpdateRunnerRequest:
     def to_dict(self) -> dict[str, Any]:
         from ..models.update_runner_request_metadata import UpdateRunnerRequestMetadata
         name = self.name
-
-        capabilities: list[str] | Unset = UNSET
-        if not isinstance(self.capabilities, Unset):
-            capabilities = self.capabilities
-
-
 
         state: str | Unset = UNSET
         if not isinstance(self.state, Unset):
@@ -76,8 +68,6 @@ class UpdateRunnerRequest:
         })
         if name is not UNSET:
             field_dict["name"] = name
-        if capabilities is not UNSET:
-            field_dict["capabilities"] = capabilities
         if state is not UNSET:
             field_dict["state"] = state
         if max_concurrent is not UNSET:
@@ -96,9 +86,6 @@ class UpdateRunnerRequest:
         from ..models.update_runner_request_metadata import UpdateRunnerRequestMetadata
         d = dict(src_dict)
         name = d.pop("name", UNSET)
-
-        capabilities = cast(list[str], d.pop("capabilities", UNSET))
-
 
         _state = d.pop("state", UNSET)
         state: UpdateRunnerRequestState | Unset
@@ -126,7 +113,6 @@ class UpdateRunnerRequest:
 
         update_runner_request = cls(
             name=name,
-            capabilities=capabilities,
             state=state,
             max_concurrent=max_concurrent,
             metadata=metadata,

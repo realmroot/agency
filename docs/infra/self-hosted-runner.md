@@ -100,7 +100,7 @@ Timing defaults:
 
 The daemon loads the saved device-login access token at startup when `AMA_TOKEN` is not provided. `AMA_TOKEN` remains available for tests and temporary process-local overrides, and it takes precedence over the saved token. Operators should prefer `ama-runner auth login` for normal self-hosted runners.
 
-The daemon fails fast when the API server, token, environment binding, work directory, timing values, or an unsafe adapter acknowledgement required by the host is invalid. Windows CLI-only runners do not enable the AMA process adapter and therefore do not require `--allow-unsafe-process`. Runner registration stores only OIDC subject/client binding metadata, safe capabilities, environment binding metadata, heartbeat/load state, and secret references; raw token material is not stored in D1 or returned by runner APIs. Runner device-login tokens are accepted only for runner registration and runtime runner APIs, not for general control-plane resources such as environments, agents, sessions, providers, or vaults.
+The daemon fails fast when the API server, token, environment binding, work directory, timing values, or an unsafe adapter acknowledgement required by the host is invalid. Windows CLI-only runners do not enable the AMA process adapter and therefore do not require `--allow-unsafe-process`. Runner registration stores only OIDC subject/client binding metadata, supported runtimes and models, environment binding metadata, heartbeat/load state, and secret references; raw token material is not stored in D1 or returned by runner APIs. Runner device-login tokens are accepted only for runner registration and runtime runner APIs, not for general control-plane resources such as environments, agents, sessions, providers, or vaults.
 
 ## Local Executor Boundary
 
@@ -131,7 +131,7 @@ At startup, the daemon:
 1. Checks `/api/v1/configz` for an AMA control plane.
 2. Loads the saved FlareAuth/OIDC device-login token unless an explicit token override is supplied.
 3. Registers a runner when no runner id is configured.
-4. Sends an active heartbeat with capabilities and adapter metadata.
+4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
 5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.
 6. Uploads structured lease events.
 7. Renews active leases while local work is running.

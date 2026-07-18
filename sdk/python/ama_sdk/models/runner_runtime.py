@@ -8,30 +8,33 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.runner_runtime_inventory_state import RunnerRuntimeInventoryState
+from ..models.runner_runtime_state import RunnerRuntimeState
 from ..types import UNSET, Unset
+from typing import cast
 
 
 
 
 
 
-T = TypeVar("T", bound="RunnerRuntimeInventory")
+T = TypeVar("T", bound="RunnerRuntime")
 
 
 
 @_attrs_define
-class RunnerRuntimeInventory:
+class RunnerRuntime:
     """ 
         Attributes:
             runtime (str):  Example: codex.
-            state (RunnerRuntimeInventoryState):  Example: ready.
+            models (list[str]):  Example: ['gpt-5.3-codex'].
+            state (RunnerRuntimeState):  Example: ready.
             version (str | Unset):  Example: 0.42.0.
             detail (str | Unset):  Example: host CLI enumerated 2 models.
      """
 
     runtime: str
-    state: RunnerRuntimeInventoryState
+    models: list[str]
+    state: RunnerRuntimeState
     version: str | Unset = UNSET
     detail: str | Unset = UNSET
 
@@ -41,6 +44,10 @@ class RunnerRuntimeInventory:
 
     def to_dict(self) -> dict[str, Any]:
         runtime = self.runtime
+
+        models = self.models
+
+
 
         state = self.state.value
 
@@ -53,6 +60,7 @@ class RunnerRuntimeInventory:
 
         field_dict.update({
             "runtime": runtime,
+            "models": models,
             "state": state,
         })
         if version is not UNSET:
@@ -69,7 +77,10 @@ class RunnerRuntimeInventory:
         d = dict(src_dict)
         runtime = d.pop("runtime")
 
-        state = RunnerRuntimeInventoryState(d.pop("state"))
+        models = cast(list[str], d.pop("models"))
+
+
+        state = RunnerRuntimeState(d.pop("state"))
 
 
 
@@ -78,12 +89,13 @@ class RunnerRuntimeInventory:
 
         detail = d.pop("detail", UNSET)
 
-        runner_runtime_inventory = cls(
+        runner_runtime = cls(
             runtime=runtime,
+            models=models,
             state=state,
             version=version,
             detail=detail,
         )
 
-        return runner_runtime_inventory
+        return runner_runtime
 

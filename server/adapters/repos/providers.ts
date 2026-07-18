@@ -90,7 +90,7 @@ export function createProviderRepo(db: Db): ProviderRepo {
       }
       const row = {
         // The vendor slug is the natural key: agents pin providerId, the catalog
-        // keys models by providerId, and runner capabilities/policy all reference
+        // keys models by providerId, and runtime requirements/policy all reference
         // the vendor — using the slug as the id keeps every layer consistent with
         // zero runtime resolution.
         id: input.slug,

@@ -1,8 +1,8 @@
 import { parseJson } from '@server/domain/runtime/session-snapshot'
-import { runnerSupportsRuntimeProviderModel } from '@server/domain/runtime-catalog'
+import { runtimesSupport } from '@server/domain/runtime-catalog'
 import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
 import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
-import type { ConnectorRecord, SessionOrchestrationStore } from '@server/usecases/ports'
+import type { ConnectorRecord, RunnerRuntime, SessionOrchestrationStore } from '@server/usecases/ports'
 import type {
   AgentRow,
   AgentVersionRow,
@@ -427,18 +427,18 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       )
     },
 
-    // ── runtime/runner capability validation ──────────────────────────────
-    async activeRunnerCapabilities(projectId: string, environmentId: string): Promise<string[]> {
+    // ── runner runtime validation ─────────────────────────────────────────
+    async activeRunnerRuntimes(projectId: string, environmentId: string): Promise<RunnerRuntime[][]> {
       const activeRunners = await db
-        .select({ capabilities: runners.capabilities })
+        .select({ runtimes: runners.runtimes })
         .from(runners)
         .where(
           and(eq(runners.projectId, projectId), eq(runners.environmentId, environmentId), eq(runners.state, 'active')),
         )
-      return activeRunners.map((runner) => runner.capabilities)
+      return activeRunners.map((runner) => parseJson<RunnerRuntime[]>(runner.runtimes) ?? [])
     },
 
-    async resolveEnvironmentForRuntime(projectId, runtime, providerId, model): Promise<string | null> {
+    async resolveEnvironmentForRuntime(projectId, runtime, model): Promise<string | null> {
       // Candidate = an active, non-archived runner bound to a usable environment
       // (live + has a current version). The join plus isNotNull drops unbound
       // runners (environment_id null) since the session needs a concrete
@@ -447,7 +447,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const rows = await db
         .select({
           environmentId: runners.environmentId,
-          capabilities: runners.capabilities,
+          runtimes: runners.runtimes,
           currentLoad: runners.currentLoad,
           maxConcurrent: runners.maxConcurrent,
         })
@@ -467,21 +467,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const capable = rows
         .map((row) => ({
           environmentId: row.environmentId,
-          capabilities: parseJson<string[]>(row.capabilities) ?? [],
+          runtimes: parseJson<RunnerRuntime[]>(row.runtimes) ?? [],
           available: row.currentLoad < row.maxConcurrent,
         }))
-        .filter((row) => runnerSupportsRuntimeProviderModel(row.capabilities, runtime, providerId))
+        .filter((row) => runtimesSupport(row.runtimes, runtime, model))
       if (capable.length === 0) {
         return null
       }
-      // Prefer a runner that declares the model, then one with spare capacity;
-      // otherwise fall back to any runtime-capable environment (its work item
-      // queues until a runner frees up).
-      const modelCapable = model
-        ? capable.filter((row) => runnerSupportsRuntimeProviderModel(row.capabilities, runtime, providerId, model))
-        : capable
-      const pool = modelCapable.length > 0 ? modelCapable : capable
-      const chosen = pool.find((row) => row.available) ?? pool[0]
+      const chosen = capable.find((row) => row.available) ?? capable[0]
       return chosen?.environmentId ?? null
     },
 

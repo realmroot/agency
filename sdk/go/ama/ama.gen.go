@@ -1408,30 +1408,54 @@ func (e RunnerHeartbeatState) Valid() bool {
 	}
 }
 
-// Defines values for RunnerRuntimeInventoryState.
+// Defines values for RunnerRuntimeState.
 const (
-	RunnerRuntimeInventoryStateLimited         RunnerRuntimeInventoryState = "limited"
-	RunnerRuntimeInventoryStateMissing         RunnerRuntimeInventoryState = "missing"
-	RunnerRuntimeInventoryStateReady           RunnerRuntimeInventoryState = "ready"
-	RunnerRuntimeInventoryStateUnauthenticated RunnerRuntimeInventoryState = "unauthenticated"
-	RunnerRuntimeInventoryStateUnauthorized    RunnerRuntimeInventoryState = "unauthorized"
-	RunnerRuntimeInventoryStateUnhealthy       RunnerRuntimeInventoryState = "unhealthy"
+	RunnerRuntimeStateLimited         RunnerRuntimeState = "limited"
+	RunnerRuntimeStateMissing         RunnerRuntimeState = "missing"
+	RunnerRuntimeStateReady           RunnerRuntimeState = "ready"
+	RunnerRuntimeStateUnauthenticated RunnerRuntimeState = "unauthenticated"
+	RunnerRuntimeStateUnauthorized    RunnerRuntimeState = "unauthorized"
+	RunnerRuntimeStateUnhealthy       RunnerRuntimeState = "unhealthy"
 )
 
-// Valid indicates whether the value is a known member of the RunnerRuntimeInventoryState enum.
-func (e RunnerRuntimeInventoryState) Valid() bool {
+// Valid indicates whether the value is a known member of the RunnerRuntimeState enum.
+func (e RunnerRuntimeState) Valid() bool {
 	switch e {
-	case RunnerRuntimeInventoryStateLimited:
+	case RunnerRuntimeStateLimited:
 		return true
-	case RunnerRuntimeInventoryStateMissing:
+	case RunnerRuntimeStateMissing:
 		return true
-	case RunnerRuntimeInventoryStateReady:
+	case RunnerRuntimeStateReady:
 		return true
-	case RunnerRuntimeInventoryStateUnauthenticated:
+	case RunnerRuntimeStateUnauthenticated:
 		return true
-	case RunnerRuntimeInventoryStateUnauthorized:
+	case RunnerRuntimeStateUnauthorized:
 		return true
-	case RunnerRuntimeInventoryStateUnhealthy:
+	case RunnerRuntimeStateUnhealthy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RunnerRuntimeRequirementRuntime.
+const (
+	RunnerRuntimeRequirementRuntimeAma        RunnerRuntimeRequirementRuntime = "ama"
+	RunnerRuntimeRequirementRuntimeClaudeCode RunnerRuntimeRequirementRuntime = "claude-code"
+	RunnerRuntimeRequirementRuntimeCodex      RunnerRuntimeRequirementRuntime = "codex"
+	RunnerRuntimeRequirementRuntimeCopilot    RunnerRuntimeRequirementRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the RunnerRuntimeRequirementRuntime enum.
+func (e RunnerRuntimeRequirementRuntime) Valid() bool {
+	switch e {
+	case RunnerRuntimeRequirementRuntimeAma:
+		return true
+	case RunnerRuntimeRequirementRuntimeClaudeCode:
+		return true
+	case RunnerRuntimeRequirementRuntimeCodex:
+		return true
+	case RunnerRuntimeRequirementRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2460,13 +2484,13 @@ func (e VaultCredentialStatusPhase) Valid() bool {
 
 // Defines values for VaultCredentialVersionSpecProvider.
 const (
-	VaultCredentialVersionSpecProviderAma VaultCredentialVersionSpecProvider = "ama"
+	Ama VaultCredentialVersionSpecProvider = "ama"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialVersionSpecProvider enum.
 func (e VaultCredentialVersionSpecProvider) Valid() bool {
 	switch e {
-	case VaultCredentialVersionSpecProviderAma:
+	case Ama:
 		return true
 	default:
 		return false
@@ -3402,7 +3426,6 @@ type CreateProjectRequest struct {
 // CreateRunnerRequest defines model for CreateRunnerRequest.
 type CreateRunnerRequest struct {
 	AuthMode      *CreateRunnerRequestAuthMode `json:"authMode,omitempty"`
-	Capabilities  *[]string                    `json:"capabilities,omitempty"`
 	EnvironmentId *string                      `json:"environmentId,omitempty"`
 	MaxConcurrent *int                         `json:"maxConcurrent,omitempty"`
 	Metadata      *map[string]interface{}      `json:"metadata,omitempty"`
@@ -4106,11 +4129,10 @@ type PublicServiceConfigName string
 
 // PutRunnerHeartbeatRequest defines model for PutRunnerHeartbeatRequest.
 type PutRunnerHeartbeatRequest struct {
-	Capabilities     *[]string                       `json:"capabilities,omitempty"`
-	Metadata         *map[string]interface{}         `json:"metadata,omitempty"`
-	RuntimeInventory *[]RunnerRuntimeInventory       `json:"runtimeInventory,omitempty"`
-	RuntimeUsage     *[]RuntimeUsage                 `json:"runtimeUsage,omitempty"`
-	State            *PutRunnerHeartbeatRequestState `json:"state,omitempty"`
+	Metadata     *map[string]interface{}         `json:"metadata,omitempty"`
+	RuntimeUsage *[]RuntimeUsage                 `json:"runtimeUsage,omitempty"`
+	Runtimes     *[]RunnerRuntime                `json:"runtimes,omitempty"`
+	State        *PutRunnerHeartbeatRequestState `json:"state,omitempty"`
 }
 
 // PutRunnerHeartbeatRequestState defines model for PutRunnerHeartbeatRequest.State.
@@ -4163,23 +4185,22 @@ type ResourceUpdateMetadata struct {
 
 // Runner defines model for Runner.
 type Runner struct {
-	ArchivedAt       *time.Time               `json:"archivedAt"`
-	AuthMode         RunnerAuthMode           `json:"authMode"`
-	Capabilities     []string                 `json:"capabilities"`
-	CreatedAt        time.Time                `json:"createdAt"`
-	CurrentLoad      int                      `json:"currentLoad"`
-	EnvironmentId    *string                  `json:"environmentId"`
-	Id               string                   `json:"id"`
-	LastHeartbeatAt  *time.Time               `json:"lastHeartbeatAt"`
-	MaxConcurrent    int                      `json:"maxConcurrent"`
-	Metadata         map[string]interface{}   `json:"metadata"`
-	Name             string                   `json:"name"`
-	ProjectId        string                   `json:"projectId"`
-	RuntimeInventory []RunnerRuntimeInventory `json:"runtimeInventory"`
-	RuntimeUsage     []RuntimeUsage           `json:"runtimeUsage"`
-	SecretRef        *NullableSecretRef       `json:"secretRef"`
-	State            RunnerState              `json:"state"`
-	UpdatedAt        time.Time                `json:"updatedAt"`
+	ArchivedAt      *time.Time             `json:"archivedAt"`
+	AuthMode        RunnerAuthMode         `json:"authMode"`
+	CreatedAt       time.Time              `json:"createdAt"`
+	CurrentLoad     int                    `json:"currentLoad"`
+	EnvironmentId   *string                `json:"environmentId"`
+	Id              string                 `json:"id"`
+	LastHeartbeatAt *time.Time             `json:"lastHeartbeatAt"`
+	MaxConcurrent   int                    `json:"maxConcurrent"`
+	Metadata        map[string]interface{} `json:"metadata"`
+	Name            string                 `json:"name"`
+	ProjectId       string                 `json:"projectId"`
+	RuntimeUsage    []RuntimeUsage         `json:"runtimeUsage"`
+	Runtimes        []RunnerRuntime        `json:"runtimes"`
+	SecretRef       *NullableSecretRef     `json:"secretRef"`
+	State           RunnerState            `json:"state"`
+	UpdatedAt       time.Time              `json:"updatedAt"`
 }
 
 // RunnerAuthMode defines model for Runner.AuthMode.
@@ -4318,12 +4339,12 @@ type RunnerGitCredential struct {
 
 // RunnerHeartbeat defines model for RunnerHeartbeat.
 type RunnerHeartbeat struct {
-	CurrentLoad      int                      `json:"currentLoad"`
-	LastHeartbeatAt  *time.Time               `json:"lastHeartbeatAt"`
-	RunnerId         string                   `json:"runnerId"`
-	RuntimeInventory []RunnerRuntimeInventory `json:"runtimeInventory"`
-	RuntimeUsage     []RuntimeUsage           `json:"runtimeUsage"`
-	State            RunnerHeartbeatState     `json:"state"`
+	CurrentLoad     int                  `json:"currentLoad"`
+	LastHeartbeatAt *time.Time           `json:"lastHeartbeatAt"`
+	RunnerId        string               `json:"runnerId"`
+	RuntimeUsage    []RuntimeUsage       `json:"runtimeUsage"`
+	Runtimes        []RunnerRuntime      `json:"runtimes"`
+	State           RunnerHeartbeatState `json:"state"`
 }
 
 // RunnerHeartbeatState defines model for RunnerHeartbeat.State.
@@ -4338,21 +4359,31 @@ type RunnerListResponse struct {
 // RunnerOpaqueJsonObject defines model for RunnerOpaqueJsonObject.
 type RunnerOpaqueJsonObject map[string]*interface{}
 
-// RunnerRuntimeInventory defines model for RunnerRuntimeInventory.
-type RunnerRuntimeInventory struct {
-	Detail  *string                     `json:"detail,omitempty"`
-	Runtime string                      `json:"runtime"`
-	State   RunnerRuntimeInventoryState `json:"state"`
-	Version *string                     `json:"version,omitempty"`
+// RunnerRuntime defines model for RunnerRuntime.
+type RunnerRuntime struct {
+	Detail  *string            `json:"detail,omitempty"`
+	Models  []string           `json:"models"`
+	Runtime string             `json:"runtime"`
+	State   RunnerRuntimeState `json:"state"`
+	Version *string            `json:"version,omitempty"`
 }
 
-// RunnerRuntimeInventoryState defines model for RunnerRuntimeInventory.State.
-type RunnerRuntimeInventoryState string
+// RunnerRuntimeState defines model for RunnerRuntime.State.
+type RunnerRuntimeState string
 
 // RunnerRuntimeRequest defines model for RunnerRuntimeRequest.
 type RunnerRuntimeRequest struct {
 	ToolCalls *[]RunnerRuntimeToolCall `json:"toolCalls,omitempty"`
 }
+
+// RunnerRuntimeRequirement defines model for RunnerRuntimeRequirement.
+type RunnerRuntimeRequirement struct {
+	Model   *string                         `json:"model,omitempty"`
+	Runtime RunnerRuntimeRequirementRuntime `json:"runtime"`
+}
+
+// RunnerRuntimeRequirementRuntime defines model for RunnerRuntimeRequirement.Runtime.
+type RunnerRuntimeRequirementRuntime string
 
 // RunnerRuntimeToolCall defines model for RunnerRuntimeToolCall.
 type RunnerRuntimeToolCall struct {
@@ -4409,28 +4440,28 @@ type RunnerVolumeMount struct {
 
 // RunnerWorkPayload defines model for RunnerWorkPayload.
 type RunnerWorkPayload struct {
-	AgentSnapshot            *map[string]interface{}    `json:"agentSnapshot,omitempty"`
-	Approved                 *bool                      `json:"approved,omitempty"`
-	Env                      *map[string]string         `json:"env,omitempty"`
-	EnvironmentSnapshot      *map[string]interface{}    `json:"environmentSnapshot,omitempty"`
-	HostingMode              *string                    `json:"hostingMode,omitempty"`
-	Input                    *map[string]interface{}    `json:"input,omitempty"`
-	Model                    *string                    `json:"model,omitempty"`
-	Prompt                   *string                    `json:"prompt,omitempty"`
-	Protocol                 *RunnerWorkPayloadProtocol `json:"protocol,omitempty"`
-	Provider                 *string                    `json:"provider,omitempty"`
-	RequiredRunnerCapability *string                    `json:"requiredRunnerCapability,omitempty"`
-	Resume                   *bool                      `json:"resume,omitempty"`
-	ResumeToken              *string                    `json:"resumeToken,omitempty"`
-	Runtime                  *string                    `json:"runtime,omitempty"`
-	RuntimeConfig            *map[string]interface{}    `json:"runtimeConfig,omitempty"`
-	RuntimeDriver            *string                    `json:"runtimeDriver,omitempty"`
-	SessionId                *string                    `json:"sessionId,omitempty"`
-	ToolCall                 *RunnerToolCall            `json:"toolCall,omitempty"`
-	ToolCallId               *string                    `json:"toolCallId,omitempty"`
-	ToolName                 *string                    `json:"toolName,omitempty"`
-	Type                     *string                    `json:"type,omitempty"`
-	WorkspaceManifest        *RunnerWorkspaceManifest   `json:"workspaceManifest,omitempty"`
+	AgentSnapshot       *map[string]interface{}    `json:"agentSnapshot,omitempty"`
+	Approved            *bool                      `json:"approved,omitempty"`
+	Env                 *map[string]string         `json:"env,omitempty"`
+	EnvironmentSnapshot *map[string]interface{}    `json:"environmentSnapshot,omitempty"`
+	HostingMode         *string                    `json:"hostingMode,omitempty"`
+	Input               *map[string]interface{}    `json:"input,omitempty"`
+	Model               *string                    `json:"model,omitempty"`
+	Prompt              *string                    `json:"prompt,omitempty"`
+	Protocol            *RunnerWorkPayloadProtocol `json:"protocol,omitempty"`
+	Provider            *string                    `json:"provider,omitempty"`
+	Resume              *bool                      `json:"resume,omitempty"`
+	ResumeToken         *string                    `json:"resumeToken,omitempty"`
+	Runtime             *string                    `json:"runtime,omitempty"`
+	RuntimeConfig       *map[string]interface{}    `json:"runtimeConfig,omitempty"`
+	RuntimeDriver       *string                    `json:"runtimeDriver,omitempty"`
+	RuntimeRequirement  *RunnerRuntimeRequirement  `json:"runtimeRequirement,omitempty"`
+	SessionId           *string                    `json:"sessionId,omitempty"`
+	ToolCall            *RunnerToolCall            `json:"toolCall,omitempty"`
+	ToolCallId          *string                    `json:"toolCallId,omitempty"`
+	ToolName            *string                    `json:"toolName,omitempty"`
+	Type                *string                    `json:"type,omitempty"`
+	WorkspaceManifest   *RunnerWorkspaceManifest   `json:"workspaceManifest,omitempty"`
 }
 
 // RunnerWorkPayloadProtocol defines model for RunnerWorkPayload.Protocol.
@@ -5244,7 +5275,6 @@ type UpdateMemoryStoreRequest struct {
 // UpdateRunnerRequest defines model for UpdateRunnerRequest.
 type UpdateRunnerRequest struct {
 	Archived      *bool                     `json:"archived,omitempty"`
-	Capabilities  *[]string                 `json:"capabilities,omitempty"`
 	MaxConcurrent *int                      `json:"maxConcurrent,omitempty"`
 	Metadata      *map[string]interface{}   `json:"metadata,omitempty"`
 	Name          *string                   `json:"name,omitempty"`

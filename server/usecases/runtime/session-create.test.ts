@@ -269,7 +269,7 @@ describe('createSessionForAgent — environment resolution', () => {
     resolveEnvironmentForRuntimeMock.mockReset()
   })
 
-  it('resolves an environment for the runtime/provider/model when none is pinned', async () => {
+  it('resolves an environment for the runtime/model when none is pinned', async () => {
     resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
 
     const result = await createSessionForAgent(
@@ -282,7 +282,7 @@ describe('createSessionForAgent — environment resolution', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', 'anthropic', '@cf/x')
+    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', '@cf/x')
     // The resolved id is what gets looked up and used.
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_resolved')
   })

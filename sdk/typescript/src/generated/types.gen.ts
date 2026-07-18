@@ -497,7 +497,7 @@ export type RunnerWorkPayload = {
         [key: string]: unknown;
     } | null;
     runtimeDriver?: string;
-    requiredRunnerCapability?: string | null;
+    runtimeRequirement?: RunnerRuntimeRequirement;
     env?: {
         [key: string]: string;
     };
@@ -512,6 +512,11 @@ export type RunnerWorkPayload = {
         [key: string]: unknown;
     };
     toolCall?: RunnerToolCall;
+};
+
+export type RunnerRuntimeRequirement = {
+    runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
+    model?: string;
 };
 
 export type RunnerRuntimeToolCall = {
@@ -994,7 +999,6 @@ export type Runner = {
     id: string;
     projectId: string;
     name: string;
-    capabilities: Array<string>;
     environmentId: string | null;
     secretRef: NullableSecretRef;
     authMode: 'bearer' | 'mtls' | 'oidc' | 'federated';
@@ -1002,7 +1006,7 @@ export type Runner = {
     currentLoad: number;
     maxConcurrent: number;
     runtimeUsage: Array<RuntimeUsage>;
-    runtimeInventory: Array<RunnerRuntimeInventory>;
+    runtimes: Array<RunnerRuntime>;
     metadata: {
         [key: string]: unknown;
     };
@@ -1025,8 +1029,9 @@ export type RuntimeUsageWindow = {
     resetsAt: string;
 };
 
-export type RunnerRuntimeInventory = {
+export type RunnerRuntime = {
     runtime: string;
+    models: Array<string>;
     version?: string;
     state: 'ready' | 'missing' | 'unauthenticated' | 'unauthorized' | 'limited' | 'unhealthy';
     detail?: string;
@@ -1034,7 +1039,6 @@ export type RunnerRuntimeInventory = {
 
 export type CreateRunnerRequest = {
     name: string;
-    capabilities?: Array<string>;
     environmentId?: string;
     secretRef?: string;
     authMode?: 'bearer' | 'mtls' | 'oidc' | 'federated';
@@ -1051,7 +1055,6 @@ export type RunnerListResponse = {
 
 export type UpdateRunnerRequest = {
     name?: string;
-    capabilities?: Array<string>;
     state?: 'active' | 'draining' | 'disabled';
     maxConcurrent?: number;
     metadata?: {
@@ -1065,15 +1068,14 @@ export type RunnerHeartbeat = {
     state: 'active' | 'draining' | 'disabled' | 'offline';
     currentLoad: number;
     runtimeUsage: Array<RuntimeUsage>;
-    runtimeInventory: Array<RunnerRuntimeInventory>;
+    runtimes: Array<RunnerRuntime>;
     lastHeartbeatAt: string | null;
 };
 
 export type PutRunnerHeartbeatRequest = {
     state?: 'active' | 'draining' | 'offline';
-    capabilities?: Array<string>;
     runtimeUsage?: Array<RuntimeUsage>;
-    runtimeInventory?: Array<RunnerRuntimeInventory>;
+    runtimes?: Array<RunnerRuntime>;
     metadata?: {
         [key: string]: unknown;
     };

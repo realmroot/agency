@@ -153,7 +153,7 @@ describe('runner protocol schemas', () => {
         model: 'gpt',
         agentSnapshot: { metadata: { uid: 'agent_1' } },
         runtimeDriver: 'codex-self-hosted',
-        requiredRunnerCapability: 'env_1',
+        runtimeRequirement: { runtime: 'codex', model: 'gpt' },
         env: { HOME: '/tmp' },
         workspaceManifest: { root: '/workspace', mounts: [] },
         prompt: 'build',

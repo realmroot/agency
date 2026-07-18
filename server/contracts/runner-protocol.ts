@@ -89,7 +89,14 @@ export const RunnerWorkPayloadSchema = z
     agentSnapshot: JsonObjectSchema.optional(),
     environmentSnapshot: JsonObjectSchema.nullable().optional(),
     runtimeDriver: z.string().optional().openapi({ example: 'codex-self-hosted' }),
-    requiredRunnerCapability: z.string().nullable().optional(),
+    runtimeRequirement: z
+      .object({
+        runtime: z.enum(['ama', 'claude-code', 'codex', 'copilot']),
+        model: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional()
+      .openapi('RunnerRuntimeRequirement'),
     env: StringMapSchema.optional(),
     workspaceManifest: RunnerWorkspaceManifestSchema.optional(),
     prompt: z.string().nullable().optional(),

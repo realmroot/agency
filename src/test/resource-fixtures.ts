@@ -299,7 +299,6 @@ export type RunnerOverrides = {
   id?: string
   projectId?: string
   name?: string
-  capabilities?: string[]
   environmentId?: string | null
   secretRef?: Runner['secretRef']
   authMode?: Runner['authMode']
@@ -307,7 +306,7 @@ export type RunnerOverrides = {
   currentLoad?: number
   maxConcurrent?: number
   runtimeUsage?: Runner['runtimeUsage']
-  runtimeInventory?: Runner['runtimeInventory']
+  runtimes?: Runner['runtimes']
   metadata?: Runner['metadata']
   lastHeartbeatAt?: string | null
   archivedAt?: string | null
@@ -320,7 +319,6 @@ export function runner(overrides: RunnerOverrides = {}): Runner {
     id: overrides.id ?? 'runner_1',
     projectId: overrides.projectId ?? 'project_1',
     name: overrides.name ?? 'Mac mini runner',
-    capabilities: overrides.capabilities ?? ['codex', 'node'],
     environmentId: overrides.environmentId === undefined ? 'env_1' : overrides.environmentId,
     secretRef: overrides.secretRef ?? null,
     authMode: overrides.authMode ?? 'oidc',
@@ -328,7 +326,9 @@ export function runner(overrides: RunnerOverrides = {}): Runner {
     currentLoad: overrides.currentLoad ?? 1,
     maxConcurrent: overrides.maxConcurrent ?? 2,
     runtimeUsage: overrides.runtimeUsage ?? [],
-    runtimeInventory: overrides.runtimeInventory ?? [{ runtime: 'codex', version: '0.42.0', state: 'ready' }],
+    runtimes: overrides.runtimes ?? [
+      { runtime: 'codex', models: ['gpt-5.3-codex'], version: '0.42.0', state: 'ready' },
+    ],
     metadata: overrides.metadata ?? {},
     lastHeartbeatAt: overrides.lastHeartbeatAt === undefined ? now : overrides.lastHeartbeatAt,
     archivedAt: overrides.archivedAt === undefined ? null : overrides.archivedAt,

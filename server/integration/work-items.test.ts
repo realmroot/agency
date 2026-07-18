@@ -147,7 +147,7 @@ describe('[CF] /api/v1/work-items', () => {
         payload: expect.objectContaining({
           type: 'session.start',
           sessionId: session.id,
-          requiredRunnerCapability: DEFAULT_AMA_RUNNER_CAPABILITY,
+          runtimeRequirement: { runtime: DEFAULT_AMA_RUNNER_CAPABILITY },
           envFrom,
         }),
       }),
@@ -205,7 +205,6 @@ describe('[CF] /api/v1/work-items', () => {
       body: JSON.stringify({
         name: 'Queue-reading runner',
         environmentId: environment.id,
-        capabilities: [DEFAULT_AMA_RUNNER_CAPABILITY],
       }),
     })
     expect(runnerRes.status).toBe(201)

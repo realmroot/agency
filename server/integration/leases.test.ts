@@ -116,15 +116,14 @@ async function createSelfHostedSession(
 async function registerActiveRunner(
   authorization: string,
   environmentId: string,
-  options: { capabilities?: string[]; maxConcurrent?: number } = {},
+  options: { runtimeNames?: string[]; maxConcurrent?: number } = {},
 ) {
-  const capabilities = options.capabilities ?? [DEFAULT_AMA_RUNNER_CAPABILITY]
+  const runtimeNames = options.runtimeNames ?? [DEFAULT_AMA_RUNNER_CAPABILITY]
   const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
     method: 'POST',
     body: JSON.stringify({
       name: `Lease runner ${crypto.randomUUID()}`,
       environmentId,
-      capabilities,
       maxConcurrent: options.maxConcurrent ?? 2,
     }),
   })
@@ -132,7 +131,14 @@ async function registerActiveRunner(
   const runner = (await runnerRes.json()) as { id: string }
   const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
     method: 'PUT',
-    body: JSON.stringify({ state: 'active', capabilities }),
+    body: JSON.stringify({
+      state: 'active',
+      runtimes: runtimeNames.map((runtime) => ({
+        runtime,
+        models: ['@cf/moonshotai/kimi-k2.6'],
+        state: 'ready',
+      })),
+    }),
   })
   expect(heartbeatRes.status).toBe(200)
   return runner
@@ -398,7 +404,6 @@ describe('[CF] /api/v1/leases', () => {
       body: JSON.stringify({
         name: 'Offline runner',
         environmentId: environment.id,
-        capabilities: [DEFAULT_AMA_RUNNER_CAPABILITY],
       }),
     })
     const offlineRunner = (await offlineRunnerRes.json()) as { id: string }
@@ -430,14 +435,14 @@ describe('[CF] /api/v1/leases', () => {
     })
   })
 
-  it('rejects claims when runner capabilities do not match the required runtime', async () => {
+  it('rejects claims when runner runtimes do not match the required runtime', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     // Queue the work before any runner exists so session creation does not gate
     // on runner eligibility; the capability mismatch is enforced at claim time.
     const session = await createSelfHostedSession(authorization, agent.id, environment.id)
-    const runner = await registerActiveRunner(authorization, environment.id, { capabilities: ['node'] })
+    const runner = await registerActiveRunner(authorization, environment.id, { runtimeNames: ['node'] })
     const workItem = await availableWorkItem(authorization, session.id)
 
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -452,7 +457,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
-      capabilities: ['claude-code'],
+      runtimeNames: ['claude-code'],
     })
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'claude-code' })
     const workItem = await availableWorkItem(authorization, session.id)
@@ -499,7 +504,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
-      capabilities: ['claude-code'],
+      runtimeNames: ['claude-code'],
     })
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'claude-code' })
     const workItem = await availableWorkItem(authorization, session.id)
@@ -544,7 +549,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
-      capabilities: ['codex'],
+      runtimeNames: ['codex'],
     })
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'codex' })
     const workItem = await availableWorkItem(authorization, session.id)

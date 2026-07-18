@@ -91,13 +91,11 @@ async function createRuntimeCredential(authorization: string) {
 }
 
 async function registerActiveRunner(authorization: string, environmentId: string) {
-  const capabilities = [AMA_RUNNER_CAPABILITY]
   const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
     method: 'POST',
     body: JSON.stringify({
       name: `Trigger runner ${crypto.randomUUID()}`,
       environmentId,
-      capabilities,
       maxConcurrent: 2,
     }),
   })
@@ -105,7 +103,10 @@ async function registerActiveRunner(authorization: string, environmentId: string
   const runner = (await runnerRes.json()) as { id: string }
   const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
     method: 'PUT',
-    body: JSON.stringify({ state: 'active', capabilities }),
+    body: JSON.stringify({
+      state: 'active',
+      runtimes: [{ runtime: AMA_RUNNER_CAPABILITY, models: [], state: 'ready' }],
+    }),
   })
   expect(heartbeatRes.status).toBe(200)
   return runner
