@@ -93,6 +93,10 @@ func (d *Daemon) Start(ctx context.Context) error {
 	if err := d.ensureRunnerID(ctx); err != nil {
 		return err
 	}
+	// Runtime usage can make an otherwise installed CLI unschedulable. Probe it
+	// before the first heartbeat so the control plane and the local lease guard
+	// start from the same runtime state.
+	d.refreshRuntimeUsage(ctx)
 	if err := d.heartbeatOrRecover(ctx); err != nil {
 		if ctx.Err() != nil && d.RunnerID != "" {
 			_ = d.sendOfflineHeartbeat(context.Background())
@@ -220,6 +224,7 @@ func (d *Daemon) RunOnce(ctx context.Context) error {
 	if err := d.ensureRunnerID(ctx); err != nil {
 		return err
 	}
+	d.refreshRuntimeUsage(ctx)
 	if err := d.heartbeatOrRecover(ctx); err != nil {
 		return err
 	}

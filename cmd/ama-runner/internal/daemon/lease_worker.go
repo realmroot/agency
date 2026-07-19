@@ -152,7 +152,13 @@ func (r LeaseWorker) supportsRuntimeRequirement(required *protocol.RuntimeRequir
 		return false
 	}
 	for _, entry := range r.CurrentRuntimes() {
-		if entry.Runtime == required.Runtime && entry.State == runtime.RuntimeStateReady &&
+		// The control plane assigns new work only while the last reported state is
+		// ready. A usage refresh can mark the local snapshot limited before the
+		// next heartbeat reaches the control plane; an assignment made in that
+		// window is still capability-compatible and must not be misreported as an
+		// unsupported runtime or model.
+		if entry.Runtime == required.Runtime &&
+			(entry.State == runtime.RuntimeStateReady || entry.State == runtime.RuntimeStateLimited) &&
 			(required.Model == "" || lo.Contains(entry.Models, required.Model)) {
 			return true
 		}

@@ -13,6 +13,7 @@ Feature: Runners
     Given a work item declares a structured runtime and optional model requirement
     When a runner is evaluated for the work
     Then only a runner reporting that ready runtime and exact selected model in its runtimes list is eligible
+    And an already-assigned lease remains locally valid if that same matching runtime becomes limited after the scheduling heartbeat
     And a null model requires only the ready runtime without inventing a model id
     And session starts that declare no runtime requirement are not claimable
     And local sandbox tool work requires the AMA runtime while other unscoped non-session work is claimable by any runner
@@ -56,7 +57,8 @@ Feature: Runners
     And the runner resource does not expose a generic capabilities field or a legacy runtimeInventory field
     And host platform metadata is diagnostic while the runtimes list remains authoritative for scheduling
     And Windows omits the unsupported AMA runtime while still reporting detected CLI-backed runtimes
-    And quota-governed runtimes whose usage probe is unavailable are reported as limited
+    And quota-governed runtimes are probed before the first schedulable heartbeat
+    And quota-governed runtimes whose usage probe is unavailable are reported as limited before work can be assigned
     And disabled runners cannot heartbeat themselves active and every runner endpoint requires authentication
 
   # ── Work queue and leases (api: assembled server, channel, lifecycle) ──

@@ -326,6 +326,7 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 	})
 }
 
+// [spec: runners/eligibility]
 func TestLeaseWorkerRuntimeRequirementHelpers(t *testing.T) {
 	worker := LeaseWorker{}
 	if worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex"}) {
@@ -342,6 +343,15 @@ func TestLeaseWorkerRuntimeRequirementHelpers(t *testing.T) {
 	}
 	if !worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex"}) {
 		t.Fatal("empty model should accept a ready runtime")
+	}
+	worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+		return []runtime.RunnerRuntime{{Runtime: "codex", Models: []string{"gpt-5"}, State: runtime.RuntimeStateLimited}}
+	}
+	if !worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex", Model: "gpt-5"}) {
+		t.Fatal("an assigned lease should remain compatible when its matching runtime becomes limited")
+	}
+	if worker.supportsRuntimeRequirement(&protocol.RuntimeRequirement{Runtime: "codex", Model: "other"}) {
+		t.Fatal("a limited runtime must still reject a non-matching assigned model")
 	}
 }
 

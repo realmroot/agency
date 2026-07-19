@@ -247,7 +247,8 @@ func TestInventoryRefreshUsageIgnoresCancelledContext(t *testing.T) {
 	}
 }
 
-func TestInventoryRunUsageCollectorStopsOnContextCancel(t *testing.T) {
+// [spec: runners/heartbeat]
+func TestInventoryRunUsageCollectorDoesNotImmediatelyRepeatStartupRefresh(t *testing.T) {
 	calls := 0
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {
@@ -258,8 +259,8 @@ func TestInventoryRunUsageCollectorStopsOnContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	inv.RunUsageCollector(ctx)
-	if calls != 1 {
-		t.Fatalf("expected collector to refresh once before stopping, got %d calls", calls)
+	if calls != 0 {
+		t.Fatalf("expected collector to wait for its first interval before refreshing, got %d calls", calls)
 	}
 }
 

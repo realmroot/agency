@@ -534,6 +534,32 @@ func TestRunOnceSendsHeartbeatAndCompletesApprovedToolWork(t *testing.T) {
 	}
 }
 
+// [spec: runners/heartbeat]
+func TestRunOnceProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
+	client := &fakeAMAServer{}
+	daemon := testDaemon(client, &fakeAdapter{})
+	var callsMu sync.Mutex
+	var includeUsageCalls []bool
+	daemon.RuntimeCatalog = usageUnavailableRuntimeCatalog(&callsMu, &includeUsageCalls)
+
+	if err := daemon.RunOnce(context.Background()); err != nil {
+		t.Fatalf("expected run once success, got %v", err)
+	}
+
+	callsMu.Lock()
+	calls := append([]bool(nil), includeUsageCalls...)
+	callsMu.Unlock()
+	if !slices.Equal(calls, []bool{true, false}) {
+		t.Fatalf("expected usage probe before runtime heartbeat inventory, got %v", calls)
+	}
+	claude, found := lo.Find(heartbeatRuntimes(client.heartbeats[0]), func(entry ama.RunnerRuntime) bool {
+		return entry.Runtime == "claude-code"
+	})
+	if !found || claude.State != "limited" {
+		t.Fatalf("expected first heartbeat to report unavailable claude-code usage as limited, got %#v", claude)
+	}
+}
+
 func TestRunOnceRejectsConcurrentProcessForSameStateDir(t *testing.T) {
 	client := &fakeAMAServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
@@ -1017,6 +1043,55 @@ func TestStartRegistersRunnerAndSendsOfflineHeartbeatOnShutdown(t *testing.T) {
 	build := version.Default()
 	if got := heartbeatMetadata(client.heartbeats[0])["runnerVersion"]; got != build.Version {
 		t.Fatalf("expected runner version heartbeat metadata %q, got %#v", build.Version, got)
+	}
+}
+
+// [spec: runners/heartbeat]
+func TestStartProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
+	client := &fakeAMAServer{}
+	daemon := testDaemon(client, &fakeAdapter{})
+	var callsMu sync.Mutex
+	var includeUsageCalls []bool
+	daemon.RuntimeCatalog = usageUnavailableRuntimeCatalog(&callsMu, &includeUsageCalls)
+	daemon.Config.HeartbeatInterval = time.Hour
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- daemon.Start(ctx)
+	}()
+
+	deadline := time.After(time.Second)
+	for {
+		client.mu.Lock()
+		heartbeats := append([]ama.PutRunnerHeartbeatRequest(nil), client.heartbeats...)
+		client.mu.Unlock()
+		if len(heartbeats) > 0 {
+			claude, found := lo.Find(heartbeatRuntimes(heartbeats[0]), func(entry ama.RunnerRuntime) bool {
+				return entry.Runtime == "claude-code"
+			})
+			if !found || claude.State != "limited" {
+				t.Fatalf("expected first heartbeat to report unavailable claude-code usage as limited, got %#v", claude)
+			}
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("timed out waiting for startup heartbeat")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected cancelled daemon, got %v", err)
+	}
+
+	callsMu.Lock()
+	calls := append([]bool(nil), includeUsageCalls...)
+	callsMu.Unlock()
+	if !slices.Equal(calls, []bool{true, false}) {
+		t.Fatalf("expected usage probe before runtime heartbeat inventory without an immediate collector repeat, got %v", calls)
 	}
 }
 
@@ -1810,6 +1885,30 @@ func runtimesFor(entries ...runtime.InventoryRuntime) *runtime.Inventory {
 	return &runtime.Inventory{
 		Load: func(context.Context, bool) (*runtime.InventorySnapshot, error) {
 			return &runtime.InventorySnapshot{Runtimes: append([]runtime.InventoryRuntime(nil), entries...)}, nil
+		},
+	}
+}
+
+func usageUnavailableRuntimeCatalog(callsMu *sync.Mutex, includeUsageCalls *[]bool) *runtime.Inventory {
+	entry := runtimeEntry(
+		"claude-code",
+		true,
+		[]string{"claude-sonnet-4-6"},
+		[]string{"claude-sonnet-4-6"},
+		"ready",
+		"2.1.185",
+		"ready",
+	)
+	return &runtime.Inventory{
+		Load: func(_ context.Context, includeUsage bool) (*runtime.InventorySnapshot, error) {
+			callsMu.Lock()
+			*includeUsageCalls = append(*includeUsageCalls, includeUsage)
+			callsMu.Unlock()
+			snapshotEntry := entry
+			if includeUsage {
+				snapshotEntry.LimitedDetail = "Claude Code quota usage unavailable; scheduling paused until the usage probe succeeds"
+			}
+			return &runtime.InventorySnapshot{Runtimes: []runtime.InventoryRuntime{snapshotEntry}}, nil
 		},
 	}
 }

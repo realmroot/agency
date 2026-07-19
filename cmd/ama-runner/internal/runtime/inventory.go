@@ -92,7 +92,6 @@ func (inv *Inventory) RefreshUsage(ctx context.Context) {
 }
 
 func (inv *Inventory) RunUsageCollector(ctx context.Context) {
-	inv.RefreshUsage(ctx)
 	ticker := time.NewTicker(runtimeUsageRefreshInterval)
 	defer ticker.Stop()
 	for {
