@@ -99,7 +99,8 @@ Feature: Runners
     When the queue is read
     Then the work returns to available with the bound target runtime session id and a null runner
     And the session exposes a safe waiting-for-runner-recovery reason
-    And an eligible runner can claim the recovered work again
+    And reading the session after the startup window does not terminalize runner recovery
+    And an eligible runner can claim the recovered work again, return the session to running, and complete it to idle
 
   @runners/session-runtime-binding @api
   Scenario: Bind each AMA session to one target runtime session

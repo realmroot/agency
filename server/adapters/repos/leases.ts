@@ -531,7 +531,10 @@ export function createLeaseRepo(db: Db): LeaseRepo {
               eq(sessions.id, claimed.sessionId),
               eq(sessions.projectId, input.projectId),
               eq(sessions.state, 'pending'),
-              eq(sessions.stateReason, 'waiting-for-runner'),
+              or(
+                eq(sessions.stateReason, 'waiting-for-runner'),
+                eq(sessions.stateReason, 'waiting-for-runner-recovery'),
+              ),
             ),
           )
       }

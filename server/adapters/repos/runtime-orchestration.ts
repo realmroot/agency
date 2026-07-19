@@ -695,7 +695,11 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             eq(sessions.state, 'pending'),
             or(
               isNull(sessions.stateReason),
-              and(ne(sessions.stateReason, 'requires-runner'), ne(sessions.stateReason, 'waiting-for-runner')),
+              and(
+                ne(sessions.stateReason, 'requires-runner'),
+                ne(sessions.stateReason, 'waiting-for-runner'),
+                ne(sessions.stateReason, 'waiting-for-runner-recovery'),
+              ),
             ),
             sql`${sessions.createdAt} < ${expiredBefore}`,
           ),

@@ -497,6 +497,44 @@ describe('[CF] /api/v1/leases', () => {
       metadata: { uid: session.id },
       status: { phase: 'pending', reason: 'waiting-for-runner-recovery' },
     })
+
+    const expiredStartupWindow = new Date(Date.now() - 10 * 60_000).toISOString()
+    await env.DB.prepare('UPDATE sessions SET created_at = ? WHERE id = ?').bind(expiredStartupWindow, session.id).run()
+
+    const sessionsRes = await jsonFetch('/api/v1/sessions', authorization)
+    expect(sessionsRes.status).toBe(200)
+    const sessions = (await sessionsRes.json()) as {
+      data: Array<{ metadata: { uid: string }; status: { phase: string; reason: string | null } }>
+    }
+    expect(sessions.data).toContainEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ uid: session.id }),
+        status: expect.objectContaining({ phase: 'pending', reason: 'waiting-for-runner-recovery' }),
+      }),
+    )
+
+    const reclaimRes = await claimLease(authorization, workItem.id, runner.id)
+    expect(reclaimRes.status).toBe(201)
+    const reclaimedLease = (await reclaimRes.json()) as { id: string }
+    expect(reclaimedLease.id).not.toBe(lease.id)
+
+    const runningSessionRes = await jsonFetch(`/api/v1/sessions/${session.id}`, authorization)
+    await expect(runningSessionRes.json()).resolves.toMatchObject({
+      metadata: { uid: session.id },
+      status: { phase: 'running', reason: null },
+    })
+
+    const completeRes = await jsonFetch(`/api/v1/leases/${reclaimedLease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'completed', result: { ok: true } }),
+    })
+    expect(completeRes.status).toBe(200)
+
+    const completedSessionRes = await jsonFetch(`/api/v1/sessions/${session.id}`, authorization)
+    await expect(completedSessionRes.json()).resolves.toMatchObject({
+      metadata: { uid: session.id },
+      status: { phase: 'idle', reason: null },
+    })
   })
 
   it('rejects caller-assigned runtimes when their target session id differs from the AMA session [spec: runners/session-runtime-binding]', async () => {
