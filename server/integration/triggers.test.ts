@@ -1207,6 +1207,80 @@ describe('[CF] /api/v1/triggers', () => {
     expect(resumed.status.sessionId).not.toBe(first.status.sessionId)
   })
 
+  it('automatically resumes serial FIFO when a self-hosted lease settles idle [spec: triggers/http-serial-dispatch]', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization, 'self_hosted')
+    const runner = await registerActiveRunner(authorization, environment.id)
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Serial lease completion webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      template: {
+        metadata: { labels: {}, annotations: {} },
+        spec: {
+          agentId: agent.id,
+          environmentId: environment.id,
+          runtime: 'ama',
+          promptTemplate: 'Handle {{ .body.routing_key }}.',
+          env: {},
+          envFrom: [],
+          volumes: [],
+          volumeMounts: [],
+        },
+      },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+
+    const firstRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-lease-1' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:1' }),
+    })
+    expect(firstRes.status).toBe(201)
+    const first = (await firstRes.json()) as { status: { sessionId: string | null } }
+    expect(first.status.sessionId).toEqual(expect.any(String))
+
+    const secondRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-lease-2' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:2' }),
+    })
+    expect(secondRes.status).toBe(201)
+    const second = (await secondRes.json()) as {
+      metadata: { uid: string }
+      status: { phase: string; sessionId: string | null }
+    }
+    expect(second.status).toMatchObject({ phase: 'queued', sessionId: null })
+
+    const workItemsRes = await jsonFetch(
+      `/api/v1/work-items?state=available&sessionId=${first.status.sessionId}`,
+      authorization,
+    )
+    expect(workItemsRes.status).toBe(200)
+    const workItems = (await workItemsRes.json()) as { data: Array<{ id: string }> }
+    expect(workItems.data).toHaveLength(1)
+
+    const leaseRes = await jsonFetch('/api/v1/leases', authorization, {
+      method: 'POST',
+      body: JSON.stringify({ workItemId: workItems.data[0]!.id, runnerId: runner.id, leaseDurationSeconds: 90 }),
+    })
+    expect(leaseRes.status).toBe(201)
+    const lease = (await leaseRes.json()) as { id: string }
+
+    const completeRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'completed', result: { ok: true } }),
+    })
+    expect(completeRes.status).toBe(200)
+
+    const resumedRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs/${second.metadata.uid}`, authorization)
+    expect(resumedRes.status).toBe(200)
+    const resumed = (await resumedRes.json()) as { status: { phase: string; sessionId: string | null } }
+    expect(resumed.status).toMatchObject({ phase: 'dispatched', sessionId: expect.any(String) })
+    expect(resumed.status.sessionId).not.toBe(first.status.sessionId)
+  })
+
   it('does not dispatch paused or archived triggers [spec: triggers/inactive]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)

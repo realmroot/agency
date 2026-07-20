@@ -3,7 +3,11 @@ import { createDeps } from './composition'
 import type { Env } from './env'
 import { type LogContext, logError } from './logging'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
-import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from './usecases/dispatch-triggers'
+import {
+  dispatchNextSerialHttpTrigger,
+  recoverSerialHttpTriggers,
+  wakeSerialHttpTriggerForSettledSession,
+} from './usecases/dispatch-triggers'
 import type { CloudTurnQueueMessage, TriggerDispatchQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
 import {
@@ -66,7 +70,7 @@ export default {
       })
     }
   },
-  async queue(batch, env) {
+  async queue(batch, env, ctx) {
     // Messages that exhausted their retries arrive on the dead-letter queue; mark
     // the stranded session errored instead of re-running the turn.
     const deadLetter = batch.queue.endsWith('-dlq')
@@ -82,12 +86,19 @@ export default {
           message.ack()
           continue
         }
+        const cloudTurn = body as CloudTurnQueueMessage
         if (deadLetter) {
-          await markCloudTurnDeadLettered(deps, body as CloudTurnQueueMessage)
+          await markCloudTurnDeadLettered(deps, cloudTurn)
         } else {
-          await consumeCloudTurnQueueMessage(deps, body as CloudTurnQueueMessage)
+          await consumeCloudTurnQueueMessage(deps, cloudTurn)
         }
         message.ack()
+        waitUntilLogged(
+          ctx,
+          'cloud-turn.serial-http-trigger-wake.failed',
+          wakeSerialHttpTriggerForSettledSession(deps, cloudTurn.projectId, cloudTurn.sessionId),
+          queueMessageContext(cloudTurn),
+        )
       } catch (error) {
         logError(`cloud-turn.${deadLetter ? 'dead-letter' : 'consumer'}.failed`, error, {
           queue: batch.queue,

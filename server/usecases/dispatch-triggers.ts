@@ -1,4 +1,5 @@
 import type { ResourceMetadata } from '@server/domain/resource'
+import { parseJson } from '@server/domain/runtime/session-snapshot'
 import type { Trigger } from '@server/domain/trigger'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type { Deps } from './deps'
@@ -673,6 +674,30 @@ async function wakeHttpTrigger(deps: Deps, projectId: string, triggerId: string,
     { type: 'trigger.dispatch', triggerId, projectId },
     delaySeconds > 0 ? { delaySeconds } : undefined,
   )
+}
+
+export async function wakeSerialHttpTriggerForSettledSession(
+  deps: Deps,
+  projectId: string,
+  sessionId: string,
+): Promise<boolean> {
+  const session = await deps.sessionOrchestration.findSession(projectId, sessionId)
+  if (!session || session.state === 'pending' || session.state === 'running') return false
+
+  const metadata = parseJson<{ annotations?: Record<string, unknown> }>(session.metadata)
+  const annotations = metadata?.annotations
+  const triggerId = annotations?.source === 'http-trigger' ? annotations.httpTriggerId : null
+  if (typeof triggerId !== 'string' || !triggerId) return false
+
+  const trigger = await deps.triggers.find(projectId, triggerId)
+  if (trigger?.spec.source.type !== 'http' || trigger.spec.source.concurrency?.mode !== 'serial') return false
+
+  if (deps.triggerDispatchQueue?.configured()) {
+    await wakeHttpTrigger(deps, projectId, triggerId)
+  } else {
+    await dispatchNextSerialHttpTrigger(deps, projectId, triggerId)
+  }
+  return true
 }
 
 export async function dispatchNextSerialHttpTrigger(

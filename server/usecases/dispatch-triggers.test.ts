@@ -33,6 +33,7 @@ import {
   dispatchHttpTrigger,
   dispatchNextSerialHttpTrigger,
   recoverSerialHttpTriggers,
+  wakeSerialHttpTriggerForSettledSession,
 } from './dispatch-triggers'
 import * as runtimeSessions from './runtime/sessions'
 
@@ -270,6 +271,7 @@ function fakeDeps(
     audit?: Partial<Deps['audit']>
     triggers?: Partial<Deps['triggers']>
     triggerDispatchQueue?: Deps['triggerDispatchQueue']
+    sessionOrchestration?: Partial<Deps['sessionOrchestration']>
   } = {},
 ): Deps {
   const triggerDispatch: Deps['triggerDispatch'] = {
@@ -338,7 +340,10 @@ function fakeDeps(
     runtimeWorkspace: undefined as unknown as Deps['runtimeWorkspace'],
     sandboxExecutor: undefined as unknown as Deps['sandboxExecutor'],
     amaTurnExecutor: undefined as unknown as Deps['amaTurnExecutor'],
-    sessionOrchestration: undefined as unknown as Deps['sessionOrchestration'],
+    sessionOrchestration: {
+      findSession: async () => null,
+      ...overrides.sessionOrchestration,
+    } as Deps['sessionOrchestration'],
     sessionEventStore: undefined as unknown as Deps['sessionEventStore'],
     sessions: sessionsRepo,
     createApprovalGate: undefined as unknown as Deps['createApprovalGate'],
@@ -1533,6 +1538,64 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
 })
 
 describe('[spec: triggers/http-serial-dispatch] serial HTTP trigger dispatch', () => {
+  it('wakes the serial trigger queue when its HTTP session settles', async () => {
+    const wakeups: Array<{ type: string; projectId: string; triggerId: string }> = []
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      sessionOrchestration: {
+        findSession: async () =>
+          ({
+            state: 'idle',
+            metadata: JSON.stringify({ annotations: { source: 'http-trigger', httpTriggerId: 'trigger_http' } }),
+          }) as never,
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (message) => {
+          wakeups.push(message)
+        },
+      },
+    })
+
+    await expect(wakeSerialHttpTriggerForSettledSession(deps, 'project_1', 'sess_1')).resolves.toBe(true)
+    expect(wakeups).toEqual([{ type: 'trigger.dispatch', projectId: 'project_1', triggerId: 'trigger_http' }])
+  })
+
+  it.each([
+    ['missing session', null],
+    ['pending session', { state: 'pending', metadata: null }],
+    ['running session', { state: 'running', metadata: null }],
+    ['unrelated idle session', { state: 'idle', metadata: null }],
+    [
+      'idle session without an HTTP trigger id',
+      { state: 'idle', metadata: JSON.stringify({ annotations: { source: 'http-trigger' } }) },
+    ],
+  ])('does not wake for a %s', async (_label, session) => {
+    const findTrigger = vi.fn()
+    const deps = fakeDeps({
+      triggers: { find: findTrigger },
+      sessionOrchestration: { findSession: async () => session as never },
+    })
+
+    await expect(wakeSerialHttpTriggerForSettledSession(deps, 'project_1', 'sess_1')).resolves.toBe(false)
+    expect(findTrigger).not.toHaveBeenCalled()
+  })
+
+  it('does not wake a parallel HTTP trigger after its session settles', async () => {
+    const deps = fakeDeps({
+      triggers: { find: async () => httpTrigger() },
+      sessionOrchestration: {
+        findSession: async () =>
+          ({
+            state: 'idle',
+            metadata: JSON.stringify({ annotations: { source: 'http-trigger', httpTriggerId: 'trigger_http' } }),
+          }) as never,
+      },
+    })
+
+    await expect(wakeSerialHttpTriggerForSettledSession(deps, 'project_1', 'sess_1')).resolves.toBe(false)
+  })
+
   it('dispatches the FIFO head and leaves a different routing key queued while that session is active', async () => {
     const enqueuedRuns = [
       pendingRun({ run: { id: 'httprun_first', correlationId: 'http:first' }, renderedPrompt: 'First issue' }),

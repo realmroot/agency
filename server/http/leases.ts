@@ -9,6 +9,7 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
+import { wakeSerialHttpTriggerForSettledSession } from '../usecases/dispatch-triggers'
 import { claimLease } from '../usecases/leases'
 import { type LeaseRecord, RunnerConflictError, RunnerValidationError } from '../usecases/ports'
 import { dispatchPrompt } from '../usecases/runtime/cloud-turn'
@@ -351,6 +352,9 @@ export function registerLeaseRoutes(routes: LeaseRoutes) {
         if (session?.state === 'idle') {
           await dispatchPrompt(deps, auth, session, rawPayload.prompt)
         }
+      }
+      if (requestedState !== 'active' && typeof rawPayload?.sessionId === 'string') {
+        await wakeSerialHttpTriggerForSettledSession(deps, auth.project.id, rawPayload.sessionId)
       }
       return c.json(serializeLease(updated), 200)
     })

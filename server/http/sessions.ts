@@ -33,6 +33,7 @@ import {
   negotiateMediaType,
   parseListCursor,
 } from '../openapi'
+import { wakeSerialHttpTriggerForSettledSession } from '../usecases/dispatch-triggers'
 import { type SessionRuntimeError, SessionValidationError } from '../usecases/ports'
 import {
   createSession as createRuntimeSession,
@@ -1315,6 +1316,9 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         const outcome = await updateSession(deps, auth as never, session, patch, requestId(c))
         if (!outcome.ok) {
           return runtimeErrorResponse(c, outcome.error) as never
+        }
+        if (body.state !== undefined) {
+          await wakeSerialHttpTriggerForSettledSession(deps, auth.project.id, sessionId)
         }
         return c.json(serializeSession(outcome.value), 200)
       } catch (error) {
