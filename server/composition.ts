@@ -7,6 +7,7 @@ import { createRuntimeSecretGateway } from './adapters/gateways/runtime-secrets'
 import { createSecretStoreGateway } from './adapters/gateways/secret-store'
 import { createSessionDoEventStore } from './adapters/gateways/session-do-events'
 import { createCloudLoopChecker, createEventStore } from './adapters/gateways/session-event-store'
+import { createTriggerDispatchQueue } from './adapters/gateways/trigger-dispatch-queue'
 import { createAgentRepo } from './adapters/repos/agents'
 import { createAuditReadRepo } from './adapters/repos/audit-records'
 import { createBudgetRepo } from './adapters/repos/budgets'
@@ -67,6 +68,7 @@ export function createDeps(env: Env): Deps {
     auditRecords: createAuditReadRepo(db),
     triggers: createTriggerRepo(db),
     triggerDispatch: createTriggerDispatchRepo(db),
+    triggerDispatchQueue: createTriggerDispatchQueue(env),
     projects: createProjectRepo(db),
     federatedTenants: createFederatedTenantRepo(db),
     runners: createRunnerRepo(db),

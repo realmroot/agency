@@ -27,6 +27,7 @@ import type {
   SessionOrchestrationStore,
   SessionRepo,
   SessionSandboxExecutor,
+  TriggerDispatchQueue,
   TriggerDispatchRepo,
   TriggerRepo,
   UsageRepo,
@@ -64,6 +65,7 @@ export interface Deps {
   auditRecords: AuditReadRepo
   triggers: TriggerRepo
   triggerDispatch: TriggerDispatchRepo
+  triggerDispatchQueue?: TriggerDispatchQueue
   projects: ProjectRepo
   federatedTenants: FederatedTenantRepo
   runners: RunnerRepo

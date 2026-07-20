@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
@@ -253,7 +256,7 @@ describe('codexProvider', () => {
     expect(codexConstructorMock).toHaveBeenCalledWith({
       env: { HOME: '/home/agent' },
       config: {
-        features: { apps: false },
+        features: { apps: false, multi_agent: true },
         developer_instructions: expect.stringContaining('SYSTEM_PROMPT'),
       },
     })
@@ -289,6 +292,30 @@ describe('codexProvider', () => {
     expect(startThreadMock).toHaveBeenCalledTimes(1)
     expect(runStreamedMock).toHaveBeenNthCalledWith(1, 'USER_TASK', { signal: expect.any(AbortSignal) })
     expect(runStreamedMock).toHaveBeenNthCalledWith(2, 'FOLLOW_UP', { signal: expect.any(AbortSignal) })
+  })
+
+  it('passes an explicitly configured model when the host uses ChatGPT authentication', async () => {
+    const hostHome = mkdtempSync(join(tmpdir(), 'ama-codex-provider-'))
+    mkdirSync(join(hostHome, '.codex'))
+    writeFileSync(join(hostHome, '.codex', 'auth.json'), JSON.stringify({ tokens: { access_token: 'test-token' } }))
+    runStreamedMock.mockResolvedValue({ events: events() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+
+    try {
+      const handle = await codexProvider.execute(
+        request({
+          env: { HOME: '/home/agent', AMA_RUNTIME_BRIDGE_HOST_HOME: hostHome },
+          model: 'gpt-5.3-codex-spark',
+        }),
+      )
+      for await (const _event of handle.events) {
+        // drain
+      }
+
+      expect(startThreadMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5.3-codex-spark' }))
+    } finally {
+      rmSync(hostHome, { recursive: true, force: true })
+    }
   })
 
   it('normalizes Codex command output into AMA tool results', async () => {

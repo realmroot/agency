@@ -38826,9 +38826,8 @@ function readAccessToken(request3) {
   return codexAccessToken(hostHome(request3.env));
 }
 function resolveModel(request3) {
-  if (!request3.model) return readAccessToken(request3) ? void 0 : "o3";
-  if (readAccessToken(request3) && !request3.env.OPENAI_API_KEY) return void 0;
-  return request3.model;
+  if (request3.model) return request3.model;
+  return readAccessToken(request3) ? void 0 : "o3";
 }
 function positiveNumber(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : void 0;
@@ -39311,7 +39310,10 @@ var codexProvider = {
       // Managed sessions must not inherit the host user's personal Codex Apps
       // connectors (e.g. the GitHub connector creates PRs as the host user
       // instead of with the session-scoped git credential).
-      config: { features: { apps: false }, ...systemPrompt ? { developer_instructions: systemPrompt } : {} },
+      config: {
+        features: { apps: false, multi_agent: true },
+        ...systemPrompt ? { developer_instructions: systemPrompt } : {}
+      },
       ...codexPathOverride ? { codexPathOverride } : {}
     });
     const model = resolveModel(request3);

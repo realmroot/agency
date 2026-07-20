@@ -4,7 +4,14 @@ import type { Trigger } from '@server/domain/trigger'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
-import type { AuthScope, ClaimedRun, DueTrigger, RuntimeSessionHandle } from './ports'
+import type {
+  AuthScope,
+  ClaimedRun,
+  DueTrigger,
+  PendingHttpRun,
+  RuntimeSessionHandle,
+  StalePendingHttpRun,
+} from './ports'
 
 // dispatchDueScheduledTriggers now calls the runtime createSession usecase
 // directly (the SessionRuntimeGateway indirection was removed). Mock that module
@@ -21,7 +28,12 @@ vi.mock('./runtime/sessions', () => ({
   markExpiredPending: vi.fn(),
 }))
 
-import { dispatchDueScheduledTriggers, dispatchHttpTrigger } from './dispatch-triggers'
+import {
+  dispatchDueScheduledTriggers,
+  dispatchHttpTrigger,
+  dispatchNextSerialHttpTrigger,
+  recoverSerialHttpTriggers,
+} from './dispatch-triggers'
 import * as runtimeSessions from './runtime/sessions'
 
 type RuntimeSessionOverrides = {
@@ -114,6 +126,13 @@ function httpTrigger(
   }
 }
 
+function serialHttpTrigger(triggerId = 'trigger_http'): Trigger {
+  return httpTrigger({
+    metadata: { uid: triggerId },
+    spec: { source: { type: 'http', concurrency: { mode: 'serial' } } },
+  })
+}
+
 function claimedRun(overrides: Partial<ClaimedRun> = {}): ClaimedRun {
   return {
     id: 'run_1',
@@ -122,6 +141,31 @@ function claimedRun(overrides: Partial<ClaimedRun> = {}): ClaimedRun {
     metadata: {},
     ...overrides,
   }
+}
+
+function pendingRun(
+  overrides: Omit<Partial<PendingHttpRun>, 'run'> & { run?: Partial<ClaimedRun> } = {},
+): PendingHttpRun {
+  const { run, ...fields } = overrides
+  return {
+    run: claimedRun({ id: 'httprun_pending', ...run }),
+    triggerId: 'trigger_http',
+    organizationId: 'org_1',
+    organizationName: 'Org',
+    projectId: 'project_1',
+    projectName: 'Project',
+    requestedByUserId: 'user_1',
+    routingKeyHash: null,
+    renderedPrompt: 'Handle T-123 from portal',
+    ...fields,
+  }
+}
+
+function stalePendingRun(
+  overrides: Omit<Partial<StalePendingHttpRun>, 'run'> & { run?: Partial<ClaimedRun> } = {},
+): StalePendingHttpRun {
+  const { existingSession, ...pending } = overrides
+  return { ...pendingRun(pending), existingSession: existingSession ?? null }
 }
 
 function sessionRecord(overrides: Partial<Session> = {}): Session {
@@ -224,12 +268,20 @@ function fakeDeps(
     sessionRuntime?: RuntimeSessionOverrides
     sessions?: Partial<Deps['sessions']>
     audit?: Partial<Deps['audit']>
+    triggers?: Partial<Deps['triggers']>
+    triggerDispatchQueue?: Deps['triggerDispatchQueue']
   } = {},
 ): Deps {
   const triggerDispatch: Deps['triggerDispatch'] = {
     dueTriggers: async () => [],
     claimRun: async () => claimedRun(),
     claimHttpRun: async () => claimedRun({ id: 'httprun_1', scheduledFor: '2026-01-01T00:00:00.000Z' }),
+    enqueueHttpRun: async () => ({ replayed: false, run: claimedRun(), wake: true }),
+    claimNextHttpRun: async () => null,
+    requeueHttpRun: async () => {},
+    staleHttpRuns: async () => [],
+    hasPendingHttpRuns: async () => false,
+    pendingHttpTriggers: async () => [],
     projectName: async () => 'My Project',
     markRunFailed: async () => {},
     markRunDispatched: async () => {},
@@ -272,7 +324,8 @@ function fakeDeps(
     budgets: undefined as unknown as Deps['budgets'],
     usageRecords: undefined as unknown as Deps['usageRecords'],
     auditRecords: undefined as unknown as Deps['auditRecords'],
-    triggers: undefined as unknown as Deps['triggers'],
+    triggers: overrides.triggers as Deps['triggers'],
+    ...(overrides.triggerDispatchQueue ? { triggerDispatchQueue: overrides.triggerDispatchQueue } : {}),
     projects: undefined as unknown as Deps['projects'],
     federatedTenants: undefined as unknown as Deps['federatedTenants'],
     runners: undefined as unknown as Deps['runners'],
@@ -1476,6 +1529,439 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       }),
     ).rejects.toMatchObject({ name: 'TriggerValidationError' })
     expect(claimed).toBe(false)
+  })
+})
+
+describe('[spec: triggers/http-serial-dispatch] serial HTTP trigger dispatch', () => {
+  it('dispatches the FIFO head and leaves a different routing key queued while that session is active', async () => {
+    const enqueuedRuns = [
+      pendingRun({ run: { id: 'httprun_first', correlationId: 'http:first' }, renderedPrompt: 'First issue' }),
+      pendingRun({ run: { id: 'httprun_second', correlationId: 'http:second' }, renderedPrompt: 'Second issue' }),
+    ]
+    const wakeups: Array<{ triggerId: string; delaySeconds?: number }> = []
+    let enqueueIndex = 0
+    let claimIndex = 0
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: false, run: enqueuedRuns[enqueueIndex++]!.run, wake: true }),
+        claimNextHttpRun: async () => (claimIndex++ === 0 ? enqueuedRuns[0]! : null),
+        hasPendingHttpRuns: async () => false,
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (message, options) => {
+          wakeups.push({
+            triggerId: message.triggerId,
+            ...(options?.delaySeconds ? { delaySeconds: options.delaySeconds } : {}),
+          })
+        },
+      },
+    })
+
+    const first = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: {
+        body: { routing_key: 'github:owner/repo:issue:1', ticket: { id: '1' }, source: 'github' },
+        header: {},
+      },
+      idempotencyKey: 'delivery-1',
+    })
+    const second = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: {
+        body: { routing_key: 'github:owner/repo:issue:2', ticket: { id: '2' }, source: 'github' },
+        header: {},
+      },
+      idempotencyKey: 'delivery-2',
+    })
+
+    expect(first).toMatchObject({ runId: 'httprun_first', state: 'dispatched', sessionId: 'sess_1' })
+    expect(second).toMatchObject({ runId: 'httprun_second', state: 'queued', sessionId: null })
+    expect(runtimeSessions.createSession).toHaveBeenCalledTimes(1)
+    expect(wakeups).toEqual([{ triggerId: 'trigger_http', delaySeconds: 5 }])
+  })
+
+  it('delivers the active routing key immediately even when another subject is already waiting', async () => {
+    const active = runtimeSession({ id: 'sess_active', state: 'running' })
+    const immediate = pendingRun({
+      run: { id: 'httprun_active_subject', correlationId: 'http:active-subject' },
+      routingKeyHash: 'active-subject-hash',
+      renderedPrompt: 'Active issue follow-up',
+    })
+    const wakeups: number[] = []
+    const claimNextHttpRun = vi.fn(async () => immediate)
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: false, run: immediate.run, wake: true }),
+        claimNextHttpRun,
+        hasPendingHttpRuns: async () => true,
+      },
+      sessions: { findReusableHttpTriggerSession: async () => active },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (_message, options) => {
+          wakeups.push(options?.delaySeconds ?? 0)
+        },
+      },
+    })
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: {
+        body: { routing_key: 'github:owner/repo:issue:1', ticket: { id: '1' }, source: 'github' },
+        header: {},
+      },
+      idempotencyKey: 'delivery-follow-up',
+    })
+
+    expect(result).toMatchObject({ runId: 'httprun_active_subject', state: 'dispatched', sessionId: 'sess_active' })
+    expect(runtimeSessions.dispatchPrompt).toHaveBeenCalledWith(
+      deps,
+      expect.objectContaining({ project: { id: 'project_1', name: 'Project' } }),
+      expect.objectContaining({ id: 'sess_active' }),
+      'Active issue follow-up',
+      'http:active-subject',
+    )
+    expect(claimNextHttpRun).toHaveBeenCalledWith('trigger_http')
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+    expect(wakeups).toEqual([5])
+  })
+
+  it('fails a serial run when delivery to its active routing-key session is rejected', async () => {
+    const claimed = pendingRun({
+      run: { id: 'httprun_rejected' },
+      routingKeyHash: 'active-subject-hash',
+      renderedPrompt: 'Rejected follow-up',
+    })
+    const failures: string[] = []
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: false, run: claimed.run, wake: true }),
+        claimNextHttpRun: async () => claimed,
+        hasPendingHttpRuns: async () => false,
+        markRunFailed: async (_trigger, _run, message) => {
+          failures.push(message)
+        },
+      },
+      sessions: {
+        findReusableHttpTriggerSession: async () => runtimeSession({ id: 'sess_active', state: 'running' }),
+      },
+    })
+    vi.mocked(runtimeSessions.dispatchPrompt).mockResolvedValue({
+      ok: false,
+      status: 409,
+      message: 'Session runtime is not active',
+    })
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: { body: { routing_key: 'active', ticket: { id: '1' }, source: 'github' }, header: {} },
+    })
+
+    expect(result).toMatchObject({ state: 'failed', sessionId: null, errorMessage: 'Session runtime is not active' })
+    expect(failures).toEqual(['Session runtime is not active'])
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+  })
+
+  it('does not serialize independent trigger ids against each other', async () => {
+    const triggerOne = serialHttpTrigger('trigger_one')
+    const triggerTwo = serialHttpTrigger('trigger_two')
+    const pendingByTrigger = new Map([
+      ['trigger_one', pendingRun({ triggerId: 'trigger_one', run: { id: 'run_one' }, renderedPrompt: 'One' })],
+      ['trigger_two', pendingRun({ triggerId: 'trigger_two', run: { id: 'run_two' }, renderedPrompt: 'Two' })],
+    ])
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async (_auth, trigger) => ({
+          replayed: false,
+          run: pendingByTrigger.get(trigger.metadata.uid)!.run,
+          wake: true,
+        }),
+        claimNextHttpRun: async (triggerId) => pendingByTrigger.get(triggerId) ?? null,
+        hasPendingHttpRuns: async () => false,
+      },
+      sessionRuntime: {
+        createSession: async (_deps, _auth, input) => ({
+          ok: true,
+          value: sessionRecord({ metadata: { ...sessionRecord().metadata, uid: `sess_${input.options.name}` } }),
+        }),
+      },
+    })
+
+    const [one, two] = await Promise.all([
+      dispatchHttpTrigger(deps, auth, {
+        trigger: triggerOne,
+        context: { body: { routing_key: 'one', ticket: { id: '1' }, source: 'github' }, header: {} },
+      }),
+      dispatchHttpTrigger(deps, auth, {
+        trigger: triggerTwo,
+        context: { body: { routing_key: 'two', ticket: { id: '2' }, source: 'github' }, header: {} },
+      }),
+    ])
+
+    expect(one).toMatchObject({ runId: 'run_one', state: 'dispatched' })
+    expect(two).toMatchObject({ runId: 'run_two', state: 'dispatched' })
+    expect(runtimeSessions.createSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns the original run for an idempotency replay without dispatching twice', async () => {
+    const wakeups: string[] = []
+    const claimNextHttpRun = vi.fn()
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: true, runId: 'httprun_original', wake: true }),
+        claimNextHttpRun,
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (message) => {
+          wakeups.push(message.triggerId)
+        },
+      },
+    })
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: { body: { routing_key: 'one', ticket: { id: '1' }, source: 'github' }, header: {} },
+      idempotencyKey: 'same-delivery',
+    })
+
+    expect(result).toMatchObject({ runId: 'httprun_original', state: 'queued', replayed: true })
+    expect(claimNextHttpRun).not.toHaveBeenCalled()
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+    expect(wakeups).toEqual(['trigger_http'])
+  })
+
+  it('requeues a claimed run and schedules another wake when dispatch throws', async () => {
+    const claimed = pendingRun({ run: { id: 'httprun_retry' } })
+    const requeued: string[] = []
+    const wakeups: number[] = []
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: false, run: claimed.run, wake: true }),
+        claimNextHttpRun: async () => claimed,
+        requeueHttpRun: async (runId) => {
+          requeued.push(runId)
+        },
+      },
+      sessionRuntime: {
+        createSession: async () => {
+          throw new Error('runner gateway unavailable')
+        },
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (_message, options) => {
+          wakeups.push(options?.delaySeconds ?? 0)
+        },
+      },
+    })
+
+    await expect(
+      dispatchHttpTrigger(deps, auth, {
+        trigger: serialHttpTrigger(),
+        context: { body: { routing_key: 'retry', ticket: { id: '1' }, source: 'github' }, header: {} },
+      }),
+    ).rejects.toThrow('runner gateway unavailable')
+    expect(requeued).toEqual(['httprun_retry'])
+    expect(wakeups).toEqual([5])
+  })
+
+  it('marks a claimed serial run failed when session creation returns a permanent error', async () => {
+    const claimed = pendingRun({ run: { id: 'httprun_failed' } })
+    const failures: string[] = []
+    const deps = fakeDeps({
+      triggerDispatch: {
+        enqueueHttpRun: async () => ({ replayed: false, run: claimed.run, wake: true }),
+        claimNextHttpRun: async () => claimed,
+        hasPendingHttpRuns: async () => false,
+        markRunFailed: async (_trigger, _run, message) => {
+          failures.push(message)
+        },
+      },
+      sessionRuntime: {
+        createSession: async () => ({
+          ok: false,
+          error: { status: 400, code: 'validation', message: 'Agent is unavailable' },
+        }),
+      },
+    })
+
+    const result = await dispatchHttpTrigger(deps, auth, {
+      trigger: serialHttpTrigger(),
+      context: { body: { routing_key: 'failed', ticket: { id: '1' }, source: 'github' }, header: {} },
+    })
+
+    expect(result).toMatchObject({ runId: 'httprun_failed', state: 'failed', errorMessage: 'Agent is unavailable' })
+    expect(failures).toEqual(['Agent is unavailable'])
+  })
+
+  it('dispatches the next queued run after the active session no longer blocks the trigger', async () => {
+    const next = pendingRun({ run: { id: 'httprun_next' }, renderedPrompt: 'Next issue' })
+    let eligible = false
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        claimNextHttpRun: async () => (eligible ? next : null),
+        hasPendingHttpRuns: async () => !eligible,
+      },
+    })
+
+    const blocked = await dispatchNextSerialHttpTrigger(deps, 'project_1', 'trigger_http')
+    eligible = true
+    const resumed = await dispatchNextSerialHttpTrigger(deps, 'project_1', 'trigger_http')
+
+    expect(blocked).toEqual({ pending: true, blocked: true })
+    expect(resumed).toEqual({ pending: false, blocked: false })
+    expect(runtimeSessions.createSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves queued runs blocked when the trigger is suspended', async () => {
+    const claimNextHttpRun = vi.fn()
+    const suspended = httpTrigger({
+      spec: { source: { type: 'http', concurrency: { mode: 'serial' } }, suspend: true },
+    })
+    const deps = fakeDeps({
+      triggers: { find: async () => suspended },
+      triggerDispatch: {
+        claimNextHttpRun,
+        hasPendingHttpRuns: async () => true,
+      },
+    })
+
+    await expect(dispatchNextSerialHttpTrigger(deps, 'project_1', 'trigger_http')).resolves.toEqual({
+      pending: true,
+      blocked: true,
+    })
+    expect(claimNextHttpRun).not.toHaveBeenCalled()
+  })
+
+  it('ignores recovery messages for missing or non-HTTP triggers', async () => {
+    const deps = fakeDeps({ triggers: { find: async () => null } })
+    await expect(dispatchNextSerialHttpTrigger(deps, 'project_1', 'trigger_missing')).resolves.toEqual({
+      pending: false,
+      blocked: false,
+    })
+  })
+
+  it('re-enqueues stranded trigger ids during scheduled recovery', async () => {
+    const wakeups: Array<{ triggerId: string; projectId: string }> = []
+    const deps = fakeDeps({
+      triggerDispatch: {
+        pendingHttpTriggers: async () => [
+          { triggerId: 'trigger_one', projectId: 'project_1' },
+          { triggerId: 'trigger_two', projectId: 'project_1' },
+        ],
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue: async (message) => {
+          wakeups.push({ triggerId: message.triggerId, projectId: message.projectId })
+        },
+      },
+    })
+
+    await expect(recoverSerialHttpTriggers(deps)).resolves.toBe(2)
+    expect(wakeups).toEqual([
+      { triggerId: 'trigger_one', projectId: 'project_1' },
+      { triggerId: 'trigger_two', projectId: 'project_1' },
+    ])
+  })
+
+  it('requeues a stale dispatching run without a session and continues it in the same cron recovery', async () => {
+    const stale = stalePendingRun({ run: { id: 'httprun_crashed' }, renderedPrompt: 'Resume crashed run' })
+    const requeued: string[] = []
+    let isQueued = false
+    let staleBefore: string | null = null
+    let staleLimit: number | null = null
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        staleHttpRuns: async (before, limit) => {
+          staleBefore = before
+          staleLimit = limit
+          return [stale]
+        },
+        requeueHttpRun: async (runId) => {
+          requeued.push(runId)
+          isQueued = true
+        },
+        pendingHttpTriggers: async () => (isQueued ? [{ triggerId: 'trigger_http', projectId: 'project_1' }] : []),
+        claimNextHttpRun: async () => (isQueued ? stale : null),
+        hasPendingHttpRuns: async () => false,
+      },
+      triggerDispatchQueue: {
+        configured: () => false,
+        enqueue: async () => {
+          throw new Error('unconfigured queue must not be used')
+        },
+      },
+    })
+
+    const now = new Date('2026-07-20T12:00:00.000Z')
+    await expect(recoverSerialHttpTriggers(deps, 25, now)).resolves.toBe(1)
+
+    expect(staleBefore).toBe('2026-07-20T11:55:00.000Z')
+    expect(staleLimit).toBe(25)
+    expect(requeued).toEqual(['httprun_crashed'])
+    expect(runtimeSessions.createSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('finalizes a stale dispatching run from its existing session without creating a duplicate', async () => {
+    const sessionMetadata = {
+      labels: { subject: 'github-issue' },
+      annotations: { httpRunId: 'httprun_created_before_crash' },
+    }
+    const stale = stalePendingRun({
+      run: { id: 'httprun_created_before_crash' },
+      existingSession: { id: 'sess_created_before_crash', metadata: sessionMetadata },
+    })
+    const finalized: Array<{ runId: string; sessionId: string; metadata: typeof sessionMetadata }> = []
+    const requeueHttpRun = vi.fn()
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        staleHttpRuns: async () => [stale],
+        pendingHttpTriggers: async () => [],
+        requeueHttpRun,
+        markRunDispatched: async (_trigger, run, sessionId, metadata) => {
+          finalized.push({ runId: run.id, sessionId, metadata: metadata as typeof sessionMetadata })
+        },
+      },
+    })
+
+    await expect(recoverSerialHttpTriggers(deps)).resolves.toBe(0)
+
+    expect(finalized).toEqual([
+      {
+        runId: 'httprun_created_before_crash',
+        sessionId: 'sess_created_before_crash',
+        metadata: sessionMetadata,
+      },
+    ])
+    expect(requeueHttpRun).not.toHaveBeenCalled()
+    expect(runtimeSessions.createSession).not.toHaveBeenCalled()
+  })
+
+  it('dispatches stranded runs inline when the wake queue binding is unavailable', async () => {
+    const claimed = pendingRun({ run: { id: 'httprun_inline_recovery' } })
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        pendingHttpTriggers: async () => [{ triggerId: 'trigger_http', projectId: 'project_1' }],
+        claimNextHttpRun: async () => claimed,
+        hasPendingHttpRuns: async () => false,
+      },
+      triggerDispatchQueue: {
+        configured: () => false,
+        enqueue: async () => {
+          throw new Error('unconfigured queue must not be used')
+        },
+      },
+    })
+
+    await expect(recoverSerialHttpTriggers(deps)).resolves.toBe(1)
+    expect(runtimeSessions.createSession).toHaveBeenCalledTimes(1)
   })
 })
 

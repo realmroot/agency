@@ -5417,6 +5417,9 @@
                 "enum": [
                   "http"
                 ]
+              },
+              "concurrency": {
+                "$ref": "#/components/schemas/HttpTriggerConcurrency"
               }
             },
             "required": [
@@ -5448,6 +5451,22 @@
           "intervalSeconds",
           "windowSeconds"
         ]
+      },
+      "HttpTriggerConcurrency": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "parallel",
+              "serial"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
       },
       "TriggerTemplate": {
         "type": "object",
@@ -5877,6 +5896,9 @@
                         "enum": [
                           "http"
                         ]
+                      },
+                      "concurrency": {
+                        "$ref": "#/components/schemas/HttpTriggerConcurrency"
                       }
                     },
                     "required": [
@@ -6093,6 +6115,9 @@
                         "enum": [
                           "http"
                         ]
+                      },
+                      "concurrency": {
+                        "$ref": "#/components/schemas/HttpTriggerConcurrency"
                       }
                     },
                     "required": [
@@ -6284,6 +6309,8 @@
             "type": "string",
             "enum": [
               "claimed",
+              "queued",
+              "dispatching",
               "dispatched",
               "failed"
             ],
@@ -12299,6 +12326,8 @@
               "type": "string",
               "enum": [
                 "claimed",
+                "queued",
+                "dispatching",
                 "dispatched",
                 "failed"
               ],

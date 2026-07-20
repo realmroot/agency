@@ -68,6 +68,14 @@ Feature: Triggers
     And later posts with the same routing key reuse the same non-archived session instead of creating another one
     And missing template variables fail the run request without creating a session
 
+  @triggers/http-serial-dispatch @usecase
+  Scenario: Serial HTTP triggers queue different subjects without delaying the active subject
+    Given a serial HTTP trigger has an active session for one routing key
+    When requests arrive for another routing key and then for the active routing key
+    Then the other routing key remains queued until the active session becomes idle
+    And the active routing key is delivered immediately to its existing session
+    And queued routing keys dispatch in AMA acceptance order with at most one active session
+
   @triggers/inactive @api
   Scenario: Inactive triggers do not dispatch
     Given a project has paused and archived triggers

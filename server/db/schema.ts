@@ -554,6 +554,9 @@ export const triggers = sqliteTable(
     triggerType: text('trigger_type', { enum: ['scheduled', 'http'] })
       .notNull()
       .default('scheduled'),
+    httpConcurrencyMode: text('http_concurrency_mode', { enum: ['parallel', 'serial'] })
+      .notNull()
+      .default('parallel'),
     // Mirrors RuntimeSchema (server/contracts/environment-contracts.ts) — keep in lockstep.
     runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
     name: text('name').notNull(),
@@ -586,6 +589,7 @@ export const triggers = sqliteTable(
     // other hardened enum column. Mirrors RuntimeSchema (contracts/environment-contracts).
     check('ck_triggers_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
     check('ck_triggers_type', sql`${table.triggerType} in ('scheduled','http')`),
+    check('ck_triggers_http_concurrency', sql`${table.httpConcurrencyMode} in ('parallel','serial')`),
     check(
       'ck_triggers_schedule_shape',
       sql`(${table.triggerType} = 'scheduled' and ${table.intervalSeconds} is not null and ${table.nextDueAt} is not null) or (${table.triggerType} = 'http' and ${table.intervalSeconds} is null and ${table.nextDueAt} is null)`,
@@ -608,7 +612,7 @@ export const triggerRuns = sqliteTable(
     heartbeatAt: text('heartbeat_at'),
     triggeredAt: text('triggered_at').notNull(),
     // Mirrors RUN_STATES (server/http/triggers.ts).
-    state: text('state', { enum: ['claimed', 'dispatched', 'failed'] }).notNull(),
+    state: text('state', { enum: ['claimed', 'queued', 'dispatching', 'dispatched', 'failed'] }).notNull(),
     idempotencyKey: text('idempotency_key').notNull(),
     sessionId: text('session_id').references(() => sessions.id),
     correlationId: text('correlation_id').notNull(),
@@ -622,7 +626,33 @@ export const triggerRuns = sqliteTable(
     uniqueIndex('idx_trigger_runs_idempotency_key').on(table.idempotencyKey),
     index('idx_trigger_runs_trigger_created').on(table.triggerId, table.createdAt, table.id),
     index('idx_trigger_runs_project_created').on(table.projectId, table.createdAt, table.id),
-    check('ck_trigger_runs_state', sql`${table.state} in ('claimed','dispatched','failed')`),
+    check('ck_trigger_runs_state', sql`${table.state} in ('claimed','queued','dispatching','dispatched','failed')`),
+  ],
+)
+
+export const httpTriggerPendingRuns = sqliteTable(
+  'http_trigger_pending_runs',
+  {
+    sequence: integer('sequence').primaryKey({ autoIncrement: true }),
+    runId: text('run_id')
+      .notNull()
+      .unique()
+      .references(() => triggerRuns.id, { onDelete: 'cascade' }),
+    triggerId: text('trigger_id')
+      .notNull()
+      .references(() => triggers.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').notNull(),
+    organizationName: text('organization_name').notNull(),
+    projectId: text('project_id').notNull(),
+    projectName: text('project_name').notNull(),
+    requestedByUserId: text('requested_by_user_id').notNull(),
+    routingKeyHash: text('routing_key_hash'),
+    renderedPrompt: text('rendered_prompt').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_http_trigger_pending_fifo').on(table.triggerId, table.sequence),
+    index('idx_http_trigger_pending_project').on(table.projectId, table.sequence),
   ],
 )
 

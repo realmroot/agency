@@ -33,6 +33,10 @@ binding = "AI"
 binding = "CLOUD_TURNS"
 queue = "ama-cloud-turns"
 
+[[queues.producers]]
+binding = "TRIGGER_DISPATCHES"
+queue = "ama-trigger-dispatches"
+
 [[queues.consumers]]
 queue = "ama-cloud-turns"
 max_batch_size = 1
@@ -47,6 +51,12 @@ dead_letter_queue = "ama-cloud-turns-dlq"
 queue = "ama-cloud-turns-dlq"
 max_batch_size = 1
 max_retries = 1
+
+[[queues.consumers]]
+queue = "ama-trigger-dispatches"
+max_batch_size = 1
+max_retries = 5
+dead_letter_queue = "ama-trigger-dispatches-dlq"
 
 [[services]]
 binding = "OIDC_PROVIDER"
@@ -138,6 +148,10 @@ binding = "AI"
 binding = "CLOUD_TURNS"
 queue = "ama-cloud-turns-staging"
 
+[[env.staging.queues.producers]]
+binding = "TRIGGER_DISPATCHES"
+queue = "ama-trigger-dispatches-staging"
+
 [[env.staging.queues.consumers]]
 queue = "ama-cloud-turns-staging"
 max_batch_size = 1
@@ -148,6 +162,12 @@ dead_letter_queue = "ama-cloud-turns-staging-dlq"
 queue = "ama-cloud-turns-staging-dlq"
 max_batch_size = 1
 max_retries = 1
+
+[[env.staging.queues.consumers]]
+queue = "ama-trigger-dispatches-staging"
+max_batch_size = 1
+max_retries = 5
+dead_letter_queue = "ama-trigger-dispatches-staging-dlq"
 
 [[env.staging.services]]
 binding = "OIDC_PROVIDER"

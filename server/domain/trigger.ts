@@ -6,8 +6,9 @@ import type { ResourceMetadata, ResourcePhase } from './resource'
 import type { SessionSpec } from './session'
 
 export type TriggerType = 'scheduled' | 'http'
-export type TriggerRunPhase = 'claimed' | 'dispatched' | 'failed'
+export type TriggerRunPhase = 'claimed' | 'queued' | 'dispatching' | 'dispatched' | 'failed'
 export type TriggerSourceType = 'schedule' | 'http'
+export type HttpTriggerConcurrencyMode = 'parallel' | 'serial'
 export type TriggerSessionTemplateSpec = Pick<
   SessionSpec,
   'agentId' | 'environmentId' | 'runtime' | 'env' | 'envFrom' | 'volumes' | 'volumeMounts'
@@ -36,6 +37,9 @@ export type TriggerSource =
     }
   | {
       type: 'http'
+      concurrency?: {
+        mode: HttpTriggerConcurrencyMode
+      }
     }
 
 export interface Trigger {

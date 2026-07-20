@@ -43,9 +43,8 @@ function readAccessToken(request: RuntimeProviderRequest): string | null {
 }
 
 function resolveModel(request: RuntimeProviderRequest): string | undefined {
-  if (!request.model) return readAccessToken(request) ? undefined : 'o3'
-  if (readAccessToken(request) && !request.env.OPENAI_API_KEY) return undefined
-  return request.model
+  if (request.model) return request.model
+  return readAccessToken(request) ? undefined : 'o3'
 }
 
 function positiveNumber(value: unknown): number | undefined {
@@ -616,7 +615,10 @@ export const codexProvider: RuntimeProvider = {
       // Managed sessions must not inherit the host user's personal Codex Apps
       // connectors (e.g. the GitHub connector creates PRs as the host user
       // instead of with the session-scoped git credential).
-      config: { features: { apps: false }, ...(systemPrompt ? { developer_instructions: systemPrompt } : {}) },
+      config: {
+        features: { apps: false, multi_agent: true },
+        ...(systemPrompt ? { developer_instructions: systemPrompt } : {}),
+      },
       ...(codexPathOverride ? { codexPathOverride } : {}),
     })
     const model = resolveModel(request)

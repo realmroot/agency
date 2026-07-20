@@ -66,7 +66,10 @@ function recordFrom(row: TriggerRow): Trigger {
                 windowSeconds: row.windowSeconds ?? 0,
               },
             }
-          : { type: 'http' },
+          : {
+              type: 'http',
+              concurrency: { mode: row.httpConcurrencyMode ?? 'parallel' },
+            },
       suspend: !row.enabled,
       template,
     },
@@ -109,6 +112,7 @@ function configColumns(config: CreateTriggerInput['config']) {
   const schedule = config.source.type === 'schedule' ? config.source.schedule : null
   return {
     triggerType: schedule ? ('scheduled' as const) : ('http' as const),
+    httpConcurrencyMode: config.source.type === 'http' ? (config.source.concurrency?.mode ?? 'parallel') : 'parallel',
     agentId: config.template.spec.agentId,
     environmentId: config.template.spec.environmentId,
     runtime: config.template.spec.runtime,

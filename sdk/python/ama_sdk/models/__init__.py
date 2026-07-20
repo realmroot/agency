@@ -174,6 +174,8 @@ from .find_tool_input import FindToolInput
 from .git_repository_volume import GitRepositoryVolume
 from .git_repository_volume_type import GitRepositoryVolumeType
 from .grep_tool_input import GrepToolInput
+from .http_trigger_concurrency import HttpTriggerConcurrency
+from .http_trigger_concurrency_mode import HttpTriggerConcurrencyMode
 from .image_content_block import ImageContentBlock
 from .image_content_block_type import ImageContentBlockType
 from .json_content_block import JsonContentBlock
@@ -697,6 +699,8 @@ __all__ = (
     "GitRepositoryVolume",
     "GitRepositoryVolumeType",
     "GrepToolInput",
+    "HttpTriggerConcurrency",
+    "HttpTriggerConcurrencyMode",
     "ImageContentBlock",
     "ImageContentBlockType",
     "JsonContentBlock",

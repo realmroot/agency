@@ -25,7 +25,7 @@ import { requestId } from './request-context'
 
 type TriggerRoutes = OpenAPIHono<DepsEnv>
 
-const RUN_STATES = ['claimed', 'dispatched', 'failed'] as const
+const RUN_STATES = ['claimed', 'queued', 'dispatching', 'dispatched', 'failed'] as const
 const JsonObjectSchema = z.record(z.string(), z.unknown())
 const TriggerCreateMetadataSchema = ResourceCreateMetadataSchema.pick({ name: true }).openapi('TriggerCreateMetadata')
 const TriggerUpdateMetadataSchema = ResourceUpdateMetadataSchema.pick({ name: true }).openapi('TriggerUpdateMetadata')
@@ -38,6 +38,11 @@ const TriggerScheduleSchema = z
   })
   .openapi('TriggerSchedule')
 
+const HttpTriggerConcurrencySchema = z
+  .object({ mode: z.enum(['parallel', 'serial']) })
+  .strict()
+  .openapi('HttpTriggerConcurrency')
+
 const TriggerSourceSchema = z
   .discriminatedUnion('type', [
     z.object({
@@ -46,6 +51,7 @@ const TriggerSourceSchema = z
     }),
     z.object({
       type: z.literal('http'),
+      concurrency: HttpTriggerConcurrencySchema.optional(),
     }),
   ])
   .openapi('TriggerSource')
@@ -148,7 +154,7 @@ const CreateTriggerSchema = z
       .object({
         source: z.discriminatedUnion('type', [
           z.object({ type: z.literal('schedule'), schedule: SchedulePayloadSchema }),
-          z.object({ type: z.literal('http') }),
+          z.object({ type: z.literal('http'), concurrency: HttpTriggerConcurrencySchema.optional() }),
         ]),
         suspend: z.boolean().optional().openapi({ example: false }),
         template: CreateTriggerTemplateSchema,
@@ -174,7 +180,7 @@ const UpdateTriggerSchema = z
         source: z
           .discriminatedUnion('type', [
             z.object({ type: z.literal('schedule'), schedule: SchedulePayloadSchema }),
-            z.object({ type: z.literal('http') }),
+            z.object({ type: z.literal('http'), concurrency: HttpTriggerConcurrencySchema.optional() }),
           ])
           .optional(),
         suspend: z.boolean().optional().openapi({ example: true }),
@@ -416,7 +422,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
                       windowSeconds: spec.source.schedule.windowSeconds ?? 0,
                     },
                   }
-                : { type: 'http' },
+                : { type: 'http', concurrency: spec.source.concurrency ?? { mode: 'parallel' } },
             suspend: spec.suspend ?? false,
             template: {
               metadata: {
@@ -611,6 +617,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         if (!run) {
           throw new Error('HTTP trigger run was not persisted')
         }
+        if (result.replayed) c.header('idempotency-replayed', 'true')
         return c.json(serializeTriggerRun(run), 201)
       } catch (error) {
         return conflictOrValidation(c, error)
@@ -680,7 +687,10 @@ function patchFromBody(body: z.infer<typeof UpdateTriggerSchema>): UpdateTrigger
                     windowSeconds: spec.source.schedule.windowSeconds ?? 0,
                   },
                 }
-              : { type: 'http' as const },
+              : {
+                  type: 'http' as const,
+                  ...(spec.source.concurrency !== undefined ? { concurrency: spec.source.concurrency } : {}),
+                },
         }
       : {}),
     ...(spec?.suspend !== undefined ? { suspend: spec.suspend } : {}),

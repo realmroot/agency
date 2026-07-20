@@ -943,6 +943,24 @@ func (e GitRepositoryVolumeType) Valid() bool {
 	}
 }
 
+// Defines values for HttpTriggerConcurrencyMode.
+const (
+	Parallel HttpTriggerConcurrencyMode = "parallel"
+	Serial   HttpTriggerConcurrencyMode = "serial"
+)
+
+// Valid indicates whether the value is a known member of the HttpTriggerConcurrencyMode enum.
+func (e HttpTriggerConcurrencyMode) Valid() bool {
+	switch e {
+	case Parallel:
+		return true
+	case Serial:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImageContentBlockType.
 const (
 	Image ImageContentBlockType = "image"
@@ -1860,16 +1878,16 @@ func (e SessionEvent11Type) Valid() bool {
 
 // Defines values for SessionMessageDelivery.
 const (
-	Live   SessionMessageDelivery = "live"
-	Queued SessionMessageDelivery = "queued"
+	SessionMessageDeliveryLive   SessionMessageDelivery = "live"
+	SessionMessageDeliveryQueued SessionMessageDelivery = "queued"
 )
 
 // Valid indicates whether the value is a known member of the SessionMessageDelivery enum.
 func (e SessionMessageDelivery) Valid() bool {
 	switch e {
-	case Live:
+	case SessionMessageDeliveryLive:
 		return true
-	case Queued:
+	case SessionMessageDeliveryQueued:
 		return true
 	default:
 		return false
@@ -2121,9 +2139,11 @@ func (e ToolResultContentBlockType) Valid() bool {
 
 // Defines values for TriggerRunStatusPhase.
 const (
-	TriggerRunStatusPhaseClaimed    TriggerRunStatusPhase = "claimed"
-	TriggerRunStatusPhaseDispatched TriggerRunStatusPhase = "dispatched"
-	TriggerRunStatusPhaseFailed     TriggerRunStatusPhase = "failed"
+	TriggerRunStatusPhaseClaimed     TriggerRunStatusPhase = "claimed"
+	TriggerRunStatusPhaseDispatched  TriggerRunStatusPhase = "dispatched"
+	TriggerRunStatusPhaseDispatching TriggerRunStatusPhase = "dispatching"
+	TriggerRunStatusPhaseFailed      TriggerRunStatusPhase = "failed"
+	TriggerRunStatusPhaseQueued      TriggerRunStatusPhase = "queued"
 )
 
 // Valid indicates whether the value is a known member of the TriggerRunStatusPhase enum.
@@ -2133,7 +2153,11 @@ func (e TriggerRunStatusPhase) Valid() bool {
 		return true
 	case TriggerRunStatusPhaseDispatched:
 		return true
+	case TriggerRunStatusPhaseDispatching:
+		return true
 	case TriggerRunStatusPhaseFailed:
+		return true
+	case TriggerRunStatusPhaseQueued:
 		return true
 	default:
 		return false
@@ -2853,9 +2877,11 @@ func (e ListTriggersParamsSuspend) Valid() bool {
 
 // Defines values for ListTriggerRunsParamsState.
 const (
-	ListTriggerRunsParamsStateClaimed    ListTriggerRunsParamsState = "claimed"
-	ListTriggerRunsParamsStateDispatched ListTriggerRunsParamsState = "dispatched"
-	ListTriggerRunsParamsStateFailed     ListTriggerRunsParamsState = "failed"
+	ListTriggerRunsParamsStateClaimed     ListTriggerRunsParamsState = "claimed"
+	ListTriggerRunsParamsStateDispatched  ListTriggerRunsParamsState = "dispatched"
+	ListTriggerRunsParamsStateDispatching ListTriggerRunsParamsState = "dispatching"
+	ListTriggerRunsParamsStateFailed      ListTriggerRunsParamsState = "failed"
+	ListTriggerRunsParamsStateQueued      ListTriggerRunsParamsState = "queued"
 )
 
 // Valid indicates whether the value is a known member of the ListTriggerRunsParamsState enum.
@@ -2865,7 +2891,11 @@ func (e ListTriggerRunsParamsState) Valid() bool {
 		return true
 	case ListTriggerRunsParamsStateDispatched:
 		return true
+	case ListTriggerRunsParamsStateDispatching:
+		return true
 	case ListTriggerRunsParamsStateFailed:
+		return true
+	case ListTriggerRunsParamsStateQueued:
 		return true
 	default:
 		return false
@@ -2931,19 +2961,19 @@ func (e ListVaultCredentialsParamsState) Valid() bool {
 
 // Defines values for ListVaultCredentialVersionsParamsState.
 const (
-	Active     ListVaultCredentialVersionsParamsState = "active"
-	Revoked    ListVaultCredentialVersionsParamsState = "revoked"
-	Superseded ListVaultCredentialVersionsParamsState = "superseded"
+	ListVaultCredentialVersionsParamsStateActive     ListVaultCredentialVersionsParamsState = "active"
+	ListVaultCredentialVersionsParamsStateRevoked    ListVaultCredentialVersionsParamsState = "revoked"
+	ListVaultCredentialVersionsParamsStateSuperseded ListVaultCredentialVersionsParamsState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListVaultCredentialVersionsParamsState enum.
 func (e ListVaultCredentialVersionsParamsState) Valid() bool {
 	switch e {
-	case Active:
+	case ListVaultCredentialVersionsParamsStateActive:
 		return true
-	case Revoked:
+	case ListVaultCredentialVersionsParamsStateRevoked:
 		return true
-	case Superseded:
+	case ListVaultCredentialVersionsParamsStateSuperseded:
 		return true
 	default:
 		return false
@@ -3501,7 +3531,8 @@ type CreateTriggerRequestSpecSource0Type string
 
 // CreateTriggerRequestSpecSource1 defines model for .
 type CreateTriggerRequestSpecSource1 struct {
-	Type CreateTriggerRequestSpecSource1Type `json:"type"`
+	Concurrency *HttpTriggerConcurrency             `json:"concurrency,omitempty"`
+	Type        CreateTriggerRequestSpecSource1Type `json:"type"`
 }
 
 // CreateTriggerRequestSpecSource1Type defines model for CreateTriggerRequest.Spec.Source.1.Type.
@@ -3845,6 +3876,14 @@ type GrepToolInput struct {
 	Path       *string `json:"path,omitempty"`
 	Pattern    string  `json:"pattern"`
 }
+
+// HttpTriggerConcurrency defines model for HttpTriggerConcurrency.
+type HttpTriggerConcurrency struct {
+	Mode HttpTriggerConcurrencyMode `json:"mode"`
+}
+
+// HttpTriggerConcurrencyMode defines model for HttpTriggerConcurrency.Mode.
+type HttpTriggerConcurrencyMode string
 
 // ImageContentBlock defines model for ImageContentBlock.
 type ImageContentBlock struct {
@@ -5142,7 +5181,8 @@ type TriggerSource0Type string
 
 // TriggerSource1 defines model for .
 type TriggerSource1 struct {
-	Type TriggerSource1Type `json:"type"`
+	Concurrency *HttpTriggerConcurrency `json:"concurrency,omitempty"`
+	Type        TriggerSource1Type      `json:"type"`
 }
 
 // TriggerSource1Type defines model for TriggerSource.1.Type.
@@ -5339,7 +5379,8 @@ type UpdateTriggerRequestSpecSource0Type string
 
 // UpdateTriggerRequestSpecSource1 defines model for .
 type UpdateTriggerRequestSpecSource1 struct {
-	Type UpdateTriggerRequestSpecSource1Type `json:"type"`
+	Concurrency *HttpTriggerConcurrency             `json:"concurrency,omitempty"`
+	Type        UpdateTriggerRequestSpecSource1Type `json:"type"`
 }
 
 // UpdateTriggerRequestSpecSource1Type defines model for UpdateTriggerRequest.Spec.Source.1.Type.

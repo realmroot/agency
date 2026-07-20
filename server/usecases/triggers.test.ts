@@ -131,6 +131,16 @@ describe('[spec: triggers/create] createTrigger', () => {
     expect(trigger.status.nextDueAt).toBeNull()
   })
 
+  it('preserves serial concurrency when creating an HTTP trigger', async () => {
+    const trigger = await createTrigger(fakeDeps(), auth, {
+      config: {
+        ...baseConfig({ source: { type: 'http', concurrency: { mode: 'serial' } }, nextDueAt: null }),
+        nextDueAt: null,
+      },
+    })
+    expect(trigger.spec.source).toEqual({ type: 'http', concurrency: { mode: 'serial' } })
+  })
+
   it('derives nextDueAt from the interval when omitted', async () => {
     const trigger = await createTrigger(fakeDeps(), auth, {
       config: { ...baseConfig(), nextDueAt: null },
@@ -318,6 +328,32 @@ describe('[spec: triggers/lifecycle] updateTrigger', () => {
     expect(result.trigger.metadata.name).toBe('Webhook renamed')
     expect(result.trigger.spec.source.type).toBe('http')
     expect(result.trigger.status.nextDueAt).toBeNull()
+  })
+
+  it('updates and preserves HTTP trigger serial concurrency', async () => {
+    const current = triggerRecord({ spec: { source: { type: 'http' } }, status: { nextDueAt: null } })
+    const serialized = await updateTrigger(fakeDeps(), auth, current, {
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+    })
+    const preserved = await updateTrigger(fakeDeps(), auth, serialized.trigger, { source: { type: 'http' } })
+    const renamed = await updateTrigger(fakeDeps(), auth, preserved.trigger, { name: 'Still serial' })
+
+    expect(serialized.trigger.spec.source).toEqual({ type: 'http', concurrency: { mode: 'serial' } })
+    expect(preserved.trigger.spec.source).toEqual({ type: 'http', concurrency: { mode: 'serial' } })
+    expect(renamed.trigger.spec.source).toEqual({ type: 'http', concurrency: { mode: 'serial' } })
+  })
+
+  it('converts an HTTP trigger to a scheduled trigger when interval timing is supplied', async () => {
+    const current = triggerRecord({ spec: { source: { type: 'http' } }, status: { nextDueAt: null } })
+    const result = await updateTrigger(fakeDeps(), auth, current, {
+      source: { type: 'schedule', schedule: { intervalSeconds: 1800 } },
+    })
+
+    expect(result.trigger.spec.source).toEqual({
+      type: 'schedule',
+      schedule: { type: 'interval', intervalSeconds: 1800, windowSeconds: 0 },
+    })
+    expect(result.trigger.status.nextDueAt).toEqual(expect.any(String))
   })
 
   it('rejects secret material in template metadata patch', async () => {

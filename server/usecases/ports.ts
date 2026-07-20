@@ -937,7 +937,7 @@ export interface TriggerListQuery {
 export interface TriggerRunListQuery {
   projectId: string
   triggerId: string
-  state?: 'claimed' | 'dispatched' | 'failed'
+  state?: 'claimed' | 'queued' | 'dispatching' | 'dispatched' | 'failed'
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -1003,6 +1003,29 @@ export interface ClaimedRun {
   metadata: Record<string, unknown>
 }
 
+export interface PendingHttpRun {
+  run: ClaimedRun
+  triggerId: string
+  organizationId: string
+  organizationName: string
+  projectId: string
+  projectName: string
+  requestedByUserId: string
+  routingKeyHash: string | null
+  renderedPrompt: string
+}
+
+export interface StalePendingHttpRun extends PendingHttpRun {
+  existingSession: {
+    id: string
+    metadata: Pick<ResourceMetadata, 'labels' | 'annotations'>
+  } | null
+}
+
+export type HttpRunClaimResult =
+  | { replayed: true; runId: string; wake: true }
+  | { replayed: false; run: ClaimedRun; wake: boolean }
+
 // DB boundary for the background trigger dispatcher (cron/queue entry). The
 // drizzle reads (due triggers), the idempotent run claim (UNIQUE-guarded
 // insert), and the run/trigger state advances all live in adapters/repos; the
@@ -1018,6 +1041,19 @@ export interface TriggerDispatchRepo {
     idempotencyKey: string | null,
     metadata: Record<string, unknown>,
   ): Promise<ClaimedRun | null>
+  enqueueHttpRun(
+    auth: AuthScope,
+    trigger: Trigger,
+    triggeredAt: string,
+    idempotencyKey: string | null,
+    metadata: Record<string, unknown>,
+    input: { routingKeyHash: string | null; renderedPrompt: string },
+  ): Promise<HttpRunClaimResult>
+  claimNextHttpRun(triggerId: string): Promise<PendingHttpRun | null>
+  requeueHttpRun(runId: string): Promise<void>
+  staleHttpRuns(staleBefore: string, limit: number): Promise<StalePendingHttpRun[]>
+  hasPendingHttpRuns(triggerId: string): Promise<boolean>
+  pendingHttpTriggers(limit: number): Promise<Array<{ triggerId: string; projectId: string }>>
   projectName(projectId: string): Promise<string | null>
   markRunFailed(trigger: DueTrigger | Trigger, run: ClaimedRun, message: string): Promise<void>
   markRunDispatched(
@@ -1026,6 +1062,17 @@ export interface TriggerDispatchRepo {
     sessionId: string,
     sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'>,
   ): Promise<void>
+}
+
+export type TriggerDispatchQueueMessage = {
+  type: 'trigger.dispatch'
+  triggerId: string
+  projectId: string
+}
+
+export interface TriggerDispatchQueue {
+  enqueue(message: TriggerDispatchQueueMessage, options?: { delaySeconds?: number }): Promise<void>
+  configured(): boolean
 }
 
 // --- projects ---

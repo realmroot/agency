@@ -3,7 +3,8 @@ import { createDeps } from './composition'
 import type { Env } from './env'
 import { type LogContext, logError } from './logging'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
-import type { CloudTurnQueueMessage } from './usecases/ports'
+import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from './usecases/dispatch-triggers'
+import type { CloudTurnQueueMessage, TriggerDispatchQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
 import {
   consumeCloudTurnQueueMessage,
@@ -54,6 +55,9 @@ export default {
       scheduledAt,
     })
     waitUntilLogged(ctx, 'scheduled.idle-timeouts.failed', markIdleTimedOutSessions(createDeps(env)), { scheduledAt })
+    waitUntilLogged(ctx, 'scheduled.serial-http-triggers.failed', recoverSerialHttpTriggers(createDeps(env)), {
+      scheduledAt,
+    })
     // The model catalog changes slowly; refresh once an hour (the cron fires
     // every minute, so gate on minute 0) rather than every tick.
     if (new Date(event.scheduledTime).getUTCMinutes() === 0) {
@@ -68,12 +72,20 @@ export default {
     const deadLetter = batch.queue.endsWith('-dlq')
     const deps = createDeps(env)
     for (const message of batch.messages) {
-      const body = message.body as CloudTurnQueueMessage
+      const body = message.body as CloudTurnQueueMessage | TriggerDispatchQueueMessage
       try {
+        if (body.type === 'trigger.dispatch') {
+          const result = await dispatchNextSerialHttpTrigger(deps, body.projectId, body.triggerId)
+          if (result.pending) {
+            await deps.triggerDispatchQueue?.enqueue(body, result.blocked ? { delaySeconds: 5 } : undefined)
+          }
+          message.ack()
+          continue
+        }
         if (deadLetter) {
-          await markCloudTurnDeadLettered(deps, body)
+          await markCloudTurnDeadLettered(deps, body as CloudTurnQueueMessage)
         } else {
-          await consumeCloudTurnQueueMessage(deps, body)
+          await consumeCloudTurnQueueMessage(deps, body as CloudTurnQueueMessage)
         }
         message.ack()
       } catch (error) {

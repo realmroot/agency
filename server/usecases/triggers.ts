@@ -113,7 +113,9 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
 
 export interface UpdateTriggerPatch {
   name?: string
-  source?: { type: 'schedule'; schedule?: Partial<TriggerSchedule> } | { type: 'http' }
+  source?:
+    | { type: 'schedule'; schedule?: Partial<TriggerSchedule> }
+    | { type: 'http'; concurrency?: { mode: 'parallel' | 'serial' } }
   suspend?: boolean
   template?: {
     metadata?: Partial<TriggerSessionTemplate['metadata']>
@@ -144,7 +146,17 @@ function mergeSource(trigger: Trigger, patch: UpdateTriggerPatch): Pick<TriggerC
         schedule: 'HTTP triggers do not use schedule timing.',
       })
     }
-    return { source: { type: 'http' }, nextDueAt: null }
+    return {
+      source: {
+        type: 'http',
+        ...(patch.source.concurrency !== undefined
+          ? { concurrency: patch.source.concurrency }
+          : current.type === 'http' && current.concurrency !== undefined
+            ? { concurrency: current.concurrency }
+            : {}),
+      },
+      nextDueAt: null,
+    }
   }
   if (patch.source?.type === 'schedule' || (!patch.source && current.type === 'schedule')) {
     const currentSchedule = current.type === 'schedule' ? current.schedule : null
@@ -170,7 +182,13 @@ function mergeSource(trigger: Trigger, patch: UpdateTriggerPatch): Pick<TriggerC
       schedule: 'HTTP triggers do not use schedule timing.',
     })
   }
-  return { source: { type: 'http' }, nextDueAt: null }
+  return {
+    source: {
+      type: 'http',
+      ...(current.type === 'http' && current.concurrency !== undefined ? { concurrency: current.concurrency } : {}),
+    },
+    nextDueAt: null,
+  }
 }
 
 export interface UpdateTriggerResult {

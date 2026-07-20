@@ -11,12 +11,28 @@ import {
   type AuthScope,
   type ClaimedRun,
   type DueTrigger,
+  type PendingHttpRun,
   type RuntimeSessionHandle,
   TriggerConflictError,
+  type TriggerDispatchRepo,
   TriggerValidationError,
 } from './ports'
 import { createSession, reopenSession } from './runtime/sessions'
 import { sendSessionMessage } from './sessions'
+
+type SerialTriggerDispatchRepo = Pick<
+  TriggerDispatchRepo,
+  | 'enqueueHttpRun'
+  | 'claimNextHttpRun'
+  | 'requeueHttpRun'
+  | 'staleHttpRuns'
+  | 'hasPendingHttpRuns'
+  | 'pendingHttpTriggers'
+>
+
+function serialTriggerDispatchRepo(deps: Deps): SerialTriggerDispatchRepo {
+  return deps.triggerDispatch
+}
 
 export interface ScheduleDispatchResult {
   heartbeatAt: string
@@ -312,18 +328,21 @@ export interface HttpTriggerDispatchInput {
   idempotencyKey?: string | null
 }
 
+type HttpDispatchResult = {
+  runId: string
+  triggerId: string
+  triggeredAt: string
+  state: 'queued' | 'dispatched' | 'failed'
+  sessionId: string | null
+  errorMessage: string | null
+  replayed?: boolean
+}
+
 export async function dispatchHttpTrigger(
   deps: Deps,
   auth: AuthScope,
   input: HttpTriggerDispatchInput,
-): Promise<{
-  runId: string
-  triggerId: string
-  triggeredAt: string
-  state: 'dispatched' | 'failed'
-  sessionId: string | null
-  errorMessage: string | null
-}> {
+): Promise<HttpDispatchResult> {
   const { trigger } = input
   if (trigger.spec.source.type !== 'http') {
     throw new TriggerConflictError('Only HTTP triggers can create runs from requests')
@@ -358,6 +377,16 @@ export async function dispatchHttpTrigger(
   }
 
   const requestMetadata = httpTriggerBodyMetadata(input.context.body)
+  if (trigger.spec.source.concurrency?.mode === 'serial') {
+    return dispatchSerialHttpTrigger(deps, auth, {
+      trigger,
+      triggeredAt,
+      keyHash,
+      renderedPrompt,
+      requestMetadata,
+      idempotencyKey: input.idempotencyKey ?? null,
+    })
+  }
   const run = await deps.triggerDispatch.claimHttpRun(
     auth,
     trigger,
@@ -457,4 +486,253 @@ export async function dispatchHttpTrigger(
     sessionId: result.value.metadata.uid,
     errorMessage: null,
   }
+}
+
+async function dispatchSerialHttpTrigger(
+  deps: Deps,
+  auth: AuthScope,
+  input: {
+    trigger: Trigger
+    triggeredAt: string
+    keyHash: string | null
+    renderedPrompt: string
+    requestMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'>
+    idempotencyKey: string | null
+  },
+): Promise<HttpDispatchResult> {
+  const repo = serialTriggerDispatchRepo(deps)
+  const enqueued = await repo.enqueueHttpRun(
+    auth,
+    input.trigger,
+    input.triggeredAt,
+    input.idempotencyKey,
+    input.requestMetadata,
+    { routingKeyHash: input.keyHash, renderedPrompt: input.renderedPrompt },
+  )
+  if (enqueued.replayed) {
+    await wakeHttpTrigger(deps, auth.project.id, input.trigger.metadata.uid)
+    return {
+      runId: enqueued.runId,
+      triggerId: input.trigger.metadata.uid,
+      triggeredAt: input.triggeredAt,
+      state: 'queued',
+      sessionId: null,
+      errorMessage: null,
+      replayed: true,
+    }
+  }
+
+  const claimed = await repo.claimNextHttpRun(input.trigger.metadata.uid)
+
+  if (claimed) {
+    const result = await dispatchClaimedSerialHttpRunWithRecovery(deps, input.trigger, claimed)
+    if (await repo.hasPendingHttpRuns(input.trigger.metadata.uid)) {
+      await wakeHttpTrigger(deps, auth.project.id, input.trigger.metadata.uid, 5)
+    }
+    if (claimed.run.id === enqueued.run.id) return result
+  }
+
+  if (enqueued.wake) {
+    await wakeHttpTrigger(deps, auth.project.id, input.trigger.metadata.uid, 5)
+  }
+  return {
+    runId: enqueued.run.id,
+    triggerId: input.trigger.metadata.uid,
+    triggeredAt: input.triggeredAt,
+    state: 'queued',
+    sessionId: null,
+    errorMessage: null,
+  }
+}
+
+function pendingRunAuth(run: PendingHttpRun): AuthScope {
+  return {
+    organization: { id: run.organizationId, name: run.organizationName },
+    project: { id: run.projectId, name: run.projectName },
+    user: { id: run.requestedByUserId },
+    roles: ['system'],
+    permissions: ['*'],
+  }
+}
+
+async function dispatchClaimedSerialHttpRun(
+  deps: Deps,
+  trigger: Trigger,
+  pending: PendingHttpRun,
+): Promise<HttpDispatchResult> {
+  const auth = pendingRunAuth(pending)
+  const requestMetadata = pending.run.metadata as Pick<ResourceMetadata, 'labels' | 'annotations'>
+  const existingSession = pending.routingKeyHash
+    ? await deps.sessions.findReusableHttpTriggerSession(auth.project.id, trigger.metadata.uid, pending.routingKeyHash)
+    : null
+  const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
+    labels: mergeStringMaps(trigger.spec.template.metadata.labels, requestMetadata.labels ?? {}),
+    annotations: {
+      ...trigger.spec.template.metadata.annotations,
+      ...(requestMetadata.annotations ?? {}),
+      ...(pending.routingKeyHash ? { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: pending.routingKeyHash } : {}),
+      source: 'http-trigger',
+      httpTriggerId: trigger.metadata.uid,
+      httpRunId: pending.run.id,
+      triggeredAt: pending.run.scheduledFor,
+      correlationId: pending.run.correlationId,
+    },
+  }
+
+  if (existingSession) {
+    const outcome = await dispatchToReusableHttpSession(
+      deps,
+      auth,
+      existingSession,
+      pending.renderedPrompt,
+      pending.run.correlationId,
+    )
+    if (!outcome.ok) {
+      await deps.triggerDispatch.markRunFailed(trigger, pending.run, outcome.message)
+      await recordHttpDispatch(deps, auth, trigger, pending.run, { ok: false, message: outcome.message })
+      return {
+        runId: pending.run.id,
+        triggerId: trigger.metadata.uid,
+        triggeredAt: pending.run.scheduledFor,
+        state: 'failed',
+        sessionId: null,
+        errorMessage: outcome.message,
+      }
+    }
+    await deps.triggerDispatch.markRunDispatched(trigger, pending.run, existingSession.id, {
+      ...sessionMetadata,
+      annotations: { ...sessionMetadata.annotations, reusedSession: 'true' },
+    })
+    await recordHttpDispatch(deps, auth, trigger, pending.run, { ok: true, sessionId: existingSession.id })
+    return {
+      runId: pending.run.id,
+      triggerId: trigger.metadata.uid,
+      triggeredAt: pending.run.scheduledFor,
+      state: 'dispatched',
+      sessionId: existingSession.id,
+      errorMessage: null,
+    }
+  }
+
+  const result = await createSession(deps, auth, {
+    agentId: trigger.spec.template.spec.agentId,
+    environmentId: trigger.spec.template.spec.environmentId,
+    options: {
+      name: trigger.metadata.name,
+      metadata: sessionMetadata,
+      runtime: trigger.spec.template.spec.runtime,
+      prompt: pending.renderedPrompt,
+      env: trigger.spec.template.spec.env,
+      envFrom: trigger.spec.template.spec.envFrom,
+      volumes: trigger.spec.template.spec.volumes,
+      volumeMounts: trigger.spec.template.spec.volumeMounts,
+    },
+    requestId: pending.run.correlationId,
+  })
+  if (!result.ok) {
+    const message = result.error.message
+    await deps.triggerDispatch.markRunFailed(trigger, pending.run, message)
+    await recordHttpDispatch(deps, auth, trigger, pending.run, { ok: false, message })
+    return {
+      runId: pending.run.id,
+      triggerId: trigger.metadata.uid,
+      triggeredAt: pending.run.scheduledFor,
+      state: 'failed',
+      sessionId: null,
+      errorMessage: message,
+    }
+  }
+  await deps.triggerDispatch.markRunDispatched(trigger, pending.run, result.value.metadata.uid, sessionMetadata)
+  await recordHttpDispatch(deps, auth, trigger, pending.run, { ok: true, sessionId: result.value.metadata.uid })
+  return {
+    runId: pending.run.id,
+    triggerId: trigger.metadata.uid,
+    triggeredAt: pending.run.scheduledFor,
+    state: 'dispatched',
+    sessionId: result.value.metadata.uid,
+    errorMessage: null,
+  }
+}
+
+async function dispatchClaimedSerialHttpRunWithRecovery(
+  deps: Deps,
+  trigger: Trigger,
+  pending: PendingHttpRun,
+): Promise<HttpDispatchResult> {
+  try {
+    return await dispatchClaimedSerialHttpRun(deps, trigger, pending)
+  } catch (error) {
+    await serialTriggerDispatchRepo(deps).requeueHttpRun(pending.run.id)
+    await wakeHttpTrigger(deps, pending.projectId, pending.triggerId, 5)
+    throw error
+  }
+}
+
+async function wakeHttpTrigger(deps: Deps, projectId: string, triggerId: string, delaySeconds = 0) {
+  await deps.triggerDispatchQueue?.enqueue(
+    { type: 'trigger.dispatch', triggerId, projectId },
+    delaySeconds > 0 ? { delaySeconds } : undefined,
+  )
+}
+
+export async function dispatchNextSerialHttpTrigger(
+  deps: Deps,
+  projectId: string,
+  triggerId: string,
+): Promise<{ pending: boolean; blocked: boolean }> {
+  const repo = serialTriggerDispatchRepo(deps)
+  const trigger = await deps.triggers.find(projectId, triggerId)
+  if (trigger?.spec.source.type !== 'http') {
+    return { pending: false, blocked: false }
+  }
+  if (trigger.metadata.archivedAt !== null || trigger.spec.suspend) {
+    return { pending: await repo.hasPendingHttpRuns(triggerId), blocked: true }
+  }
+  const claimed = await repo.claimNextHttpRun(triggerId)
+  if (!claimed) {
+    return { pending: await repo.hasPendingHttpRuns(triggerId), blocked: true }
+  }
+  await dispatchClaimedSerialHttpRunWithRecovery(deps, trigger, claimed)
+  return { pending: await repo.hasPendingHttpRuns(triggerId), blocked: false }
+}
+
+const SERIAL_HTTP_DISPATCH_STALE_MS = 5 * 60 * 1000
+
+async function recoverStaleSerialHttpRuns(deps: Deps, limit: number, now: Date): Promise<void> {
+  const repo = serialTriggerDispatchRepo(deps)
+  const staleBefore = new Date(now.getTime() - SERIAL_HTTP_DISPATCH_STALE_MS).toISOString()
+  const staleRuns = await repo.staleHttpRuns(staleBefore, limit)
+  for (const pending of staleRuns) {
+    const trigger = await deps.triggers.find(pending.projectId, pending.triggerId)
+    if (!trigger) continue
+    if (pending.existingSession) {
+      const auth = pendingRunAuth(pending)
+      await deps.triggerDispatch.markRunDispatched(
+        trigger,
+        pending.run,
+        pending.existingSession.id,
+        pending.existingSession.metadata,
+      )
+      await recordHttpDispatch(deps, auth, trigger, pending.run, {
+        ok: true,
+        sessionId: pending.existingSession.id,
+      })
+      continue
+    }
+    await repo.requeueHttpRun(pending.run.id)
+  }
+}
+
+export async function recoverSerialHttpTriggers(deps: Deps, limit = 100, now = new Date()): Promise<number> {
+  const repo = serialTriggerDispatchRepo(deps)
+  await recoverStaleSerialHttpRuns(deps, limit, now)
+  const pending = await repo.pendingHttpTriggers(limit)
+  for (const item of pending) {
+    if (deps.triggerDispatchQueue?.configured()) {
+      await wakeHttpTrigger(deps, item.projectId, item.triggerId)
+    } else {
+      await dispatchNextSerialHttpTrigger(deps, item.projectId, item.triggerId)
+    }
+  }
+  return pending.length
 }

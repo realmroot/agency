@@ -13,14 +13,14 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 
 const ROOT = process.cwd()
 const RUNTIME = 'codex'
 const PROVIDER = 'workers-ai'
-const MODEL = 'gpt-5.3-codex'
+const MODEL = smokeCodexModel()
 const DONE_MARKER = 'AMA_FULL_SMOKE_DONE'
 const RESULT_MARKER = 'AMA_FULL_SMOKE_RUNTIME_OK'
 const SUBAGENT_RESULT = '4'
@@ -28,6 +28,24 @@ const BACKFILL_REQUEST_ID = 'full_smoke_backfill'
 const timeoutMs = Number(process.env.AMA_FULL_SMOKE_TIMEOUT_MS ?? 5 * 60 * 1000)
 
 const packages = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] }
+
+function smokeCodexModel() {
+  if (process.env.AMA_FULL_SMOKE_MODEL) return process.env.AMA_FULL_SMOKE_MODEL
+  const hostHome = process.env.AMA_RUNTIME_BRIDGE_HOST_HOME ?? homedir()
+  try {
+    const cache = JSON.parse(readFileSync(join(hostHome, '.codex', 'models_cache.json'), 'utf8'))
+    const models = Array.isArray(cache.models) ? cache.models : []
+    const visible = models
+      .filter((model) => typeof model?.slug === 'string' && model.slug && model.visibility !== 'hide')
+      .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0))
+    const collaborationModel = visible.find((model) => model.slug === 'gpt-5.3-codex-spark')
+    if (collaborationModel) return collaborationModel.slug
+    if (visible[0]) return visible[0].slug
+  } catch {
+    // The runner uses this same fallback when the host model cache is unavailable.
+  }
+  return 'gpt-5.3-codex'
+}
 
 function info(message) {
   console.log(`[smoke:real] ${message}`)
@@ -524,8 +542,8 @@ async function main() {
         spec: {
           systemPrompt: [
             'You are running the AMA full-chain smoke test.',
-            'Launch exactly one sub-agent/collaborating agent to independently answer the arithmetic question: what is 2+2?',
-            'Wait for that sub-agent to finish before completing the task.',
+            'Before using any file or shell tool, you MUST call the spawn_agent collaboration tool exactly once with the arithmetic-checker agent and ask it to reply only 4 for 2+2.',
+            'You MUST call wait for that child and receive 4 before continuing. If the child result is unavailable, fail instead of completing the task.',
             `Write exactly "${RESULT_MARKER}\\n" to ama-full-smoke-result.txt in the workspace root.`,
             `When done, reply exactly "${DONE_MARKER}".`,
           ].join('\n'),
@@ -537,6 +555,7 @@ async function main() {
               name: 'arithmetic-checker',
               description: 'Answers one arithmetic smoke-test question.',
               systemPrompt: 'Answer the delegated arithmetic question exactly and do not modify files.',
+              model: MODEL,
             },
           ],
           mcpConnectors: [],
@@ -559,8 +578,8 @@ async function main() {
         },
         prompt: [
           'Run the full-chain AMA smoke test.',
-          `Launch exactly one sub-agent or collaborating agent and ask it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
-          'Wait for the sub-agent result before finishing.',
+          `Before any other tool call, you MUST call spawn_agent exactly once with subagent type arithmetic-checker and prompt it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
+          `Then you MUST call wait for that child and receive "${SUBAGENT_RESULT}" before using file or shell tools.`,
           `Ensure ama-full-smoke-result.txt contains exactly "${RESULT_MARKER}\\n".`,
           `Reply exactly "${DONE_MARKER}" and nothing else.`,
         ].join('\n'),

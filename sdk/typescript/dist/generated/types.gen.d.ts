@@ -1187,11 +1187,15 @@ export type TriggerSource = {
     schedule: TriggerSchedule;
 } | {
     type: 'http';
+    concurrency?: HttpTriggerConcurrency;
 };
 export type TriggerSchedule = {
     type: 'interval';
     intervalSeconds: number;
     windowSeconds: number;
+};
+export type HttpTriggerConcurrency = {
+    mode: 'parallel' | 'serial';
 };
 export type TriggerTemplate = {
     metadata: TriggerTemplateMetadata;
@@ -1278,6 +1282,7 @@ export type CreateTriggerRequest = {
             };
         } | {
             type: 'http';
+            concurrency?: HttpTriggerConcurrency;
         };
         suspend?: boolean;
         template: {
@@ -1322,6 +1327,7 @@ export type UpdateTriggerRequest = {
             };
         } | {
             type: 'http';
+            concurrency?: HttpTriggerConcurrency;
         };
         suspend?: boolean;
         template?: {
@@ -1368,7 +1374,7 @@ export type TriggerRunSpec = {
     };
 };
 export type TriggerRunStatus = {
-    phase: 'claimed' | 'dispatched' | 'failed';
+    phase: 'claimed' | 'queued' | 'dispatching' | 'dispatched' | 'failed';
     idempotencyKey: string;
     correlationId: string;
     heartbeatAt: string | null;
@@ -3358,7 +3364,7 @@ export type ListTriggerRunsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
-        state?: 'claimed' | 'dispatched' | 'failed';
+        state?: 'claimed' | 'queued' | 'dispatching' | 'dispatched' | 'failed';
     };
     url: '/api/v1/triggers/{triggerId}/runs';
 };

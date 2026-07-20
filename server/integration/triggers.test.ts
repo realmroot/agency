@@ -1,5 +1,11 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
+import { createTriggerDispatchRepo } from '@server/adapters/repos/trigger-dispatch'
+import { createDeps } from '@server/composition'
+import { createDb } from '@server/db/client'
+import type { Env } from '@server/env'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from '@server/usecases/dispatch-triggers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
 
@@ -21,7 +27,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
   })
 }
 
-async function createEnvironment(authorization: string) {
+async function createEnvironment(authorization: string, type: 'cloud' | 'self_hosted' = 'cloud') {
   const res = await jsonFetch('/api/v1/environments', authorization, {
     method: 'POST',
     body: JSON.stringify(
@@ -30,7 +36,7 @@ async function createEnvironment(authorization: string) {
           name: `Trigger workspace ${crypto.randomUUID()}`,
         },
         {
-          type: 'cloud',
+          type,
           networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true },
           packages: EMPTY_PACKAGES,
         },
@@ -149,7 +155,9 @@ async function createTrigger(
   return (await res.json()) as {
     metadata: { uid: string; name: string; archivedAt: string | null }
     spec: {
-      source: { type: 'schedule'; schedule: { intervalSeconds: number; windowSeconds: number } } | { type: 'http' }
+      source:
+        | { type: 'schedule'; schedule: { intervalSeconds: number; windowSeconds: number } }
+        | { type: 'http'; concurrency?: { mode: 'parallel' | 'serial' } }
       suspend: boolean
       template: {
         metadata: { labels: Record<string, string>; annotations: Record<string, string> }
@@ -347,6 +355,41 @@ describe('[CF] /api/v1/triggers', () => {
         expect.objectContaining({ action: 'trigger.archive', resourceId: firstId }),
       ]),
     )
+  })
+
+  it('persists HTTP trigger concurrency through create, update, and read', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization)
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Serial issue webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+
+    expect(trigger.spec.source).toEqual({ type: 'http', concurrency: { mode: 'serial' } })
+
+    const parallelRes = await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { source: { type: 'http', concurrency: { mode: 'parallel' } } } }),
+    })
+    expect(parallelRes.status).toBe(200)
+    await expect(parallelRes.json()).resolves.toMatchObject({
+      spec: { source: { type: 'http', concurrency: { mode: 'parallel' } } },
+    })
+
+    const serialRes = await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { source: { type: 'http', concurrency: { mode: 'serial' } } } }),
+    })
+    expect(serialRes.status).toBe(200)
+
+    const readRes = await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization)
+    expect(readRes.status).toBe(200)
+    await expect(readRes.json()).resolves.toMatchObject({
+      spec: { source: { type: 'http', concurrency: { mode: 'serial' } } },
+    })
   })
 
   it('rejects secret-like metadata keys on create and update before storing trigger metadata', async () => {
@@ -642,6 +685,271 @@ describe('[CF] /api/v1/triggers', () => {
     await expect(failedRunsRes.json()).resolves.toMatchObject({ data: [] })
   })
 
+  it('claims one serial HTTP run at a time and preserves D1 FIFO under concurrent claim attempts', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization)
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'FIFO webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+    const owner = await env.DB.prepare(
+      'select organization_id as organizationId, project_id as projectId, created_by_user_id as userId from triggers where id = ?',
+    )
+      .bind(triggerId)
+      .first<{ organizationId: string; projectId: string; userId: string }>()
+    expect(owner).not.toBeNull()
+    const timestamp = new Date().toISOString()
+    const runIds = [`httprun_${crypto.randomUUID()}`, `httprun_${crypto.randomUUID()}`]
+
+    await env.DB.batch(
+      runIds.flatMap((runId, index) => [
+        env.DB.prepare(
+          `insert into trigger_runs
+            (id, organization_id, project_id, trigger_id, scheduled_for, heartbeat_at, triggered_at, state,
+             idempotency_key, session_id, correlation_id, error_message, metadata, created_at, updated_at)
+           values (?, ?, ?, ?, null, null, ?, 'queued', ?, null, ?, null, '{}', ?, ?)`,
+        ).bind(
+          runId,
+          owner!.organizationId,
+          owner!.projectId,
+          triggerId,
+          timestamp,
+          `http:${triggerId}:fifo-${index}`,
+          `http:${triggerId}:fifo-${index}`,
+          timestamp,
+          timestamp,
+        ),
+        env.DB.prepare(
+          `insert into http_trigger_pending_runs
+            (run_id, trigger_id, organization_id, organization_name, project_id, project_name,
+             requested_by_user_id, routing_key_hash, rendered_prompt, created_at)
+           values (?, ?, ?, 'Org', ?, 'Project', ?, ?, ?, ?)`,
+        ).bind(
+          runId,
+          triggerId,
+          owner!.organizationId,
+          owner!.projectId,
+          owner!.userId,
+          `routing-hash-${index}`,
+          `Prompt ${index}`,
+          timestamp,
+        ),
+      ]),
+    )
+
+    const repo = createTriggerDispatchRepo(createDb(env as unknown as Env))
+    const contenders = await Promise.all([repo.claimNextHttpRun!(triggerId), repo.claimNextHttpRun!(triggerId)])
+    const claimed = contenders.filter((run) => run !== null)
+    expect(claimed).toHaveLength(1)
+    expect(claimed[0]?.run.id).toBe(runIds[0])
+    await expect(repo.claimNextHttpRun!(triggerId)).resolves.toBeNull()
+
+    await env.DB.batch([
+      env.DB.prepare("update trigger_runs set state = 'failed' where id = ?").bind(runIds[0]),
+      env.DB.prepare('delete from http_trigger_pending_runs where run_id = ?').bind(runIds[0]),
+    ])
+    await expect(repo.claimNextHttpRun!(triggerId)).resolves.toMatchObject({ run: { id: runIds[1] } })
+  })
+
+  it('claims an active routing key ahead of FIFO and permits only one claim while that session becomes idle', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization, 'self_hosted')
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Active routing-key race webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+    const activeRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'active-routing-key-run' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:active' }),
+    })
+    expect(activeRes.status).toBe(201)
+    const activeRun = (await activeRes.json()) as { status: { sessionId: string | null } }
+    expect(activeRun.status.sessionId).toEqual(expect.any(String))
+    const activeSession = await env.DB.prepare('select state, metadata from sessions where id = ?')
+      .bind(activeRun.status.sessionId)
+      .first<{ state: string; metadata: string }>()
+    expect(activeSession?.state).toBe('pending')
+    const activeRoutingKeyHash = (JSON.parse(activeSession!.metadata) as { annotations: Record<string, string> })
+      .annotations[AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]
+    expect(activeRoutingKeyHash).toEqual(expect.any(String))
+
+    const owner = await env.DB.prepare(
+      'select organization_id as organizationId, project_id as projectId, created_by_user_id as userId from triggers where id = ?',
+    )
+      .bind(triggerId)
+      .first<{ organizationId: string; projectId: string; userId: string }>()
+    expect(owner).not.toBeNull()
+    const timestamp = new Date().toISOString()
+    const fifoRunId = `httprun_${crypto.randomUUID()}`
+    const activeKeyRunId = `httprun_${crypto.randomUUID()}`
+    await env.DB.batch(
+      [
+        { runId: fifoRunId, routingKeyHash: 'different-routing-key-hash', prompt: 'FIFO issue' },
+        { runId: activeKeyRunId, routingKeyHash: activeRoutingKeyHash!, prompt: 'Active issue follow-up' },
+      ].flatMap(({ runId, routingKeyHash, prompt }, index) => [
+        env.DB.prepare(
+          `insert into trigger_runs
+            (id, organization_id, project_id, trigger_id, scheduled_for, heartbeat_at, triggered_at, state,
+             idempotency_key, session_id, correlation_id, error_message, metadata, created_at, updated_at)
+           values (?, ?, ?, ?, null, null, ?, 'queued', ?, null, ?, null, '{}', ?, ?)`,
+        ).bind(
+          runId,
+          owner!.organizationId,
+          owner!.projectId,
+          triggerId,
+          timestamp,
+          `http:${triggerId}:active-race-${index}`,
+          `http:${triggerId}:active-race-${index}`,
+          timestamp,
+          timestamp,
+        ),
+        env.DB.prepare(
+          `insert into http_trigger_pending_runs
+            (run_id, trigger_id, organization_id, organization_name, project_id, project_name,
+             requested_by_user_id, routing_key_hash, rendered_prompt, created_at)
+           values (?, ?, ?, 'Org', ?, 'Project', ?, ?, ?, ?)`,
+        ).bind(
+          runId,
+          triggerId,
+          owner!.organizationId,
+          owner!.projectId,
+          owner!.userId,
+          routingKeyHash,
+          prompt,
+          timestamp,
+        ),
+      ]),
+    )
+
+    const repo = createTriggerDispatchRepo(createDb(env as unknown as Env))
+    const overtaking = await repo.claimNextHttpRun!(triggerId)
+    expect(overtaking?.run.id).toBe(activeKeyRunId)
+    await repo.requeueHttpRun!(activeKeyRunId)
+
+    const contenders = await Promise.all([
+      repo.claimNextHttpRun!(triggerId),
+      env.DB.prepare("update sessions set state = 'idle' where id = ?")
+        .bind(activeRun.status.sessionId)
+        .run()
+        .then(() => repo.claimNextHttpRun!(triggerId)),
+      repo.claimNextHttpRun!(triggerId),
+    ])
+    const claimed = contenders.filter((run) => run !== null)
+    expect(claimed).toHaveLength(1)
+    const dispatching = await env.DB.prepare(
+      "select count(*) as count from trigger_runs where trigger_id = ? and state = 'dispatching'",
+    )
+      .bind(triggerId)
+      .first<{ count: number }>()
+    expect(dispatching?.count).toBe(1)
+  })
+
+  it('repairs stale dispatching runs with and without a session without duplicate creation', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization, 'self_hosted')
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Crash recovery webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+    const createdRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'created-before-crash' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:created-before-crash' }),
+    })
+    expect(createdRes.status).toBe(201)
+    const created = (await createdRes.json()) as {
+      metadata: { uid: string }
+      status: { sessionId: string | null }
+    }
+    expect(created.status.sessionId).toEqual(expect.any(String))
+    const owner = await env.DB.prepare(
+      'select organization_id as organizationId, project_id as projectId, created_by_user_id as userId from triggers where id = ?',
+    )
+      .bind(triggerId)
+      .first<{ organizationId: string; projectId: string; userId: string }>()
+    expect(owner).not.toBeNull()
+    const staleAt = '2026-07-20T11:00:00.000Z'
+    const crashedRunId = `httprun_${crypto.randomUUID()}`
+    const sessionsBefore = await env.DB.prepare('select count(*) as count from sessions where project_id = ?')
+      .bind(owner!.projectId)
+      .first<{ count: number }>()
+
+    await env.DB.batch([
+      env.DB.prepare(
+        "update trigger_runs set state = 'dispatching', session_id = null, updated_at = ? where id = ?",
+      ).bind(staleAt, created.metadata.uid),
+      env.DB.prepare("update sessions set state = 'idle' where id = ?").bind(created.status.sessionId),
+      env.DB.prepare(
+        `insert into http_trigger_pending_runs
+          (run_id, trigger_id, organization_id, organization_name, project_id, project_name,
+           requested_by_user_id, routing_key_hash, rendered_prompt, created_at)
+         values (?, ?, ?, 'Org', ?, 'Project', ?, 'created-routing-hash', 'Created before crash', ?)`,
+      ).bind(created.metadata.uid, triggerId, owner!.organizationId, owner!.projectId, owner!.userId, staleAt),
+      env.DB.prepare(
+        `insert into trigger_runs
+          (id, organization_id, project_id, trigger_id, scheduled_for, heartbeat_at, triggered_at, state,
+           idempotency_key, session_id, correlation_id, error_message, metadata, created_at, updated_at)
+         values (?, ?, ?, ?, null, null, ?, 'dispatching', ?, null, ?, null, '{}', ?, ?)`,
+      ).bind(
+        crashedRunId,
+        owner!.organizationId,
+        owner!.projectId,
+        triggerId,
+        staleAt,
+        `http:${triggerId}:crashed-before-create`,
+        `http:${triggerId}:crashed-before-create`,
+        staleAt,
+        staleAt,
+      ),
+      env.DB.prepare(
+        `insert into http_trigger_pending_runs
+          (run_id, trigger_id, organization_id, organization_name, project_id, project_name,
+           requested_by_user_id, routing_key_hash, rendered_prompt, created_at)
+         values (?, ?, ?, 'Org', ?, 'Project', ?, 'crashed-routing-hash', 'Resume after crash', ?)`,
+      ).bind(crashedRunId, triggerId, owner!.organizationId, owner!.projectId, owner!.userId, staleAt),
+    ])
+
+    const recovered = await recoverSerialHttpTriggers(
+      createDeps(env as unknown as Env),
+      100,
+      new Date('2026-07-20T12:00:00.000Z'),
+    )
+    expect(recovered).toBeGreaterThanOrEqual(1)
+
+    const repaired = await env.DB.prepare(
+      'select id, state, session_id as sessionId from trigger_runs where id in (?, ?)',
+    )
+      .bind(created.metadata.uid, crashedRunId)
+      .all<{ id: string; state: string; sessionId: string | null }>()
+    expect(repaired.results).toEqual(
+      expect.arrayContaining([
+        { id: created.metadata.uid, state: 'dispatched', sessionId: created.status.sessionId },
+        expect.objectContaining({ id: crashedRunId, state: 'dispatched', sessionId: expect.any(String) }),
+      ]),
+    )
+    expect(repaired.results.find((run) => run.id === crashedRunId)?.sessionId).not.toBe(created.status.sessionId)
+    const sessionsAfter = await env.DB.prepare('select count(*) as count from sessions where project_id = ?')
+      .bind(owner!.projectId)
+      .first<{ count: number }>()
+    expect(sessionsAfter?.count).toBe((sessionsBefore?.count ?? 0) + 1)
+    const pending = await env.DB.prepare(
+      'select count(*) as count from http_trigger_pending_runs where run_id in (?, ?)',
+    )
+      .bind(created.metadata.uid, crashedRunId)
+      .first<{ count: number }>()
+    expect(pending?.count).toBe(0)
+  })
+
   it('creates an HTTP trigger run from request fields [spec: triggers/http-dispatch]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
@@ -814,6 +1122,89 @@ describe('[CF] /api/v1/triggers', () => {
         },
       },
     })
+  })
+
+  it('queues a different serial subject, delivers the active subject, then resumes FIFO after idle', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization, 'self_hosted')
+    const trigger = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Serial maintainer webhook',
+      source: { type: 'http', concurrency: { mode: 'serial' } },
+      template: {
+        metadata: { labels: {}, annotations: {} },
+        spec: {
+          agentId: agent.id,
+          environmentId: environment.id,
+          runtime: 'ama',
+          promptTemplate: 'Handle {{ .body.event }} for {{ .body.routing_key }}.',
+          env: {},
+          envFrom: [],
+          volumes: [],
+          volumeMounts: [],
+        },
+      },
+      nextDueAt: undefined,
+    })
+    const triggerId = trigger.metadata.uid
+
+    const firstRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-delivery-1' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:1', event: 'issues.opened' }),
+    })
+    expect(firstRes.status).toBe(201)
+    const first = (await firstRes.json()) as { status: { phase: string; sessionId: string | null } }
+    expect(first.status).toMatchObject({ phase: 'dispatched', sessionId: expect.any(String) })
+
+    const secondRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-delivery-2' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:2', event: 'issues.opened' }),
+    })
+    expect(secondRes.status).toBe(201)
+    const second = (await secondRes.json()) as {
+      metadata: { uid: string }
+      status: { phase: string; sessionId: string | null }
+    }
+    expect(second.status).toEqual(expect.objectContaining({ phase: 'queued', sessionId: null }))
+
+    const sameSubjectRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-delivery-3' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:1', event: 'issue_comment.created' }),
+    })
+    expect(sameSubjectRes.status).toBe(201)
+    await expect(sameSubjectRes.json()).resolves.toMatchObject({
+      status: { phase: 'dispatched', sessionId: first.status.sessionId },
+    })
+
+    const replayRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'serial-delivery-2' },
+      body: JSON.stringify({ routing_key: 'github:owner/repo:issue:2', event: 'issues.opened' }),
+    })
+    expect(replayRes.status).toBe(201)
+    expect(replayRes.headers.get('idempotency-replayed')).toBe('true')
+    await expect(replayRes.json()).resolves.toMatchObject({
+      metadata: { uid: second.metadata.uid },
+      status: { phase: 'queued', sessionId: null },
+    })
+
+    await env.DB.prepare("update sessions set state = 'idle' where id = ?").bind(first.status.sessionId).run()
+    const owner = await env.DB.prepare('select project_id as projectId from triggers where id = ?')
+      .bind(triggerId)
+      .first<{ projectId: string }>()
+    expect(owner).not.toBeNull()
+    await expect(
+      dispatchNextSerialHttpTrigger(createDeps(env as unknown as Env), owner!.projectId, triggerId),
+    ).resolves.toEqual({ pending: false, blocked: false })
+
+    const resumedRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs/${second.metadata.uid}`, authorization)
+    expect(resumedRes.status).toBe(200)
+    const resumed = (await resumedRes.json()) as { status: { phase: string; sessionId: string | null } }
+    expect(resumed.status).toMatchObject({ phase: 'dispatched', sessionId: expect.any(String) })
+    expect(resumed.status.sessionId).not.toBe(first.status.sessionId)
   })
 
   it('does not dispatch paused or archived triggers [spec: triggers/inactive]', async () => {
