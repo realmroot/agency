@@ -4,7 +4,7 @@ import type { Env } from './env'
 import { type LogContext, logError } from './logging'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
 import {
-  dispatchNextSerialHttpTrigger,
+  consumeSerialHttpTriggerWake,
   recoverSerialHttpTriggers,
   wakeSerialHttpTriggerForSettledSession,
 } from './usecases/dispatch-triggers'
@@ -79,10 +79,7 @@ export default {
       const body = message.body as CloudTurnQueueMessage | TriggerDispatchQueueMessage
       try {
         if (body.type === 'trigger.dispatch') {
-          const result = await dispatchNextSerialHttpTrigger(deps, body.projectId, body.triggerId)
-          if (result.pending) {
-            await deps.triggerDispatchQueue?.enqueue(body, result.blocked ? { delaySeconds: 5 } : undefined)
-          }
+          await consumeSerialHttpTriggerWake(deps, body)
           message.ack()
           continue
         }

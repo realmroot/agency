@@ -29,6 +29,7 @@ vi.mock('./runtime/sessions', () => ({
 }))
 
 import {
+  consumeSerialHttpTriggerWake,
   dispatchDueScheduledTriggers,
   dispatchHttpTrigger,
   dispatchNextSerialHttpTrigger,
@@ -1877,6 +1878,54 @@ describe('[spec: triggers/http-serial-dispatch] serial HTTP trigger dispatch', (
     expect(blocked).toEqual({ pending: true, blocked: true })
     expect(resumed).toEqual({ pending: false, blocked: false })
     expect(runtimeSessions.createSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('consumes a blocked wake without creating a polling loop [spec: triggers/http-serial-wake-bounded]', async () => {
+    const enqueue = vi.fn()
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        claimNextHttpRun: async () => null,
+        hasPendingHttpRuns: async () => true,
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue,
+      },
+    })
+
+    await consumeSerialHttpTriggerWake(deps, {
+      type: 'trigger.dispatch',
+      projectId: 'project_1',
+      triggerId: 'trigger_http',
+    })
+
+    expect(enqueue).not.toHaveBeenCalled()
+  })
+
+  it('continues immediately after a wake dispatches one of multiple eligible runs', async () => {
+    const claimed = pendingRun({ run: { id: 'httprun_first_eligible' } })
+    const enqueue = vi.fn()
+    const deps = fakeDeps({
+      triggers: { find: async () => serialHttpTrigger() },
+      triggerDispatch: {
+        claimNextHttpRun: async () => claimed,
+        hasPendingHttpRuns: async () => true,
+      },
+      triggerDispatchQueue: {
+        configured: () => true,
+        enqueue,
+      },
+    })
+    const message = {
+      type: 'trigger.dispatch' as const,
+      projectId: 'project_1',
+      triggerId: 'trigger_http',
+    }
+
+    await consumeSerialHttpTriggerWake(deps, message)
+
+    expect(enqueue).toHaveBeenCalledWith(message)
   })
 
   it('leaves queued runs blocked when the trigger is suspended', async () => {

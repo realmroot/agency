@@ -76,6 +76,13 @@ Feature: Triggers
     And the active routing key is delivered immediately to its existing session
     And queued routing keys dispatch in AMA acceptance order with at most one active session
 
+  @triggers/http-serial-wake-bounded @usecase
+  Scenario: Blocked serial trigger wake signals remain bounded
+    Given a serial HTTP trigger has queued runs blocked by an active session
+    When a queued wake signal cannot claim the next run
+    Then the blocked wake signal is consumed without scheduling another polling signal
+    And session settlement or heartbeat recovery can wake the trigger again
+
   @triggers/inactive @api
   Scenario: Inactive triggers do not dispatch
     Given a project has paused and archived triggers

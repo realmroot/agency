@@ -15,6 +15,7 @@ import {
   type PendingHttpRun,
   type RuntimeSessionHandle,
   TriggerConflictError,
+  type TriggerDispatchQueueMessage,
   type TriggerDispatchRepo,
   TriggerValidationError,
 } from './ports'
@@ -719,6 +720,13 @@ export async function dispatchNextSerialHttpTrigger(
   }
   await dispatchClaimedSerialHttpRunWithRecovery(deps, trigger, claimed)
   return { pending: await repo.hasPendingHttpRuns(triggerId), blocked: false }
+}
+
+export async function consumeSerialHttpTriggerWake(deps: Deps, message: TriggerDispatchQueueMessage): Promise<void> {
+  const result = await dispatchNextSerialHttpTrigger(deps, message.projectId, message.triggerId)
+  if (result.pending && !result.blocked) {
+    await deps.triggerDispatchQueue?.enqueue(message)
+  }
 }
 
 const SERIAL_HTTP_DISPATCH_STALE_MS = 5 * 60 * 1000
