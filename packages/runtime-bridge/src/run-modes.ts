@@ -17,10 +17,11 @@ import {
   type RuntimeBridgeOutputMessage,
   type RuntimeProviderHandle,
 } from './protocol'
+import type { RuntimeControlQueue } from './runtime-controls'
 
 type RunRequest = Extract<RuntimeBridgeInputMessage, { type: 'run' }>
 
-type RunState = { handle?: RuntimeProviderHandle; done: boolean }
+type RunState = { controls: RuntimeControlQueue }
 
 function sessionEventOutput(requestId: string, event: AmaRuntimeEvent): RuntimeBridgeOutputMessage {
   const canonical = assertAmaRuntimeEvent(event)
@@ -190,8 +191,8 @@ export function deterministicBridgeTestEvents(request: RunRequest): AmaRuntimeEv
 }
 
 // Drives the deterministic/live e2e test-mode run, writing the same NDJSON
-// outputs main.ts's production path emits. Records the live handle on state so
-// control messages (abort/send/permission) still reach it.
+// outputs main.ts's production path emits. Attaches the live handle to the
+// control queue so startup controls (abort/send/permission) still reach it.
 export async function runE2eBridgeTest(
   request: RunRequest,
   state: RunState,
@@ -223,7 +224,7 @@ export async function runE2eBridgeTest(
     return
   }
   const handle = liveBridgeTestHandle(request)
-  state.handle = handle
+  await state.controls.attach(handle)
   const emitLiveResumeToken = createResumeTokenWatcher(handle, (resumeToken) => {
     write({ type: 'resumeToken', requestId: request.requestId, resumeToken })
   })

@@ -6,6 +6,7 @@ import type {
 
 export type {
   AmaRuntimeEvent,
+  RuntimeBridgeControlMessage,
   RuntimeBridgeInputMessage,
   RuntimeBridgeOutputMessage,
   RuntimeBridgeRunMessage,
