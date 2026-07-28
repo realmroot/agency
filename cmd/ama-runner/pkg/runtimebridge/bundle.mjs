@@ -218276,7 +218276,7 @@ async function runE2eBridgeTest(request3, state, write2) {
     return;
   }
   const handle = liveBridgeTestHandle(request3);
-  state.handle = handle;
+  await state.controls.attach(handle);
   const emitLiveResumeToken = createResumeTokenWatcher(handle, (resumeToken) => {
     write2({ type: "resumeToken", requestId: request3.requestId, resumeToken });
   });
@@ -218287,6 +218287,48 @@ async function runE2eBridgeTest(request3, state, write2) {
     emitLiveResumeToken();
   }
   write2({ type: "result", requestId: request3.requestId, result: { resumeToken: handle.getResumeToken?.() } });
+}
+
+// packages/runtime-bridge/src/runtime-controls.ts
+function createRuntimeControlQueue(onPromptRejected) {
+  let handle;
+  const pending = [];
+  let tail = Promise.resolve();
+  const deliver = async (message) => {
+    if (message.type === "abort") {
+      await handle.abort();
+      return;
+    }
+    if (message.type === "permissionDecision") {
+      await handle.resolvePermission?.(message.permissionId, message.allowed, message.reason);
+      return;
+    }
+    try {
+      await handle.send(message.message);
+    } catch (error51) {
+      onPromptRejected(error51 instanceof Error ? error51.message : String(error51));
+    }
+  };
+  const schedule = (message) => {
+    const result = tail.then(() => deliver(message));
+    tail = result.catch(() => {
+    });
+    return result;
+  };
+  return {
+    async attach(nextHandle) {
+      handle = nextHandle;
+      const controls = pending.splice(0);
+      await Promise.all(controls.map(schedule));
+    },
+    async dispatch(message) {
+      if (!handle) {
+        pending.push(message);
+        return;
+      }
+      await schedule(message);
+    }
+  };
 }
 
 // packages/runtime-bridge/src/main.ts
@@ -218319,7 +218361,14 @@ function parseInput(line) {
   return record2;
 }
 async function run(request3) {
-  const state = { done: false };
+  const state = {
+    controls: createRuntimeControlQueue((reason) => {
+      writeSessionEvent(request3.requestId, {
+        type: "runtime.error",
+        payload: { message: `Runtime rejected injected prompt: ${reason}`, code: "runtime_prompt_rejected" }
+      });
+    })
+  };
   active.set(request3.requestId, state);
   try {
     if (isE2eBridgeTest(request3)) {
@@ -218331,7 +218380,7 @@ async function run(request3) {
       ...request3,
       emitProviderEvent: (event) => writeProviderEvent(request3, event)
     });
-    state.handle = handle;
+    await state.controls.attach(handle);
     const emitResumeToken = createResumeTokenWatcher(handle, (resumeToken) => {
       write({ type: "resumeToken", requestId: request3.requestId, resumeToken });
     });
@@ -218346,7 +218395,6 @@ async function run(request3) {
     const message = err2 instanceof Error ? err2.message : String(err2);
     write({ type: "error", requestId: request3.requestId, error: bridgeError(message, "runtime_bridge_error") });
   } finally {
-    state.done = true;
     active.delete(request3.requestId);
   }
 }
@@ -218415,7 +218463,7 @@ async function inventory(request3) {
 }
 async function control(message) {
   const state = active.get(message.requestId);
-  if (!state?.handle) {
+  if (!state) {
     write({
       type: "error",
       requestId: message.requestId,
@@ -218423,23 +218471,7 @@ async function control(message) {
     });
     return;
   }
-  if (message.type === "abort") {
-    await state.handle.abort();
-    return;
-  }
-  if (message.type === "permissionDecision") {
-    await state.handle.resolvePermission?.(message.permissionId ?? "", message.allowed === true, message.reason);
-    return;
-  }
-  try {
-    await state.handle.send(message.message ?? "");
-  } catch (err2) {
-    const reason = err2 instanceof Error ? err2.message : String(err2);
-    writeSessionEvent(message.requestId, {
-      type: "runtime.error",
-      payload: { message: `Runtime rejected injected prompt: ${reason}`, code: "runtime_prompt_rejected" }
-    });
-  }
+  await state.controls.dispatch(message);
 }
 write({ type: "ready" });
 var lines = createInterface2({ input: stdin, crlfDelay: Number.POSITIVE_INFINITY });

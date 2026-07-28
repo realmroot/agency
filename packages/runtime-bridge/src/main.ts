@@ -9,14 +9,13 @@ import {
   type RuntimeBridgeInputMessage,
   type RuntimeBridgeOutputMessage,
   type RuntimeInventoryEntry,
-  type RuntimeProviderHandle,
 } from './protocol'
 import { getProvider, listProviders } from './providers/registry'
 import { isE2eBridgeTest, probeFailureStatus, runE2eBridgeTest, TEST_MODE_RUNTIME_MODELS } from './run-modes'
+import { createRuntimeControlQueue } from './runtime-controls'
 
 type ActiveRun = {
-  handle?: RuntimeProviderHandle
-  done: boolean
+  controls: ReturnType<typeof createRuntimeControlQueue>
 }
 
 const active = new Map<string, ActiveRun>()
@@ -55,7 +54,14 @@ function parseInput(line: string): RuntimeBridgeInputMessage | null {
 }
 
 async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>) {
-  const state: ActiveRun = { done: false }
+  const state: ActiveRun = {
+    controls: createRuntimeControlQueue((reason) => {
+      writeSessionEvent(request.requestId, {
+        type: 'runtime.error',
+        payload: { message: `Runtime rejected injected prompt: ${reason}`, code: 'runtime_prompt_rejected' },
+      })
+    }),
+  }
   active.set(request.requestId, state)
   try {
     if (isE2eBridgeTest(request)) {
@@ -67,7 +73,7 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
       ...request,
       emitProviderEvent: (event) => writeProviderEvent(request, event),
     })
-    state.handle = handle
+    await state.controls.attach(handle)
     // Surface the resume token as soon as the provider learns it so the runner
     // can persist it via lease renewals; waiting for the final result message
     // loses the token when the runner is interrupted mid-run.
@@ -85,7 +91,6 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
     const message = err instanceof Error ? err.message : String(err)
     write({ type: 'error', requestId: request.requestId, error: bridgeError(message, 'runtime_bridge_error') })
   } finally {
-    state.done = true
     active.delete(request.requestId)
   }
 }
@@ -158,7 +163,7 @@ async function inventory(request: Extract<RuntimeBridgeInputMessage, { type: 'in
 
 async function control(message: Exclude<RuntimeBridgeInputMessage, { type: 'run' | 'inventory' }>) {
   const state = active.get(message.requestId)
-  if (!state?.handle) {
+  if (!state) {
     write({
       type: 'error',
       requestId: message.requestId,
@@ -166,25 +171,7 @@ async function control(message: Exclude<RuntimeBridgeInputMessage, { type: 'run'
     })
     return
   }
-  if (message.type === 'abort') {
-    await state.handle.abort()
-    return
-  }
-  if (message.type === 'permissionDecision') {
-    await state.handle.resolvePermission?.(message.permissionId ?? '', message.allowed === true, message.reason)
-    return
-  }
-  try {
-    await state.handle.send(message.message ?? '')
-  } catch (err) {
-    // A rejected mid-run send must not kill the active run; surface it as a
-    // diagnostic so the prompt loss is observable in the session events.
-    const reason = err instanceof Error ? err.message : String(err)
-    writeSessionEvent(message.requestId, {
-      type: 'runtime.error',
-      payload: { message: `Runtime rejected injected prompt: ${reason}`, code: 'runtime_prompt_rejected' },
-    })
-  }
+  await state.controls.dispatch(message)
 }
 
 write({ type: 'ready' })

@@ -61,6 +61,13 @@ Feature: Runtime
     Then the event is delivered without protocol-layer truncation
     And the runner terminates the bridge process instead of hanging if protocol reading fails
 
+  @runtime/startup-controls @usecase
+  Scenario: Preserve live controls while a self-hosted runtime starts
+    Given a self-hosted runtime run is registered before its provider handle is ready
+    When a live prompt or other control arrives during provider initialization
+    Then the bridge queues controls in arrival order until the provider handle is ready
+    And the startup controls do not fail the active runtime request
+
   @runtime/provider-event-replay @usecase
   Scenario: Capture provider stream events for deterministic session rebuild
     Given a self-hosted external runtime exposes only live SDK stream events
