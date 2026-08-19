@@ -120,6 +120,7 @@ export const agents = sqliteTable(
     // JSON array of connector slugs. Resolved against the platform MCP catalog
     // at session start, not FK'd (slugs are stable connector ids).
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
+    realmroot: text('realmroot'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
@@ -157,6 +158,7 @@ export const agentVersions = sqliteTable(
     subagents: text('subagents').notNull().default('[]'),
     allowedTools: text('allowed_tools').notNull().default('[]'),
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
+    realmroot: text('realmroot'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [
@@ -318,6 +320,7 @@ export const vaultCredentials = sqliteTable(
         'ama.dev/tls',
         'ama.dev/private-key-jwk',
         'ama.dev/oauth-token',
+        'ama.dev/realmroot-agent-state',
       ],
     }).notNull(),
     metadata: text('metadata').notNull().default('{}'),
@@ -342,7 +345,7 @@ export const vaultCredentials = sqliteTable(
     check('ck_vault_credentials_state', sql`${table.state} in ('active','revoked')`),
     check(
       'ck_vault_credentials_type',
-      sql`${table.type} in ('opaque','ama.dev/basic-auth','ama.dev/ssh-auth','ama.dev/tls','ama.dev/private-key-jwk','ama.dev/oauth-token')`,
+      sql`${table.type} in ('opaque','ama.dev/basic-auth','ama.dev/ssh-auth','ama.dev/tls','ama.dev/private-key-jwk','ama.dev/oauth-token','ama.dev/realmroot-agent-state')`,
     ),
   ],
 )

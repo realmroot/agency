@@ -265,7 +265,8 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 		}
 		return err
 	}
-	handle := runnersession.NewSandboxHandle(payload.SessionID, workspace, r.SandboxAdapter, payload.Env)
+	runtimeEnv := workspace.RuntimeEnv(payload.Env)
+	handle := runnersession.NewSandboxHandle(payload.SessionID, workspace, r.SandboxAdapter, runtimeEnv)
 	relay.Register(payload.SessionID, handle)
 	if err := r.uploadSessionEvent(leaseCtx, payload.SessionID, runnerEvent(string(sessionevent.EventTypeRuntimeStarted), ama.JSON{})); err != nil {
 		relay.Unregister(payload.SessionID)
@@ -354,12 +355,13 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		RuntimeBridge:      r.RuntimeBridge,
 		MaxSessionDuration: r.Config.MaxSessionDuration,
 	}
+	runtimeEnv := workspace.RuntimeEnv(payload.Env)
 	var writeMu sync.Mutex
 	result := runtimeRunner.Run(leaseCtx, runtime.Request{
 		SessionID:     payload.SessionID,
 		Runtime:       payload.Runtime,
 		RuntimeConfig: payload.RuntimeConfig,
-		Env:           payload.Env,
+		Env:           runtimeEnv,
 		Provider:      payload.Provider,
 		Model:         payload.Model,
 		AgentSnapshot: payload.AgentSnapshot,

@@ -23,6 +23,7 @@ describe('credential form model', () => {
         'expires-at': '',
         scopes: '',
       },
+      'ama.dev/realmroot-agent-state': { 'state.json': '' },
     }
 
     expect(Object.fromEntries(credentialTypes.map(({ type }) => [type, defaultCredentialData(type)]))).toEqual(expected)
@@ -79,6 +80,32 @@ describe('credential form model', () => {
         ...emptyCredential,
         type: 'ama.dev/oauth-token',
         data: { 'access-token': 'token' },
+      }),
+    ).toBe(true)
+    expect(
+      hasValidCredentialSecretData({
+        ...emptyCredential,
+        type: 'ama.dev/realmroot-agent-state',
+        data: { 'state.json': '' },
+      }),
+    ).toBe(false)
+    expect(
+      hasValidCredentialSecretData({
+        ...emptyCredential,
+        type: 'ama.dev/realmroot-agent-state',
+        data: {
+          'state.json': JSON.stringify({
+            version: 18,
+            agent_id: 'rr_agent_1',
+            origin: 'https://realmroot.example.com',
+            issuer: 'https://realmroot.example.com/api/auth',
+            runtime: 'ama',
+            host_id: 'host_1',
+            agent_key_id: 'key_1',
+            agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+            enrollment_idempotency_key: 'enroll_1',
+          }),
+        },
       }),
     ).toBe(true)
   })

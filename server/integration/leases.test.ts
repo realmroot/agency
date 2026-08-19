@@ -206,15 +206,14 @@ describe('[CF] /api/v1/leases', () => {
       attempts: number
       leaseId: string
       runnerId: string
-      payload: { env?: Record<string, string> }
+      payload: { env?: Record<string, string>; envFrom?: unknown[] }
     }
     expect(leasedWork).toMatchObject({ state: 'leased', attempts: 1, leaseId, runnerId: runner.id })
-    // The leasing runner receives the materialized payload with vault secret
-    // env resolved into env.
-    expect(leasedWork.payload.env).toMatchObject({
-      AK_API_URL: 'https://ak.example.test',
-      AK_AGENT_KEY: 'raw-ak-agent-key',
-    })
+    // Console reads retain persisted secret references even while a runner
+    // holds the active lease; only the bound runner identity may materialize.
+    expect(leasedWork.payload.env).toEqual({ AK_API_URL: 'https://ak.example.test' })
+    expect(leasedWork.payload.envFrom).toEqual(envFrom)
+    expect(JSON.stringify(leasedWork)).not.toContain('raw-ak-agent-key')
 
     // The same item cannot be claimed twice.
     const conflictRes = await claimLease(authorization, workItem.id, runner.id)

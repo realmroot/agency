@@ -113,6 +113,30 @@ async function createSelfHostedSession(
   return { ...session, id: session.metadata.uid, state: session.status.phase, stateReason: session.status.reason }
 }
 
+async function registerActiveRunner(authorization: string, environmentId: string) {
+  const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
+    method: 'POST',
+    body: JSON.stringify({ name: `Bound runner ${crypto.randomUUID()}`, environmentId }),
+  })
+  expect(runnerRes.status).toBe(201)
+  const runner = (await runnerRes.json()) as { id: string }
+  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
+    method: 'PUT',
+    body: JSON.stringify({
+      state: 'active',
+      runtimes: [
+        {
+          runtime: DEFAULT_AMA_RUNNER_CAPABILITY,
+          models: ['@cf/moonshotai/kimi-k2.6'],
+          state: 'ready',
+        },
+      ],
+    }),
+  })
+  expect(heartbeatRes.status).toBe(200)
+  return runner
+}
+
 describe('[CF] /api/v1/work-items', () => {
   beforeEach(async () => {
     await setupOidcProvider()
@@ -214,5 +238,41 @@ describe('[CF] /api/v1/work-items', () => {
     expect(listRes.status).toBe(200)
     const list = (await listRes.json()) as { data: Array<{ id: string; state: string }> }
     expect(list.data).toEqual([expect.objectContaining({ state: 'available', sessionId: session.id })])
+  })
+
+  it('materializes secrets only for the OIDC-bound runner holding the active lease [spec: runners/work-items]', async () => {
+    const operatorAuthorization = await signIn()
+    const runnerAuthorization = operatorAuthorization.replace('e2e:', 'e2e-runner:')
+    const environment = await createSelfHostedEnvironment(operatorAuthorization)
+    const agent = await createAgent(operatorAuthorization)
+    const envFrom = await createSessionEnvFrom(operatorAuthorization)
+    const runner = await registerActiveRunner(runnerAuthorization, environment.id)
+    const session = await createSelfHostedSession(operatorAuthorization, agent.id, environment.id, {
+      env: { PUBLIC_VALUE: 'visible' },
+      envFrom,
+    })
+    const listRes = await jsonFetch(`/api/v1/work-items?sessionId=${session.id}`, runnerAuthorization)
+    const list = (await listRes.json()) as { data: Array<{ id: string }> }
+    const workItemId = list.data[0]!.id
+
+    const claimRes = await jsonFetch('/api/v1/leases', runnerAuthorization, {
+      method: 'POST',
+      body: JSON.stringify({ workItemId, runnerId: runner.id, leaseDurationSeconds: 90 }),
+    })
+    expect(claimRes.status).toBe(201)
+
+    const consoleRead = await jsonFetch(`/api/v1/work-items/${workItemId}`, operatorAuthorization)
+    expect(consoleRead.status).toBe(200)
+    const consoleWork = (await consoleRead.json()) as { payload: Record<string, unknown> }
+    expect(consoleWork.payload).toMatchObject({ envFrom, env: { PUBLIC_VALUE: 'visible' } })
+    expect(JSON.stringify(consoleWork)).not.toContain('raw-ak-agent-key')
+
+    const runnerRead = await jsonFetch(`/api/v1/work-items/${workItemId}`, runnerAuthorization)
+    expect(runnerRead.status).toBe(200)
+    const runnerWork = (await runnerRead.json()) as { payload: Record<string, unknown> }
+    expect(runnerWork.payload).not.toHaveProperty('envFrom')
+    expect(runnerWork.payload).toMatchObject({
+      env: { PUBLIC_VALUE: 'visible', AK_AGENT_KEY: 'raw-ak-agent-key' },
+    })
   })
 })

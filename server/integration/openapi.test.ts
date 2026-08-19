@@ -575,6 +575,7 @@ describe('[CF] OpenAPI documentation', () => {
       if (!isPublic) {
         expect(operation.security, `${operation.operationId} must declare bearer auth`).toEqual([{ bearerAuth: [] }])
         expectJsonErrorResponse(operation, '401')
+        expectJsonErrorResponse(operation, '403')
       }
       if (operation.requestBody) {
         expect(

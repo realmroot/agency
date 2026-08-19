@@ -22,8 +22,30 @@ function spec(overrides: Partial<AgentSpec> = {}): AgentSpec {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
+    realmroot: null,
     ...overrides,
   }
+}
+
+function withRealmrootVault(
+  deps: Deps,
+  values: { vaultPhase?: 'active' | 'revoked'; credentialPhase?: 'active' | 'revoked'; type?: string } = {},
+) {
+  deps.vaults = {
+    find: async () =>
+      values.vaultPhase === 'revoked' ? null : ({ status: { phase: values.vaultPhase ?? 'active' } } as never),
+    findCredential: async () => ({
+      spec: { vaultId: 'vault_1', type: values.type ?? 'ama.dev/realmroot-agent-state' },
+      status: { phase: values.credentialPhase ?? 'active' },
+    }),
+  } as never
+  return deps
+}
+
+const realmroot = {
+  agentId: 'rr_agent_1',
+  origin: 'https://realmroot.example.com',
+  credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
 }
 
 function agentRecord(
@@ -235,6 +257,65 @@ describe('[spec: agents/create] createAgent', () => {
         }),
       }),
     ).rejects.toMatchObject({ fields: { subagents: expect.stringContaining('MCP connector') } })
+  })
+})
+
+describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
+  it('accepts a visible active Realmroot state credential', async () => {
+    const created = await createAgent(withRealmrootVault(fakeDeps()), auth, {
+      name: 'Realmroot agent',
+      description: null,
+      spec: spec({ realmroot }),
+    })
+
+    expect(created.spec.realmroot).toEqual(realmroot)
+  })
+
+  it.each([
+    [{ ...realmroot, origin: 'http://realmroot.example.com' }, 'HTTPS'],
+    [{ ...realmroot, credentialRef: 'external://secret' }, 'AMA Vault'],
+    [{ ...realmroot, credentialRef: 'ama://vaults/vault_1' }, 'active credential'],
+    [{ ...realmroot, credentialRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1' }, 'active credential'],
+  ])('rejects an invalid or non-credential-scoped binding %#', async (binding, message) => {
+    await expect(
+      createAgent(withRealmrootVault(fakeDeps()), auth, {
+        name: 'Realmroot agent',
+        description: null,
+        spec: spec({ realmroot: binding }),
+      }),
+    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining(message) } })
+  })
+
+  it.each([
+    ['revoked credential', { credentialPhase: 'revoked' }],
+    ['invisible vault', { vaultPhase: 'revoked' }],
+    ['wrong credential type', { type: 'opaque' }],
+  ])('rejects a %s', async (_name, values) => {
+    await expect(
+      createAgent(withRealmrootVault(fakeDeps(), values as never), auth, {
+        name: 'Realmroot agent',
+        description: null,
+        spec: spec({ realmroot }),
+      }),
+    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining('active credential') } })
+  })
+
+  it('creates a new immutable Agent version when the binding changes', async () => {
+    const inserted: AgentSpec[] = []
+    const deps = withRealmrootVault(
+      fakeDeps({
+        repo: {
+          insertVersion: async (agent, value, createdAt) => {
+            inserted.push(value)
+            return agentVersion(agent, value, createdAt)
+          },
+        },
+      }),
+    )
+
+    await updateAgent(deps, auth, agentRecord(), { realmroot })
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.realmroot).toEqual(realmroot)
   })
 })
 

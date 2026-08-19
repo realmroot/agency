@@ -231,6 +231,9 @@ func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName stri
 	if w == nil || agentSnapshot == nil {
 		return report, nil
 	}
+	if err := prepareRealmrootAgent(w.Root, agentSnapshot); err != nil {
+		return report, err
+	}
 	for _, skill := range agentSkillRefs(agentSnapshot) {
 		change, err := refreshAgentSkill(ctx, w.Cwd, runtimeName, skill)
 		if err != nil {

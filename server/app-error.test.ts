@@ -17,7 +17,7 @@ describe('app error handling', () => {
           'x-ama-project-id': 'project_logging',
         },
       }),
-      { AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
+      { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
     )
 
     expect(response.status).toBe(500)

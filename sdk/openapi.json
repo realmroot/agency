@@ -2829,6 +2829,9 @@
             "example": [
               "github"
             ]
+          },
+          "realmroot": {
+            "$ref": "#/components/schemas/RealmrootAgentBinding"
           }
         },
         "required": [
@@ -2838,7 +2841,8 @@
           "skills",
           "subagents",
           "allowedTools",
-          "mcpConnectors"
+          "mcpConnectors",
+          "realmroot"
         ]
       },
       "AgentSubagent": {
@@ -2900,6 +2904,34 @@
           "allowedTools",
           "skills",
           "mcpConnectors"
+        ],
+        "additionalProperties": false
+      },
+      "RealmrootAgentBinding": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://id.realmroot.dev"
+          },
+          "credentialRef": {
+            "type": "string",
+            "minLength": 1,
+            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+          }
+        },
+        "required": [
+          "agentId",
+          "origin",
+          "credentialRef"
         ],
         "additionalProperties": false
       },
@@ -3014,6 +3046,9 @@
                 "example": [
                   "github"
                 ]
+              },
+              "realmroot": {
+                "$ref": "#/components/schemas/RealmrootAgentBinding"
               }
             },
             "required": [
@@ -3206,6 +3241,9 @@
                 "example": [
                   "github"
                 ]
+              },
+              "realmroot": {
+                "$ref": "#/components/schemas/RealmrootAgentBinding"
               }
             },
             "additionalProperties": false
@@ -6698,6 +6736,9 @@
               "type": "string"
             }
           },
+          "realmroot": {
+            "$ref": "#/components/schemas/SessionRealmrootBinding"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6761,6 +6802,28 @@
           "allowedTools",
           "skills",
           "mcpConnectors"
+        ],
+        "additionalProperties": false
+      },
+      "SessionRealmrootBinding": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri"
+          },
+          "credentialRef": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "origin",
+          "credentialRef"
         ],
         "additionalProperties": false
       },
@@ -7955,7 +8018,8 @@
               "ama.dev/ssh-auth",
               "ama.dev/tls",
               "ama.dev/private-key-jwk",
-              "ama.dev/oauth-token"
+              "ama.dev/oauth-token",
+              "ama.dev/realmroot-agent-state"
             ],
             "example": "opaque",
             "x-enum-varnames": [
@@ -7964,7 +8028,8 @@
               "VaultCredentialTypeSshAuth",
               "VaultCredentialTypeTls",
               "VaultCredentialTypePrivateKeyJwk",
-              "VaultCredentialTypeOauthToken"
+              "VaultCredentialTypeOauthToken",
+              "VaultCredentialTypeRealmrootAgentState"
             ]
           },
           "metadata": {
@@ -8170,7 +8235,8 @@
               "ama.dev/ssh-auth",
               "ama.dev/tls",
               "ama.dev/private-key-jwk",
-              "ama.dev/oauth-token"
+              "ama.dev/oauth-token",
+              "ama.dev/realmroot-agent-state"
             ],
             "example": "opaque",
             "x-enum-varnames": [
@@ -8179,7 +8245,8 @@
               "CreateVaultCredentialRequestTypeSshAuth",
               "CreateVaultCredentialRequestTypeTls",
               "CreateVaultCredentialRequestTypePrivateKeyJwk",
-              "CreateVaultCredentialRequestTypeOauthToken"
+              "CreateVaultCredentialRequestTypeOauthToken",
+              "CreateVaultCredentialRequestTypeRealmrootAgentState"
             ]
           },
           "metadata": {
@@ -8460,6 +8527,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -8542,6 +8619,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -8579,6 +8666,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8626,6 +8723,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8759,6 +8866,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -8813,6 +8930,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -8853,6 +8980,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8937,6 +9074,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Agent not found",
             "content": {
@@ -8996,6 +9143,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9073,6 +9230,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9206,6 +9373,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -9260,6 +9437,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -9300,6 +9487,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9384,6 +9581,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Environment not found",
             "content": {
@@ -9443,6 +9650,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9528,6 +9745,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Environment or version not found",
             "content": {
@@ -9573,6 +9800,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -9602,6 +9839,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9639,6 +9886,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9686,6 +9943,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9743,6 +10010,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9809,6 +10086,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -10512,6 +10799,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -10552,6 +10849,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -10965,6 +11272,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -11019,6 +11336,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -11059,6 +11386,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11142,6 +11479,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Budget not found",
             "content": {
@@ -11182,6 +11529,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11319,6 +11676,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -11359,6 +11726,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11506,6 +11883,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -11546,6 +11933,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11639,6 +12036,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11788,6 +12195,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -11828,6 +12245,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11894,6 +12321,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12050,6 +12487,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -12090,6 +12537,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12174,6 +12631,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Trigger not found",
             "content": {
@@ -12225,6 +12692,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12369,6 +12846,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Trigger not found",
             "content": {
@@ -12445,6 +12932,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Trigger not found",
             "content": {
@@ -12513,6 +13010,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12757,6 +13264,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -12797,6 +13314,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12881,6 +13408,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Session not found",
             "content": {
@@ -12933,6 +13470,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13039,6 +13586,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Session not found",
             "content": {
@@ -13106,6 +13663,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13192,6 +13759,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13356,6 +13933,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Session not found",
             "content": {
@@ -13499,6 +14086,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Session not found",
             "content": {
@@ -13558,6 +14155,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13634,6 +14241,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13777,6 +14394,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -13831,6 +14458,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -13871,6 +14508,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13946,6 +14593,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14043,6 +14700,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Memory store not found",
             "content": {
@@ -14110,6 +14777,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14214,6 +14891,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Memory not found",
             "content": {
@@ -14273,6 +14960,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14406,6 +15103,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -14460,6 +15167,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -14500,6 +15217,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14576,6 +15303,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14727,6 +15464,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Vault not found",
             "content": {
@@ -14794,6 +15541,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14870,6 +15627,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14963,6 +15730,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Credential not found",
             "content": {
@@ -15040,6 +15817,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15190,6 +15977,16 @@
               }
             }
           },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Credential not found",
             "content": {
@@ -15257,6 +16054,16 @@
           },
           "401": {
             "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token lacks the permission required for this resource",
             "content": {
               "application/json": {
                 "schema": {

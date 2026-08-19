@@ -44,6 +44,15 @@ Feature: Sessions
     And envFrom expands credential data keys into runtime environment variables
     And volume items project selected secret keys to the runtime-facing names
 
+  @sessions/realmroot-identity @usecase
+  Scenario: Materialize a bound Realmroot Agent identity for one session
+    Given the selected agent version references an active Realmroot Agent credential
+    When AMA launches the session in a cloud or self-hosted runtime
+    Then the credential is mounted through the existing secret-volume boundary
+    And an ephemeral private Realmroot state directory is prepared for the runtime
+    And the Realmroot origin and stable AMA runtime identity are supplied without exposing the credential
+    And a revoked or missing credential fails session creation before runtime allocation
+
 	  @sessions/memory-store-resources @api
 	  Scenario: Create a session with attached memory stores
 	    Given a project has an active memory store with memories

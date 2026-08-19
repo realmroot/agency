@@ -1,5 +1,5 @@
 import type { SessionEvent } from '@shared/session-events'
-import type { AgentSubagent } from './agent'
+import type { AgentSubagent, RealmrootAgentBinding } from './agent'
 import type {
   EnvironmentNetworking,
   EnvironmentPackages,
@@ -116,6 +116,7 @@ export interface SessionAgentSnapshot {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
+  realmroot: RealmrootAgentBinding | null
   createdAt: string
 }
 

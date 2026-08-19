@@ -656,6 +656,7 @@ export type AgentSpec = {
     subagents: Array<AgentSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
+    realmroot: RealmrootAgentBinding;
 };
 export type AgentSubagent = {
     name: string;
@@ -666,6 +667,11 @@ export type AgentSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
+export type RealmrootAgentBinding = {
+    agentId: string;
+    origin: string;
+    credentialRef: string;
+} | null;
 export type AgentStatus = {
     phase: ResourcePhase;
     currentVersionId: string | null;
@@ -682,6 +688,7 @@ export type CreateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
+        realmroot?: RealmrootAgentBinding;
     };
 };
 export type ResourceCreateMetadata = {
@@ -707,6 +714,7 @@ export type UpdateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
+        realmroot?: RealmrootAgentBinding;
     };
     /**
      * Lifecycle transition: true archives the agent, false unarchives it.
@@ -1455,6 +1463,7 @@ export type SessionAgentSnapshot = {
     subagents: Array<SessionSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
+    realmroot?: SessionRealmrootBinding;
     createdAt: string;
 };
 export type SessionSubagent = {
@@ -1466,6 +1475,11 @@ export type SessionSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
+export type SessionRealmrootBinding = {
+    agentId: string;
+    origin: string;
+    credentialRef: string;
+} | null;
 export type SessionEnvironmentSnapshot = {
     id: string;
     environmentId: string;
@@ -1733,7 +1747,7 @@ export type VaultCredential = {
 export type VaultCredentialSpec = {
     vaultId: string;
     organizationId: string;
-    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token';
+    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token' | 'ama.dev/realmroot-agent-state';
     metadata: {
         [key: string]: unknown;
     };
@@ -1773,7 +1787,7 @@ export type VaultCredentialVersionStatus = {
 };
 export type CreateVaultCredentialRequest = {
     name: string;
-    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token';
+    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token' | 'ama.dev/realmroot-agent-state';
     metadata?: {
         [key: string]: unknown;
     };
@@ -1883,6 +1897,10 @@ export type ReadCurrentAuthSessionErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ReadCurrentAuthSessionError = ReadCurrentAuthSessionErrors[keyof ReadCurrentAuthSessionErrors];
 export type ReadCurrentAuthSessionResponses = {
@@ -1910,6 +1928,10 @@ export type ListProjectsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListProjectsError = ListProjectsErrors[keyof ListProjectsErrors];
 export type ListProjectsResponses = {
@@ -1930,6 +1952,10 @@ export type CreateProjectErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateProjectError = CreateProjectErrors[keyof CreateProjectErrors];
 export type CreateProjectResponses = {
@@ -1952,6 +1978,10 @@ export type ReadProjectErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Project not found
      */
@@ -1990,6 +2020,10 @@ export type ListAgentsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListAgentsError = ListAgentsErrors[keyof ListAgentsErrors];
 export type ListAgentsResponses = {
@@ -2014,6 +2048,10 @@ export type CreateAgentErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateAgentError = CreateAgentErrors[keyof CreateAgentErrors];
 export type CreateAgentResponses = {
@@ -2036,6 +2074,10 @@ export type ReadAgentErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Agent not found
      */
@@ -2067,6 +2109,10 @@ export type UpdateAgentErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Agent not found
      */
     404: ErrorResponse;
@@ -2096,6 +2142,10 @@ export type ListAgentVersionsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Agent not found
      */
@@ -2127,6 +2177,10 @@ export type ReadAgentVersionErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Agent or version not found
      */
@@ -2165,6 +2219,10 @@ export type ListEnvironmentsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListEnvironmentsError = ListEnvironmentsErrors[keyof ListEnvironmentsErrors];
 export type ListEnvironmentsResponses = {
@@ -2189,6 +2247,10 @@ export type CreateEnvironmentErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateEnvironmentError = CreateEnvironmentErrors[keyof CreateEnvironmentErrors];
 export type CreateEnvironmentResponses = {
@@ -2211,6 +2273,10 @@ export type ReadEnvironmentErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Environment not found
      */
@@ -2242,6 +2308,10 @@ export type UpdateEnvironmentErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Environment not found
      */
     404: ErrorResponse;
@@ -2271,6 +2341,10 @@ export type ListEnvironmentVersionsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Environment not found
      */
@@ -2303,6 +2377,10 @@ export type ReadEnvironmentVersionErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Environment or version not found
      */
     404: ErrorResponse;
@@ -2326,6 +2404,10 @@ export type ListProvidersErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListProvidersError = ListProvidersErrors[keyof ListProvidersErrors];
 export type ListProvidersResponses = {
@@ -2346,6 +2428,10 @@ export type ListModelsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListModelsError = ListModelsErrors[keyof ListModelsErrors];
 export type ListModelsResponses = {
@@ -2366,6 +2452,10 @@ export type RefreshCatalogErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type RefreshCatalogError = RefreshCatalogErrors[keyof RefreshCatalogErrors];
 export type RefreshCatalogResponses = {
@@ -2388,6 +2478,10 @@ export type ReadProviderErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Provider not found
      */
@@ -2414,6 +2508,10 @@ export type ListProviderModelsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Provider not found
      */
@@ -2482,6 +2580,10 @@ export type CreateRunnerErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Conflict
      */
@@ -2689,6 +2791,10 @@ export type ListWorkItemsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListWorkItemsError = ListWorkItemsErrors[keyof ListWorkItemsErrors];
 export type ListWorkItemsResponses = {
@@ -2711,6 +2817,10 @@ export type ReadWorkItemErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Work item not found
      */
@@ -2876,6 +2986,10 @@ export type ListBudgetsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListBudgetsError = ListBudgetsErrors[keyof ListBudgetsErrors];
 export type ListBudgetsResponses = {
@@ -2900,6 +3014,10 @@ export type CreateBudgetErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateBudgetError = CreateBudgetErrors[keyof CreateBudgetErrors];
 export type CreateBudgetResponses = {
@@ -2922,6 +3040,10 @@ export type DeleteBudgetErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Budget not found
      */
@@ -2948,6 +3070,10 @@ export type ReadBudgetErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Budget not found
      */
@@ -2978,6 +3104,10 @@ export type UpdateBudgetErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Budget not found
      */
@@ -3014,6 +3144,10 @@ export type ListConnectorsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListConnectorsError = ListConnectorsErrors[keyof ListConnectorsErrors];
 export type ListConnectorsResponses = {
@@ -3036,6 +3170,10 @@ export type ReadConnectorErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Connector not found
      */
@@ -3073,6 +3211,10 @@ export type ListUsageRecordsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListUsageRecordsError = ListUsageRecordsErrors[keyof ListUsageRecordsErrors];
 export type ListUsageRecordsResponses = {
@@ -3095,6 +3237,10 @@ export type ReadUsageRecordErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Usage record not found
      */
@@ -3127,6 +3273,10 @@ export type ReadUsageSummaryErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ReadUsageSummaryError = ReadUsageSummaryErrors[keyof ReadUsageSummaryErrors];
 export type ReadUsageSummaryResponses = {
@@ -3162,6 +3312,10 @@ export type ListAuditRecordsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListAuditRecordsError = ListAuditRecordsErrors[keyof ListAuditRecordsErrors];
 export type ListAuditRecordsResponses = {
@@ -3184,6 +3338,10 @@ export type ReadAuditRecordErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Audit record not found
      */
@@ -3226,6 +3384,10 @@ export type ListTriggersErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListTriggersError = ListTriggersErrors[keyof ListTriggersErrors];
 export type ListTriggersResponses = {
@@ -3250,6 +3412,10 @@ export type CreateTriggerErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Agent not found
      */
@@ -3281,6 +3447,10 @@ export type DeleteTriggerErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Trigger not found
      */
     404: ErrorResponse;
@@ -3306,6 +3476,10 @@ export type ReadTriggerErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Trigger not found
      */
@@ -3336,6 +3510,10 @@ export type UpdateTriggerErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Trigger not found
      */
@@ -3378,6 +3556,10 @@ export type ListTriggerRunsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Trigger not found
      */
     404: ErrorResponse;
@@ -3407,6 +3589,10 @@ export type CreateTriggerRunErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Trigger not found
      */
@@ -3438,6 +3624,10 @@ export type ReadTriggerRunErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Trigger run not found
      */
@@ -3478,6 +3668,10 @@ export type ListSessionsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListSessionsError = ListSessionsErrors[keyof ListSessionsErrors];
 export type ListSessionsResponses = {
@@ -3537,6 +3731,10 @@ export type ReadSessionErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Session not found
      */
     404: ErrorResponse;
@@ -3566,6 +3764,10 @@ export type UpdateSessionErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Session not found
      */
@@ -3597,6 +3799,10 @@ export type ConnectSessionSocketErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Session not found
      */
     404: ErrorResponse;
@@ -3627,6 +3833,10 @@ export type ListSessionMessagesErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Session not found
      */
     404: ErrorResponse;
@@ -3656,6 +3866,10 @@ export type CreateSessionMessageErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Session not found
      */
@@ -3691,6 +3905,10 @@ export type ReadSessionMessageErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Session or message not found
      */
@@ -3728,6 +3946,10 @@ export type ListSessionEventsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Session not found
      */
@@ -3789,6 +4011,10 @@ export type ListSessionApprovalsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Session not found
      */
     404: ErrorResponse;
@@ -3816,6 +4042,10 @@ export type ReadSessionApprovalErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Session or approval not found
      */
     404: ErrorResponse;
@@ -3842,6 +4072,10 @@ export type DecideSessionApprovalErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Session or pending approval not found
      */
@@ -3884,6 +4118,10 @@ export type ListMemoryStoresErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListMemoryStoresError = ListMemoryStoresErrors[keyof ListMemoryStoresErrors];
 export type ListMemoryStoresResponses = {
@@ -3908,6 +4146,10 @@ export type CreateMemoryStoreErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateMemoryStoreError = CreateMemoryStoreErrors[keyof CreateMemoryStoreErrors];
 export type CreateMemoryStoreResponses = {
@@ -3930,6 +4172,10 @@ export type ReadMemoryStoreErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Memory store not found
      */
@@ -3960,6 +4206,10 @@ export type UpdateMemoryStoreErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Memory store not found
      */
@@ -3994,6 +4244,10 @@ export type ListMemoryStoreMemoriesErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Memory store not found
      */
     404: ErrorResponse;
@@ -4023,6 +4277,10 @@ export type CreateMemoryStoreMemoryErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Memory store not found
      */
@@ -4055,6 +4313,10 @@ export type DeleteMemoryStoreMemoryErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Memory not found
      */
     404: ErrorResponse;
@@ -4085,6 +4347,10 @@ export type UpdateMemoryStoreMemoryErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Memory not found
      */
@@ -4127,6 +4393,10 @@ export type ListVaultsErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type ListVaultsError = ListVaultsErrors[keyof ListVaultsErrors];
 export type ListVaultsResponses = {
@@ -4151,6 +4421,10 @@ export type CreateVaultErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
 };
 export type CreateVaultError = CreateVaultErrors[keyof CreateVaultErrors];
 export type CreateVaultResponses = {
@@ -4173,6 +4447,10 @@ export type ReadVaultErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Vault not found
      */
@@ -4203,6 +4481,10 @@ export type UpdateVaultErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Vault not found
      */
@@ -4245,6 +4527,10 @@ export type ListVaultCredentialsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Vault not found
      */
     404: ErrorResponse;
@@ -4274,6 +4560,10 @@ export type CreateVaultCredentialErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Vault not found
      */
@@ -4306,6 +4596,10 @@ export type ReadVaultCredentialErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Credential not found
      */
     404: ErrorResponse;
@@ -4337,6 +4631,10 @@ export type UpdateVaultCredentialErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Credential not found
      */
     404: ErrorResponse;
@@ -4367,6 +4665,10 @@ export type UpdateVaultCredentialSecretErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Credential not found
      */
@@ -4409,6 +4711,10 @@ export type ListVaultCredentialVersionsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
+    /**
      * Credential not found
      */
     404: ErrorResponse;
@@ -4436,6 +4742,10 @@ export type ReadVaultCredentialVersionErrors = {
      * Authentication required
      */
     401: ErrorResponse;
+    /**
+     * Token lacks the permission required for this resource
+     */
+    403: ErrorResponse;
     /**
      * Credential version not found
      */

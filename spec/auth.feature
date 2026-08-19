@@ -6,10 +6,18 @@ Feature: Auth
 
   @auth/oidc-claims @domain
   Scenario: Resolve a tenant scope from OIDC claims
-    Given a valid OIDC access token with identity claims
+    Given a valid OIDC access token with identity claims and the AMA resource audience
     When the platform resolves the request context
     Then it derives user, organization, and project context from the claims
     And deterministic runner tokens require a configured runner client
+    And a token without explicit roles or permissions receives no implicit owner authority
+    And each control-plane operation requires its resource read or write permission
+
+  @auth/oidc-audience @domain
+  Scenario: Reject an access token issued for another resource
+    Given a signed OIDC access token from the configured issuer
+    When its audience does not identify the AMA resource
+    Then authentication fails closed before tenant context is resolved
 
   # ── Session and context API (api: assembled server, real D1) ──
 

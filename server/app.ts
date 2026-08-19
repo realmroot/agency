@@ -25,7 +25,7 @@ import { registerUsageSummaryRoutes } from './http/usage-summary'
 import { registerVaultRoutes } from './http/vaults'
 import { registerWorkItemRoutes } from './http/work-items'
 import { logError, requestLogContext } from './logging'
-import { ApiSecuritySchemes, createDepsApiRouter } from './openapi'
+import { ApiSecuritySchemes, addAuthorizationResponses, createDepsApiRouter } from './openapi'
 
 export function createApp() {
   const app = createDepsApiRouter()
@@ -109,7 +109,7 @@ export function createApp() {
     routes.openAPIRegistry.register(name, schema)
   }
 
-  routes.doc('/api/v1/openapi.json', {
+  const openApiConfig: Parameters<typeof routes.getOpenAPIDocument>[0] = {
     openapi: '3.0.0',
     info: {
       title: 'Any Managed Agents API',
@@ -118,7 +118,8 @@ export function createApp() {
         'Control-plane API for Any Managed Agents. Every resource lives under /api/v1 and follows REST conventions. Command-line automation uses restish or direct HTTP against this OpenAPI document; live browser task traffic uses the session socket and canonical session events.',
     },
     servers: [{ url: '/' }],
-  })
+  }
+  routes.get('/api/v1/openapi.json', (c) => c.json(addAuthorizationResponses(routes.getOpenAPIDocument(openApiConfig))))
 
   routes.get(
     '/api/docs',

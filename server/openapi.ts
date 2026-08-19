@@ -18,6 +18,29 @@ export const AuthenticatedOperation = {
   security: [{ bearerAuth: [] }],
 }
 
+type OpenApiOperation = {
+  security?: Array<Record<string, string[]>>
+  responses?: Record<string, unknown>
+}
+
+export function addAuthorizationResponses<T extends { paths: object }>(document: T) {
+  for (const operations of Object.values(document.paths) as Array<Record<string, OpenApiOperation>>) {
+    for (const operation of Object.values(operations)) {
+      if (!operation.security?.some((requirement) => Object.hasOwn(requirement, 'bearerAuth'))) continue
+      operation.responses ??= {}
+      operation.responses['403'] ??= {
+        description: 'Token lacks the permission required for this resource',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+          },
+        },
+      }
+    }
+  }
+  return document
+}
+
 export const ErrorResponseSchema = z
   .object({
     error: z.object({

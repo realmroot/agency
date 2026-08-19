@@ -16,10 +16,12 @@ run_worker_first = ["/api/*", "/runtime/*"]
 
 [vars]
 AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
+AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.tftt.cc/api/auth"
 OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
+OIDC_RESOURCE = "https://ama.tftt.cc"
 OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 
@@ -118,7 +120,7 @@ new_sqlite_classes = ["RunnerPoolObject"]
 [[containers]]
 class_name = "Sandbox"
 name = "any-managed-agents-sandbox"
-image = "registry.cloudflare.com/94a89d03c0fc785c8dcbd3c674d6742a/ama-sandbox:0.10.1-gh1"
+image = "./Dockerfile"
 max_instances = 20
 
 [observability]
@@ -131,9 +133,11 @@ head_sampling_rate = 0.05
 [env.staging]
 
 [env.staging.vars]
+AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 OIDC_ISSUER = "https://id.tftt.cc/api/auth"
 OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
+OIDC_RESOURCE = "https://any-managed-agents-staging.saltbo.workers.dev"
 OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 AMA_ALLOWED_ORIGINS = "https://any-managed-agents-staging.saltbo.workers.dev"

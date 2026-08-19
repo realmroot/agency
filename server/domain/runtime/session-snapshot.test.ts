@@ -15,6 +15,7 @@ function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
+    realmroot: null,
     createdAt: '2026-06-25T00:00:00.000Z',
     ...overrides,
   }
@@ -93,5 +94,24 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     expect(augmented.systemPrompt).toContain('https://github.com/saltbo/agent-kanban.git at repos/saltbo/agent-kanban')
     expect(augmented.systemPrompt).toContain('Team memory')
     expect(augmented.systemPrompt).toContain('.ama/memory-stores/memstore_1')
+  })
+})
+
+describe('[spec: sessions/realmroot-identity] Realmroot workspace context', () => {
+  it('announces the Realmroot toolbox without exposing credential material', () => {
+    const augmented = agentSnapshotWithWorkspaceContext(
+      agentSnapshot({
+        realmroot: {
+          agentId: 'rr_agent_1',
+          origin: 'https://realmroot.example.com',
+          credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+        },
+      }),
+      [],
+      [],
+    )
+
+    expect(augmented.systemPrompt).toContain('Realmroot Toolbox')
+    expect(augmented.systemPrompt).not.toContain('ama://vaults/')
   })
 })

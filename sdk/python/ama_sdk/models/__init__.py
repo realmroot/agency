@@ -248,6 +248,7 @@ from .put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMeta
 from .put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
 from .read_tool_input import ReadToolInput
 from .read_usage_summary_group_by import ReadUsageSummaryGroupBy
+from .realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
 from .reasoning_content_block import ReasoningContentBlock
 from .reasoning_content_block_type import ReasoningContentBlockType
 from .resource_create_metadata import ResourceCreateMetadata
@@ -381,6 +382,7 @@ from .session_metadata import SessionMetadata
 from .session_metadata_annotations import SessionMetadataAnnotations
 from .session_metadata_labels import SessionMetadataLabels
 from .session_placement_type_0 import SessionPlacementType0
+from .session_realmroot_binding_type_0 import SessionRealmrootBindingType0
 from .session_socket_abort_message import SessionSocketAbortMessage
 from .session_socket_abort_message_type import SessionSocketAbortMessageType
 from .session_socket_ack_message import SessionSocketAckMessage
@@ -773,6 +775,7 @@ __all__ = (
     "PutRunnerHeartbeatRequestState",
     "ReadToolInput",
     "ReadUsageSummaryGroupBy",
+    "RealmrootAgentBindingType0",
     "ReasoningContentBlock",
     "ReasoningContentBlockType",
     "ResourceCreateMetadata",
@@ -906,6 +909,7 @@ __all__ = (
     "SessionMetadataAnnotations",
     "SessionMetadataLabels",
     "SessionPlacementType0",
+    "SessionRealmrootBindingType0",
     "SessionSocketAbortMessage",
     "SessionSocketAbortMessageType",
     "SessionSocketAckMessage",

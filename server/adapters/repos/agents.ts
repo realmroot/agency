@@ -1,4 +1,4 @@
-import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/domain/agent'
+import type { Agent, AgentSpec, AgentSubagent, AgentVersion, RealmrootAgentBinding } from '@server/domain/agent'
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import type {
@@ -37,6 +37,7 @@ function specFromRow(row: AgentRow | AgentVersionRow): AgentSpec {
     subagents: parseJson<AgentSubagent[]>(row.subagents),
     allowedTools: parseJson<string[]>(row.allowedTools),
     mcpConnectors: parseJson<string[]>(row.mcpConnectors),
+    realmroot: row.realmroot ? parseJson<RealmrootAgentBinding>(row.realmroot) : null,
   }
 }
 
@@ -49,6 +50,7 @@ function specColumns(spec: AgentSpec) {
     subagents: stringify(spec.subagents),
     allowedTools: stringify(spec.allowedTools),
     mcpConnectors: stringify(spec.mcpConnectors),
+    realmroot: spec.realmroot ? stringify(spec.realmroot) : null,
   }
 }
 

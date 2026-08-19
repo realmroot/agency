@@ -66,6 +66,15 @@ const SessionSubagentSchema = z
   .strict()
   .openapi('SessionSubagent')
 
+const SessionRealmrootBindingSchema = z
+  .object({
+    agentId: z.string(),
+    origin: z.string().url(),
+    credentialRef: z.string(),
+  })
+  .strict()
+  .openapi('SessionRealmrootBinding')
+
 const AgentVersionSnapshotSchema = z
   .object({
     id: z.string(),
@@ -79,6 +88,9 @@ const AgentVersionSnapshotSchema = z
     subagents: z.array(SessionSubagentSchema),
     allowedTools: z.array(z.string()),
     mcpConnectors: z.array(z.string()),
+    // Historical snapshots predate Realmroot bindings, so absence remains a
+    // valid persisted representation while newly created snapshots write null.
+    realmroot: SessionRealmrootBindingSchema.nullable().optional(),
     createdAt: z.string().datetime(),
   })
   .openapi('SessionAgentSnapshot')

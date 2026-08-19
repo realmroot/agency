@@ -20,7 +20,17 @@ import type { Env } from '../server/env'
 
 type OpenApiDocument = {
   openapi: string
-  paths: Record<string, Record<string, { operationId?: string }>>
+  paths: Record<
+    string,
+    Record<
+      string,
+      {
+        operationId?: string
+        security?: Array<Record<string, string[]>>
+        responses?: Record<string, unknown>
+      }
+    >
+  >
   components?: {
     schemas?: Record<string, JSONSchema>
   }
@@ -102,6 +112,7 @@ function stabilizeSdkSchemaNames(document: OpenApiDocument) {
     'VaultCredentialTypeTls',
     'VaultCredentialTypePrivateKeyJwk',
     'VaultCredentialTypeOauthToken',
+    'VaultCredentialTypeRealmrootAgentState',
   ])
   setPropertyEnumNames(document, 'CreateVaultCredentialRequest', ['type'], [
     'CreateVaultCredentialRequestTypeOpaque',
@@ -110,6 +121,7 @@ function stabilizeSdkSchemaNames(document: OpenApiDocument) {
     'CreateVaultCredentialRequestTypeTls',
     'CreateVaultCredentialRequestTypePrivateKeyJwk',
     'CreateVaultCredentialRequestTypeOauthToken',
+    'CreateVaultCredentialRequestTypeRealmrootAgentState',
   ])
 }
 

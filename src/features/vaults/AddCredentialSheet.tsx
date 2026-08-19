@@ -192,6 +192,15 @@ function CredentialSecretFields({
           <SecretInput label="Scopes" value={form.data.scopes!} onChange={(value) => setData('scopes', value)} />
         </>
       )
+    case 'ama.dev/realmroot-agent-state':
+      return (
+        <SecretTextarea
+          label="Realmroot Agent state JSON"
+          description="Paste the complete YW1h.json enrolled with AGENT=ama. AMA stores it as state.json."
+          value={form.data['state.json']!}
+          onChange={(value) => setData('state.json', value)}
+        />
+      )
   }
 }
 
@@ -281,10 +290,12 @@ function SecretInput({
 
 function SecretTextarea({
   label,
+  description,
   value,
   onChange,
 }: {
   label: string
+  description?: string
   value: string
   onChange: (value: string) => void
 }) {
@@ -293,6 +304,7 @@ function SecretTextarea({
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Textarea id={id} autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} />
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>
   )
 }
