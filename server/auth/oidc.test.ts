@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
-import { getBearerClaims, OidcError, organizationIdForClaims, upsertProjectForClaims } from './oidc'
+import { getBearerClaims, OidcError, oidcAudience, organizationIdForClaims, upsertProjectForClaims } from './oidc'
 
 type ProjectRawRow = [string, string, string, string, string]
 
@@ -33,6 +33,7 @@ function envFor(issuer: string, overrides: Partial<Env> = {}) {
     OIDC_ISSUER: issuer,
     OIDC_CLIENT_ID: 'ama',
     OIDC_CLIENT_SECRET: 'secret',
+    OIDC_RESOURCE: 'https://ama.example.com',
     OIDC_USE_SERVICE_BINDING: 'false',
     ...overrides,
   } as Env
@@ -42,10 +43,12 @@ async function signedToken({
   issuer,
   subject = 'user_real',
   claims = {},
+  audience = 'https://ama.example.com',
 }: {
   issuer: string
   subject?: string | null
   claims?: Record<string, unknown>
+  audience?: string | null
 }) {
   const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true })
   const jwk = await exportJWK(publicKey)
@@ -60,6 +63,9 @@ async function signedToken({
     .setExpirationTime('5m')
   if (subject !== null) {
     jwt = jwt.setSubject(subject)
+  }
+  if (audience) {
+    jwt = jwt.setAudience(audience)
   }
 
   return {
@@ -93,7 +99,10 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
 
   it('requires a configured runner client for deterministic runner tokens', async () => {
     await expect(
-      getBearerClaims({ AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env, 'e2e-runner:missing-client'),
+      getBearerClaims(
+        { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
+        'e2e-runner:missing-client',
+      ),
     ).rejects.toBeInstanceOf(OidcError)
   })
 
@@ -153,6 +162,78 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
     expect(claims.roles).toContain('runner')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/introspect')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/userinfo')
+  })
+})
+
+describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it.each([
+    ['missing', null],
+    ['wrong', 'https://other-api.example.com'],
+  ])('rejects a signed JWT with %s AMA audience', async (_name, audience) => {
+    const issuer = `https://id-audience-${_name}.test/api/auth`
+    const resource = 'https://ama.example.com'
+    const { token, jwks } = await signedToken({ issuer, audience })
+    stubJwks(jwks)
+
+    await expect(getBearerClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)).rejects.toBeInstanceOf(OidcError)
+  })
+
+  it('accepts the configured AMA audience and does not invent owner or wildcard authority', async () => {
+    const issuer = 'https://id-audience-correct.test/api/auth'
+    const resource = 'https://ama.example.com'
+    const { token, jwks } = await signedToken({ issuer, audience: resource })
+    stubJwks(jwks)
+
+    const claims = await getBearerClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)
+    expect(claims.sub).toBe('user_real')
+    expect(claims.roles).toEqual([])
+    expect(claims.permissions).toEqual([])
+  })
+
+  it.each([
+    {},
+    { AMA_RUNTIME_MODE: 'production' },
+    { AMA_RUNTIME_MODE: 'tests', AMA_E2E_TEST_AUTH: 'true' },
+    { AMA_RUNTIME_MODE: 'test' },
+    { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'false' },
+    { AMA_RUNTIME_MODE: 'live', AMA_E2E_TEST_AUTH: 'true' },
+  ])('fails closed without OIDC_RESOURCE for runtime flags %j', (values) => {
+    expect(() => oidcAudience(values as Env, 'https://ama.example.com/api/v1/agents')).toThrow(
+      'OIDC_RESOURCE is required',
+    )
+  })
+
+  it('getBearerClaims fails closed in live mode without an explicit OIDC_RESOURCE', async () => {
+    const liveEnv = envFor('https://id-live-resource.test/api/auth', { AMA_RUNTIME_MODE: 'live' })
+    delete liveEnv.OIDC_RESOURCE
+    await expect(
+      getBearerClaims(liveEnv, 'opaque-token', 'https://ama.example.com/api/v1/agents'),
+    ).rejects.toMatchObject({ message: expect.stringContaining('OIDC_RESOURCE is required') })
+  })
+
+  it('uses request origin fallback only in explicit e2e test mode', () => {
+    expect(
+      oidcAudience(
+        { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true' } as Env,
+        'https://ama.example.com/api/v1/agents?limit=10',
+      ),
+    ).toBe('https://ama.example.com')
+  })
+
+  it('does not accept synthesized e2e tokens in live mode even when the test-auth flag is set', async () => {
+    await expect(
+      getBearerClaims(
+        envFor('https://id-live-e2e.test/api/auth', {
+          AMA_RUNTIME_MODE: 'live',
+          AMA_E2E_TEST_AUTH: 'true',
+        }),
+        'e2e:user_1',
+      ),
+    ).rejects.toMatchObject({ message: 'OIDC access token must be a JWT' })
   })
 })
 

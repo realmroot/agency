@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
-import { requireOidcConfig } from '../auth/oidc'
+import { oidcAudience, requireOidcConfig } from '../auth/oidc'
 import type { Env } from '../env'
 import type { DepsEnv } from '../openapi'
 
@@ -63,7 +63,12 @@ function scopes(value: string | undefined, fallback: string) {
 export function publicConfig(
   env: Pick<
     Env,
-    'OIDC_ISSUER' | 'OIDC_CLIENT_ID' | 'OIDC_CLIENT_SECRET' | 'OIDC_RUNNER_CLIENT_ID' | 'OIDC_RUNNER_SCOPES'
+    | 'OIDC_ISSUER'
+    | 'OIDC_CLIENT_ID'
+    | 'OIDC_CLIENT_SECRET'
+    | 'OIDC_RESOURCE'
+    | 'OIDC_RUNNER_CLIENT_ID'
+    | 'OIDC_RUNNER_SCOPES'
   >,
   requestUrl: string,
 ) {
@@ -84,7 +89,7 @@ export function publicConfig(
       auth: {
         oidc: {
           issuer,
-          resource: origin,
+          resource: oidcAudience(env, requestUrl),
           browser: {
             clientId,
             scopes: scopes(undefined, 'openid email profile'),

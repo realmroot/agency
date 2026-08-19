@@ -1060,6 +1060,58 @@ describe('[spec: vaults/add-credential-sheet] AddCredentialSheet', () => {
     expect(screen.getByLabelText('Token type')).toBeInTheDocument()
     expect(screen.getByLabelText('Expires at')).toBeInTheDocument()
     expect(screen.getByLabelText('Scopes')).toBeInTheDocument()
+
+    await selectCredentialType('Realmroot Agent state')
+    expect(screen.getByLabelText('Realmroot Agent state JSON')).toBeInTheDocument()
+    expect(screen.getByText(/enrolled with AGENT=ama/)).toBeInTheDocument()
+  })
+
+  it('[spec: agents/realmroot-binding] submits Realmroot Agent state under the dedicated credential type and key', async () => {
+    let capturedBody: Record<string, unknown> = {}
+    const state = JSON.stringify({
+      version: 18,
+      agent_id: 'rr_agent_1',
+      origin: 'https://realmroot.example.com',
+      issuer: 'https://realmroot.example.com/api/auth',
+      runtime: 'ama',
+      host_id: 'host_1',
+      agent_key_id: 'key_1',
+      agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+      enrollment_idempotency_key: 'enroll_1',
+    })
+    server.use(
+      http.post('*/api/v1/vaults/vault_1/credentials', async ({ request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(credential({ id: 'vaultcred_realmroot' }), { status: 201 })
+      }),
+      http.get('*/api/v1/vaults/vault_1/credentials', () =>
+        HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
+      ),
+      http.get('*/api/v1/vaults/vault_1', () => HttpResponse.json(vault())),
+    )
+
+    const client = makeQueryClient()
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AddCredentialSheet vaultId="vault_1" open onOpenChange={vi.fn()} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Realmroot identity' } })
+    await selectCredentialType('Realmroot Agent state')
+    fireEvent.change(screen.getByLabelText('Realmroot Agent state JSON'), { target: { value: state } })
+    fireEvent.click(screen.getByRole('button', { name: /Save credential/i }))
+
+    await waitFor(() =>
+      expect(capturedBody).toEqual({
+        name: 'Realmroot identity',
+        type: 'ama.dev/realmroot-agent-state',
+        metadata: {},
+        secret: { stringData: { 'state.json': state } },
+      }),
+    )
   })
 
   const structuredCredentialCases: Array<{

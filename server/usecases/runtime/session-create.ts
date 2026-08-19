@@ -58,6 +58,14 @@ import { validateRuntimeProviderModel } from './provisioning'
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
+const REALMROOT_SOURCE_VOLUME = 'realmroot-agent-state'
+const REALMROOT_SOURCE_MOUNT = '/workspace/.ama/realmroot-source'
+const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
+const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
+
+function pathsOverlap(left: string, right: string) {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
+}
 
 // The create flow delegates the inline cloud launch to the cloud-turn usecase,
 // so it needs the full CloudTurnDeps. The self-hosted / queued paths use the
@@ -298,6 +306,71 @@ function sessionTitleFromPrompt(prompt: string) {
   return title.length > 80 ? `${title.slice(0, 77).trimEnd()}...` : title
 }
 
+function realmrootRuntimeInputs(
+  binding: AgentSnapshot['realmroot'],
+  env: Record<string, string>,
+  envFrom: EnvFromEntry[],
+  volumes: Volume[],
+  volumeMounts: VolumeMount[],
+):
+  | { env: Record<string, string>; volumes: Volume[]; volumeMounts: VolumeMount[] }
+  | { fields: Record<string, string> } {
+  if (!binding) return { env, volumes, volumeMounts }
+  const reserved = Object.keys(env).find((name) => REALMROOT_RESERVED_ENV.has(name))
+  if (reserved) {
+    return { fields: { [`env.${reserved}`]: `${reserved} is managed by the Realmroot Agent binding.` } }
+  }
+  const reservedEnvFromIndex = envFrom.findIndex((entry) => entry.name && REALMROOT_RESERVED_ENV.has(entry.name))
+  if (reservedEnvFromIndex >= 0) {
+    return {
+      fields: {
+        [`envFrom.${reservedEnvFromIndex}.name`]: 'Realmroot Agent environment variables are managed by the binding.',
+      },
+    }
+  }
+  const bulkEnvFromIndex = envFrom.findIndex((entry) => entry.name === undefined)
+  if (bulkEnvFromIndex >= 0) {
+    return {
+      fields: {
+        [`envFrom.${bulkEnvFromIndex}.name`]:
+          'Realmroot-bound Sessions require explicit envFrom names to protect managed variables.',
+      },
+    }
+  }
+  if (volumes.some((volume) => volume.name === REALMROOT_SOURCE_VOLUME)) {
+    return { fields: { volumes: `Volume name ${REALMROOT_SOURCE_VOLUME} is reserved for Realmroot Agent state.` } }
+  }
+  if (
+    volumeMounts.some(
+      (mount) =>
+        pathsOverlap(mount.mountPath, REALMROOT_SOURCE_MOUNT) || pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR),
+    )
+  ) {
+    return { fields: { volumeMounts: 'Realmroot Agent state mount paths are reserved.' } }
+  }
+  return {
+    env: {
+      ...env,
+      AGENT: 'ama',
+      REALMROOT_ORIGIN: binding.origin,
+      REALMROOT_STATE_DIR,
+    },
+    volumes: [
+      ...volumes,
+      {
+        name: REALMROOT_SOURCE_VOLUME,
+        type: 'secret',
+        secretRef: binding.credentialRef,
+        items: [{ key: 'state.json', path: 'state.json' }],
+      },
+    ],
+    volumeMounts: [
+      ...volumeMounts,
+      { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_SOURCE_MOUNT, readOnly: true },
+    ],
+  }
+}
+
 // ── Work item enqueue ───────────────────────────────────────────────────────
 
 export async function enqueueSelfHostedSessionWork(
@@ -517,6 +590,25 @@ export async function createSessionForAgent(
     }
   }
   const providerId = agentVersion.providerId
+  const agentSnapshot = createAgentSnapshot(agentVersion, providerId)
+  const realmrootInputs = realmrootRuntimeInputs(
+    agentSnapshot.realmroot,
+    options.env ?? {},
+    options.envFrom ?? [],
+    normalizedWorkspaceVolumes.volumes,
+    normalizedWorkspaceVolumes.volumeMounts,
+  )
+  if ('fields' in realmrootInputs) {
+    return {
+      ok: false,
+      error: {
+        status: 400,
+        code: 'validation_error',
+        message: 'Invalid Realmroot runtime configuration',
+        fields: realmrootInputs.fields,
+      },
+    }
+  }
   const prompt = sessionPrompt(userPrompt)
   const { decision: policyDecision, override: policyOverride } = await policy.evaluateProviderForSession(auth, {
     providerId,
@@ -604,7 +696,7 @@ export async function createSessionForAgent(
       error: { status: 409, code: 'conflict', message: 'Selected environment is archived or unavailable' },
     }
   }
-  const resolvedWorkspaceVolumes = await resolveMemoryVolumes(store, auth, normalizedWorkspaceVolumes.volumes)
+  const resolvedWorkspaceVolumes = await resolveMemoryVolumes(store, auth, realmrootInputs.volumes)
   if ('fields' in resolvedWorkspaceVolumes) {
     return {
       ok: false,
@@ -629,13 +721,13 @@ export async function createSessionForAgent(
     }
   }
 
-  const mergedEnv = options.env ?? {}
+  const mergedEnv = realmrootInputs.env
   const mergedEnvFrom = validatedEnvFrom.entries
   const validatedVolumes = await validateDeclaredVolumes(
     store,
     auth,
     resolvedWorkspaceVolumes.volumes,
-    normalizedWorkspaceVolumes.volumeMounts,
+    realmrootInputs.volumeMounts,
   )
   if ('fields' in validatedVolumes) {
     return {
@@ -651,7 +743,6 @@ export async function createSessionForAgent(
 
   const timestamp = now()
   const id = crypto.randomUUID()
-  const agentSnapshot = createAgentSnapshot(agentVersion, providerId)
   const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(
     agentSnapshot,
     validatedVolumes.volumes,

@@ -58,6 +58,17 @@ These decisions define the intended end state for Any Managed Agents.
 - This project must not reimplement a parallel authentication system.
 - Control-plane and runtime requests resolve tenant context from OIDC sessions or credentials.
 - Runner daemon authentication uses FlareAuth/OIDC device login. AMA validates provider-issued bearer tokens, binds OIDC runner operation to the runner registration subject/client id, rejects runner-scoped tokens on non-runner control-plane resources, and must not build a parallel runner credential issuer.
+- OIDC access tokens must identify the exact AMA resource audience. Missing role or permission claims grant no implicit owner authority.
+- The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; only that permission, `<resource>:*`, or `*` authorizes the operation. Runner tokens remain limited to their bound runner workflow.
+
+## Realmroot Agent Identity
+
+- An AMA Agent may bind to one enrolled Realmroot Agent through a safe versioned descriptor containing the Realmroot Agent id, Realmroot origin, and an AMA Vault credential reference.
+- The Realmroot Agent state and private key remain secret material in AMA Vault. Agent rows, version rows, session snapshots, API responses, events, and audit records store only the safe descriptor and secret reference.
+- Session creation automatically attaches only the bound credential. It must not attach the containing vault or any unrelated credential.
+- Cloud and self-hosted runtimes materialize the credential through the existing read-only secret mount, copy it into a session-local private writable state directory required by Realmroot Toolbox, and delete that working copy with the session workspace.
+- AMA sets the Realmroot runtime identity to `ama` so one AMA Agent remains one stable Realmroot Agent across the concrete `ama`, `codex`, `claude-code`, and `copilot` session runtimes.
+- AMA does not proxy Realmroot business API traffic, issue Realmroot tokens, or inject a controller's OIDC credentials into a runtime. Realmroot Toolbox obtains and refreshes short-lived Agent authority directly.
 
 ## Providers
 

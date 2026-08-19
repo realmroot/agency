@@ -773,6 +773,7 @@ describe('[CF] /api/v1/sessions', () => {
 
   it('queues self-hosted sessions for runner lease support [spec: sessions/memory-store-resources] [spec: runtime/self-hosted-ama-cloud-loop]', async () => {
     const authorization = await signIn()
+    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
     const credential = await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization, {
       name: 'Self-hosted workspace',
@@ -783,7 +784,7 @@ describe('[CF] /api/v1/sessions', () => {
       runtimeConfig: {},
       packages: [],
     })
-    const runner = await registerRunner(authorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
     const agent = await createAgent(authorization, {
       name: 'Self-hosted session agent',
       systemPrompt: 'Wait for a self-hosted runner.',
@@ -929,10 +930,17 @@ describe('[CF] /api/v1/sessions', () => {
       { type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
     ])
 
-    await heartbeatRunner(authorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
-    const lease = await claimLease(authorization, runner.id)
+    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const lease = await claimLease(runnerAuthorization, runner.id)
     expect(lease).toBeTruthy()
-    const workItem = await readWorkItem(authorization, lease!.workItemId)
+    const consoleWorkItem = await readWorkItem(authorization, lease!.workItemId)
+    expect(consoleWorkItem.payload).toMatchObject({
+      envFrom: [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef }],
+    })
+    expect(JSON.stringify(consoleWorkItem)).not.toContain('raw-github-token')
+    expect(JSON.stringify(consoleWorkItem)).not.toContain('Review for correctness first.')
+
+    const workItem = await readWorkItem(runnerAuthorization, lease!.workItemId)
     const payload = workItem.payload as {
       env: Record<string, string>
       envFrom: Array<Record<string, unknown>>
@@ -1032,6 +1040,7 @@ describe('[CF] /api/v1/sessions', () => {
 
   it('materializes credential-backed env and workspace volumes for runner use [spec: sessions/secret-projection]', async () => {
     const authorization = await signIn()
+    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
     const environment = await createEnvironment(authorization, {
       name: `Self-hosted credential workspace ${crypto.randomUUID()}`,
       hostingMode: 'self_hosted',
@@ -1041,7 +1050,7 @@ describe('[CF] /api/v1/sessions', () => {
       runtimeConfig: {},
       packages: [],
     })
-    const runner = await registerRunner(authorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
     const agent = await createAgent(authorization, {
       name: 'Credential-backed workspace agent',
       systemPrompt: 'Use prepared workspace mounts.',
@@ -1109,10 +1118,22 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(createRes.status).toBe(201)
 
-    await heartbeatRunner(authorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
-    const lease = await claimLease(authorization, runner.id)
+    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const lease = await claimLease(runnerAuthorization, runner.id)
     expect(lease).toBeTruthy()
-    const workItem = await readWorkItem(authorization, lease!.workItemId)
+    const consoleWorkItem = await readWorkItem(authorization, lease!.workItemId)
+    expect(consoleWorkItem.payload).toMatchObject({
+      envFrom: [
+        { type: 'secret', name: 'SERVICE_PASSWORD', secretRef: gitSecretRef, key: 'GH_TOKEN' },
+        { type: 'secret', secretRef: appSecretRef },
+      ],
+      volumes: expect.any(Array),
+      volumeMounts: expect.any(Array),
+    })
+    expect(JSON.stringify(consoleWorkItem)).not.toContain('git-password')
+    expect(JSON.stringify(consoleWorkItem)).not.toContain('secret-alpha')
+
+    const workItem = await readWorkItem(runnerAuthorization, lease!.workItemId)
     const payload = workItem.payload as {
       env: Record<string, string>
       workspaceManifest: {

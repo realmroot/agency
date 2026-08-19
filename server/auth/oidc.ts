@@ -61,6 +61,30 @@ export function requireOidcConfig(env: Env) {
   }
 }
 
+export function oidcAudience(
+  env: Pick<Env, 'OIDC_RESOURCE' | 'AMA_RUNTIME_MODE' | 'AMA_E2E_TEST_AUTH'>,
+  requestUrl?: string,
+) {
+  const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
+  if (!env.OIDC_RESOURCE?.trim() && !e2eTestMode) {
+    throw new OidcError('OIDC_RESOURCE is required outside the explicit e2e test runtime')
+  }
+  const value = env.OIDC_RESOURCE?.trim() || (requestUrl ? new URL(requestUrl).origin : '')
+  if (!value) {
+    throw new OidcError('OIDC_RESOURCE or a request URL is required for access-token audience validation')
+  }
+  let resource: URL
+  try {
+    resource = new URL(value)
+  } catch {
+    throw new OidcError('OIDC_RESOURCE must be an absolute URL')
+  }
+  if (resource.username || resource.password || resource.search || resource.hash) {
+    throw new OidcError('OIDC_RESOURCE must not contain credentials, query, or fragment')
+  }
+  return resource.toString().replace(/\/$/, '')
+}
+
 async function createOidcClient(env: Env) {
   const config = requireOidcConfig(env)
   const clientMetadata: Partial<client.ClientMetadata> = {
@@ -124,24 +148,33 @@ async function createOidcClient(env: Env) {
   }
 }
 
-export async function getBearerClaims(env: Env, accessToken: string): Promise<UserInfoClaims> {
-  if (env.AMA_E2E_TEST_AUTH === 'true' && accessToken.startsWith('e2e:')) {
+export async function getBearerClaims(
+  env: Env,
+  accessToken: string,
+  expectedAudience?: string,
+): Promise<UserInfoClaims> {
+  const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
+  if (e2eTestMode && accessToken.startsWith('e2e:')) {
     return e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
   }
-  if (env.AMA_E2E_TEST_AUTH === 'true' && accessToken.startsWith('e2e-runner:')) {
+  if (e2eTestMode && accessToken.startsWith('e2e-runner:')) {
     if (!env.OIDC_RUNNER_CLIENT_ID) {
       throw new OidcError('OIDC_RUNNER_CLIENT_ID is required for runner e2e tokens')
     }
     return e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
   }
-  if (env.AMA_E2E_TEST_AUTH === 'true' && accessToken.startsWith('e2e-federated-runner:')) {
+  if (e2eTestMode && accessToken.startsWith('e2e-federated-runner:')) {
     return e2eFederatedRunnerClaims(accessToken.slice('e2e-federated-runner:'.length))
   }
 
-  return normalizeClaims(env, await verifyJwtAccessToken(env, accessToken))
+  return normalizeClaims(env, await verifyJwtAccessToken(env, accessToken, oidcAudience(env, expectedAudience)))
 }
 
-async function verifyJwtAccessToken(env: Env, accessToken: string): Promise<Record<string, unknown> & { sub: string }> {
+async function verifyJwtAccessToken(
+  env: Env,
+  accessToken: string,
+  audience: string,
+): Promise<Record<string, unknown> & { sub: string }> {
   if (accessToken.split('.').length !== 3) {
     throw new OidcError('OIDC access token must be a JWT')
   }
@@ -158,7 +191,7 @@ async function verifyJwtAccessToken(env: Env, accessToken: string): Promise<Reco
   })
 
   try {
-    const { payload } = await jwtVerify(accessToken, remoteJwks, { issuer: metadata.issuer })
+    const { payload } = await jwtVerify(accessToken, remoteJwks, { issuer: metadata.issuer, audience })
     if (!payload.sub) {
       throw new OidcError('OIDC access token did not include required subject')
     }
@@ -296,8 +329,8 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
     ...optionalClaim('tenant_id', claims.tenant_id),
     ...optionalClaim('ama_project_id', claims.ama_project_id),
     ...optionalClaim('ama_environment_id', claims.ama_environment_id),
-    roles: roles.length ? roles : runnerScoped ? ['runner'] : ['owner'],
-    permissions: permissions.length ? permissions : runnerScoped ? [] : ['*'],
+    roles: roles.length ? roles : runnerScoped ? ['runner'] : [],
+    permissions,
     teams,
   }
 }

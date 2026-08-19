@@ -593,6 +593,186 @@ describe('session-runtime', () => {
     )
   })
 
+  it('[spec: sessions/realmroot-identity] validates cloud Realmroot state and writes a private session copy', async () => {
+    const issuer = 'https://realmroot.example.com/api/auth'
+    const state = JSON.stringify({
+      version: 18,
+      agent_id: 'rr_agent_1',
+      origin: 'https://realmroot.example.com',
+      issuer,
+      runtime: 'ama',
+      host_id: 'host_1',
+      agent_key_id: 'key_1',
+      agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+      enrollment_idempotency_key: 'enroll_1',
+    })
+    mockSandbox.exec.mockImplementation(async (command: string) =>
+      command.startsWith('cat ')
+        ? { exitCode: 1, stdout: '', stderr: 'missing' }
+        : { exitCode: 0, stdout: '', stderr: '' },
+    )
+
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_realmroot',
+        sandboxId: 'sandbox_realmroot',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {
+          systemPrompt: 'Use Realmroot.',
+          realmroot: {
+            agentId: 'rr_agent_1',
+            origin: 'https://realmroot.example.com',
+            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+          },
+        },
+        environmentSnapshot: { runtimeConfig: {} },
+        workspaceManifest: {
+          root: '/workspace',
+          mounts: [
+            {
+              name: 'realmroot-agent-state',
+              type: 'secret',
+              mountPath: '/workspace/.ama/realmroot-source',
+              readOnly: true,
+              files: [{ path: 'state.json', content: state }],
+            },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({ sandboxId: 'sandbox_realmroot' })
+
+    const stateWrite = mockSandbox.writeFile.mock.calls.find(([path]) => String(path).endsWith('/ama.json'))
+    expect(stateWrite).toEqual([
+      expect.stringContaining('/.ama/realmroot-state/identities/'),
+      state,
+      { encoding: 'utf-8' },
+    ])
+    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('chmod 600')
+    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('command -v realmroot')
+  })
+
+  it('[spec: sessions/realmroot-identity] rejects cloud state for a different Realmroot Agent', async () => {
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_realmroot',
+        sandboxId: 'sandbox_realmroot',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {
+          systemPrompt: 'Use Realmroot.',
+          realmroot: {
+            agentId: 'rr_agent_1',
+            origin: 'https://realmroot.example.com',
+            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+          },
+        },
+        environmentSnapshot: { runtimeConfig: {} },
+        workspaceManifest: {
+          root: '/workspace',
+          mounts: [
+            {
+              name: 'realmroot-agent-state',
+              type: 'secret',
+              mountPath: '/workspace/.ama/realmroot-source',
+              readOnly: true,
+              files: [
+                {
+                  path: 'state.json',
+                  content: JSON.stringify({
+                    version: 18,
+                    agent_id: 'rr_agent_other',
+                    origin: 'https://realmroot.example.com',
+                    issuer: 'https://realmroot.example.com/api/auth',
+                    runtime: 'ama',
+                    host_id: 'host_1',
+                    agent_key_id: 'key_1',
+                    agent_private_key:
+                      'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+                    enrollment_idempotency_key: 'enroll_1',
+                  }),
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    ).rejects.toThrow('does not match the bound Agent')
+  })
+
+  it('[spec: sessions/realmroot-identity] preserves an existing valid writable cloud state on repeated preparation', async () => {
+    const sourceState = JSON.stringify({
+      version: 18,
+      agent_id: 'rr_agent_1',
+      origin: 'https://realmroot.example.com',
+      issuer: 'https://realmroot.example.com/api/auth',
+      runtime: 'ama',
+      host_id: 'host_1',
+      agent_key_id: 'key_1',
+      agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+      enrollment_idempotency_key: 'enroll_1',
+    })
+    const evolvedState = JSON.stringify({
+      ...JSON.parse(sourceState),
+      protocol_credential: {
+        resource_indicator: 'https://realmroot.example.com/',
+        authorization_details: [],
+        credential_endpoint: 'https://realmroot.example.com/api/credentials',
+        proof_target: 'https://realmroot.example.com/',
+        private_key: 'AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI',
+        access_token: 'refreshed',
+        expires_at: '2026-09-01T00:00:00.000Z',
+        scopes: ['agent:operate'],
+      },
+    })
+    let existingState: string | null = null
+    mockSandbox.exec.mockImplementation(async (command: string) =>
+      command.startsWith('cat ')
+        ? existingState === null
+          ? { exitCode: 1, stdout: '', stderr: 'missing' }
+          : { exitCode: 0, stdout: existingState, stderr: '' }
+        : { exitCode: 0, stdout: '', stderr: '' },
+    )
+    mockSandbox.writeFile.mockImplementation(async (path: string) => {
+      if (path.endsWith('/ama.json')) existingState = sourceState
+    })
+    const input = {
+      sessionId: 'session_realmroot_repeat',
+      sandboxId: 'sandbox_realmroot_repeat',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: {
+        systemPrompt: 'Use Realmroot.',
+        realmroot: {
+          agentId: 'rr_agent_1',
+          origin: 'https://realmroot.example.com',
+          credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+        },
+      },
+      environmentSnapshot: { runtimeConfig: {} },
+      workspaceManifest: {
+        root: '/workspace' as const,
+        mounts: [
+          {
+            name: 'realmroot-agent-state',
+            type: 'secret' as const,
+            mountPath: '/workspace/.ama/realmroot-source',
+            readOnly: true,
+            files: [{ path: 'state.json', content: sourceState }],
+          },
+        ],
+      },
+    }
+
+    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
+    existingState = evolvedState
+    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
+
+    const targetWrites = mockSandbox.writeFile.mock.calls.filter(([path]) => String(path).endsWith('/ama.json'))
+    expect(targetWrites).toHaveLength(1)
+    expect(existingState).toBe(evolvedState)
+  })
+
   it('stops the configured executor backend for a sandbox', async () => {
     await stopSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, 'sandbox_123')
 

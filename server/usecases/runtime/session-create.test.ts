@@ -31,6 +31,7 @@ const {
   findEnvironmentVersionMock,
   resolveEnvironmentForRuntimeMock,
   assignWorkMock,
+  secretVersionForResolutionMock,
 } = vi.hoisted(() => ({
   enqueueCloudTurnMock: vi.fn(),
   cloudTurnsRunInlineMock: vi.fn(() => false),
@@ -58,6 +59,7 @@ const {
   findEnvironmentVersionMock: vi.fn(),
   resolveEnvironmentForRuntimeMock: vi.fn(),
   assignWorkMock: vi.fn(async () => true),
+  secretVersionForResolutionMock: vi.fn(),
 }))
 
 // Provider/runtime resolution + provider-config read live in the deps-first
@@ -93,6 +95,7 @@ const store = {
   resolveEnvironmentForRuntime: resolveEnvironmentForRuntimeMock,
   insertSession: insertSessionMock,
   updateSessionWhenState: updateSessionWhenStateMock,
+  secretVersionForResolution: secretVersionForResolutionMock,
 }
 
 // enqueue is env-bound at the gateway; the usecase drives it through
@@ -323,6 +326,199 @@ describe('createSessionForAgent — environment resolution', () => {
       },
     })
     expect(findEnvironmentMock).not.toHaveBeenCalled()
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', () => {
+  const binding = {
+    agentId: 'rr_agent_1',
+    origin: 'https://realmroot.example.com',
+    credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+  }
+
+  beforeEach(() => {
+    enqueueCloudTurnMock.mockReset()
+    enqueueCloudTurnMock.mockResolvedValue(undefined)
+    cloudTurnsRunInlineMock.mockReturnValue(false)
+    insertSessionMock.mockReset()
+    insertSessionMock.mockResolvedValue(undefined)
+    updateSessionWhenStateMock.mockReset()
+    updateSessionWhenStateMock.mockReturnValue(true)
+    findAgentMock.mockResolvedValue({ id: 'agent_1', currentVersionId: 'agentver_1', archivedAt: null })
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: '@cf/x', providerId: 'anthropic' })
+    findEnvironmentMock.mockResolvedValue({ id: 'env_1', currentVersionId: 'envver_1' })
+    findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      realmroot: binding,
+    } as never)
+    secretVersionForResolutionMock.mockReset()
+    secretVersionForResolutionMock.mockResolvedValue({
+      id: 'vaultver_rotated',
+      state: 'active',
+      metadata: '{}',
+      secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/vaultver_rotated',
+    })
+  })
+
+  it('injects reserved env and only the bound credential as a read-only source mount', async () => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Use private resources' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    const inserted = (
+      insertSessionMock.mock.calls as unknown as Array<[{ env: string; volumes: string; volumeMounts: string }]>
+    )[0]![0]
+    expect(JSON.parse(inserted.env)).toEqual({
+      AGENT: 'ama',
+      REALMROOT_ORIGIN: binding.origin,
+      REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
+    })
+    expect(JSON.parse(inserted.volumes)).toEqual([
+      {
+        name: 'realmroot-agent-state',
+        type: 'secret',
+        secretRef: binding.credentialRef,
+        items: [{ key: 'state.json', path: 'state.json' }],
+      },
+    ])
+    expect(JSON.parse(inserted.volumeMounts)).toEqual([
+      {
+        name: 'realmroot-agent-state',
+        mountPath: '/workspace/.ama/realmroot-source',
+        readOnly: true,
+      },
+    ])
+    expect(secretVersionForResolutionMock).toHaveBeenCalledWith('org_1', 'proj_1', binding.credentialRef)
+  })
+
+  it.each([
+    'AGENT',
+    'REALMROOT_ORIGIN',
+    'REALMROOT_STATE_DIR',
+  ])('rejects caller control of reserved env %s', async (name) => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Start', env: { [name]: 'override' } },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'validation_error', fields: { [`env.${name}`]: expect.stringContaining('managed') } },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects a reserved Realmroot source volume name', async () => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      {
+        runtime: 'ama',
+        prompt: 'Start',
+        volumes: [
+          {
+            name: 'realmroot-agent-state',
+            type: 'git_repository',
+            url: 'https://github.com/saltbo/any-managed-agents.git',
+            ref: 'main',
+          },
+        ],
+        volumeMounts: [{ name: 'realmroot-agent-state', mountPath: '/workspace/custom' }],
+      },
+      null,
+    )
+
+    expect(result).toMatchObject({ ok: false, error: { fields: { volumes: expect.stringContaining('reserved') } } })
+  })
+
+  it('rejects caller mounts that overlap a reserved Realmroot state directory', async () => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      {
+        runtime: 'ama',
+        prompt: 'Start',
+        volumes: [
+          {
+            name: 'source',
+            type: 'git_repository',
+            url: 'https://github.com/saltbo/any-managed-agents.git',
+            ref: 'main',
+          },
+        ],
+        volumeMounts: [{ name: 'source', mountPath: '/workspace/.ama' }],
+      },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { fields: { volumeMounts: expect.stringContaining('reserved') } },
+    })
+  })
+
+  it.each([
+    { envFrom: [{ type: 'secret', secretRef: 'ama://vaults/vault_2/credentials/cred_2' }] },
+    {
+      envFrom: [
+        {
+          type: 'secret',
+          name: 'REALMROOT_ORIGIN',
+          key: 'origin',
+          secretRef: 'ama://vaults/vault_2/credentials/cred_2',
+        },
+      ],
+    },
+  ])('rejects bulk or reserved-name envFrom entries', async ({ envFrom }) => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Start', envFrom: envFrom as never },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'validation_error', fields: { 'envFrom.0.name': expect.any(String) } },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('fails a new Session after the bound credential is revoked', async () => {
+    secretVersionForResolutionMock.mockResolvedValue({ state: 'revoked', metadata: '{}', secretRef: 'ref' })
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Start after revocation' },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'validation_error', fields: { 'volumes.0.secretRef': expect.stringContaining('active') } },
+    })
     expect(insertSessionMock).not.toHaveBeenCalled()
   })
 })

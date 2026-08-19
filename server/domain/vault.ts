@@ -14,6 +14,7 @@ export const CREDENTIAL_TYPES = [
   'ama.dev/tls',
   'ama.dev/private-key-jwk',
   'ama.dev/oauth-token',
+  'ama.dev/realmroot-agent-state',
 ] as const
 export const CREDENTIAL_STATES = ['active', 'revoked'] as const
 export const VERSION_STATES = ['active', 'superseded', 'revoked'] as const
@@ -183,6 +184,8 @@ function requiredKeys(type: CredentialType): string[] {
       return ['jwk']
     case 'ama.dev/oauth-token':
       return ['access-token']
+    case 'ama.dev/realmroot-agent-state':
+      return ['state.json']
   }
 }
 
@@ -230,7 +233,314 @@ export function validateSecretData(type: CredentialType, stringData: Record<stri
       return { 'stringData.jwk': 'JWK must be valid JSON.' }
     }
   }
+  if (type === 'ama.dev/realmroot-agent-state') {
+    try {
+      parseRealmrootAgentState(stringData['state.json'] ?? '')
+    } catch (error) {
+      return {
+        'stringData.state.json': error instanceof Error ? error.message : 'Realmroot Agent state is invalid.',
+      }
+    }
+  }
   return null
+}
+
+export interface RealmrootAgentStateMetadata {
+  agentId: string
+  origin: string
+  issuer: string
+  runtime: 'ama'
+}
+
+const REALMROOT_AGENT_STATE_VERSION = 18
+const REALMROOT_AGENT_STATE_KEYS = new Set([
+  'version',
+  'origin',
+  'issuer',
+  'runtime',
+  'name',
+  'agent_id',
+  'host_id',
+  'agent_key_id',
+  'agent_private_key',
+  'registration_approval',
+  'enrollment_idempotency_key',
+  'identity',
+  'credential_sources',
+  'protocol_credential',
+])
+
+function objectRecord(value: unknown, message: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(message)
+  return value as Record<string, unknown>
+}
+
+function assertKnownKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>, message: string) {
+  if (Object.keys(value).some((key) => !allowed.has(key))) throw new Error(message)
+}
+
+function realmrootAbsoluteUrl(value: unknown, message: string) {
+  if (typeof value !== 'string' || !value) throw new Error(message)
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error(message)
+  }
+  const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]'
+  if (
+    parsed.username ||
+    parsed.password ||
+    (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && loopback))
+  ) {
+    throw new Error(message)
+  }
+  return parsed
+}
+
+const DPOP_CREDENTIAL_KEYS = new Set([
+  'resource_indicator',
+  'authorization_details',
+  'credential_endpoint',
+  'proof_target',
+  'private_key',
+  'access_token',
+  'expires_at',
+  'scopes',
+])
+
+function authorizationDetails(value: unknown) {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.some((detail) => !detail || typeof detail !== 'object' || Array.isArray(detail))) {
+    throw new Error('Realmroot Agent state contains invalid authorization details.')
+  }
+  return value
+}
+
+function canonicalJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJson)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, canonicalJson(nested)]),
+  )
+}
+
+function canonicalAuthorizationDetails(details: unknown[]) {
+  return details
+    .map((detail) => JSON.stringify(canonicalJson(detail)))
+    .sort()
+    .join('\u0000')
+}
+
+function realmrootRfc3339(value: unknown, message: string) {
+  if (typeof value !== 'string') throw new Error(message)
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(value)
+  if (!match) throw new Error(message)
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+  if (
+    daysInMonth === undefined ||
+    day < 1 ||
+    day > daysInMonth ||
+    Number(hourText) > 23 ||
+    Number(minuteText) > 59 ||
+    Number(secondText) > 59 ||
+    (offsetHourText !== undefined && Number(offsetHourText) > 23) ||
+    (offsetMinuteText !== undefined && Number(offsetMinuteText) > 59)
+  ) {
+    throw new Error(message)
+  }
+}
+
+function dpopCredential(value: unknown, source?: { resource: string; details: unknown[] }) {
+  const credential = objectRecord(value, 'Realmroot Agent state contains invalid DPoP credential metadata.')
+  assertKnownKeys(credential, DPOP_CREDENTIAL_KEYS, 'Realmroot Agent state contains unknown DPoP credential fields.')
+  const resource = realmrootAbsoluteUrl(
+    credential.resource_indicator,
+    'Realmroot Agent state contains an invalid DPoP resource URL.',
+  ).toString()
+  realmrootAbsoluteUrl(credential.credential_endpoint, 'Realmroot Agent state contains an invalid credential endpoint.')
+  realmrootAbsoluteUrl(credential.proof_target, 'Realmroot Agent state contains an invalid proof target.')
+  const details = authorizationDetails(credential.authorization_details)
+  if (
+    source &&
+    (resource !== source.resource ||
+      canonicalAuthorizationDetails(details) !== canonicalAuthorizationDetails(source.details))
+  ) {
+    throw new Error('Realmroot Agent state credential source and current credential do not match.')
+  }
+  if (
+    credential.scopes !== undefined &&
+    (!Array.isArray(credential.scopes) || credential.scopes.some((v) => typeof v !== 'string'))
+  ) {
+    throw new Error('Realmroot Agent state contains invalid DPoP scopes.')
+  }
+  for (const key of ['private_key', 'access_token'] as const) {
+    if (credential[key] !== undefined && typeof credential[key] !== 'string') {
+      throw new Error('Realmroot Agent state contains invalid DPoP credential values.')
+    }
+  }
+  if (credential.expires_at !== undefined && credential.expires_at !== null) {
+    realmrootRfc3339(credential.expires_at, 'Realmroot Agent state contains an invalid DPoP expiry.')
+  }
+  return credential
+}
+
+function validateRealmrootOptionalState(state: Record<string, unknown>) {
+  if (state.registration_approval !== undefined && state.registration_approval !== null) {
+    const approval = objectRecord(state.registration_approval, 'Realmroot Agent registration approval is invalid.')
+    assertKnownKeys(
+      approval,
+      new Set(['verification_uri_complete', 'expires_at', 'interval_seconds']),
+      'Realmroot Agent registration approval contains unknown fields.',
+    )
+    realmrootAbsoluteUrl(approval.verification_uri_complete, 'Realmroot Agent registration approval URL is invalid.')
+    if (!Number.isInteger(approval.interval_seconds)) throw new Error('Realmroot Agent approval interval is invalid.')
+    if (approval.expires_at !== undefined && approval.expires_at !== null) {
+      realmrootRfc3339(approval.expires_at, 'Realmroot Agent registration approval expiry is invalid.')
+    }
+  }
+  if (state.identity !== undefined && state.identity !== null) {
+    const identity = objectRecord(state.identity, 'Realmroot Agent identity is invalid.')
+    assertKnownKeys(
+      identity,
+      new Set(['id', 'issuer', 'subject', 'username', 'name', 'runtime']),
+      'Realmroot Agent identity contains unknown fields.',
+    )
+    if (
+      typeof identity.id !== 'string' ||
+      typeof identity.issuer !== 'string' ||
+      typeof identity.subject !== 'string'
+    ) {
+      throw new Error('Realmroot Agent identity is incomplete.')
+    }
+    for (const key of ['username', 'name', 'runtime'] as const) {
+      if (identity[key] !== undefined && typeof identity[key] !== 'string') {
+        throw new Error('Realmroot Agent identity contains invalid fields.')
+      }
+    }
+  }
+  if (state.credential_sources !== undefined && state.credential_sources !== null) {
+    const sources = objectRecord(state.credential_sources, 'Realmroot Agent credential sources are invalid.')
+    const contexts = new Set<string>()
+    for (const [reference, rawSource] of Object.entries(sources)) {
+      if (!reference.startsWith('rrcs_') || decodedBase64UrlLength(reference.slice(5)) !== 16) {
+        throw new Error('Realmroot Agent credential source reference is invalid.')
+      }
+      const source = objectRecord(rawSource, 'Realmroot Agent credential source is invalid.')
+      assertKnownKeys(
+        source,
+        new Set(['resource_indicator', 'authorization_details', 'credential']),
+        'Realmroot Agent credential source contains unknown fields.',
+      )
+      const resource = realmrootAbsoluteUrl(
+        source.resource_indicator,
+        'Realmroot Agent credential source resource is invalid.',
+      ).toString()
+      const details = authorizationDetails(source.authorization_details)
+      const context = `${resource}\u0000${canonicalAuthorizationDetails(details)}`
+      if (contexts.has(context)) throw new Error('Realmroot Agent credential sources contain a duplicate context.')
+      contexts.add(context)
+      const credential = dpopCredential(source.credential, { resource, details })
+      if (!Array.isArray(credential.scopes) || credential.scopes.length === 0) {
+        throw new Error('Realmroot Agent credential source requires scopes.')
+      }
+      if (credential.private_key || credential.access_token || credential.expires_at) {
+        throw new Error('Realmroot Agent credential source must not contain target key or token material.')
+      }
+    }
+  }
+  if (state.protocol_credential !== undefined && state.protocol_credential !== null) {
+    const credential = dpopCredential(state.protocol_credential)
+    if (typeof credential.private_key !== 'string' || decodedBase64UrlLength(credential.private_key) !== 32) {
+      throw new Error('Realmroot Agent protocol DPoP private key is invalid.')
+    }
+    if (
+      (typeof credential.access_token === 'string' && credential.access_token.length > 0) !==
+      (credential.expires_at != null)
+    ) {
+      throw new Error('Realmroot Agent protocol credential is incomplete.')
+    }
+  }
+}
+
+function decodedBase64UrlLength(value: string) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return -1
+  try {
+    const normalized = value.replaceAll('-', '+').replaceAll('_', '/')
+    return atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')).length
+  } catch {
+    return -1
+  }
+}
+
+export function parseRealmrootAgentState(content: string): RealmrootAgentStateMetadata {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    throw new Error('Realmroot Agent state must be valid JSON.')
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Realmroot Agent state must be a JSON object.')
+  }
+  const state = parsed as Record<string, unknown>
+  assertKnownKeys(state, REALMROOT_AGENT_STATE_KEYS, 'Realmroot Agent state contains fields unknown to v0.4.2.')
+  if (state.name !== undefined && typeof state.name !== 'string') {
+    throw new Error('Realmroot Agent state contains an invalid name.')
+  }
+  if (state.version !== REALMROOT_AGENT_STATE_VERSION) {
+    throw new Error(`Realmroot Agent state must use version ${REALMROOT_AGENT_STATE_VERSION}.`)
+  }
+  for (const key of [
+    'agent_id',
+    'origin',
+    'issuer',
+    'host_id',
+    'agent_key_id',
+    'enrollment_idempotency_key',
+  ] as const) {
+    if (typeof state[key] !== 'string' || !state[key].trim()) {
+      throw new Error(`Realmroot Agent state requires ${key}.`)
+    }
+  }
+  let origin: URL
+  try {
+    origin = new URL(state.origin as string)
+  } catch {
+    throw new Error('Realmroot Agent state origin must be a safe HTTPS URL.')
+  }
+  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.search || origin.hash) {
+    throw new Error('Realmroot Agent state origin must be a safe HTTPS URL.')
+  }
+  let issuer: URL
+  try {
+    issuer = new URL(state.issuer as string)
+  } catch {
+    throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
+  }
+  if (issuer.protocol !== 'https:' || issuer.username || issuer.password || issuer.search || issuer.hash) {
+    throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
+  }
+  if (state.runtime !== 'ama') {
+    throw new Error('Realmroot Agent state must be enrolled with AGENT=ama.')
+  }
+  if (typeof state.agent_private_key !== 'string' || decodedBase64UrlLength(state.agent_private_key) !== 64) {
+    throw new Error('Realmroot Agent state contains an invalid Ed25519 private key.')
+  }
+  validateRealmrootOptionalState(state)
+  return {
+    agentId: state.agent_id as string,
+    origin: state.origin as string,
+    issuer: state.issuer as string,
+    runtime: 'ama',
+  }
 }
 
 // Builds the safe reference for a credential version from the requested secret

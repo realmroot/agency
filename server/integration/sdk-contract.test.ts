@@ -126,6 +126,31 @@ describe('[CF] generated SDK contract', () => {
     vi.unstubAllGlobals()
   })
 
+  it('declares the standard 403 response for every bearer-auth operation', () => {
+    const document = openapi as {
+      paths: Record<
+        string,
+        Record<
+          string,
+          {
+            operationId?: string
+            security?: Array<Record<string, unknown>>
+            responses?: Record<string, { content?: Record<string, { schema?: unknown }> }>
+          }
+        >
+      >
+    }
+    for (const methods of Object.values(document.paths)) {
+      for (const operation of Object.values(methods)) {
+        if (!operation.operationId || !operation.security?.some((requirement) => 'bearerAuth' in requirement)) continue
+        expect(
+          operation.responses?.['403']?.content?.['application/json']?.schema,
+          `${operation.operationId} must publish the standard forbidden response`,
+        ).toEqual({ $ref: '#/components/schemas/ErrorResponse' })
+      }
+    }
+  })
+
   it('external product manages standard AMA resources through the SDK [spec: projects/external-resources]', async () => {
     const { ama, runId } = await newSdk()
     const refs = externalRefs(runId)

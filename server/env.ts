@@ -25,6 +25,9 @@ export interface Env {
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
   OIDC_CLIENT_SECRET?: string
+  // Exact OAuth protected-resource audience accepted by the API. When absent,
+  // request handlers use their externally visible request origin.
+  OIDC_RESOURCE?: string
   OIDC_RUNNER_CLIENT_ID?: string
   OIDC_RUNNER_SCOPES?: string
   OIDC_USE_SERVICE_BINDING?: string

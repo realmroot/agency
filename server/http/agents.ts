@@ -69,6 +69,17 @@ const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
   example: ['read', 'bash', 'edit'],
 })
 
+const RealmrootAgentBindingSchema = z
+  .object({
+    agentId: z.string().min(1).max(160).openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    origin: z.string().url().openapi({ example: 'https://id.realmroot.dev' }),
+    credentialRef: z.string().min(1).openapi({
+      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+    }),
+  })
+  .strict()
+  .openapi('RealmrootAgentBinding')
+
 const AgentSpecSchema = z
   .object({
     systemPrompt: z.string().openapi({ example: 'Answer with citations.' }),
@@ -90,6 +101,7 @@ const AgentSpecSchema = z
     }),
     allowedTools: AllowedToolsSchema,
     mcpConnectors: z.array(z.string()).openapi({ example: ['github'] }),
+    realmroot: RealmrootAgentBindingSchema.nullable(),
   })
   .openapi('AgentSpec')
 
@@ -155,6 +167,7 @@ const AgentPayloadSchema = z
           .max(50)
           .optional()
           .openapi({ example: ['github'] }),
+        realmroot: RealmrootAgentBindingSchema.nullable().optional(),
       })
       .strict(),
   })
@@ -474,6 +487,7 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
     ...(spec?.subagents !== undefined ? { subagents: normalizeSubagents(spec.subagents) } : {}),
     ...(spec?.allowedTools !== undefined ? { allowedTools: spec.allowedTools } : {}),
     ...(spec?.mcpConnectors !== undefined ? { mcpConnectors: spec.mcpConnectors } : {}),
+    ...(spec?.realmroot !== undefined ? { realmroot: spec.realmroot } : {}),
     ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
@@ -488,6 +502,7 @@ function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): AgentSpec {
     subagents: normalizeSubagents(spec.subagents ?? []),
     allowedTools: spec.allowedTools ?? defaultAllowedTools(),
     mcpConnectors: spec.mcpConnectors ?? [],
+    realmroot: spec.realmroot ?? null,
   }
 }
 

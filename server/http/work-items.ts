@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
-import { requireAuth } from '../auth/session'
+import { isRunnerOidcAuth, requireAuth } from '../auth/session'
 import { errorResponse } from '../errors'
 import {
   AuthenticatedOperation,
@@ -198,7 +198,7 @@ export function registerWorkItemRoutes(routes: WorkItemRoutes) {
       // envFrom references materialized into env and workspaceManifest.
       const leaseRunnerId =
         workItem.state === 'leased' ? await deps.workItems.activeLeaseRunnerId(auth.project.id, workItemId) : null
-      if (leaseRunnerId) {
+      if (leaseRunnerId && isRunnerOidcAuth(c.env, auth)) {
         const runner = await deps.runners.find(auth.project.id, leaseRunnerId)
         if (runner && runnerOperationAuthorized(c.env, auth, runner)) {
           try {

@@ -21,11 +21,17 @@ Required settings:
 - Client id: `OIDC_CLIENT_ID`
 - Client secret: store as Wrangler secret `OIDC_CLIENT_SECRET`
 - Resource audience: configure the public AMA origin as an enabled FlareAuth API
-  resource audience. AMA derives this value from the request origin so browser
-  and runner flows receive JWT access tokens for the origin they call.
+  resource audience and set that exact value in `OIDC_RESOURCE`. AMA rejects
+  access tokens with a missing or different audience. Only the explicit E2E
+  test runtime may derive it from the current request origin.
 - Redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE
+
+Provider authorization claims must grant explicit AMA resource permissions.
+Collection reads require `<resource>:read`, mutations require
+`<resource>:write`, and narrowly scoped administration may use
+`<resource>:*`. A missing permission claim is denied.
 
 The browser uses the community `oidc-client-ts` library for authorization-code
 PKCE redirect handling. The Worker uses the community `openid-client` library for
@@ -48,6 +54,8 @@ The container image must be built from this repository's `Dockerfile`. Runtime
 packages required for tool execution must be baked into the container image. The
 runtime must not install Node packages during session start; session startup
 should only create workspace metadata and initialize the executor backend.
+The image pins and checksum-verifies the Realmroot CLI used by Realmroot-bound
+Agents.
 
 Required Worker bindings and variables:
 
@@ -99,6 +107,10 @@ external vault. D1 stores runner metadata, supported runtimes and models, heartb
 work item payloads, lease state, safe result/error metadata, and secret
 references only. Do not expose runner host ports, runner-local preview URLs, or
 runner-local filesystem paths as product endpoints.
+
+Runners that accept Realmroot-bound Agents must have a compatible `realmroot`
+CLI on `PATH`. A bound Session fails before runtime launch when the CLI or the
+bound state is unavailable; an unbound Session has no Realmroot dependency.
 
 ## Local E2E And Smoke
 

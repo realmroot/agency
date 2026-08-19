@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
-import { getBearerClaims, OidcError, organizationIdForClaims, requireOidcConfig } from '../auth/oidc'
+import { getBearerClaims, OidcError, oidcAudience, organizationIdForClaims, requireOidcConfig } from '../auth/oidc'
 import { requireAuth, resolveProjectForClaims } from '../auth/session'
 import { errorResponse } from '../errors'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
@@ -160,7 +160,7 @@ export function registerAuthRoutes(routes: AuthRoutes) {
 
       let claims: Awaited<ReturnType<typeof getBearerClaims>>
       try {
-        claims = await getBearerClaims(c.env, accessToken)
+        claims = await getBearerClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
       } catch (err) {
         if (err instanceof OidcError) {
           return errorResponse(c, 401, 'oidc_error', 'OIDC token validation failed', {

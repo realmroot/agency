@@ -19,6 +19,7 @@ export const credentialTypes: Array<{ type: CredentialType; label: string }> = [
   { type: 'ama.dev/tls', label: 'TLS' },
   { type: 'ama.dev/private-key-jwk', label: 'Private key JWK' },
   { type: 'ama.dev/oauth-token', label: 'OAuth token' },
+  { type: 'ama.dev/realmroot-agent-state', label: 'Realmroot Agent state' },
 ]
 
 export function defaultCredentialData(type: CredentialType): Record<string, string> {
@@ -35,6 +36,8 @@ export function defaultCredentialData(type: CredentialType): Record<string, stri
       return { jwk: '' }
     case 'ama.dev/oauth-token':
       return { 'access-token': '', 'refresh-token': '', 'token-type': '', 'expires-at': '', scopes: '' }
+    case 'ama.dev/realmroot-agent-state':
+      return { 'state.json': '' }
   }
 }
 
@@ -68,5 +71,7 @@ function requiredCredentialDataKeys(type: CredentialType) {
       return ['jwk']
     case 'ama.dev/oauth-token':
       return ['access-token']
+    case 'ama.dev/realmroot-agent-state':
+      return ['state.json']
   }
 }

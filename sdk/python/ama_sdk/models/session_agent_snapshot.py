@@ -8,10 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..types import UNSET, Unset
 from typing import cast
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
   from ..models.session_subagent import SessionSubagent
 
 
@@ -38,6 +40,7 @@ class SessionAgentSnapshot:
             allowed_tools (list[str]):
             mcp_connectors (list[str]):
             created_at (datetime.datetime):
+            realmroot (None | SessionRealmrootBindingType0 | Unset):
      """
 
     id: str
@@ -52,6 +55,7 @@ class SessionAgentSnapshot:
     allowed_tools: list[str]
     mcp_connectors: list[str]
     created_at: datetime.datetime
+    realmroot: None | SessionRealmrootBindingType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -59,6 +63,7 @@ class SessionAgentSnapshot:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
         from ..models.session_subagent import SessionSubagent
         id = self.id
 
@@ -96,6 +101,14 @@ class SessionAgentSnapshot:
 
         created_at = self.created_at.isoformat()
 
+        realmroot: dict[str, Any] | None | Unset
+        if isinstance(self.realmroot, Unset):
+            realmroot = UNSET
+        elif isinstance(self.realmroot, SessionRealmrootBindingType0):
+            realmroot = self.realmroot.to_dict()
+        else:
+            realmroot = self.realmroot
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -113,6 +126,8 @@ class SessionAgentSnapshot:
             "mcpConnectors": mcp_connectors,
             "createdAt": created_at,
         })
+        if realmroot is not UNSET:
+            field_dict["realmroot"] = realmroot
 
         return field_dict
 
@@ -120,6 +135,7 @@ class SessionAgentSnapshot:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
         from ..models.session_subagent import SessionSubagent
         d = dict(src_dict)
         id = d.pop("id")
@@ -166,6 +182,26 @@ class SessionAgentSnapshot:
 
 
 
+        def _parse_realmroot(data: object) -> None | SessionRealmrootBindingType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_session_realmroot_binding_type_0 = SessionRealmrootBindingType0.from_dict(data)
+
+
+
+                return componentsschemas_session_realmroot_binding_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SessionRealmrootBindingType0 | Unset, data)
+
+        realmroot = _parse_realmroot(d.pop("realmroot", UNSET))
+
+
         session_agent_snapshot = cls(
             id=id,
             agent_id=agent_id,
@@ -179,6 +215,7 @@ class SessionAgentSnapshot:
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
             created_at=created_at,
+            realmroot=realmroot,
         )
 
 

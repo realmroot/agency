@@ -2,10 +2,13 @@ import {
   type Agent,
   type AgentSpec,
   type AgentSubagent,
+  type RealmrootAgentBinding,
   validateAllowedTools,
+  validateRealmrootBinding,
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
+import { secretRefIdentity } from '@server/domain/vault'
 import type { Deps } from './deps'
 import { AgentArchivedError, AgentValidationError, type AuthScope } from './ports'
 
@@ -39,6 +42,31 @@ async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
   if (subagentConnectorError) {
     throw new AgentValidationError('Invalid agent configuration', subagentConnectorError)
   }
+  const realmrootError = validateRealmrootBinding(config.realmroot)
+  if (realmrootError) {
+    throw new AgentValidationError('Invalid agent configuration', realmrootError)
+  }
+  if (config.realmroot && !(await realmrootCredentialActive(deps, auth, config.realmroot.credentialRef))) {
+    throw new AgentValidationError('Invalid agent configuration', {
+      realmroot: 'Realmroot credential must reference an active credential in a visible AMA Vault.',
+    })
+  }
+}
+
+async function realmrootCredentialActive(deps: Deps, auth: AuthScope, reference: string) {
+  const identity = secretRefIdentity(reference)
+  if (!identity?.credentialId || identity.versionId) return false
+  const vault = await deps.vaults.find(identity.vaultId, {
+    organizationId: auth.organization.id,
+    projectId: auth.project.id,
+  })
+  if (vault?.status.phase !== 'active') return false
+  const credential = await deps.vaults.findCredential(identity.vaultId, identity.credentialId)
+  return (
+    credential?.spec.vaultId === identity.vaultId &&
+    credential.spec.type === 'ama.dev/realmroot-agent-state' &&
+    credential.status.phase === 'active'
+  )
 }
 
 // A null provider defers project-default resolution to session start, so it
@@ -107,6 +135,7 @@ const RUNTIME_CONFIG_FIELDS = [
   'subagents',
   'allowedTools',
   'mcpConnectors',
+  'realmroot',
 ] as const
 
 export interface UpdateAgentPatch {
@@ -119,6 +148,7 @@ export interface UpdateAgentPatch {
   subagents?: AgentSubagent[]
   allowedTools?: string[]
   mcpConnectors?: string[]
+  realmroot?: RealmrootAgentBinding | null
   archived?: boolean
 }
 
@@ -168,6 +198,7 @@ export async function updateAgent(
     subagents: fields.subagents ?? agent.spec.subagents,
     allowedTools: fields.allowedTools ?? agent.spec.allowedTools,
     mcpConnectors: fields.mcpConnectors ?? agent.spec.mcpConnectors,
+    realmroot: fields.realmroot !== undefined ? fields.realmroot : agent.spec.realmroot,
   }
   await validateConfig(deps, auth, next)
 

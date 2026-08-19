@@ -6,6 +6,7 @@ import { errorResponse } from '../errors'
 import {
   getBearerClaims,
   OidcError,
+  oidcAudience,
   organizationIdForClaims,
   type UserInfoClaims,
   upsertProjectForClaims,
@@ -77,6 +78,40 @@ function isRunnerTokenPath(pathname: string) {
   return RUNNER_TOKEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 
+function requiredHttpPermission(method: string, requestUrl: string) {
+  const match = /^\/api\/v1\/([^/]+)/.exec(new URL(requestUrl).pathname)
+  if (!match?.[1]) return null
+  const operation = method === 'GET' || method === 'HEAD' ? 'read' : 'write'
+  return { resource: match[1], permission: `${match[1]}:${operation}` }
+}
+
+class AuthorizationError extends Error {
+  constructor(readonly requiredPermission: string) {
+    super('Token is not authorized for this resource')
+    this.name = 'AuthorizationError'
+  }
+}
+
+function missingPermission<E extends HonoEnv>(c: AppContext<E>, auth: Pick<AuthContext, 'permissions' | 'oidc'>) {
+  if (isRunnerOidcAuth(c.env, auth)) return null
+  const required = requiredHttpPermission(c.req.method, c.req.url)
+  if (!required) return null
+  if (
+    auth.permissions.includes('*') ||
+    auth.permissions.includes(`${required.resource}:*`) ||
+    auth.permissions.includes(required.permission)
+  ) {
+    return null
+  }
+  return required.permission
+}
+
+function authorizationErrorResponse<E extends HonoEnv>(c: AppContext<E>, error: AuthorizationError) {
+  return errorResponse(c, 403, 'forbidden', error.message, {
+    requiredPermission: error.requiredPermission,
+  }) as never
+}
+
 function bearerToken(headers: Headers, url: string) {
   const value = headers.get('authorization')
   if (value) {
@@ -99,8 +134,10 @@ export async function resolveAuthContext<E extends HonoEnv>(
 
   const token = bearerToken(c.req.raw.headers, c.req.url)
   if (token) {
-    const claims = await getBearerClaims(c.env, token)
+    const claims = await getBearerClaims(c.env, token, oidcAudience(c.env, c.req.url))
     const identity = authIdentityFromClaims(claims)
+    const requiredPermission = missingPermission(c, identity)
+    if (requiredPermission) throw new AuthorizationError(requiredPermission)
     const project = await upsertProjectForClaims(db, claims, new Date().toISOString(), requestedProjectId)
     return {
       ...identity,
@@ -126,6 +163,7 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
   try {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
+    if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError) {
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
         reason: 'missing_or_invalid_bearer_token',
@@ -151,7 +189,7 @@ export async function resolveProjectForClaims(env: Env, claims: UserInfoClaims, 
 export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): Promise<AuthIdentity | null> {
   const token = bearerToken(c.req.raw.headers, c.req.url)
   if (token) {
-    const claims = await getBearerClaims(c.env, token)
+    const claims = await getBearerClaims(c.env, token, oidcAudience(c.env, c.req.url))
     return authIdentityFromClaims(claims)
   }
 
@@ -206,6 +244,8 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
   if (isRunnerOidcAuth(c.env, auth) && !isRunnerTokenPath(new URL(c.req.url).pathname)) {
     return errorResponse(c, 403, 'forbidden', 'Runner token is not authorized for this resource') as never
   }
+  const requiredPermission = missingPermission(c, auth)
+  if (requiredPermission) return authorizationErrorResponse(c, new AuthorizationError(requiredPermission))
   return auth
 }
 
@@ -217,6 +257,7 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
   try {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
+    if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError) {
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
         reason: 'missing_or_invalid_bearer_token',
