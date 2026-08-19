@@ -86,7 +86,7 @@ func TestPrepareRealmrootAgentCreatesPrivateSessionState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("expected state mode 0600, got %o", info.Mode().Perm())
 	}
 	for _, dir := range []string{
@@ -98,7 +98,7 @@ func TestPrepareRealmrootAgentCreatesPrivateSessionState(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Mode().Perm() != 0o700 {
+		if runtime.GOOS != "windows" && info.Mode().Perm() != 0o700 {
 			t.Fatalf("expected private directory mode 0700 for %s, got %o", dir, info.Mode().Perm())
 		}
 	}
