@@ -314,7 +314,8 @@ function authorizationDetails(value: unknown) {
   if (!Array.isArray(value) || value.some((detail) => !detail || typeof detail !== 'object' || Array.isArray(detail))) {
     throw new Error('Realmroot Agent state contains invalid authorization details.')
   }
-  return value
+  const details: unknown[] = value
+  return details
 }
 
 function canonicalJson(value: unknown): unknown {
