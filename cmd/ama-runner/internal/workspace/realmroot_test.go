@@ -13,8 +13,13 @@ import (
 func installFakeRealmroot(t *testing.T) {
 	t.Helper()
 	bin := t.TempDir()
-	path := filepath.Join(bin, "realmroot")
-	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+	name := "realmroot"
+	contents := []byte("#!/bin/sh\nexit 0\n")
+	if runtime.GOOS == "windows" {
+		name = "realmroot.bat"
+		contents = []byte("@exit /b 0\r\n")
+	}
+	if err := os.WriteFile(filepath.Join(bin, name), contents, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
