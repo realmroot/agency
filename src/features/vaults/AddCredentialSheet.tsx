@@ -196,7 +196,7 @@ function CredentialSecretFields({
       return (
         <SecretTextarea
           label="Realmroot Agent state JSON"
-          description="Paste the complete ama.json enrolled with AGENT=ama. AMA stores it as state.json."
+          description="Paste the complete YW1h.json enrolled with AGENT=ama. AMA stores it as state.json."
           value={form.data['state.json']!}
           onChange={(value) => setData('state.json', value)}
         />

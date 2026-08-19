@@ -65,6 +65,8 @@ func realmrootSnapshot() map[string]any {
 	}
 }
 
+const realmrootAMARuntimeFile = "YW1h.json"
+
 func TestPrepareRealmrootAgentCreatesPrivateSessionState(t *testing.T) {
 	installFakeRealmroot(t)
 	root := t.TempDir()
@@ -74,13 +76,17 @@ func TestPrepareRealmrootAgentCreatesPrivateSessionState(t *testing.T) {
 		t.Fatalf("expected Realmroot preparation success, got %v", err)
 	}
 	issuerDir := base64.RawURLEncoding.EncodeToString([]byte("https://realmroot.example.com/api/auth"))
-	target := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", issuerDir, "ama.json")
+	targetDir := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", issuerDir)
+	target := filepath.Join(targetDir, realmrootAMARuntimeFile)
 	got, err := os.ReadFile(target)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(got) != string(data) {
 		t.Fatalf("expected exact private state copy, got %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, "ama.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected legacy ama.json runtime state to be absent, got %v", err)
 	}
 	info, err := os.Stat(target)
 	if err != nil {
@@ -134,7 +140,13 @@ func TestPrepareRealmrootAgentPreservesExistingWritableState(t *testing.T) {
 		t.Fatalf("first preparation failed: %v", err)
 	}
 	issuerDir := base64.RawURLEncoding.EncodeToString([]byte("https://realmroot.example.com/api/auth"))
-	target := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", issuerDir, "ama.json")
+	target := filepath.Join(
+		root,
+		filepath.FromSlash(realmrootStateDirPath),
+		"identities",
+		issuerDir,
+		realmrootAMARuntimeFile,
+	)
 	var evolved map[string]any
 	data, err := os.ReadFile(target)
 	if err != nil {
@@ -214,7 +226,13 @@ func TestPrepareRealmrootAgentReportsFilesystemFailures(t *testing.T) {
 		root := t.TempDir()
 		realmrootState(t, root, nil)
 		issuerDir := base64.RawURLEncoding.EncodeToString([]byte("https://realmroot.example.com/api/auth"))
-		target := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", issuerDir, "ama.json")
+		target := filepath.Join(
+			root,
+			filepath.FromSlash(realmrootStateDirPath),
+			"identities",
+			issuerDir,
+			realmrootAMARuntimeFile,
+		)
 		if err := os.MkdirAll(target, 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -240,7 +258,10 @@ func TestPrepareRealmrootAgentReportsFilesystemFailures(t *testing.T) {
 			if err := os.MkdirAll(targetDir, 0o700); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink(filepath.Join(root, "missing", "ama.json"), filepath.Join(targetDir, "ama.json")); err != nil {
+			if err := os.Symlink(
+				filepath.Join(root, "missing", realmrootAMARuntimeFile),
+				filepath.Join(targetDir, realmrootAMARuntimeFile),
+			); err != nil {
 				t.Fatal(err)
 			}
 			err := prepareRealmrootAgent(root, realmrootSnapshot())
@@ -265,7 +286,13 @@ func TestPrepareRealmrootAgentRejectsInvalidExistingState(t *testing.T) {
 			root := t.TempDir()
 			realmrootState(t, root, nil)
 			issuerDir := base64.RawURLEncoding.EncodeToString([]byte("https://realmroot.example.com/api/auth"))
-			target := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", issuerDir, "ama.json")
+			target := filepath.Join(
+				root,
+				filepath.FromSlash(realmrootStateDirPath),
+				"identities",
+				issuerDir,
+				realmrootAMARuntimeFile,
+			)
 			if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 				t.Fatal(err)
 			}

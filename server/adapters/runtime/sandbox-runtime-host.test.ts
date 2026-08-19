@@ -642,12 +642,13 @@ describe('session-runtime', () => {
       }),
     ).resolves.toMatchObject({ sandboxId: 'sandbox_realmroot' })
 
-    const stateWrite = mockSandbox.writeFile.mock.calls.find(([path]) => String(path).endsWith('/ama.json'))
+    const stateWrite = mockSandbox.writeFile.mock.calls.find(([path]) => String(path).endsWith('/YW1h.json'))
     expect(stateWrite).toEqual([
       expect.stringContaining('/.ama/realmroot-state/identities/'),
       state,
       { encoding: 'utf-8' },
     ])
+    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
     expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('chmod 600')
     expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('command -v realmroot')
   })
@@ -734,7 +735,7 @@ describe('session-runtime', () => {
         : { exitCode: 0, stdout: '', stderr: '' },
     )
     mockSandbox.writeFile.mockImplementation(async (path: string) => {
-      if (path.endsWith('/ama.json')) existingState = sourceState
+      if (path.endsWith('/YW1h.json')) existingState = sourceState
     })
     const input = {
       sessionId: 'session_realmroot_repeat',
@@ -768,8 +769,9 @@ describe('session-runtime', () => {
     existingState = evolvedState
     await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
 
-    const targetWrites = mockSandbox.writeFile.mock.calls.filter(([path]) => String(path).endsWith('/ama.json'))
+    const targetWrites = mockSandbox.writeFile.mock.calls.filter(([path]) => String(path).endsWith('/YW1h.json'))
     expect(targetWrites).toHaveLength(1)
+    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
     expect(existingState).toBe(evolvedState)
   })
 

@@ -11,10 +11,10 @@ Enroll the identity outside an AMA Session with the stable AMA runtime name:
 ```bash
 export AGENT=ama
 export REALMROOT_STATE_DIR="$(mktemp -d)"
-realmroot agent enroll --origin https://realmroot.example.com
+realmroot agent enroll --username <agent-username> --realmroot-origin https://realmroot.example.com
 ```
 
-Locate the resulting `ama.json` below
+Locate the resulting `YW1h.json` below
 `$REALMROOT_STATE_DIR/identities/<issuer>/`. Create an AMA Vault credential with
 type `ama.dev/realmroot-agent-state` and put the complete JSON document in the
 single `state.json` data key. Never place the document itself in an Agent spec,

@@ -322,7 +322,7 @@ async function prepareCloudRealmrootState(
     sandbox,
     `mkdir -p ${shellQuote(targetDir)} && chmod 700 ${shellQuote('/workspace/.ama/realmroot-state')} ${shellQuote('/workspace/.ama/realmroot-state/identities')} ${shellQuote(targetDir)}`,
   )
-  const target = `${targetDir}/ama.json`
+  const target = `${targetDir}/${base64Url(state.runtime)}.json`
   const existing = await sandbox.exec(`cat ${shellQuote(target)}`)
   if (existing.exitCode === 0 || existing.success === true) {
     const existingState = matchingRealmrootState(existing.stdout ?? '', binding)

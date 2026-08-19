@@ -61,7 +61,8 @@ func prepareRealmrootAgent(root string, snapshot map[string]any) error {
 	if err := protectRealmrootDirectories(filepath.Join(root, filepath.FromSlash(realmrootStateDirPath)), targetDir); err != nil {
 		return err
 	}
-	target := filepath.Join(targetDir, "ama.json")
+	runtimeFile := base64.RawURLEncoding.EncodeToString([]byte(state.Runtime)) + ".json"
+	target := filepath.Join(targetDir, runtimeFile)
 	existing, err := os.ReadFile(target)
 	if err == nil {
 		existingState, err := validateRealmrootState(existing, binding)

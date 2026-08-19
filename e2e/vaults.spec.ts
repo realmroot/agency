@@ -40,7 +40,7 @@ test('stores Realmroot Agent state from the credential sheet [spec: agents/realm
   await page.getByRole('option', { name: 'Realmroot Agent state' }).click()
   await expect(page.getByLabel('Realmroot Agent state JSON')).toBeVisible()
   await expect(
-    page.getByText('Paste the complete ama.json enrolled with AGENT=ama. AMA stores it as state.json.'),
+    page.getByText('Paste the complete YW1h.json enrolled with AGENT=ama. AMA stores it as state.json.'),
   ).toBeVisible()
 
   const state = JSON.stringify({
