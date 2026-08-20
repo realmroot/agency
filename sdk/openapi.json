@@ -3,7 +3,7 @@
   "info": {
     "title": "Any Managed Agents API",
     "version": "1.0.0",
-    "description": "Realmroot-native control-plane API for Any Managed Agents. Console operations use Bearer tokens while runner and Agent operations require DPoP; every protected operation requires an exact resource scope."
+    "description": "Realmroot-native control-plane API for Any Managed Agents. Console and runner operations use Bearer tokens while Agent operations require DPoP; every protected operation requires an exact resource scope."
   },
   "servers": [
     {
@@ -21,15 +21,15 @@
       "realmrootConsoleBearer": {
         "type": "openIdConnect",
         "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
-        "description": "Realmroot-issued at+jwt Bearer token for the registered AMA Console client.",
-        "x-realmroot-client-mode": "console"
+        "description": "Realmroot-issued at+jwt Bearer token for registered AMA Console and runner clients.",
+        "x-realmroot-client-mode": "console-or-runner"
       },
       "realmrootDpop": {
         "type": "openIdConnect",
         "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
-        "description": "Realmroot-issued, DPoP-bound at+jwt access token for runner and Agent clients.",
+        "description": "Realmroot-issued, DPoP-bound at+jwt access token for Realmroot Agent clients.",
         "x-dpop-required": true,
-        "x-realmroot-client-mode": "machine-or-agent"
+        "x-realmroot-client-mode": "agent"
       }
     },
     "schemas": {

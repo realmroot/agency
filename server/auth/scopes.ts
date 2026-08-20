@@ -47,7 +47,7 @@ export function protectedResourceMetadata(resource: string, issuer: string) {
     dpop_bound_access_tokens_required: false,
     realmroot_client_authentication: {
       console: 'bearer',
-      runner: 'dpop',
+      runner: 'bearer',
       agent: 'dpop',
     },
   }

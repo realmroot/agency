@@ -167,8 +167,8 @@ func applySavedLogin(config *runnerconfig.Config) error {
 	if strings.TrimSpace(config.APIServer) == "" {
 		config.APIServer = saved.APIServer
 	}
-	if strings.TrimSpace(saved.DPoPPrivateKey) == "" {
-		return errors.New("saved AMA runner login is not DPoP-bound; run ama-runner auth login again")
+	if !strings.EqualFold(strings.TrimSpace(saved.TokenType), "Bearer") {
+		return errors.New("saved AMA runner login is not a Realmroot Bearer credential; run ama-runner auth login again")
 	}
 	return nil
 }

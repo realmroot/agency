@@ -1,12 +1,9 @@
 package auth
 
 import (
-	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 )
 
 type AuthTransport struct {
@@ -44,7 +41,6 @@ func (t AuthTransport) authorizedRequest(request *http.Request, forceRefresh boo
 		return request, nil
 	}
 	var token string
-	var dpopPrivateKey string
 	var err error
 	if forceRefresh {
 		token, err = t.Tokens.ForceRefresh(request.Context())
@@ -53,16 +49,6 @@ func (t AuthTransport) authorizedRequest(request *http.Request, forceRefresh boo
 	}
 	if err != nil {
 		return nil, err
-	}
-	profile, err := t.Tokens.CredentialProfile()
-	if err != nil {
-		return nil, err
-	}
-	if profile != nil {
-		dpopPrivateKey = profile.DPoPPrivateKey
-	}
-	if strings.TrimSpace(dpopPrivateKey) == "" {
-		return nil, fmt.Errorf("AMA runner requires a Realmroot DPoP login")
 	}
 	next := request.Clone(request.Context())
 	if request.Body != nil && request.GetBody != nil {
@@ -73,24 +59,8 @@ func (t AuthTransport) authorizedRequest(request *http.Request, forceRefresh boo
 		next.Body = body
 	}
 	if strings.TrimSpace(token) != "" {
-		var proof string
-		if strings.HasPrefix(token, "e2e") {
-			proof = fmt.Sprintf("e2e-proof:%s:%s", strings.ToUpper(request.Method), normalizedProofURL(request.URL))
-		} else {
-			proof, err = signDPoPProof(dpopPrivateKey, request.Method, request.URL.String(), token, "", time.Now())
-			if err != nil {
-				return nil, err
-			}
-		}
-		next.Header.Set("authorization", "DPoP "+token)
-		next.Header.Set("dpop", proof)
+		next.Header.Set("authorization", "Bearer "+token)
+		next.Header.Del("dpop")
 	}
 	return next, nil
-}
-
-func normalizedProofURL(value *url.URL) string {
-	next := *value
-	next.RawQuery = ""
-	next.Fragment = ""
-	return next.String()
 }

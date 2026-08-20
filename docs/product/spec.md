@@ -20,7 +20,7 @@ Any Managed Agents is a Cloudflare-native managed agents system. It is inspired 
 - Anthropic is optional, not required.
 - Authentication and delegated authority are provided exclusively by Realmroot.
 - Realmroot owns users and organizations; AMA stores project and product-resource metadata only.
-- The exact AMA protected Resource is `https://ama.tftt.cc/api`. Browser Console calls use Realmroot-issued Bearer `at+jwt` tokens from the registered Console client; runner, Agent, and Toolbox calls use sender-constrained tokens with a fresh RFC 9449 DPoP proof. Credentials cannot be downgraded or used across client modes.
+- The exact AMA protected Resource is `https://ama.tftt.cc/api`. Browser Console and runner calls use Realmroot-issued Bearer `at+jwt` tokens from their registered clients; Agent and Toolbox calls use sender-constrained tokens with a fresh RFC 9449 DPoP proof. Credentials cannot be downgraded or used across client modes.
 - Secret values are stored in Cloudflare Secrets; D1 stores metadata and references only.
 - BDD specs are the agent-facing acceptance contract for development and verification.
 - E2E specs use native Playwright specs traced to BDD-lite scenario ids.
@@ -62,7 +62,7 @@ The web console is an internal control-plane entrypoint. It uses Realmroot autho
 ```txt
 Control plane:
   web console -> Realmroot Bearer Hono RPC client -> /api/* -> Hono OpenAPI routes -> D1 / governance / metadata
-  Realmroot Toolbox / DPoP SDK -> protected Resource + OpenAPI -> Hono routes -> D1 / governance / metadata
+  Realmroot Toolbox / Agent DPoP SDK -> protected Resource + OpenAPI -> Hono routes -> D1 / governance / metadata
 
 Runtime:
   client / external SDK helper -> AMA session endpoint -> selected session runtime -> canonical AMA session events -> D1 events
@@ -106,7 +106,7 @@ Queue and lease APIs solve session dispatch, ownership, heartbeat, expiry, and r
 
 All runtimes emit canonical AMA session events. The protocol covers lifecycle, message, provider call, tool call, workspace, policy, usage, and error events with monotonically increasing sequence numbers, stable ids, redacted payloads, and runtime-specific details confined to safe metadata.
 
-Runner authentication uses a Realmroot public-native Application. `ama-runner auth login` uses Realmroot OAuth/OIDC device authorization and persists its DPoP private key and token material only in the local runner credential file, separate from the non-secret runner config file. AMA validates Realmroot-issued `at+jwt` tokens plus a fresh RFC 9449 proof, binds OIDC runner registrations to the creating token subject/client id, rejects runner heartbeats, lease operations, event upload, or session WebSocket upgrades when the token does not match that binding, and rejects runner-scoped device tokens on non-runner control-plane resources. AMA must not implement a parallel runner credential issuer. D1 may store runner ids, names, OIDC subject/client binding metadata, supported runtimes and models, environment binding metadata, heartbeat/load state, work item payloads, lease state, result/error metadata, DPoP replay identifiers with short expiry, and secret references only. Raw runner tokens, DPoP private keys, provider secrets, or vault secret values must not appear in D1, OpenAPI responses, events, logs, or UI state.
+Runner authentication uses a Realmroot public-native Application. `ama-runner auth login` uses Realmroot OAuth/OIDC device authorization and persists short-lived Bearer access-token and rotating refresh-token material only in the local runner credential file, separate from the non-secret runner config file. AMA validates Realmroot-issued `at+jwt` tokens, binds OIDC runner registrations to the creating token subject/client id, rejects runner heartbeats, lease operations, event upload, or session WebSocket upgrades when the token does not match that binding, and rejects runner-scoped device tokens on non-runner control-plane resources. AMA must not implement a parallel runner credential issuer. D1 may store runner ids, names, OIDC subject/client binding metadata, supported runtimes and models, environment binding metadata, heartbeat/load state, work item payloads, lease state, result/error metadata, and secret references only. Raw runner tokens, refresh tokens, provider secrets, or vault secret values must not appear in D1, OpenAPI responses, events, logs, or UI state.
 
 Environment `networkPolicy.mode` is exactly `unrestricted`, `restricted`, or `offline`. Restricted policy requires explicit `allowedHosts`; unrestricted and offline policy do not carry host allow-lists. Offline policy denies outbound sandbox network operations.
 
@@ -146,7 +146,7 @@ inspect persisted session events, and stop the session.
 Release verification must include:
 
 - Realmroot PKCE login through `oidc-client-ts`, with Bearer tokens kept in tab-scoped session storage.
-- Realmroot access-token validation at the Worker boundary for every client; runner and Agent credentials additionally require DPoP validation including `cnf.jkt`, `ath`, method, URI, freshness, and replay checks.
+- Realmroot access-token validation at the Worker boundary for every client; Agent credentials additionally require DPoP validation including `cnf.jkt`, `ath`, method, URI, freshness, and replay checks.
 - Agent, environment, and session CRUD covered by Cloudflare integration tests.
 - OpenAPI generated from Hono route schemas for auth, agents, environments, and
   sessions.

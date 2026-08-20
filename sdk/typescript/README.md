@@ -81,10 +81,21 @@ heartbeat endpoints do not leak into the public client shape:
 ```ts
 import { createAmaRunnerClient } from '@any-managed-agents/sdk'
 
-const runner = createAmaRunnerClient({ baseUrl, authorize: realmrootDpopAuthorizer, projectId })
+const runner = createAmaRunnerClient({
+  baseUrl,
+  projectId,
+  headers: { Authorization: `Bearer ${runnerAccessToken}` },
+  // Node and other non-browser runtimes provide the concrete adapter because
+  // browser WebSocket constructors cannot set Authorization headers.
+  webSocketFactory: (url, headers) => openWebSocketWithHeaders(url, headers),
+})
 await runner.runners.putHeartbeat(runnerId, { state: 'active' })
 const channel = await runner.runners.channel(runnerId)
 ```
+
+The factory sends the Bearer credential in the WebSocket handshake's
+`Authorization` header. It must not encode the token in the URL or
+`Sec-WebSocket-Protocol`.
 
 The web console does not import this package; console code uses the
 project-local Hono RPC client in `src/lib/api.ts`.

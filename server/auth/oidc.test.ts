@@ -164,7 +164,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
       ),
     ).resolves.toMatchObject({ client_id: 'ama' })
     await expect(getDpopClaims(env, e2eDpopRequest('e2e:console'))).rejects.toMatchObject({
-      message: 'Realmroot Console clients require Bearer authentication',
+      message: 'Realmroot Console and runner clients require Bearer authentication',
     })
   })
 
@@ -192,12 +192,8 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     })
   })
 
-  it('accepts runner DPoP and rejects runner Bearer', async () => {
+  it('accepts runner Bearer and rejects runner DPoP', async () => {
     const env = testAuthEnv()
-    await expect(getDpopClaims(env, e2eDpopRequest('e2e-runner:runner'))).resolves.toMatchObject({
-      client_id: 'ama-runner',
-      roles: ['runner'],
-    })
     await expect(
       getBearerClaims(
         env,
@@ -205,7 +201,10 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
           headers: { authorization: 'Bearer e2e-runner:runner' },
         }),
       ),
-    ).rejects.toMatchObject({ message: 'Realmroot machine and Agent clients require DPoP' })
+    ).resolves.toMatchObject({ client_id: 'ama-runner', roles: ['runner'] })
+    await expect(getDpopClaims(env, e2eDpopRequest('e2e-runner:runner'))).rejects.toMatchObject({
+      message: 'Realmroot Console and runner clients require Bearer authentication',
+    })
   })
 
   it('accepts a verified realmroot-cli Agent only with a bound DPoP proof', async () => {

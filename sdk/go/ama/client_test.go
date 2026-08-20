@@ -12,6 +12,11 @@ import (
 	"github.com/coder/websocket"
 )
 
+type bearerRoundTripper struct {
+	base  http.RoundTripper
+	token string
+}
+
 type dpopRoundTripper struct {
 	base  http.RoundTripper
 	token string
@@ -27,6 +32,17 @@ func (t dpopRoundTripper) RoundTrip(request *http.Request) (*http.Response, erro
 
 func dpopHTTPClient(base *http.Client, token, proof string) *http.Client {
 	return &http.Client{Transport: dpopRoundTripper{base: base.Transport, token: token, proof: proof}}
+}
+
+func (t bearerRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	clone := request.Clone(request.Context())
+	clone.Header.Set("authorization", "Bearer "+t.token)
+	clone.Header.Del("dpop")
+	return t.base.RoundTrip(clone)
+}
+
+func bearerHTTPClient(base *http.Client, token string) *http.Client {
+	return &http.Client{Transport: bearerRoundTripper{base: base.Transport, token: token}}
 }
 
 func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
@@ -90,16 +106,70 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 	}
 }
 
+func TestRunnerClientFacadeUsesBearerForHTTP(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/runners" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("authorization"); got != "Bearer runner_token" {
+			t.Fatalf("expected runner Bearer authorization, got %q", got)
+		}
+		if got := r.Header.Get("dpop"); got != "" {
+			t.Fatalf("runner HTTP request must not include DPoP proof, got %q", got)
+		}
+		if got := r.Header.Get("x-ama-project-id"); got != "project_runner" {
+			t.Fatalf("expected project header, got %q", got)
+		}
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{
+			"archivedAt": null,
+			"authMode": "realmroot",
+			"createdAt": "2026-01-01T00:00:00Z",
+			"currentLoad": 0,
+			"environmentId": null,
+			"id": "runner_http",
+			"lastHeartbeatAt": null,
+			"maxConcurrent": 1,
+			"metadata": {},
+			"name": "runner-http",
+			"projectId": "project_runner",
+			"runtimes": [],
+			"runtimeUsage": [],
+			"secretRef": null,
+			"state": "active",
+			"updatedAt": "2026-01-01T00:00:00Z"
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewRunner(ClientConfig{
+		BaseURL:    server.URL,
+		ProjectID:  "project_runner",
+		HTTPClient: bearerHTTPClient(server.Client(), "runner_token"),
+	})
+	if err != nil {
+		t.Fatalf("expected runner client, got %v", err)
+	}
+	runner, err := client.Runners.Create(context.Background(), CreateRunnerRequest{Name: "runner-http"})
+	if err != nil {
+		t.Fatalf("expected runner create success, got %v", err)
+	}
+	if runner.Id != "runner_http" {
+		t.Fatalf("expected decoded runner, got %#v", runner)
+	}
+}
+
 func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/runners/runner_42/channel" || r.Method != http.MethodGet {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
 		}
-		if got := r.Header.Get("authorization"); got != "DPoP token_ws" {
+		if got := r.Header.Get("authorization"); got != "Bearer token_ws" {
 			t.Fatalf("expected authorization header, got %q", got)
 		}
-		if got := r.Header.Get("dpop"); got != "proof_ws" {
-			t.Fatalf("expected DPoP proof header, got %q", got)
+		if got := r.Header.Get("dpop"); got != "" {
+			t.Fatalf("runner WebSocket must not include DPoP proof, got %q", got)
 		}
 		if got := r.Header.Get("x-ama-project-id"); got != "project_ws" {
 			t.Fatalf("expected project header, got %q", got)
@@ -115,7 +185,7 @@ func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 	client, err := NewRunner(ClientConfig{
 		BaseURL:    server.URL,
 		ProjectID:  "project_ws",
-		HTTPClient: dpopHTTPClient(server.Client(), "token_ws", "proof_ws"),
+		HTTPClient: bearerHTTPClient(server.Client(), "token_ws"),
 	})
 	if err != nil {
 		t.Fatalf("expected client, got %v", err)

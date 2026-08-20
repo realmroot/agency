@@ -188,14 +188,16 @@ describe('[CF] generated SDK contract', () => {
     )
   })
 
-  it('keeps the Console-only socket ticket operation raw and excludes it from stable DPoP facades', () => {
+  it('keeps the Console-only socket ticket operation raw and excludes it from stable authenticated facades', () => {
     const exclusions = resources.facadeExclusions
     expect(exclusions).toEqual([
       {
         operationId: 'createSessionSocketTicket',
-        reason: expect.stringContaining('Bearer-only'),
+        reason: expect.stringContaining('Console-only'),
       },
     ])
+    expect(exclusions[0]?.reason).toContain('stable Agent facade')
+    expect(exclusions[0]?.reason).toContain('runner facade does not expose browser session sockets')
     expect(new Set(exclusions.map(({ operationId }) => operationId)).size).toBe(exclusions.length)
     expect(operations).toContainEqual({
       operationId: 'createSessionSocketTicket',
@@ -205,11 +207,55 @@ describe('[CF] generated SDK contract', () => {
 
     const authorize = vi.fn(async () => ({ accessToken: 'token', dpopProof: 'proof' }))
     const agent = createAmaClient({ baseUrl: 'https://example.com', authorize })
-    const runner = createAmaRunnerClient({ baseUrl: 'https://example.com', authorize })
+    const runner = createAmaRunnerClient({
+      baseUrl: 'https://example.com',
+      headers: { authorization: 'Bearer runner-token' },
+    })
     expect(agent.sessions).not.toHaveProperty('createSocketTicket')
     expect(runner.sessions).not.toHaveProperty('createSocketTicket')
     expect(agent.raw).toBeTruthy()
     expect(runner.raw).toBeTruthy()
+  })
+
+  it('uses an explicit native WebSocket factory for runner Bearer auth and strips legacy DPoP headers', async () => {
+    const socket = {
+      addEventListener: vi.fn(),
+      close: vi.fn(),
+      send: vi.fn(),
+    } as unknown as WebSocket
+    const webSocketFactory = vi.fn(async () => socket)
+    const runner = createAmaRunnerClient({
+      baseUrl: 'https://example.com',
+      projectId: 'project_runner',
+      headers: {
+        Authorization: 'Bearer runner-token',
+        DPoP: 'legacy-proof-must-not-leak',
+      },
+      webSocketFactory,
+    })
+
+    await expect(runner.runners.channel('runner / 1')).resolves.toBeTruthy()
+    expect(webSocketFactory).toHaveBeenCalledWith(
+      'wss://example.com/api/v1/runners/runner%20%2F%201/channel?x-ama-project-id=project_runner',
+      {
+        Authorization: 'Bearer runner-token',
+        'x-ama-project-id': 'project_runner',
+      },
+    )
+
+    await expect(
+      createAmaRunnerClient({
+        baseUrl: 'https://example.com',
+        headers: { authorization: 'Bearer runner-token' },
+      }).runners.channel('runner_1'),
+    ).rejects.toThrow('Runner WebSocket factory with Bearer header support is required')
+    await expect(
+      createAmaRunnerClient({
+        baseUrl: 'https://example.com',
+        headers: { authorization: 'DPoP runner-token' },
+        webSocketFactory,
+      }).runners.channel('runner_1'),
+    ).rejects.toThrow('Runner WebSocket requires an Authorization: Bearer header')
   })
 
   it('external product manages standard AMA resources through the SDK [spec: projects/external-resources]', async () => {

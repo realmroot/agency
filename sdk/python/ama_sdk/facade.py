@@ -277,9 +277,8 @@ class AmaRunnerClient:
         project_id: str | None = None,
         headers: dict[str, str] | None = None,
         client: Client | None = None,
-        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
     ) -> None:
-        self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)
+        self._core = _ClientCore(base_url, project_id, headers, client)
         self.configz = _RunnerConfigzResource(self._core)
         self.runners = _RunnerRunnersResource(self._core)
         self.work_items = _RunnerWorkItemsResource(self._core)
@@ -306,9 +305,8 @@ def create_ama_runner_client(
     project_id: str | None = None,
     headers: dict[str, str] | None = None,
     client: Client | None = None,
-    websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
 ) -> AmaRunnerClient:
-    return AmaRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)
+    return AmaRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client)
 
 
 def _websocket_url(base_url: str, path: str) -> str:
@@ -322,10 +320,20 @@ def _websocket_url(base_url: str, path: str) -> str:
     return urlunparse((scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
-def _websocket_headers(owner: _ClientCore, url: str) -> dict[str, str]:
+def _dpop_websocket_headers(owner: _ClientCore, url: str) -> dict[str, str]:
     if owner.websocket_authorizer is None:
         raise RuntimeError("Realmroot DPoP WebSocket authorizer is required")
     result = {**owner.headers, **owner.websocket_authorizer(url.replace("ws", "http", 1), "GET")}
+    if owner.project_id:
+        result["x-ama-project-id"] = owner.project_id
+    return result
+
+
+def _runner_websocket_headers(owner: _ClientCore) -> dict[str, str]:
+    result = {name: value for name, value in owner.headers.items() if name.lower() != "dpop"}
+    authorization = next((value for name, value in result.items() if name.lower() == "authorization"), None)
+    if authorization is None or len(authorization.split(" ")) != 2 or not authorization.startswith("Bearer "):
+        raise RuntimeError("Runner WebSocket requires an Authorization: Bearer header")
     if owner.project_id:
         result["x-ama-project-id"] = owner.project_id
     return result
@@ -550,7 +558,7 @@ class _SessionsResource:
 
     def stream(self, session_id: str) -> SessionStream:
         url = _websocket_url(self._owner.base_url, f"/api/v1/sessions/{quote(session_id)}/socket")
-        return SessionStream(url, _websocket_headers(self._owner, url))
+        return SessionStream(url, _dpop_websocket_headers(self._owner, url))
 
     def list_messages(self, session_id: str, **query: Any) -> Any:
         return _unwrap(list_session_messages_api.sync_detailed(session_id=session_id, client=self._client, **query))
@@ -681,7 +689,7 @@ class _RunnerRunnersResource:
 
     def channel(self, runner_id: str) -> RunnerChannel:
         url = _websocket_url(self._owner.base_url, f"/api/v1/runners/{quote(runner_id)}/channel")
-        return RunnerChannel(url, _websocket_headers(self._owner, url))
+        return RunnerChannel(url, _runner_websocket_headers(self._owner))
 
     def get_heartbeat(self, runner_id: str) -> Any:
         return _unwrap(read_runner_heartbeat_api.sync_detailed(runner_id=runner_id, client=self._client))

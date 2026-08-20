@@ -25,7 +25,7 @@ realmroot toolbox post any-managed-agents/api/v1/agents \
 
 ## Direct HTTP and generated SDKs
 
-Direct clients must supply a request-aware Realmroot DPoP authorizer (TypeScript), an authenticated `http.Client` transport (Go), or an `httpx.Auth` implementation (Python). The SDKs intentionally have no raw access-token option.
+Agent-facing direct clients must supply a request-aware Realmroot DPoP authorizer (TypeScript), an authenticated `http.Client` transport (Go), or an `httpx.Auth` implementation (Python). Runner clients use an authenticated transport that supplies their Realmroot Bearer credential; the SDKs intentionally do not accept a raw access-token constructor option.
 
 The local e2e check exercises protected-resource discovery plus the core environment, Agent, and Session workflow:
 

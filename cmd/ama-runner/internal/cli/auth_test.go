@@ -21,32 +21,29 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		Email:          "one@example.test",
-		Name:           "One",
-		AccessToken:    "token-1",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-1",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_1",
+		APIServer:   "https://ama.example.test",
+		Email:       "one@example.test",
+		Name:        "One",
+		AccessToken: "token-1",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_2",
-		APIServer:      "https://ama.example.test",
-		Email:          "two@example.test",
-		Name:           "Two",
-		AccessToken:    "token-2",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-2",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_2",
+		APIServer:   "https://ama.example.test",
+		Email:       "two@example.test",
+		Name:        "Two",
+		AccessToken: "token-2",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_3",
-		APIServer:      "https://other.example.test",
-		AccessToken:    "token-3",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-3",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_3",
+		APIServer:   "https://other.example.test",
+		AccessToken: "token-3",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 
 	var output bytes.Buffer
@@ -88,13 +85,12 @@ func TestRunAuthRefreshUpdatesActiveCredential(t *testing.T) {
 	server := authRefreshServer(t)
 	defer server.Close()
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      server.URL,
-		AccessToken:    "old-token",
-		RefreshToken:   "refresh-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
-		ExpiresAt:      time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    "acct_1",
+		APIServer:    server.URL,
+		AccessToken:  "old-token",
+		RefreshToken: "refresh-token",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
 	})
 
 	var output bytes.Buffer
@@ -222,7 +218,7 @@ func authRefreshServer(t *testing.T) *httptest.Server {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "new-token",
 				"refresh_token": "new-refresh",
-				"token_type":    "DPoP",
+				"token_type":    "Bearer",
 				"expires_in":    3600,
 				"scope":         "openid profile email offline_access",
 			})

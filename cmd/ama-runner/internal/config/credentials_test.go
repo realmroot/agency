@@ -11,28 +11,26 @@ import (
 func TestCredentialProfilesSaveLoadSwitchAndLogout(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	first := CredentialProfile{
-		AccountID:      " acct_1 ",
-		APIServer:      "https://ama.example.test/",
-		Email:          " one@example.test ",
-		Name:           " One ",
-		AccessToken:    "token-1",
-		RefreshToken:   "refresh-1",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-1",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    " acct_1 ",
+		APIServer:    "https://ama.example.test/",
+		Email:        " one@example.test ",
+		Name:         " One ",
+		AccessToken:  "token-1",
+		RefreshToken: "refresh-1",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(path, first); err != nil {
 		t.Fatalf("save first profile: %v", err)
 	}
 	second := CredentialProfile{
-		AccountID:      "acct_2",
-		APIServer:      "https://ama.example.test",
-		Email:          "two@example.test",
-		Name:           "Two",
-		AccessToken:    "token-2",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-2",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_2",
+		APIServer:   "https://ama.example.test",
+		Email:       "two@example.test",
+		Name:        "Two",
+		AccessToken: "token-2",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(path, second); err != nil {
 		t.Fatalf("save second profile: %v", err)
@@ -90,13 +88,15 @@ func TestCredentialProfileValidationAndSelectionErrors(t *testing.T) {
 	if err := SaveCredentialProfile(path, CredentialProfile{AccessToken: "token"}); err == nil {
 		t.Fatal("expected missing account id error")
 	}
+	if err := SaveCredentialProfile(path, CredentialProfile{AccountID: "acct", AccessToken: "token", TokenType: "DPoP"}); err == nil || !strings.Contains(err.Error(), "must be Bearer") {
+		t.Fatalf("expected legacy DPoP profile rejection, got %v", err)
+	}
 	expired := CredentialProfile{
-		AccountID:      "acct_expired",
-		APIServer:      "https://expired.example.test",
-		AccessToken:    "expired-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "expired-key",
-		ExpiresAt:      time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_expired",
+		APIServer:   "https://expired.example.test",
+		AccessToken: "expired-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(path, expired); err != nil {
 		t.Fatalf("save expired profile: %v", err)
@@ -109,6 +109,36 @@ func TestCredentialProfileValidationAndSelectionErrors(t *testing.T) {
 	}
 	if _, err := SwitchCredentialProfile(path, "", "missing@example.test"); err == nil || !strings.Contains(err.Error(), "no saved auth account") {
 		t.Fatalf("expected missing account error, got %v", err)
+	}
+}
+
+func TestCredentialStoreIgnoresLegacyDPoPKeyOnBearerProfile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	if err := os.WriteFile(path, []byte(`{
+  "active": "https://ama.example.test#acct_1",
+  "profiles": [{
+    "accountId": "acct_1",
+    "apiServer": "https://ama.example.test",
+    "accessToken": "token",
+    "tokenType": "Bearer",
+    "dpopPrivateKey": "legacy-key-must-be-ignored"
+  }]
+}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	profile, err := LoadActiveCredentialProfile(path)
+	if err != nil || profile == nil || profile.TokenType != "Bearer" {
+		t.Fatalf("expected Bearer profile with ignored legacy field, profile=%#v err=%v", profile, err)
+	}
+	if err := SaveCredentialProfile(path, *profile); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "dpopPrivateKey") || strings.Contains(string(data), "legacy-key") {
+		t.Fatalf("legacy DPoP key survived credential rewrite: %s", data)
 	}
 }
 
@@ -146,21 +176,19 @@ func TestCredentialStoreHandlesMissingEmptyAndInvalidFiles(t *testing.T) {
 func TestCredentialProfileLookupAndLogoutBranches(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	alpha := CredentialProfile{
-		AccountID:      "acct_alpha",
-		APIServer:      "https://alpha.example.test",
-		Email:          "alpha@example.test",
-		AccessToken:    "alpha-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "alpha-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_alpha",
+		APIServer:   "https://alpha.example.test",
+		Email:       "alpha@example.test",
+		AccessToken: "alpha-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	beta := CredentialProfile{
-		AccountID:      "acct_beta",
-		APIServer:      "https://beta.example.test",
-		AccessToken:    "beta-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "beta-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_beta",
+		APIServer:   "https://beta.example.test",
+		AccessToken: "beta-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(path, alpha); err != nil {
 		t.Fatal(err)
@@ -217,13 +245,12 @@ func TestCredentialProfileLookupAndLogoutBranches(t *testing.T) {
 func TestCredentialProfileUpdateBranches(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	profile := CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		AccessToken:    "token-1",
-		RefreshToken:   "refresh-1",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-1",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    "acct_1",
+		APIServer:    "https://ama.example.test",
+		AccessToken:  "token-1",
+		RefreshToken: "refresh-1",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(path, profile); err != nil {
 		t.Fatal(err)
@@ -266,34 +293,31 @@ func TestCredentialProfileUpdateBranches(t *testing.T) {
 func TestCredentialProfileSelectionEdgeCases(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	sharedOne := CredentialProfile{
-		AccountID:      "acct_shared_1",
-		APIServer:      "https://shared.example.test",
-		Email:          "one@example.test",
-		Name:           "One",
-		AccessToken:    "token-1",
-		RefreshToken:   "refresh-1",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-1",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    "acct_shared_1",
+		APIServer:    "https://shared.example.test",
+		Email:        "one@example.test",
+		Name:         "One",
+		AccessToken:  "token-1",
+		RefreshToken: "refresh-1",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	sharedTwo := CredentialProfile{
-		AccountID:      "acct_shared_2",
-		APIServer:      "https://shared.example.test/",
-		Email:          "two@example.test",
-		Name:           "Two",
-		AccessToken:    "token-2",
-		RefreshToken:   "refresh-2",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "key-2",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    "acct_shared_2",
+		APIServer:    "https://shared.example.test/",
+		Email:        "two@example.test",
+		Name:         "Two",
+		AccessToken:  "token-2",
+		RefreshToken: "refresh-2",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	other := CredentialProfile{
-		AccountID:      "acct_other",
-		APIServer:      "https://other.example.test",
-		AccessToken:    "token-other",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "other-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_other",
+		APIServer:   "https://other.example.test",
+		AccessToken: "token-other",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	for _, profile := range []CredentialProfile{sharedOne, sharedTwo, other} {
 		if err := SaveCredentialProfile(path, profile); err != nil {

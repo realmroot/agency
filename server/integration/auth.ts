@@ -91,11 +91,11 @@ export async function signIn(claims = defaultClaims()) {
 export async function signInRunner(claims = defaultClaims()) {
   counter += 1
   const runId = `${claims.sub}_${counter}`.replaceAll(/[^A-Za-z0-9_-]/g, '_')
-  return `DPoP e2e-runner:${runId}`
+  return `Bearer e2e-runner:${runId}`
 }
 
 export function asRunnerAuthorization(authorization: string) {
-  return authorization.replace(/^Bearer e2e:/, 'DPoP e2e-runner:')
+  return authorization.replace(/^Bearer e2e:/, 'Bearer e2e-runner:')
 }
 
 export function dpopHeaders(authorization: string, method: string, path: string) {

@@ -36,14 +36,17 @@ item, lease, heartbeat, and runner channel methods that are intentionally absent
 from the public `create_ama_client` facade.
 
 ```python
-from ama_sdk import create_ama_runner_client
+from ama_sdk import Client, create_ama_runner_client
 from ama_sdk.models.put_runner_heartbeat_request import PutRunnerHeartbeatRequest
 from ama_sdk.models.put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
 
 runner = create_ama_runner_client(
     base_url="https://ama.example.com",
-    client=generated,
-    websocket_authorizer=realmroot_dpop_websocket_authorizer,
+    headers={"Authorization": f"Bearer {runner_access_token}"},
+    client=Client(
+        base_url="https://ama.example.com",
+        headers={"Authorization": f"Bearer {runner_access_token}"},
+    ),
     project_id=project_id,
 )
 
@@ -52,3 +55,6 @@ runner.runners.put_heartbeat(
     PutRunnerHeartbeatRequest(state=PutRunnerHeartbeatRequestState.ACTIVE),
 )
 ```
+
+The same Bearer header authenticates the HTTP calls and runner WebSocket
+handshake. The token is never placed in the URL or WebSocket subprotocol.

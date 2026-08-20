@@ -8,6 +8,12 @@ export interface AmaClientConfig {
         dpopProof: string;
     }>;
 }
+export interface AmaRunnerClientConfig {
+    baseUrl: string;
+    projectId?: string;
+    headers?: Record<string, string>;
+    webSocketFactory?: (url: string, headers: Record<string, string>) => WebSocket | Promise<WebSocket>;
+}
 export declare class AmaApiError extends Error {
     readonly status: number | undefined;
     readonly responseText: string;
@@ -148,7 +154,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
     };
 };
 export type AmaRunnerClient = ReturnType<typeof createAmaRunnerClient>;
-export declare function createAmaRunnerClient(config: AmaClientConfig): {
+export declare function createAmaRunnerClient(config: AmaRunnerClientConfig): {
     raw: import("./generated/client/types.gen.js").Client;
     configz: {
         get: () => Promise<types.PublicConfig>;

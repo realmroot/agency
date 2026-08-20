@@ -40,7 +40,7 @@ the public `ama.New` client.
 ```go
 runner, err := ama.NewRunner(ama.ClientConfig{
 	BaseURL:    "https://ama.example.com",
-	HTTPClient: realmrootDPoPHTTPClient,
+	HTTPClient: runnerBearerHTTPClient,
 	ProjectID:  projectID,
 })
 if err != nil {
@@ -50,3 +50,7 @@ if err != nil {
 state := ama.PutRunnerHeartbeatRequestStateActive
 _, err = runner.Runners.PutHeartbeat(ctx, runnerID, ama.PutRunnerHeartbeatRequest{State: &state})
 ```
+
+`runnerBearerHTTPClient` supplies the short-lived Realmroot runner token as an
+`Authorization: Bearer` header for both HTTP requests and the WebSocket
+handshake. It must not place the token in the URL or WebSocket subprotocol.

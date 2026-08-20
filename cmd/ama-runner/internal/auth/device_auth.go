@@ -82,17 +82,12 @@ func LoginWithDeviceAuthorization(
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
-	dpopPrivateKey, err := newDPoPPrivateKey()
-	if err != nil {
-		return DeviceLoginResult{}, err
-	}
 	device, err := client.StartDeviceAuthorization(
 		ctx,
 		metadata.DeviceAuthorizationEndpoint,
 		options.ClientID,
 		options.Scopes,
 		options.Resource,
-		dpopPrivateKey,
 	)
 	if err != nil {
 		return DeviceLoginResult{}, err
@@ -102,7 +97,7 @@ func LoginWithDeviceAuthorization(
 		output = io.Discard
 	}
 	printDeviceInstructions(output, device)
-	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource, dpopPrivateKey)
+	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource)
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
@@ -114,16 +109,15 @@ func LoginWithDeviceAuthorization(
 		return DeviceLoginResult{}, err
 	}
 	if err := runnerconfig.SaveCredentialProfile(options.CredentialPath, runnerconfig.CredentialProfile{
-		AccountID:      identity.Subject,
-		APIServer:      strings.TrimRight(options.APIServer, "/"),
-		Email:          identity.Email,
-		Name:           identity.Name,
-		AccessToken:    token.AccessToken,
-		RefreshToken:   token.RefreshToken,
-		TokenType:      token.TokenType,
-		ExpiresAt:      expiresAt(token.ExpiresIn),
-		Scope:          token.Scope,
-		DPoPPrivateKey: dpopPrivateKey,
+		AccountID:    identity.Subject,
+		APIServer:    strings.TrimRight(options.APIServer, "/"),
+		Email:        identity.Email,
+		Name:         identity.Name,
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		TokenType:    token.TokenType,
+		ExpiresAt:    expiresAt(token.ExpiresIn),
+		Scope:        token.Scope,
 	}); err != nil {
 		return DeviceLoginResult{}, err
 	}
@@ -257,6 +251,10 @@ func audienceCount(raw json.RawMessage) int {
 	return len(tokenAudiences(raw))
 }
 
+func isLoopbackHost(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
 func (c DeviceAuthClient) Discover(ctx context.Context, issuer string) (oidcMetadata, error) {
 	issuer = strings.TrimRight(issuer, "/")
 	endpoint := issuer + "/.well-known/openid-configuration"
@@ -282,7 +280,6 @@ func (c DeviceAuthClient) StartDeviceAuthorization(
 	clientID string,
 	scopes string,
 	resource string,
-	dpopPrivateKey string,
 ) (deviceAuthorizationResponse, error) {
 	values := url.Values{}
 	values.Set("client_id", clientID)
@@ -292,11 +289,6 @@ func (c DeviceAuthClient) StartDeviceAuthorization(
 	if strings.TrimSpace(resource) != "" {
 		values.Set("resource", strings.TrimRight(resource, "/"))
 	}
-	jkt, err := dpopJKT(dpopPrivateKey)
-	if err != nil {
-		return deviceAuthorizationResponse{}, err
-	}
-	values.Set("dpop_jkt", jkt)
 	var response deviceAuthorizationResponse
 	if err := c.postForm(ctx, endpoint, values, &response); err != nil {
 		return deviceAuthorizationResponse{}, err
@@ -314,7 +306,6 @@ func (c DeviceAuthClient) PollDeviceToken(
 	device deviceAuthorizationResponse,
 	fallbackInterval time.Duration,
 	resource string,
-	dpopPrivateKey string,
 ) (tokenResponse, error) {
 	interval := time.Duration(device.Interval) * time.Second
 	if interval <= 0 {
@@ -342,13 +333,13 @@ func (c DeviceAuthClient) PollDeviceToken(
 			values.Set("resource", strings.TrimRight(resource, "/"))
 		}
 		var token tokenResponse
-		err := c.postDpopForm(ctx, endpoint, values, dpopPrivateKey, &token)
+		err := c.postForm(ctx, endpoint, values, &token)
 		if err == nil && token.Error == "" {
 			if token.AccessToken == "" {
 				return tokenResponse{}, fmt.Errorf("OIDC token response did not include an access token")
 			}
-			if !strings.EqualFold(token.TokenType, "DPoP") {
-				return tokenResponse{}, fmt.Errorf("Realmroot token response did not issue a DPoP token")
+			if !strings.EqualFold(token.TokenType, "Bearer") {
+				return tokenResponse{}, fmt.Errorf("Realmroot token response did not issue a Bearer token")
 			}
 			return token, nil
 		}
@@ -382,7 +373,6 @@ func (c DeviceAuthClient) RefreshToken(
 	clientID string,
 	refreshToken string,
 	resource string,
-	dpopPrivateKey string,
 ) (tokenResponse, error) {
 	if strings.TrimSpace(refreshToken) == "" {
 		return tokenResponse{}, fmt.Errorf("OIDC refresh token is required")
@@ -395,14 +385,14 @@ func (c DeviceAuthClient) RefreshToken(
 		values.Set("resource", strings.TrimRight(resource, "/"))
 	}
 	var token tokenResponse
-	if err := c.postDpopForm(ctx, endpoint, values, dpopPrivateKey, &token); err != nil {
+	if err := c.postForm(ctx, endpoint, values, &token); err != nil {
 		return tokenResponse{}, err
 	}
 	if token.AccessToken == "" {
 		return tokenResponse{}, fmt.Errorf("OIDC refresh response did not include an access token")
 	}
-	if !strings.EqualFold(token.TokenType, "DPoP") {
-		return tokenResponse{}, fmt.Errorf("Realmroot refresh response did not issue a DPoP token")
+	if !strings.EqualFold(token.TokenType, "Bearer") {
+		return tokenResponse{}, fmt.Errorf("Realmroot refresh response did not issue a Bearer token")
 	}
 	return token, nil
 }
@@ -420,32 +410,6 @@ func (c DeviceAuthClient) postForm(ctx context.Context, endpoint string, values 
 	return c.postFormOnly(ctx, endpoint, values, out)
 }
 
-func (c DeviceAuthClient) postDpopForm(ctx context.Context, endpoint string, values url.Values, privateKey string, out any) error {
-	nonce := ""
-	for attempt := 0; attempt < 2; attempt++ {
-		proof, err := signDPoPProof(privateKey, http.MethodPost, endpoint, "", nonce, time.Now())
-		if err != nil {
-			return err
-		}
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(values.Encode()))
-		if err != nil {
-			return err
-		}
-		request.Header.Set("accept", "application/json")
-		request.Header.Set("content-type", "application/x-www-form-urlencoded")
-		request.Header.Set("dpop", proof)
-		challenge, err := c.doWithDPoPNonce(request, out)
-		if err == nil {
-			return nil
-		}
-		if challenge == "" || attempt == 1 {
-			return err
-		}
-		nonce = challenge
-	}
-	return errors.New("Realmroot DPoP token request failed")
-}
-
 func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, values url.Values, out any) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(values.Encode()))
 	if err != nil {
@@ -457,35 +421,30 @@ func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, val
 }
 
 func (c DeviceAuthClient) do(request *http.Request, out any) error {
-	_, err := c.doWithDPoPNonce(request, out)
-	return err
-}
-
-func (c DeviceAuthClient) doWithDPoPNonce(request *http.Request, out any) (string, error) {
 	httpClient := c.HTTPClient
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		var tokenErr tokenResponse
 		if json.Unmarshal(body, &tokenErr) == nil && tokenErr.Error != "" {
-			return response.Header.Get("DPoP-Nonce"), deviceTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
+			return deviceTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
 		}
-		return response.Header.Get("DPoP-Nonce"), oidcStatusError{Path: request.URL.Path, Status: response.StatusCode}
+		return oidcStatusError{Path: request.URL.Path, Status: response.StatusCode}
 	}
 	if err := json.Unmarshal(body, out); err != nil {
-		return "", err
+		return err
 	}
-	return "", nil
+	return nil
 }
 
 type oidcStatusError struct {

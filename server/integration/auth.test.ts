@@ -79,7 +79,7 @@ describe('[CF] auth v1', () => {
       dpop_bound_access_tokens_required: false,
       realmroot_client_authentication: {
         console: 'bearer',
-        runner: 'dpop',
+        runner: 'bearer',
         agent: 'dpop',
       },
     })
@@ -158,20 +158,20 @@ describe('[CF] auth v1', () => {
     expectAuthRequired(await res.json())
   })
 
-  it('rejects a runner token presented as Bearer [spec: auth/credential-mode]', async () => {
-    const authorization = (await signInRunner()).replace(/^DPoP /, 'Bearer ')
-    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
-      headers: { authorization },
-    })
-    expect(res.status).toBe(401)
-    expect(res.headers.get('www-authenticate')).toBe('Bearer error="invalid_token"')
-    expectAuthRequired(await res.json())
-  })
-
-  it('accepts a runner token with DPoP on a runner resource [spec: auth/credential-mode]', async () => {
+  it('accepts a runner token with Bearer on a runner resource [spec: auth/credential-mode]', async () => {
     const authorization = await signInRunner()
     const res = await jsonFetch('/api/v1/runners', authorization)
     expect(res.status).toBe(200)
+  })
+
+  it('rejects a runner token presented as DPoP [spec: auth/credential-mode]', async () => {
+    const authorization = (await signInRunner()).replace(/^Bearer /, 'DPoP ')
+    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: dpopHeaders(authorization, 'GET', '/api/v1/auth/sessions/current'),
+    })
+    expect(res.status).toBe(401)
+    expect(res.headers.get('www-authenticate')).toMatch(/^DPoP /)
+    expectAuthRequired(await res.json())
   })
 
   it('advertises both credential schemes when authentication is missing', async () => {

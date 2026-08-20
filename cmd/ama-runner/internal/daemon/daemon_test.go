@@ -1454,7 +1454,7 @@ func TestNewDaemonWiresSDKClientAndAdapters(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "e2e-runner:test",
-		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
