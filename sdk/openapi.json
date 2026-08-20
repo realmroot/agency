@@ -3,20 +3,20 @@
   "info": {
     "title": "Any Managed Agents API",
     "version": "1.0.0",
-    "description": "Control-plane API for Any Managed Agents. Every resource lives under /api/v1 and follows REST conventions. Command-line automation uses restish or direct HTTP against this OpenAPI document; live browser task traffic uses the session socket and canonical session events."
+    "description": "Realmroot-native control-plane API for Any Managed Agents. Every protected operation requires a DPoP-bound Realmroot token with an exact resource scope."
   },
   "servers": [
     {
-      "url": "/"
+      "url": "https://example.test"
     }
   ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "OIDC access token",
-        "description": "OIDC access token issued by the configured FlareAuth issuer."
+      "realmrootDpop": {
+        "type": "openIdConnect",
+        "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
+        "description": "Realmroot-issued, DPoP-bound at+jwt access token. Bearer tokens are rejected.",
+        "x-dpop-required": true
       }
     },
     "schemas": {
@@ -2562,19 +2562,6 @@
           "error"
         ]
       },
-      "CreateAuthSessionRequest": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string",
-            "minLength": 1,
-            "example": "eyJhbGciOiJFZERTQSJ9..."
-          }
-        },
-        "required": [
-          "accessToken"
-        ]
-      },
       "ProjectListResponse": {
         "type": "object",
         "properties": {
@@ -4052,12 +4039,9 @@
           "authMode": {
             "type": "string",
             "enum": [
-              "bearer",
-              "mtls",
-              "oidc",
-              "federated"
+              "realmroot"
             ],
-            "example": "oidc"
+            "example": "realmroot"
           },
           "state": {
             "type": "string",
@@ -4258,12 +4242,9 @@
           "authMode": {
             "type": "string",
             "enum": [
-              "bearer",
-              "mtls",
-              "oidc",
-              "federated"
+              "realmroot"
             ],
-            "example": "bearer"
+            "example": "realmroot"
           },
           "maxConcurrent": {
             "type": "integer",
@@ -5305,10 +5286,15 @@
             "type": "string",
             "nullable": true
           },
+          "controllerUserId": {
+            "type": "string",
+            "nullable": true
+          },
           "actorType": {
             "type": "string",
             "enum": [
               "user",
+              "agent",
               "system"
             ]
           },
@@ -5373,6 +5359,7 @@
           "id",
           "projectId",
           "actorUserId",
+          "controllerUserId",
           "actorType",
           "action",
           "resourceType",
@@ -8444,57 +8431,6 @@
         }
       }
     },
-    "/api/v1/auth/sessions": {
-      "post": {
-        "operationId": "createAuthSession",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Validate an OIDC bearer token and return auth context",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAuthSessionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Bearer token accepted. Returns user, organization, and project context.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthSession"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or expired OIDC token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Request origin is not in the allowed origins list",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/sessions/current": {
       "get": {
         "operationId": "readCurrentAuthSession",
@@ -8504,7 +8440,9 @@
         "summary": "Read the authenticated session context",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "auth:read"
+            ]
           }
         ],
         "responses": {
@@ -8529,7 +8467,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8537,18 +8475,6 @@
                 }
               }
             }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "deleteCurrentAuthSession",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Complete a local sign-out request",
-        "responses": {
-          "204": {
-            "description": "Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider."
           }
         }
       }
@@ -8562,7 +8488,9 @@
         "summary": "List projects in the current organization",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "projects:read"
+            ]
           }
         ],
         "parameters": [
@@ -8621,7 +8549,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8640,7 +8568,9 @@
         "summary": "Create a project in the current organization",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "projects:write"
+            ]
           }
         ],
         "requestBody": {
@@ -8675,7 +8605,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8696,7 +8626,9 @@
         "summary": "Read a single project",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "projects:read"
+            ]
           }
         ],
         "parameters": [
@@ -8732,7 +8664,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8763,7 +8695,9 @@
         "summary": "List agents",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:read"
+            ]
           }
         ],
         "parameters": [
@@ -8868,7 +8802,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8887,7 +8821,9 @@
         "summary": "Create an agent",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:write"
+            ]
           }
         ],
         "requestBody": {
@@ -8932,7 +8868,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -8953,7 +8889,9 @@
         "summary": "Read an agent",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:read"
+            ]
           }
         ],
         "parameters": [
@@ -8989,7 +8927,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9019,7 +8957,9 @@
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:write"
+            ]
           }
         ],
         "parameters": [
@@ -9075,7 +9015,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9116,7 +9056,9 @@
         "summary": "List agent versions",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:read"
+            ]
           }
         ],
         "parameters": [
@@ -9152,7 +9094,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9183,7 +9125,9 @@
         "summary": "Read an agent version",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "agents:read"
+            ]
           }
         ],
         "parameters": [
@@ -9239,7 +9183,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9270,7 +9214,9 @@
         "summary": "List environments",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:read"
+            ]
           }
         ],
         "parameters": [
@@ -9375,7 +9321,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9394,7 +9340,9 @@
         "summary": "Create an environment",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:write"
+            ]
           }
         ],
         "requestBody": {
@@ -9439,7 +9387,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9460,7 +9408,9 @@
         "summary": "Read an environment",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:read"
+            ]
           }
         ],
         "parameters": [
@@ -9496,7 +9446,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9526,7 +9476,9 @@
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:write"
+            ]
           }
         ],
         "parameters": [
@@ -9582,7 +9534,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9623,7 +9575,9 @@
         "summary": "List environment versions",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:read"
+            ]
           }
         ],
         "parameters": [
@@ -9659,7 +9613,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9690,7 +9644,9 @@
         "summary": "Read an environment version",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "environments:read"
+            ]
           }
         ],
         "parameters": [
@@ -9746,7 +9702,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9777,7 +9733,9 @@
         "summary": "List model vendors",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "providers:read"
+            ]
           }
         ],
         "responses": {
@@ -9802,7 +9760,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9823,7 +9781,9 @@
         "summary": "List all catalog models",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "providers:read"
+            ]
           }
         ],
         "responses": {
@@ -9848,7 +9808,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9870,7 +9830,9 @@
         "description": "Triggers a discovery refresh of the global model catalog (also runs hourly on a schedule).",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "providers:write"
+            ]
           }
         ],
         "responses": {
@@ -9895,7 +9857,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9916,7 +9878,9 @@
         "summary": "Read a model vendor",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "providers:read"
+            ]
           }
         ],
         "parameters": [
@@ -9952,7 +9916,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9983,7 +9947,9 @@
         "summary": "List a vendor's models",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "providers:read"
+            ]
           }
         ],
         "parameters": [
@@ -10019,7 +9985,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -10050,7 +10016,9 @@
         "summary": "Register a self-hosted runner",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:write"
+            ]
           }
         ],
         "requestBody": {
@@ -10095,7 +10063,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "Runner device token required",
             "content": {
               "application/json": {
                 "schema": {
@@ -10124,7 +10092,9 @@
         "summary": "List self-hosted runners",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:read"
+            ]
           }
         ],
         "parameters": [
@@ -10274,7 +10244,9 @@
         "summary": "Read a self-hosted runner",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:read"
+            ]
           }
         ],
         "parameters": [
@@ -10339,7 +10311,9 @@
         "summary": "Update or archive a self-hosted runner",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:write"
+            ]
           }
         ],
         "parameters": [
@@ -10436,7 +10410,9 @@
         "summary": "Read the current runner heartbeat state",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:read"
+            ]
           }
         ],
         "parameters": [
@@ -10501,7 +10477,9 @@
         "summary": "Replace the current runner heartbeat state",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:write"
+            ]
           }
         ],
         "parameters": [
@@ -10598,7 +10576,9 @@
         "summary": "Open the runner relay WebSocket channel",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "runners:write"
+            ]
           }
         ],
         "parameters": [
@@ -10678,7 +10658,9 @@
         "summary": "List queued self-hosted work items",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "work-items:read"
+            ]
           }
         ],
         "parameters": [
@@ -10801,7 +10783,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -10822,7 +10804,9 @@
         "summary": "Read a queued self-hosted work item",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "work-items:read"
+            ]
           }
         ],
         "parameters": [
@@ -10858,7 +10842,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -10899,7 +10883,9 @@
         "summary": "Claim a specific available work item for a runner",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "leases:write"
+            ]
           }
         ],
         "requestBody": {
@@ -10983,7 +10969,9 @@
         "summary": "List work leases",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "leases:read"
+            ]
           }
         ],
         "parameters": [
@@ -11087,7 +11075,9 @@
         "summary": "Read a work lease",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "leases:read"
+            ]
           }
         ],
         "parameters": [
@@ -11152,7 +11142,9 @@
         "summary": "Renew or finish a work lease",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "leases:write"
+            ]
           }
         ],
         "parameters": [
@@ -11249,7 +11241,9 @@
         "summary": "List budgets",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "budgets:read"
+            ]
           }
         ],
         "responses": {
@@ -11274,7 +11268,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11293,7 +11287,9 @@
         "summary": "Create a budget",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "budgets:write"
+            ]
           }
         ],
         "requestBody": {
@@ -11338,7 +11334,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11359,7 +11355,9 @@
         "summary": "Read a budget",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "budgets:read"
+            ]
           }
         ],
         "parameters": [
@@ -11395,7 +11393,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11424,7 +11422,9 @@
         "summary": "Update a budget",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "budgets:write"
+            ]
           }
         ],
         "parameters": [
@@ -11480,7 +11480,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11509,7 +11509,9 @@
         "summary": "Delete a budget",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "budgets:write"
+            ]
           }
         ],
         "parameters": [
@@ -11538,7 +11540,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11569,7 +11571,9 @@
         "summary": "List connectors",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "connectors:read"
+            ]
           }
         ],
         "parameters": [
@@ -11678,7 +11682,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11699,7 +11703,9 @@
         "summary": "Read connector",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "connectors:read"
+            ]
           }
         ],
         "parameters": [
@@ -11735,7 +11741,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11767,7 +11773,9 @@
         "description": "Lists usage records for the project. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "usage-records:read"
+            ]
           }
         ],
         "parameters": [
@@ -11885,7 +11893,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11906,7 +11914,9 @@
         "summary": "Read a usage record",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "usage-records:read"
+            ]
           }
         ],
         "parameters": [
@@ -11942,7 +11952,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -11974,7 +11984,9 @@
         "description": "Read-only aggregation of usage records grouped by provider, model, or agent.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "usage-summary:read"
+            ]
           }
         ],
         "parameters": [
@@ -12045,7 +12057,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12067,7 +12079,9 @@
         "description": "Lists audit records for the organization. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "audit-records:read"
+            ]
           }
         ],
         "parameters": [
@@ -12197,7 +12211,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12218,7 +12232,9 @@
         "summary": "Read an audit record",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "audit-records:read"
+            ]
           }
         ],
         "parameters": [
@@ -12254,7 +12270,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12285,7 +12301,9 @@
         "summary": "Create a trigger",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:write"
+            ]
           }
         ],
         "requestBody": {
@@ -12330,7 +12348,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12369,7 +12387,9 @@
         "summary": "List triggers",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:read"
+            ]
           }
         ],
         "parameters": [
@@ -12489,7 +12509,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12510,7 +12530,9 @@
         "summary": "Read a trigger",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:read"
+            ]
           }
         ],
         "parameters": [
@@ -12546,7 +12568,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12576,7 +12598,9 @@
         "description": "Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:write"
+            ]
           }
         ],
         "parameters": [
@@ -12632,7 +12656,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12672,7 +12696,9 @@
         "description": "Permanently deletes the trigger and its run history.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:write"
+            ]
           }
         ],
         "parameters": [
@@ -12701,7 +12727,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12732,7 +12758,9 @@
         "summary": "List trigger runs",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:read"
+            ]
           }
         ],
         "parameters": [
@@ -12847,7 +12875,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12877,7 +12905,9 @@
         "description": "Creates a run for an HTTP trigger using the JSON body, query string, and allowed request headers as prompt template variables.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:write"
+            ]
           }
         ],
         "parameters": [
@@ -12933,7 +12963,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -12974,7 +13004,9 @@
         "summary": "Read a trigger run",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "triggers:read"
+            ]
           }
         ],
         "parameters": [
@@ -13019,7 +13051,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13050,7 +13082,9 @@
         "summary": "Create a session",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "requestBody": {
@@ -13134,7 +13168,9 @@
         "summary": "List sessions",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -13266,7 +13302,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13287,7 +13323,9 @@
         "summary": "Read a session",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -13323,7 +13361,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13353,7 +13391,9 @@
         "description": "Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and lifecycle archiving (archived: true|false).",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "parameters": [
@@ -13409,7 +13449,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13450,7 +13490,9 @@
         "summary": "Open the session browser WebSocket (live events + backfill + input)",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "parameters": [
@@ -13479,7 +13521,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13520,7 +13562,9 @@
         "summary": "List session messages",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -13587,7 +13631,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13616,7 +13660,9 @@
         "summary": "Send a prompt message to a session",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "parameters": [
@@ -13672,7 +13718,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13723,7 +13769,9 @@
         "summary": "Read a session message delivery state",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -13768,7 +13816,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13800,7 +13848,9 @@
         "description": "Content negotiation: application/json returns a paginated list, text/csv exports the filtered events, text/event-stream streams new events as SSE.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -13934,7 +13984,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -13964,7 +14014,9 @@
         "description": "Event ingest for runners and clients. Runner OIDC tokens are accepted only while the runner holds an active lease attached to the session.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "parameters": [
@@ -14051,7 +14103,9 @@
         "summary": "List tool approvals for a session",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -14087,7 +14141,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14118,7 +14172,9 @@
         "summary": "Read a tool approval",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:read"
+            ]
           }
         ],
         "parameters": [
@@ -14164,7 +14220,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14194,7 +14250,9 @@
         "description": "Records the human decision for a paused tool call. Approval resumes the runtime and executes the tool (or records the provided custom result); denial resumes the runtime with the denial.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "sessions:write"
+            ]
           }
         ],
         "parameters": [
@@ -14250,7 +14308,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14291,7 +14349,9 @@
         "summary": "List memory stores",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:read"
+            ]
           }
         ],
         "parameters": [
@@ -14396,7 +14456,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14415,7 +14475,9 @@
         "summary": "Create a memory store",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:write"
+            ]
           }
         ],
         "requestBody": {
@@ -14460,7 +14522,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14481,7 +14543,9 @@
         "summary": "Read a memory store",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:read"
+            ]
           }
         ],
         "parameters": [
@@ -14517,7 +14581,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14546,7 +14610,9 @@
         "summary": "Update or archive a memory store",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:write"
+            ]
           }
         ],
         "parameters": [
@@ -14602,7 +14668,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14633,7 +14699,9 @@
         "summary": "List memories in a memory store",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:read"
+            ]
           }
         ],
         "parameters": [
@@ -14701,7 +14769,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14730,7 +14798,9 @@
         "summary": "Create a memory in a memory store",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:write"
+            ]
           }
         ],
         "parameters": [
@@ -14786,7 +14856,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14827,7 +14897,9 @@
         "summary": "Update a memory",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:write"
+            ]
           }
         ],
         "parameters": [
@@ -14892,7 +14964,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -14931,7 +15003,9 @@
         "summary": "Delete a memory",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "memory-stores:write"
+            ]
           }
         ],
         "parameters": [
@@ -14969,7 +15043,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15000,7 +15074,9 @@
         "summary": "List vaults",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -15105,7 +15181,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15124,7 +15200,9 @@
         "summary": "Create a vault",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:write"
+            ]
           }
         ],
         "requestBody": {
@@ -15169,7 +15247,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15190,7 +15268,9 @@
         "summary": "Read a vault",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -15226,7 +15306,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15256,7 +15336,9 @@
         "description": "Partial update. Archive with `archived: true`; restore with `archived: false`.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:write"
+            ]
           }
         ],
         "parameters": [
@@ -15312,7 +15394,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15353,7 +15435,9 @@
         "summary": "List vault credential metadata",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -15465,7 +15549,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15494,7 +15578,9 @@
         "summary": "Create vault credential metadata",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:write"
+            ]
           }
         ],
         "parameters": [
@@ -15550,7 +15636,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15591,7 +15677,9 @@
         "summary": "Read vault credential metadata",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -15636,7 +15724,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15666,7 +15754,9 @@
         "description": "Revoke with `state: 'revoked'` and an optional `revokeReason`.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:write"
+            ]
           }
         ],
         "parameters": [
@@ -15731,7 +15821,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15761,7 +15851,9 @@
         "description": "Updates credential secret material. AMA records version snapshots internally for auditability.",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:write"
+            ]
           }
         ],
         "parameters": [
@@ -15826,7 +15918,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -15867,7 +15959,9 @@
         "summary": "List vault credential versions",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -15978,7 +16072,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -16009,7 +16103,9 @@
         "summary": "Read a vault credential version",
         "security": [
           {
-            "bearerAuth": []
+            "realmrootDpop": [
+              "vaults:read"
+            ]
           }
         ],
         "parameters": [
@@ -16063,7 +16159,7 @@
             }
           },
           "403": {
-            "description": "Token lacks the permission required for this resource",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {

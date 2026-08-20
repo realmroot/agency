@@ -18,7 +18,7 @@ import {
 import { type RunnerAuthRecord, RunnerConflictError, RunnerValidationError } from '../usecases/ports'
 import { recordRunnerHeartbeat, registerRunner, updateRunner } from '../usecases/runners'
 import { requestId } from './request-context'
-import { runnerForbidden, runnerOidcContext, runnerOperationAuthorized } from './runner-auth'
+import { runnerForbidden, runnerOidcContext, runnerOperationAuthorized, runnerRuntimeAuthorized } from './runner-auth'
 
 type RunnerRoutes = OpenAPIHono<DepsEnv>
 
@@ -64,7 +64,7 @@ const RunnerSchema = z
     name: z.string().openapi({ example: 'mac-mini-build-runner' }),
     environmentId: z.string().nullable().openapi({ example: 'env_abc123' }),
     secretRef: NullableSecretRefSchema,
-    authMode: z.enum(RUNNER_AUTH_MODES).openapi({ example: 'oidc' }),
+    authMode: z.enum(RUNNER_AUTH_MODES).openapi({ example: 'realmroot' }),
     state: z.enum(RUNNER_STATES).openapi({ example: 'active' }),
     currentLoad: z.number().int().openapi({ example: 0 }),
     maxConcurrent: z.number().int().openapi({ example: 2 }),
@@ -95,7 +95,7 @@ const CreateRunnerSchema = z
     name: z.string().min(1).max(120).openapi({ example: 'mac-mini-build-runner' }),
     environmentId: z.string().min(1).optional().openapi({ example: 'env_abc123' }),
     secretRef: SecretRefSchema.optional(),
-    authMode: z.enum(RUNNER_AUTH_MODES).optional().openapi({ example: 'bearer' }),
+    authMode: z.enum(RUNNER_AUTH_MODES).optional().openapi({ example: 'realmroot' }),
     maxConcurrent: z.number().int().min(1).max(100).optional().openapi({ example: 2 }),
     metadata: JsonObjectSchema.optional().openapi({ example: { pool: 'default' } }),
   })
@@ -211,6 +211,10 @@ const createRunnerRoute = createRoute({
     201: { description: 'Created runner', content: { 'application/json': { schema: RunnerSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    403: {
+      description: 'Runner device token required',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
     409: { description: 'Conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
@@ -357,7 +361,7 @@ async function connectRunnerChannel(c: Context<DepsEnv>) {
   if (!runner) {
     return errorResponse(c, 404, 'not_found', 'Runner not found')
   }
-  if (!runnerOperationAuthorized(c.env, auth, runner)) {
+  if (!runnerRuntimeAuthorized(c.env, auth, runner)) {
     return runnerForbidden(c)
   }
   if (!runner.environmentId) {
@@ -420,6 +424,9 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
         return auth
+      }
+      if (!isRunnerOidcAuth(c.env, auth)) {
+        return runnerForbidden(c)
       }
       try {
         const { runner, reregistered } = await registerRunner(deps, auth, runnerOidcContext(c.env, auth), {
@@ -565,7 +572,7 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       if (!runner) {
         return errorResponse(c, 404, 'not_found', 'Runner not found')
       }
-      if (!runnerOperationAuthorized(c.env, auth, runner)) {
+      if (!runnerRuntimeAuthorized(c.env, auth, runner)) {
         return runnerForbidden(c)
       }
       try {

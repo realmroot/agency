@@ -1,7 +1,7 @@
 import type { SessionSocketClientMessage } from '@ama/runtime-contracts/session-socket'
 import type { AmaSessionEventType } from '@shared/session-events'
 import type { SessionEvent } from '@/lib/amarpc'
-import { getStoredAccessToken } from '@/lib/oidc'
+import { getDpopHeaders } from '@/lib/oidc'
 
 export type SessionRuntimeConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 export type SessionRuntimeRunState = 'idle' | 'running' | 'error'
@@ -95,14 +95,25 @@ export function sessionRuntimeReducer(state: SessionRuntimeState, action: Sessio
   return state
 }
 
-export function sessionSocketUrl(socketPath: string) {
+export async function sessionSocketConnection(socketPath: string) {
   const url = new URL(socketPath, window.location.href)
+  const proofUrl = url.toString()
+  const headers = await getDpopHeaders(proofUrl, 'GET')
+  const authorization = headers.authorization?.slice('DPoP '.length)
+  if (!authorization || !headers.dpop) throw new Error('Realmroot DPoP credential is unavailable')
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  const accessToken = getStoredAccessToken()
-  if (accessToken) {
-    url.searchParams.set('access_token', accessToken)
+  return {
+    url: url.toString(),
+    protocols: [
+      'ama-dpop',
+      `ama-access.${encodeSocketCredential(authorization)}`,
+      `ama-proof.${encodeSocketCredential(headers.dpop)}`,
+    ],
   }
-  return url.toString()
+}
+
+function encodeSocketCredential(value: string) {
+  return btoa(value).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
 function mergePersistedEvents(state: SessionRuntimeState, events: SessionEvent[]) {

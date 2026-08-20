@@ -2,11 +2,15 @@ package auth
 
 import (
 	"context"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,6 +47,7 @@ type oidcMetadata struct {
 	Issuer                      string `json:"issuer"`
 	DeviceAuthorizationEndpoint string `json:"device_authorization_endpoint"`
 	TokenEndpoint               string `json:"token_endpoint"`
+	JWKSURI                     string `json:"jwks_uri"`
 }
 
 type deviceAuthorizationResponse struct {
@@ -77,7 +82,18 @@ func LoginWithDeviceAuthorization(
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
-	device, err := client.StartDeviceAuthorization(ctx, metadata.DeviceAuthorizationEndpoint, options.ClientID, options.Scopes)
+	dpopPrivateKey, err := newDPoPPrivateKey()
+	if err != nil {
+		return DeviceLoginResult{}, err
+	}
+	device, err := client.StartDeviceAuthorization(
+		ctx,
+		metadata.DeviceAuthorizationEndpoint,
+		options.ClientID,
+		options.Scopes,
+		options.Resource,
+		dpopPrivateKey,
+	)
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
@@ -86,27 +102,28 @@ func LoginWithDeviceAuthorization(
 		output = io.Discard
 	}
 	printDeviceInstructions(output, device)
-	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource)
+	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource, dpopPrivateKey)
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
 	if strings.TrimSpace(token.RefreshToken) == "" {
 		return DeviceLoginResult{}, fmt.Errorf("OIDC token response did not include a refresh token; runner client must allow offline_access")
 	}
-	identity, err := tokenIdentity(token.IDToken)
+	identity, err := client.validateIDToken(ctx, metadata, token.IDToken, options.ClientID)
 	if err != nil {
 		return DeviceLoginResult{}, err
 	}
 	if err := runnerconfig.SaveCredentialProfile(options.CredentialPath, runnerconfig.CredentialProfile{
-		AccountID:    identity.Subject,
-		APIServer:    strings.TrimRight(options.APIServer, "/"),
-		Email:        identity.Email,
-		Name:         identity.Name,
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenType:    token.TokenType,
-		ExpiresAt:    expiresAt(token.ExpiresIn),
-		Scope:        token.Scope,
+		AccountID:      identity.Subject,
+		APIServer:      strings.TrimRight(options.APIServer, "/"),
+		Email:          identity.Email,
+		Name:           identity.Name,
+		AccessToken:    token.AccessToken,
+		RefreshToken:   token.RefreshToken,
+		TokenType:      token.TokenType,
+		ExpiresAt:      expiresAt(token.ExpiresIn),
+		Scope:          token.Scope,
+		DPoPPrivateKey: dpopPrivateKey,
 	}); err != nil {
 		return DeviceLoginResult{}, err
 	}
@@ -119,19 +136,85 @@ type tokenIdentityClaims struct {
 	Name    string `json:"name"`
 }
 
-func tokenIdentity(idToken string) (tokenIdentityClaims, error) {
+func (c DeviceAuthClient) validateIDToken(
+	ctx context.Context,
+	metadata oidcMetadata,
+	idToken string,
+	clientID string,
+) (tokenIdentityClaims, error) {
 	parts := strings.Split(idToken, ".")
-	if len(parts) < 2 || strings.TrimSpace(parts[1]) == "" {
+	if len(parts) != 3 || strings.TrimSpace(parts[1]) == "" {
 		return tokenIdentityClaims{}, fmt.Errorf("OIDC token response did not include an id token with account identity")
 	}
-	data, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token payload is invalid: %w", err)
+	var header struct {
+		Algorithm string `json:"alg"`
+		KeyID     string `json:"kid"`
 	}
-	var claims tokenIdentityClaims
-	if err := json.Unmarshal(data, &claims); err != nil {
+	if err := decodeJWTJSON(parts[0], &header); err != nil || header.Algorithm != "RS256" || header.KeyID == "" {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token header is invalid")
+	}
+	var keys struct {
+		Keys []struct {
+			KeyID     string `json:"kid"`
+			KeyType   string `json:"kty"`
+			Algorithm string `json:"alg"`
+			Use       string `json:"use"`
+			Modulus   string `json:"n"`
+			Exponent  string `json:"e"`
+		} `json:"keys"`
+	}
+	if err := c.getJSON(ctx, metadata.JWKSURI, &keys); err != nil {
+		return tokenIdentityClaims{}, fmt.Errorf("fetch OIDC signing keys: %w", err)
+	}
+	var publicKey *rsa.PublicKey
+	for _, key := range keys.Keys {
+		if key.KeyID != header.KeyID || key.KeyType != "RSA" || (key.Algorithm != "" && key.Algorithm != "RS256") || (key.Use != "" && key.Use != "sig") {
+			continue
+		}
+		modulus, modulusErr := base64.RawURLEncoding.DecodeString(key.Modulus)
+		exponent, exponentErr := base64.RawURLEncoding.DecodeString(key.Exponent)
+		if modulusErr != nil || exponentErr != nil || len(modulus) == 0 || len(exponent) == 0 || len(exponent) > 4 {
+			continue
+		}
+		e := 0
+		for _, value := range exponent {
+			e = e<<8 | int(value)
+		}
+		if e >= 3 {
+			publicKey = &rsa.PublicKey{N: new(big.Int).SetBytes(modulus), E: e}
+			break
+		}
+	}
+	if publicKey == nil {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token signing key is unavailable")
+	}
+	signature, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token signature is invalid")
+	}
+	digest := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
+	if err := rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, digest[:], signature); err != nil {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token signature is invalid")
+	}
+	var envelope struct {
+		tokenIdentityClaims
+		Issuer     string          `json:"iss"`
+		Audience   json.RawMessage `json:"aud"`
+		Authorized string          `json:"azp"`
+		ExpiresAt  int64           `json:"exp"`
+		IssuedAt   int64           `json:"iat"`
+	}
+	if err := decodeJWTJSON(parts[1], &envelope); err != nil {
 		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token claims are invalid: %w", err)
 	}
+	now := time.Now().Unix()
+	if envelope.Issuer != metadata.Issuer || !audienceContains(envelope.Audience, clientID) || envelope.ExpiresAt <= now || envelope.IssuedAt <= 0 || envelope.IssuedAt > now+60 {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token claims are invalid")
+	}
+	if audienceCount(envelope.Audience) > 1 && envelope.Authorized != clientID {
+		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token authorized party is invalid")
+	}
+	claims := envelope.tokenIdentityClaims
 	claims.Subject = strings.TrimSpace(claims.Subject)
 	claims.Email = strings.TrimSpace(claims.Email)
 	claims.Name = strings.TrimSpace(claims.Name)
@@ -141,14 +224,54 @@ func tokenIdentity(idToken string) (tokenIdentityClaims, error) {
 	return claims, nil
 }
 
+func decodeJWTJSON(part string, value any) error {
+	data, err := base64.RawURLEncoding.DecodeString(part)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, value)
+}
+
+func tokenAudiences(raw json.RawMessage) []string {
+	var single string
+	if json.Unmarshal(raw, &single) == nil && single != "" {
+		return []string{single}
+	}
+	var multiple []string
+	if json.Unmarshal(raw, &multiple) != nil {
+		return nil
+	}
+	return multiple
+}
+
+func audienceContains(raw json.RawMessage, expected string) bool {
+	for _, audience := range tokenAudiences(raw) {
+		if audience == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func audienceCount(raw json.RawMessage) int {
+	return len(tokenAudiences(raw))
+}
+
 func (c DeviceAuthClient) Discover(ctx context.Context, issuer string) (oidcMetadata, error) {
-	endpoint := strings.TrimRight(issuer, "/") + "/.well-known/openid-configuration"
+	issuer = strings.TrimRight(issuer, "/")
+	endpoint := issuer + "/.well-known/openid-configuration"
 	var metadata oidcMetadata
 	if err := c.getJSON(ctx, endpoint, &metadata); err != nil {
 		return oidcMetadata{}, err
 	}
-	if metadata.DeviceAuthorizationEndpoint == "" || metadata.TokenEndpoint == "" {
-		return oidcMetadata{}, fmt.Errorf("OIDC issuer metadata does not include device and token endpoints")
+	if metadata.Issuer != issuer || metadata.DeviceAuthorizationEndpoint == "" || metadata.TokenEndpoint == "" || metadata.JWKSURI == "" {
+		return oidcMetadata{}, fmt.Errorf("OIDC issuer metadata is incomplete or mismatched")
+	}
+	for _, value := range []string{metadata.DeviceAuthorizationEndpoint, metadata.TokenEndpoint, metadata.JWKSURI} {
+		parsed, err := url.Parse(value)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLoopbackHost(parsed.Hostname()))) {
+			return oidcMetadata{}, fmt.Errorf("OIDC issuer metadata contains an unsafe endpoint")
+		}
 	}
 	return metadata, nil
 }
@@ -158,12 +281,22 @@ func (c DeviceAuthClient) StartDeviceAuthorization(
 	endpoint string,
 	clientID string,
 	scopes string,
+	resource string,
+	dpopPrivateKey string,
 ) (deviceAuthorizationResponse, error) {
 	values := url.Values{}
 	values.Set("client_id", clientID)
 	if strings.TrimSpace(scopes) != "" {
 		values.Set("scope", scopes)
 	}
+	if strings.TrimSpace(resource) != "" {
+		values.Set("resource", strings.TrimRight(resource, "/"))
+	}
+	jkt, err := dpopJKT(dpopPrivateKey)
+	if err != nil {
+		return deviceAuthorizationResponse{}, err
+	}
+	values.Set("dpop_jkt", jkt)
 	var response deviceAuthorizationResponse
 	if err := c.postForm(ctx, endpoint, values, &response); err != nil {
 		return deviceAuthorizationResponse{}, err
@@ -181,6 +314,7 @@ func (c DeviceAuthClient) PollDeviceToken(
 	device deviceAuthorizationResponse,
 	fallbackInterval time.Duration,
 	resource string,
+	dpopPrivateKey string,
 ) (tokenResponse, error) {
 	interval := time.Duration(device.Interval) * time.Second
 	if interval <= 0 {
@@ -208,13 +342,13 @@ func (c DeviceAuthClient) PollDeviceToken(
 			values.Set("resource", strings.TrimRight(resource, "/"))
 		}
 		var token tokenResponse
-		err := c.postForm(ctx, endpoint, values, &token)
+		err := c.postDpopForm(ctx, endpoint, values, dpopPrivateKey, &token)
 		if err == nil && token.Error == "" {
 			if token.AccessToken == "" {
 				return tokenResponse{}, fmt.Errorf("OIDC token response did not include an access token")
 			}
-			if token.TokenType == "" {
-				token.TokenType = "Bearer"
+			if !strings.EqualFold(token.TokenType, "DPoP") {
+				return tokenResponse{}, fmt.Errorf("Realmroot token response did not issue a DPoP token")
 			}
 			return token, nil
 		}
@@ -248,6 +382,7 @@ func (c DeviceAuthClient) RefreshToken(
 	clientID string,
 	refreshToken string,
 	resource string,
+	dpopPrivateKey string,
 ) (tokenResponse, error) {
 	if strings.TrimSpace(refreshToken) == "" {
 		return tokenResponse{}, fmt.Errorf("OIDC refresh token is required")
@@ -260,14 +395,14 @@ func (c DeviceAuthClient) RefreshToken(
 		values.Set("resource", strings.TrimRight(resource, "/"))
 	}
 	var token tokenResponse
-	if err := c.postForm(ctx, endpoint, values, &token); err != nil {
+	if err := c.postDpopForm(ctx, endpoint, values, dpopPrivateKey, &token); err != nil {
 		return tokenResponse{}, err
 	}
 	if token.AccessToken == "" {
 		return tokenResponse{}, fmt.Errorf("OIDC refresh response did not include an access token")
 	}
-	if token.TokenType == "" {
-		token.TokenType = "Bearer"
+	if !strings.EqualFold(token.TokenType, "DPoP") {
+		return tokenResponse{}, fmt.Errorf("Realmroot refresh response did not issue a DPoP token")
 	}
 	return token, nil
 }
@@ -282,10 +417,33 @@ func (c DeviceAuthClient) getJSON(ctx context.Context, endpoint string, out any)
 }
 
 func (c DeviceAuthClient) postForm(ctx context.Context, endpoint string, values url.Values, out any) error {
-	if err := c.postFormOnly(ctx, endpoint, values, out); !isUnsupportedMediaType(err) {
-		return err
+	return c.postFormOnly(ctx, endpoint, values, out)
+}
+
+func (c DeviceAuthClient) postDpopForm(ctx context.Context, endpoint string, values url.Values, privateKey string, out any) error {
+	nonce := ""
+	for attempt := 0; attempt < 2; attempt++ {
+		proof, err := signDPoPProof(privateKey, http.MethodPost, endpoint, "", nonce, time.Now())
+		if err != nil {
+			return err
+		}
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(values.Encode()))
+		if err != nil {
+			return err
+		}
+		request.Header.Set("accept", "application/json")
+		request.Header.Set("content-type", "application/x-www-form-urlencoded")
+		request.Header.Set("dpop", proof)
+		challenge, err := c.doWithDPoPNonce(request, out)
+		if err == nil {
+			return nil
+		}
+		if challenge == "" || attempt == 1 {
+			return err
+		}
+		nonce = challenge
 	}
-	return c.postJSON(ctx, endpoint, formValuesJSON(values), out)
+	return errors.New("Realmroot DPoP token request failed")
 }
 
 func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, values url.Values, out any) error {
@@ -298,45 +456,36 @@ func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, val
 	return c.do(request, out)
 }
 
-func (c DeviceAuthClient) postJSON(ctx context.Context, endpoint string, values map[string]string, out any) error {
-	data, err := json.Marshal(values)
-	if err != nil {
-		return err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(data)))
-	if err != nil {
-		return err
-	}
-	request.Header.Set("accept", "application/json")
-	request.Header.Set("content-type", "application/json")
-	return c.do(request, out)
+func (c DeviceAuthClient) do(request *http.Request, out any) error {
+	_, err := c.doWithDPoPNonce(request, out)
+	return err
 }
 
-func (c DeviceAuthClient) do(request *http.Request, out any) error {
+func (c DeviceAuthClient) doWithDPoPNonce(request *http.Request, out any) (string, error) {
 	httpClient := c.HTTPClient
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		var tokenErr tokenResponse
 		if json.Unmarshal(body, &tokenErr) == nil && tokenErr.Error != "" {
-			return deviceTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
+			return response.Header.Get("DPoP-Nonce"), deviceTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
 		}
-		return oidcStatusError{Path: request.URL.Path, Status: response.StatusCode}
+		return response.Header.Get("DPoP-Nonce"), oidcStatusError{Path: request.URL.Path, Status: response.StatusCode}
 	}
 	if err := json.Unmarshal(body, out); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return "", nil
 }
 
 type oidcStatusError struct {
@@ -346,19 +495,6 @@ type oidcStatusError struct {
 
 func (e oidcStatusError) Error() string {
 	return fmt.Sprintf("OIDC %s failed with status %d", e.Path, e.Status)
-}
-
-func isUnsupportedMediaType(err error) bool {
-	var statusErr oidcStatusError
-	return errors.As(err, &statusErr) && statusErr.Status == http.StatusUnsupportedMediaType
-}
-
-func formValuesJSON(values url.Values) map[string]string {
-	result := map[string]string{}
-	for key := range values {
-		result[key] = values.Get(key)
-	}
-	return result
 }
 
 type deviceTokenError struct {

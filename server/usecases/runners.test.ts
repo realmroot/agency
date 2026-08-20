@@ -16,9 +16,12 @@ const consoleOidc: RunnerOidcContext = {
   isRunnerToken: false,
   subject: 'sub_1',
   clientId: null,
-  runnerProjectId: null,
-  runnerEnvironmentId: null,
-  externalTenantId: null,
+}
+
+const runnerOidc: RunnerOidcContext = {
+  isRunnerToken: true,
+  subject: 'sub_1',
+  clientId: 'realmroot-cli',
 }
 
 function runnerRecord(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
@@ -29,7 +32,7 @@ function runnerRecord(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthReco
     name: 'Runner',
     environmentId: null,
     secretRef: null,
-    authMode: 'bearer',
+    authMode: 'realmroot',
     state: 'offline',
     currentLoad: 0,
     maxConcurrent: 1,
@@ -64,11 +67,11 @@ function fakeDeps(repo: Partial<Deps['runners']> = {}): Deps {
 
 describe('[spec: runners/register] registerRunner', () => {
   it('inserts a new runner when references are usable', async () => {
-    const result = await registerRunner(fakeDeps(), auth, consoleOidc, {
+    const result = await registerRunner(fakeDeps(), auth, runnerOidc, {
       name: 'Local runner',
       environmentId: 'env_1',
       secretRef: 'ama://vaults/vault_1/credentials/cred_1',
-      authMode: 'bearer',
+      authMode: 'realmroot',
       maxConcurrent: 2,
       metadata: { pool: 'default' },
     })
@@ -78,11 +81,11 @@ describe('[spec: runners/register] registerRunner', () => {
 
   it('rejects raw secret material in metadata', async () => {
     await expect(
-      registerRunner(fakeDeps(), auth, consoleOidc, {
+      registerRunner(fakeDeps(), auth, runnerOidc, {
         name: 'Leaky',
         environmentId: undefined,
         secretRef: undefined,
-        authMode: 'bearer',
+        authMode: 'realmroot',
         maxConcurrent: 1,
         metadata: { apiKey: 'raw' },
       }),
@@ -91,11 +94,11 @@ describe('[spec: runners/register] registerRunner', () => {
 
   it('conflicts when the environment is unavailable', async () => {
     await expect(
-      registerRunner(fakeDeps({ environmentUsable: async () => false }), auth, consoleOidc, {
+      registerRunner(fakeDeps({ environmentUsable: async () => false }), auth, runnerOidc, {
         name: 'Runner',
         environmentId: 'env_missing',
         secretRef: undefined,
-        authMode: 'bearer',
+        authMode: 'realmroot',
         maxConcurrent: 1,
         metadata: {},
       }),
@@ -107,12 +110,12 @@ describe('[spec: runners/register] registerRunner', () => {
       registerRunner(
         fakeDeps({ secretRefUsable: async () => ({ credentialMissing: true, versionMissing: false }) }),
         auth,
-        consoleOidc,
+        runnerOidc,
         {
           name: 'Runner',
           environmentId: undefined,
           secretRef: 'ama://vaults/vault_1/credentials/cred_missing',
-          authMode: 'bearer',
+          authMode: 'realmroot',
           maxConcurrent: 1,
           metadata: {},
         },
@@ -120,37 +123,36 @@ describe('[spec: runners/register] registerRunner', () => {
     ).rejects.toBeInstanceOf(RunnerValidationError)
   })
 
-  it('re-registers a machine-bound federated runner instead of inserting', async () => {
-    const existing = runnerRecord({ id: 'runner_fed', authMode: 'federated', oidcSubject: 'sub_1' })
+  it('re-registers a machine-bound Realmroot runner instead of inserting', async () => {
+    const existing = runnerRecord({ id: 'runner_realmroot', authMode: 'realmroot', oidcSubject: 'sub_1' })
     const result = await registerRunner(
       fakeDeps({ findForMachineRegistration: async () => existing }),
       auth,
-      { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
+      { ...consoleOidc, isRunnerToken: true, clientId: 'realmroot-cli' },
       {
-        name: 'Federated runner',
+        name: 'Realmroot runner',
         environmentId: undefined,
         secretRef: undefined,
-        authMode: 'federated',
+        authMode: 'realmroot',
         maxConcurrent: 1,
         metadata: { machineId: 'mac-1' },
       },
     )
     expect(result.reregistered).toBe(true)
-    expect(result.runner.id).toBe('runner_fed')
+    expect(result.runner.id).toBe('runner_realmroot')
   })
 
-  it('rejects a federated runner token trying to register as non-federated', async () => {
-    // runnerOidcBindingFields returns a non-null binding error
+  it('rejects a runner token trying to register a legacy auth mode', async () => {
     await expect(
       registerRunner(
         fakeDeps(),
         auth,
-        { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
+        { ...consoleOidc, isRunnerToken: true, clientId: 'realmroot-cli' },
         {
           name: 'Bad mode',
           environmentId: undefined,
           secretRef: undefined,
-          authMode: 'oidc',
+          authMode: 'oidc' as never,
           maxConcurrent: 1,
           metadata: {},
         },
@@ -163,12 +165,12 @@ describe('[spec: runners/register] registerRunner', () => {
       registerRunner(
         fakeDeps({ secretRefUsable: async () => ({ credentialMissing: false, versionMissing: true }) }),
         auth,
-        consoleOidc,
+        runnerOidc,
         {
           name: 'Runner',
           environmentId: undefined,
           secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_bad',
-          authMode: 'bearer',
+          authMode: 'realmroot',
           maxConcurrent: 1,
           metadata: {},
         },
@@ -180,19 +182,19 @@ describe('[spec: runners/register] registerRunner', () => {
     const existing = runnerRecord({
       id: 'runner_other',
       projectId: 'project_other',
-      authMode: 'federated',
+      authMode: 'realmroot',
       oidcSubject: 'sub_1',
     })
     await expect(
       registerRunner(
         fakeDeps({ findForMachineRegistration: async () => existing }),
         auth,
-        { ...consoleOidc, isRunnerToken: true, runnerProjectId: 'project_1' },
+        { ...consoleOidc, isRunnerToken: true, clientId: 'realmroot-cli' },
         {
           name: 'Conflicting runner',
           environmentId: undefined,
           secretRef: undefined,
-          authMode: 'federated',
+          authMode: 'realmroot',
           maxConcurrent: 1,
           metadata: { machineId: 'mac-2' },
         },

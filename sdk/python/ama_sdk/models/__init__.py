@@ -70,7 +70,6 @@ from .connector_tool_policy_metadata import ConnectorToolPolicyMetadata
 from .connector_trust_level import ConnectorTrustLevel
 from .create_agent_request import CreateAgentRequest
 from .create_agent_request_spec import CreateAgentRequestSpec
-from .create_auth_session_request import CreateAuthSessionRequest
 from .create_budget_request import CreateBudgetRequest
 from .create_budget_request_limit_type import CreateBudgetRequestLimitType
 from .create_budget_request_metadata import CreateBudgetRequestMetadata
@@ -597,7 +596,6 @@ __all__ = (
     "ConnectorTrustLevel",
     "CreateAgentRequest",
     "CreateAgentRequestSpec",
-    "CreateAuthSessionRequest",
     "CreateBudgetRequest",
     "CreateBudgetRequestLimitType",
     "CreateBudgetRequestMetadata",

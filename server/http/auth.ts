@@ -1,7 +1,6 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
-import { getBearerClaims, OidcError, oidcAudience, organizationIdForClaims, requireOidcConfig } from '../auth/oidc'
-import { requireAuth, resolveProjectForClaims } from '../auth/session'
-import { errorResponse } from '../errors'
+import { requireOidcConfig } from '../auth/oidc'
+import { requireAuth } from '../auth/session'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
 // Mounted at /api/v1/auth (docs/api-v1-design.md §2 Auth). The auth resource's
@@ -36,12 +35,6 @@ const AuthConfigQuerySchema = z.object({
       example: 'example-org',
     }),
 })
-
-const CreateAuthSessionRequestSchema = z
-  .object({
-    accessToken: z.string().min(1).openapi({ example: 'eyJhbGciOiJFZERTQSJ9...' }),
-  })
-  .openapi('CreateAuthSessionRequest')
 
 const AuthUserSchema = z
   .object({
@@ -85,29 +78,6 @@ const readAuthConfigRoute = createRoute({
   },
 })
 
-const createAuthSessionRoute = createRoute({
-  method: 'post',
-  path: '/sessions',
-  operationId: 'createAuthSession',
-  tags: ['Auth'],
-  summary: 'Validate an OIDC bearer token and return auth context',
-  request: { body: { required: true, content: { 'application/json': { schema: CreateAuthSessionRequestSchema } } } },
-  responses: {
-    201: {
-      description: 'Bearer token accepted. Returns user, organization, and project context.',
-      content: { 'application/json': { schema: AuthSessionSchema } },
-    },
-    401: {
-      description: 'Invalid or expired OIDC token',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    403: {
-      description: 'Request origin is not in the allowed origins list',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-  },
-})
-
 const readCurrentAuthSessionRoute = createRoute({
   method: 'get',
   path: '/sessions/current',
@@ -118,17 +88,6 @@ const readCurrentAuthSessionRoute = createRoute({
   responses: {
     200: { description: 'Current session context', content: { 'application/json': { schema: AuthSessionSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-  },
-})
-
-const deleteCurrentAuthSessionRoute = createRoute({
-  method: 'delete',
-  path: '/sessions/current',
-  operationId: 'deleteCurrentAuthSession',
-  tags: ['Auth'],
-  summary: 'Complete a local sign-out request',
-  responses: {
-    204: { description: 'Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider.' },
   },
 })
 
@@ -147,50 +106,6 @@ export function registerAuthRoutes(routes: AuthRoutes) {
         methods = []
       }
       return c.json({ methods }, 200)
-    })
-    .openapi(createAuthSessionRoute, async (c) => {
-      // Reject cross-origin token submissions when an origin allowlist is configured.
-      const requestOrigin = c.req.header('origin')
-      const allowedOrigins = c.env.AMA_ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) ?? []
-      if (requestOrigin && allowedOrigins.length > 0 && !allowedOrigins.includes(requestOrigin)) {
-        return errorResponse(c, 403, 'forbidden', 'Request origin is not allowed') as never
-      }
-
-      const { accessToken } = c.req.valid('json')
-
-      let claims: Awaited<ReturnType<typeof getBearerClaims>>
-      try {
-        claims = await getBearerClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
-      } catch (err) {
-        if (err instanceof OidcError) {
-          return errorResponse(c, 401, 'oidc_error', 'OIDC token validation failed', {
-            reason: err.message,
-          }) as never
-        }
-        throw err
-      }
-
-      const project = await resolveProjectForClaims(c.env, claims)
-      const organizationId = project.organizationId ?? organizationIdForClaims(claims)
-
-      return c.json(
-        {
-          user: {
-            id: claims.sub,
-            email: claims.email ?? '',
-            name: claims.name ?? null,
-          },
-          organization: {
-            id: organizationId,
-            name: claims.org_name ?? claims.organization_name ?? 'Personal workspace',
-          },
-          project: {
-            id: project.id,
-            name: project.name,
-          },
-        },
-        201,
-      )
     })
     .openapi(readCurrentAuthSessionRoute, async (c) => {
       const auth = await requireAuth(c)
@@ -216,8 +131,5 @@ export function registerAuthRoutes(routes: AuthRoutes) {
         },
         200,
       )
-    })
-    .openapi(deleteCurrentAuthSessionRoute, (c) => {
-      return c.body(null, 204)
     })
 }

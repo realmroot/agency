@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateAuthSessionData, CreateAuthSessionErrors, CreateAuthSessionResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteCurrentAuthSessionData, DeleteCurrentAuthSessionResponses, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
+import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -29,27 +29,9 @@ export const readConfigz = <ThrowOnError extends boolean = false>(options?: Opti
 export const readAuthConfig = <ThrowOnError extends boolean = false>(options?: Options<ReadAuthConfigData, ThrowOnError>): RequestResult<ReadAuthConfigResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ReadAuthConfigResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/config', ...options });
 
 /**
- * Validate an OIDC bearer token and return auth context
- */
-export const createAuthSession = <ThrowOnError extends boolean = false>(options: Options<CreateAuthSessionData, ThrowOnError>): RequestResult<CreateAuthSessionResponses, CreateAuthSessionErrors, ThrowOnError> => (options.client ?? client).post<CreateAuthSessionResponses, CreateAuthSessionErrors, ThrowOnError>({
-    url: '/api/v1/auth/sessions',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Complete a local sign-out request
- */
-export const deleteCurrentAuthSession = <ThrowOnError extends boolean = false>(options?: Options<DeleteCurrentAuthSessionData, ThrowOnError>): RequestResult<DeleteCurrentAuthSessionResponses, unknown, ThrowOnError> => (options?.client ?? client).delete<DeleteCurrentAuthSessionResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/sessions/current', ...options });
-
-/**
  * Read the authenticated session context
  */
 export const readCurrentAuthSession = <ThrowOnError extends boolean = false>(options?: Options<ReadCurrentAuthSessionData, ThrowOnError>): RequestResult<ReadCurrentAuthSessionResponses, ReadCurrentAuthSessionErrors, ThrowOnError> => (options?.client ?? client).get<ReadCurrentAuthSessionResponses, ReadCurrentAuthSessionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/sessions/current',
     ...options
 });
@@ -58,7 +40,6 @@ export const readCurrentAuthSession = <ThrowOnError extends boolean = false>(opt
  * List projects in the current organization
  */
 export const listProjects = <ThrowOnError extends boolean = false>(options?: Options<ListProjectsData, ThrowOnError>): RequestResult<ListProjectsResponses, ListProjectsErrors, ThrowOnError> => (options?.client ?? client).get<ListProjectsResponses, ListProjectsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects',
     ...options
 });
@@ -67,7 +48,6 @@ export const listProjects = <ThrowOnError extends boolean = false>(options?: Opt
  * Create a project in the current organization
  */
 export const createProject = <ThrowOnError extends boolean = false>(options: Options<CreateProjectData, ThrowOnError>): RequestResult<CreateProjectResponses, CreateProjectErrors, ThrowOnError> => (options.client ?? client).post<CreateProjectResponses, CreateProjectErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects',
     ...options,
     headers: {
@@ -80,7 +60,6 @@ export const createProject = <ThrowOnError extends boolean = false>(options: Opt
  * Read a single project
  */
 export const readProject = <ThrowOnError extends boolean = false>(options: Options<ReadProjectData, ThrowOnError>): RequestResult<ReadProjectResponses, ReadProjectErrors, ThrowOnError> => (options.client ?? client).get<ReadProjectResponses, ReadProjectErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects/{projectId}',
     ...options
 });
@@ -89,7 +68,6 @@ export const readProject = <ThrowOnError extends boolean = false>(options: Optio
  * List agents
  */
 export const listAgents = <ThrowOnError extends boolean = false>(options?: Options<ListAgentsData, ThrowOnError>): RequestResult<ListAgentsResponses, ListAgentsErrors, ThrowOnError> => (options?.client ?? client).get<ListAgentsResponses, ListAgentsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents',
     ...options
 });
@@ -98,7 +76,6 @@ export const listAgents = <ThrowOnError extends boolean = false>(options?: Optio
  * Create an agent
  */
 export const createAgent = <ThrowOnError extends boolean = false>(options: Options<CreateAgentData, ThrowOnError>): RequestResult<CreateAgentResponses, CreateAgentErrors, ThrowOnError> => (options.client ?? client).post<CreateAgentResponses, CreateAgentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents',
     ...options,
     headers: {
@@ -111,7 +88,6 @@ export const createAgent = <ThrowOnError extends boolean = false>(options: Optio
  * Read an agent
  */
 export const readAgent = <ThrowOnError extends boolean = false>(options: Options<ReadAgentData, ThrowOnError>): RequestResult<ReadAgentResponses, ReadAgentErrors, ThrowOnError> => (options.client ?? client).get<ReadAgentResponses, ReadAgentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}',
     ...options
 });
@@ -122,7 +98,6 @@ export const readAgent = <ThrowOnError extends boolean = false>(options: Options
  * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.
  */
 export const updateAgent = <ThrowOnError extends boolean = false>(options: Options<UpdateAgentData, ThrowOnError>): RequestResult<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}',
     ...options,
     headers: {
@@ -135,7 +110,6 @@ export const updateAgent = <ThrowOnError extends boolean = false>(options: Optio
  * List agent versions
  */
 export const listAgentVersions = <ThrowOnError extends boolean = false>(options: Options<ListAgentVersionsData, ThrowOnError>): RequestResult<ListAgentVersionsResponses, ListAgentVersionsErrors, ThrowOnError> => (options.client ?? client).get<ListAgentVersionsResponses, ListAgentVersionsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}/versions',
     ...options
 });
@@ -144,7 +118,6 @@ export const listAgentVersions = <ThrowOnError extends boolean = false>(options:
  * Read an agent version
  */
 export const readAgentVersion = <ThrowOnError extends boolean = false>(options: Options<ReadAgentVersionData, ThrowOnError>): RequestResult<ReadAgentVersionResponses, ReadAgentVersionErrors, ThrowOnError> => (options.client ?? client).get<ReadAgentVersionResponses, ReadAgentVersionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}/versions/{version}',
     ...options
 });
@@ -153,7 +126,6 @@ export const readAgentVersion = <ThrowOnError extends boolean = false>(options: 
  * List environments
  */
 export const listEnvironments = <ThrowOnError extends boolean = false>(options?: Options<ListEnvironmentsData, ThrowOnError>): RequestResult<ListEnvironmentsResponses, ListEnvironmentsErrors, ThrowOnError> => (options?.client ?? client).get<ListEnvironmentsResponses, ListEnvironmentsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments',
     ...options
 });
@@ -162,7 +134,6 @@ export const listEnvironments = <ThrowOnError extends boolean = false>(options?:
  * Create an environment
  */
 export const createEnvironment = <ThrowOnError extends boolean = false>(options: Options<CreateEnvironmentData, ThrowOnError>): RequestResult<CreateEnvironmentResponses, CreateEnvironmentErrors, ThrowOnError> => (options.client ?? client).post<CreateEnvironmentResponses, CreateEnvironmentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments',
     ...options,
     headers: {
@@ -175,7 +146,6 @@ export const createEnvironment = <ThrowOnError extends boolean = false>(options:
  * Read an environment
  */
 export const readEnvironment = <ThrowOnError extends boolean = false>(options: Options<ReadEnvironmentData, ThrowOnError>): RequestResult<ReadEnvironmentResponses, ReadEnvironmentErrors, ThrowOnError> => (options.client ?? client).get<ReadEnvironmentResponses, ReadEnvironmentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}',
     ...options
 });
@@ -186,7 +156,6 @@ export const readEnvironment = <ThrowOnError extends boolean = false>(options: O
  * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.
  */
 export const updateEnvironment = <ThrowOnError extends boolean = false>(options: Options<UpdateEnvironmentData, ThrowOnError>): RequestResult<UpdateEnvironmentResponses, UpdateEnvironmentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateEnvironmentResponses, UpdateEnvironmentErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}',
     ...options,
     headers: {
@@ -199,7 +168,6 @@ export const updateEnvironment = <ThrowOnError extends boolean = false>(options:
  * List environment versions
  */
 export const listEnvironmentVersions = <ThrowOnError extends boolean = false>(options: Options<ListEnvironmentVersionsData, ThrowOnError>): RequestResult<ListEnvironmentVersionsResponses, ListEnvironmentVersionsErrors, ThrowOnError> => (options.client ?? client).get<ListEnvironmentVersionsResponses, ListEnvironmentVersionsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}/versions',
     ...options
 });
@@ -208,7 +176,6 @@ export const listEnvironmentVersions = <ThrowOnError extends boolean = false>(op
  * Read an environment version
  */
 export const readEnvironmentVersion = <ThrowOnError extends boolean = false>(options: Options<ReadEnvironmentVersionData, ThrowOnError>): RequestResult<ReadEnvironmentVersionResponses, ReadEnvironmentVersionErrors, ThrowOnError> => (options.client ?? client).get<ReadEnvironmentVersionResponses, ReadEnvironmentVersionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}/versions/{version}',
     ...options
 });
@@ -217,7 +184,6 @@ export const readEnvironmentVersion = <ThrowOnError extends boolean = false>(opt
  * List model vendors
  */
 export const listProviders = <ThrowOnError extends boolean = false>(options?: Options<ListProvidersData, ThrowOnError>): RequestResult<ListProvidersResponses, ListProvidersErrors, ThrowOnError> => (options?.client ?? client).get<ListProvidersResponses, ListProvidersErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers',
     ...options
 });
@@ -226,7 +192,6 @@ export const listProviders = <ThrowOnError extends boolean = false>(options?: Op
  * List all catalog models
  */
 export const listModels = <ThrowOnError extends boolean = false>(options?: Options<ListModelsData, ThrowOnError>): RequestResult<ListModelsResponses, ListModelsErrors, ThrowOnError> => (options?.client ?? client).get<ListModelsResponses, ListModelsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/models',
     ...options
 });
@@ -237,7 +202,6 @@ export const listModels = <ThrowOnError extends boolean = false>(options?: Optio
  * Triggers a discovery refresh of the global model catalog (also runs hourly on a schedule).
  */
 export const refreshCatalog = <ThrowOnError extends boolean = false>(options?: Options<RefreshCatalogData, ThrowOnError>): RequestResult<RefreshCatalogResponses, RefreshCatalogErrors, ThrowOnError> => (options?.client ?? client).post<RefreshCatalogResponses, RefreshCatalogErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/refresh',
     ...options
 });
@@ -246,7 +210,6 @@ export const refreshCatalog = <ThrowOnError extends boolean = false>(options?: O
  * Read a model vendor
  */
 export const readProvider = <ThrowOnError extends boolean = false>(options: Options<ReadProviderData, ThrowOnError>): RequestResult<ReadProviderResponses, ReadProviderErrors, ThrowOnError> => (options.client ?? client).get<ReadProviderResponses, ReadProviderErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/{providerId}',
     ...options
 });
@@ -255,7 +218,6 @@ export const readProvider = <ThrowOnError extends boolean = false>(options: Opti
  * List a vendor's models
  */
 export const listProviderModels = <ThrowOnError extends boolean = false>(options: Options<ListProviderModelsData, ThrowOnError>): RequestResult<ListProviderModelsResponses, ListProviderModelsErrors, ThrowOnError> => (options.client ?? client).get<ListProviderModelsResponses, ListProviderModelsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/{providerId}/models',
     ...options
 });
@@ -264,7 +226,6 @@ export const listProviderModels = <ThrowOnError extends boolean = false>(options
  * List self-hosted runners
  */
 export const listRunners = <ThrowOnError extends boolean = false>(options?: Options<ListRunnersData, ThrowOnError>): RequestResult<ListRunnersResponses, ListRunnersErrors, ThrowOnError> => (options?.client ?? client).get<ListRunnersResponses, ListRunnersErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners',
     ...options
 });
@@ -273,7 +234,6 @@ export const listRunners = <ThrowOnError extends boolean = false>(options?: Opti
  * Register a self-hosted runner
  */
 export const createRunner = <ThrowOnError extends boolean = false>(options: Options<CreateRunnerData, ThrowOnError>): RequestResult<CreateRunnerResponses, CreateRunnerErrors, ThrowOnError> => (options.client ?? client).post<CreateRunnerResponses, CreateRunnerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners',
     ...options,
     headers: {
@@ -286,7 +246,6 @@ export const createRunner = <ThrowOnError extends boolean = false>(options: Opti
  * Read a self-hosted runner
  */
 export const readRunner = <ThrowOnError extends boolean = false>(options: Options<ReadRunnerData, ThrowOnError>): RequestResult<ReadRunnerResponses, ReadRunnerErrors, ThrowOnError> => (options.client ?? client).get<ReadRunnerResponses, ReadRunnerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}',
     ...options
 });
@@ -295,7 +254,6 @@ export const readRunner = <ThrowOnError extends boolean = false>(options: Option
  * Update or archive a self-hosted runner
  */
 export const updateRunner = <ThrowOnError extends boolean = false>(options: Options<UpdateRunnerData, ThrowOnError>): RequestResult<UpdateRunnerResponses, UpdateRunnerErrors, ThrowOnError> => (options.client ?? client).patch<UpdateRunnerResponses, UpdateRunnerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}',
     ...options,
     headers: {
@@ -308,7 +266,6 @@ export const updateRunner = <ThrowOnError extends boolean = false>(options: Opti
  * Read the current runner heartbeat state
  */
 export const readRunnerHeartbeat = <ThrowOnError extends boolean = false>(options: Options<ReadRunnerHeartbeatData, ThrowOnError>): RequestResult<ReadRunnerHeartbeatResponses, ReadRunnerHeartbeatErrors, ThrowOnError> => (options.client ?? client).get<ReadRunnerHeartbeatResponses, ReadRunnerHeartbeatErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/heartbeat',
     ...options
 });
@@ -317,7 +274,6 @@ export const readRunnerHeartbeat = <ThrowOnError extends boolean = false>(option
  * Replace the current runner heartbeat state
  */
 export const putRunnerHeartbeat = <ThrowOnError extends boolean = false>(options: Options<PutRunnerHeartbeatData, ThrowOnError>): RequestResult<PutRunnerHeartbeatResponses, PutRunnerHeartbeatErrors, ThrowOnError> => (options.client ?? client).put<PutRunnerHeartbeatResponses, PutRunnerHeartbeatErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/heartbeat',
     ...options,
     headers: {
@@ -330,7 +286,6 @@ export const putRunnerHeartbeat = <ThrowOnError extends boolean = false>(options
  * Open the runner relay WebSocket channel
  */
 export const connectRunnerChannel = <ThrowOnError extends boolean = false>(options: Options<ConnectRunnerChannelData, ThrowOnError>): RequestResult<ConnectRunnerChannelResponses, ConnectRunnerChannelErrors, ThrowOnError> => (options.client ?? client).get<ConnectRunnerChannelResponses, ConnectRunnerChannelErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/channel',
     ...options
 });
@@ -339,7 +294,6 @@ export const connectRunnerChannel = <ThrowOnError extends boolean = false>(optio
  * List queued self-hosted work items
  */
 export const listWorkItems = <ThrowOnError extends boolean = false>(options?: Options<ListWorkItemsData, ThrowOnError>): RequestResult<ListWorkItemsResponses, ListWorkItemsErrors, ThrowOnError> => (options?.client ?? client).get<ListWorkItemsResponses, ListWorkItemsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/work-items',
     ...options
 });
@@ -348,7 +302,6 @@ export const listWorkItems = <ThrowOnError extends boolean = false>(options?: Op
  * Read a queued self-hosted work item
  */
 export const readWorkItem = <ThrowOnError extends boolean = false>(options: Options<ReadWorkItemData, ThrowOnError>): RequestResult<ReadWorkItemResponses, ReadWorkItemErrors, ThrowOnError> => (options.client ?? client).get<ReadWorkItemResponses, ReadWorkItemErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/work-items/{workItemId}',
     ...options
 });
@@ -357,7 +310,6 @@ export const readWorkItem = <ThrowOnError extends boolean = false>(options: Opti
  * List work leases
  */
 export const listLeases = <ThrowOnError extends boolean = false>(options?: Options<ListLeasesData, ThrowOnError>): RequestResult<ListLeasesResponses, ListLeasesErrors, ThrowOnError> => (options?.client ?? client).get<ListLeasesResponses, ListLeasesErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases',
     ...options
 });
@@ -366,7 +318,6 @@ export const listLeases = <ThrowOnError extends boolean = false>(options?: Optio
  * Claim a specific available work item for a runner
  */
 export const createLease = <ThrowOnError extends boolean = false>(options: Options<CreateLeaseData, ThrowOnError>): RequestResult<CreateLeaseResponses, CreateLeaseErrors, ThrowOnError> => (options.client ?? client).post<CreateLeaseResponses, CreateLeaseErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases',
     ...options,
     headers: {
@@ -379,7 +330,6 @@ export const createLease = <ThrowOnError extends boolean = false>(options: Optio
  * Read a work lease
  */
 export const readLease = <ThrowOnError extends boolean = false>(options: Options<ReadLeaseData, ThrowOnError>): RequestResult<ReadLeaseResponses, ReadLeaseErrors, ThrowOnError> => (options.client ?? client).get<ReadLeaseResponses, ReadLeaseErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases/{leaseId}',
     ...options
 });
@@ -388,7 +338,6 @@ export const readLease = <ThrowOnError extends boolean = false>(options: Options
  * Renew or finish a work lease
  */
 export const updateLease = <ThrowOnError extends boolean = false>(options: Options<UpdateLeaseData, ThrowOnError>): RequestResult<UpdateLeaseResponses, UpdateLeaseErrors, ThrowOnError> => (options.client ?? client).patch<UpdateLeaseResponses, UpdateLeaseErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases/{leaseId}',
     ...options,
     headers: {
@@ -401,7 +350,6 @@ export const updateLease = <ThrowOnError extends boolean = false>(options: Optio
  * List budgets
  */
 export const listBudgets = <ThrowOnError extends boolean = false>(options?: Options<ListBudgetsData, ThrowOnError>): RequestResult<ListBudgetsResponses, ListBudgetsErrors, ThrowOnError> => (options?.client ?? client).get<ListBudgetsResponses, ListBudgetsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets',
     ...options
 });
@@ -410,7 +358,6 @@ export const listBudgets = <ThrowOnError extends boolean = false>(options?: Opti
  * Create a budget
  */
 export const createBudget = <ThrowOnError extends boolean = false>(options: Options<CreateBudgetData, ThrowOnError>): RequestResult<CreateBudgetResponses, CreateBudgetErrors, ThrowOnError> => (options.client ?? client).post<CreateBudgetResponses, CreateBudgetErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets',
     ...options,
     headers: {
@@ -423,7 +370,6 @@ export const createBudget = <ThrowOnError extends boolean = false>(options: Opti
  * Delete a budget
  */
 export const deleteBudget = <ThrowOnError extends boolean = false>(options: Options<DeleteBudgetData, ThrowOnError>): RequestResult<DeleteBudgetResponses, DeleteBudgetErrors, ThrowOnError> => (options.client ?? client).delete<DeleteBudgetResponses, DeleteBudgetErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options
 });
@@ -432,7 +378,6 @@ export const deleteBudget = <ThrowOnError extends boolean = false>(options: Opti
  * Read a budget
  */
 export const readBudget = <ThrowOnError extends boolean = false>(options: Options<ReadBudgetData, ThrowOnError>): RequestResult<ReadBudgetResponses, ReadBudgetErrors, ThrowOnError> => (options.client ?? client).get<ReadBudgetResponses, ReadBudgetErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options
 });
@@ -441,7 +386,6 @@ export const readBudget = <ThrowOnError extends boolean = false>(options: Option
  * Update a budget
  */
 export const updateBudget = <ThrowOnError extends boolean = false>(options: Options<UpdateBudgetData, ThrowOnError>): RequestResult<UpdateBudgetResponses, UpdateBudgetErrors, ThrowOnError> => (options.client ?? client).patch<UpdateBudgetResponses, UpdateBudgetErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options,
     headers: {
@@ -454,7 +398,6 @@ export const updateBudget = <ThrowOnError extends boolean = false>(options: Opti
  * List connectors
  */
 export const listConnectors = <ThrowOnError extends boolean = false>(options?: Options<ListConnectorsData, ThrowOnError>): RequestResult<ListConnectorsResponses, ListConnectorsErrors, ThrowOnError> => (options?.client ?? client).get<ListConnectorsResponses, ListConnectorsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/connectors',
     ...options
 });
@@ -463,7 +406,6 @@ export const listConnectors = <ThrowOnError extends boolean = false>(options?: O
  * Read connector
  */
 export const readConnector = <ThrowOnError extends boolean = false>(options: Options<ReadConnectorData, ThrowOnError>): RequestResult<ReadConnectorResponses, ReadConnectorErrors, ThrowOnError> => (options.client ?? client).get<ReadConnectorResponses, ReadConnectorErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/connectors/{connectorId}',
     ...options
 });
@@ -474,7 +416,6 @@ export const readConnector = <ThrowOnError extends boolean = false>(options: Opt
  * Lists usage records for the project. Send Accept: text/csv to export the filtered records as CSV.
  */
 export const listUsageRecords = <ThrowOnError extends boolean = false>(options?: Options<ListUsageRecordsData, ThrowOnError>): RequestResult<ListUsageRecordsResponses, ListUsageRecordsErrors, ThrowOnError> => (options?.client ?? client).get<ListUsageRecordsResponses, ListUsageRecordsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-records',
     ...options
 });
@@ -483,7 +424,6 @@ export const listUsageRecords = <ThrowOnError extends boolean = false>(options?:
  * Read a usage record
  */
 export const readUsageRecord = <ThrowOnError extends boolean = false>(options: Options<ReadUsageRecordData, ThrowOnError>): RequestResult<ReadUsageRecordResponses, ReadUsageRecordErrors, ThrowOnError> => (options.client ?? client).get<ReadUsageRecordResponses, ReadUsageRecordErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-records/{recordId}',
     ...options
 });
@@ -494,7 +434,6 @@ export const readUsageRecord = <ThrowOnError extends boolean = false>(options: O
  * Read-only aggregation of usage records grouped by provider, model, or agent.
  */
 export const readUsageSummary = <ThrowOnError extends boolean = false>(options?: Options<ReadUsageSummaryData, ThrowOnError>): RequestResult<ReadUsageSummaryResponses, ReadUsageSummaryErrors, ThrowOnError> => (options?.client ?? client).get<ReadUsageSummaryResponses, ReadUsageSummaryErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-summary',
     ...options
 });
@@ -505,7 +444,6 @@ export const readUsageSummary = <ThrowOnError extends boolean = false>(options?:
  * Lists audit records for the organization. Send Accept: text/csv to export the filtered records as CSV.
  */
 export const listAuditRecords = <ThrowOnError extends boolean = false>(options?: Options<ListAuditRecordsData, ThrowOnError>): RequestResult<ListAuditRecordsResponses, ListAuditRecordsErrors, ThrowOnError> => (options?.client ?? client).get<ListAuditRecordsResponses, ListAuditRecordsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/audit-records',
     ...options
 });
@@ -514,7 +452,6 @@ export const listAuditRecords = <ThrowOnError extends boolean = false>(options?:
  * Read an audit record
  */
 export const readAuditRecord = <ThrowOnError extends boolean = false>(options: Options<ReadAuditRecordData, ThrowOnError>): RequestResult<ReadAuditRecordResponses, ReadAuditRecordErrors, ThrowOnError> => (options.client ?? client).get<ReadAuditRecordResponses, ReadAuditRecordErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/audit-records/{recordId}',
     ...options
 });
@@ -523,7 +460,6 @@ export const readAuditRecord = <ThrowOnError extends boolean = false>(options: O
  * List triggers
  */
 export const listTriggers = <ThrowOnError extends boolean = false>(options?: Options<ListTriggersData, ThrowOnError>): RequestResult<ListTriggersResponses, ListTriggersErrors, ThrowOnError> => (options?.client ?? client).get<ListTriggersResponses, ListTriggersErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers',
     ...options
 });
@@ -532,7 +468,6 @@ export const listTriggers = <ThrowOnError extends boolean = false>(options?: Opt
  * Create a trigger
  */
 export const createTrigger = <ThrowOnError extends boolean = false>(options: Options<CreateTriggerData, ThrowOnError>): RequestResult<CreateTriggerResponses, CreateTriggerErrors, ThrowOnError> => (options.client ?? client).post<CreateTriggerResponses, CreateTriggerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers',
     ...options,
     headers: {
@@ -547,7 +482,6 @@ export const createTrigger = <ThrowOnError extends boolean = false>(options: Opt
  * Permanently deletes the trigger and its run history.
  */
 export const deleteTrigger = <ThrowOnError extends boolean = false>(options: Options<DeleteTriggerData, ThrowOnError>): RequestResult<DeleteTriggerResponses, DeleteTriggerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteTriggerResponses, DeleteTriggerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options
 });
@@ -556,7 +490,6 @@ export const deleteTrigger = <ThrowOnError extends boolean = false>(options: Opt
  * Read a trigger
  */
 export const readTrigger = <ThrowOnError extends boolean = false>(options: Options<ReadTriggerData, ThrowOnError>): RequestResult<ReadTriggerResponses, ReadTriggerErrors, ThrowOnError> => (options.client ?? client).get<ReadTriggerResponses, ReadTriggerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options
 });
@@ -567,7 +500,6 @@ export const readTrigger = <ThrowOnError extends boolean = false>(options: Optio
  * Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.
  */
 export const updateTrigger = <ThrowOnError extends boolean = false>(options: Options<UpdateTriggerData, ThrowOnError>): RequestResult<UpdateTriggerResponses, UpdateTriggerErrors, ThrowOnError> => (options.client ?? client).patch<UpdateTriggerResponses, UpdateTriggerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options,
     headers: {
@@ -580,7 +512,6 @@ export const updateTrigger = <ThrowOnError extends boolean = false>(options: Opt
  * List trigger runs
  */
 export const listTriggerRuns = <ThrowOnError extends boolean = false>(options: Options<ListTriggerRunsData, ThrowOnError>): RequestResult<ListTriggerRunsResponses, ListTriggerRunsErrors, ThrowOnError> => (options.client ?? client).get<ListTriggerRunsResponses, ListTriggerRunsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs',
     ...options
 });
@@ -591,7 +522,6 @@ export const listTriggerRuns = <ThrowOnError extends boolean = false>(options: O
  * Creates a run for an HTTP trigger using the JSON body, query string, and allowed request headers as prompt template variables.
  */
 export const createTriggerRun = <ThrowOnError extends boolean = false>(options: Options<CreateTriggerRunData, ThrowOnError>): RequestResult<CreateTriggerRunResponses, CreateTriggerRunErrors, ThrowOnError> => (options.client ?? client).post<CreateTriggerRunResponses, CreateTriggerRunErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs',
     ...options,
     headers: {
@@ -604,7 +534,6 @@ export const createTriggerRun = <ThrowOnError extends boolean = false>(options: 
  * Read a trigger run
  */
 export const readTriggerRun = <ThrowOnError extends boolean = false>(options: Options<ReadTriggerRunData, ThrowOnError>): RequestResult<ReadTriggerRunResponses, ReadTriggerRunErrors, ThrowOnError> => (options.client ?? client).get<ReadTriggerRunResponses, ReadTriggerRunErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs/{runId}',
     ...options
 });
@@ -613,7 +542,6 @@ export const readTriggerRun = <ThrowOnError extends boolean = false>(options: Op
  * List sessions
  */
 export const listSessions = <ThrowOnError extends boolean = false>(options?: Options<ListSessionsData, ThrowOnError>): RequestResult<ListSessionsResponses, ListSessionsErrors, ThrowOnError> => (options?.client ?? client).get<ListSessionsResponses, ListSessionsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions',
     ...options
 });
@@ -622,7 +550,6 @@ export const listSessions = <ThrowOnError extends boolean = false>(options?: Opt
  * Create a session
  */
 export const createSession = <ThrowOnError extends boolean = false>(options: Options<CreateSessionData, ThrowOnError>): RequestResult<CreateSessionResponses, CreateSessionErrors, ThrowOnError> => (options.client ?? client).post<CreateSessionResponses, CreateSessionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions',
     ...options,
     headers: {
@@ -635,7 +562,6 @@ export const createSession = <ThrowOnError extends boolean = false>(options: Opt
  * Read a session
  */
 export const readSession = <ThrowOnError extends boolean = false>(options: Options<ReadSessionData, ThrowOnError>): RequestResult<ReadSessionResponses, ReadSessionErrors, ThrowOnError> => (options.client ?? client).get<ReadSessionResponses, ReadSessionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}',
     ...options
 });
@@ -646,7 +572,6 @@ export const readSession = <ThrowOnError extends boolean = false>(options: Optio
  * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
  */
 export const updateSession = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionData, ThrowOnError>): RequestResult<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}',
     ...options,
     headers: {
@@ -659,7 +584,6 @@ export const updateSession = <ThrowOnError extends boolean = false>(options: Opt
  * Open the session browser WebSocket (live events + backfill + input)
  */
 export const connectSessionSocket = <ThrowOnError extends boolean = false>(options: Options<ConnectSessionSocketData, ThrowOnError>): RequestResult<unknown, ConnectSessionSocketErrors, ThrowOnError> => (options.client ?? client).get<unknown, ConnectSessionSocketErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/socket',
     ...options
 });
@@ -668,7 +592,6 @@ export const connectSessionSocket = <ThrowOnError extends boolean = false>(optio
  * List session messages
  */
 export const listSessionMessages = <ThrowOnError extends boolean = false>(options: Options<ListSessionMessagesData, ThrowOnError>): RequestResult<ListSessionMessagesResponses, ListSessionMessagesErrors, ThrowOnError> => (options.client ?? client).get<ListSessionMessagesResponses, ListSessionMessagesErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages',
     ...options
 });
@@ -677,7 +600,6 @@ export const listSessionMessages = <ThrowOnError extends boolean = false>(option
  * Send a prompt message to a session
  */
 export const createSessionMessage = <ThrowOnError extends boolean = false>(options: Options<CreateSessionMessageData, ThrowOnError>): RequestResult<CreateSessionMessageResponses, CreateSessionMessageErrors, ThrowOnError> => (options.client ?? client).post<CreateSessionMessageResponses, CreateSessionMessageErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages',
     ...options,
     headers: {
@@ -690,7 +612,6 @@ export const createSessionMessage = <ThrowOnError extends boolean = false>(optio
  * Read a session message delivery state
  */
 export const readSessionMessage = <ThrowOnError extends boolean = false>(options: Options<ReadSessionMessageData, ThrowOnError>): RequestResult<ReadSessionMessageResponses, ReadSessionMessageErrors, ThrowOnError> => (options.client ?? client).get<ReadSessionMessageResponses, ReadSessionMessageErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages/{messageId}',
     ...options
 });
@@ -701,7 +622,6 @@ export const readSessionMessage = <ThrowOnError extends boolean = false>(options
  * Content negotiation: application/json returns a paginated list, text/csv exports the filtered events, text/event-stream streams new events as SSE.
  */
 export const listSessionEvents = <ThrowOnError extends boolean = false>(options: Options<ListSessionEventsData, ThrowOnError>): RequestResult<ListSessionEventsResponses, ListSessionEventsErrors, ThrowOnError> => (options.client ?? client).get<ListSessionEventsResponses, ListSessionEventsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/events',
     ...options
 });
@@ -712,7 +632,6 @@ export const listSessionEvents = <ThrowOnError extends boolean = false>(options:
  * Event ingest for runners and clients. Runner OIDC tokens are accepted only while the runner holds an active lease attached to the session.
  */
 export const createSessionEvents = <ThrowOnError extends boolean = false>(options: Options<CreateSessionEventsData, ThrowOnError>): RequestResult<CreateSessionEventsResponses, CreateSessionEventsErrors, ThrowOnError> => (options.client ?? client).post<CreateSessionEventsResponses, CreateSessionEventsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/events',
     ...options,
     headers: {
@@ -725,7 +644,6 @@ export const createSessionEvents = <ThrowOnError extends boolean = false>(option
  * List tool approvals for a session
  */
 export const listSessionApprovals = <ThrowOnError extends boolean = false>(options: Options<ListSessionApprovalsData, ThrowOnError>): RequestResult<ListSessionApprovalsResponses, ListSessionApprovalsErrors, ThrowOnError> => (options.client ?? client).get<ListSessionApprovalsResponses, ListSessionApprovalsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals',
     ...options
 });
@@ -734,7 +652,6 @@ export const listSessionApprovals = <ThrowOnError extends boolean = false>(optio
  * Read a tool approval
  */
 export const readSessionApproval = <ThrowOnError extends boolean = false>(options: Options<ReadSessionApprovalData, ThrowOnError>): RequestResult<ReadSessionApprovalResponses, ReadSessionApprovalErrors, ThrowOnError> => (options.client ?? client).get<ReadSessionApprovalResponses, ReadSessionApprovalErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals/{approvalId}',
     ...options
 });
@@ -745,7 +662,6 @@ export const readSessionApproval = <ThrowOnError extends boolean = false>(option
  * Records the human decision for a paused tool call. Approval resumes the runtime and executes the tool (or records the provided custom result); denial resumes the runtime with the denial.
  */
 export const decideSessionApproval = <ThrowOnError extends boolean = false>(options: Options<DecideSessionApprovalData, ThrowOnError>): RequestResult<DecideSessionApprovalResponses, DecideSessionApprovalErrors, ThrowOnError> => (options.client ?? client).patch<DecideSessionApprovalResponses, DecideSessionApprovalErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals/{approvalId}',
     ...options,
     headers: {
@@ -758,7 +674,6 @@ export const decideSessionApproval = <ThrowOnError extends boolean = false>(opti
  * List memory stores
  */
 export const listMemoryStores = <ThrowOnError extends boolean = false>(options?: Options<ListMemoryStoresData, ThrowOnError>): RequestResult<ListMemoryStoresResponses, ListMemoryStoresErrors, ThrowOnError> => (options?.client ?? client).get<ListMemoryStoresResponses, ListMemoryStoresErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores',
     ...options
 });
@@ -767,7 +682,6 @@ export const listMemoryStores = <ThrowOnError extends boolean = false>(options?:
  * Create a memory store
  */
 export const createMemoryStore = <ThrowOnError extends boolean = false>(options: Options<CreateMemoryStoreData, ThrowOnError>): RequestResult<CreateMemoryStoreResponses, CreateMemoryStoreErrors, ThrowOnError> => (options.client ?? client).post<CreateMemoryStoreResponses, CreateMemoryStoreErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores',
     ...options,
     headers: {
@@ -780,7 +694,6 @@ export const createMemoryStore = <ThrowOnError extends boolean = false>(options:
  * Read a memory store
  */
 export const readMemoryStore = <ThrowOnError extends boolean = false>(options: Options<ReadMemoryStoreData, ThrowOnError>): RequestResult<ReadMemoryStoreResponses, ReadMemoryStoreErrors, ThrowOnError> => (options.client ?? client).get<ReadMemoryStoreResponses, ReadMemoryStoreErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}',
     ...options
 });
@@ -789,7 +702,6 @@ export const readMemoryStore = <ThrowOnError extends boolean = false>(options: O
  * Update or archive a memory store
  */
 export const updateMemoryStore = <ThrowOnError extends boolean = false>(options: Options<UpdateMemoryStoreData, ThrowOnError>): RequestResult<UpdateMemoryStoreResponses, UpdateMemoryStoreErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemoryStoreResponses, UpdateMemoryStoreErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}',
     ...options,
     headers: {
@@ -802,7 +714,6 @@ export const updateMemoryStore = <ThrowOnError extends boolean = false>(options:
  * List memories in a memory store
  */
 export const listMemoryStoreMemories = <ThrowOnError extends boolean = false>(options: Options<ListMemoryStoreMemoriesData, ThrowOnError>): RequestResult<ListMemoryStoreMemoriesResponses, ListMemoryStoreMemoriesErrors, ThrowOnError> => (options.client ?? client).get<ListMemoryStoreMemoriesResponses, ListMemoryStoreMemoriesErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories',
     ...options
 });
@@ -811,7 +722,6 @@ export const listMemoryStoreMemories = <ThrowOnError extends boolean = false>(op
  * Create a memory in a memory store
  */
 export const createMemoryStoreMemory = <ThrowOnError extends boolean = false>(options: Options<CreateMemoryStoreMemoryData, ThrowOnError>): RequestResult<CreateMemoryStoreMemoryResponses, CreateMemoryStoreMemoryErrors, ThrowOnError> => (options.client ?? client).post<CreateMemoryStoreMemoryResponses, CreateMemoryStoreMemoryErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories',
     ...options,
     headers: {
@@ -824,7 +734,6 @@ export const createMemoryStoreMemory = <ThrowOnError extends boolean = false>(op
  * Delete a memory
  */
 export const deleteMemoryStoreMemory = <ThrowOnError extends boolean = false>(options: Options<DeleteMemoryStoreMemoryData, ThrowOnError>): RequestResult<DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreMemoryErrors, ThrowOnError> => (options.client ?? client).delete<DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreMemoryErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
     ...options
 });
@@ -833,7 +742,6 @@ export const deleteMemoryStoreMemory = <ThrowOnError extends boolean = false>(op
  * Update a memory
  */
 export const updateMemoryStoreMemory = <ThrowOnError extends boolean = false>(options: Options<UpdateMemoryStoreMemoryData, ThrowOnError>): RequestResult<UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreMemoryErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreMemoryErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
     ...options,
     headers: {
@@ -846,7 +754,6 @@ export const updateMemoryStoreMemory = <ThrowOnError extends boolean = false>(op
  * List vaults
  */
 export const listVaults = <ThrowOnError extends boolean = false>(options?: Options<ListVaultsData, ThrowOnError>): RequestResult<ListVaultsResponses, ListVaultsErrors, ThrowOnError> => (options?.client ?? client).get<ListVaultsResponses, ListVaultsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults',
     ...options
 });
@@ -855,7 +762,6 @@ export const listVaults = <ThrowOnError extends boolean = false>(options?: Optio
  * Create a vault
  */
 export const createVault = <ThrowOnError extends boolean = false>(options: Options<CreateVaultData, ThrowOnError>): RequestResult<CreateVaultResponses, CreateVaultErrors, ThrowOnError> => (options.client ?? client).post<CreateVaultResponses, CreateVaultErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults',
     ...options,
     headers: {
@@ -868,7 +774,6 @@ export const createVault = <ThrowOnError extends boolean = false>(options: Optio
  * Read a vault
  */
 export const readVault = <ThrowOnError extends boolean = false>(options: Options<ReadVaultData, ThrowOnError>): RequestResult<ReadVaultResponses, ReadVaultErrors, ThrowOnError> => (options.client ?? client).get<ReadVaultResponses, ReadVaultErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}',
     ...options
 });
@@ -879,7 +784,6 @@ export const readVault = <ThrowOnError extends boolean = false>(options: Options
  * Partial update. Archive with `archived: true`; restore with `archived: false`.
  */
 export const updateVault = <ThrowOnError extends boolean = false>(options: Options<UpdateVaultData, ThrowOnError>): RequestResult<UpdateVaultResponses, UpdateVaultErrors, ThrowOnError> => (options.client ?? client).patch<UpdateVaultResponses, UpdateVaultErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}',
     ...options,
     headers: {
@@ -892,7 +796,6 @@ export const updateVault = <ThrowOnError extends boolean = false>(options: Optio
  * List vault credential metadata
  */
 export const listVaultCredentials = <ThrowOnError extends boolean = false>(options: Options<ListVaultCredentialsData, ThrowOnError>): RequestResult<ListVaultCredentialsResponses, ListVaultCredentialsErrors, ThrowOnError> => (options.client ?? client).get<ListVaultCredentialsResponses, ListVaultCredentialsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials',
     ...options
 });
@@ -901,7 +804,6 @@ export const listVaultCredentials = <ThrowOnError extends boolean = false>(optio
  * Create vault credential metadata
  */
 export const createVaultCredential = <ThrowOnError extends boolean = false>(options: Options<CreateVaultCredentialData, ThrowOnError>): RequestResult<CreateVaultCredentialResponses, CreateVaultCredentialErrors, ThrowOnError> => (options.client ?? client).post<CreateVaultCredentialResponses, CreateVaultCredentialErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials',
     ...options,
     headers: {
@@ -914,7 +816,6 @@ export const createVaultCredential = <ThrowOnError extends boolean = false>(opti
  * Read vault credential metadata
  */
 export const readVaultCredential = <ThrowOnError extends boolean = false>(options: Options<ReadVaultCredentialData, ThrowOnError>): RequestResult<ReadVaultCredentialResponses, ReadVaultCredentialErrors, ThrowOnError> => (options.client ?? client).get<ReadVaultCredentialResponses, ReadVaultCredentialErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options
 });
@@ -925,7 +826,6 @@ export const readVaultCredential = <ThrowOnError extends boolean = false>(option
  * Revoke with `state: 'revoked'` and an optional `revokeReason`.
  */
 export const updateVaultCredential = <ThrowOnError extends boolean = false>(options: Options<UpdateVaultCredentialData, ThrowOnError>): RequestResult<UpdateVaultCredentialResponses, UpdateVaultCredentialErrors, ThrowOnError> => (options.client ?? client).patch<UpdateVaultCredentialResponses, UpdateVaultCredentialErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options,
     headers: {
@@ -940,7 +840,6 @@ export const updateVaultCredential = <ThrowOnError extends boolean = false>(opti
  * Updates credential secret material. AMA records version snapshots internally for auditability.
  */
 export const updateVaultCredentialSecret = <ThrowOnError extends boolean = false>(options: Options<UpdateVaultCredentialSecretData, ThrowOnError>): RequestResult<UpdateVaultCredentialSecretResponses, UpdateVaultCredentialSecretErrors, ThrowOnError> => (options.client ?? client).put<UpdateVaultCredentialSecretResponses, UpdateVaultCredentialSecretErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options,
     headers: {
@@ -953,7 +852,6 @@ export const updateVaultCredentialSecret = <ThrowOnError extends boolean = false
  * List vault credential versions
  */
 export const listVaultCredentialVersions = <ThrowOnError extends boolean = false>(options: Options<ListVaultCredentialVersionsData, ThrowOnError>): RequestResult<ListVaultCredentialVersionsResponses, ListVaultCredentialVersionsErrors, ThrowOnError> => (options.client ?? client).get<ListVaultCredentialVersionsResponses, ListVaultCredentialVersionsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions',
     ...options
 });
@@ -962,7 +860,6 @@ export const listVaultCredentialVersions = <ThrowOnError extends boolean = false
  * Read a vault credential version
  */
 export const readVaultCredentialVersion = <ThrowOnError extends boolean = false>(options: Options<ReadVaultCredentialVersionData, ThrowOnError>): RequestResult<ReadVaultCredentialVersionResponses, ReadVaultCredentialVersionErrors, ThrowOnError> => (options.client ?? client).get<ReadVaultCredentialVersionResponses, ReadVaultCredentialVersionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}',
     ...options
 });

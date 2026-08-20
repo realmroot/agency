@@ -14,9 +14,6 @@ function oidc(overrides: Partial<RunnerOidcContext> = {}): RunnerOidcContext {
     isRunnerToken: false,
     subject: 'sub_1',
     clientId: null,
-    runnerProjectId: null,
-    runnerEnvironmentId: null,
-    externalTenantId: null,
     ...overrides,
   }
 }
@@ -94,59 +91,36 @@ describe('hasSecretMaterial', () => {
 })
 
 describe('[spec: runners/auth-binding] runner registration binding', () => {
-  it('defaults the auth mode from the token binding', () => {
-    expect(runnerAuthModeForRegistration(oidc(), undefined)).toBe('oidc')
-    expect(runnerAuthModeForRegistration(oidc({ runnerProjectId: 'project_1' }), undefined)).toBe('federated')
-    expect(runnerAuthModeForRegistration(oidc(), 'bearer')).toBe('bearer')
+  it('defaults to Realmroot and preserves an explicitly requested Realmroot mode', () => {
+    expect(runnerAuthModeForRegistration(undefined)).toBe('realmroot')
+    expect(runnerAuthModeForRegistration('realmroot')).toBe('realmroot')
   })
 
-  it('defaults to federated when externalTenantId is set', () => {
-    expect(runnerAuthModeForRegistration(oidc({ externalTenantId: 'tenant_1' }), undefined)).toBe('federated')
+  it('preserves the requested environment', () => {
+    expect(environmentIdForRegistration('env_req')).toBe('env_req')
+    expect(environmentIdForRegistration(undefined)).toBeUndefined()
   })
 
-  it('defaults to federated when runnerEnvironmentId is set', () => {
-    expect(runnerAuthModeForRegistration(oidc({ runnerEnvironmentId: 'env_1' }), undefined)).toBe('federated')
-  })
-
-  it('overrides the environment with the federated token binding', () => {
-    expect(environmentIdForRegistration(oidc({ runnerEnvironmentId: 'env_bound' }), 'env_req')).toBe('env_bound')
-    expect(environmentIdForRegistration(oidc(), 'env_req')).toBe('env_req')
-  })
-
-  it('rejects a device-login token registering a non-oidc runner', () => {
-    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, clientId: 'cid' }), 'bearer')).toMatchObject({
-      authMode: expect.stringContaining('device-login'),
+  it('rejects a runner token registering a legacy auth mode', () => {
+    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, clientId: 'cid' }), 'bearer' as never)).toMatchObject({
+      authMode: expect.stringContaining('Realmroot'),
     })
   })
 
-  it('rejects a federated token registering a non-federated runner', () => {
-    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, runnerProjectId: 'project_1' }), 'oidc')).toMatchObject({
-      authMode: expect.stringContaining('Federated'),
-    })
+  it('accepts a Realmroot runner token with a bindable client id', () => {
+    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, clientId: 'cid' }), 'realmroot')).toBeNull()
   })
 
-  it('accepts a federated runner token with a project binding and federated mode', () => {
-    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, runnerProjectId: 'project_1' }), 'federated')).toBeNull()
-  })
-
-  it('rejects a federated token that has only an environment id (no project or tenant binding)', () => {
-    expect(
-      runnerOidcBindingFields(oidc({ isRunnerToken: true, runnerEnvironmentId: 'env_1' }), 'federated'),
-    ).toMatchObject({ authorization: expect.stringContaining('project or external tenant') })
-  })
-
-  it('accepts an OIDC runner token with a client id and oidc mode', () => {
-    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true, clientId: 'cid' }), 'oidc')).toBeNull()
-  })
-
-  it('rejects an OIDC runner token missing a client id', () => {
-    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true }), 'oidc')).toMatchObject({
+  it('rejects a Realmroot runner token missing a client id', () => {
+    expect(runnerOidcBindingFields(oidc({ isRunnerToken: true }), 'realmroot')).toMatchObject({
       authorization: expect.stringContaining('client id'),
     })
   })
 
-  it('accepts a console (non-runner) token for any mode', () => {
-    expect(runnerOidcBindingFields(oidc(), 'bearer')).toBeNull()
+  it('rejects a console token for Realmroot registration', () => {
+    expect(runnerOidcBindingFields(oidc(), 'realmroot')).toMatchObject({
+      authorization: expect.stringContaining('Realmroot runner device token'),
+    })
   })
 
   it('reads a trimmed machine id from metadata', () => {

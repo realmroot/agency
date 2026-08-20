@@ -10,7 +10,7 @@ v1 不兼容旧版（旧路径全部删除，无兼容层）。
 - 所有接口挂载在 `/api/v1` 下，全部进 OpenAPI 文档。
 - 资源名：复数 kebab-case。字段名：camelCase。enum 值：snake_case
   （外部标识符例外：provider type 如 `workers-ai` 保持 kebab）。
-- 认证：OIDC（FlareAuth）Bearer token；租户由
+- 认证：Realmroot OIDC + RFC 9449 DPoP；Bearer 一律拒绝。租户由
   认证上下文 + `X-AMA-Project-ID` 头限定，资源路径不再嵌套 project。
 
 ### 1.2 严格 REST 规则（无例外条款见 1.8）
@@ -113,9 +113,7 @@ v1 不兼容旧版（旧路径全部删除，无兼容层）。
 
 ```
 GET              /api/v1/auth/config                      OIDC 发现配置（公开；?organization=）
-POST             /api/v1/auth/sessions                    bearer token 解析上下文 → 201（公开）
 GET              /api/v1/auth/sessions/current            当前会话上下文 {user, organization, project}
-DELETE           /api/v1/auth/sessions/current            登出 → 204
 ```
 
 ### Projects

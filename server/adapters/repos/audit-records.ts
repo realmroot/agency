@@ -15,8 +15,9 @@ function recordFrom(row: AuditRow): AuditRecord {
     id: row.id,
     projectId: row.projectId,
     actorUserId: row.actorUserId,
+    controllerUserId: row.controllerUserId,
     // DB text columns constrained to these enums by the audit write path.
-    actorType: row.actorType as 'user' | 'system',
+    actorType: row.actorType as 'user' | 'agent' | 'system',
     action: row.action,
     resourceType: row.resourceType,
     resourceId: row.resourceId,

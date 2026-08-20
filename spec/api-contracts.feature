@@ -1,7 +1,7 @@
 Feature: API contracts
   The control plane is automated through a single OpenAPI document generated from
   the Hono routes under /api/v1. Errors use a stable envelope, lists paginate and
-  filter consistently, the document drives restish and generated SDKs, and runtime
+  filter consistently, the document drives Realmroot Toolbox and generated SDKs, and runtime
   session traffic stays on AMA endpoints rather than a bespoke CLI protocol.
 
   # ── Health probe and OpenAPI generation (api: assembled server) ──
@@ -18,8 +18,16 @@ Feature: API contracts
     Given the Worker app is initialized
     When the OpenAPI document is requested
     Then it is generated from Hono route schemas and stays entirely under /api/v1
-    And every operation has a unique id, summary, tags, a documented success response, and bearer auth on protected paths
+    And every operation has a unique id, summary, tags, a documented success response, and scoped Realmroot DPoP auth on protected paths
     And it does not describe a replacement for AMA runtime session traffic
+
+  @api-contracts/resource-discovery @api
+  Scenario: Publish the Realmroot protected Resource contract
+    Given the Worker app is initialized
+    When a client discovers the exact AMA Resource
+    Then RFC 9728 metadata publishes the exact resource, Realmroot issuer, DPoP requirement, and complete scope catalog
+    And the Resource response links the live OpenAPI document with service-desc
+    And every OpenAPI operation scope belongs to the published catalog
 
   @api-contracts/error-envelope @api
   Scenario: Provide a consistent API error envelope
@@ -54,12 +62,12 @@ Feature: API contracts
     When the API client requests a date range
     Then only matching resources are returned
 
-  # ── restish and generated SDKs (api: documented CLI path + SDK layout) ──
+  # ── Realmroot Toolbox and generated SDKs ──
 
-  @api-contracts/restish @api
-  Scenario: Drive the control plane through restish over the published contract
+  @api-contracts/realmroot-toolbox @api
+  Scenario: Drive the control plane through Realmroot Toolbox over the published contract
     Given a control-plane harness exposes /api/v1/openapi.json
-    When restish discovers operations and runs the core environment, agent, and session workflow
+    When Realmroot discovers operations and runs the core environment, agent, and session workflow
     Then it discovers the documented resource groups and exercises the workflow over documented /api/v1 paths
     And the OpenAPI document remains the single source of truth for command discovery, fields, and auth
 

@@ -22,9 +22,9 @@ Usage:
 
 ```go
 client, err := ama.New(ama.ClientConfig{
-	BaseURL:     "https://ama.example.com",
-	AccessToken: accessToken,
-	ProjectID:   projectID,
+	BaseURL:    "https://ama.example.com",
+	HTTPClient: realmrootDPoPHTTPClient,
+	ProjectID:  projectID,
 })
 if err != nil {
 	return err
@@ -39,9 +39,9 @@ the public `ama.New` client.
 
 ```go
 runner, err := ama.NewRunner(ama.ClientConfig{
-	BaseURL:     "https://ama.example.com",
-	AccessToken: accessToken,
-	ProjectID:   projectID,
+	BaseURL:    "https://ama.example.com",
+	HTTPClient: realmrootDPoPHTTPClient,
+	ProjectID:  projectID,
 })
 if err != nil {
 	return err

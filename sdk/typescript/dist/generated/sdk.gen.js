@@ -9,25 +9,9 @@ export const readConfigz = (options) => (options?.client ?? client).get({ url: '
  */
 export const readAuthConfig = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/config', ...options });
 /**
- * Validate an OIDC bearer token and return auth context
- */
-export const createAuthSession = (options) => (options.client ?? client).post({
-    url: '/api/v1/auth/sessions',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-/**
- * Complete a local sign-out request
- */
-export const deleteCurrentAuthSession = (options) => (options?.client ?? client).delete({ url: '/api/v1/auth/sessions/current', ...options });
-/**
  * Read the authenticated session context
  */
 export const readCurrentAuthSession = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/sessions/current',
     ...options
 });
@@ -35,7 +19,6 @@ export const readCurrentAuthSession = (options) => (options?.client ?? client).g
  * List projects in the current organization
  */
 export const listProjects = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects',
     ...options
 });
@@ -43,7 +26,6 @@ export const listProjects = (options) => (options?.client ?? client).get({
  * Create a project in the current organization
  */
 export const createProject = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects',
     ...options,
     headers: {
@@ -55,7 +37,6 @@ export const createProject = (options) => (options.client ?? client).post({
  * Read a single project
  */
 export const readProject = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/projects/{projectId}',
     ...options
 });
@@ -63,7 +44,6 @@ export const readProject = (options) => (options.client ?? client).get({
  * List agents
  */
 export const listAgents = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents',
     ...options
 });
@@ -71,7 +51,6 @@ export const listAgents = (options) => (options?.client ?? client).get({
  * Create an agent
  */
 export const createAgent = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents',
     ...options,
     headers: {
@@ -83,7 +62,6 @@ export const createAgent = (options) => (options.client ?? client).post({
  * Read an agent
  */
 export const readAgent = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}',
     ...options
 });
@@ -93,7 +71,6 @@ export const readAgent = (options) => (options.client ?? client).get({
  * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.
  */
 export const updateAgent = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}',
     ...options,
     headers: {
@@ -105,7 +82,6 @@ export const updateAgent = (options) => (options.client ?? client).patch({
  * List agent versions
  */
 export const listAgentVersions = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}/versions',
     ...options
 });
@@ -113,7 +89,6 @@ export const listAgentVersions = (options) => (options.client ?? client).get({
  * Read an agent version
  */
 export const readAgentVersion = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/agents/{agentId}/versions/{version}',
     ...options
 });
@@ -121,7 +96,6 @@ export const readAgentVersion = (options) => (options.client ?? client).get({
  * List environments
  */
 export const listEnvironments = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments',
     ...options
 });
@@ -129,7 +103,6 @@ export const listEnvironments = (options) => (options?.client ?? client).get({
  * Create an environment
  */
 export const createEnvironment = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments',
     ...options,
     headers: {
@@ -141,7 +114,6 @@ export const createEnvironment = (options) => (options.client ?? client).post({
  * Read an environment
  */
 export const readEnvironment = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}',
     ...options
 });
@@ -151,7 +123,6 @@ export const readEnvironment = (options) => (options.client ?? client).get({
  * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.
  */
 export const updateEnvironment = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}',
     ...options,
     headers: {
@@ -163,7 +134,6 @@ export const updateEnvironment = (options) => (options.client ?? client).patch({
  * List environment versions
  */
 export const listEnvironmentVersions = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}/versions',
     ...options
 });
@@ -171,7 +141,6 @@ export const listEnvironmentVersions = (options) => (options.client ?? client).g
  * Read an environment version
  */
 export const readEnvironmentVersion = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/environments/{environmentId}/versions/{version}',
     ...options
 });
@@ -179,7 +148,6 @@ export const readEnvironmentVersion = (options) => (options.client ?? client).ge
  * List model vendors
  */
 export const listProviders = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers',
     ...options
 });
@@ -187,7 +155,6 @@ export const listProviders = (options) => (options?.client ?? client).get({
  * List all catalog models
  */
 export const listModels = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/models',
     ...options
 });
@@ -197,7 +164,6 @@ export const listModels = (options) => (options?.client ?? client).get({
  * Triggers a discovery refresh of the global model catalog (also runs hourly on a schedule).
  */
 export const refreshCatalog = (options) => (options?.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/refresh',
     ...options
 });
@@ -205,7 +171,6 @@ export const refreshCatalog = (options) => (options?.client ?? client).post({
  * Read a model vendor
  */
 export const readProvider = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/{providerId}',
     ...options
 });
@@ -213,7 +178,6 @@ export const readProvider = (options) => (options.client ?? client).get({
  * List a vendor's models
  */
 export const listProviderModels = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/providers/{providerId}/models',
     ...options
 });
@@ -221,7 +185,6 @@ export const listProviderModels = (options) => (options.client ?? client).get({
  * List self-hosted runners
  */
 export const listRunners = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners',
     ...options
 });
@@ -229,7 +192,6 @@ export const listRunners = (options) => (options?.client ?? client).get({
  * Register a self-hosted runner
  */
 export const createRunner = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners',
     ...options,
     headers: {
@@ -241,7 +203,6 @@ export const createRunner = (options) => (options.client ?? client).post({
  * Read a self-hosted runner
  */
 export const readRunner = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}',
     ...options
 });
@@ -249,7 +210,6 @@ export const readRunner = (options) => (options.client ?? client).get({
  * Update or archive a self-hosted runner
  */
 export const updateRunner = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}',
     ...options,
     headers: {
@@ -261,7 +221,6 @@ export const updateRunner = (options) => (options.client ?? client).patch({
  * Read the current runner heartbeat state
  */
 export const readRunnerHeartbeat = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/heartbeat',
     ...options
 });
@@ -269,7 +228,6 @@ export const readRunnerHeartbeat = (options) => (options.client ?? client).get({
  * Replace the current runner heartbeat state
  */
 export const putRunnerHeartbeat = (options) => (options.client ?? client).put({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/heartbeat',
     ...options,
     headers: {
@@ -281,7 +239,6 @@ export const putRunnerHeartbeat = (options) => (options.client ?? client).put({
  * Open the runner relay WebSocket channel
  */
 export const connectRunnerChannel = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/runners/{runnerId}/channel',
     ...options
 });
@@ -289,7 +246,6 @@ export const connectRunnerChannel = (options) => (options.client ?? client).get(
  * List queued self-hosted work items
  */
 export const listWorkItems = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/work-items',
     ...options
 });
@@ -297,7 +253,6 @@ export const listWorkItems = (options) => (options?.client ?? client).get({
  * Read a queued self-hosted work item
  */
 export const readWorkItem = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/work-items/{workItemId}',
     ...options
 });
@@ -305,7 +260,6 @@ export const readWorkItem = (options) => (options.client ?? client).get({
  * List work leases
  */
 export const listLeases = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases',
     ...options
 });
@@ -313,7 +267,6 @@ export const listLeases = (options) => (options?.client ?? client).get({
  * Claim a specific available work item for a runner
  */
 export const createLease = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases',
     ...options,
     headers: {
@@ -325,7 +278,6 @@ export const createLease = (options) => (options.client ?? client).post({
  * Read a work lease
  */
 export const readLease = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases/{leaseId}',
     ...options
 });
@@ -333,7 +285,6 @@ export const readLease = (options) => (options.client ?? client).get({
  * Renew or finish a work lease
  */
 export const updateLease = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/leases/{leaseId}',
     ...options,
     headers: {
@@ -345,7 +296,6 @@ export const updateLease = (options) => (options.client ?? client).patch({
  * List budgets
  */
 export const listBudgets = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets',
     ...options
 });
@@ -353,7 +303,6 @@ export const listBudgets = (options) => (options?.client ?? client).get({
  * Create a budget
  */
 export const createBudget = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets',
     ...options,
     headers: {
@@ -365,7 +314,6 @@ export const createBudget = (options) => (options.client ?? client).post({
  * Delete a budget
  */
 export const deleteBudget = (options) => (options.client ?? client).delete({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options
 });
@@ -373,7 +321,6 @@ export const deleteBudget = (options) => (options.client ?? client).delete({
  * Read a budget
  */
 export const readBudget = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options
 });
@@ -381,7 +328,6 @@ export const readBudget = (options) => (options.client ?? client).get({
  * Update a budget
  */
 export const updateBudget = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/budgets/{budgetId}',
     ...options,
     headers: {
@@ -393,7 +339,6 @@ export const updateBudget = (options) => (options.client ?? client).patch({
  * List connectors
  */
 export const listConnectors = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/connectors',
     ...options
 });
@@ -401,7 +346,6 @@ export const listConnectors = (options) => (options?.client ?? client).get({
  * Read connector
  */
 export const readConnector = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/connectors/{connectorId}',
     ...options
 });
@@ -411,7 +355,6 @@ export const readConnector = (options) => (options.client ?? client).get({
  * Lists usage records for the project. Send Accept: text/csv to export the filtered records as CSV.
  */
 export const listUsageRecords = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-records',
     ...options
 });
@@ -419,7 +362,6 @@ export const listUsageRecords = (options) => (options?.client ?? client).get({
  * Read a usage record
  */
 export const readUsageRecord = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-records/{recordId}',
     ...options
 });
@@ -429,7 +371,6 @@ export const readUsageRecord = (options) => (options.client ?? client).get({
  * Read-only aggregation of usage records grouped by provider, model, or agent.
  */
 export const readUsageSummary = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/usage-summary',
     ...options
 });
@@ -439,7 +380,6 @@ export const readUsageSummary = (options) => (options?.client ?? client).get({
  * Lists audit records for the organization. Send Accept: text/csv to export the filtered records as CSV.
  */
 export const listAuditRecords = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/audit-records',
     ...options
 });
@@ -447,7 +387,6 @@ export const listAuditRecords = (options) => (options?.client ?? client).get({
  * Read an audit record
  */
 export const readAuditRecord = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/audit-records/{recordId}',
     ...options
 });
@@ -455,7 +394,6 @@ export const readAuditRecord = (options) => (options.client ?? client).get({
  * List triggers
  */
 export const listTriggers = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers',
     ...options
 });
@@ -463,7 +401,6 @@ export const listTriggers = (options) => (options?.client ?? client).get({
  * Create a trigger
  */
 export const createTrigger = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers',
     ...options,
     headers: {
@@ -477,7 +414,6 @@ export const createTrigger = (options) => (options.client ?? client).post({
  * Permanently deletes the trigger and its run history.
  */
 export const deleteTrigger = (options) => (options.client ?? client).delete({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options
 });
@@ -485,7 +421,6 @@ export const deleteTrigger = (options) => (options.client ?? client).delete({
  * Read a trigger
  */
 export const readTrigger = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options
 });
@@ -495,7 +430,6 @@ export const readTrigger = (options) => (options.client ?? client).get({
  * Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.
  */
 export const updateTrigger = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}',
     ...options,
     headers: {
@@ -507,7 +441,6 @@ export const updateTrigger = (options) => (options.client ?? client).patch({
  * List trigger runs
  */
 export const listTriggerRuns = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs',
     ...options
 });
@@ -517,7 +450,6 @@ export const listTriggerRuns = (options) => (options.client ?? client).get({
  * Creates a run for an HTTP trigger using the JSON body, query string, and allowed request headers as prompt template variables.
  */
 export const createTriggerRun = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs',
     ...options,
     headers: {
@@ -529,7 +461,6 @@ export const createTriggerRun = (options) => (options.client ?? client).post({
  * Read a trigger run
  */
 export const readTriggerRun = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/triggers/{triggerId}/runs/{runId}',
     ...options
 });
@@ -537,7 +468,6 @@ export const readTriggerRun = (options) => (options.client ?? client).get({
  * List sessions
  */
 export const listSessions = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions',
     ...options
 });
@@ -545,7 +475,6 @@ export const listSessions = (options) => (options?.client ?? client).get({
  * Create a session
  */
 export const createSession = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions',
     ...options,
     headers: {
@@ -557,7 +486,6 @@ export const createSession = (options) => (options.client ?? client).post({
  * Read a session
  */
 export const readSession = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}',
     ...options
 });
@@ -567,7 +495,6 @@ export const readSession = (options) => (options.client ?? client).get({
  * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
  */
 export const updateSession = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}',
     ...options,
     headers: {
@@ -579,7 +506,6 @@ export const updateSession = (options) => (options.client ?? client).patch({
  * Open the session browser WebSocket (live events + backfill + input)
  */
 export const connectSessionSocket = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/socket',
     ...options
 });
@@ -587,7 +513,6 @@ export const connectSessionSocket = (options) => (options.client ?? client).get(
  * List session messages
  */
 export const listSessionMessages = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages',
     ...options
 });
@@ -595,7 +520,6 @@ export const listSessionMessages = (options) => (options.client ?? client).get({
  * Send a prompt message to a session
  */
 export const createSessionMessage = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages',
     ...options,
     headers: {
@@ -607,7 +531,6 @@ export const createSessionMessage = (options) => (options.client ?? client).post
  * Read a session message delivery state
  */
 export const readSessionMessage = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/messages/{messageId}',
     ...options
 });
@@ -617,7 +540,6 @@ export const readSessionMessage = (options) => (options.client ?? client).get({
  * Content negotiation: application/json returns a paginated list, text/csv exports the filtered events, text/event-stream streams new events as SSE.
  */
 export const listSessionEvents = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/events',
     ...options
 });
@@ -627,7 +549,6 @@ export const listSessionEvents = (options) => (options.client ?? client).get({
  * Event ingest for runners and clients. Runner OIDC tokens are accepted only while the runner holds an active lease attached to the session.
  */
 export const createSessionEvents = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/events',
     ...options,
     headers: {
@@ -639,7 +560,6 @@ export const createSessionEvents = (options) => (options.client ?? client).post(
  * List tool approvals for a session
  */
 export const listSessionApprovals = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals',
     ...options
 });
@@ -647,7 +567,6 @@ export const listSessionApprovals = (options) => (options.client ?? client).get(
  * Read a tool approval
  */
 export const readSessionApproval = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals/{approvalId}',
     ...options
 });
@@ -657,7 +576,6 @@ export const readSessionApproval = (options) => (options.client ?? client).get({
  * Records the human decision for a paused tool call. Approval resumes the runtime and executes the tool (or records the provided custom result); denial resumes the runtime with the denial.
  */
 export const decideSessionApproval = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/sessions/{sessionId}/approvals/{approvalId}',
     ...options,
     headers: {
@@ -669,7 +587,6 @@ export const decideSessionApproval = (options) => (options.client ?? client).pat
  * List memory stores
  */
 export const listMemoryStores = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores',
     ...options
 });
@@ -677,7 +594,6 @@ export const listMemoryStores = (options) => (options?.client ?? client).get({
  * Create a memory store
  */
 export const createMemoryStore = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores',
     ...options,
     headers: {
@@ -689,7 +605,6 @@ export const createMemoryStore = (options) => (options.client ?? client).post({
  * Read a memory store
  */
 export const readMemoryStore = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}',
     ...options
 });
@@ -697,7 +612,6 @@ export const readMemoryStore = (options) => (options.client ?? client).get({
  * Update or archive a memory store
  */
 export const updateMemoryStore = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}',
     ...options,
     headers: {
@@ -709,7 +623,6 @@ export const updateMemoryStore = (options) => (options.client ?? client).patch({
  * List memories in a memory store
  */
 export const listMemoryStoreMemories = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories',
     ...options
 });
@@ -717,7 +630,6 @@ export const listMemoryStoreMemories = (options) => (options.client ?? client).g
  * Create a memory in a memory store
  */
 export const createMemoryStoreMemory = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories',
     ...options,
     headers: {
@@ -729,7 +641,6 @@ export const createMemoryStoreMemory = (options) => (options.client ?? client).p
  * Delete a memory
  */
 export const deleteMemoryStoreMemory = (options) => (options.client ?? client).delete({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
     ...options
 });
@@ -737,7 +648,6 @@ export const deleteMemoryStoreMemory = (options) => (options.client ?? client).d
  * Update a memory
  */
 export const updateMemoryStoreMemory = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
     ...options,
     headers: {
@@ -749,7 +659,6 @@ export const updateMemoryStoreMemory = (options) => (options.client ?? client).p
  * List vaults
  */
 export const listVaults = (options) => (options?.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults',
     ...options
 });
@@ -757,7 +666,6 @@ export const listVaults = (options) => (options?.client ?? client).get({
  * Create a vault
  */
 export const createVault = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults',
     ...options,
     headers: {
@@ -769,7 +677,6 @@ export const createVault = (options) => (options.client ?? client).post({
  * Read a vault
  */
 export const readVault = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}',
     ...options
 });
@@ -779,7 +686,6 @@ export const readVault = (options) => (options.client ?? client).get({
  * Partial update. Archive with `archived: true`; restore with `archived: false`.
  */
 export const updateVault = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}',
     ...options,
     headers: {
@@ -791,7 +697,6 @@ export const updateVault = (options) => (options.client ?? client).patch({
  * List vault credential metadata
  */
 export const listVaultCredentials = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials',
     ...options
 });
@@ -799,7 +704,6 @@ export const listVaultCredentials = (options) => (options.client ?? client).get(
  * Create vault credential metadata
  */
 export const createVaultCredential = (options) => (options.client ?? client).post({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials',
     ...options,
     headers: {
@@ -811,7 +715,6 @@ export const createVaultCredential = (options) => (options.client ?? client).pos
  * Read vault credential metadata
  */
 export const readVaultCredential = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options
 });
@@ -821,7 +724,6 @@ export const readVaultCredential = (options) => (options.client ?? client).get({
  * Revoke with `state: 'revoked'` and an optional `revokeReason`.
  */
 export const updateVaultCredential = (options) => (options.client ?? client).patch({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options,
     headers: {
@@ -835,7 +737,6 @@ export const updateVaultCredential = (options) => (options.client ?? client).pat
  * Updates credential secret material. AMA records version snapshots internally for auditability.
  */
 export const updateVaultCredentialSecret = (options) => (options.client ?? client).put({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',
     ...options,
     headers: {
@@ -847,7 +748,6 @@ export const updateVaultCredentialSecret = (options) => (options.client ?? clien
  * List vault credential versions
  */
 export const listVaultCredentialVersions = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions',
     ...options
 });
@@ -855,7 +755,6 @@ export const listVaultCredentialVersions = (options) => (options.client ?? clien
  * Read a vault credential version
  */
 export const readVaultCredentialVersion = (options) => (options.client ?? client).get({
-    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}',
     ...options
 });

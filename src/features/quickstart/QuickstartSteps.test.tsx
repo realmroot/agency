@@ -630,12 +630,11 @@ describe('QuickstartIntegrationStep', () => {
     ).toBeTruthy()
   })
 
-  it('renders curl, restish, and sdk examples when input is provided', () => {
+  it('renders the Realmroot toolbox example when input is provided', () => {
     render(
       <MemoryRouter>
         <QuickstartIntegrationStep
           input={{
-            origin: 'https://ama.example.com',
             agentId: 'agent_123',
             environmentId: 'env_456',
             sessionId: 'sess_789',
@@ -643,9 +642,7 @@ describe('QuickstartIntegrationStep', () => {
         />
       </MemoryRouter>,
     )
-    expect(screen.getByText('curl')).toBeTruthy()
-    expect(screen.getByText('restish')).toBeTruthy()
-    expect(screen.getByText('TypeScript SDK')).toBeTruthy()
+    expect(screen.getByText('Realmroot CLI')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open session detail' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open usage' })).toBeTruthy()
   })

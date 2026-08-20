@@ -31,9 +31,13 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 				"issuer":                        "http://" + r.Host + "/issuer",
 				"device_authorization_endpoint": "http://" + r.Host + "/device",
 				"token_endpoint":                "http://" + r.Host + "/token",
+				"jwks_uri":                      "http://" + r.Host + "/jwks",
 			})
 		case "/token":
 			refreshes += 1
+			if r.Header.Get("dpop") == "" {
+				t.Fatal("expected refresh request DPoP proof")
+			}
 			if r.FormValue("grant_type") != RefreshGrantType ||
 				r.FormValue("client_id") != "runner-client" ||
 				r.FormValue("refresh_token") != "old-refresh-token" ||
@@ -43,7 +47,7 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "fresh-access-token",
 				"refresh_token": "new-refresh-token",
-				"token_type":    "Bearer",
+				"token_type":    "DPoP",
 				"expires_in":    3600,
 				"scope":         "openid profile email offline_access",
 			})
@@ -53,12 +57,13 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 	}))
 	defer server.Close()
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:    "acct_1",
-		APIServer:    server.URL,
-		AccessToken:  "expired-access-token",
-		RefreshToken: "old-refresh-token",
-		TokenType:    "Bearer",
-		ExpiresAt:    time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      server.URL,
+		AccessToken:    "expired-access-token",
+		RefreshToken:   "old-refresh-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		ExpiresAt:      time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +71,6 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 	source, err := NewTokenSource(runnerconfig.Config{
 		CredentialPath: credentialPath,
 		APIServer:      server.URL,
-		Token:          "expired-access-token",
 	}, server.Client())
 	if err != nil {
 		t.Fatal(err)
@@ -106,6 +110,7 @@ func TestTokenSourceRefreshRetainsExistingRefreshTokenWhenOmitted(t *testing.T) 
 				"issuer":                        "http://" + r.Host + "/issuer",
 				"device_authorization_endpoint": "http://" + r.Host + "/device",
 				"token_endpoint":                "http://" + r.Host + "/token",
+				"jwks_uri":                      "http://" + r.Host + "/jwks",
 			})
 		case "/token":
 			if r.FormValue("resource") != server.URL {
@@ -113,7 +118,7 @@ func TestTokenSourceRefreshRetainsExistingRefreshTokenWhenOmitted(t *testing.T) 
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token": "fresh-access-token",
-				"token_type":   "Bearer",
+				"token_type":   "DPoP",
 				"expires_in":   3600,
 			})
 		default:
@@ -122,12 +127,13 @@ func TestTokenSourceRefreshRetainsExistingRefreshTokenWhenOmitted(t *testing.T) 
 	}))
 	defer server.Close()
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:    "acct_1",
-		APIServer:    server.URL,
-		AccessToken:  "expired-access-token",
-		RefreshToken: "old-refresh-token",
-		TokenType:    "Bearer",
-		ExpiresAt:    time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      server.URL,
+		AccessToken:    "expired-access-token",
+		RefreshToken:   "old-refresh-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		ExpiresAt:      time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -183,12 +189,13 @@ func TestTokenSourceReusesCredentialRefreshedByAnotherProcess(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-				AccountID:    "acct_1",
-				APIServer:    server.URL,
-				AccessToken:  "stale-access-token",
-				RefreshToken: "old-refresh-token",
-				TokenType:    "Bearer",
-				ExpiresAt:    tc.expiresAt.UTC().Format(time.RFC3339),
+				AccountID:      "acct_1",
+				APIServer:      server.URL,
+				AccessToken:    "stale-access-token",
+				RefreshToken:   "old-refresh-token",
+				TokenType:      "DPoP",
+				DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+				ExpiresAt:      tc.expiresAt.UTC().Format(time.RFC3339),
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -200,12 +207,13 @@ func TestTokenSourceReusesCredentialRefreshedByAnotherProcess(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-				AccountID:    "acct_1",
-				APIServer:    server.URL,
-				AccessToken:  "fresh-access-token",
-				RefreshToken: "new-refresh-token",
-				TokenType:    "Bearer",
-				ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+				AccountID:      "acct_1",
+				APIServer:      server.URL,
+				AccessToken:    "fresh-access-token",
+				RefreshToken:   "new-refresh-token",
+				TokenType:      "DPoP",
+				DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+				ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -217,28 +225,6 @@ func TestTokenSourceReusesCredentialRefreshedByAnotherProcess(t *testing.T) {
 				t.Fatalf("unexpected token %q", token)
 			}
 		})
-	}
-}
-
-func TestTokenSourceExplicitTokenPaths(t *testing.T) {
-	source := &TokenSource{Config: runnerconfig.Config{Token: " explicit-token "}}
-	token, err := source.AccessToken(context.Background())
-	if err != nil {
-		t.Fatalf("expected explicit token, got %v", err)
-	}
-	if token != " explicit-token " {
-		t.Fatalf("unexpected explicit token %q", token)
-	}
-	refreshed, err := source.ForceRefresh(context.Background())
-	if err != nil {
-		t.Fatalf("expected explicit force refresh to return token, got %v", err)
-	}
-	if refreshed != " explicit-token " {
-		t.Fatalf("unexpected force refreshed token %q", refreshed)
-	}
-	source.Config.Token = " "
-	if _, err := source.AccessToken(context.Background()); err == nil {
-		t.Fatal("expected missing explicit token error")
 	}
 }
 
@@ -302,15 +288,12 @@ func TestNewTokenSourceReturnsCredentialLoadErrors(t *testing.T) {
 	}
 }
 
-func TestNewTokenSourceWithoutSavedProfileRequiresExplicitToken(t *testing.T) {
-	source, err := NewTokenSource(runnerconfig.Config{
+func TestNewTokenSourceWithoutSavedDPoPProfileFailsClosed(t *testing.T) {
+	_, err := NewTokenSource(runnerconfig.Config{
 		CredentialPath: filepath.Join(t.TempDir(), "missing.json"),
 		APIServer:      "https://ama.example.test",
 	}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := source.AccessToken(context.Background()); err == nil {
-		t.Fatal("expected missing token error")
+	if err == nil {
+		t.Fatal("expected missing Realmroot DPoP login error")
 	}
 }

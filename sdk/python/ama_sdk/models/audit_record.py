@@ -33,6 +33,7 @@ class AuditRecord:
             id (str):
             project_id (None | str):
             actor_user_id (None | str):
+            controller_user_id (None | str):
             actor_type (AuditRecordActorType):
             action (str):
             resource_type (str):
@@ -51,6 +52,7 @@ class AuditRecord:
     id: str
     project_id: None | str
     actor_user_id: None | str
+    controller_user_id: None | str
     actor_type: AuditRecordActorType
     action: str
     resource_type: str
@@ -81,6 +83,9 @@ class AuditRecord:
 
         actor_user_id: None | str
         actor_user_id = self.actor_user_id
+
+        controller_user_id: None | str
+        controller_user_id = self.controller_user_id
 
         actor_type = self.actor_type.value
 
@@ -120,6 +125,7 @@ class AuditRecord:
             "id": id,
             "projectId": project_id,
             "actorUserId": actor_user_id,
+            "controllerUserId": controller_user_id,
             "actorType": actor_type,
             "action": action,
             "resourceType": resource_type,
@@ -161,6 +167,14 @@ class AuditRecord:
             return cast(None | str, data)
 
         actor_user_id = _parse_actor_user_id(d.pop("actorUserId"))
+
+
+        def _parse_controller_user_id(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        controller_user_id = _parse_controller_user_id(d.pop("controllerUserId"))
 
 
         actor_type = AuditRecordActorType(d.pop("actorType"))
@@ -241,6 +255,7 @@ class AuditRecord:
             id=id,
             project_id=project_id,
             actor_user_id=actor_user_id,
+            controller_user_id=controller_user_id,
             actor_type=actor_type,
             action=action,
             resource_type=resource_type,

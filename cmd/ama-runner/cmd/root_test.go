@@ -3,6 +3,10 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -13,10 +17,19 @@ import (
 	"testing"
 	"time"
 
+	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
 )
 
 func TestRunFailsOnInvalidConfig(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "://bad", AccessToken: "e2e-runner:test",
+		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	err := execute(context.Background(), []string{"--api-server", "://bad"}, testBuild(), nil, nil)
 	if err == nil {
 		t.Fatal("expected invalid config error")
@@ -65,9 +78,6 @@ func TestRootCommandHelpAndArgumentValidation(t *testing.T) {
 	}
 	if err := execute(context.Background(), []string{"auth", "status", "extra"}, testBuild(), &output, nil); err == nil {
 		t.Fatal("expected auth status argument validation error")
-	}
-	if err := execute(context.Background(), []string{"auth", "token", "extra"}, testBuild(), &output, nil); err == nil {
-		t.Fatal("expected auth token argument validation error")
 	}
 	if err := execute(context.Background(), []string{"auth", "switch", "one", "two"}, testBuild(), &output, nil); err == nil {
 		t.Fatal("expected auth switch argument validation error")
@@ -126,7 +136,10 @@ func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
 				"issuer":                        "http://" + r.Host + "/issuer",
 				"device_authorization_endpoint": "http://" + r.Host + "/device",
 				"token_endpoint":                "http://" + r.Host + "/token",
+				"jwks_uri":                      "http://" + r.Host + "/jwks",
 			})
+		case "/jwks":
+			_ = json.NewEncoder(w).Encode(rootTestJWKS())
 		case "/device":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"device_code":      "device-code",
@@ -138,8 +151,8 @@ func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "login-access-token",
 				"refresh_token": "login-refresh-token",
-				"id_token":      testIDToken("user_1", "runner@example.test", "Runner User"),
-				"token_type":    "Bearer",
+				"id_token":      testIDToken("http://"+r.Host+"/issuer", "runner-client", "user_1", "runner@example.test", "Runner User"),
+				"token_type":    "DPoP",
 				"expires_in":    3600,
 			})
 		default:
@@ -208,7 +221,8 @@ func TestRunAuthStatusCommand(t *testing.T) {
     "accountId": "acct_1",
     "apiServer": "https://ama.example.test",
     "accessToken": "token",
-    "tokenType": "Bearer"
+    "tokenType": "DPoP",
+    "dpopPrivateKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"
   }]
 }`
 	if err := os.WriteFile(credentialPath, []byte(data), 0o600); err != nil {
@@ -220,13 +234,6 @@ func TestRunAuthStatusCommand(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "* https://ama.example.test acct_1") {
 		t.Fatalf("unexpected auth status output %q", output.String())
-	}
-	output.Reset()
-	if err := execute(context.Background(), []string{"auth", "token"}, testBuild(), &output, nil); err != nil {
-		t.Fatalf("expected auth token command, got %v", err)
-	}
-	if strings.TrimSpace(output.String()) != "token" {
-		t.Fatalf("unexpected auth token output %q", output.String())
 	}
 }
 
@@ -255,7 +262,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/leases":
 			_, _ = w.Write([]byte(`{"data":[],"pagination":{"limit":100,"hasMore":false,"nextCursor":null}}`))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/channel"):
-			if got := r.Header.Get("authorization"); got != "Bearer token" {
+			if got := r.Header.Get("authorization"); got != "DPoP e2e-runner:root-test" || r.Header.Get("dpop") == "" {
 				t.Fatalf("expected runner channel authorization header, got %q", got)
 			}
 			// The relay hub dials the runner pool channel via WebSocket upgrade.
@@ -268,8 +275,15 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 	}))
 	defer server.Close()
 
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: server.URL, AccessToken: "e2e-runner:root-test",
+		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("AMA_API_SERVER", server.URL)
-	t.Setenv("AMA_TOKEN", "token")
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
 	t.Setenv("AMA_ENVIRONMENT_ID", "env_1")
 	t.Setenv("AMA_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
@@ -286,15 +300,38 @@ func testBuild() version.Info {
 	return version.Info{}
 }
 
-func testIDToken(subject string, email string, name string) string {
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none"}`))
-	payload, err := json.Marshal(map[string]string{
-		"sub":   subject,
-		"email": email,
-		"name":  name,
+var rootTestRSAKey = func() *rsa.PrivateKey {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	return key
+}()
+
+func rootTestJWKS() map[string]any {
+	return map[string]any{"keys": []map[string]string{{
+		"kid": "root-test-key", "kty": "RSA", "alg": "RS256", "use": "sig",
+		"n": base64.RawURLEncoding.EncodeToString(rootTestRSAKey.PublicKey.N.Bytes()),
+		"e": base64.RawURLEncoding.EncodeToString([]byte{1, 0, 1}),
+	}}}
+}
+
+func testIDToken(issuer string, audience string, subject string, email string, name string) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","kid":"root-test-key"}`))
+	now := time.Now().Unix()
+	payload, err := json.Marshal(map[string]any{
+		"iss": issuer, "aud": audience, "sub": subject, "email": email, "name": name,
+		"iat": now, "exp": now + 300,
 	})
 	if err != nil {
 		panic(err)
 	}
-	return header + "." + base64.RawURLEncoding.EncodeToString(payload) + "."
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	signed := header + "." + encodedPayload
+	digest := sha256.Sum256([]byte(signed))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, rootTestRSAKey, crypto.SHA256, digest[:])
+	if err != nil {
+		panic(err)
+	}
+	return signed + "." + base64.RawURLEncoding.EncodeToString(signature)
 }

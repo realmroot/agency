@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	BearerAuthScopes bearerAuthContextKey = "bearerAuth.Scopes"
+	RealmrootDpopScopes realmrootDpopContextKey = "realmrootDpop.Scopes"
 )
 
 // Defines values for AmaEvent0Type.
@@ -204,6 +204,7 @@ func (e AmaEvent11Type) Valid() bool {
 
 // Defines values for AuditRecordActorType.
 const (
+	AuditRecordActorTypeAgent  AuditRecordActorType = "agent"
 	AuditRecordActorTypeSystem AuditRecordActorType = "system"
 	AuditRecordActorTypeUser   AuditRecordActorType = "user"
 )
@@ -211,6 +212,8 @@ const (
 // Valid indicates whether the value is a known member of the AuditRecordActorType enum.
 func (e AuditRecordActorType) Valid() bool {
 	switch e {
+	case AuditRecordActorTypeAgent:
+		return true
 	case AuditRecordActorTypeSystem:
 		return true
 	case AuditRecordActorTypeUser:
@@ -243,13 +246,13 @@ func (e AuditRecordOutcome) Valid() bool {
 
 // Defines values for AuthMethodType.
 const (
-	AuthMethodTypeOidc AuthMethodType = "oidc"
+	Oidc AuthMethodType = "oidc"
 )
 
 // Valid indicates whether the value is a known member of the AuthMethodType enum.
 func (e AuthMethodType) Valid() bool {
 	switch e {
-	case AuthMethodTypeOidc:
+	case Oidc:
 		return true
 	default:
 		return false
@@ -519,22 +522,13 @@ func (e CreateBudgetRequestWindow) Valid() bool {
 
 // Defines values for CreateRunnerRequestAuthMode.
 const (
-	CreateRunnerRequestAuthModeBearer    CreateRunnerRequestAuthMode = "bearer"
-	CreateRunnerRequestAuthModeFederated CreateRunnerRequestAuthMode = "federated"
-	CreateRunnerRequestAuthModeMtls      CreateRunnerRequestAuthMode = "mtls"
-	CreateRunnerRequestAuthModeOidc      CreateRunnerRequestAuthMode = "oidc"
+	CreateRunnerRequestAuthModeRealmroot CreateRunnerRequestAuthMode = "realmroot"
 )
 
 // Valid indicates whether the value is a known member of the CreateRunnerRequestAuthMode enum.
 func (e CreateRunnerRequestAuthMode) Valid() bool {
 	switch e {
-	case CreateRunnerRequestAuthModeBearer:
-		return true
-	case CreateRunnerRequestAuthModeFederated:
-		return true
-	case CreateRunnerRequestAuthModeMtls:
-		return true
-	case CreateRunnerRequestAuthModeOidc:
+	case CreateRunnerRequestAuthModeRealmroot:
 		return true
 	default:
 		return false
@@ -1194,22 +1188,13 @@ func (e ResourcePhase) Valid() bool {
 
 // Defines values for RunnerAuthMode.
 const (
-	Bearer    RunnerAuthMode = "bearer"
-	Federated RunnerAuthMode = "federated"
-	Mtls      RunnerAuthMode = "mtls"
-	Oidc      RunnerAuthMode = "oidc"
+	RunnerAuthModeRealmroot RunnerAuthMode = "realmroot"
 )
 
 // Valid indicates whether the value is a known member of the RunnerAuthMode enum.
 func (e RunnerAuthMode) Valid() bool {
 	switch e {
-	case Bearer:
-		return true
-	case Federated:
-		return true
-	case Mtls:
-		return true
-	case Oidc:
+	case RunnerAuthModeRealmroot:
 		return true
 	default:
 		return false
@@ -3201,22 +3186,23 @@ type AmaEvent11Type string
 
 // AuditRecord defines model for AuditRecord.
 type AuditRecord struct {
-	Action         string                 `json:"action"`
-	ActorType      AuditRecordActorType   `json:"actorType"`
-	ActorUserId    *string                `json:"actorUserId"`
-	After          map[string]interface{} `json:"after"`
-	Before         map[string]interface{} `json:"before"`
-	CorrelationId  *string                `json:"correlationId"`
-	CreatedAt      time.Time              `json:"createdAt"`
-	Id             string                 `json:"id"`
-	Metadata       map[string]interface{} `json:"metadata"`
-	Outcome        AuditRecordOutcome     `json:"outcome"`
-	PolicyCategory *string                `json:"policyCategory"`
-	ProjectId      *string                `json:"projectId"`
-	RequestId      *string                `json:"requestId"`
-	ResourceId     *string                `json:"resourceId"`
-	ResourceType   string                 `json:"resourceType"`
-	SessionId      *string                `json:"sessionId"`
+	Action           string                 `json:"action"`
+	ActorType        AuditRecordActorType   `json:"actorType"`
+	ActorUserId      *string                `json:"actorUserId"`
+	After            map[string]interface{} `json:"after"`
+	Before           map[string]interface{} `json:"before"`
+	ControllerUserId *string                `json:"controllerUserId"`
+	CorrelationId    *string                `json:"correlationId"`
+	CreatedAt        time.Time              `json:"createdAt"`
+	Id               string                 `json:"id"`
+	Metadata         map[string]interface{} `json:"metadata"`
+	Outcome          AuditRecordOutcome     `json:"outcome"`
+	PolicyCategory   *string                `json:"policyCategory"`
+	ProjectId        *string                `json:"projectId"`
+	RequestId        *string                `json:"requestId"`
+	ResourceId       *string                `json:"resourceId"`
+	ResourceType     string                 `json:"resourceType"`
+	SessionId        *string                `json:"sessionId"`
 }
 
 // AuditRecordActorType defines model for AuditRecord.ActorType.
@@ -3382,11 +3368,6 @@ type CreateAgentRequest struct {
 		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
 		SystemPrompt  string                 `json:"systemPrompt"`
 	} `json:"spec"`
-}
-
-// CreateAuthSessionRequest defines model for CreateAuthSessionRequest.
-type CreateAuthSessionRequest struct {
-	AccessToken string `json:"accessToken"`
 }
 
 // CreateBudgetRequest defines model for CreateBudgetRequest.
@@ -5689,8 +5670,8 @@ type WriteToolInput struct {
 	Path    string `json:"path"`
 }
 
-// bearerAuthContextKey is the context key for bearerAuth security scheme
-type bearerAuthContextKey string
+// realmrootDpopContextKey is the context key for realmrootDpop security scheme
+type realmrootDpopContextKey string
 
 // ListAgentsParams defines parameters for ListAgents.
 type ListAgentsParams struct {
@@ -5964,9 +5945,6 @@ type CreateAgentJSONRequestBody = CreateAgentRequest
 
 // UpdateAgentJSONRequestBody defines body for UpdateAgent for application/json ContentType.
 type UpdateAgentJSONRequestBody = UpdateAgentRequest
-
-// CreateAuthSessionJSONRequestBody defines body for CreateAuthSession for application/json ContentType.
-type CreateAuthSessionJSONRequestBody = CreateAuthSessionRequest
 
 // CreateBudgetJSONRequestBody defines body for CreateBudget for application/json ContentType.
 type CreateBudgetJSONRequestBody = CreateBudgetRequest
@@ -8411,14 +8389,6 @@ type ClientInterface interface {
 	// ReadAuthConfig request
 	ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateAuthSessionWithBody request with any body
-	CreateAuthSessionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CreateAuthSession(ctx context.Context, body CreateAuthSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteCurrentAuthSession request
-	DeleteCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ReadCurrentAuthSession request
 	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -8833,42 +8803,6 @@ func (c *APIClient) ReadAuditRecord(ctx context.Context, recordId string, reqEdi
 
 func (c *APIClient) ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadAuthConfigRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) CreateAuthSessionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAuthSessionRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) CreateAuthSession(ctx context.Context, body CreateAuthSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAuthSessionRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) DeleteCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteCurrentAuthSessionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10704,73 +10638,6 @@ func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*htt
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewCreateAuthSessionRequest calls the generic CreateAuthSession builder with application/json body
-func NewCreateAuthSessionRequest(server string, body CreateAuthSessionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateAuthSessionRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewCreateAuthSessionRequestWithBody generates requests for CreateAuthSession with any type of body
-func NewCreateAuthSessionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/sessions")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewDeleteCurrentAuthSessionRequest generates requests for DeleteCurrentAuthSession
-func NewDeleteCurrentAuthSessionRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/sessions/current")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -15261,14 +15128,6 @@ type ClientWithResponsesInterface interface {
 	// ReadAuthConfigWithResponse request
 	ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error)
 
-	// CreateAuthSessionWithBodyWithResponse request with any body
-	CreateAuthSessionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAuthSessionResponse, error)
-
-	CreateAuthSessionWithResponse(ctx context.Context, body CreateAuthSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAuthSessionResponse, error)
-
-	// DeleteCurrentAuthSessionWithResponse request
-	DeleteCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentAuthSessionResponse, error)
-
 	// ReadCurrentAuthSessionWithResponse request
 	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
 
@@ -15852,67 +15711,6 @@ func (r ReadAuthConfigResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadAuthConfigResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type CreateAuthSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *AuthSession
-	JSON401      *ErrorResponse
-	JSON403      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateAuthSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateAuthSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r CreateAuthSessionResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type DeleteCurrentAuthSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteCurrentAuthSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteCurrentAuthSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteCurrentAuthSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18659,32 +18457,6 @@ func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, pa
 	return ParseReadAuthConfigResponse(rsp)
 }
 
-// CreateAuthSessionWithBodyWithResponse request with arbitrary body returning *CreateAuthSessionResponse
-func (c *ClientWithResponses) CreateAuthSessionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAuthSessionResponse, error) {
-	rsp, err := c.CreateAuthSessionWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateAuthSessionResponse(rsp)
-}
-
-func (c *ClientWithResponses) CreateAuthSessionWithResponse(ctx context.Context, body CreateAuthSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAuthSessionResponse, error) {
-	rsp, err := c.CreateAuthSession(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateAuthSessionResponse(rsp)
-}
-
-// DeleteCurrentAuthSessionWithResponse request returning *DeleteCurrentAuthSessionResponse
-func (c *ClientWithResponses) DeleteCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentAuthSessionResponse, error) {
-	rsp, err := c.DeleteCurrentAuthSession(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteCurrentAuthSessionResponse(rsp)
-}
-
 // ReadCurrentAuthSessionWithResponse request returning *ReadCurrentAuthSessionResponse
 func (c *ClientWithResponses) ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error) {
 	rsp, err := c.ReadCurrentAuthSession(ctx, reqEditors...)
@@ -20033,62 +19805,6 @@ func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, e
 		}
 		response.JSON200 = &dest
 
-	}
-
-	return response, nil
-}
-
-// ParseCreateAuthSessionResponse parses an HTTP response from a CreateAuthSessionWithResponse call
-func ParseCreateAuthSessionResponse(rsp *http.Response) (*CreateAuthSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateAuthSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest AuthSession
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteCurrentAuthSessionResponse parses an HTTP response from a DeleteCurrentAuthSessionWithResponse call
-func ParseDeleteCurrentAuthSessionResponse(rsp *http.Response) (*DeleteCurrentAuthSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteCurrentAuthSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
 	}
 
 	return response, nil

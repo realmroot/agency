@@ -21,29 +21,32 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
-		Email:       "one@example.test",
-		Name:        "One",
-		AccessToken: "token-1",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      "https://ama.example.test",
+		Email:          "one@example.test",
+		Name:           "One",
+		AccessToken:    "token-1",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "key-1",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_2",
-		APIServer:   "https://ama.example.test",
-		Email:       "two@example.test",
-		Name:        "Two",
-		AccessToken: "token-2",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_2",
+		APIServer:      "https://ama.example.test",
+		Email:          "two@example.test",
+		Name:           "Two",
+		AccessToken:    "token-2",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "key-2",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_3",
-		APIServer:   "https://other.example.test",
-		AccessToken: "token-3",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_3",
+		APIServer:      "https://other.example.test",
+		AccessToken:    "token-3",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "key-3",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	})
 
 	var output bytes.Buffer
@@ -61,14 +64,6 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "Switched to https://ama.example.test acct_1") {
 		t.Fatalf("unexpected switch output: %s", output.String())
-	}
-
-	output.Reset()
-	if err := RunAuthToken(context.Background(), &output); err != nil {
-		t.Fatalf("expected token, got %v", err)
-	}
-	if strings.TrimSpace(output.String()) != "token-1" {
-		t.Fatalf("unexpected token output: %s", output.String())
 	}
 
 	output.Reset()
@@ -93,12 +88,13 @@ func TestRunAuthRefreshUpdatesActiveCredential(t *testing.T) {
 	server := authRefreshServer(t)
 	defer server.Close()
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
-		AccountID:    "acct_1",
-		APIServer:    server.URL,
-		AccessToken:  "old-token",
-		RefreshToken: "refresh-token",
-		TokenType:    "Bearer",
-		ExpiresAt:    time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      server.URL,
+		AccessToken:    "old-token",
+		RefreshToken:   "refresh-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		ExpiresAt:      time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
 	})
 
 	var output bytes.Buffer
@@ -132,9 +128,6 @@ func TestRunAuthRequiresLogin(t *testing.T) {
 	var output bytes.Buffer
 	if err := RunAuthStatus(&output); err == nil || !strings.Contains(err.Error(), "not logged in") {
 		t.Fatalf("expected status login error, got %v", err)
-	}
-	if err := RunAuthToken(context.Background(), &output); err == nil || !strings.Contains(err.Error(), "not logged in") {
-		t.Fatalf("expected token login error, got %v", err)
 	}
 	if err := RunAuthRefresh(context.Background(), &output); err == nil || !strings.Contains(err.Error(), "not logged in") {
 		t.Fatalf("expected refresh login error, got %v", err)
@@ -220,6 +213,7 @@ func authRefreshServer(t *testing.T) *httptest.Server {
 				"issuer":                        "http://" + r.Host + "/issuer",
 				"device_authorization_endpoint": "http://" + r.Host + "/device",
 				"token_endpoint":                "http://" + r.Host + "/token",
+				"jwks_uri":                      "http://" + r.Host + "/jwks",
 			})
 		case "/token":
 			if r.FormValue("grant_type") != "refresh_token" || r.FormValue("refresh_token") != "refresh-token" {
@@ -228,7 +222,7 @@ func authRefreshServer(t *testing.T) *httptest.Server {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "new-token",
 				"refresh_token": "new-refresh",
-				"token_type":    "Bearer",
+				"token_type":    "DPoP",
 				"expires_in":    3600,
 				"scope":         "openid profile email offline_access",
 			})

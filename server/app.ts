@@ -1,5 +1,7 @@
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
+import { requireOidcConfig } from './auth/oidc'
+import { AMA_RESOURCE_DESCRIPTION, AMA_RESOURCE_NAME, protectedResourceMetadata } from './auth/scopes'
 import { createDeps } from './composition'
 import { RUNNER_PROTOCOL_SCHEMAS } from './contracts/runner-protocol'
 import type { Env } from './env'
@@ -25,7 +27,7 @@ import { registerUsageSummaryRoutes } from './http/usage-summary'
 import { registerVaultRoutes } from './http/vaults'
 import { registerWorkItemRoutes } from './http/work-items'
 import { logError, requestLogContext } from './logging'
-import { ApiSecuritySchemes, addAuthorizationResponses, createDepsApiRouter } from './openapi'
+import { ApiSecuritySchemes, createDepsApiRouter, finalizeOpenApiDocument } from './openapi'
 
 export function createApp() {
   const app = createDepsApiRouter()
@@ -50,12 +52,12 @@ export function createApp() {
         return allowedOrigins.split(',').includes(origin) ? origin : null
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'X-AMA-Project-ID'],
+      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID'],
     }),
   )
 
-  // Every control-plane resource lives under /api/v1. Auth and its federation
-  // config are the one namespaced area (the IdP boundary; also disambiguates
+  // Every control-plane resource lives under /api/v1. Auth and the public
+  // Realmroot client config are the one namespaced area (also disambiguating
   // login sessions from agent /sessions).
   // agents, environments, providers, vaults, connectors, the governance
   // resources, and the usage/audit reporting resources are migrated
@@ -82,6 +84,18 @@ export function createApp() {
   const vaults = registerVaultRoutes(createDepsApiRouter())
   const memoryStores = registerMemoryStoreRoutes(createDepsApiRouter())
 
+  app.get('/.well-known/oauth-protected-resource/api', (c) => {
+    const origin = new URL(c.req.url).origin
+    const { issuer } = requireOidcConfig(c.env)
+    return c.json(protectedResourceMetadata(origin, issuer))
+  })
+  app.get('/api', (c) => {
+    const origin = new URL(c.req.url).origin
+    const serviceDescription = `${origin}/api/v1/openapi.json`
+    c.header('Link', `<${serviceDescription}>; rel="service-desc"; type="application/openapi+json"`)
+    return c.json({ resource: `${origin}/api`, name: AMA_RESOURCE_NAME, description: AMA_RESOURCE_DESCRIPTION })
+  })
+
   const routes = app
     .route('/api/healthz', healthz)
     .route('/api/v1/configz', configz)
@@ -104,7 +118,7 @@ export function createApp() {
     .route('/api/v1/memory-stores', memoryStores)
     .route('/api/v1/vaults', vaults)
 
-  routes.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', ApiSecuritySchemes.bearerAuth)
+  routes.openAPIRegistry.registerComponent('securitySchemes', 'realmrootDpop', ApiSecuritySchemes.realmrootDpop)
   for (const [name, schema] of Object.entries(RUNNER_PROTOCOL_SCHEMAS)) {
     routes.openAPIRegistry.register(name, schema)
   }
@@ -115,11 +129,16 @@ export function createApp() {
       title: 'Any Managed Agents API',
       version: '1.0.0',
       description:
-        'Control-plane API for Any Managed Agents. Every resource lives under /api/v1 and follows REST conventions. Command-line automation uses restish or direct HTTP against this OpenAPI document; live browser task traffic uses the session socket and canonical session events.',
+        'Realmroot-native control-plane API for Any Managed Agents. Every protected operation requires a DPoP-bound Realmroot token with an exact resource scope.',
     },
     servers: [{ url: '/' }],
   }
-  routes.get('/api/v1/openapi.json', (c) => c.json(addAuthorizationResponses(routes.getOpenAPIDocument(openApiConfig))))
+  routes.get('/api/v1/openapi.json', (c) => {
+    const document = finalizeOpenApiDocument(routes.getOpenAPIDocument(openApiConfig))
+    document.servers = [{ url: new URL(c.req.url).origin }]
+    c.header('Content-Type', 'application/openapi+json')
+    return c.json(document)
+  })
 
   routes.get(
     '/api/docs',

@@ -12,7 +12,8 @@ describe('app error handling', () => {
     const response = await createApp().fetch(
       new Request('https://example.test/api/v1/projects', {
         headers: {
-          authorization: 'Bearer e2e:logging_error',
+          authorization: 'DPoP e2e:logging_error',
+          dpop: 'e2e-proof:GET:https://example.test/api/v1/projects',
           'x-request-id': 'req_logging_error',
           'x-ama-project-id': 'project_logging',
         },

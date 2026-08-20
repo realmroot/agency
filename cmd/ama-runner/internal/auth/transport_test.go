@@ -22,13 +22,16 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 		switch r.URL.Path {
 		case "/secure":
 			secureRequests += 1
-			if r.Header.Get("authorization") == "Bearer stale-access-token" {
+			if r.Header.Get("authorization") == "DPoP stale-access-token" {
 				w.WriteHeader(http.StatusUnauthorized)
 				_, _ = w.Write([]byte(`{"error":{"message":"expired"}}`))
 				return
 			}
-			if r.Header.Get("authorization") != "Bearer fresh-access-token" {
+			if r.Header.Get("authorization") != "DPoP fresh-access-token" {
 				t.Fatalf("unexpected authorization header: %s", r.Header.Get("authorization"))
+			}
+			if r.Header.Get("dpop") == "" {
+				t.Fatal("expected DPoP proof header")
 			}
 			_, _ = w.Write([]byte(`{"ok":true}`))
 		case "/api/v1/configz":
@@ -43,11 +46,12 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 				"issuer":                        "http://" + r.Host + "/issuer",
 				"device_authorization_endpoint": "http://" + r.Host + "/device",
 				"token_endpoint":                "http://" + r.Host + "/token",
+				"jwks_uri":                      "http://" + r.Host + "/jwks",
 			})
 		case "/token":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token": "fresh-access-token",
-				"token_type":   "Bearer",
+				"token_type":   "DPoP",
 				"expires_in":   3600,
 			})
 		default:
@@ -56,12 +60,13 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 	}))
 	defer server.Close()
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:    "acct_1",
-		APIServer:    server.URL,
-		AccessToken:  "stale-access-token",
-		RefreshToken: "refresh-token",
-		TokenType:    "Bearer",
-		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      server.URL,
+		AccessToken:    "stale-access-token",
+		RefreshToken:   "refresh-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +74,6 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 	source, err := NewTokenSource(runnerconfig.Config{
 		CredentialPath: credentialPath,
 		APIServer:      server.URL,
-		Token:          "stale-access-token",
 	}, server.Client())
 	if err != nil {
 		t.Fatal(err)
@@ -116,19 +120,15 @@ func TestAuthTransportReturnsBaseErrors(t *testing.T) {
 }
 
 func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) {
-	source, err := NewTokenSource(runnerconfig.Config{
-		Token:         "static-token",
-		TokenExplicit: true,
-	}, http.DefaultClient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
+		AccessToken: "saved-token", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}}
 	requests := 0
 	transport := AuthTransport{
 		Tokens: source,
 		Base: roundTripperFunc(func(request *http.Request) (*http.Response, error) {
 			requests++
-			if request.Header.Get("authorization") != "Bearer static-token" {
+			if request.Header.Get("authorization") != "DPoP saved-token" || request.Header.Get("dpop") == "" {
 				t.Fatalf("unexpected authorization header %q", request.Header.Get("authorization"))
 			}
 			return &http.Response{
@@ -154,13 +154,9 @@ func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) 
 }
 
 func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
-	source, err := NewTokenSource(runnerconfig.Config{
-		Token:         "token",
-		TokenExplicit: true,
-	}, http.DefaultClient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
+		AccessToken: "saved-token", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}}
 	transport := AuthTransport{Tokens: source}
 	request, err := http.NewRequest(http.MethodPost, "https://ama.example.test/secure", strings.NewReader("body"))
 	if err != nil {
@@ -172,6 +168,26 @@ func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 	authorized, err := transport.authorizedRequest(request, false)
 	if err == nil || !strings.Contains(err.Error(), "rewind failed") {
 		t.Fatalf("expected get body error, got request=%v err=%v", authorized, err)
+	}
+}
+
+func TestAuthTransportBuildsSyntheticDPoPProofWithoutQueryOrFragment(t *testing.T) {
+	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
+		AccessToken: "e2e-token", DPoPPrivateKey: testDPoPPrivateKey,
+	}}
+	request, err := http.NewRequest(http.MethodPatch, "https://ama.example.test/api/v1/runners/runner_1/heartbeat?ignored=yes#fragment", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorized, err := (AuthTransport{Tokens: source}).authorizedRequest(request, false)
+	if err != nil {
+		t.Fatalf("authorizedRequest: %v", err)
+	}
+	if got := authorized.Header.Get("authorization"); got != "DPoP e2e-token" {
+		t.Fatalf("authorization = %q", got)
+	}
+	if got := authorized.Header.Get("dpop"); got != "e2e-proof:PATCH:https://ama.example.test/api/v1/runners/runner_1/heartbeat" {
+		t.Fatalf("DPoP proof = %q", got)
 	}
 }
 

@@ -2,14 +2,14 @@ import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
 
-const { getBearerClaimsMock, upsertProjectForClaimsMock } = vi.hoisted(() => ({
-  getBearerClaimsMock: vi.fn(),
+const { getDpopClaimsMock, upsertProjectForClaimsMock } = vi.hoisted(() => ({
+  getDpopClaimsMock: vi.fn(),
   upsertProjectForClaimsMock: vi.fn(),
 }))
 
 vi.mock('./oidc', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./oidc')>()),
-  getBearerClaims: getBearerClaimsMock,
+  getDpopClaims: getDpopClaimsMock,
   upsertProjectForClaims: upsertProjectForClaimsMock,
 }))
 
@@ -48,14 +48,14 @@ const baseClaims = {
 }
 
 async function request(path: string, values: { method?: string; permissions?: string[]; runner?: boolean } = {}) {
-  getBearerClaimsMock.mockResolvedValue({
+  getDpopClaimsMock.mockResolvedValue({
     ...baseClaims,
     permissions: values.permissions ?? [],
     ...(values.runner ? { client_id: 'runner-client' } : {}),
   })
   return await app.request(
     `https://ama.example.com${path}`,
-    { method: values.method ?? 'GET', headers: { authorization: 'Bearer token' } },
+    { method: values.method ?? 'GET', headers: { authorization: 'DPoP token', dpop: 'proof' } },
     {
       DB: {} as D1Database,
       OIDC_RESOURCE: 'https://ama.example.com',
@@ -66,7 +66,7 @@ async function request(path: string, values: { method?: string; permissions?: st
 
 describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
   beforeEach(() => {
-    getBearerClaimsMock.mockReset()
+    getDpopClaimsMock.mockReset()
     upsertProjectForClaimsMock.mockReset()
     upsertProjectForClaimsMock.mockResolvedValue({ id: 'project_1', name: 'Project', organizationId: 'org_1' })
   })
@@ -83,8 +83,12 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     })
   })
 
-  it.each([['*'], ['agents:*'], ['agents:read']])('allows GET with permission %s', async (...permissions) => {
+  it.each([['agents:read']])('allows GET with exact scope %s', async (...permissions) => {
     expect((await request('/api/v1/agents/agent_1', { permissions })).status).toBe(200)
+  })
+
+  it.each([['*'], ['agents:*']])('rejects wildcard scope %s', async (...permissions) => {
+    expect((await request('/api/v1/agents/agent_1', { permissions })).status).toBe(403)
   })
 
   it('rejects before creating or resolving a Default project', async () => {
@@ -122,9 +126,21 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     ).toBe(200)
   })
 
-  it('keeps runner paths and runner session-event ingestion on runner binding authorization', async () => {
-    expect((await request('/api/v1/work-items/work_1', { runner: true })).status).toBe(200)
-    expect((await request('/api/v1/sessions/session_1/events', { method: 'POST', runner: true })).status).toBe(200)
+  it('requires exact scopes before applying runner-path binding authorization', async () => {
+    expect((await request('/api/v1/work-items/work_1', { runner: true })).status).toBe(403)
+    expect(
+      (await request('/api/v1/work-items/work_1', { runner: true, permissions: ['work-items:read'] })).status,
+    ).toBe(200)
+    expect((await request('/api/v1/sessions/session_1/events', { method: 'POST', runner: true })).status).toBe(403)
+    expect(
+      (
+        await request('/api/v1/sessions/session_1/events', {
+          method: 'POST',
+          runner: true,
+          permissions: ['sessions:write'],
+        })
+      ).status,
+    ).toBe(200)
     expect((await request('/api/v1/agents/agent_1', { runner: true })).status).toBe(403)
   })
 })

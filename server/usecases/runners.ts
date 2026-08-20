@@ -32,8 +32,8 @@ export interface RegisterRunnerResult {
   reregistered: boolean
 }
 
-// Registers (or federated re-registers) a self-hosted runner: rejects raw
-// secret material, resolves the OIDC binding, validates the environment and
+// Registers or re-registers a self-hosted runner: rejects raw secret material,
+// resolves the Realmroot binding, validates the environment and
 // secret references, and reuses a machine-bound runner row when present.
 export async function registerRunner(
   deps: Deps,
@@ -44,11 +44,11 @@ export async function registerRunner(
   if (hasSecretMaterial(input.metadata)) {
     throw new RunnerValidationError('Runner metadata must not contain raw secret material')
   }
-  const environmentId = environmentIdForRegistration(oidc, input.environmentId)
+  const environmentId = environmentIdForRegistration(input.environmentId)
   if (environmentId && !(await deps.runners.environmentUsable(auth.project.id, environmentId))) {
     throw new RunnerConflictError('Runner environment is unavailable')
   }
-  const authMode = runnerAuthModeForRegistration(oidc, input.authMode)
+  const authMode = runnerAuthModeForRegistration(input.authMode)
   const bindingFields = runnerOidcBindingFields(oidc, authMode)
   if (bindingFields) {
     throw new RunnerValidationError('Runner OIDC token is missing required binding claims', bindingFields)
@@ -88,11 +88,10 @@ export async function registerRunner(
     machineId,
   )
   if (reusable) {
-    // Machine-bound re-registration is only valid for the federated runner that
-    // owns the row; anything else is a conflicting registration of the same id.
+    // Machine-bound re-registration is valid only for the same Realmroot subject.
     if (
       reusable.projectId !== auth.project.id ||
-      reusable.authMode !== 'federated' ||
+      reusable.authMode !== 'realmroot' ||
       reusable.oidcSubject !== oidc.subject
     ) {
       throw new RunnerConflictError('Runner id is already registered')

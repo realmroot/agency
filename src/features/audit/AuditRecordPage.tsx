@@ -64,6 +64,7 @@ export function AuditRecordPage() {
           <Meta label="Record id" value={record.id} />
           <Meta label="Actor" value={record.actorUserId ?? record.actorType} />
           <Meta label="Actor type" value={record.actorType} />
+          <Meta label="Controller" value={record.controllerUserId ?? 'None'} />
           <Meta label="Created" value={formatDate(record.createdAt)} />
           <Meta label="Request id" value={record.requestId ?? 'None'} />
           <Meta label="Correlation id" value={record.correlationId ?? 'None'} />

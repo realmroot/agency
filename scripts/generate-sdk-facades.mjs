@@ -13,6 +13,8 @@ const operations = collectOperations(openapi)
 const pythonModules = collectPythonModules(path.join(ROOT, 'sdk/python/ama_sdk/api'))
 
 validateSpec()
+rewriteTypeScriptGeneratedAuthBoundary()
+rewritePythonAuthenticatedClient()
 writeFileSync(path.join(ROOT, 'sdk/typescript/src/client.ts'), generateTypeScriptClient())
 writeFileSync(path.join(ROOT, 'sdk/go/ama/client.go'), generateGoClient())
 writeFileSync(path.join(ROOT, 'sdk/python/ama_sdk/facade.py'), generatePythonFacade())
@@ -22,6 +24,82 @@ writeFileSync(
 )
 
 execFileSync('gofmt', ['-w', 'sdk/go/ama/client.go'], { cwd: ROOT, stdio: 'inherit' })
+
+function rewriteTypeScriptGeneratedAuthBoundary() {
+  const authPath = path.join(ROOT, 'sdk/typescript/src/generated/core/auth.gen.ts')
+  writeFileSync(
+    authPath,
+    `// Generated authentication boundary for the Realmroot-native AMA Resource.
+
+export type AuthToken = string | undefined
+
+export interface Auth {
+  in?: 'header' | 'query' | 'cookie'
+  key?: string
+  name?: string
+  scheme?: never
+  type: 'apiKey' | 'http'
+}
+
+export const getAuthToken = async (
+  _auth: Auth,
+  _callback: ((auth: Auth) => Promise<AuthToken> | AuthToken) | AuthToken,
+): Promise<string | undefined> => {
+  throw new Error('Raw token authentication is unsupported; use createAmaClient with a Realmroot DPoP authorizer')
+}
+`,
+  )
+
+  const sdkPath = path.join(ROOT, 'sdk/typescript/src/generated/sdk.gen.ts')
+  const sdkSource = readFileSync(sdkPath, 'utf8')
+  writeFileSync(sdkPath, sdkSource.replaceAll(/    security: \[\{ scheme: '[^']+', type: 'http' \}\],\n/g, ''))
+}
+
+function rewritePythonAuthenticatedClient() {
+  const clientPath = path.join(ROOT, 'sdk/python/ama_sdk/client.py')
+  const source = readFileSync(clientPath, 'utf8')
+  const marker = '@define\nclass AuthenticatedClient:'
+  const start = source.indexOf(marker)
+  if (start < 0) {
+    if (source.includes('class AuthenticatedClient(Client):')) return
+    throw new Error('Generated Python AuthenticatedClient was not found')
+  }
+  const replacement = `@define
+class AuthenticatedClient(Client):
+    """Generated client backed by a request-aware Realmroot DPoP httpx.Auth implementation."""
+
+    _auth: httpx.Auth = field(kw_only=True, alias="auth")
+
+    def get_httpx_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(
+                base_url=self._base_url,
+                cookies=self._cookies,
+                headers=self._headers,
+                timeout=self._timeout,
+                verify=self._verify_ssl,
+                follow_redirects=self._follow_redirects,
+                auth=self._auth,
+                **self._httpx_args,
+            )
+        return self._client
+
+    def get_async_httpx_client(self) -> httpx.AsyncClient:
+        if self._async_client is None:
+            self._async_client = httpx.AsyncClient(
+                base_url=self._base_url,
+                cookies=self._cookies,
+                headers=self._headers,
+                timeout=self._timeout,
+                verify=self._verify_ssl,
+                follow_redirects=self._follow_redirects,
+                auth=self._auth,
+                **self._httpx_args,
+            )
+        return self._async_client
+`
+  writeFileSync(clientPath, `${source.slice(0, start)}${replacement}`)
+}
 
 function normalizeFacades(document) {
   if (document.facades) {
@@ -117,9 +195,9 @@ import type * as types from './generated/types.gen.js'
 
 export interface AmaClientConfig {
   baseUrl: string
-  accessToken?: string
   projectId?: string
   headers?: Record<string, string>
+  authorize?: (url: string, method: string) => Promise<{ accessToken: string; dpopProof: string }>
 }
 
 export class AmaApiError extends Error {
@@ -163,17 +241,32 @@ type SessionSocketServerMessage =
 function websocketURL(config: AmaClientConfig, path: string): URL {
   const url = new URL(path, config.baseUrl)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  if (config.accessToken) {
-    url.searchParams.set('access_token', config.accessToken)
-  }
   if (config.projectId) {
     url.searchParams.set('x-ama-project-id', config.projectId)
   }
   return url
 }
 
-function createSessionStream(config: AmaClientConfig, sessionId: string): SessionStream {
-  const socket = new WebSocket(websocketURL(config, \`/api/v1/sessions/\${encodeURIComponent(sessionId)}/socket\`).toString())
+function base64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+}
+
+async function authenticatedWebSocket(config: AmaClientConfig, path: string): Promise<WebSocket> {
+  if (!config.authorize) throw new Error('Realmroot DPoP authorizer is required for AMA WebSocket connections')
+  const url = websocketURL(config, path)
+  const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET')
+  return new WebSocket(url.toString(), [
+    'ama-dpop',
+    \`ama-access.\${base64Url(authorization.accessToken)}\`,
+    \`ama-proof.\${base64Url(authorization.dpopProof)}\`,
+  ])
+}
+
+async function createSessionStream(config: AmaClientConfig, sessionId: string): Promise<SessionStream> {
+  const socket = await authenticatedWebSocket(config, \`/api/v1/sessions/\${encodeURIComponent(sessionId)}/socket\`)
   const buffered: types.SessionEvent[] = []
   const waiters: Array<(result: IteratorResult<types.SessionEvent>) => void> = []
   const backfillWaiters = new Map<string, (response: types.SessionSocketBackfillMessage) => void>()
@@ -245,8 +338,8 @@ function createSessionStream(config: AmaClientConfig, sessionId: string): Sessio
   }
 }
 
-function createRunnerChannel(config: AmaClientConfig, runnerId: string): RunnerChannel {
-  const socket = new WebSocket(websocketURL(config, \`/api/v1/runners/\${encodeURIComponent(runnerId)}/channel\`).toString())
+async function createRunnerChannel(config: AmaClientConfig, runnerId: string): Promise<RunnerChannel> {
+  const socket = await authenticatedWebSocket(config, \`/api/v1/runners/\${encodeURIComponent(runnerId)}/channel\`)
   const buffered: types.RunnerChannelMessage[] = []
   const waiters: Array<(result: IteratorResult<types.RunnerChannelMessage>) => void> = []
   let done = false
@@ -302,11 +395,21 @@ function createRunnerChannel(config: AmaClientConfig, runnerId: string): RunnerC
 }
 
 function createConfiguredClient(config: AmaClientConfig) {
+  const authenticatedFetch: typeof fetch = async (input, init) => {
+    const request = new Request(input, init)
+    const headers = new Headers(request.headers)
+    if (config.authorize) {
+      const authorization = await config.authorize(request.url, request.method)
+      headers.set('authorization', \`DPoP \${authorization.accessToken}\`)
+      headers.set('dpop', authorization.dpopProof)
+    }
+    return fetch(new Request(request, { headers }))
+  }
   return createClient(
     createConfig({
       baseUrl: config.baseUrl,
+      fetch: authenticatedFetch,
       headers: {
-        ...(config.accessToken ? { authorization: \`Bearer \${config.accessToken}\` } : {}),
         ...(config.projectId ? { 'x-ama-project-id': config.projectId } : {}),
         ...config.headers,
       },
@@ -343,10 +446,10 @@ function generateTypeScriptResource(resource) {
 function generateTypeScriptMethod(method) {
   const operation = operations.get(method.operationId)
   if (operation.id === 'connectSessionSocket') {
-    return `${method.name}: (sessionId: string): SessionStream => createSessionStream(config, sessionId)`
+    return `${method.name}: (sessionId: string): Promise<SessionStream> => createSessionStream(config, sessionId)`
   }
   if (operation.id === 'connectRunnerChannel') {
-    return `${method.name}: (runnerId: string): RunnerChannel => createRunnerChannel(config, runnerId)`
+    return `${method.name}: (runnerId: string): Promise<RunnerChannel> => createRunnerChannel(config, runnerId)`
   }
   const pathParams = operation.pathParams.map((param) => `${param.name}: ${tsScalarType(param.schema)}`)
   const queryParam = operation.queryParams.length > 0 ? `query?: types.${pascal(operation.id)}Data['query']` : undefined
@@ -382,7 +485,7 @@ function generateGoClient() {
     ...facades.public.resources.map((resource) => generateGoService(resource, '')),
     ...facades.runner.resources.map((resource) => generateGoService(resource, 'Runner')),
   ].join('\n')
-  return `package ama\n\nimport (\n\t\"bytes\"\n\t\"context\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"fmt\"\n\t\"net/http\"\n\t\"net/url\"\n\t\"strings\"\n\n\t\"github.com/coder/websocket\"\n)\n\n// Regenerate the typed models and REST client (ama.gen.go) from the OpenAPI doc.\n// Requires oapi-codegen on PATH:\n//   go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest\n// The config's paths (overlay, output) resolve from sdk/go, so run from there.\n// \`go generate\` invokes this from the package dir, hence the \`cd ..\`.\n//go:generate sh -c \"cd .. && oapi-codegen -config oapi-codegen.config.yaml ../openapi.json\"\n\ntype JSON = map[string]interface{}\n\ntype AccessTokenProvider func(context.Context) (string, error)\n\ntype ClientConfig struct {\n\tBaseURL             string\n\tAccessToken         string\n\tAccessTokenProvider AccessTokenProvider\n\tProjectID           string\n\tHeaders             map[string]string\n\tHTTPClient          HttpRequestDoer\n}\n\ntype clientCore struct {\n\traw                 *ClientWithResponses\n\tbaseURL             string\n\taccessToken         string\n\taccessTokenProvider AccessTokenProvider\n\tprojectID           string\n\theaders             map[string]string\n}\n\ntype Client struct {\n\tcore *clientCore\n${publicFields}\n}\n\ntype RunnerClient struct {\n\tcore *clientCore\n${runnerFields}\n}\n\nfunc New(config ClientConfig) (*Client, error) {\n\tcore, err := newClientCore(config)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tclient := &Client{core: core}\n${publicAssignments}\n\treturn client, nil\n}\n\nfunc NewRunner(config ClientConfig) (*RunnerClient, error) {\n\tcore, err := newClientCore(config)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tclient := &RunnerClient{core: core}\n${runnerAssignments}\n\treturn client, nil\n}\n\nfunc newClientCore(config ClientConfig) (*clientCore, error) {\n\tif strings.TrimSpace(config.BaseURL) == \"\" {\n\t\treturn nil, fmt.Errorf(\"AMA base URL is required\")\n\t}\n\theaders := map[string]string{}\n\tfor key, value := range config.Headers {\n\t\theaders[key] = value\n\t}\n\topts := []ClientOption{\n\t\tWithRequestEditorFn(func(ctx context.Context, request *http.Request) error {\n\t\t\ttoken, err := accessToken(ctx, config.AccessToken, config.AccessTokenProvider)\n\t\t\tif err != nil {\n\t\t\t\treturn err\n\t\t\t}\n\t\t\tif token != \"\" {\n\t\t\t\trequest.Header.Set(\"authorization\", \"Bearer \"+token)\n\t\t\t}\n\t\t\tif config.ProjectID != \"\" {\n\t\t\t\trequest.Header.Set(\"x-ama-project-id\", config.ProjectID)\n\t\t\t}\n\t\t\tfor key, value := range headers {\n\t\t\t\trequest.Header.Set(key, value)\n\t\t\t}\n\t\t\treturn nil\n\t\t}),\n\t}\n\tif config.HTTPClient != nil {\n\t\topts = append(opts, WithHTTPClient(config.HTTPClient))\n\t}\n\tbaseURL := strings.TrimRight(config.BaseURL, \"/\")\n\traw, err := NewClientWithResponses(baseURL, opts...)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn &clientCore{raw: raw, baseURL: baseURL, accessToken: config.AccessToken, accessTokenProvider: config.AccessTokenProvider, projectID: config.ProjectID, headers: headers}, nil\n}\n\nfunc (c *Client) Raw() *ClientWithResponses {\n\treturn c.core.raw\n}\n\nfunc (c *RunnerClient) Raw() *ClientWithResponses {\n\treturn c.core.raw\n}\n\ntype APIError struct {\n\tStatus       int\n\tResponseText string\n\tBody         any\n}\n\nfunc (e *APIError) Error() string {\n\tif e.Status == 0 {\n\t\treturn \"AMA API request failed\"\n\t}\n\tif e.ResponseText != \"\" {\n\t\treturn fmt.Sprintf(\"AMA API request failed with HTTP %d: %s\", e.Status, e.ResponseText)\n\t}\n\treturn fmt.Sprintf(\"AMA API request failed with HTTP %d\", e.Status)\n}\n\nfunc StatusCode(err error) (int, bool) {\n\tvar apiErr *APIError\n\tif errors.As(err, &apiErr) {\n\t\treturn apiErr.Status, true\n\t}\n\treturn 0, false\n}\n\ntype JSONChannel interface {\n\tReadJSON(ctx context.Context, out any) error\n\tWriteJSON(ctx context.Context, value any) error\n\tClose(statusCode int, reason string) error\n}\n\ntype WebSocketChannel struct {\n\tConn *websocket.Conn\n}\n\nconst webSocketReadLimit = 16 << 20\n\nfunc (c *WebSocketChannel) ReadJSON(ctx context.Context, out any) error {\n\t_, data, err := c.Conn.Read(ctx)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn json.Unmarshal(data, out)\n}\n\nfunc (c *WebSocketChannel) WriteJSON(ctx context.Context, value any) error {\n\tdata, err := json.Marshal(value)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn c.Conn.Write(ctx, websocket.MessageText, data)\n}\n\nfunc (c *WebSocketChannel) Close(statusCode int, reason string) error {\n\treturn c.Conn.Close(websocket.StatusCode(statusCode), reason)\n}\n\nfunc (c *clientCore) dialWebSocket(ctx context.Context, path string) (JSONChannel, error) {\n\tendpoint, err := c.webSocketURL(path)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\theaders := http.Header{}\n\tfor key, value := range c.headers {\n\t\theaders.Set(key, value)\n\t}\n\ttoken, err := accessToken(ctx, c.accessToken, c.accessTokenProvider)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tif token != \"\" {\n\t\theaders.Set(\"authorization\", \"Bearer \"+token)\n\t}\n\tif c.projectID != \"\" {\n\t\theaders.Set(\"x-ama-project-id\", c.projectID)\n\t}\n\tconn, _, err := websocket.Dial(ctx, endpoint, &websocket.DialOptions{HTTPHeader: headers})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tconn.SetReadLimit(webSocketReadLimit)\n\treturn &WebSocketChannel{Conn: conn}, nil\n}\n\nfunc (c *clientCore) webSocketURL(path string) (string, error) {\n\tparsed, err := url.Parse(c.baseURL)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\tswitch parsed.Scheme {\n\tcase \"https\":\n\t\tparsed.Scheme = \"wss\"\n\tcase \"http\":\n\t\tparsed.Scheme = \"ws\"\n\tdefault:\n\t\treturn \"\", fmt.Errorf(\"AMA base URL must use http or https\")\n\t}\n\tparsed.Path = path\n\tparsed.RawPath = \"\"\n\tparsed.RawQuery = \"\"\n\tparsed.Fragment = \"\"\n\treturn parsed.String(), nil\n}\n\nfunc accessToken(ctx context.Context, static string, provider AccessTokenProvider) (string, error) {\n\tif provider != nil {\n\t\treturn provider(ctx)\n\t}\n\treturn static, nil\n}\n\n${services}\nfunc unwrap[T any](status int, responseBody []byte, data *T, errors ...*ErrorResponse) (*T, error) {\n\tif status >= 200 && status <= 299 && data != nil {\n\t\treturn data, nil\n\t}\n\treturn nil, newAPIError(status, responseBody, firstError(errors...))\n}\n\nfunc unwrapEmpty(status int, responseBody []byte, errors ...*ErrorResponse) error {\n\tif status >= 200 && status <= 299 {\n\t\treturn nil\n\t}\n\treturn newAPIError(status, responseBody, firstError(errors...))\n}\n\nfunc newAPIError(status int, responseBody []byte, response *ErrorResponse) *APIError {\n\tif response != nil {\n\t\treturn &APIError{Status: status, ResponseText: errorResponseText(response), Body: response}\n\t}\n\treturn &APIError{Status: status, ResponseText: strings.TrimSpace(string(responseBody)), Body: string(responseBody)}\n}\n\nfunc errorResponseText(response *ErrorResponse) string {\n\tif response == nil {\n\t\treturn \"\"\n\t}\n\tif response.Error.Message != \"\" {\n\t\treturn response.Error.Message\n\t}\n\treturn fmt.Sprintf(\"%v\", response.Error)\n}\n\nfunc firstError(errors ...*ErrorResponse) *ErrorResponse {\n\tfor _, err := range errors {\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\treturn nil\n}\n`
+  return `package ama\n\nimport (\n\t\"bytes\"\n\t\"context\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"fmt\"\n\t\"net/http\"\n\t\"net/url\"\n\t\"strings\"\n\n\t\"github.com/coder/websocket\"\n)\n\n// Regenerate the typed models and REST client (ama.gen.go) from the OpenAPI doc.\n// Requires oapi-codegen on PATH:\n//   go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest\n// The config's paths (overlay, output) resolve from sdk/go, so run from there.\n// \`go generate\` invokes this from the package dir, hence the \`cd ..\`.\n//go:generate sh -c \"cd .. && oapi-codegen -config oapi-codegen.config.yaml ../openapi.json\"\n\ntype JSON = map[string]interface{}\n\ntype ClientConfig struct {\n\tBaseURL    string\n\tProjectID  string\n\tHeaders    map[string]string\n\tHTTPClient *http.Client\n}\n\ntype clientCore struct {\n\traw                 *ClientWithResponses\n\tbaseURL             string\n\tprojectID  string\n\theaders    map[string]string\n\thttpClient *http.Client\n}\n\ntype Client struct {\n\tcore *clientCore\n${publicFields}\n}\n\ntype RunnerClient struct {\n\tcore *clientCore\n${runnerFields}\n}\n\nfunc New(config ClientConfig) (*Client, error) {\n\tcore, err := newClientCore(config)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tclient := &Client{core: core}\n${publicAssignments}\n\treturn client, nil\n}\n\nfunc NewRunner(config ClientConfig) (*RunnerClient, error) {\n\tcore, err := newClientCore(config)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tclient := &RunnerClient{core: core}\n${runnerAssignments}\n\treturn client, nil\n}\n\nfunc newClientCore(config ClientConfig) (*clientCore, error) {\n\tif strings.TrimSpace(config.BaseURL) == \"\" {\n\t\treturn nil, fmt.Errorf(\"AMA base URL is required\")\n\t}\n\theaders := map[string]string{}\n\tfor key, value := range config.Headers {\n\t\theaders[key] = value\n\t}\n\topts := []ClientOption{\n\t\tWithRequestEditorFn(func(ctx context.Context, request *http.Request) error {\n\t\t\tif config.ProjectID != \"\" {\n\t\t\t\trequest.Header.Set(\"x-ama-project-id\", config.ProjectID)\n\t\t\t}\n\t\t\tfor key, value := range headers {\n\t\t\t\trequest.Header.Set(key, value)\n\t\t\t}\n\t\t\treturn nil\n\t\t}),\n\t}\n\thttpClient := config.HTTPClient\n\tif httpClient == nil {\n\t\thttpClient = http.DefaultClient\n\t}\n\topts = append(opts, WithHTTPClient(httpClient))\n\tbaseURL := strings.TrimRight(config.BaseURL, \"/\")\n\traw, err := NewClientWithResponses(baseURL, opts...)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn &clientCore{raw: raw, baseURL: baseURL, projectID: config.ProjectID, headers: headers, httpClient: httpClient}, nil\n}\n\nfunc (c *Client) Raw() *ClientWithResponses {\n\treturn c.core.raw\n}\n\nfunc (c *RunnerClient) Raw() *ClientWithResponses {\n\treturn c.core.raw\n}\n\ntype APIError struct {\n\tStatus       int\n\tResponseText string\n\tBody         any\n}\n\nfunc (e *APIError) Error() string {\n\tif e.Status == 0 {\n\t\treturn \"AMA API request failed\"\n\t}\n\tif e.ResponseText != \"\" {\n\t\treturn fmt.Sprintf(\"AMA API request failed with HTTP %d: %s\", e.Status, e.ResponseText)\n\t}\n\treturn fmt.Sprintf(\"AMA API request failed with HTTP %d\", e.Status)\n}\n\nfunc StatusCode(err error) (int, bool) {\n\tvar apiErr *APIError\n\tif errors.As(err, &apiErr) {\n\t\treturn apiErr.Status, true\n\t}\n\treturn 0, false\n}\n\ntype JSONChannel interface {\n\tReadJSON(ctx context.Context, out any) error\n\tWriteJSON(ctx context.Context, value any) error\n\tClose(statusCode int, reason string) error\n}\n\ntype WebSocketChannel struct {\n\tConn *websocket.Conn\n}\n\nconst webSocketReadLimit = 16 << 20\n\nfunc (c *WebSocketChannel) ReadJSON(ctx context.Context, out any) error {\n\t_, data, err := c.Conn.Read(ctx)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn json.Unmarshal(data, out)\n}\n\nfunc (c *WebSocketChannel) WriteJSON(ctx context.Context, value any) error {\n\tdata, err := json.Marshal(value)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn c.Conn.Write(ctx, websocket.MessageText, data)\n}\n\nfunc (c *WebSocketChannel) Close(statusCode int, reason string) error {\n\treturn c.Conn.Close(websocket.StatusCode(statusCode), reason)\n}\n\nfunc (c *clientCore) dialWebSocket(ctx context.Context, path string) (JSONChannel, error) {\n\tendpoint, err := c.webSocketURL(path)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\theaders := http.Header{}\n\tfor key, value := range c.headers {\n\t\theaders.Set(key, value)\n\t}\n\tif c.projectID != \"\" {\n\t\theaders.Set(\"x-ama-project-id\", c.projectID)\n\t}\n\tconn, _, err := websocket.Dial(ctx, endpoint, &websocket.DialOptions{HTTPClient: c.httpClient, HTTPHeader: headers})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tconn.SetReadLimit(webSocketReadLimit)\n\treturn &WebSocketChannel{Conn: conn}, nil\n}\n\nfunc (c *clientCore) webSocketURL(path string) (string, error) {\n\tparsed, err := url.Parse(c.baseURL)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\tswitch parsed.Scheme {\n\tcase \"https\":\n\t\tparsed.Scheme = \"wss\"\n\tcase \"http\":\n\t\tparsed.Scheme = \"ws\"\n\tdefault:\n\t\treturn \"\", fmt.Errorf(\"AMA base URL must use http or https\")\n\t}\n\tparsed.Path = path\n\tparsed.RawPath = \"\"\n\tparsed.RawQuery = \"\"\n\tparsed.Fragment = \"\"\n\treturn parsed.String(), nil\n}\n\n\n${services}\nfunc unwrap[T any](status int, responseBody []byte, data *T, errors ...*ErrorResponse) (*T, error) {\n\tif status >= 200 && status <= 299 && data != nil {\n\t\treturn data, nil\n\t}\n\treturn nil, newAPIError(status, responseBody, firstError(errors...))\n}\n\nfunc unwrapEmpty(status int, responseBody []byte, errors ...*ErrorResponse) error {\n\tif status >= 200 && status <= 299 {\n\t\treturn nil\n\t}\n\treturn newAPIError(status, responseBody, firstError(errors...))\n}\n\nfunc newAPIError(status int, responseBody []byte, response *ErrorResponse) *APIError {\n\tif response != nil {\n\t\treturn &APIError{Status: status, ResponseText: errorResponseText(response), Body: response}\n\t}\n\treturn &APIError{Status: status, ResponseText: strings.TrimSpace(string(responseBody)), Body: string(responseBody)}\n}\n\nfunc errorResponseText(response *ErrorResponse) string {\n\tif response == nil {\n\t\treturn \"\"\n\t}\n\tif response.Error.Message != \"\" {\n\t\treturn response.Error.Message\n\t}\n\treturn fmt.Sprintf(\"%v\", response.Error)\n}\n\nfunc firstError(errors ...*ErrorResponse) *ErrorResponse {\n\tfor _, err := range errors {\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t}\n\treturn nil\n}\n`
 }
 
 function generateGoFields(facadeName, prefix) {
@@ -474,7 +577,7 @@ function generatePythonFacade() {
   ].join('\n\n')
   const publicInitAssignments = generatePythonInitAssignments('public', '')
   const runnerInitAssignments = generatePythonInitAssignments('runner', 'Runner')
-  return `from __future__ import annotations\n\nimport asyncio\nimport json\nfrom collections.abc import AsyncIterator\nfrom typing import Any\nfrom urllib.parse import quote, urlencode, urlparse, urlunparse\n\nimport websockets\n\nfrom .client import AuthenticatedClient, Client\n${uniqueImports.join('\n')}\n\n\nclass AmaApiError(Exception):\n    def __init__(self, status: int | None, response_text: str, body: Any) -> None:\n        super().__init__(f\"AMA API request failed{'' if status is None else f' with HTTP {status}'}\")\n        self.status = status\n        self.response_text = response_text\n        self.body = body\n\n\nclass JsonWebSocket:\n    def __init__(self, url: str, headers: dict[str, str]) -> None:\n        self.url = url\n        self.headers = headers\n        self._socket: Any | None = None\n\n    async def connect(self) -> \"JsonWebSocket\":\n        self._socket = await websockets.connect(self.url, additional_headers=self.headers or None)\n        return self\n\n    async def __aenter__(self) -> \"JsonWebSocket\":\n        return await self.connect()\n\n    async def __aexit__(self, *args: Any) -> None:\n        await self.close()\n\n    def _connected(self) -> Any:\n        if self._socket is None:\n            raise RuntimeError(\"WebSocket is not connected; use 'async with' or await connect().\")\n        return self._socket\n\n    async def recv_json(self) -> Any:\n        return json.loads(await self._connected().recv())\n\n    async def send_json(self, value: Any) -> None:\n        await self._connected().send(json.dumps(value))\n\n    async def close(self, code: int = 1000, reason: str = \"\") -> None:\n        if self._socket is not None:\n            await self._socket.close(code=code, reason=reason)\n            self._socket = None\n\n\nclass RunnerChannel(JsonWebSocket):\n    async def messages(self) -> AsyncIterator[Any]:\n        while True:\n            yield await self.recv_json()\n\n    async def send(self, message: Any) -> None:\n        await self.send_json(message)\n\n\nclass SessionStream(JsonWebSocket):\n    def __init__(self, url: str, headers: dict[str, str]) -> None:\n        super().__init__(url, headers)\n        self._events: asyncio.Queue[Any | None] = asyncio.Queue()\n        self._messages: asyncio.Queue[Any | None] = asyncio.Queue()\n        self._backfills: dict[str, asyncio.Future[Any]] = {}\n        self._reader: asyncio.Task[None] | None = None\n        self._backfill_seq = 0\n\n    async def connect(self) -> \"SessionStream\":\n        await super().connect()\n        self._reader = asyncio.create_task(self._read_loop())\n        return self\n\n    async def _read_loop(self) -> None:\n        try:\n            async for message in self._connected():\n                socket_message = json.loads(message)\n                message_type = socket_message.get(\"type\") if isinstance(socket_message, dict) else None\n                if message_type == \"event\":\n                    await self._events.put(socket_message.get(\"record\"))\n                elif message_type == \"backfill\":\n                    request_id = socket_message.get(\"requestId\")\n                    future = self._backfills.pop(request_id, None)\n                    if future is not None and not future.done():\n                        future.set_result(socket_message)\n                else:\n                    await self._messages.put(socket_message)\n        except Exception as error:\n            for future in self._backfills.values():\n                if not future.done():\n                    future.set_exception(error)\n            self._backfills.clear()\n        finally:\n            await self._events.put(None)\n            await self._messages.put(None)\n\n    async def events(self) -> AsyncIterator[Any]:\n        while True:\n            event = await self._events.get()\n            if event is None:\n                return\n            yield event\n\n    async def messages(self) -> AsyncIterator[Any]:\n        while True:\n            message = await self._messages.get()\n            if message is None:\n                return\n            yield message\n\n    async def send(self, message: Any) -> None:\n        await self.send_json(message)\n\n    async def backfill(self, **options: Any) -> Any:\n        self._backfill_seq += 1\n        request_id = f\"bf_{self._backfill_seq}\"\n        future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()\n        self._backfills[request_id] = future\n        await self.send_json({\"type\": \"backfill\", \"requestId\": request_id, **options})\n        return await future\n\n    async def close(self, code: int = 1000, reason: str = \"\") -> None:\n        if self._reader is not None:\n            self._reader.cancel()\n            self._reader = None\n        await super().close(code=code, reason=reason)\n\n\nclass _ClientCore:\n    def __init__(\n        self,\n        base_url: str,\n        access_token: str | None = None,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: AuthenticatedClient | Client | None = None,\n    ) -> None:\n        merged_headers = dict(headers or {})\n        if project_id:\n            merged_headers[\"x-ama-project-id\"] = project_id\n        self.base_url = base_url\n        self.access_token = access_token\n        self.project_id = project_id\n        self.headers = merged_headers\n        self.client = client or _new_generated_client(base_url, access_token, merged_headers)\n\n    @property\n    def raw(self) -> AuthenticatedClient | Client:\n        return self.client\n\n\nclass AmaClient:\n    def __init__(\n        self,\n        base_url: str,\n        access_token: str | None = None,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: AuthenticatedClient | Client | None = None,\n    ) -> None:\n        self._core = _ClientCore(base_url, access_token, project_id, headers, client)\n${publicInitAssignments}\n\n    @property\n    def raw(self) -> AuthenticatedClient | Client:\n        return self._core.raw\n\n\nclass AmaRunnerClient:\n    def __init__(\n        self,\n        base_url: str,\n        access_token: str | None = None,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: AuthenticatedClient | Client | None = None,\n    ) -> None:\n        self._core = _ClientCore(base_url, access_token, project_id, headers, client)\n${runnerInitAssignments}\n\n    @property\n    def raw(self) -> AuthenticatedClient | Client:\n        return self._core.raw\n\n\ndef create_ama_client(\n    base_url: str,\n    access_token: str | None = None,\n    project_id: str | None = None,\n    headers: dict[str, str] | None = None,\n) -> AmaClient:\n    return AmaClient(base_url=base_url, access_token=access_token, project_id=project_id, headers=headers)\n\n\ndef create_ama_runner_client(\n    base_url: str,\n    access_token: str | None = None,\n    project_id: str | None = None,\n    headers: dict[str, str] | None = None,\n) -> AmaRunnerClient:\n    return AmaRunnerClient(base_url=base_url, access_token=access_token, project_id=project_id, headers=headers)\n\n\ndef _new_generated_client(base_url: str, access_token: str | None, headers: dict[str, str]) -> AuthenticatedClient | Client:\n    if access_token:\n        return AuthenticatedClient(base_url=base_url, token=access_token, headers=headers)\n    return Client(base_url=base_url, headers=headers)\n\n\ndef _websocket_url(base_url: str, path: str, access_token: str | None, project_id: str | None) -> str:\n    parsed = urlparse(base_url.rstrip(\"/\") + path)\n    if parsed.scheme == \"https\":\n        scheme = \"wss\"\n    elif parsed.scheme == \"http\":\n        scheme = \"ws\"\n    else:\n        raise ValueError(\"AMA base URL must use http or https\")\n    query = {}\n    if access_token:\n        query[\"access_token\"] = access_token\n    if project_id:\n        query[\"x-ama-project-id\"] = project_id\n    return urlunparse((scheme, parsed.netloc, parsed.path, \"\", urlencode(query), \"\"))\n\n\ndef _websocket_headers(headers: dict[str, str], access_token: str | None, project_id: str | None) -> dict[str, str]:\n    result = dict(headers)\n    if access_token:\n        result[\"authorization\"] = f\"Bearer {access_token}\"\n    if project_id:\n        result[\"x-ama-project-id\"] = project_id\n    return result\n\n\ndef _unwrap(response: Any) -> Any:\n    status = int(response.status_code)\n    if 200 <= status <= 299:\n        return response.parsed\n    body = response.parsed\n    response_text = getattr(body, \"error\", None)\n    if response_text is not None and getattr(response_text, \"message\", None):\n        text = response_text.message\n    else:\n        text = response.content.decode(\"utf-8\", errors=\"replace\") if response.content else \"\"\n    raise AmaApiError(status, text, body)\n\n\n${resources}\n`
+  return `from __future__ import annotations\n\nimport asyncio\nimport json\nfrom collections.abc import AsyncIterator, Callable\nfrom typing import Any\nfrom urllib.parse import quote, urlparse, urlunparse\n\nimport websockets\n\nfrom .client import Client\n${uniqueImports.join('\n')}\n\n\nclass AmaApiError(Exception):\n    def __init__(self, status: int | None, response_text: str, body: Any) -> None:\n        super().__init__(f\"AMA API request failed{'' if status is None else f' with HTTP {status}'}\")\n        self.status = status\n        self.response_text = response_text\n        self.body = body\n\n\nclass JsonWebSocket:\n    def __init__(self, url: str, headers: dict[str, str]) -> None:\n        self.url = url\n        self.headers = headers\n        self._socket: Any | None = None\n\n    async def connect(self) -> \"JsonWebSocket\":\n        self._socket = await websockets.connect(self.url, additional_headers=self.headers or None)\n        return self\n\n    async def __aenter__(self) -> \"JsonWebSocket\":\n        return await self.connect()\n\n    async def __aexit__(self, *args: Any) -> None:\n        await self.close()\n\n    def _connected(self) -> Any:\n        if self._socket is None:\n            raise RuntimeError(\"WebSocket is not connected; use 'async with' or await connect().\")\n        return self._socket\n\n    async def recv_json(self) -> Any:\n        return json.loads(await self._connected().recv())\n\n    async def send_json(self, value: Any) -> None:\n        await self._connected().send(json.dumps(value))\n\n    async def close(self, code: int = 1000, reason: str = \"\") -> None:\n        if self._socket is not None:\n            await self._socket.close(code=code, reason=reason)\n            self._socket = None\n\n\nclass RunnerChannel(JsonWebSocket):\n    async def messages(self) -> AsyncIterator[Any]:\n        while True:\n            yield await self.recv_json()\n\n    async def send(self, message: Any) -> None:\n        await self.send_json(message)\n\n\nclass SessionStream(JsonWebSocket):\n    def __init__(self, url: str, headers: dict[str, str]) -> None:\n        super().__init__(url, headers)\n        self._events: asyncio.Queue[Any | None] = asyncio.Queue()\n        self._messages: asyncio.Queue[Any | None] = asyncio.Queue()\n        self._backfills: dict[str, asyncio.Future[Any]] = {}\n        self._reader: asyncio.Task[None] | None = None\n        self._backfill_seq = 0\n\n    async def connect(self) -> \"SessionStream\":\n        await super().connect()\n        self._reader = asyncio.create_task(self._read_loop())\n        return self\n\n    async def _read_loop(self) -> None:\n        try:\n            async for message in self._connected():\n                socket_message = json.loads(message)\n                message_type = socket_message.get(\"type\") if isinstance(socket_message, dict) else None\n                if message_type == \"event\":\n                    await self._events.put(socket_message.get(\"record\"))\n                elif message_type == \"backfill\":\n                    request_id = socket_message.get(\"requestId\")\n                    future = self._backfills.pop(request_id, None)\n                    if future is not None and not future.done():\n                        future.set_result(socket_message)\n                else:\n                    await self._messages.put(socket_message)\n        except Exception as error:\n            for future in self._backfills.values():\n                if not future.done():\n                    future.set_exception(error)\n            self._backfills.clear()\n        finally:\n            await self._events.put(None)\n            await self._messages.put(None)\n\n    async def events(self) -> AsyncIterator[Any]:\n        while True:\n            event = await self._events.get()\n            if event is None:\n                return\n            yield event\n\n    async def messages(self) -> AsyncIterator[Any]:\n        while True:\n            message = await self._messages.get()\n            if message is None:\n                return\n            yield message\n\n    async def send(self, message: Any) -> None:\n        await self.send_json(message)\n\n    async def backfill(self, **options: Any) -> Any:\n        self._backfill_seq += 1\n        request_id = f\"bf_{self._backfill_seq}\"\n        future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()\n        self._backfills[request_id] = future\n        await self.send_json({\"type\": \"backfill\", \"requestId\": request_id, **options})\n        return await future\n\n    async def close(self, code: int = 1000, reason: str = \"\") -> None:\n        if self._reader is not None:\n            self._reader.cancel()\n            self._reader = None\n        await super().close(code=code, reason=reason)\n\n\nclass _ClientCore:\n    def __init__(\n        self,\n        base_url: str,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: Client | None = None,\n        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,\n    ) -> None:\n        merged_headers = dict(headers or {})\n        if project_id:\n            merged_headers[\"x-ama-project-id\"] = project_id\n        self.base_url = base_url\n        self.websocket_authorizer = websocket_authorizer\n        self.project_id = project_id\n        self.headers = merged_headers\n        self.client = client or Client(base_url=base_url, headers=merged_headers)\n\n    @property\n    def raw(self) -> Client:\n        return self.client\n\n\nclass AmaClient:\n    def __init__(\n        self,\n        base_url: str,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: Client | None = None,\n        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,\n    ) -> None:\n        self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)\n${publicInitAssignments}\n\n    @property\n    def raw(self) -> Client:\n        return self._core.raw\n\n\nclass AmaRunnerClient:\n    def __init__(\n        self,\n        base_url: str,\n        project_id: str | None = None,\n        headers: dict[str, str] | None = None,\n        client: Client | None = None,\n        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,\n    ) -> None:\n        self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)\n${runnerInitAssignments}\n\n    @property\n    def raw(self) -> Client:\n        return self._core.raw\n\n\ndef create_ama_client(\n    base_url: str,\n    project_id: str | None = None,\n    headers: dict[str, str] | None = None,\n    client: Client | None = None,\n    websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,\n) -> AmaClient:\n    return AmaClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)\n\n\ndef create_ama_runner_client(\n    base_url: str,\n    project_id: str | None = None,\n    headers: dict[str, str] | None = None,\n    client: Client | None = None,\n    websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,\n) -> AmaRunnerClient:\n    return AmaRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)\n\n\ndef _websocket_url(base_url: str, path: str) -> str:\n    parsed = urlparse(base_url.rstrip(\"/\") + path)\n    if parsed.scheme == \"https\":\n        scheme = \"wss\"\n    elif parsed.scheme == \"http\":\n        scheme = \"ws\"\n    else:\n        raise ValueError(\"AMA base URL must use http or https\")\n    return urlunparse((scheme, parsed.netloc, parsed.path, \"\", \"\", \"\"))\n\n\ndef _websocket_headers(owner: _ClientCore, url: str) -> dict[str, str]:\n    if owner.websocket_authorizer is None:\n        raise RuntimeError(\"Realmroot DPoP WebSocket authorizer is required\")\n    result = {**owner.headers, **owner.websocket_authorizer(url.replace(\"ws\", \"http\", 1), \"GET\")}\n    if owner.project_id:\n        result[\"x-ama-project-id\"] = owner.project_id\n    return result\n\n\ndef _unwrap(response: Any) -> Any:\n    status = int(response.status_code)\n    if 200 <= status <= 299:\n        return response.parsed\n    body = response.parsed\n    response_text = getattr(body, \"error\", None)\n    if response_text is not None and getattr(response_text, \"message\", None):\n        text = response_text.message\n    else:\n        text = response.content.decode(\"utf-8\", errors=\"replace\") if response.content else \"\"\n    raise AmaApiError(status, text, body)\n\n\n${resources}\n`
 }
 
 function generatePythonInitAssignments(facadeName, prefix) {
@@ -491,10 +594,10 @@ function generatePythonResource(resource, prefix) {
 function generatePythonMethod(method) {
   const operation = operations.get(method.operationId)
   if (operation.id === 'connectSessionSocket') {
-    return `def ${pythonName(method.name)}(self, session_id: str) -> SessionStream:\n    return SessionStream(\n        _websocket_url(self._owner.base_url, f\"/api/v1/sessions/{quote(session_id)}/socket\", self._owner.access_token, self._owner.project_id),\n        _websocket_headers(self._owner.headers, self._owner.access_token, self._owner.project_id),\n    )`
+    return `def ${pythonName(method.name)}(self, session_id: str) -> SessionStream:\n    url = _websocket_url(self._owner.base_url, f\"/api/v1/sessions/{quote(session_id)}/socket\")\n    return SessionStream(url, _websocket_headers(self._owner, url))`
   }
   if (operation.id === 'connectRunnerChannel') {
-    return `def ${pythonName(method.name)}(self, runner_id: str) -> RunnerChannel:\n    return RunnerChannel(\n        _websocket_url(self._owner.base_url, f\"/api/v1/runners/{quote(runner_id)}/channel\", self._owner.access_token, self._owner.project_id),\n        _websocket_headers(self._owner.headers, self._owner.access_token, self._owner.project_id),\n    )`
+    return `def ${pythonName(method.name)}(self, runner_id: str) -> RunnerChannel:\n    url = _websocket_url(self._owner.base_url, f\"/api/v1/runners/{quote(runner_id)}/channel\")\n    return RunnerChannel(url, _websocket_headers(self._owner, url))`
   }
   const moduleAlias = pythonModuleAlias(operation.id)
   const pathArgs = operation.pathParams.map((param) => `${pythonName(param.name)}: ${pythonScalarType(param.schema)}`)

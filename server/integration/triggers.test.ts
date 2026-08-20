@@ -7,7 +7,7 @@ import type { Env } from '@server/env'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from '@server/usecases/dispatch-triggers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
+import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
 
 const AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -21,7 +21,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
@@ -97,7 +97,8 @@ async function createRuntimeCredential(authorization: string) {
 }
 
 async function registerActiveRunner(authorization: string, environmentId: string) {
-  const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
+  const runnerAuthorization = asRunnerAuthorization(authorization)
+  const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
     method: 'POST',
     body: JSON.stringify({
       name: `Trigger runner ${crypto.randomUUID()}`,
@@ -107,7 +108,7 @@ async function registerActiveRunner(authorization: string, environmentId: string
   })
   expect(runnerRes.status).toBe(201)
   const runner = (await runnerRes.json()) as { id: string }
-  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
+  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
     method: 'PUT',
     body: JSON.stringify({
       state: 'active',
@@ -1261,14 +1262,15 @@ describe('[CF] /api/v1/triggers', () => {
     const workItems = (await workItemsRes.json()) as { data: Array<{ id: string }> }
     expect(workItems.data).toHaveLength(1)
 
-    const leaseRes = await jsonFetch('/api/v1/leases', authorization, {
+    const runnerAuthorization = asRunnerAuthorization(authorization)
+    const leaseRes = await jsonFetch('/api/v1/leases', runnerAuthorization, {
       method: 'POST',
       body: JSON.stringify({ workItemId: workItems.data[0]!.id, runnerId: runner.id, leaseDurationSeconds: 90 }),
     })
     expect(leaseRes.status).toBe(201)
     const lease = (await leaseRes.json()) as { id: string }
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const completeRes = await jsonFetch(`/api/v1/leases/${lease.id}`, runnerAuthorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'completed', result: { ok: true } }),
     })

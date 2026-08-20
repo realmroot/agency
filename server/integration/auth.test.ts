@@ -1,17 +1,14 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
-
-function accessTokenOf(authorization: string) {
-  return authorization.slice('Bearer '.length)
-}
+import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
 
 async function jsonFetch(path: string, authorization?: string, init?: { method?: string; body?: unknown }) {
+  const method = init?.method ?? (init?.body !== undefined ? 'POST' : 'GET')
   return SELF.fetch(`https://example.com${path}`, {
-    method: init?.method ?? (init?.body !== undefined ? 'POST' : 'GET'),
+    method,
     headers: {
       'content-type': 'application/json',
-      ...(authorization ? { authorization } : {}),
+      ...(authorization ? dpopHeaders(authorization, method, path) : {}),
     },
     ...(init?.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
   })
@@ -34,6 +31,64 @@ describe('[CF] auth v1', () => {
     })
   })
 
+  it('publishes RFC 9728 Realmroot resource metadata with the exact AMA scope catalog [spec: api-contracts/resource-discovery]', async () => {
+    const res = await SELF.fetch('https://example.com/.well-known/oauth-protected-resource/api')
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      resource: 'https://example.com/api',
+      authorization_servers: ['https://oidc.test'],
+      scopes_supported: [
+        'agents:read',
+        'agents:write',
+        'audit-records:read',
+        'audit-records:write',
+        'auth:read',
+        'auth:write',
+        'budgets:read',
+        'budgets:write',
+        'connectors:read',
+        'connectors:write',
+        'environments:read',
+        'environments:write',
+        'leases:read',
+        'leases:write',
+        'memory-stores:read',
+        'memory-stores:write',
+        'projects:read',
+        'projects:write',
+        'providers:read',
+        'providers:write',
+        'runners:read',
+        'runners:write',
+        'sessions:read',
+        'sessions:write',
+        'triggers:read',
+        'triggers:write',
+        'usage-records:read',
+        'usage-records:write',
+        'usage-summary:read',
+        'usage-summary:write',
+        'vaults:read',
+        'vaults:write',
+        'work-items:read',
+        'work-items:write',
+      ],
+      bearer_methods_supported: [],
+      resource_name: 'Any Managed Agents API',
+      dpop_signing_alg_values_supported: ['ES256'],
+      dpop_bound_access_tokens_required: true,
+    })
+  })
+
+  it('links the AMA resource root to the canonical OpenAPI service description', async () => {
+    const res = await SELF.fetch('https://example.com/api')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('link')).toBe(
+      '<https://example.com/api/v1/openapi.json>; rel="service-desc"; type="application/openapi+json"',
+    )
+    await expect(res.json()).resolves.toMatchObject({ resource: 'https://example.com/api' })
+  })
+
   it('exposes public browser config through configz', async () => {
     const res = await SELF.fetch('https://example.com/api/v1/configz')
     expect(res.status).toBe(200)
@@ -49,7 +104,7 @@ describe('[CF] auth v1', () => {
           resource: 'https://example.com',
           browser: {
             clientId: 'ama-test',
-            scopes: ['openid', 'email', 'profile'],
+            scopes: ['openid', 'profile', 'email', 'offline_access'],
           },
           runner: {
             clientId: 'ama-runner-test',
@@ -67,67 +122,7 @@ describe('[CF] auth v1', () => {
     expect(body.methods).toHaveLength(1)
   })
 
-  it('resolves auth context from a valid access token [spec: auth/session-create]', async () => {
-    const authorization = await signIn()
-    const res = await jsonFetch('/api/v1/auth/sessions', undefined, {
-      body: { accessToken: accessTokenOf(authorization) },
-    })
-    expect(res.status).toBe(201)
-    const body = (await res.json()) as {
-      user: Record<string, unknown>
-      organization: Record<string, unknown>
-      project: Record<string, unknown>
-    }
-    expect(body).toMatchObject({
-      user: {
-        id: expect.stringMatching(/^user_e2e_/),
-        email: expect.stringContaining('@e2e.example.com'),
-      },
-      organization: {
-        id: expect.stringMatching(/^org_e2e_/),
-        name: expect.stringContaining('E2E Organization'),
-      },
-      project: {
-        id: expect.stringMatching(/^project_/),
-        name: 'Default project',
-      },
-    })
-    expect(body.project).not.toHaveProperty('organizationId')
-    expect(res.headers.get('set-cookie')).toBeNull()
-  })
-
-  it('rejects invalid access tokens with 401 [spec: auth/session-reject]', async () => {
-    const res = await jsonFetch('/api/v1/auth/sessions', undefined, {
-      body: { accessToken: 'invalid-token' },
-    })
-    expect(res.status).toBe(401)
-    await expect(res.json()).resolves.toMatchObject({
-      error: { type: 'oidc_error', message: 'OIDC token validation failed' },
-    })
-  })
-
-  it('rejects session creation from a disallowed origin', async () => {
-    const authorization = await signIn()
-    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'https://evil.example.com' },
-      body: JSON.stringify({ accessToken: accessTokenOf(authorization) }),
-    })
-    expect(res.status).toBe(403)
-    await expect(res.json()).resolves.toMatchObject({
-      error: { type: 'forbidden', message: 'Request origin is not allowed' },
-    })
-  })
-
-  it('rejects malformed session creation payloads', async () => {
-    const res = await jsonFetch('/api/v1/auth/sessions', undefined, { body: {} })
-    expect(res.status).toBe(400)
-    await expect(res.json()).resolves.toMatchObject({
-      error: { type: 'validation_error', message: 'Invalid request' },
-    })
-  })
-
-  it('reads the current session context from a bearer token [spec: auth/session-current]', async () => {
+  it('reads the current session context from a DPoP credential [spec: auth/session-current]', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/auth/sessions/current', authorization)
     expect(res.status).toBe(200)
@@ -146,10 +141,24 @@ describe('[CF] auth v1', () => {
     expectAuthRequired(await res.json())
   })
 
-  it('acknowledges sign-out without managing server auth state [spec: auth/session-current]', async () => {
-    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', { method: 'DELETE' })
-    expect(res.status).toBe(204)
-    expect(res.headers.get('set-cookie')).toBeNull()
+  it('rejects Bearer credentials even when the token is otherwise accepted in explicit test mode', async () => {
+    const authorization = await signIn()
+    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: { authorization: authorization.replace(/^DPoP /, 'Bearer ') },
+    })
+    expect(res.status).toBe(401)
+    expect(res.headers.get('www-authenticate')).toMatch(/^DPoP /)
+    expectAuthRequired(await res.json())
+  })
+
+  it('rejects a DPoP token without its proof', async () => {
+    const authorization = await signIn()
+    const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: { authorization },
+    })
+    expect(res.status).toBe(401)
+    expect(res.headers.get('www-authenticate')).toContain('error="invalid_dpop_proof"')
+    expectAuthRequired(await res.json())
   })
 })
 

@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
   return { metadata, spec }
@@ -11,7 +11,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })

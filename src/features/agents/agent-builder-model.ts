@@ -175,7 +175,7 @@ export function apiErrorToBuilder(error: unknown): { errors: BuilderFieldErrors;
   return { errors, step: BUILDER_STEPS.find((step) => steps.has(step)) ?? null }
 }
 
-export function agentApiExamples(origin: string, agent: Agent) {
+export function agentApiExamples(agent: Agent) {
   const body = JSON.stringify({
     metadata: {
       name: agent.metadata.name,
@@ -191,15 +191,10 @@ export function agentApiExamples(origin: string, agent: Agent) {
       subagents: agent.spec.subagents,
     },
   })
-  const curl = [
-    `curl -X POST "${origin}/api/v1/agents" \\`,
-    '  -H "Authorization: Bearer $AMA_ACCESS_TOKEN" \\',
-    '  -H "Content-Type: application/json" \\',
-    `  -d '${body}'`,
+  const realmroot = [
+    'realmroot toolbox sync any-managed-agents',
+    `realmroot toolbox post any-managed-agents/api/v1/agents '${body}' --scope agents:write`,
+    `realmroot toolbox get any-managed-agents/api/v1/agents/${agent.metadata.uid} --scope agents:read`,
   ].join('\n')
-  const restish = [
-    `printf '%s\\n' '${body}' | restish post ${origin}/api/v1/agents -H "Authorization: Bearer $AMA_ACCESS_TOKEN"`,
-    `restish get ${origin}/api/v1/agents/${agent.metadata.uid} -H "Authorization: Bearer $AMA_ACCESS_TOKEN"`,
-  ].join('\n')
-  return { curl, restish }
+  return { realmroot }
 }

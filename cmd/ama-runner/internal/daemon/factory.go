@@ -25,10 +25,9 @@ func New(config runnerconfig.Config, build version.Info) (*Daemon, error) {
 		},
 	}
 	client, err := sdkama.NewRunner(sdkama.ClientConfig{
-		BaseURL:             config.APIServer,
-		AccessTokenProvider: tokens.AccessToken,
-		ProjectID:           config.ProjectID,
-		HTTPClient:          authHTTPClient,
+		BaseURL:    config.APIServer,
+		ProjectID:  config.ProjectID,
+		HTTPClient: authHTTPClient,
 	})
 	if err != nil {
 		return nil, err

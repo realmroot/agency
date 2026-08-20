@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
+	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	sdkama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
@@ -21,9 +21,8 @@ func ValidateLoginCommand(command LoginCommand) (LoginCommand, error) {
 	if strings.TrimSpace(command.APIServer) == "" {
 		return LoginCommand{}, fmt.Errorf("AMA API server URL is required")
 	}
-	parsed, err := url.Parse(command.APIServer)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return LoginCommand{}, fmt.Errorf("AMA API server URL must be an absolute URL")
+	if err := runnerconfig.ValidateAPIServerURL(command.APIServer); err != nil {
+		return LoginCommand{}, err
 	}
 	if strings.TrimSpace(command.CredentialPath) == "" {
 		return LoginCommand{}, fmt.Errorf("runner credential path is required")

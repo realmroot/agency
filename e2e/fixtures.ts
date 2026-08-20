@@ -1,4 +1,4 @@
-import { type APIRequestContext, test as base, expect, type Page, request } from '@playwright/test'
+import { type APIResponse, test as base, expect, type Page, request } from '@playwright/test'
 
 const BASE = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PORT ?? 5173}`
 
@@ -12,10 +12,14 @@ export type E2eToken = {
 type Fixtures = {
   // A per-test run id, unique enough to isolate the rows each crown creates.
   runId: string
-  // The local e2e bearer token (minted via the AMA_E2E_TEST_AUTH harness route).
+  // The local e2e DPoP token (minted only by the AMA_E2E_TEST_AUTH harness route).
   token: E2eToken
-  // An authenticated APIRequestContext for raw control-plane calls.
-  api: APIRequestContext
+  // An authenticated DPoP client for raw control-plane calls.
+  api: E2eApi
+}
+
+type E2eApi = {
+  post(url: string, options?: { data?: unknown }): Promise<APIResponse>
 }
 
 export const test = base.extend<Fixtures>({
@@ -37,15 +41,28 @@ export const test = base.extend<Fixtures>({
   api: async ({ token }, use) => {
     const ctx = await request.newContext({
       baseURL: BASE,
-      extraHTTPHeaders: {
-        authorization: `Bearer ${token.accessToken}`,
-        'x-ama-project-id': token.projectId,
-      },
     })
-    await use(ctx)
+    await use({
+      post: (url, options) =>
+        ctx.post(url, {
+          ...options,
+          headers: e2eDpopHeaders(token, 'POST', url),
+        }),
+    })
     await ctx.dispose()
   },
 })
+
+function e2eDpopHeaders(token: E2eToken, method: string, path: string) {
+  const target = new URL(path, BASE)
+  target.hash = ''
+  target.search = ''
+  return {
+    authorization: `DPoP ${token.accessToken}`,
+    dpop: `e2e-proof:${method.toUpperCase()}:${target.toString()}`,
+    'x-ama-project-id': token.projectId,
+  }
+}
 
 // Sign the browser in the way the SPA expects: seed the e2e access token + project
 // id into localStorage (the oidc client's e2e fast-path reads them) before the app

@@ -52,5 +52,5 @@ Feature: Web console
   Scenario: Use one shared Hono RPC client for control-plane calls
     Given the console issues a control-plane list request
     When the request is sent
-    Then it uses the shared authenticated client with bearer auth, tenancy headers, the web-rpc marker, and serialized list options
+    Then it uses the shared authenticated client with per-request Realmroot DPoP, tenancy headers, the web-rpc marker, and serialized list options
     And external automation remains described by the OpenAPI document

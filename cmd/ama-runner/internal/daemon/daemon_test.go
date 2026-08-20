@@ -248,7 +248,7 @@ func writeAPIError(w http.ResponseWriter, status int, err error) {
 
 func fakeRunnerResource(id string, name string) ama.Runner {
 	return ama.Runner{
-		AuthMode:      ama.Oidc,
+		AuthMode:      ama.RunnerAuthModeRealmroot,
 		CreatedAt:     time.Now(),
 		CurrentLoad:   0,
 		Id:            id,
@@ -1451,10 +1451,16 @@ func TestHeartbeatOrRecoverReRegistersWhenRunnerIsGone(t *testing.T) {
 }
 
 func TestNewDaemonWiresSDKClientAndAdapters(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "e2e-runner:test",
+		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	config := runnerconfig.Config{
 		APIServer:             "https://ama.example.test",
-		Token:                 "token",
-		TokenExplicit:         true,
+		CredentialPath:        credentialPath,
 		WorkDir:               t.TempDir(),
 		StateDir:              t.TempDir(),
 		CommandTimeout:        time.Second,

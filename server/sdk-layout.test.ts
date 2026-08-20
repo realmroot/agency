@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest'
 
 describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
   it('keeps generated OpenAPI and SDK artifacts aligned with Hono routes', () => {
-    expect(() => execFileSync('pnpm', ['run', 'openapi:check'], { encoding: 'utf8' })).not.toThrow()
+    const files = execFileSync('git', ['ls-files', 'sdk'], { encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter((file) => file && existsSync(file))
+    const before = Object.fromEntries(files.map((file) => [file, readFileSync(file, 'utf8')]))
+    execFileSync('pnpm', ['run', 'openapi:generate'], { encoding: 'utf8' })
+    const after = Object.fromEntries(files.map((file) => [file, readFileSync(file, 'utf8')]))
+    expect(after).toEqual(before)
   }, 30_000)
 
   it('keeps only the TypeScript SDK in pnpm workspaces', () => {

@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultClaims, setupOidcProvider, signIn } from './auth'
+import { defaultClaims, dpopHeaders, setupOidcProvider, signIn } from './auth'
 
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
 
@@ -16,7 +16,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })

@@ -18,35 +18,6 @@ export const projects = sqliteTable('projects', {
   updatedAt: text('updated_at').notNull(),
 })
 
-export const federatedTenants = sqliteTable(
-  'federated_tenants',
-  {
-    id: text('id').primaryKey(),
-    issuer: text('issuer').notNull(),
-    externalTenantId: text('external_tenant_id').notNull(),
-    projectId: text('project_id')
-      .notNull()
-      .references(() => projects.id),
-    // Optional default environment for sessions started by this tenant; null =
-    // resolve at session start. Intentionally NOT a FK: the usecase accepts any
-    // environmentId and validates existence at session-create time (not at write),
-    // and D1 enforces FKs at runtime, so a FK would surface a stale id as a raw 500
-    // instead of a clean error. Documented soft pointer.
-    environmentId: text('environment_id'),
-    // JSON array of granted scope strings (e.g. 'session:poll','session:claim');
-    // a mutable value-object list, not a relation.
-    capabilities: text('capabilities').notNull().default('[]'),
-    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    metadata: text('metadata').notNull().default('{}'),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => [
-    uniqueIndex('idx_federated_tenants_issuer_tenant').on(table.issuer, table.externalTenantId),
-    index('idx_federated_tenants_project').on(table.projectId),
-  ],
-)
-
 // Global vendor catalog. NOT per-tenant: the platform serves one shared model
 // universe (cloud runs everything through the Workers AI binding + AI Gateway),
 // so a provider is just the model VENDOR (anthropic, openai, moonshotai, …).
@@ -578,8 +549,8 @@ export const triggers = sqliteTable(
     // denormalization set by the dispatcher (advanceTrigger) that may briefly lag.
     lastRunId: text('last_run_id'),
     metadata: text('metadata').notNull().default('{}'),
-    // Nullable audit pointer with no FK — there is no users table in this D1 schema
-    // (identity lives in the federated/OIDC layer). Survives user-record deletion.
+    // Nullable audit pointer with no FK — there is no users table in this D1 schema.
+    // Realmroot identity references survive user-record deletion.
     createdByUserId: text('created_by_user_id'),
     archivedAt: text('archived_at'),
     createdAt: text('created_at').notNull(),
@@ -676,9 +647,9 @@ export const runners = sqliteTable(
     credentialId: text('credential_id'),
     credentialVersionId: text('credential_version_id'),
     // Mirrors RUNNER_AUTH_MODES (server/domain/runner-queue.ts).
-    authMode: text('auth_mode', { enum: ['bearer', 'mtls', 'oidc', 'federated'] })
+    authMode: text('auth_mode', { enum: ['realmroot'] })
       .notNull()
-      .default('bearer'),
+      .default('realmroot'),
     oidcSubject: text('oidc_subject'),
     oidcClientId: text('oidc_client_id'),
     // Mirrors RUNNER_STATES (server/http/runners.ts).
@@ -701,7 +672,7 @@ export const runners = sqliteTable(
     index('idx_runners_project_state_updated').on(table.projectId, table.state, table.updatedAt, table.id),
     index('idx_runners_project_environment').on(table.projectId, table.environmentId, table.state),
     check('ck_runners_state', sql`${table.state} in ('active','draining','disabled','offline')`),
-    check('ck_runners_auth_mode', sql`${table.authMode} in ('bearer','mtls','oidc','federated')`),
+    check('ck_runners_auth_mode', sql`${table.authMode} = 'realmroot'`),
   ],
 )
 
@@ -919,7 +890,7 @@ export const usageRecords = sqliteTable(
 )
 
 // Append-only audit ledger. projectId is nullable + non-FK and
-// sessionId/resourceId/actorUserId are soft pointers so audit entries survive
+// sessionId/resourceId/actorUserId/controllerUserId are soft pointers so audit entries survive
 // deletion of the subject and can record org-level (project-less) actions.
 export const auditRecords = sqliteTable(
   'audit_records',
@@ -928,6 +899,7 @@ export const auditRecords = sqliteTable(
     organizationId: text('organization_id').notNull(),
     projectId: text('project_id'),
     actorUserId: text('actor_user_id'),
+    controllerUserId: text('controller_user_id'),
     actorType: text('actor_type').notNull().default('user'),
     action: text('action').notNull(),
     resourceType: text('resource_type').notNull(),
@@ -946,6 +918,23 @@ export const auditRecords = sqliteTable(
     index('idx_audit_records_org_created').on(table.organizationId, table.createdAt, table.id),
     index('idx_audit_records_project_created').on(table.projectId, table.createdAt, table.id),
     index('idx_audit_records_action_resource').on(table.action, table.resourceType, table.resourceId),
+  ],
+)
+
+// Short-lived RFC 9449 replay ledger. It stores only public proof identifiers
+// and thumbprints; access tokens and DPoP private keys never enter D1.
+export const dpopProofs = sqliteTable(
+  'dpop_proofs',
+  {
+    issuer: text('issuer').notNull(),
+    keyThumbprint: text('key_thumbprint').notNull(),
+    jti: text('jti').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    consumedAt: text('consumed_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_dpop_proofs_identity').on(table.issuer, table.keyThumbprint, table.jti),
+    index('idx_dpop_proofs_expires_at').on(table.expiresAt),
   ],
 )
 

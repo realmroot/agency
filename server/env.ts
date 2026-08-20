@@ -4,7 +4,6 @@ export interface Env {
   DB: D1Database
   AI: Ai
   ASSETS: Fetcher
-  OIDC_PROVIDER?: Fetcher
   SANDBOX: DurableObjectNamespace<Sandbox>
   // The per-session Session DO (idFromName(sessionId)): event store + browser WebSocket hub.
   SESSION: DurableObjectNamespace
@@ -24,13 +23,12 @@ export interface Env {
   AMA_AI_GATEWAY_ID?: string
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
-  OIDC_CLIENT_SECRET?: string
-  // Exact OAuth protected-resource audience accepted by the API. When absent,
-  // request handlers use their externally visible request origin.
+  // Exact Realmroot protected-resource audience accepted by the API. Required
+  // outside the explicit E2E test gate.
   OIDC_RESOURCE?: string
+  OIDC_BROWSER_SCOPES?: string
   OIDC_RUNNER_CLIENT_ID?: string
   OIDC_RUNNER_SCOPES?: string
-  OIDC_USE_SERVICE_BINDING?: string
   AMA_ALLOWED_ORIGINS?: string
   AMA_E2E_TEST_AUTH?: string
 }

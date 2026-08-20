@@ -1,5 +1,5 @@
 export type ClientOptions = {
-    baseUrl: `${string}://${string}` | (string & {});
+    baseUrl: 'https://example.test' | (string & {});
 };
 export type SessionSocketEventMessage = {
     type: 'event';
@@ -602,9 +602,6 @@ export type ErrorResponse = {
         };
     };
 };
-export type CreateAuthSessionRequest = {
-    accessToken: string;
-};
 export type ProjectListResponse = {
     data: Array<Project>;
     pagination: ListPagination;
@@ -897,7 +894,7 @@ export type Runner = {
     name: string;
     environmentId: string | null;
     secretRef: NullableSecretRef;
-    authMode: 'bearer' | 'mtls' | 'oidc' | 'federated';
+    authMode: 'realmroot';
     state: 'active' | 'draining' | 'disabled' | 'offline';
     currentLoad: number;
     maxConcurrent: number;
@@ -932,7 +929,7 @@ export type CreateRunnerRequest = {
     name: string;
     environmentId?: string;
     secretRef?: string;
-    authMode?: 'bearer' | 'mtls' | 'oidc' | 'federated';
+    authMode?: 'realmroot';
     maxConcurrent?: number;
     metadata?: {
         [key: string]: unknown;
@@ -1160,7 +1157,8 @@ export type AuditRecord = {
     id: string;
     projectId: string | null;
     actorUserId: string | null;
-    actorType: 'user' | 'system';
+    controllerUserId: string | null;
+    actorType: 'user' | 'agent' | 'system';
     action: string;
     resourceType: string;
     resourceId: string | null;
@@ -1849,43 +1847,6 @@ export type ReadAuthConfigResponses = {
     200: AuthConfig;
 };
 export type ReadAuthConfigResponse = ReadAuthConfigResponses[keyof ReadAuthConfigResponses];
-export type CreateAuthSessionData = {
-    body: CreateAuthSessionRequest;
-    path?: never;
-    query?: never;
-    url: '/api/v1/auth/sessions';
-};
-export type CreateAuthSessionErrors = {
-    /**
-     * Invalid or expired OIDC token
-     */
-    401: ErrorResponse;
-    /**
-     * Request origin is not in the allowed origins list
-     */
-    403: ErrorResponse;
-};
-export type CreateAuthSessionError = CreateAuthSessionErrors[keyof CreateAuthSessionErrors];
-export type CreateAuthSessionResponses = {
-    /**
-     * Bearer token accepted. Returns user, organization, and project context.
-     */
-    201: AuthSession;
-};
-export type CreateAuthSessionResponse = CreateAuthSessionResponses[keyof CreateAuthSessionResponses];
-export type DeleteCurrentAuthSessionData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/auth/sessions/current';
-};
-export type DeleteCurrentAuthSessionResponses = {
-    /**
-     * Sign-out acknowledged. Bearer tokens are cleared by the client/OIDC provider.
-     */
-    204: void;
-};
-export type DeleteCurrentAuthSessionResponse = DeleteCurrentAuthSessionResponses[keyof DeleteCurrentAuthSessionResponses];
 export type ReadCurrentAuthSessionData = {
     body?: never;
     path?: never;
@@ -1898,7 +1859,7 @@ export type ReadCurrentAuthSessionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -1929,7 +1890,7 @@ export type ListProjectsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -1953,7 +1914,7 @@ export type CreateProjectErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -1979,7 +1940,7 @@ export type ReadProjectErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2021,7 +1982,7 @@ export type ListAgentsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2049,7 +2010,7 @@ export type CreateAgentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2075,7 +2036,7 @@ export type ReadAgentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2109,7 +2070,7 @@ export type UpdateAgentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2143,7 +2104,7 @@ export type ListAgentVersionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2178,7 +2139,7 @@ export type ReadAgentVersionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2220,7 +2181,7 @@ export type ListEnvironmentsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2248,7 +2209,7 @@ export type CreateEnvironmentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2274,7 +2235,7 @@ export type ReadEnvironmentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2308,7 +2269,7 @@ export type UpdateEnvironmentErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2342,7 +2303,7 @@ export type ListEnvironmentVersionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2377,7 +2338,7 @@ export type ReadEnvironmentVersionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2405,7 +2366,7 @@ export type ListProvidersErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2429,7 +2390,7 @@ export type ListModelsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2453,7 +2414,7 @@ export type RefreshCatalogErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2479,7 +2440,7 @@ export type ReadProviderErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2509,7 +2470,7 @@ export type ListProviderModelsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2581,7 +2542,7 @@ export type CreateRunnerErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * Runner device token required
      */
     403: ErrorResponse;
     /**
@@ -2792,7 +2753,7 @@ export type ListWorkItemsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -2818,7 +2779,7 @@ export type ReadWorkItemErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2987,7 +2948,7 @@ export type ListBudgetsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3015,7 +2976,7 @@ export type CreateBudgetErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3041,7 +3002,7 @@ export type DeleteBudgetErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3071,7 +3032,7 @@ export type ReadBudgetErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3105,7 +3066,7 @@ export type UpdateBudgetErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3145,7 +3106,7 @@ export type ListConnectorsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3171,7 +3132,7 @@ export type ReadConnectorErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3212,7 +3173,7 @@ export type ListUsageRecordsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3238,7 +3199,7 @@ export type ReadUsageRecordErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3274,7 +3235,7 @@ export type ReadUsageSummaryErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3313,7 +3274,7 @@ export type ListAuditRecordsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3339,7 +3300,7 @@ export type ReadAuditRecordErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3385,7 +3346,7 @@ export type ListTriggersErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3413,7 +3374,7 @@ export type CreateTriggerErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3447,7 +3408,7 @@ export type DeleteTriggerErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3477,7 +3438,7 @@ export type ReadTriggerErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3511,7 +3472,7 @@ export type UpdateTriggerErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3556,7 +3517,7 @@ export type ListTriggerRunsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3590,7 +3551,7 @@ export type CreateTriggerRunErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3625,7 +3586,7 @@ export type ReadTriggerRunErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3669,7 +3630,7 @@ export type ListSessionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -3731,7 +3692,7 @@ export type ReadSessionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3765,7 +3726,7 @@ export type UpdateSessionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3799,7 +3760,7 @@ export type ConnectSessionSocketErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3833,7 +3794,7 @@ export type ListSessionMessagesErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3867,7 +3828,7 @@ export type CreateSessionMessageErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3906,7 +3867,7 @@ export type ReadSessionMessageErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -3947,7 +3908,7 @@ export type ListSessionEventsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4011,7 +3972,7 @@ export type ListSessionApprovalsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4042,7 +4003,7 @@ export type ReadSessionApprovalErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4073,7 +4034,7 @@ export type DecideSessionApprovalErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4119,7 +4080,7 @@ export type ListMemoryStoresErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -4147,7 +4108,7 @@ export type CreateMemoryStoreErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -4173,7 +4134,7 @@ export type ReadMemoryStoreErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4207,7 +4168,7 @@ export type UpdateMemoryStoreErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4244,7 +4205,7 @@ export type ListMemoryStoreMemoriesErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4278,7 +4239,7 @@ export type CreateMemoryStoreMemoryErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4313,7 +4274,7 @@ export type DeleteMemoryStoreMemoryErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4348,7 +4309,7 @@ export type UpdateMemoryStoreMemoryErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4394,7 +4355,7 @@ export type ListVaultsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -4422,7 +4383,7 @@ export type CreateVaultErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
 };
@@ -4448,7 +4409,7 @@ export type ReadVaultErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4482,7 +4443,7 @@ export type UpdateVaultErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4527,7 +4488,7 @@ export type ListVaultCredentialsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4561,7 +4522,7 @@ export type CreateVaultCredentialErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4596,7 +4557,7 @@ export type ReadVaultCredentialErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4631,7 +4592,7 @@ export type UpdateVaultCredentialErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4666,7 +4627,7 @@ export type UpdateVaultCredentialSecretErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4711,7 +4672,7 @@ export type ListVaultCredentialVersionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -4743,7 +4704,7 @@ export type ReadVaultCredentialVersionErrors = {
      */
     401: ErrorResponse;
     /**
-     * Token lacks the permission required for this resource
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**

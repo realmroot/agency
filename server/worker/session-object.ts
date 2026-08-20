@@ -127,7 +127,10 @@ export class SessionObject implements DurableObject {
     // Push history immediately on connect so the chat renders from the socket alone
     // — events never travel over HTTP. Live events follow via fanOutToBrowsers.
     this.durableState.waitUntil(this.sendBackfill(server, scope.sessionId, { order: 'asc', limit: 200 }))
-    return new Response(null, { status: 101, webSocket: client })
+    const headers = request.headers.get('sec-websocket-protocol')?.includes('ama-dpop')
+      ? { 'Sec-WebSocket-Protocol': 'ama-dpop' }
+      : undefined
+    return new Response(null, { status: 101, webSocket: client, ...(headers ? { headers } : {}) })
   }
 
   // Fan a frame to every browser socket watching `sessionId`.

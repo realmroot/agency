@@ -3,14 +3,16 @@ import { drizzle } from 'drizzle-orm/d1'
 import type { Context, Env as HonoEnv } from 'hono'
 import type { Env } from '../env'
 import { errorResponse } from '../errors'
+import { DpopError, dpopChallenge } from './dpop'
 import {
-  getBearerClaims,
+  getDpopClaims,
   OidcError,
   oidcAudience,
   organizationIdForClaims,
   type UserInfoClaims,
   upsertProjectForClaims,
 } from './oidc'
+import { requiredScope } from './scopes'
 
 // Routes may or may not carry extra context Variables (e.g. an injected Deps
 // object). Context's Variables are invariant, so a fixed param would reject one
@@ -39,15 +41,14 @@ export interface AuthContext {
   // OIDC-asserted team memberships; optional because system-synthesized auth
   // contexts (queue consumers, schedulers) carry no identity claims.
   teams?: string[]
+  agentActor?: { issuer: string; subject: string }
   oidc: {
     subject: string
     clientId: string | null
     scope: string | null
     issuer: string | null
-    externalTenantId: string | null
     runnerId: string | null
-    runnerProjectId: string | null
-    runnerEnvironmentId: string | null
+    agentActorSubject: string | null
   }
 }
 
@@ -57,16 +58,12 @@ export interface AuthIdentity {
   roles: string[]
   permissions: string[]
   teams?: string[]
+  agentActor?: AuthContext['agentActor']
   oidc: AuthContext['oidc']
 }
 
 export function isRunnerOidcAuth(env: Env, auth: Pick<AuthContext, 'oidc'>) {
-  return (
-    (!!env.OIDC_RUNNER_CLIENT_ID && auth.oidc.clientId === env.OIDC_RUNNER_CLIENT_ID) ||
-    !!auth.oidc.runnerId ||
-    !!auth.oidc.runnerProjectId ||
-    !!auth.oidc.runnerEnvironmentId
-  )
+  return (!!env.OIDC_RUNNER_CLIENT_ID && auth.oidc.clientId === env.OIDC_RUNNER_CLIENT_ID) || !!auth.oidc.runnerId
 }
 
 // Runner tokens are scoped to the runner work loop: registration/heartbeat,
@@ -78,13 +75,6 @@ function isRunnerTokenPath(pathname: string) {
   return RUNNER_TOKEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 
-function requiredHttpPermission(method: string, requestUrl: string) {
-  const match = /^\/api\/v1\/([^/]+)/.exec(new URL(requestUrl).pathname)
-  if (!match?.[1]) return null
-  const operation = method === 'GET' || method === 'HEAD' ? 'read' : 'write'
-  return { resource: match[1], permission: `${match[1]}:${operation}` }
-}
-
 class AuthorizationError extends Error {
   constructor(readonly requiredPermission: string) {
     super('Token is not authorized for this resource')
@@ -93,33 +83,16 @@ class AuthorizationError extends Error {
 }
 
 function missingPermission<E extends HonoEnv>(c: AppContext<E>, auth: Pick<AuthContext, 'permissions' | 'oidc'>) {
-  if (isRunnerOidcAuth(c.env, auth)) return null
-  const required = requiredHttpPermission(c.req.method, c.req.url)
-  if (!required) return null
-  if (
-    auth.permissions.includes('*') ||
-    auth.permissions.includes(`${required.resource}:*`) ||
-    auth.permissions.includes(required.permission)
-  ) {
-    return null
-  }
-  return required.permission
+  const required = requiredScope(c.req.method, c.req.url)
+  if (!required || auth.permissions.includes(required)) return null
+  return required
 }
 
 function authorizationErrorResponse<E extends HonoEnv>(c: AppContext<E>, error: AuthorizationError) {
+  c.header('WWW-Authenticate', dpopChallenge('insufficient_scope', error.requiredPermission))
   return errorResponse(c, 403, 'forbidden', error.message, {
     requiredPermission: error.requiredPermission,
   }) as never
-}
-
-function bearerToken(headers: Headers, url: string) {
-  const value = headers.get('authorization')
-  if (value) {
-    const match = /^Bearer\s+(.+)$/i.exec(value.trim())
-    return match?.[1] ?? null
-  }
-  const token = new URL(url).searchParams.get('access_token')
-  return token && token.length > 0 ? token : null
 }
 
 export async function resolveAuthContext<E extends HonoEnv>(
@@ -132,15 +105,16 @@ export async function resolveAuthContext<E extends HonoEnv>(
   const requestedProjectId =
     c.req.raw.headers.get('x-ama-project-id') ?? new URL(c.req.url).searchParams.get('x-ama-project-id') ?? undefined
 
-  const token = bearerToken(c.req.raw.headers, c.req.url)
-  if (token) {
-    const claims = await getBearerClaims(c.env, token, oidcAudience(c.env, c.req.url))
+  if (hasDpopCredential(c.req.raw)) {
+    const claims = await getDpopClaims(c.env, dpopRequest(c.req.raw), oidcAudience(c.env, c.req.url))
     const identity = authIdentityFromClaims(claims)
     const requiredPermission = missingPermission(c, identity)
     if (requiredPermission) throw new AuthorizationError(requiredPermission)
     const project = await upsertProjectForClaims(db, claims, new Date().toISOString(), requestedProjectId)
+    const { agentActor, ...baseIdentity } = identity
     return {
-      ...identity,
+      ...baseIdentity,
+      ...(agentActor ? { agentActor } : {}),
       organization: {
         ...identity.organization,
         id: project.organizationId ?? identity.organization.id,
@@ -164,16 +138,18 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
-    if (err instanceof OidcError) {
+    if (err instanceof OidcError || err instanceof DpopError) {
+      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_bearer_token',
+        reason: 'missing_or_invalid_dpop_credential',
       })
     }
     throw err
   }
   if (!auth) {
+    c.header('WWW-Authenticate', dpopChallenge())
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_bearer_token',
+      reason: 'missing_or_invalid_dpop_credential',
     })
   }
   return auth
@@ -187,16 +163,15 @@ export async function resolveProjectForClaims(env: Env, claims: UserInfoClaims, 
 }
 
 export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): Promise<AuthIdentity | null> {
-  const token = bearerToken(c.req.raw.headers, c.req.url)
-  if (token) {
-    const claims = await getBearerClaims(c.env, token, oidcAudience(c.env, c.req.url))
+  if (hasDpopCredential(c.req.raw)) {
+    const claims = await getDpopClaims(c.env, dpopRequest(c.req.raw), oidcAudience(c.env, c.req.url))
     return authIdentityFromClaims(claims)
   }
 
   return null
 }
 
-function authIdentityFromClaims(claims: Awaited<ReturnType<typeof getBearerClaims>>): AuthIdentity {
+function authIdentityFromClaims(claims: Awaited<ReturnType<typeof getDpopClaims>>): AuthIdentity {
   return {
     user: {
       id: claims.sub,
@@ -211,15 +186,14 @@ function authIdentityFromClaims(claims: Awaited<ReturnType<typeof getBearerClaim
     roles: claims.roles,
     permissions: claims.permissions,
     teams: claims.teams,
+    ...(claims.actor ? { agentActor: { issuer: claims.actor.issuer, subject: claims.actor.subject } } : {}),
     oidc: {
       subject: claims.sub,
       clientId: claims.client_id ?? claims.azp ?? null,
       scope: claims.scope ?? null,
       issuer: claims.iss ?? null,
-      externalTenantId: claims.external_tenant_id ?? claims.tenant_id ?? null,
       runnerId: null,
-      runnerProjectId: claims.ama_project_id ?? null,
-      runnerEnvironmentId: claims.ama_environment_id ?? null,
+      agentActorSubject: claims.actor?.subject ?? null,
     },
   }
 }
@@ -229,16 +203,18 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
   try {
     auth = await resolveAuthIdentity(c)
   } catch (err) {
-    if (err instanceof OidcError) {
+    if (err instanceof OidcError || err instanceof DpopError) {
+      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_bearer_token',
+        reason: 'missing_or_invalid_dpop_credential',
       })
     }
     throw err
   }
   if (!auth) {
+    c.header('WWW-Authenticate', dpopChallenge())
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_bearer_token',
+      reason: 'missing_or_invalid_dpop_credential',
     })
   }
   if (isRunnerOidcAuth(c.env, auth) && !isRunnerTokenPath(new URL(c.req.url).pathname)) {
@@ -258,20 +234,55 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
-    if (err instanceof OidcError) {
+    if (err instanceof OidcError || err instanceof DpopError) {
+      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_bearer_token',
+        reason: 'missing_or_invalid_dpop_credential',
       })
     }
     throw err
   }
   if (!auth) {
+    c.header('WWW-Authenticate', dpopChallenge())
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_bearer_token',
+      reason: 'missing_or_invalid_dpop_credential',
     })
   }
   if (isRunnerOidcAuth(c.env, auth) && !isRunnerTokenPath(new URL(c.req.url).pathname)) {
     return errorResponse(c, 403, 'forbidden', 'Runner token is not authorized for this resource') as never
   }
   return auth
+}
+
+function hasDpopCredential(request: Request) {
+  return /^DPoP\s+/i.test(request.headers.get('authorization') ?? '') || hasSocketCredential(request)
+}
+
+function dpopRequest(request: Request) {
+  if (!hasSocketCredential(request)) return request
+  const protocols = (request.headers.get('sec-websocket-protocol') ?? '').split(',').map((value) => value.trim())
+  const access = protocols.find((value) => value.startsWith('ama-access.'))?.slice('ama-access.'.length)
+  const proof = protocols.find((value) => value.startsWith('ama-proof.'))?.slice('ama-proof.'.length)
+  if (!access || !proof) return request
+  const headers = new Headers(request.headers)
+  headers.set('authorization', `DPoP ${decodeSocketCredential(access)}`)
+  headers.set('dpop', decodeSocketCredential(proof))
+  return new Request(request, { headers })
+}
+
+function hasSocketCredential(request: Request) {
+  return (request.headers.get('sec-websocket-protocol') ?? '').split(',').some((value) => value.trim() === 'ama-dpop')
+}
+
+function decodeSocketCredential(value: string) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new DpopError('invalid_dpop_proof', 'WebSocket DPoP credential is invalid')
+  const base64 = value
+    .replaceAll('-', '+')
+    .replaceAll('_', '/')
+    .padEnd(Math.ceil(value.length / 4) * 4, '=')
+  try {
+    return atob(base64)
+  } catch {
+    throw new DpopError('invalid_dpop_proof', 'WebSocket DPoP credential is invalid')
+  }
 }

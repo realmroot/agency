@@ -174,7 +174,7 @@ export function AgentBuilderPage() {
   const stepIndex = BUILDER_STEPS.indexOf(step)
   const previousStep = stepIndex > 0 ? BUILDER_STEPS[stepIndex - 1] : undefined
   const nextStep = step !== 'test' && step !== 'done' ? BUILDER_STEPS[stepIndex + 1] : undefined
-  const examples = publishedAgent ? agentApiExamples(window.location.origin, publishedAgent) : null
+  const examples = publishedAgent ? agentApiExamples(publishedAgent) : null
   const testSession = testSessionQuery.data ?? null
 
   return (
@@ -286,17 +286,11 @@ export function AgentBuilderPage() {
                 <span className="font-mono text-xs text-muted-foreground">{publishedAgent.metadata.uid}</span>
               </div>
               <Field>
-                <FieldLabel>Equivalent curl call</FieldLabel>
-                <JsonBlock value={examples.curl} />
+                <FieldLabel>Realmroot CLI</FieldLabel>
+                <JsonBlock value={examples.realmroot} />
                 <FieldDescription>
-                  Calls this platform&apos;s control-plane API. Authenticate with your own token; examples never embed
-                  secrets.
+                  Realmroot requests the exact scope and signs the call with the current Agent identity.
                 </FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel>Equivalent restish calls</FieldLabel>
-                <JsonBlock value={examples.restish} />
-                <FieldDescription>restish works against the published OpenAPI document.</FieldDescription>
               </Field>
               <div className="flex flex-wrap gap-2">
                 <Button asChild>

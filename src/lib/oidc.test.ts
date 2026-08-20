@@ -10,6 +10,7 @@ const mockSigninRedirectCallback = vi.fn()
 const mockSignoutRedirect = vi.fn()
 const mockUserManagerConstructor = vi.fn()
 const mockRemoveUser = vi.fn()
+const mockDpopProof = vi.fn()
 const jwtAccessToken = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature'
 
 vi.mock('oidc-client-ts', () => {
@@ -24,11 +25,13 @@ vi.mock('oidc-client-ts', () => {
     signinRedirectCallback = mockSigninRedirectCallback
     signoutRedirect = mockSignoutRedirect
     removeUser = mockRemoveUser
+    dpopProof = mockDpopProof
   }
 
   return {
     UserManager: UserManagerMock,
     WebStorageStateStore: class {},
+    IndexedDbDPoPStore: class {},
   }
 })
 
@@ -197,6 +200,34 @@ describe('oidc helpers', () => {
       const token = await getAccessToken()
       expect(token).toBeNull()
       expect(mockRemoveUser).toHaveBeenCalled()
+    })
+  })
+
+  describe('getDpopHeaders', () => {
+    it('creates an explicit synthetic proof only for the test-gated e2e token', async () => {
+      const { getDpopHeaders } = await freshOidc()
+      window.localStorage.setItem('ama:e2e-access-token', 'e2e:proof-test')
+      await expect(getDpopHeaders('/api/v1/agents?cursor=secret', 'get')).resolves.toEqual({
+        authorization: 'DPoP e2e:proof-test',
+        dpop: 'e2e-proof:GET:http://localhost:3000/api/v1/agents',
+      })
+    })
+
+    it('uses the OIDC manager DPoP key for a matching signed access token', async () => {
+      const { getDpopHeaders } = await freshOidc()
+      const futureExpiry = Math.floor(Date.now() / 1000) + 3600
+      window.localStorage.setItem(
+        'oidc.user:https://auth.example.com:test-client-id',
+        JSON.stringify({ access_token: jwtAccessToken, expires_at: futureExpiry }),
+      )
+      const user = { expired: false, access_token: jwtAccessToken } as User
+      mockGetUser.mockResolvedValueOnce(user)
+      mockDpopProof.mockResolvedValueOnce('signed-proof')
+      await expect(getDpopHeaders('/api/v1/agents?cursor=secret', 'GET')).resolves.toEqual({
+        authorization: `DPoP ${jwtAccessToken}`,
+        dpop: 'signed-proof',
+      })
+      expect(mockDpopProof).toHaveBeenCalledWith('http://localhost:3000/api/v1/agents', user, 'GET')
     })
   })
 

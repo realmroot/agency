@@ -12,13 +12,33 @@ import (
 	"github.com/coder/websocket"
 )
 
+type dpopRoundTripper struct {
+	base  http.RoundTripper
+	token string
+	proof string
+}
+
+func (t dpopRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	clone := request.Clone(request.Context())
+	clone.Header.Set("authorization", "DPoP "+t.token)
+	clone.Header.Set("dpop", t.proof)
+	return t.base.RoundTrip(clone)
+}
+
+func dpopHTTPClient(base *http.Client, token, proof string) *http.Client {
+	return &http.Client{Transport: dpopRoundTripper{base: base.Transport, token: token, proof: proof}}
+}
+
 func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/runners" || r.Method != http.MethodPost {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
 		}
-		if got := r.Header.Get("authorization"); got != "Bearer token_1" {
+		if got := r.Header.Get("authorization"); got != "DPoP token_1" {
 			t.Fatalf("expected authorization header, got %q", got)
+		}
+		if got := r.Header.Get("dpop"); got != "proof_1" {
+			t.Fatalf("expected DPoP proof header, got %q", got)
 		}
 		if got := r.Header.Get("x-ama-project-id"); got != "project_1" {
 			t.Fatalf("expected project header, got %q", got)
@@ -34,7 +54,7 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{
 			"archivedAt": null,
-			"authMode": "oidc",
+			"authMode": "realmroot",
 			"createdAt": "2026-01-01T00:00:00Z",
 			"currentLoad": 0,
 			"environmentId": null,
@@ -54,11 +74,9 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 	defer server.Close()
 
 	client, err := New(ClientConfig{
-		BaseURL:   server.URL,
-		ProjectID: "project_1",
-		AccessTokenProvider: func(context.Context) (string, error) {
-			return "token_1", nil
-		},
+		BaseURL:    server.URL,
+		ProjectID:  "project_1",
+		HTTPClient: dpopHTTPClient(server.Client(), "token_1", "proof_1"),
 	})
 	if err != nil {
 		t.Fatalf("expected client, got %v", err)
@@ -77,8 +95,11 @@ func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 		if r.URL.Path != "/api/v1/runners/runner_42/channel" || r.Method != http.MethodGet {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
 		}
-		if got := r.Header.Get("authorization"); got != "Bearer token_ws" {
+		if got := r.Header.Get("authorization"); got != "DPoP token_ws" {
 			t.Fatalf("expected authorization header, got %q", got)
+		}
+		if got := r.Header.Get("dpop"); got != "proof_ws" {
+			t.Fatalf("expected DPoP proof header, got %q", got)
 		}
 		if got := r.Header.Get("x-ama-project-id"); got != "project_ws" {
 			t.Fatalf("expected project header, got %q", got)
@@ -92,11 +113,9 @@ func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewRunner(ClientConfig{
-		BaseURL:   server.URL,
-		ProjectID: "project_ws",
-		AccessTokenProvider: func(context.Context) (string, error) {
-			return "token_ws", nil
-		},
+		BaseURL:    server.URL,
+		ProjectID:  "project_ws",
+		HTTPClient: dpopHTTPClient(server.Client(), "token_ws", "proof_ws"),
 	})
 	if err != nil {
 		t.Fatalf("expected client, got %v", err)

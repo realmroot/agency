@@ -11,7 +11,7 @@ Any Managed Agents is a Cloudflare-native Managed Agent control plane.
 - Pi coding agent is the v1 runtime inside one Cloudflare Sandbox per running session.
 - Cloudflare Sandbox owns filesystem, process isolation, and per-session execution.
 - Runtime traffic uses Pi protocol directly or through a transparent AMA proxy.
-- OpenAPI is the external contract for direct HTTP clients, restish, and generated SDKs.
+- OpenAPI and RFC 9728 metadata are the external contract for Realmroot Toolbox and DPoP-aware generated SDKs.
 - The web console uses the shared Hono RPC client for internal control-plane calls.
 - Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, and secret references only.
 
@@ -100,15 +100,14 @@ docs/infra/        Cloudflare deployment and infrastructure notes
 
 Control-plane API behavior must stay aligned across route handlers, validation schemas, tests, and generated OpenAPI output. Stable error envelopes matter. Do not replace structured API errors with ad hoc strings.
 
-OpenAPI is the public contract for operators, generated SDKs, and restish workflows. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls.
+OpenAPI is the public contract for Realmroot Toolbox and generated SDKs. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls.
 
 ## Authentication
 
-Use mature OIDC libraries:
+AMA is a native Realmroot Resource Server:
 
 - `oidc-client-ts` in the browser for authorization-code PKCE redirect handling.
-- `openid-client` in the Worker for provider discovery.
-- `jose` in the Worker for local JWT/JWKS bearer-token verification.
+- `jose` in the Worker for Realmroot JWT/JWKS and RFC 9449 DPoP verification.
 
 Do not hand-roll token parsing, token validation, callback validation, or OIDC discovery logic.
 
@@ -116,7 +115,8 @@ Expected configuration names use generic OIDC terminology, for example:
 
 - `OIDC_ISSUER`
 - `OIDC_CLIENT_ID`
-- `OIDC_CLIENT_SECRET`
+- `OIDC_RESOURCE`
+- `OIDC_BROWSER_SCOPES`
 - `AMA_VAULT_ENCRYPTION_KEY`
 
 ## UI Contributions

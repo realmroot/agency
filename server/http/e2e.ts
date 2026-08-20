@@ -7,7 +7,7 @@
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
-import { getBearerClaims, oidcAudience, upsertProjectForClaims } from '../auth/oidc'
+import { getAccessTokenClaims, oidcAudience, upsertProjectForClaims } from '../auth/oidc'
 import { requireAuth } from '../auth/session'
 import { providerModels, providers, vaultCredentialVersions } from '../db/schema'
 import type { Env } from '../env'
@@ -39,7 +39,7 @@ const routes = app
     const body: { runId?: string } = await c.req.json<{ runId?: string }>().catch(() => ({}))
     const runId = body.runId?.replaceAll(/[^A-Za-z0-9_-]/g, '_') || newId('run')
     const accessToken = `e2e:${runId}`
-    const claims = await getBearerClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
+    const claims = await getAccessTokenClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
     const project = await upsertProjectForClaims(drizzle(c.env.DB), claims, new Date().toISOString())
     return c.json({ accessToken, userId: claims.sub, organizationId: claims.org_id, projectId: project.id }, 201)
   })

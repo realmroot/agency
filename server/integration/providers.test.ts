@@ -1,13 +1,13 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { expectAuthRequired, seedPlatformProvider, setupOidcProvider, signInUser } from './auth'
+import { dpopHeaders, expectAuthRequired, seedPlatformProvider, setupOidcProvider, signInUser } from './auth'
 
 async function jsonFetch(path: string, authorization: string | null, init: RequestInit = {}) {
   return await SELF.fetch(`https://example.com${path}`, {
     ...init,
     headers: {
       'content-type': 'application/json',
-      ...(authorization ? { authorization } : {}),
+      ...(authorization ? dpopHeaders(authorization, init.method ?? 'GET', path) : {}),
       ...init.headers,
     },
   })

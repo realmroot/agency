@@ -48,7 +48,7 @@ const STEP_DESCRIPTIONS: Record<QuickstartStep, string> = {
   environment: 'Create or select the reusable sandbox template sessions will run in.',
   agent: 'Draft the agent from a template or goal description, then create it.',
   session: 'Create a test session and send the first task to the runtime.',
-  integration: 'Call the same control-plane API from curl, restish, or a generated SDK.',
+  integration: 'Call the same control-plane API through Realmroot Agent identity.',
 }
 
 export function QuickstartPage() {
@@ -277,7 +277,6 @@ export function QuickstartPage() {
         input={
           integrationSession
             ? {
-                origin: window.location.origin,
                 agentId: integrationSession.spec.agentId,
                 environmentId: integrationSession.spec.environmentId,
                 sessionId: integrationSession.metadata.uid,

@@ -11,14 +11,14 @@
 
 - Any Managed Agents is Cloudflare-native: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
-- FlareAuth owns authentication, users, and organizations. OIDC must use mature community libraries such as `openid-client` and `oidc-client-ts`; do not hand-roll token parsing, token validation, callback validation, or discovery logic.
+- Realmroot owns authentication, stable Agent identity, users, and organizations. The browser uses authorization-code PKCE; every protected request uses Realmroot-issued, DPoP-bound access tokens and exact AMA scopes.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
-- AMA owns the control plane: auth integration, FlareAuth-backed tenancy enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
+- AMA owns the control plane: Realmroot-backed tenancy and scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
 - AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.
 - Cloudflare Agents SDK is not the v1.0 runtime contract. It may be added later as an adapter, but v1.0 must not require `/agents/*` compatibility.
-- Command-line automation uses `restish` against the published OpenAPI document. Do not add a bespoke CLI binary unless the product decision changes.
-- Agent-facing skills may document restish workflows, but they must call OpenAPI-described control-plane operations and preserve the Pi runtime boundary.
-- Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators, generated SDKs, and restish use the published OpenAPI document.
+- Command-line automation uses `realmroot toolbox` against the published protected-resource metadata and OpenAPI document. Do not expose raw token or Bearer-token workflows.
+- Agent-facing skills must use Realmroot Agent identity and OpenAPI-described control-plane operations while preserving the Pi runtime boundary.
+- Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators use Realmroot Toolbox or DPoP-aware SDKs against the published OpenAPI document.
 - Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, and secret references only.
 
 ## Workflow: Spec-Traced, Verified At The Cheapest Layer
@@ -76,7 +76,7 @@ and update the relevant `spec/` scenario or product doc first.
 
 - `server/` - Cloudflare Worker backend, Hono routes, auth, D1 access, runtime orchestration, and Pi bridge code.
 - `server/routes/` - API routes and OpenAPI-backed control-plane surfaces.
-- `server/auth/` - FlareAuth and session integration.
+- `server/auth/` - Realmroot OIDC, DPoP, scope, and session integration.
 - `server/db/` - D1 schema and persistence helpers.
 - `server/runtime/` - Cloudflare Sandbox and Pi runtime integration.
 - `src/app/` - React application providers and router setup.
@@ -107,7 +107,7 @@ and update the relevant `spec/` scenario or product doc first.
 - Control-plane API behavior must be represented in OpenAPI generated from route schemas.
 - Keep route handlers, validation schemas, tests, and OpenAPI output aligned in the same change.
 - Stable error envelopes matter; do not replace structured API errors with ad hoc strings.
-- OpenAPI is the contract for direct HTTP, generated SDKs, and restish CLI workflows.
+- OpenAPI and protected-resource metadata are the contract for Realmroot Toolbox and generated SDK workflows.
 - OpenAPI is the external contract. It should not become the internal browser client implementation when Hono RPC can provide the project-local API entrypoint.
 
 ## Runtime And Session Rules

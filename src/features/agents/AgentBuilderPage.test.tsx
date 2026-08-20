@@ -250,7 +250,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Publish agent' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Publish agent' }))
-    await waitFor(() => expect(screen.getByText('Equivalent curl call')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Realmroot CLI')).toBeInTheDocument())
     expect(screen.getByRole('link', { name: 'Open agent' })).toBeInTheDocument()
   })
 

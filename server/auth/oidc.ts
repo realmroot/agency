@@ -1,9 +1,10 @@
 import { and, asc, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import { createRemoteJWKSet, customFetch, type JWKSCacheInput, jwksCache, jwtVerify } from 'jose'
-import * as client from 'openid-client'
+import { createRemoteJWKSet, customFetch, type JWKSCacheInput, type JWTPayload, jwksCache, jwtVerify } from 'jose'
 import { projects } from '../db/schema'
 import type { Env } from '../env'
+import { verifyDpopCredential } from './dpop'
+import { AMA_SCOPES } from './scopes'
 
 export interface UserInfoClaims {
   iss?: string
@@ -24,10 +25,7 @@ export interface UserInfoClaims {
   // or `authorization.teams`). AMA keeps no local team tables; provider
   // access rules reference these identifiers directly.
   teams: string[]
-  external_tenant_id?: string
-  tenant_id?: string
-  ama_project_id?: string
-  ama_environment_id?: string
+  actor?: { issuer: string; subject: string; profile: 'ai_agent' }
 }
 
 export class OidcError extends Error {
@@ -57,7 +55,6 @@ export function requireOidcConfig(env: Env) {
   return {
     issuer: env.OIDC_ISSUER.replace(/\/$/, ''),
     clientId: env.OIDC_CLIENT_ID,
-    clientSecret: env.OIDC_CLIENT_SECRET,
   }
 }
 
@@ -85,74 +82,26 @@ export function oidcAudience(
   return resource.toString().replace(/\/$/, '')
 }
 
-async function createOidcClient(env: Env) {
-  const config = requireOidcConfig(env)
-  const clientMetadata: Partial<client.ClientMetadata> = {
-    response_types: ['code'],
-    token_endpoint_auth_method: config.clientSecret ? 'client_secret_post' : 'none',
-  }
-  if (config.clientSecret) {
-    clientMetadata.client_secret = config.clientSecret
-  }
-
-  try {
-    return await client.discovery(
-      new URL(config.issuer),
-      config.clientId,
-      clientMetadata,
-      config.clientSecret ? client.ClientSecretPost(config.clientSecret) : client.None(),
-      {
-        [client.customFetch]: async (input, init) => {
-          const request = new Request(input, init as RequestInit)
-          const requestUrl = new URL(request.url)
-          const issuerUrl = new URL(config.issuer)
-          if (
-            requestUrl.origin === issuerUrl.origin &&
-            (requestUrl.pathname === '/api/auth/.well-known/openid-configuration' ||
-              requestUrl.pathname === '/.well-known/openid-configuration/api/auth')
-          ) {
-            return Response.json({
-              issuer: config.issuer,
-              authorization_endpoint: `${config.issuer}/oauth2/authorize`,
-              token_endpoint: `${config.issuer}/oauth2/token`,
-              jwks_uri: `${config.issuer}/jwks`,
-              userinfo_endpoint: `${config.issuer}/oauth2/userinfo`,
-              end_session_endpoint: `${config.issuer}/oauth2/end-session`,
-              response_types_supported: ['code'],
-              grant_types_supported: ['authorization_code', 'refresh_token'],
-              token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post', 'none'],
-              code_challenge_methods_supported: ['S256'],
-              scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
-              subject_types_supported: ['public'],
-              id_token_signing_alg_values_supported: ['EdDSA'],
-            })
-          }
-          const requestInit: RequestInit = {
-            method: request.method,
-            headers: Object.fromEntries(request.headers.entries()),
-            redirect: request.redirect,
-            signal: request.signal,
-          }
-          if (request.method !== 'GET' && request.method !== 'HEAD') {
-            requestInit.body = (init?.body as BodyInit | undefined) ?? (await request.clone().arrayBuffer())
-          }
-          const useServiceBinding = env.OIDC_USE_SERVICE_BINDING !== 'false'
-          return useServiceBinding && requestUrl.origin === issuerUrl.origin && env.OIDC_PROVIDER
-            ? await env.OIDC_PROVIDER.fetch(request.url, requestInit)
-            : await fetch(request.url, requestInit)
-        },
-      },
-    )
-  } catch (err) {
-    throw toOidcError(err)
-  }
+export async function getDpopClaims(env: Env, request: Request, expectedAudience?: string): Promise<UserInfoClaims> {
+  const verified = await verifyDpopCredential(env, request, (accessToken) =>
+    verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience)),
+  )
+  return normalizeClaims(env, verified.payload)
 }
 
-export async function getBearerClaims(
+export async function getAccessTokenClaims(
   env: Env,
   accessToken: string,
   expectedAudience?: string,
 ): Promise<UserInfoClaims> {
+  return normalizeClaims(env, await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience)))
+}
+
+async function verifyAccessToken(
+  env: Env,
+  accessToken: string,
+  audience: string,
+): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
     return e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
@@ -163,27 +112,15 @@ export async function getBearerClaims(
     }
     return e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
   }
-  if (e2eTestMode && accessToken.startsWith('e2e-federated-runner:')) {
-    return e2eFederatedRunnerClaims(accessToken.slice('e2e-federated-runner:'.length))
-  }
-
-  return normalizeClaims(env, await verifyJwtAccessToken(env, accessToken, oidcAudience(env, expectedAudience)))
-}
-
-async function verifyJwtAccessToken(
-  env: Env,
-  accessToken: string,
-  audience: string,
-): Promise<Record<string, unknown> & { sub: string }> {
   if (accessToken.split('.').length !== 3) {
-    throw new OidcError('OIDC access token must be a JWT')
+    throw new OidcError('Realmroot access token must be a JWT')
   }
 
   const metadata = await oidcMetadata(env)
   const cachedJwks = oidcJwksDataCache.get(metadata.jwksUri) ?? {}
   oidcJwksDataCache.set(metadata.jwksUri, cachedJwks)
   const remoteJwks = createRemoteJWKSet(new URL(metadata.jwksUri), {
-    [customFetch]: (url, options) => oidcFetch(env, url, options),
+    [customFetch]: (url, options) => oidcFetch(url, options),
     [jwksCache]: cachedJwks,
     cacheMaxAge: JWKS_CACHE_MAX_AGE_MS,
     cooldownDuration: JWKS_COOLDOWN_MS,
@@ -191,10 +128,17 @@ async function verifyJwtAccessToken(
   })
 
   try {
-    const { payload } = await jwtVerify(accessToken, remoteJwks, { issuer: metadata.issuer, audience })
+    const { payload } = await jwtVerify(accessToken, remoteJwks, {
+      issuer: metadata.issuer,
+      audience,
+      typ: 'at+jwt',
+      algorithms: ['RS256'],
+      requiredClaims: ['sub', 'iat', 'exp', 'client_id', 'scope', 'cnf'],
+    })
     if (!payload.sub) {
-      throw new OidcError('OIDC access token did not include required subject')
+      throw new OidcError('Realmroot access token did not include required subject')
     }
+    validateRealmrootClient(env, payload)
     return { ...payload, sub: payload.sub }
   } catch (err) {
     throw toOidcError(err)
@@ -209,13 +153,15 @@ async function oidcMetadata(env: Env): Promise<CachedOidcMetadata> {
     return cached
   }
 
-  const oidcClient = await createOidcClient(env)
-  const metadata = oidcClient.serverMetadata()
-  if (!metadata.jwks_uri) {
-    throw new OidcError('OIDC discovery did not include jwks_uri')
-  }
+  const response = await oidcFetch(`${issuer}/.well-known/openid-configuration`, {
+    headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!response.ok) throw new OidcError(`Realmroot discovery failed with ${response.status}`)
+  const metadata = (await response.json()) as { issuer?: string; jwks_uri?: string }
+  if (metadata.issuer !== issuer || !metadata.jwks_uri) throw new OidcError('Realmroot discovery is invalid')
   const next = {
-    issuer: metadata.issuer ?? issuer,
+    issuer: metadata.issuer,
     jwksUri: metadata.jwks_uri,
     expiresAt: now + OIDC_METADATA_CACHE_MS,
   }
@@ -223,13 +169,8 @@ async function oidcMetadata(env: Env): Promise<CachedOidcMetadata> {
   return next
 }
 
-function oidcFetch(env: Env, url: string, init: RequestInit) {
-  const requestUrl = new URL(url)
-  const issuerUrl = new URL(env.OIDC_ISSUER ?? url)
-  const useServiceBinding = env.OIDC_USE_SERVICE_BINDING !== 'false'
-  return useServiceBinding && requestUrl.origin === issuerUrl.origin && env.OIDC_PROVIDER
-    ? env.OIDC_PROVIDER.fetch(url, init)
-    : fetch(url, init)
+function oidcFetch(url: string, init: RequestInit) {
+  return fetch(url, init)
 }
 
 export async function upsertProjectForClaims(
@@ -238,13 +179,6 @@ export async function upsertProjectForClaims(
   timestamp: string,
   requestedProjectId?: string,
 ) {
-  const federatedProject = await projectForFederatedClaims(db, claims)
-  if (federatedProject) {
-    return federatedProject
-  }
-  if (claims.iss && (claims.external_tenant_id || claims.tenant_id || claims.ama_environment_id)) {
-    throw new OidcError('Federated token is not bound to an AMA project')
-  }
   const organizationId = organizationIdForClaims(claims)
   const projectName = 'Default project'
 
@@ -288,30 +222,13 @@ export function organizationIdForClaims(claims: UserInfoClaims) {
   return claims.org_id ?? claims.organization_id ?? `user:${claims.sub}`
 }
 
-async function projectForFederatedClaims(db: DrizzleD1Database, claims: UserInfoClaims) {
-  // A federated/runner token names its target AMA project explicitly via `ama_project_id`.
-  // The project must belong to the caller's organization (derived from the client identity
-  // via organizationIdForClaims), which bounds the token to its own tenant's workspaces — no
-  // separate per-tenant federation binding is needed.
-  if (!claims.ama_project_id) return null
-  const project = await db.select().from(projects).where(eq(projects.id, claims.ama_project_id)).get()
-  if (!project) return null
-  const organizationId = organizationIdForClaims(claims)
-  if (project.organizationId !== organizationId) {
-    throw new OidcError('Federated token project does not belong to the caller organization')
-  }
-  return { id: project.id, name: project.name, organizationId: project.organizationId }
-}
-
 function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: string }): UserInfoClaims {
   const authorization = objectClaim(claims.authorization)
   const roles = stringArray(claims.roles).length ? stringArray(claims.roles) : stringArray(authorization?.roles)
-  const permissions = stringArray(claims.permissions).length
-    ? stringArray(claims.permissions)
-    : stringArray(authorization?.permissions)
+  const permissions = typeof claims.scope === 'string' ? [...new Set(claims.scope.split(/\s+/).filter(Boolean))] : []
   const teams = stringArray(claims.teams).length ? stringArray(claims.teams) : stringArray(authorization?.teams)
   const clientId = stringClaim(claims.client_id) ?? stringClaim(claims.azp)
-  const runnerScoped = isRunnerTokenClaim(env, clientId, claims)
+  const runnerScoped = isRunnerTokenClaim(env, clientId)
   return {
     sub: claims.sub,
     ...optionalClaim('iss', claims.iss),
@@ -322,17 +239,34 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
     ...optionalClaim('azp', claims.azp),
     ...optionalClaim('scope', claims.scope),
     ...optionalClaim('org_id', claims.org_id),
-    ...optionalClaim('organization_id', claims.organization_id),
+    ...optionalClaim('organization_id', claims.organization_id ?? claims['urn:realmroot:params:oauth:org']),
     ...optionalClaim('org_name', claims.org_name),
     ...optionalClaim('organization_name', claims.organization_name),
-    ...optionalClaim('external_tenant_id', claims.external_tenant_id),
-    ...optionalClaim('tenant_id', claims.tenant_id),
-    ...optionalClaim('ama_project_id', claims.ama_project_id),
-    ...optionalClaim('ama_environment_id', claims.ama_environment_id),
     roles: roles.length ? roles : runnerScoped ? ['runner'] : [],
     permissions,
     teams,
+    ...actorClaim(claims.act, clientId === 'realmroot-cli'),
   }
+}
+
+function validateRealmrootClient(env: Env, claims: JWTPayload) {
+  const clientId = stringClaim(claims.client_id)
+  const allowedClients = [env.OIDC_CLIENT_ID, env.OIDC_RUNNER_CLIENT_ID, 'realmroot-cli'].filter(Boolean)
+  if (!clientId || !allowedClients.includes(clientId))
+    throw new OidcError('Realmroot access token client is not allowed')
+  if (clientId !== 'realmroot-cli') return
+  const actor = objectClaim(claims.act)
+  if (!actor || actor.iss !== env.OIDC_ISSUER?.replace(/\/$/, '') || typeof actor.sub !== 'string' || !actor.sub) {
+    throw new OidcError('Realmroot Agent token omitted the stable Agent actor')
+  }
+}
+
+function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoClaims, 'actor'> | object {
+  if (!nativeAgentClient) return {}
+  const actor = objectClaim(value)
+  return typeof actor?.iss === 'string' && typeof actor.sub === 'string'
+    ? { actor: { issuer: actor.iss, subject: actor.sub, profile: 'ai_agent' as const } }
+    : {}
 }
 
 // E2E claim synthesis (gated to AMA_E2E_TEST_AUTH). The token payload after
@@ -340,7 +274,7 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
 // `org` joins the synthesized user into another run's organization, and
 // `teams`/`roles` populate the corresponding OIDC claims so team-scoped
 // policy and role-gated overrides are testable without a real IdP.
-function e2eClaims(env: Env, spec: string, clientId: string | undefined): UserInfoClaims {
+function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPayload & { sub: string } {
   const [rawRunId = '', ...directiveParts] = spec.split(';')
   const directives = new Map<string, string>()
   for (const part of directiveParts) {
@@ -358,8 +292,19 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): UserIn
   const safeRunId = sanitize(rawRunId) || newId('run')
   const safeOrgRunId = sanitize(directives.get('org') ?? '') || safeRunId
   const roles = sanitizeList(directives.get('roles'))
-  const scope = 'openid profile email offline_access'
   const runnerScoped = isRunnerTokenClaim(env, clientId)
+  const resourceScopes = runnerScoped
+    ? [
+        'runners:read',
+        'runners:write',
+        'work-items:read',
+        'work-items:write',
+        'leases:read',
+        'leases:write',
+        'sessions:write',
+      ]
+    : AMA_SCOPES
+  const scope = ['openid', 'profile', 'email', 'offline_access', ...resourceScopes].join(' ')
   return {
     sub: `user_e2e_${safeRunId}`,
     email: `${safeRunId}@e2e.example.com`,
@@ -369,25 +314,8 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): UserIn
     org_id: `org_e2e_${safeOrgRunId}`,
     org_name: `E2E Organization ${safeOrgRunId}`,
     roles: runnerScoped ? ['runner'] : roles.length ? roles : ['owner'],
-    permissions: runnerScoped ? [] : ['*'],
-    teams: sanitizeList(directives.get('teams')),
-  }
-}
-
-function e2eFederatedRunnerClaims(value: string): UserInfoClaims {
-  const [externalTenantId = 'tenant_e2e', runnerId = 'runner_e2e', environmentId = ''] = value.split(':')
-  return {
-    iss: 'https://ak.e2e.example.com',
-    sub: `${externalTenantId}:${runnerId}`,
-    name: `E2E Federated Runner ${runnerId}`,
-    client_id: 'federated-runner-client',
-    azp: 'federated-runner-client',
-    scope: 'runner:connect',
-    external_tenant_id: externalTenantId,
-    ...(environmentId ? { ama_environment_id: environmentId } : {}),
-    roles: ['runner'],
     permissions: [],
-    teams: [],
+    teams: sanitizeList(directives.get('teams')),
   }
 }
 
@@ -422,12 +350,6 @@ function objectClaim(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
 
-function isRunnerTokenClaim(env: Env, clientId: string | undefined, claims?: Record<string, unknown>) {
-  return (
-    (!!env.OIDC_RUNNER_CLIENT_ID && clientId === env.OIDC_RUNNER_CLIENT_ID) ||
-    typeof claims?.external_tenant_id === 'string' ||
-    typeof claims?.tenant_id === 'string' ||
-    typeof claims?.ama_project_id === 'string' ||
-    typeof claims?.ama_environment_id === 'string'
-  )
+function isRunnerTokenClaim(env: Env, clientId: string | undefined) {
+  return !!env.OIDC_RUNNER_CLIENT_ID && clientId === env.OIDC_RUNNER_CLIENT_ID
 }

@@ -12,18 +12,19 @@ routes = [
 binding = "ASSETS"
 directory = "./dist/client"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/runtime/*"]
+run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 
 [vars]
 AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
-OIDC_ISSUER = "https://id.tftt.cc/api/auth"
-OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
-OIDC_RESOURCE = "https://ama.tftt.cc"
-OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
-OIDC_RUNNER_SCOPES = "openid profile email offline_access"
+OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
+OIDC_CLIENT_ID = "01a01c2c-5d3e-725d-b415-ac7feacec461"
+OIDC_RESOURCE = "https://ama.tftt.cc/api"
+OIDC_BROWSER_SCOPES = "openid profile email offline_access agents:read agents:write audit-records:read audit-records:write auth:read auth:write budgets:read budgets:write connectors:read connectors:write environments:read environments:write leases:read leases:write memory-stores:read memory-stores:write projects:read projects:write providers:read providers:write runners:read runners:write sessions:read sessions:write triggers:read triggers:write usage-records:read usage-records:write usage-summary:read usage-summary:write vaults:read vaults:write work-items:read work-items:write"
+OIDC_RUNNER_CLIENT_ID = "01a01c2c-b25f-76fa-bc6f-edfc51f235e1"
+OIDC_RUNNER_SCOPES = "openid profile email offline_access runners:read runners:write work-items:read work-items:write leases:read leases:write sessions:write"
 
 [triggers]
 crons = ["* * * * *"]
@@ -59,10 +60,6 @@ queue = "ama-trigger-dispatches"
 max_batch_size = 1
 max_retries = 5
 dead_letter_queue = "ama-trigger-dispatches-dlq"
-
-[[services]]
-binding = "OIDC_PROVIDER"
-service = "flareauth-tftt"
 
 [[d1_databases]]
 binding = "DB"
@@ -135,11 +132,12 @@ head_sampling_rate = 0.05
 [env.staging.vars]
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
-OIDC_ISSUER = "https://id.tftt.cc/api/auth"
-OIDC_CLIENT_ID = "client_bb3a932954974ebea6da443dd4a3905c"
-OIDC_RESOURCE = "https://any-managed-agents-staging.saltbo.workers.dev"
-OIDC_RUNNER_CLIENT_ID = "client_ecc75e8aa2c349e7bccea7e542900070"
-OIDC_RUNNER_SCOPES = "openid profile email offline_access"
+OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
+OIDC_CLIENT_ID = "01a01c2c-5d3e-725d-b415-ac7feacec461"
+OIDC_RESOURCE = "https://any-managed-agents-staging.saltbo.workers.dev/api"
+OIDC_BROWSER_SCOPES = "openid profile email offline_access agents:read agents:write audit-records:read audit-records:write auth:read auth:write budgets:read budgets:write connectors:read connectors:write environments:read environments:write leases:read leases:write memory-stores:read memory-stores:write projects:read projects:write providers:read providers:write runners:read runners:write sessions:read sessions:write triggers:read triggers:write usage-records:read usage-records:write usage-summary:read usage-summary:write vaults:read vaults:write work-items:read work-items:write"
+OIDC_RUNNER_CLIENT_ID = "01a01c2c-b25f-76fa-bc6f-edfc51f235e1"
+OIDC_RUNNER_SCOPES = "openid profile email offline_access runners:read runners:write work-items:read work-items:write leases:read leases:write sessions:write"
 AMA_ALLOWED_ORIGINS = "https://any-managed-agents-staging.saltbo.workers.dev"
 
 [env.staging.triggers]
@@ -172,10 +170,6 @@ queue = "ama-trigger-dispatches-staging"
 max_batch_size = 1
 max_retries = 5
 dead_letter_queue = "ama-trigger-dispatches-staging-dlq"
-
-[[env.staging.services]]
-binding = "OIDC_PROVIDER"
-service = "flareauth-tftt"
 
 [[env.staging.d1_databases]]
 binding = "DB"
@@ -223,10 +217,6 @@ crons = []
 
 [env.e2e.ai]
 binding = "AI"
-
-[[env.e2e.services]]
-binding = "OIDC_PROVIDER"
-service = "flareauth-tftt"
 
 [[env.e2e.d1_databases]]
 binding = "DB"

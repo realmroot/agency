@@ -293,6 +293,36 @@ describe('useSessionRuntimeSession — live session open', () => {
     await waitFor(() => expect(screen.getByTestId('messageCount').textContent).toBe('1'), { timeout: 5000 })
   })
 
+  it('requests the next backfill page when the server reports more events', async () => {
+    await renderLive()
+
+    lastSocket!.emit({
+      type: 'backfill',
+      requestId: 'backfill-1',
+      events: [],
+      nextCursor: 200,
+      hasMore: true,
+    })
+
+    await waitFor(() => expect(lastSocket!.sent).toHaveLength(1), { timeout: 5000 })
+    expect(JSON.parse(lastSocket!.sent[0] ?? '{}')).toMatchObject({
+      type: 'backfill',
+      cursor: 200,
+      limit: 200,
+    })
+  })
+
+  it('ignores acknowledgements and reports runner-unavailable frames', async () => {
+    await renderLive()
+
+    lastSocket!.emit({ type: 'ack', requestId: 'request-1' })
+    expect(screen.getByTestId('connection').textContent).toBe('open')
+
+    lastSocket!.emit({ type: 'runner_unavailable', message: 'Runner went offline' })
+    await waitFor(() => expect(screen.getByTestId('connection').textContent).toBe('error'), { timeout: 5000 })
+    expect(screen.getByTestId('error').textContent).toBe('Runner went offline')
+  })
+
   it('sets error state on WebSocket error event', async () => {
     await renderLive()
 

@@ -30,7 +30,7 @@ Feature: Quickstart
   Scenario: Show secret-free integration examples after a session
     Given quickstart has created an agent, environment, and session
     When the developer opens the integration step
-    Then curl, restish, and SDK examples target the current platform origin with the created resource ids
+    Then the Realmroot Toolbox example targets the protected AMA Resource with the created resource ids
     And live traffic uses AMA session endpoints and examples never embed secrets or vendor URLs
 
   # ── First-run flow (web: guided console journey) ──

@@ -65,8 +65,8 @@ export function publicConfig(
     Env,
     | 'OIDC_ISSUER'
     | 'OIDC_CLIENT_ID'
-    | 'OIDC_CLIENT_SECRET'
     | 'OIDC_RESOURCE'
+    | 'OIDC_BROWSER_SCOPES'
     | 'OIDC_RUNNER_CLIENT_ID'
     | 'OIDC_RUNNER_SCOPES'
   >,
@@ -92,7 +92,7 @@ export function publicConfig(
           resource: oidcAudience(env, requestUrl),
           browser: {
             clientId,
-            scopes: scopes(undefined, 'openid email profile'),
+            scopes: scopes(env.OIDC_BROWSER_SCOPES, 'openid profile email offline_access'),
           },
           ...(runner ? { runner } : {}),
         },

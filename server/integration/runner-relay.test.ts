@@ -20,7 +20,7 @@
 
 import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 const CLAUDE_CODE_RUNTIME = 'claude-code'
 const CLAUDE_CODE_MODEL = 'claude-opus-4-5'
@@ -30,7 +30,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
@@ -85,7 +85,7 @@ async function createCliRelaySession(authorization: string, agentId: string, env
 }
 
 async function registerRunner(authorization: string, environmentId: string) {
-  const res = await jsonFetch('/api/v1/runners', authorization, {
+  const res = await jsonFetch('/api/v1/runners', asRunnerAuthorization(authorization), {
     method: 'POST',
     body: JSON.stringify({
       name: `Relay test runner ${crypto.randomUUID()}`,
@@ -97,7 +97,7 @@ async function registerRunner(authorization: string, environmentId: string) {
 }
 
 async function heartbeatRunner(authorization: string, runnerId: string) {
-  const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, authorization, {
+  const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, asRunnerAuthorization(authorization), {
     method: 'PUT',
     body: JSON.stringify({
       state: 'active',
@@ -114,7 +114,7 @@ async function claimSessionLease(authorization: string, sessionId: string, runne
   if (workRes.status !== 200) throw new Error(`Work list failed: ${workRes.status}`)
   const work = (await workRes.json()) as { data: Array<{ id: string }> }
   if (work.data.length === 0) throw new Error('No available work items for session')
-  const leaseRes = await jsonFetch('/api/v1/leases', authorization, {
+  const leaseRes = await jsonFetch('/api/v1/leases', asRunnerAuthorization(authorization), {
     method: 'POST',
     body: JSON.stringify({ workItemId: work.data[0].id, runnerId }),
   })
@@ -123,7 +123,7 @@ async function claimSessionLease(authorization: string, sessionId: string, runne
 }
 
 async function completeLease(authorization: string, leaseId: string) {
-  const res = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
+  const res = await jsonFetch(`/api/v1/leases/${leaseId}`, asRunnerAuthorization(authorization), {
     method: 'PATCH',
     body: JSON.stringify({ state: 'completed', result: { smoke: true } }),
   })
@@ -164,8 +164,10 @@ function frameIncludes(frame: Record<string, unknown>, text: string) {
 // Open the runner relay channel. Returns the accepted WebSocket and a
 // waitForFrame helper, mirroring the sessions.test.ts socket helper pattern.
 async function openRunnerChannel(authorization: string, runnerId: string) {
-  const res = await SELF.fetch(`https://example.com/api/v1/runners/${runnerId}/channel`, {
-    headers: { authorization, upgrade: 'websocket' },
+  const path = `/api/v1/runners/${runnerId}/channel`
+  const runnerAuthorization = asRunnerAuthorization(authorization)
+  const res = await SELF.fetch(`https://example.com${path}`, {
+    headers: { ...dpopHeaders(runnerAuthorization, 'GET', path), upgrade: 'websocket' },
   })
   if (res.status !== 101 || !res.webSocket) throw new Error(`Runner channel upgrade failed: ${res.status}`)
   const ws = res.webSocket as WebSocket
@@ -196,8 +198,9 @@ async function openRunnerChannel(authorization: string, runnerId: string) {
 // Open the browser WebSocket for a session. Browser sockets route to the
 // per-session Session DO; RunnerPool writes relayed runner events into it.
 async function openBrowserSocket(authorization: string, sessionId: string) {
-  const res = await SELF.fetch(`https://example.com/api/v1/sessions/${sessionId}/socket`, {
-    headers: { authorization, Upgrade: 'websocket' },
+  const path = `/api/v1/sessions/${sessionId}/socket`
+  const res = await SELF.fetch(`https://example.com${path}`, {
+    headers: { ...dpopHeaders(authorization, 'GET', path), Upgrade: 'websocket' },
   })
   if (res.status !== 101 || !res.webSocket) throw new Error(`Browser socket upgrade failed: ${res.status}`)
   const ws = res.webSocket as WebSocket

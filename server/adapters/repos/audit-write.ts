@@ -12,16 +12,20 @@ function newId(prefix: string) {
 // other caller is the authenticated user.
 function defaultActor(auth: AuthScope) {
   if (auth.user.id === 'system:scheduler') {
-    return { actorType: 'system' as const, actorUserId: null }
+    return { actorType: 'system' as const, actorUserId: null, controllerUserId: null }
   }
-  return { actorType: 'user' as const, actorUserId: auth.user.id }
+  if (auth.agentActor) {
+    return { actorType: 'agent' as const, actorUserId: auth.agentActor.subject, controllerUserId: auth.user.id }
+  }
+  return { actorType: 'user' as const, actorUserId: auth.user.id, controllerUserId: null }
 }
 
 // recordAudit (audit.ts) allows the caller to override the recorded actor; the
 // AuditPort gateway always derives it from the auth scope.
 export interface AuditWriteEntry extends AuditEntry {
-  actorType?: 'user' | 'system'
+  actorType?: 'user' | 'agent' | 'system'
   actorUserId?: string | null
+  controllerUserId?: string | null
 }
 
 export interface AuditWriteRepo {
@@ -37,6 +41,7 @@ export function createAuditWriteRepo(db: Db): AuditWriteRepo {
         organizationId: auth.organization.id,
         projectId: auth.project.id,
         actorUserId: entry.actorUserId === undefined ? actor.actorUserId : entry.actorUserId,
+        controllerUserId: entry.controllerUserId === undefined ? actor.controllerUserId : entry.controllerUserId,
         actorType: entry.actorType ?? actor.actorType,
         action: entry.action,
         resourceType: entry.resourceType,

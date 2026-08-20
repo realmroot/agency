@@ -1,4 +1,4 @@
-import { type User, UserManager, WebStorageStateStore } from 'oidc-client-ts'
+import { IndexedDbDPoPStore, type User, UserManager, WebStorageStateStore } from 'oidc-client-ts'
 
 interface OidcConfigResponse {
   authority: string
@@ -65,6 +65,7 @@ export async function getOidcManager() {
         response_type: 'code',
         scope: config.scope,
         resource: config.resource,
+        dpop: { bind_authorization_code: true, store: new IndexedDbDPoPStore() },
         automaticSilentRenew: true,
         userStore: new WebStorageStateStore({ store: window.localStorage }),
       }),
@@ -92,6 +93,31 @@ export async function getAccessToken() {
   return user.access_token
 }
 
+export async function getDpopHeaders(url: string, method: string) {
+  const accessToken = getStoredAccessToken()
+  if (!accessToken) return {}
+  const absoluteUrl = new URL(url, window.location.href).toString()
+  if (accessToken.startsWith('e2e:')) {
+    const proofUrl = new URL(absoluteUrl)
+    proofUrl.search = ''
+    proofUrl.hash = ''
+    return {
+      authorization: `DPoP ${accessToken}`,
+      dpop: `e2e-proof:${method.toUpperCase()}:${proofUrl.toString()}`,
+    }
+  }
+  const manager = await getOidcManager()
+  userPromise ??= manager.getUser()
+  const user = await userPromise
+  if (!user || user.expired || user.access_token !== accessToken) return {}
+  const proofUrl = new URL(absoluteUrl)
+  proofUrl.search = ''
+  proofUrl.hash = ''
+  const proof = await manager.dpopProof(proofUrl.toString(), user, method)
+  if (!proof) throw new Error('Realmroot DPoP proof generation failed')
+  return { authorization: `DPoP ${accessToken}`, dpop: proof }
+}
+
 export async function getCurrentUser() {
   const e2eToken = window.localStorage.getItem('ama:e2e-access-token')
   if (e2eToken) {
@@ -100,7 +126,7 @@ export async function getCurrentUser() {
     return {
       expired: false,
       access_token: e2eToken,
-      token_type: 'Bearer',
+      token_type: 'DPoP',
       scope: 'openid email profile',
       session_state: null,
       state: undefined,

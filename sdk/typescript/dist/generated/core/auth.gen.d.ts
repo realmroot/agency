@@ -1,25 +1,9 @@
 export type AuthToken = string | undefined;
 export interface Auth {
-    /**
-     * Which part of the request do we use to send the auth?
-     *
-     * @default 'header'
-     */
     in?: 'header' | 'query' | 'cookie';
-    /**
-     * A unique identifier for the security scheme.
-     *
-     * Defined only when there are multiple security schemes whose `Auth`
-     * shape would otherwise be identical.
-     */
     key?: string;
-    /**
-     * Header or query parameter name.
-     *
-     * @default 'Authorization'
-     */
     name?: string;
-    scheme?: 'basic' | 'bearer';
+    scheme?: never;
     type: 'apiKey' | 'http';
 }
-export declare const getAuthToken: (auth: Auth, callback: ((auth: Auth) => Promise<AuthToken> | AuthToken) | AuthToken) => Promise<string | undefined>;
+export declare const getAuthToken: (_auth: Auth, _callback: ((auth: Auth) => Promise<AuthToken> | AuthToken) | AuthToken) => Promise<string | undefined>;
