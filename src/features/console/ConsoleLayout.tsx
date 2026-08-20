@@ -90,7 +90,9 @@ export function ConsoleLayout() {
       ? profile.org_name
       : typeof profile.organization_name === 'string'
         ? profile.organization_name
-        : 'Personal workspace'
+        : organizationId === `user:${profile.sub}`
+          ? 'Personal workspace'
+          : `Organization ${organizationId}`
   const auth = {
     user: {
       id: profile.sub,

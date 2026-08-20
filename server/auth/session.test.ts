@@ -33,6 +33,10 @@ app.get('/api/v1/projects/:id', async (c) => {
   const auth = await requireAuthIdentity(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
 })
+app.get('/auth-identity', async (c) => {
+  const auth = await requireAuthIdentity(c)
+  return auth instanceof Response ? auth : c.json(auth)
+})
 app.post('/api/v1/sessions/:id/events', async (c) => {
   const auth = await requireSessionEventsAuth(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
@@ -57,10 +61,17 @@ const baseClaims = {
 
 async function request(
   path: string,
-  values: { method?: string; permissions?: string[]; runner?: boolean; agentDpop?: boolean } = {},
+  values: {
+    method?: string
+    permissions?: string[]
+    runner?: boolean
+    agentDpop?: boolean
+    claims?: Record<string, unknown>
+  } = {},
 ) {
   const claims = {
     ...baseClaims,
+    ...values.claims,
     permissions: values.permissions ?? [],
     ...(values.runner ? { client_id: 'runner-client' } : {}),
   }
@@ -193,6 +204,28 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
   it('enforces the same resource wall for requireAuthIdentity', async () => {
     expect((await request('/api/v1/projects/project_1')).status).toBe(403)
     expect((await request('/api/v1/projects/project_1', { permissions: ['projects:read'] })).status).toBe(200)
+  })
+
+  it('labels only the exact synthetic User organization as Personal workspace', async () => {
+    const response = await request('/auth-identity', {
+      claims: { org_id: 'user:user_1', org_name: undefined, organization_name: undefined },
+    })
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      organization: { id: 'user:user_1', name: 'Personal workspace' },
+    })
+  })
+
+  it('labels an unnamed real Organization with its canonical id', async () => {
+    const response = await request('/auth-identity', {
+      claims: { org_id: 'org_1', org_name: undefined, organization_name: undefined },
+    })
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      organization: { id: 'org_1', name: 'Organization org_1' },
+    })
   })
 
   it('requires sessions:write for console session event ingestion', async () => {

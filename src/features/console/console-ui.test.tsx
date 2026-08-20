@@ -619,7 +619,7 @@ describe('[spec: web-console/project-switcher] CreateProjectSheet', () => {
 // API request headers. Never remove it — only spy on getCurrentUser when you need
 // a different profile. Spies are cleaned up via afterEach(vi.restoreAllMocks).
 
-describe('[spec: console/layout] ConsoleLayout', () => {
+describe('[spec: web-console/shell] ConsoleLayout', () => {
   // Restore all oidc/signIn spies between tests so they don't bleed.
   afterEach(() => vi.restoreAllMocks())
 
@@ -757,15 +757,26 @@ describe('[spec: console/layout] ConsoleLayout', () => {
     expect(screen.getAllByText('Fallback Org').length).toBeGreaterThan(0)
   })
 
-  it('shows Personal workspace when org_name and organization_name are absent', async () => {
+  it('shows Personal workspace only for the user Context sentinel', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
       expired: false,
-      profile: { sub: 'u1', email: 'u@x.com', name: null, picture: null },
+      profile: { sub: 'u1', email: 'u@x.com', name: null, picture: null, org_id: 'user:u1' },
     } as never)
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
     expect(screen.getAllByText('Personal workspace').length).toBeGreaterThan(0)
+  })
+
+  it('labels an unnamed Organization claim with its id instead of Personal workspace', async () => {
+    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
+      expired: false,
+      profile: { sub: 'u1', email: 'u@x.com', name: null, picture: null, org_id: 'org-123' },
+    } as never)
+    server.use(projectsHandler([buildProject()]))
+    renderLayout()
+    await waitFor(() => expect(screen.getAllByText('Organization org-123').length).toBeGreaterThan(0))
+    expect(screen.queryByText('Personal workspace')).toBeNull()
   })
 
   it('uses picture from profile as avatarUrl when present', async () => {

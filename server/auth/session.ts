@@ -205,6 +205,7 @@ export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): 
 }
 
 function authIdentityFromClaims(claims: UserInfoClaims): AuthIdentity {
+  const organizationId = organizationIdForClaims(claims)
   return {
     user: {
       id: claims.sub,
@@ -213,8 +214,11 @@ function authIdentityFromClaims(claims: UserInfoClaims): AuthIdentity {
       avatarUrl: claims.picture ?? null,
     },
     organization: {
-      id: organizationIdForClaims(claims),
-      name: claims.org_name ?? claims.organization_name ?? 'Personal workspace',
+      id: organizationId,
+      name:
+        claims.org_name ??
+        claims.organization_name ??
+        (organizationId === `user:${claims.sub}` ? 'Personal workspace' : `Organization ${organizationId}`),
     },
     roles: claims.roles,
     permissions: claims.permissions,

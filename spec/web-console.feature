@@ -12,6 +12,7 @@ Feature: Web console
     When the user opens the console
     Then the sidebar shows agents, environments, sessions, providers, vaults, MCP, usage, audit, and settings
     And the current organization and project context are visible
+    And an Organization claim is never mislabeled as a personal workspace when its display name is absent
 
   @web-console/project-switcher @web
   Scenario: Switch and create projects from the sidebar header

@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, gotoAuthed, test } from './fixtures'
 
 test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: auth/e2e-sign-in]', async ({
@@ -124,6 +125,29 @@ test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: 
 // through Chromium. Reserved for hermetic console journeys (sign-in, routing, admin
 // CRUD that only writes D1) per the skill — a handful, not one-per-feature.
 test.describe('console (real browser)', () => {
+  test('labels only the User Context sentinel as a personal workspace [spec: web-console/shell]', async ({ page }) => {
+    await gotoWithOidcProfile(page, {
+      sub: 'realmroot-user-context',
+      email: 'user-context@example.com',
+      name: 'User Context',
+      org_id: 'user:realmroot-user-context',
+    })
+
+    await expect(page.getByText('Personal workspace', { exact: true }).first()).toBeVisible()
+  })
+
+  test('labels an unnamed Organization Context with its id [spec: web-console/shell]', async ({ page }) => {
+    await gotoWithOidcProfile(page, {
+      sub: 'realmroot-organization-user',
+      email: 'organization-context@example.com',
+      name: 'Organization Context',
+      org_id: 'org_real_context_123',
+    })
+
+    await expect(page.getByText('Organization org_real_context_123', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Personal workspace', { exact: true })).toHaveCount(0)
+  })
+
   test('signs in and navigates the console shell [spec: web-console/shell] [spec: auth/e2e-sign-in]', async ({
     page,
     token,
@@ -177,3 +201,58 @@ test.describe('console (real browser)', () => {
     await expect(page.getByText(name)).toBeVisible()
   })
 })
+
+async function gotoWithOidcProfile(page: Page, profile: { sub: string; email: string; name: string; org_id: string }) {
+  const configResponse = await page.request.get('/api/v1/configz')
+  expect(configResponse.status(), await configResponse.text()).toBe(200)
+  const config = (await configResponse.json()) as {
+    auth: { oidc: { issuer: string; browser: { clientId: string; scopes: string[] } } }
+  }
+  const oidc = config.auth.oidc
+  const now = Math.floor(Date.now() / 1000)
+  const accessToken = [
+    Buffer.from(JSON.stringify({ alg: 'none', typ: 'at+jwt' })).toString('base64url'),
+    Buffer.from(JSON.stringify({ ...profile, iat: now, exp: now + 3600 })).toString('base64url'),
+    'e2e-signature',
+  ].join('.')
+
+  await page.route('**/api/v1/projects*', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [
+          {
+            id: 'project_oidc_context',
+            name: 'OIDC Context Project',
+            createdAt: '2026-08-20T00:00:00.000Z',
+            updatedAt: '2026-08-20T00:00:00.000Z',
+          },
+        ],
+        pagination: { limit: 50, hasMore: false, nextCursor: null },
+      }),
+    }),
+  )
+  await page.addInitScript(
+    ({ issuer, clientId, scopes, userProfile, token, expiresAt }) => {
+      window.sessionStorage.setItem(
+        `oidc.user:${issuer}:${clientId}`,
+        JSON.stringify({
+          access_token: token,
+          token_type: 'Bearer',
+          scope: scopes.join(' '),
+          profile: userProfile,
+          expires_at: expiresAt,
+        }),
+      )
+    },
+    {
+      issuer: oidc.issuer,
+      clientId: oidc.browser.clientId,
+      scopes: oidc.browser.scopes,
+      userProfile: profile,
+      token: accessToken,
+      expiresAt: now + 3600,
+    },
+  )
+  await page.goto('/agents')
+}
