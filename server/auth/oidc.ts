@@ -104,19 +104,13 @@ async function verifyAccessToken(
 ): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
-    return e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID) as unknown as JWTPayload & {
-      sub: string
-    }
+    return e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
   }
   if (e2eTestMode && accessToken.startsWith('e2e-runner:')) {
     if (!env.OIDC_RUNNER_CLIENT_ID) {
       throw new OidcError('OIDC_RUNNER_CLIENT_ID is required for runner e2e tokens')
     }
-    return e2eClaims(
-      env,
-      accessToken.slice('e2e-runner:'.length),
-      env.OIDC_RUNNER_CLIENT_ID,
-    ) as unknown as JWTPayload & { sub: string }
+    return e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
   }
   if (accessToken.split('.').length !== 3) {
     throw new OidcError('Realmroot access token must be a JWT')
@@ -280,7 +274,7 @@ function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoCl
 // `org` joins the synthesized user into another run's organization, and
 // `teams`/`roles` populate the corresponding OIDC claims so team-scoped
 // policy and role-gated overrides are testable without a real IdP.
-function e2eClaims(env: Env, spec: string, clientId: string | undefined): UserInfoClaims {
+function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPayload & { sub: string } {
   const [rawRunId = '', ...directiveParts] = spec.split(';')
   const directives = new Map<string, string>()
   for (const part of directiveParts) {

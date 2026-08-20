@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { agent, credential, environment, vault } from '@/test/resource-fixtures'
 import { ApiError, api } from './amarpc'
+import { jsonArg, paramQueryArg, queryArg, queryOptions, rpcRequest } from './amarpc/core'
 
 describe('shared API client [spec: web-console/rpc-client]', () => {
   beforeEach(() => {
@@ -233,6 +234,56 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       vi.stubGlobal('fetch', makeEmptyFetch(204))
       const result = await api.deleteTrigger('trigger_1')
       expect(result).toBeUndefined()
+    })
+
+    it('returns successful text bodies when the response is not JSON', async () => {
+      const result = await rpcRequest<string>(
+        Promise.resolve(new Response('plain response', { headers: { 'content-type': 'text/plain' } })),
+      )
+      expect(result).toBe('plain response')
+    })
+
+    it('treats a response without a content-type header as text', async () => {
+      const result = await rpcRequest<string>(
+        Promise.resolve({
+          headers: new Headers(),
+          json: async () => ({ unused: true }),
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'headerless response',
+        }),
+      )
+      expect(result).toBe('headerless response')
+    })
+
+    it('uses status text when a JSON error body is null', async () => {
+      const response = new Response('null', {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: { 'content-type': 'application/json' },
+      })
+      await expect(rpcRequest(Promise.resolve(response))).rejects.toMatchObject({
+        status: 400,
+        message: 'Bad Request',
+        details: null,
+      })
+    })
+  })
+
+  describe('typed RPC argument helpers', () => {
+    it('builds empty and populated query arguments without undefined values', () => {
+      expect(queryOptions()).toEqual({})
+      expect(queryOptions({ archived: false, limit: 0, search: undefined })).toEqual({ archived: 'false', limit: '0' })
+      expect(queryArg()).toEqual({})
+      expect(queryArg({ archived: true })).toEqual({ query: { archived: 'true' } })
+    })
+
+    it('keeps path params while adding optional queries and JSON bodies', () => {
+      const param = { agentId: 'agent_1' }
+      expect(paramQueryArg(param)).toEqual({ param })
+      expect(paramQueryArg(param, { limit: 10 })).toEqual({ param, query: { limit: '10' } })
+      expect(jsonArg({ name: 'Agent' })).toEqual({ json: { name: 'Agent' } })
     })
   })
 

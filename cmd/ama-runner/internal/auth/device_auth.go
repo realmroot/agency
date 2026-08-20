@@ -456,20 +456,6 @@ func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, val
 	return c.do(request, out)
 }
 
-func (c DeviceAuthClient) postJSON(ctx context.Context, endpoint string, values map[string]string, out any) error {
-	data, err := json.Marshal(values)
-	if err != nil {
-		return err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(data)))
-	if err != nil {
-		return err
-	}
-	request.Header.Set("accept", "application/json")
-	request.Header.Set("content-type", "application/json")
-	return c.do(request, out)
-}
-
 func (c DeviceAuthClient) do(request *http.Request, out any) error {
 	_, err := c.doWithDPoPNonce(request, out)
 	return err
@@ -509,19 +495,6 @@ type oidcStatusError struct {
 
 func (e oidcStatusError) Error() string {
 	return fmt.Sprintf("OIDC %s failed with status %d", e.Path, e.Status)
-}
-
-func isUnsupportedMediaType(err error) bool {
-	var statusErr oidcStatusError
-	return errors.As(err, &statusErr) && statusErr.Status == http.StatusUnsupportedMediaType
-}
-
-func formValuesJSON(values url.Values) map[string]string {
-	result := map[string]string{}
-	for key := range values {
-		result[key] = values.Get(key)
-	}
-	return result
 }
 
 type deviceTokenError struct {

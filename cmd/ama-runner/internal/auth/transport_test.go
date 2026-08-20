@@ -171,6 +171,26 @@ func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 	}
 }
 
+func TestAuthTransportBuildsSyntheticDPoPProofWithoutQueryOrFragment(t *testing.T) {
+	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
+		AccessToken: "e2e-token", DPoPPrivateKey: testDPoPPrivateKey,
+	}}
+	request, err := http.NewRequest(http.MethodPatch, "https://ama.example.test/api/v1/runners/runner_1/heartbeat?ignored=yes#fragment", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorized, err := (AuthTransport{Tokens: source}).authorizedRequest(request, false)
+	if err != nil {
+		t.Fatalf("authorizedRequest: %v", err)
+	}
+	if got := authorized.Header.Get("authorization"); got != "DPoP e2e-token" {
+		t.Fatalf("authorization = %q", got)
+	}
+	if got := authorized.Header.Get("dpop"); got != "e2e-proof:PATCH:https://ama.example.test/api/v1/runners/runner_1/heartbeat" {
+		t.Fatalf("DPoP proof = %q", got)
+	}
+}
+
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(request *http.Request) (*http.Response, error) {

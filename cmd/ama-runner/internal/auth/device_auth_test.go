@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -750,6 +751,133 @@ func TestValidateIDTokenRequiresTrustedRS256Claims(t *testing.T) {
 	metadata.JWKSURI = emptyJWKS.URL
 	if _, err := (DeviceAuthClient{HTTPClient: emptyJWKS.Client()}).validateIDToken(context.Background(), metadata, valid, "runner-client"); err == nil || !strings.Contains(err.Error(), "signing key is unavailable") {
 		t.Fatalf("expected missing JWKS key error, got %v", err)
+	}
+}
+
+func TestValidateIDTokenRejectsMalformedAndUntrustedIdentityInputs(t *testing.T) {
+	client := DeviceAuthClient{}
+	metadata := oidcMetadata{Issuer: "https://issuer.example.test", JWKSURI: "https://issuer.example.test/jwks"}
+	for _, token := range []string{"", "header.payload", "%%%.payload.signature"} {
+		if _, err := client.validateIDToken(t.Context(), metadata, token, "runner-client"); err == nil {
+			t.Fatalf("expected malformed id token %q to fail", token)
+		}
+	}
+
+	now := time.Now().Unix()
+	base := map[string]any{
+		"iss": metadata.Issuer, "aud": "runner-client", "sub": "user_1",
+		"iat": now, "exp": now + 300,
+	}
+	valid := testSignedIDToken(base, testRSAKey())
+
+	failingJWKS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer failingJWKS.Close()
+	metadata.JWKSURI = failingJWKS.URL
+	if _, err := (DeviceAuthClient{HTTPClient: failingJWKS.Client()}).validateIDToken(t.Context(), metadata, valid, "runner-client"); err == nil || !strings.Contains(err.Error(), "fetch OIDC signing keys") {
+		t.Fatalf("expected JWKS fetch error, got %v", err)
+	}
+
+	invalidJWKS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{
+			{"kid": "other", "kty": "RSA", "n": "AQ", "e": "Aw"},
+			{"kid": "test-key", "kty": "RSA", "alg": "RS256", "use": "sig", "n": "%%%", "e": "Aw"},
+		}})
+	}))
+	defer invalidJWKS.Close()
+	metadata.JWKSURI = invalidJWKS.URL
+	if _, err := (DeviceAuthClient{HTTPClient: invalidJWKS.Client()}).validateIDToken(t.Context(), metadata, valid, "runner-client"); err == nil || !strings.Contains(err.Error(), "signing key is unavailable") {
+		t.Fatalf("expected invalid JWKS key error, got %v", err)
+	}
+
+	trustedJWKS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(testJWKS())
+	}))
+	defer trustedJWKS.Close()
+	metadata.JWKSURI = trustedJWKS.URL
+	parts := strings.Split(valid, ".")
+	badSignature := parts[0] + "." + parts[1] + ".%%%"
+	if _, err := (DeviceAuthClient{HTTPClient: trustedJWKS.Client()}).validateIDToken(t.Context(), metadata, badSignature, "runner-client"); err == nil || !strings.Contains(err.Error(), "signature is invalid") {
+		t.Fatalf("expected malformed signature error, got %v", err)
+	}
+	missingSubject := testSignedIDToken(cloneClaims(base, "sub", " "), testRSAKey())
+	if _, err := (DeviceAuthClient{HTTPClient: trustedJWKS.Client()}).validateIDToken(t.Context(), metadata, missingSubject, "runner-client"); err == nil || !strings.Contains(err.Error(), "did not include a subject") {
+		t.Fatalf("expected missing subject error, got %v", err)
+	}
+	if audiences := tokenAudiences(json.RawMessage(`{"not":"an audience"}`)); audiences != nil {
+		t.Fatalf("expected invalid audience encoding to return nil, got %#v", audiences)
+	}
+}
+
+func TestDeviceAuthProtocolFailureAndUtilityBranches(t *testing.T) {
+	client := DeviceAuthClient{HTTPClient: &http.Client{Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return nil, context.DeadlineExceeded
+	})}}
+	if _, err := client.Discover(t.Context(), "https://issuer.example.test"); err == nil {
+		t.Fatal("expected discovery transport error")
+	}
+	if _, err := (DeviceAuthClient{}).StartDeviceAuthorization(t.Context(), "https://issuer.example.test/device", "runner", "openid", "", "invalid"); err == nil {
+		t.Fatal("expected invalid DPoP key to fail device authorization")
+	}
+
+	unsafeDiscovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"issuer":                        "http://" + request.Host,
+			"device_authorization_endpoint": "http://remote.example.test/device",
+			"token_endpoint":                "http://" + request.Host + "/token",
+			"jwks_uri":                      "http://" + request.Host + "/jwks",
+		})
+	}))
+	defer unsafeDiscovery.Close()
+	if _, err := (DeviceAuthClient{HTTPClient: unsafeDiscovery.Client()}).Discover(t.Context(), unsafeDiscovery.URL); err == nil || !strings.Contains(err.Error(), "unsafe endpoint") {
+		t.Fatalf("expected unsafe discovery endpoint error, got %v", err)
+	}
+
+	var result map[string]bool
+	malformedJSON := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("not-json"))
+	}))
+	defer malformedJSON.Close()
+	if err := (DeviceAuthClient{HTTPClient: malformedJSON.Client()}).getJSON(t.Context(), malformedJSON.URL, &result); err == nil {
+		t.Fatal("expected malformed JSON response error")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := (DeviceAuthClient{}).PollDeviceToken(ctx, "https://issuer.example.test/token", "runner", deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 30}, 0, "", testDPoPPrivateKey); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected canceled poll with default interval, got %v", err)
+	}
+}
+
+func TestRefreshTokenRejectsProtocolFailures(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{name: "missing access token", body: `{"token_type":"DPoP"}`, want: "did not include an access token"},
+		{name: "wrong token type", body: `{"access_token":"fresh","token_type":"Bearer"}`, want: "did not issue a DPoP token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+			_, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner", "refresh", "", testDPoPPrivateKey)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected %q error, got %v", tc.want, err)
+			}
+		})
+	}
+
+	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer failing.Close()
+	if _, err := (DeviceAuthClient{HTTPClient: failing.Client()}).RefreshToken(t.Context(), failing.URL, "runner", "refresh", "", testDPoPPrivateKey); err == nil {
+		t.Fatal("expected refresh HTTP error")
 	}
 }
 
