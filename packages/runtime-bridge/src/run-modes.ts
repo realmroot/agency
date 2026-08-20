@@ -161,7 +161,7 @@ export function deterministicBridgeTestEvents(request: RunRequest): AmaRuntimeEv
     `workspaceEnv:${request.env.AMA_WORKSPACE}`,
     `home:${request.env.HOME}`,
     `tmpdir:${request.env.TMPDIR}`,
-    `hasAmaToken:${Object.hasOwn(request.env, 'AMA_TOKEN')}`,
+    `hasRunnerCredential:${Object.hasOwn(request.env, 'AMA_RUNNER_CREDENTIALS')}`,
     `leakedToken:${Object.values(request.env).includes('raw-secret-value') ? 'raw-secret-value' : 'none'}`,
   ].join('\n')
   return [

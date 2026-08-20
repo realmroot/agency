@@ -322,7 +322,7 @@ export function runner(overrides: RunnerOverrides = {}): Runner {
     name: overrides.name ?? 'Mac mini runner',
     environmentId: overrides.environmentId === undefined ? 'env_1' : overrides.environmentId,
     secretRef: overrides.secretRef ?? null,
-    authMode: overrides.authMode ?? 'oidc',
+    authMode: overrides.authMode ?? 'realmroot',
     state: overrides.state ?? 'active',
     currentLoad: overrides.currentLoad ?? 1,
     maxConcurrent: overrides.maxConcurrent ?? 2,

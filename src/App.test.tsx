@@ -349,6 +349,7 @@ function auditRecord(overrides: Partial<AuditRecord> = {}): AuditRecord {
     id: 'audit_1',
     projectId: 'project_1',
     actorUserId: 'user_1',
+    controllerUserId: null,
     actorType: 'user',
     action: 'agent.create',
     resourceType: 'agent',

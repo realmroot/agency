@@ -157,7 +157,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
     },
 
     async findForMachineRegistration(projectId, authMode, oidcSubject, environmentId, machineId) {
-      if (!machineId || (authMode !== 'federated' && authMode !== 'oidc')) {
+      if (!machineId || authMode !== 'realmroot') {
         return null
       }
       const row = await db
@@ -204,7 +204,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId)))
       const row = await findRow(db, projectId, runnerId)
       if (!row) {
-        throw new Error('Federated runner registration update did not return a runner')
+        throw new Error('Realmroot runner registration update did not return a runner')
       }
       return recordFrom(db, row)
     },

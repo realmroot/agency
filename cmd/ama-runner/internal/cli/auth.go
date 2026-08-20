@@ -97,19 +97,6 @@ func RunAuthSwitch(command *cobra.Command, args []string, stdout io.Writer) erro
 	return nil
 }
 
-func RunAuthToken(ctx context.Context, stdout io.Writer) error {
-	_, source, err := activeTokenSource()
-	if err != nil {
-		return err
-	}
-	token, err := source.AccessToken(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(stdout, token)
-	return nil
-}
-
 func activeTokenSource() (*runnerconfig.CredentialProfile, *runnerauth.TokenSource, error) {
 	credentialPath := AuthCredentialPath()
 	profile, err := runnerconfig.LoadActiveCredentialProfile(credentialPath)

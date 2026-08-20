@@ -40,26 +40,26 @@ These decisions define the intended end state for Any Managed Agents.
 - This repository maintains repo-local generated SDK scaffolds under `sdk/typescript`, `sdk/go`, and `sdk/python` until the SDK release process moves out.
 - This repository publishes the control-plane OpenAPI document.
 - The TypeScript SDK is the only SDK pnpm workspace. Go and Python use language-native module or package metadata and are not pnpm workspaces.
-- External SDK behavior must be generated from or mechanically aligned with this repository's Hono-generated OpenAPI document.
+- External SDK behavior must be generated from or mechanically aligned with this repository's Hono-generated OpenAPI document and accept request-aware DPoP authorization, never a raw Bearer-token shortcut.
 - This repository must not accumulate hand-authored bespoke SDK behavior that drifts from OpenAPI.
 - Runtime helpers in external SDKs must delegate to AMA runtime endpoints.
-- The web console is an internal entrypoint and uses Hono RPC for control-plane calls. OpenAPI remains the external contract for direct HTTP, generated SDKs, and restish.
+- The web console is an internal entrypoint and uses Hono RPC for control-plane calls. OpenAPI remains the external contract for Realmroot Toolbox and DPoP-aware SDKs.
 
 ## CLI Ownership
 
 - This repository does not maintain a bespoke CLI binary.
-- Command-line automation uses restish against the published control-plane OpenAPI document.
-- OpenAPI remains the source of truth for CLI operation discovery, fields, auth, and response shapes.
-- Agent-facing skills may document restish workflows, but must not introduce a separate runtime protocol or command contract.
+- Command-line automation uses Realmroot Toolbox against the native protected Resource.
+- OpenAPI and RFC 9728 protected-resource metadata remain the source of truth for Realmroot Toolbox operation discovery, fields, scopes, and response shapes.
+- Agent-facing skills use `realmroot toolbox`; they must not introduce raw-token workflows or a separate runtime protocol.
 
 ## Authentication
 
-- Authentication integrates with OIDC provider.
+- Authentication integrates exclusively with Realmroot.
 - This project must not reimplement a parallel authentication system.
-- Control-plane and runtime requests resolve tenant context from OIDC sessions or credentials.
-- Runner daemon authentication uses FlareAuth/OIDC device login. AMA validates provider-issued bearer tokens, binds OIDC runner operation to the runner registration subject/client id, rejects runner-scoped tokens on non-runner control-plane resources, and must not build a parallel runner credential issuer.
-- OIDC access tokens must identify the exact AMA resource audience. Missing role or permission claims grant no implicit owner authority.
-- The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; only that permission, `<resource>:*`, or `*` authorizes the operation. Runner tokens remain limited to their bound runner workflow.
+- Control-plane and runtime requests require Realmroot-issued, DPoP-bound `at+jwt` access tokens.
+- Runner daemon authentication uses Realmroot device authorization and a runner-local DPoP key. Static tokens and Bearer fallback are unsupported.
+- Access tokens must identify the exact `https://ama.tftt.cc/api` audience. Missing scopes grant no implicit owner authority.
+- The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; the exact scope authorizes the operation. Runner tokens remain limited to their bound runner workflow.
 
 ## Realmroot Agent Identity
 

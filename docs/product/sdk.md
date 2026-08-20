@@ -1,12 +1,12 @@
 # SDK and API Boundary
 
-This repository publishes the Any Managed Agents control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators — no bespoke CLI binary and no hand-authored client behavior that can drift from OpenAPI. Each SDK is produced from the Hono-generated OpenAPI document by its language's mainstream generator (`@hey-api/openapi-ts` for TypeScript, `oapi-codegen` for Go, `openapi-python-client` for Python), so every operation and every request/response body is a generated, typed surface. Command-line automation uses restish against the same OpenAPI document. The web console is an internal entrypoint and uses the project-local Hono RPC client.
+This repository publishes the Any Managed Agents control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. Each SDK requires request-aware Realmroot DPoP authentication; none accepts a raw Bearer-token shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
 
 ## SDK Layers
 
 ```txt
 User application
-  -> external Any Managed Agents SDK, restish, or direct HTTP
+  -> Realmroot Toolbox or a DPoP-authorized Any Managed Agents SDK
   -> Any Managed Agents OpenAPI control-plane API
   -> AMA session endpoint
   -> selected session runtime
@@ -53,37 +53,36 @@ pnpm --filter @any-managed-agents/sdk run typecheck
 
 `pnpm run openapi:generate` re-emits `sdk/openapi.json` from the Hono routes and then drives each language's generator. Do not edit generated code or the OpenAPI snapshot by hand.
 
-## CLI Boundary
+## Realmroot Toolbox Boundary
 
-The CLI path is restish over OpenAPI. The OpenAPI document is the source of truth for operation discovery, request fields, response fields, authentication, and machine-readable output.
+The CLI path is Realmroot Toolbox over RFC 9728 discovery and OpenAPI. Realmroot owns Agent identity, controller approval, token acquisition, and DPoP signing.
 
 Restish is configured from the deployment document:
 
 ```bash
-export AMA_ORIGIN="https://ama.example.com"
-restish api configure ama "$AMA_ORIGIN/api/openapi.json"
-restish ama read-configz
+realmroot toolbox sync any-managed-agents
+realmroot toolbox get any-managed-agents/api/v1/configz
 ```
 
-Use the current AMA deployment origin and `/api` paths for control-plane operations. The implemented security scheme is a OIDC provider-issued OIDC access token declared as `bearerAuth`; do not document provider API keys as AMA control-plane credentials.
+Use the protected Resource URL `https://ama.tftt.cc/api`. The OpenAPI security scheme requires a Realmroot-issued DPoP-bound token and a fresh proof for every request; Bearer is rejected.
 
 This repository includes:
 
-- [Integration snippets](integration-snippets.md) for curl, restish, and generated SDK-shaped examples.
-- [AMA restish CLI skill](../agent-skills/ama-restish-cli/SKILL.md) for automation agents.
+- [Integration snippets](integration-snippets.md) for Realmroot Toolbox and generated SDK examples.
+- [AMA Realmroot Toolbox skill](../agent-skills/ama-realmroot-toolbox/SKILL.md) for automation agents.
 - `scripts/generate-openapi-and-sdks.ts` for reproducible SDK regeneration.
 
 The skill is guidance for automation agents, not a separate command surface. It references OpenAPI operations or documented paths rather than inventing project-specific CLI commands.
 
 ## Web Console Boundary
 
-The web console should not use OpenAPI as its internal client implementation. It calls the same Hono routes through the shared Hono RPC client. OpenAPI remains the external contract for direct HTTP users, generated SDKs, and restish.
+The web console should not use OpenAPI as its internal client implementation. It calls the same Hono routes through the shared Hono RPC client. OpenAPI remains the external contract for Realmroot Toolbox and DPoP-aware generated SDKs.
 
 ## Runtime Protocol
 
 AMA session endpoints and canonical AMA session events are the v1.0 UI/API/session-state protocol surface. Agent products run through the runtime selected by the session's environment.
 
-Restish is control-plane only. It manages API resources through OpenAPI-described `/api` operations; it does not replace AMA runtime traffic.
+Realmroot Toolbox is control-plane only. It manages API resources through OpenAPI-described `/api` operations; it does not replace AMA runtime traffic.
 
 The platform must not create a second client-facing runtime protocol for RPC, session events, prompts, abort, follow-up, steering, or tool calls. Runtime session traffic goes through AMA session endpoints, and observed state comes from canonical AMA session events.
 

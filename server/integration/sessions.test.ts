@@ -2,7 +2,14 @@ import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runtimeErrorMessage } from '../http/sessions'
-import { defaultClaims, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import {
+  asRunnerAuthorization,
+  defaultClaims,
+  dpopHeaders,
+  seedPlatformProvider,
+  setupOidcProvider,
+  signIn,
+} from './auth'
 import { seedPolicy } from './policy-seed'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
@@ -13,7 +20,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...requestInit,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, requestInit.method ?? 'GET', path),
       ...requestInit.headers,
     },
   })
@@ -201,7 +208,7 @@ async function createProviderModel(_authorization: string, model: string) {
 }
 
 async function registerRunner(authorization: string, environmentId: string, _runtimeNames: string[]) {
-  const res = await jsonFetch('/api/v1/runners', authorization, {
+  const res = await jsonFetch('/api/v1/runners', asRunnerAuthorization(authorization), {
     method: 'POST',
     body: JSON.stringify({
       name: `Runtime support runner ${crypto.randomUUID()}`,
@@ -218,7 +225,7 @@ async function heartbeatRunner(
   runtimeNames: string[],
   runtimes = runtimeNames.map((runtime) => ({ runtime, models: [], state: 'ready' })),
 ) {
-  const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, authorization, {
+  const res = await jsonFetch(`/api/v1/runners/${runnerId}/heartbeat`, asRunnerAuthorization(authorization), {
     method: 'PUT',
     body: JSON.stringify({ state: 'active', runtimes }),
   })
@@ -227,14 +234,15 @@ async function heartbeatRunner(
 
 // v1 lease flow: list available work, then claim one lease for it.
 async function claimLease(authorization: string, runnerId: string) {
-  const workRes = await jsonFetch('/api/v1/work-items?state=available', authorization)
+  const runnerAuthorization = asRunnerAuthorization(authorization)
+  const workRes = await jsonFetch('/api/v1/work-items?state=available', runnerAuthorization)
   expect(workRes.status).toBe(200)
   const work = (await workRes.json()) as { data: Array<{ id: string }> }
   if (work.data.length === 0) {
     return null
   }
   for (const item of work.data) {
-    const leaseRes = await jsonFetch('/api/v1/leases', authorization, {
+    const leaseRes = await jsonFetch('/api/v1/leases', runnerAuthorization, {
       method: 'POST',
       body: JSON.stringify({ workItemId: item.id, runnerId }),
     })
@@ -1564,8 +1572,9 @@ describe('[CF] /api/v1/sessions', () => {
       }),
     })
 
-    const socketRes = await SELF.fetch(`https://example.com/api/v1/sessions/${created.metadata.uid}/socket`, {
-      headers: { authorization, Upgrade: 'websocket' },
+    const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
+    const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: { ...dpopHeaders(authorization, 'GET', socketPath), Upgrade: 'websocket' },
     })
     expect(socketRes.status).toBe(101)
     const ws = socketRes.webSocket as WebSocket
@@ -1642,8 +1651,9 @@ describe('[CF] /api/v1/sessions', () => {
     expect(createRes.status, createdText).toBe(201)
     const created = JSON.parse(createdText) as { metadata: { uid: string } }
 
-    const socketRes = await SELF.fetch(`https://example.com/api/v1/sessions/${created.metadata.uid}/socket`, {
-      headers: { authorization, Upgrade: 'websocket' },
+    const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
+    const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: { ...dpopHeaders(authorization, 'GET', socketPath), Upgrade: 'websocket' },
     })
     expect(socketRes.status).toBe(101)
     const ws = socketRes.webSocket as WebSocket

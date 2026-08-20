@@ -11,7 +11,6 @@ import type {
   ConnectorRepo,
   EnvironmentRepo,
   EventStore,
-  FederatedTenantRepo,
   LeaseRepo,
   MemoryStoreRepo,
   PolicyPort,
@@ -67,7 +66,6 @@ export interface Deps {
   triggerDispatch: TriggerDispatchRepo
   triggerDispatchQueue?: TriggerDispatchQueue
   projects: ProjectRepo
-  federatedTenants: FederatedTenantRepo
   runners: RunnerRepo
   workItems: WorkItemRepo
   leases: LeaseRepo

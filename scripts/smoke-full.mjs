@@ -11,7 +11,7 @@
 //   pnpm run smoke:real
 
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -184,14 +184,18 @@ async function waitForReady(origin) {
 }
 
 async function api(origin, token, path, options = {}) {
+  const method = options.method ?? (options.body === undefined ? 'GET' : 'POST')
+  const proofTarget = new URL(path, origin)
+  proofTarget.search = ''
   const headers = {
-    authorization: `Bearer ${token.accessToken}`,
+    authorization: `DPoP ${token.accessToken}`,
+    dpop: `e2e-proof:${method}:${proofTarget.toString()}`,
     'x-ama-project-id': token.projectId,
     ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...(options.headers ?? {}),
   }
   const response = await fetch(`${origin}${path}`, {
-    method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
+    method,
     headers,
     ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
   })
@@ -216,7 +220,7 @@ async function e2eToken(origin, runId) {
   return JSON.parse(text)
 }
 
-function startRunner(binary, origin, token, environmentId, stateDir, workDir) {
+function startRunner(binary, origin, token, environmentId, stateDir, workDir, credentialPath) {
   return startProcess(
     binary,
     [
@@ -239,7 +243,7 @@ function startRunner(binary, origin, token, environmentId, stateDir, workDir) {
       prefix: 'ama-runner',
       env: {
         ...process.env,
-        AMA_TOKEN: token.accessToken,
+        AMA_RUNNER_CREDENTIALS: credentialPath,
         AMA_RUNNER_HEARTBEAT_INTERVAL: '5s',
         AMA_RUNNER_LEASE_SECONDS: '30',
         AMA_RUNNER_RENEW_INTERVAL: '10s',
@@ -260,16 +264,20 @@ async function waitForRunner(origin, token, environmentId) {
   }, 'active self-hosted runner')
 }
 
-function socketURL(origin, token, sessionId) {
+function socketURL(origin, sessionId) {
   const url = new URL(`/api/v1/sessions/${sessionId}/socket`, origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  url.searchParams.set('access_token', token.accessToken)
   return url.toString()
 }
 
-function openSocket(url) {
+function openSocket(url, token) {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(url)
+    const proofTarget = url.replace(/^ws/, 'http')
+    const socket = new WebSocket(url, [
+      'ama-dpop',
+      `ama-access.${Buffer.from(token.accessToken).toString('base64url')}`,
+      `ama-proof.${Buffer.from(`e2e-proof:GET:${proofTarget}`).toString('base64url')}`,
+    ])
     const timer = setTimeout(() => {
       socket.close()
       reject(new Error(`socket open timed out: ${url}`))
@@ -495,6 +503,7 @@ async function main() {
   const runnerBinary = join(temp, 'ama-runner')
   const stateDir = join(temp, 'state')
   const workDir = join(temp, 'work')
+  const credentialPath = join(temp, 'credentials.json')
   const runId = `full-smoke-${Date.now()}`
   const port = Number(process.env.E2E_PORT || (await findFreePort()))
   const origin = `http://localhost:${port}`
@@ -517,6 +526,22 @@ async function main() {
     })
     await waitForReady(origin)
     token = await e2eToken(origin, runId)
+    writeFileSync(
+      credentialPath,
+      JSON.stringify({
+        active: `${origin}#${runId}`,
+        profiles: [
+          {
+            accountId: runId,
+            apiServer: origin,
+            accessToken: token.accessToken,
+            tokenType: 'DPoP',
+            dpopPrivateKey: 'e2e-only',
+          },
+        ],
+      }),
+      { mode: 0o600 },
+    )
     info(`using project ${token.projectId}`)
 
     await api(origin, token, '/api/v1/e2e/catalog/seed', { method: 'POST', body: {} })
@@ -588,8 +613,8 @@ async function main() {
     sessionId = session.metadata.uid
     info(`created session ${sessionId}`)
 
-    socket = watchSocket(await openSocket(socketURL(origin, token, sessionId)))
-    runner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir)
+    socket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
+    runner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
     await socket.waitFor(
       (frame) => frame.type === 'event' && frame.record?.type === 'runtime.started',
@@ -624,10 +649,10 @@ async function main() {
 
     await stopProcess(runner.child)
     runner = null
-    restartedRunner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir)
+    restartedRunner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
 
-    secondSocket = watchSocket(await openSocket(socketURL(origin, token, sessionId)))
+    secondSocket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
     const reconnectBackfill = await secondSocket.waitFor(
       (frame) => frame.type === 'backfill',
       'automatic backfill after runner reconnect',

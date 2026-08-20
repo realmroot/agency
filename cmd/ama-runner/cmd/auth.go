@@ -21,7 +21,6 @@ func authCommand(ctx context.Context, stdout io.Writer) *cobra.Command {
 		authRefreshCommand(ctx, stdout),
 		authStatusCommand(stdout),
 		authSwitchCommand(stdout),
-		authTokenCommand(ctx, stdout),
 	)
 	return command
 }
@@ -94,19 +93,5 @@ func authSwitchCommand(stdout io.Writer) *cobra.Command {
 		},
 	}
 	runnercli.RegisterAuthSwitchFlags(command)
-	return command
-}
-
-func authTokenCommand(ctx context.Context, stdout io.Writer) *cobra.Command {
-	command := &cobra.Command{
-		Use:           "token",
-		Short:         "Print the active runner access token",
-		Args:          cobra.NoArgs,
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		RunE: func(command *cobra.Command, _ []string) error {
-			return runnercli.RunAuthToken(ctx, stdout)
-		},
-	}
 	return command
 }

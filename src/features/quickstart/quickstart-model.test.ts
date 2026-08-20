@@ -153,32 +153,27 @@ describe('quickstart sandbox add-on [spec: quickstart/sandbox-addon]', () => {
 
 describe('quickstart integration examples [spec: quickstart/integration-examples]', () => {
   const examples = quickstartIntegrationExamples({
-    origin: 'https://ama.example.com',
     agentId: 'agent_123',
     environmentId: 'env_456',
     sessionId: 'sess_789',
   })
 
-  it('targets the platform origin with the created resource ids', () => {
-    for (const example of [examples.curl, examples.restish, examples.sdk]) {
-      expect(example).toContain('https://ama.example.com')
-      expect(example).toContain('sess_789')
-    }
-    expect(examples.curl).toContain('agent_123')
-    expect(examples.curl).toContain('env_456')
-    expect(examples.restish).toContain('/api/v1/openapi.json')
+  it('targets the Realmroot toolbox resource with the created resource ids', () => {
+    expect(examples.realmroot).toContain('any-managed-agents/api/v1/sessions')
+    expect(examples.realmroot).toContain('sess_789')
+    expect(examples.realmroot).toContain('agent_123')
+    expect(examples.realmroot).toContain('env_456')
   })
 
-  it('uses AMA session endpoints for live traffic and never embeds secrets or vendor URLs', () => {
-    expect(examples.curl).toContain('/api/v1/sessions/sess_789/socket')
-    const combined = `${examples.curl}\n${examples.restish}\n${examples.sdk}`
-    expect(combined).toContain('$AMA_ACCESS_TOKEN')
-    expect(combined).not.toMatch(/Bearer [A-Za-z0-9]/)
-    expect(combined).not.toMatch(/\b(?:api\.)?(?:openai|anthropic)\.com\b/)
+  it('requests exact scopes and never embeds tokens or vendor URLs', () => {
+    expect(examples.realmroot).toContain('--scope sessions:write')
+    expect(examples.realmroot).toContain('--scope sessions:read')
+    expect(examples.realmroot).not.toMatch(/(?:Bearer|DPoP)\s+[A-Za-z0-9]/)
+    expect(examples.realmroot).not.toMatch(/\b(?:api\.)?(?:openai|anthropic)\.com\b/)
   })
 
   it('includes the session events URL for history', () => {
-    expect(examples.curl).toContain('/api/v1/sessions/sess_789/events')
-    expect(examples.curl).not.toContain('/runtime/')
+    expect(examples.realmroot).toContain('/api/v1/sessions/sess_789/events')
+    expect(examples.realmroot).not.toContain('/runtime/')
   })
 })

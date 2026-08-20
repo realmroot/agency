@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -14,7 +14,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
@@ -114,13 +114,14 @@ async function createSelfHostedSession(
 }
 
 async function registerActiveRunner(authorization: string, environmentId: string) {
-  const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
+  const runnerAuthorization = asRunnerAuthorization(authorization)
+  const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
     method: 'POST',
     body: JSON.stringify({ name: `Bound runner ${crypto.randomUUID()}`, environmentId }),
   })
   expect(runnerRes.status).toBe(201)
   const runner = (await runnerRes.json()) as { id: string }
-  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
+  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
     method: 'PUT',
     body: JSON.stringify({
       state: 'active',

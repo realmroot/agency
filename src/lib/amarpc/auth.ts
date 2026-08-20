@@ -23,5 +23,4 @@ export const authApi = {
   readAuthConfig: (organization?: string) =>
     rpcRequest<AuthConfig>(v1.auth.config.$get({ query: organization ? { organization } : {} })),
   readCurrentSession: () => rpcRequest<AuthSession>(v1.auth.sessions.current.$get()),
-  deleteCurrentSession: () => rpcRequest<void>(v1.auth.sessions.current.$delete()),
 }

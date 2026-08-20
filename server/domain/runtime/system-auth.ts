@@ -29,10 +29,7 @@ export function channelSystemAuth(state: { organizationId: string; projectId: st
       clientId: null,
       scope: null,
       issuer: null,
-      externalTenantId: null,
       runnerId: state.runnerId,
-      runnerProjectId: state.projectId,
-      runnerEnvironmentId: null,
     },
   }
 }

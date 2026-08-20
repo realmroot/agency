@@ -34,7 +34,7 @@ describe('agent builder model extensions', () => {
   })
 
   it('omits description when absent in API examples', () => {
-    const examples = agentApiExamples('https://example.com', resourceAgent({ description: null }))
-    expect(examples.curl).not.toContain('"description"')
+    const examples = agentApiExamples(resourceAgent({ description: null }))
+    expect(examples.realmroot).not.toContain('"description"')
   })
 })

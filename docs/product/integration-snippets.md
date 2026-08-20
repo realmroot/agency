@@ -11,47 +11,23 @@ curl -fsS "$AMA_ORIGIN/api/openapi.json"
 
 The document contains `/api/v1` paths for config discovery, agents, environments, sessions, providers, vaults, budgets, usage, audit, connectors, and auth. It is the source of truth for request fields, response fields, auth, and machine-readable output.
 
-## curl
+## Realmroot Toolbox
 
-Use a OIDC provider-issued OIDC access token. The token is local to the operator session and must not be committed or shared.
-
-```bash
-curl -fsS "$AMA_ORIGIN/api/healthz"
-curl -fsS "$AMA_ORIGIN/api/v1/configz"
-
-curl -fsS "$AMA_ORIGIN/api/v1/environments" \
-  -H "content-type: application/json" \
-  -H "authorization: Bearer $OIDC_ACCESS_TOKEN" \
-  -d '{"name":"Node workspace","hostingMode":"cloud","runtimeConfig":{"image":"node:24"},"packages":[{"name":"tsx","version":"latest"}]}'
-
-curl -fsS "$AMA_ORIGIN/api/v1/agents" \
-  -H "content-type: application/json" \
-  -H "authorization: Bearer $OIDC_ACCESS_TOKEN" \
-  -d '{"name":"Research assistant","instructions":"Answer with citations.","providerId":"workers-ai","model":"@cf/moonshotai/kimi-k2.6"}'
-
-curl -fsS "$AMA_ORIGIN/api/v1/sessions" \
-  -H "content-type: application/json" \
-  -H "authorization: Bearer $OIDC_ACCESS_TOKEN" \
-  -d '{"agentId":"agent_abc123","environmentId":"env_abc123"}'
-```
-
-## restish
-
-Configure restish from the deployment OpenAPI document and keep JSON output enabled for automation.
+Realmroot discovers AMA, obtains controller-approved least-privilege scopes, and signs each request with a fresh DPoP proof. Do not copy access tokens into shell variables.
 
 ```bash
-restish api configure ama "$AMA_ORIGIN/api/openapi.json"
-restish ama read-configz
-restish ama list-agents --rsh-output-format json
-printf '%s\n' '{"name":"Node workspace","hostingMode":"cloud","runtimeConfig":{"image":"node:24"},"packages":[{"name":"tsx","version":"latest"}]}' \
-  | restish ama create-environment --rsh-output-format json
-printf '%s\n' '{"name":"Research assistant","instructions":"Answer with citations.","providerId":"workers-ai","model":"@cf/moonshotai/kimi-k2.6"}' \
-  | restish ama create-agent --rsh-output-format json
-printf '%s\n' '{"agentId":"agent_abc123","environmentId":"env_abc123"}' \
-  | restish ama create-session --rsh-output-format json
+realmroot toolbox sync any-managed-agents
+realmroot toolbox get any-managed-agents/api/v1/agents --scope agents:read
+realmroot toolbox post any-managed-agents/api/v1/agents \
+  '{"metadata":{"name":"Research assistant"},"spec":{"provider":"workers-ai","model":"@cf/moonshotai/kimi-k2.6"}}' \
+  --scope agents:write
 ```
 
-The local e2e check exercises actual restish discovery plus create environment, create agent, and create session serialization:
+## Direct HTTP and generated SDKs
+
+Direct clients must supply a request-aware Realmroot DPoP authorizer (TypeScript), an authenticated `http.Client` transport (Go), or an `httpx.Auth` implementation (Python). The SDKs intentionally have no raw access-token option.
+
+The local e2e check exercises protected-resource discovery plus the core environment, Agent, and Session workflow:
 
 ```bash
 pnpm run e2e
@@ -80,11 +56,7 @@ Standard resource responses for agents, environments, vaults, memory stores, tri
 Generated SDKs are generated from or mechanically aligned with `/api/openapi.json`. They should keep control-plane calls thin:
 
 ```ts
-const client = createAmaClient({
-  baseUrl: window.location.origin,
-  accessToken,
-  projectId,
-})
+const client = createAmaClient({ baseUrl, projectId, authorize: realmrootDpopAuthorizer })
 
 const environment = await client.environments.create({
   name: 'Node workspace',
@@ -127,7 +99,7 @@ The stable facade is split by audience:
 - `createAmaClient` / `ama.New` / `create_ama_client` expose public control-plane resources.
 - `createAmaRunnerClient` / `ama.NewRunner` / `create_ama_runner_client` expose runner protocol resources: runner channel, runner heartbeat, work items, leases, and runner-side session event ingestion.
 
-Runtime task interaction is separate from restish control-plane automation. Use the session socket operation (`connectSessionSocket`) or the generated SDK stream helper. Do not define a new CLI-level runtime protocol.
+Runtime task interaction is separate from Realmroot Toolbox control-plane automation. Use the session socket operation (`connectSessionSocket`) or the generated SDK stream helper. Do not define a new CLI-level runtime protocol.
 
 Regenerate repo-local SDK scaffolds from the Hono-generated OpenAPI document before publishing SDK changes:
 

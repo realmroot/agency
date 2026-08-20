@@ -70,6 +70,7 @@ export interface AuthScope {
   roles: string[]
   permissions: string[]
   teams?: string[]
+  agentActor?: { issuer: string; subject: string }
 }
 
 // Organization-level identity: the AuthScope subset that org-scoped usecases
@@ -851,7 +852,8 @@ export interface AuditRecord {
   id: string
   projectId: string | null
   actorUserId: string | null
-  actorType: 'user' | 'system'
+  controllerUserId: string | null
+  actorType: 'user' | 'agent' | 'system'
   action: string
   resourceType: string
   resourceId: string | null
@@ -1099,68 +1101,6 @@ export interface ProjectRepo {
   insert(organizationId: string, name: string, timestamp: string): Promise<ProjectRecord>
 }
 
-// --- federated tenants ---
-
-// Thrown when a federated tenant already exists for the (issuer, externalTenant)
-// pair. The http layer maps it to 409.
-export class FederatedTenantConflictError extends Error {
-  constructor(message = 'Federated tenant already exists for this issuer and external tenant') {
-    super(message)
-    this.name = 'FederatedTenantConflictError'
-  }
-}
-
-export interface FederatedTenantRecord {
-  id: string
-  issuer: string
-  externalTenantId: string
-  projectId: string
-  environmentId: string | null
-  capabilities: string[]
-  enabled: boolean
-  metadata: Record<string, unknown>
-  createdAt: string
-  updatedAt: string
-}
-
-export interface FederatedTenantListQuery {
-  projectId: string
-  limit: number
-  cursor: { createdAt: string; id: string } | null
-}
-
-export interface CreateFederatedTenantInput {
-  issuer: string
-  externalTenantId: string
-  projectId: string
-  environmentId: string | null
-  capabilities: string[]
-  metadata: Record<string, unknown>
-}
-
-export interface UpdateFederatedTenantFields {
-  enabled: boolean
-  capabilities: string[]
-  environmentId: string | null
-  metadata: Record<string, unknown>
-}
-
-// DB boundary for federated tenants. The only implementation lives in
-// adapters/repos.
-export interface FederatedTenantRepo {
-  list(query: FederatedTenantListQuery): Promise<ListPageResult<FederatedTenantRecord>>
-  find(projectId: string, tenantId: string): Promise<FederatedTenantRecord | null>
-  findByIssuerTenant(issuer: string, externalTenantId: string): Promise<{ id: string } | null>
-  insert(input: CreateFederatedTenantInput, timestamp: string): Promise<FederatedTenantRecord>
-  update(
-    projectId: string,
-    tenantId: string,
-    fields: UpdateFederatedTenantFields,
-    updatedAt: string,
-  ): Promise<FederatedTenantRecord>
-  delete(projectId: string, tenantId: string): Promise<void>
-}
-
 // --- runners, work items, leases (self-hosted runner queue) ---
 
 // Field-keyed validation error for runner registration orchestration (secret
@@ -1285,7 +1225,7 @@ export interface RunnerHeartbeatFields {
 export interface RunnerRepo {
   list(query: RunnerListQuery): Promise<ListPageResult<RunnerAuthRecord>>
   find(projectId: string, runnerId: string): Promise<RunnerAuthRecord | null>
-  // Looks up a reusable federated/oidc runner row by machine id for
+  // Looks up a reusable Realmroot runner row by machine id for
   // re-registration; null when no machine binding applies.
   findForMachineRegistration(
     projectId: string,
@@ -1295,7 +1235,7 @@ export interface RunnerRepo {
     machineId: string | null,
   ): Promise<RunnerAuthRecord | null>
   insert(input: CreateRunnerInput, timestamp: string): Promise<RunnerAuthRecord>
-  // Federated re-registration: rewrites the existing row and returns it.
+  // Realmroot re-registration rewrites the existing row and returns it.
   reregister(
     projectId: string,
     runnerId: string,

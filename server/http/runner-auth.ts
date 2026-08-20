@@ -8,27 +8,22 @@ import type { Context } from 'hono'
 
 // Runner-token authorization is auth-context based, so it lives in the http
 // layer alongside requireAuth. A console (non-runner) identity may operate any
-// runner in its project; a runner OIDC/federated token may only operate the
-// runner row its claims are bound to.
+// runner in its project; a Realmroot runner token may only operate the
+// Realmroot runner row its claims are bound to.
 export function runnerOperationAuthorized(env: Env, auth: AuthContext, runner: RunnerAuthRecord): boolean {
-  if (isRunnerOidcAuth(env, auth)) {
-    if (runner.authMode === 'federated') {
-      return runner.oidcSubject === auth.oidc.subject
-    }
-    return (
-      runner.authMode === 'oidc' &&
-      runner.oidcSubject === auth.oidc.subject &&
-      !!runner.oidcClientId &&
-      runner.oidcClientId === auth.oidc.clientId
-    )
-  }
-  if (runner.authMode !== 'oidc') {
-    return true
-  }
-  if (!runner.oidcSubject || !runner.oidcClientId) {
-    return false
-  }
-  return runner.oidcSubject === auth.oidc.subject && runner.oidcClientId === auth.oidc.clientId
+  if (runner.authMode !== 'realmroot') return false
+  if (!isRunnerOidcAuth(env, auth)) return true
+  return runnerRuntimeAuthorized(env, auth, runner)
+}
+
+export function runnerRuntimeAuthorized(env: Env, auth: AuthContext, runner: RunnerAuthRecord): boolean {
+  return (
+    isRunnerOidcAuth(env, auth) &&
+    runner.authMode === 'realmroot' &&
+    runner.oidcSubject === auth.oidc.subject &&
+    !!runner.oidcClientId &&
+    runner.oidcClientId === auth.oidc.clientId
+  )
 }
 
 export function runnerForbidden(c: Context) {
@@ -42,8 +37,5 @@ export function runnerOidcContext(env: Env, auth: AuthContext): RunnerOidcContex
     isRunnerToken: isRunnerOidcAuth(env, auth),
     subject: auth.oidc.subject,
     clientId: auth.oidc.clientId,
-    runnerProjectId: auth.oidc.runnerProjectId,
-    runnerEnvironmentId: auth.oidc.runnerEnvironmentId,
-    externalTenantId: auth.oidc.externalTenantId,
   }
 }

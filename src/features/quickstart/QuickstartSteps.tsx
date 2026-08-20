@@ -267,23 +267,15 @@ export function QuickstartIntegrationStep({ input }: { input: QuickstartIntegrat
   return (
     <div className="grid gap-4">
       <p className="text-sm text-muted-foreground">
-        Examples target this platform origin and the published /api OpenAPI contract, and reference the session created
-        in quickstart. Authenticate with your own token; examples never embed secrets.
+        Realmroot discovers AMA&apos;s protected Resource and OpenAPI contract, requests the exact scope, and signs
+        every call with your stable Agent identity. No token is copied into the command.
       </p>
       <Field>
-        <FieldLabel>curl</FieldLabel>
-        <JsonBlock value={examples.curl} />
-        <FieldDescription>Control-plane calls plus the AMA session socket for live session traffic.</FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel>restish</FieldLabel>
-        <JsonBlock value={examples.restish} />
-        <FieldDescription>restish works against the published OpenAPI document.</FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel>TypeScript SDK</FieldLabel>
-        <JsonBlock value={examples.sdk} />
-        <FieldDescription>Generated SDKs call the same OpenAPI-described control-plane operations.</FieldDescription>
+        <FieldLabel>Realmroot CLI</FieldLabel>
+        <JsonBlock value={examples.realmroot} />
+        <FieldDescription>
+          Realmroot handles controller approval, least-privilege scopes, and DPoP signing.
+        </FieldDescription>
       </Field>
       <div className="flex flex-wrap items-center gap-2">
         <OpenPageLink to={`/sessions/${input.sessionId}`} label="Open session detail" />

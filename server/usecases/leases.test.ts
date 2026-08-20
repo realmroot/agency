@@ -30,7 +30,7 @@ function runner(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
     name: 'Runner',
     environmentId: null,
     secretRef: null,
-    authMode: 'oidc',
+    authMode: 'realmroot',
     state: 'active',
     currentLoad: 0,
     maxConcurrent: 2,

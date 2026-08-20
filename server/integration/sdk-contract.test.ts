@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import openapi from '../../sdk/openapi.json'
 import type { AmaClient } from '../../sdk/typescript/src/index'
 import { createAmaClient } from '../../sdk/typescript/src/index'
-import { seedPlatformProvider, signIn } from './auth'
+import { dpopHeaders, seedPlatformProvider, signIn } from './auth'
 
 // The SDK's external operation inventory, derived from the published OpenAPI
 // document the generated client is built from — { path, operationId } per
@@ -48,13 +48,20 @@ function resourceSpec(resource: Json) {
   return obj(obj(resource).spec)
 }
 
-// The integration auth helper hands back a full `Bearer e2e:<runId>` header; the
-// SDK prepends its own `Bearer `, so it wants the bare token.
 async function newSdk() {
   const authorization = await signIn()
-  const accessToken = authorization.replace(/^Bearer\s+/i, '')
+  const accessToken = authorization.replace(/^DPoP\s+/i, '')
   const runId = accessToken.replace(/^e2e:/, '')
-  return { ama: createAmaClient({ baseUrl: 'https://example.com', accessToken }), runId }
+  return {
+    ama: createAmaClient({
+      baseUrl: 'https://example.com',
+      authorize: async (url, method) => {
+        const headers = dpopHeaders(authorization, method, url)
+        return { accessToken, dpopProof: headers.dpop }
+      },
+    }),
+    runId,
+  }
 }
 
 async function createAgentThroughSdk(ama: AmaClient, runId: string) {
@@ -126,7 +133,7 @@ describe('[CF] generated SDK contract', () => {
     vi.unstubAllGlobals()
   })
 
-  it('declares the standard 403 response for every bearer-auth operation', () => {
+  it('declares exact scopes and standard auth failures for every Realmroot DPoP operation', () => {
     const document = openapi as {
       paths: Record<
         string,
@@ -142,13 +149,32 @@ describe('[CF] generated SDK contract', () => {
     }
     for (const methods of Object.values(document.paths)) {
       for (const operation of Object.values(methods)) {
-        if (!operation.operationId || !operation.security?.some((requirement) => 'bearerAuth' in requirement)) continue
+        if (!operation.operationId || !operation.security?.some((requirement) => 'realmrootDpop' in requirement))
+          continue
+        const scopes = operation.security.flatMap((requirement) =>
+          Array.isArray(requirement.realmrootDpop) ? (requirement.realmrootDpop as string[]) : [],
+        )
+        expect(scopes, `${operation.operationId} must require one exact resource scope`).toHaveLength(1)
+        expect(scopes[0]).toMatch(/^[a-z-]+:(read|write)$/)
+        expect(
+          operation.responses?.['401']?.content?.['application/json']?.schema,
+          `${operation.operationId} must publish the standard authentication response`,
+        ).toEqual({ $ref: '#/components/schemas/ErrorResponse' })
         expect(
           operation.responses?.['403']?.content?.['application/json']?.schema,
           `${operation.operationId} must publish the standard forbidden response`,
         ).toEqual({ $ref: '#/components/schemas/ErrorResponse' })
       }
     }
+  })
+
+  it('publishes both Agent actor and controlling user in the generated audit SDK contract', () => {
+    const auditRecord = (openapi as { components?: { schemas?: Record<string, unknown> } }).components?.schemas
+      ?.AuditRecord as { required?: string[]; properties?: Record<string, unknown> }
+    expect(auditRecord.required).toEqual(expect.arrayContaining(['actorUserId', 'controllerUserId']))
+    expect(auditRecord.properties).toEqual(
+      expect.objectContaining({ actorUserId: expect.any(Object), controllerUserId: expect.any(Object) }),
+    )
   })
 
   it('external product manages standard AMA resources through the SDK [spec: projects/external-resources]', async () => {

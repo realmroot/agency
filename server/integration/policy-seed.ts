@@ -73,7 +73,7 @@ export async function seedPolicy(input: SeedPolicyInput) {
 }
 
 function organizationIdFromAuthorization(authorization?: string) {
-  const match = /^Bearer\s+e2e:(?<spec>.+)$/.exec(authorization ?? '')
+  const match = /^DPoP\s+e2e:(?<spec>.+)$/.exec(authorization ?? '')
   if (!match?.groups?.spec) {
     return 'org_flare_123'
   }

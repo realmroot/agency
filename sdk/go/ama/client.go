@@ -22,24 +22,19 @@ import (
 
 type JSON = map[string]interface{}
 
-type AccessTokenProvider func(context.Context) (string, error)
-
 type ClientConfig struct {
-	BaseURL             string
-	AccessToken         string
-	AccessTokenProvider AccessTokenProvider
-	ProjectID           string
-	Headers             map[string]string
-	HTTPClient          HttpRequestDoer
+	BaseURL    string
+	ProjectID  string
+	Headers    map[string]string
+	HTTPClient *http.Client
 }
 
 type clientCore struct {
-	raw                 *ClientWithResponses
-	baseURL             string
-	accessToken         string
-	accessTokenProvider AccessTokenProvider
-	projectID           string
-	headers             map[string]string
+	raw        *ClientWithResponses
+	baseURL    string
+	projectID  string
+	headers    map[string]string
+	httpClient *http.Client
 }
 
 type Client struct {
@@ -118,13 +113,6 @@ func newClientCore(config ClientConfig) (*clientCore, error) {
 	}
 	opts := []ClientOption{
 		WithRequestEditorFn(func(ctx context.Context, request *http.Request) error {
-			token, err := accessToken(ctx, config.AccessToken, config.AccessTokenProvider)
-			if err != nil {
-				return err
-			}
-			if token != "" {
-				request.Header.Set("authorization", "Bearer "+token)
-			}
 			if config.ProjectID != "" {
 				request.Header.Set("x-ama-project-id", config.ProjectID)
 			}
@@ -134,15 +122,17 @@ func newClientCore(config ClientConfig) (*clientCore, error) {
 			return nil
 		}),
 	}
-	if config.HTTPClient != nil {
-		opts = append(opts, WithHTTPClient(config.HTTPClient))
+	httpClient := config.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
+	opts = append(opts, WithHTTPClient(httpClient))
 	baseURL := strings.TrimRight(config.BaseURL, "/")
 	raw, err := NewClientWithResponses(baseURL, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &clientCore{raw: raw, baseURL: baseURL, accessToken: config.AccessToken, accessTokenProvider: config.AccessTokenProvider, projectID: config.ProjectID, headers: headers}, nil
+	return &clientCore{raw: raw, baseURL: baseURL, projectID: config.ProjectID, headers: headers, httpClient: httpClient}, nil
 }
 
 func (c *Client) Raw() *ClientWithResponses {
@@ -218,17 +208,10 @@ func (c *clientCore) dialWebSocket(ctx context.Context, path string) (JSONChanne
 	for key, value := range c.headers {
 		headers.Set(key, value)
 	}
-	token, err := accessToken(ctx, c.accessToken, c.accessTokenProvider)
-	if err != nil {
-		return nil, err
-	}
-	if token != "" {
-		headers.Set("authorization", "Bearer "+token)
-	}
 	if c.projectID != "" {
 		headers.Set("x-ama-project-id", c.projectID)
 	}
-	conn, _, err := websocket.Dial(ctx, endpoint, &websocket.DialOptions{HTTPHeader: headers})
+	conn, _, err := websocket.Dial(ctx, endpoint, &websocket.DialOptions{HTTPClient: c.httpClient, HTTPHeader: headers})
 	if err != nil {
 		return nil, err
 	}
@@ -256,13 +239,6 @@ func (c *clientCore) webSocketURL(path string) (string, error) {
 	return parsed.String(), nil
 }
 
-func accessToken(ctx context.Context, static string, provider AccessTokenProvider) (string, error) {
-	if provider != nil {
-		return provider(ctx)
-	}
-	return static, nil
-}
-
 type ConfigzService struct {
 	client *clientCore
 }
@@ -287,28 +263,12 @@ func (s AuthService) Config(ctx context.Context, params *ReadAuthConfigParams) (
 	return unwrap(response.StatusCode(), response.Body, response.JSON200)
 }
 
-func (s AuthService) CreateSession(ctx context.Context, body CreateAuthSessionRequest) (*AuthSession, error) {
-	response, err := s.client.raw.CreateAuthSessionWithResponse(ctx, body)
-	if err != nil {
-		return nil, err
-	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON401, response.JSON403)
-}
-
 func (s AuthService) CurrentSession(ctx context.Context) (*AuthSession, error) {
 	response, err := s.client.raw.ReadCurrentAuthSessionWithResponse(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403)
-}
-
-func (s AuthService) DeleteCurrentSession(ctx context.Context) error {
-	response, err := s.client.raw.DeleteCurrentAuthSessionWithResponse(ctx)
-	if err != nil {
-		return err
-	}
-	return unwrapEmpty(response.StatusCode(), response.Body)
 }
 
 type ProjectsService struct {

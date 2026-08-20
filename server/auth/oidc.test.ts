@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
-import { getBearerClaims, OidcError, oidcAudience, organizationIdForClaims, upsertProjectForClaims } from './oidc'
+import { getAccessTokenClaims, OidcError, oidcAudience, organizationIdForClaims, upsertProjectForClaims } from './oidc'
 
 type ProjectRawRow = [string, string, string, string, string]
 
@@ -56,8 +56,8 @@ async function signedToken({
   jwk.alg = 'RS256'
   jwk.use = 'sig'
 
-  let jwt = new SignJWT(claims)
-    .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+  let jwt = new SignJWT({ client_id: 'ama', scope: 'agents:read', cnf: { jkt: 'test-thumbprint' }, ...claims })
+    .setProtectedHeader({ alg: 'RS256', kid: 'test-key', typ: 'at+jwt' })
     .setIssuer(issuer)
     .setIssuedAt()
     .setExpirationTime('5m')
@@ -80,6 +80,10 @@ function stubJwks(jwks: JSONWebKeySet) {
     if (url.pathname.endsWith('/jwks')) {
       return Response.json(jwks)
     }
+    if (url.pathname.endsWith('/.well-known/openid-configuration')) {
+      const issuer = url.toString().slice(0, -'/.well-known/openid-configuration'.length)
+      return Response.json({ issuer, jwks_uri: `${issuer}/jwks` })
+    }
     return new Response('not found', { status: 404 })
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -92,14 +96,14 @@ function requestedPaths(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
-describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
+describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
   it('requires a configured runner client for deterministic runner tokens', async () => {
     await expect(
-      getBearerClaims(
+      getAccessTokenClaims(
         { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
         'e2e-runner:missing-client',
       ),
@@ -110,9 +114,11 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(getBearerClaims(envFor('https://id-opaque.test/api/auth'), 'opaque-token')).rejects.toMatchObject({
-      message: 'OIDC access token must be a JWT',
-    })
+    await expect(getAccessTokenClaims(envFor('https://id-opaque.test/api/auth'), 'opaque-token')).rejects.toMatchObject(
+      {
+        message: 'Realmroot access token must be a JWT',
+      },
+    )
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -125,18 +131,18 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
     })
     stubJwks(jwks)
 
-    await expect(getBearerClaims(envFor(issuer), token)).rejects.toBeInstanceOf(OidcError)
+    await expect(getAccessTokenClaims(envFor(issuer), token)).rejects.toBeInstanceOf(OidcError)
   })
 
   it('resolves a signed JWT subject and never fabricates a client: identity', async () => {
     const issuer = 'https://id-real-user.test/api/auth'
     const { token, jwks } = await signedToken({
       issuer,
-      claims: { client_id: 'client_ak' },
+      claims: { client_id: 'ama' },
     })
     const fetchMock = stubJwks(jwks)
 
-    const claims = await getBearerClaims(envFor(issuer), token)
+    const claims = await getAccessTokenClaims(envFor(issuer), token)
     expect(claims.sub).toBe('user_real')
     expect(organizationIdForClaims(claims)).toBe('user:user_real')
     expect(JSON.stringify(claims)).not.toContain('client:')
@@ -156,12 +162,45 @@ describe('[spec: auth/oidc-claims] OIDC bearer claim resolution', () => {
     })
     const fetchMock = stubJwks(jwks)
 
-    const claims = await getBearerClaims(envFor(issuer, { OIDC_RUNNER_CLIENT_ID: 'client_runner' }), token)
+    const claims = await getAccessTokenClaims(envFor(issuer, { OIDC_RUNNER_CLIENT_ID: 'client_runner' }), token)
     expect(claims.sub).toBe('user_runner')
     expect(claims.client_id).toBe('client_runner')
     expect(claims.roles).toContain('runner')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/introspect')
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/userinfo')
+  })
+
+  it('classifies a verified native Realmroot act chain as the stable ai_agent profile', async () => {
+    const issuer = 'https://id-agent.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      subject: 'controller_user_1',
+      claims: {
+        client_id: 'realmroot-cli',
+        act: { iss: issuer, sub: 'agent_profile_1' },
+      },
+    })
+    stubJwks(jwks)
+
+    const claims = await getAccessTokenClaims(envFor(issuer), token)
+    expect(claims.sub).toBe('controller_user_1')
+    expect(claims.actor).toEqual({ issuer, subject: 'agent_profile_1', profile: 'ai_agent' })
+  })
+
+  it('rejects a reserved Realmroot CLI token whose act issuer is not verified', async () => {
+    const issuer = 'https://id-agent-reject.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'realmroot-cli',
+        act: { iss: 'https://attacker.example.test/api/auth', sub: 'agent_1' },
+      },
+    })
+    stubJwks(jwks)
+
+    await expect(getAccessTokenClaims(envFor(issuer), token)).rejects.toMatchObject({
+      message: 'Realmroot Agent token omitted the stable Agent actor',
+    })
   })
 })
 
@@ -179,7 +218,9 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     const { token, jwks } = await signedToken({ issuer, audience })
     stubJwks(jwks)
 
-    await expect(getBearerClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)).rejects.toBeInstanceOf(OidcError)
+    await expect(getAccessTokenClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)).rejects.toBeInstanceOf(
+      OidcError,
+    )
   })
 
   it('accepts the configured AMA audience and does not invent owner or wildcard authority', async () => {
@@ -188,10 +229,10 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     const { token, jwks } = await signedToken({ issuer, audience: resource })
     stubJwks(jwks)
 
-    const claims = await getBearerClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)
+    const claims = await getAccessTokenClaims(envFor(issuer, { OIDC_RESOURCE: resource }), token)
     expect(claims.sub).toBe('user_real')
     expect(claims.roles).toEqual([])
-    expect(claims.permissions).toEqual([])
+    expect(claims.permissions).toEqual(['agents:read'])
   })
 
   it.each([
@@ -207,11 +248,11 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     )
   })
 
-  it('getBearerClaims fails closed in live mode without an explicit OIDC_RESOURCE', async () => {
+  it('getAccessTokenClaims fails closed in live mode without an explicit OIDC_RESOURCE', async () => {
     const liveEnv = envFor('https://id-live-resource.test/api/auth', { AMA_RUNTIME_MODE: 'live' })
     delete liveEnv.OIDC_RESOURCE
     await expect(
-      getBearerClaims(liveEnv, 'opaque-token', 'https://ama.example.com/api/v1/agents'),
+      getAccessTokenClaims(liveEnv, 'opaque-token', 'https://ama.example.com/api/v1/agents'),
     ).rejects.toMatchObject({ message: expect.stringContaining('OIDC_RESOURCE is required') })
   })
 
@@ -226,14 +267,14 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
 
   it('does not accept synthesized e2e tokens in live mode even when the test-auth flag is set', async () => {
     await expect(
-      getBearerClaims(
+      getAccessTokenClaims(
         envFor('https://id-live-e2e.test/api/auth', {
           AMA_RUNTIME_MODE: 'live',
           AMA_E2E_TEST_AUTH: 'true',
         }),
         'e2e:user_1',
       ),
-    ).rejects.toMatchObject({ message: 'OIDC access token must be a JWT' })
+    ).rejects.toMatchObject({ message: 'Realmroot access token must be a JWT' })
   })
 })
 

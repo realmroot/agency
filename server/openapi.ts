@@ -1,21 +1,22 @@
 import type { Hook } from '@hono/zod-openapi'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import type { Context, Env as HonoBaseEnv } from 'hono'
+import { requiredScope } from './auth/scopes'
 import { EnvFromEntrySchema } from './contracts/execution-spec'
 import type { Env } from './env'
 import type { Deps } from './usecases/deps'
 
 export const ApiSecuritySchemes = {
-  bearerAuth: {
-    type: 'http',
-    scheme: 'bearer',
-    bearerFormat: 'OIDC access token',
-    description: 'OIDC access token issued by the configured FlareAuth issuer.',
+  realmrootDpop: {
+    type: 'openIdConnect',
+    openIdConnectUrl: 'https://id.realmroot.dev/api/auth/.well-known/openid-configuration',
+    description: 'Realmroot-issued, DPoP-bound at+jwt access token. Bearer tokens are rejected.',
+    'x-dpop-required': true,
   },
 } as const
 
 export const AuthenticatedOperation = {
-  security: [{ bearerAuth: [] }],
+  security: [{ realmrootDpop: [] }],
 }
 
 type OpenApiOperation = {
@@ -23,13 +24,25 @@ type OpenApiOperation = {
   responses?: Record<string, unknown>
 }
 
-export function addAuthorizationResponses<T extends { paths: object }>(document: T) {
-  for (const operations of Object.values(document.paths) as Array<Record<string, OpenApiOperation>>) {
-    for (const operation of Object.values(operations)) {
-      if (!operation.security?.some((requirement) => Object.hasOwn(requirement, 'bearerAuth'))) continue
+export function finalizeOpenApiDocument<T extends { paths: object }>(document: T) {
+  for (const [path, operations] of Object.entries(document.paths) as Array<
+    [string, Record<string, OpenApiOperation>]
+  >) {
+    for (const [method, operation] of Object.entries(operations)) {
+      if (!operation.security?.some((requirement) => Object.hasOwn(requirement, 'realmrootDpop'))) continue
+      const scope = requiredScope(method.toUpperCase(), `https://ama.invalid${path}`)
+      operation.security = [{ realmrootDpop: scope ? [scope] : [] }]
       operation.responses ??= {}
+      operation.responses['401'] ??= {
+        description: 'A valid Realmroot DPoP credential is required',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+          },
+        },
+      }
       operation.responses['403'] ??= {
-        description: 'Token lacks the permission required for this resource',
+        description: 'The Realmroot token lacks the scope required for this resource',
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/ErrorResponse' },

@@ -11,37 +11,31 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 - Staging D1 database: `any-managed-agents-db-staging`
 - Container image built from this repository's `Dockerfile`
 
-## OIDC Provider
+## Realmroot Applications and Resource Server
 
-Create one OIDC application for each deployed Worker host.
+Create public Realmroot applications for the browser SPA and runner device flow. Register AMA as the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728 discovery document and OpenAPI document are live.
 
 Required settings:
 
 - Issuer: `OIDC_ISSUER`
 - Client id: `OIDC_CLIENT_ID`
-- Client secret: store as Wrangler secret `OIDC_CLIENT_SECRET`
-- Resource audience: configure the public AMA origin as an enabled FlareAuth API
-  resource audience and set that exact value in `OIDC_RESOURCE`. AMA rejects
-  access tokens with a missing or different audience. Only the explicit E2E
-  test runtime may derive it from the current request origin.
+- No client secret: both clients are public and use PKCE or device authorization.
+- Resource audience: the exact protected Resource URL, including `/api`.
 - Redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE
 
-Provider authorization claims must grant explicit AMA resource permissions.
+Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require
 `<resource>:write`, and narrowly scoped administration may use
 `<resource>:*`. A missing permission claim is denied.
 
-The browser uses the community `oidc-client-ts` library for authorization-code
-PKCE redirect handling. The Worker uses the community `openid-client` library for
-discovery and `jose` for local JWT/JWKS bearer-token verification. Do not
-implement OIDC parsing or token validation by hand.
+The browser uses `oidc-client-ts` for authorization-code PKCE and browser DPoP key binding. The Worker uses `jose` for JWT/JWKS and ES256 DPoP verification. Bearer tokens and legacy identity service bindings are not accepted.
 
 Control-plane settings:
 
 - `AMA_ALLOWED_ORIGINS`: comma-separated browser origins allowed for
-  bearer-authenticated CORS requests.
+  DPoP-authenticated CORS requests.
 
 ## Sandbox tool executor
 

@@ -45,32 +45,20 @@ export interface RunnerOidcContext {
   isRunnerToken: boolean
   subject: string
   clientId: string | null
-  runnerProjectId: string | null
-  runnerEnvironmentId: string | null
-  externalTenantId: string | null
 }
 
 // The set of runner authentication modes. Single source of truth: the API enum,
 // the record type, and the registration logic all derive from this.
-export const RUNNER_AUTH_MODES = ['bearer', 'mtls', 'oidc', 'federated'] as const
+export const RUNNER_AUTH_MODES = ['realmroot'] as const
 export type RunnerAuthMode = (typeof RUNNER_AUTH_MODES)[number]
 
-// The auth mode a registration resolves to: an explicit request wins, otherwise
-// a federated binding (project/tenant/environment claim) implies 'federated'
-// and a bare device-login token implies 'oidc'.
-export function runnerAuthModeForRegistration(
-  oidc: RunnerOidcContext,
-  requested: RunnerAuthMode | undefined,
-): RunnerAuthMode {
-  return requested ?? (oidc.runnerProjectId || oidc.externalTenantId || oidc.runnerEnvironmentId ? 'federated' : 'oidc')
+// The auth mode a registration resolves to. Realmroot is the only supported mode.
+export function runnerAuthModeForRegistration(requested: RunnerAuthMode | undefined): RunnerAuthMode {
+  return requested ?? 'realmroot'
 }
 
-// A federated runner token's environment binding overrides the requested one.
-export function environmentIdForRegistration(
-  oidc: RunnerOidcContext,
-  requested: string | undefined,
-): string | undefined {
-  return oidc.runnerEnvironmentId ?? requested
+export function environmentIdForRegistration(requested: string | undefined): string | undefined {
+  return requested
 }
 
 // Validates that the resolved auth mode is consistent with the token's binding
@@ -78,19 +66,10 @@ export function environmentIdForRegistration(
 // runner, or null when the binding is acceptable (including non-runner tokens).
 export function runnerOidcBindingFields(oidc: RunnerOidcContext, authMode: string): Record<string, string> | null {
   if (!oidc.isRunnerToken) {
-    return null
+    return { authorization: 'Runner registration requires a Realmroot runner device token.' }
   }
-  if (oidc.runnerProjectId || oidc.externalTenantId || oidc.runnerEnvironmentId) {
-    if (authMode !== 'federated') {
-      return { authMode: 'Federated runner tokens can only register federated runners.' }
-    }
-    if (!oidc.runnerProjectId && !oidc.externalTenantId) {
-      return { authorization: 'Federated runner token did not include a project or external tenant binding.' }
-    }
-    return null
-  }
-  if (authMode !== 'oidc') {
-    return { authMode: 'Runner device-login tokens can only register OIDC-authenticated runners.' }
+  if (authMode !== 'realmroot') {
+    return { authMode: 'Runner device tokens can only register Realmroot-authenticated runners.' }
   }
   if (!oidc.clientId) {
     return { authorization: 'Runner OIDC token did not include a bindable client id.' }

@@ -6,7 +6,7 @@ import {
   type SessionRuntimeCommand,
   type SessionSocketClientMessageType,
   sessionRuntimeReducer,
-  sessionSocketUrl,
+  sessionSocketConnection,
 } from './session-runtime'
 
 export function useSessionRuntimeSession({
@@ -23,10 +23,7 @@ export function useSessionRuntimeSession({
   const reconnectTimerRef = useRef<number | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const sessionId = session?.metadata.uid ?? ''
-  const endpoint = useMemo(
-    () => (sessionId ? sessionSocketUrl(`/api/v1/sessions/${sessionId}/socket`) : null),
-    [sessionId],
-  )
+  const endpoint = useMemo(() => (sessionId ? `/api/v1/sessions/${sessionId}/socket` : null), [sessionId])
 
   useEffect(() => {
     if (sessionIdRef.current !== (session?.metadata.uid ?? null)) {
@@ -41,77 +38,82 @@ export function useSessionRuntimeSession({
       dispatch({ type: 'connection', state: 'closed' })
       return
     }
+    let disposed = false
+    let activeSocket: WebSocket | null = null
     window.clearTimeout(reconnectTimerRef.current ?? undefined)
-    const socket = new WebSocket(endpoint)
-    socketRef.current = socket
     dispatch({ type: 'connection', state: 'connecting' })
-
-    socket.addEventListener('open', () => {
-      /* v8 ignore start -- guard fires only in stale-socket race conditions */
-      if (socketRef.current !== socket) return
-      /* v8 ignore stop */
-      dispatch({ type: 'connection', state: 'open' })
-    })
-    socket.addEventListener('message', (message) => {
-      /* v8 ignore start -- guard fires only in stale-socket race conditions */
-      if (socketRef.current !== socket) return
-      /* v8 ignore stop */
-      const socketMessage = parseSessionSocketServerMessage(message.data)
-      if (socketMessage instanceof Error) {
-        dispatch({ type: 'connection', state: 'error', error: socketMessage.message })
-        return
-      }
-      if (socketMessage.type === 'ack') {
-        return
-      }
-      if (socketMessage.type === 'error') {
-        dispatch({ type: 'connection', state: 'error', error: socketMessage.message })
-        return
-      }
-      if (socketMessage.type === 'runner_unavailable') {
-        dispatch({ type: 'connection', state: 'error', error: socketMessage.message })
-        return
-      }
-      if (socketMessage.type === 'backfill') {
-        dispatch({ type: 'session_events', events: socketMessage.events as SessionEvent[] })
-        if (socketMessage.hasMore && typeof socketMessage.nextCursor === 'number') {
-          socket.send(
-            JSON.stringify({
-              type: 'backfill',
-              requestId: crypto.randomUUID(),
-              cursor: socketMessage.nextCursor,
-              limit: 200,
-            }),
-          )
-        }
-      } else {
-        dispatch({ type: 'session_events', events: [socketMessage.record as SessionEvent] })
-      }
-      if (shouldRefreshAfterMessage(socketMessage)) {
-        window.clearTimeout(refreshTimerRef.current ?? undefined)
-        refreshTimerRef.current = window.setTimeout(onEventsChanged, 150)
-      }
-    })
-    socket.addEventListener('error', () => {
-      if (socketRef.current !== socket) return
-      dispatch({ type: 'connection', state: 'error', error: 'Session socket failed' })
-    })
-    socket.addEventListener('close', () => {
-      if (socketRef.current !== socket) return
-      socketRef.current = null
-      dispatch({ type: 'connection', state: 'connecting' })
-      reconnectTimerRef.current = window.setTimeout(() => {
-        setConnectionAttempt((attempt) => attempt + 1)
-      }, 750)
-    })
+    void sessionSocketConnection(endpoint)
+      .then(({ url, protocols }) => {
+        if (disposed) return
+        const socket = new WebSocket(url, protocols)
+        activeSocket = socket
+        socketRef.current = socket
+        socket.addEventListener('open', () => {
+          if (socketRef.current !== socket) return
+          dispatch({ type: 'connection', state: 'open' })
+        })
+        socket.addEventListener('message', (message) => {
+          if (socketRef.current !== socket) return
+          const socketMessage = parseSessionSocketServerMessage(message.data)
+          if (socketMessage instanceof Error) {
+            dispatch({ type: 'connection', state: 'error', error: socketMessage.message })
+            return
+          }
+          if (socketMessage.type === 'ack') return
+          if (socketMessage.type === 'error' || socketMessage.type === 'runner_unavailable') {
+            dispatch({ type: 'connection', state: 'error', error: socketMessage.message })
+            return
+          }
+          if (socketMessage.type === 'backfill') {
+            dispatch({ type: 'session_events', events: socketMessage.events as SessionEvent[] })
+            if (socketMessage.hasMore && typeof socketMessage.nextCursor === 'number') {
+              socket.send(
+                JSON.stringify({
+                  type: 'backfill',
+                  requestId: crypto.randomUUID(),
+                  cursor: socketMessage.nextCursor,
+                  limit: 200,
+                }),
+              )
+            }
+          } else {
+            dispatch({ type: 'session_events', events: [socketMessage.record as SessionEvent] })
+          }
+          if (shouldRefreshAfterMessage(socketMessage)) {
+            window.clearTimeout(refreshTimerRef.current ?? undefined)
+            refreshTimerRef.current = window.setTimeout(onEventsChanged, 150)
+          }
+        })
+        socket.addEventListener('error', () => {
+          if (socketRef.current !== socket) return
+          dispatch({ type: 'connection', state: 'error', error: 'Session socket failed' })
+        })
+        socket.addEventListener('close', () => {
+          if (socketRef.current !== socket) return
+          socketRef.current = null
+          dispatch({ type: 'connection', state: 'connecting' })
+          reconnectTimerRef.current = window.setTimeout(() => {
+            setConnectionAttempt((attempt) => attempt + 1)
+          }, 750)
+        })
+      })
+      .catch((error: unknown) => {
+        if (disposed) return
+        dispatch({
+          type: 'connection',
+          state: 'error',
+          error: error instanceof Error ? error.message : 'Realmroot DPoP credential is unavailable',
+        })
+      })
 
     return () => {
+      disposed = true
       window.clearTimeout(refreshTimerRef.current ?? undefined)
       window.clearTimeout(reconnectTimerRef.current ?? undefined)
-      if (socketRef.current === socket) {
+      if (socketRef.current === activeSocket) {
         socketRef.current = null
       }
-      socket.close()
+      activeSocket?.close()
     }
   }, [endpoint, onEventsChanged, connectionAttempt])
 

@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 interface OpenApiOperation {
   operationId?: string
@@ -23,7 +23,7 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
@@ -43,7 +43,7 @@ async function openApiOperationIds() {
   )
 }
 
-describe('[CF] restish/OpenAPI control-plane path [spec: api-contracts/restish]', () => {
+describe('[CF] Realmroot toolbox/OpenAPI control-plane path [spec: api-contracts/realmroot-toolbox]', () => {
   beforeEach(async () => {
     await setupOidcProvider()
     await seedPlatformProvider()

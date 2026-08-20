@@ -33,7 +33,7 @@ pnpm --filter @any-managed-agents/sdk run typecheck
 
 ## Usage
 
-Create a client bound to an origin and an OIDC access token, then call the
+Create a client bound to an origin and a request-aware Realmroot DPoP authorizer, then call the
 resource methods. Each method takes the natural arguments (ids, body, query),
 returns the typed result, and throws `AmaApiError` (with `.status`) on non-2xx.
 
@@ -42,7 +42,7 @@ import { createAmaClient, AmaApiError } from '@any-managed-agents/sdk'
 
 const client = createAmaClient({
   baseUrl: process.env.AMA_ORIGIN,
-  accessToken,        // sent as Authorization: Bearer <token>
+  authorize: realmrootDpopAuthorizer,
   projectId,          // sent as x-ama-project-id (optional)
 })
 
@@ -81,9 +81,9 @@ heartbeat endpoints do not leak into the public client shape:
 ```ts
 import { createAmaRunnerClient } from '@any-managed-agents/sdk'
 
-const runner = createAmaRunnerClient({ baseUrl, accessToken, projectId })
+const runner = createAmaRunnerClient({ baseUrl, authorize: realmrootDpopAuthorizer, projectId })
 await runner.runners.putHeartbeat(runnerId, { state: 'active' })
-const channel = runner.runners.channel(runnerId)
+const channel = await runner.runners.channel(runnerId)
 ```
 
 The web console does not import this package; console code uses the

@@ -23,7 +23,6 @@ type runConfigOption struct {
 
 var runConfigOptions = []runConfigOption{
 	{Key: "apiServer", Flag: "api-server", Env: "AMA_API_SERVER", Usage: "AMA API server URL"},
-	{Key: "token", Env: "AMA_TOKEN"},
 	{Key: "projectId", Flag: "project-id", Env: "AMA_PROJECT_ID", Usage: "AMA project id"},
 	{Key: "environmentId", Flag: "environment-id", Env: "AMA_ENVIRONMENT_ID", Usage: "AMA environment id"},
 	{Key: "allowUnsafeProcess", Flag: "allow-unsafe-process", Env: "AMA_RUNNER_ALLOW_UNSAFE_PROCESS", Default: false, Usage: "acknowledge unsafe process adapter"},
@@ -81,12 +80,6 @@ func LoadRunConfig(command *cobra.Command) (runnerconfig.Config, error) {
 	}
 	config.ConfigPath = configPath
 	config.CredentialPath = credentialPath()
-	config.TokenExplicit = strings.TrimSpace(os.Getenv("AMA_TOKEN")) != ""
-	if config.TokenExplicit {
-		config.Token = strings.TrimSpace(os.Getenv("AMA_TOKEN"))
-	} else {
-		config.Token = ""
-	}
 	if err := applySavedLogin(&config); err != nil {
 		return runnerconfig.Config{}, err
 	}
@@ -169,13 +162,13 @@ func applySavedLogin(config *runnerconfig.Config) error {
 		return err
 	}
 	if saved == nil {
-		return nil
+		return errors.New("AMA runner is not logged in; run ama-runner auth login")
 	}
 	if strings.TrimSpace(config.APIServer) == "" {
 		config.APIServer = saved.APIServer
 	}
-	if !config.TokenExplicit && strings.TrimSpace(config.Token) == "" && config.APIServer == saved.APIServer {
-		config.Token = saved.AccessToken
+	if strings.TrimSpace(saved.DPoPPrivateKey) == "" {
+		return errors.New("saved AMA runner login is not DPoP-bound; run ama-runner auth login again")
 	}
 	return nil
 }

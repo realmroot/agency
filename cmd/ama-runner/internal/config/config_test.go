@@ -13,7 +13,6 @@ import (
 func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 	valid := Config{
 		APIServer:             "https://ama.example.test",
-		Token:                 "token",
 		EnvironmentID:         "env_1",
 		AllowUnsafeProcess:    true,
 		StateDir:              t.TempDir(),
@@ -32,7 +31,6 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 	}{
 		{"apiServerMissing", func(c *Config) { c.APIServer = "" }, "AMA API server URL is required"},
 		{"apiServerMalformed", func(c *Config) { c.APIServer = "://bad" }, "absolute URL"},
-		{"token", func(c *Config) { c.Token = "" }, "AMA token"},
 		{"environment", func(c *Config) { c.EnvironmentID = "" }, "AMA environment id"},
 		{"workDir", func(c *Config) { c.WorkDir = "" }, "work dir"},
 		{"stateDir", func(c *Config) { c.StateDir = "" }, "runner state directory"},
@@ -62,6 +60,33 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 	}
 }
 
+func TestValidateAPIServerURLAllowsHTTPSAndLoopbackHTTPOnly(t *testing.T) {
+	for _, value := range []string{
+		"https://ama.example.test",
+		"http://localhost:8787",
+		"http://127.0.0.1:8787",
+		"http://[::1]:8787",
+	} {
+		if err := ValidateAPIServerURL(value); err != nil {
+			t.Fatalf("expected %q to be accepted, got %v", value, err)
+		}
+	}
+	for _, tc := range []struct {
+		value string
+		want  string
+	}{
+		{value: "http://ama.example.test", want: "HTTPS"},
+		{value: "ftp://ama.example.test", want: "HTTPS"},
+		{value: "https://user:secret@ama.example.test", want: "userinfo"},
+		{value: "https://ama.example.test?token=secret", want: "query"},
+		{value: "https://ama.example.test#fragment", want: "fragment"},
+	} {
+		if err := ValidateAPIServerURL(tc.value); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("expected %q to fail with %q, got %v", tc.value, tc.want, err)
+		}
+	}
+}
+
 func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
 	configRoot := filepath.Join(t.TempDir(), "config")
 	stateRoot := filepath.Join(t.TempDir(), "state")
@@ -86,9 +111,9 @@ func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
 func TestCredentialStoreSwitchesAccountsAndProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	profiles := []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", Email: "one@example.test", AccessToken: "token-1", TokenType: "Bearer"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test", Email: "two@example.test", AccessToken: "token-2", TokenType: "Bearer"},
-		{AccountID: "acct_other", APIServer: "https://other.example.test", Email: "other@example.test", AccessToken: "token-other", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://ama.example.test", Email: "one@example.test", AccessToken: "token-1", TokenType: "DPoP", DPoPPrivateKey: "key-1"},
+		{AccountID: "acct_2", APIServer: "https://ama.example.test", Email: "two@example.test", AccessToken: "token-2", TokenType: "DPoP", DPoPPrivateKey: "key-2"},
+		{AccountID: "acct_other", APIServer: "https://other.example.test", Email: "other@example.test", AccessToken: "token-other", TokenType: "DPoP", DPoPPrivateKey: "key-other"},
 	}
 	for _, profile := range profiles {
 		if err := SaveCredentialProfile(credentialPath, profile); err != nil {
@@ -148,12 +173,13 @@ func TestCredentialStoreLoadsAndLogsOutProfiles(t *testing.T) {
 		t.Fatalf("expected empty active profile for empty path, active=%#v err=%v", active, err)
 	}
 	profile := CredentialProfile{
-		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test/",
-		Email:       "runner@example.test",
-		AccessToken: "token",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      "https://ama.example.test/",
+		Email:          "runner@example.test",
+		AccessToken:    "token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "test-key",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}
 	if err := SaveCredentialProfile(credentialPath, profile); err != nil {
 		t.Fatal(err)
@@ -182,9 +208,9 @@ func TestCredentialStoreLoadsAndLogsOutProfiles(t *testing.T) {
 
 func TestCredentialStoreUpdatesAndReassignsActiveProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	first := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"}
-	updated := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test/", Email: "updated@example.test", AccessToken: "token-updated", TokenType: "Bearer"}
-	otherServer := CredentialProfile{AccountID: "acct_2", APIServer: "https://other.example.test", AccessToken: "token-2", TokenType: "Bearer"}
+	first := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "DPoP", DPoPPrivateKey: "key-1"}
+	updated := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test/", Email: "updated@example.test", AccessToken: "token-updated", TokenType: "DPoP", DPoPPrivateKey: "key-1"}
+	otherServer := CredentialProfile{AccountID: "acct_2", APIServer: "https://other.example.test", AccessToken: "token-2", TokenType: "DPoP", DPoPPrivateKey: "key-2"}
 	if err := SaveCredentialProfile(credentialPath, first); err != nil {
 		t.Fatal(err)
 	}
@@ -223,9 +249,9 @@ func TestCredentialStoreUpdatesAndReassignsActiveProfiles(t *testing.T) {
 func TestCredentialStoreLoadProfileSelection(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	for _, profile := range []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "token-2", TokenType: "Bearer"},
-		{AccountID: "acct_3", APIServer: "https://other.example.test", AccessToken: "token-3", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "DPoP", DPoPPrivateKey: "key-1"},
+		{AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "token-2", TokenType: "DPoP", DPoPPrivateKey: "key-2"},
+		{AccountID: "acct_3", APIServer: "https://other.example.test", AccessToken: "token-3", TokenType: "DPoP", DPoPPrivateKey: "key-3"},
 	} {
 		if err := SaveCredentialProfile(credentialPath, profile); err != nil {
 			t.Fatal(err)

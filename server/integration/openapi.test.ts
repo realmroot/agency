@@ -24,7 +24,7 @@ interface OpenApiDocument {
 const METHODS = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const EXPECTED_RESTISH_OPERATIONS = {
   Config: ['readConfigz'],
-  Auth: ['createAuthSession', 'readAuthConfig'],
+  Auth: ['readAuthConfig'],
   Projects: ['listProjects', 'createProject'],
   Agents: ['listAgents', 'createAgent'],
   Environments: ['listEnvironments', 'createEnvironment'],
@@ -76,13 +76,13 @@ describe('[CF] OpenAPI documentation', () => {
     const doc = await fetchOpenApi()
 
     expect(doc.openapi).toBe('3.0.0')
-    expect(doc.servers).toEqual([{ url: '/' }])
+    expect(doc.servers).toEqual([{ url: 'https://example.com' }])
     expect(doc.paths).not.toHaveProperty('/api/v1/health')
     expect(doc.paths).not.toHaveProperty('/api/healthz')
     expect(doc.paths).toHaveProperty('/api/v1/configz')
     expect(doc.paths).toHaveProperty('/api/v1/projects')
     expect(doc.paths).toHaveProperty('/api/v1/auth/config')
-    expect(doc.paths).toHaveProperty('/api/v1/auth/sessions')
+    expect(doc.paths).not.toHaveProperty('/api/v1/auth/sessions')
     expect(doc.paths).toHaveProperty('/api/v1/auth/sessions/current')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/login-options')
     expect(doc.paths).not.toHaveProperty('/api/auth/session')
@@ -224,18 +224,17 @@ describe('[CF] OpenAPI documentation', () => {
 
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/auth/config'].get.security).toBeUndefined()
-    expect(doc.paths['/api/v1/auth/sessions'].post.security).toBeUndefined()
-    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/environments'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/sessions'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/vaults'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/runners'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/memory-stores'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/providers'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/connectors'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/usage-records'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/audit-records'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(doc.paths['/api/v1/triggers'].get.security).toEqual([{ bearerAuth: [] }])
+    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ realmrootDpop: ['agents:read'] }])
+    expect(doc.paths['/api/v1/environments'].get.security).toEqual([{ realmrootDpop: ['environments:read'] }])
+    expect(doc.paths['/api/v1/sessions'].get.security).toEqual([{ realmrootDpop: ['sessions:read'] }])
+    expect(doc.paths['/api/v1/vaults'].get.security).toEqual([{ realmrootDpop: ['vaults:read'] }])
+    expect(doc.paths['/api/v1/runners'].get.security).toEqual([{ realmrootDpop: ['runners:read'] }])
+    expect(doc.paths['/api/v1/memory-stores'].get.security).toEqual([{ realmrootDpop: ['memory-stores:read'] }])
+    expect(doc.paths['/api/v1/providers'].get.security).toEqual([{ realmrootDpop: ['providers:read'] }])
+    expect(doc.paths['/api/v1/connectors'].get.security).toEqual([{ realmrootDpop: ['connectors:read'] }])
+    expect(doc.paths['/api/v1/usage-records'].get.security).toEqual([{ realmrootDpop: ['usage-records:read'] }])
+    expect(doc.paths['/api/v1/audit-records'].get.security).toEqual([{ realmrootDpop: ['audit-records:read'] }])
+    expect(doc.paths['/api/v1/triggers'].get.security).toEqual([{ realmrootDpop: ['triggers:read'] }])
 
     expect(doc.paths['/api/v1/agents'].get.operationId).toBe('listAgents')
     expect(doc.paths['/api/v1/environments'].get.operationId).toBe('listEnvironments')
@@ -271,7 +270,11 @@ describe('[CF] OpenAPI documentation', () => {
       doc.paths['/api/v1/agents'].get.parameters?.map((parameter) => (parameter as { name?: string }).name),
     ).toEqual(expect.arrayContaining(['archived', 'search', 'createdFrom', 'createdTo', 'limit', 'cursor']))
 
-    expect(doc.components?.securitySchemes).toHaveProperty('bearerAuth')
+    expect(doc.components?.securitySchemes).toEqual(
+      expect.objectContaining({
+        realmrootDpop: expect.objectContaining({ type: 'openIdConnect', 'x-dpop-required': true }),
+      }),
+    )
     expect(doc.components?.schemas).toHaveProperty('Project')
     expect(doc.components?.schemas).toHaveProperty('ErrorResponse')
     expect(doc.components?.schemas).toHaveProperty('ListPagination')
@@ -332,6 +335,13 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.components?.schemas).toHaveProperty('UsageRecord')
     expect(doc.components?.schemas).toHaveProperty('UsageSummary')
     expect(doc.components?.schemas).toHaveProperty('AuditRecord')
+    expect(doc.components?.schemas?.AuditRecord).toMatchObject({
+      required: expect.arrayContaining(['actorUserId', 'controllerUserId']),
+      properties: {
+        actorUserId: expect.any(Object),
+        controllerUserId: expect.any(Object),
+      },
+    })
     expect(doc.components?.schemas).toHaveProperty('Trigger')
     expect(doc.components?.schemas).toHaveProperty('TriggerRun')
     expect(doc.components?.schemas).toHaveProperty('TriggerListResponse')
@@ -573,7 +583,12 @@ describe('[CF] OpenAPI documentation', () => {
 
       const isPublic = operation.security === undefined
       if (!isPublic) {
-        expect(operation.security, `${operation.operationId} must declare bearer auth`).toEqual([{ bearerAuth: [] }])
+        const required = operation.security as Array<Record<string, unknown>>
+        expect(required, `${operation.operationId} must declare Realmroot DPoP auth`).toHaveLength(1)
+        expect(required[0]).toHaveProperty('realmrootDpop')
+        const scopeOperation =
+          path.endsWith('/socket') || path.endsWith('/channel') ? 'write' : method === 'get' ? 'read' : 'write'
+        expect(required[0]?.realmrootDpop).toEqual([`${path.split('/')[3]}:${scopeOperation}`])
         expectJsonErrorResponse(operation, '401')
         expectJsonErrorResponse(operation, '403')
       }
@@ -592,7 +607,7 @@ describe('[CF] OpenAPI documentation', () => {
 
     // Anchor the public/protected split to known endpoints so the security model stays meaningful.
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
-    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ bearerAuth: [] }])
+    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ realmrootDpop: ['agents:read'] }])
   })
 
   it('serves interactive API docs', async () => {

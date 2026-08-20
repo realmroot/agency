@@ -29,13 +29,14 @@ func NewTokenSource(config runnerconfig.Config, httpClient *http.Client) (*Token
 		HTTPClient: httpClient,
 		client:     DeviceAuthClient{HTTPClient: httpClient},
 	}
-	if !config.TokenExplicit {
-		saved, err := runnerconfig.LoadCredentialProfile(config.CredentialPath, config.APIServer)
-		if err != nil {
-			return nil, err
-		}
-		source.saved = saved
+	saved, err := runnerconfig.LoadCredentialProfile(config.CredentialPath, config.APIServer)
+	if err != nil {
+		return nil, err
 	}
+	if saved == nil || strings.TrimSpace(saved.DPoPPrivateKey) == "" {
+		return nil, fmt.Errorf("AMA runner requires a Realmroot DPoP login; run ama-runner auth login")
+	}
+	source.saved = saved
 	return source, nil
 }
 
@@ -43,10 +44,7 @@ func (s *TokenSource) AccessToken(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		if strings.TrimSpace(s.Config.Token) == "" {
-			return "", fmt.Errorf("AMA token is required")
-		}
-		return s.Config.Token, nil
+		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
 	}
 	if !s.needsRefresh(*s.saved) {
 		if strings.TrimSpace(s.saved.AccessToken) == "" {
@@ -61,7 +59,7 @@ func (s *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		return s.Config.Token, nil
+		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
 	}
 	return s.refreshLocked(ctx, true)
 }
@@ -72,9 +70,19 @@ func (s *TokenSource) CanRefresh() bool {
 	return s.saved != nil && strings.TrimSpace(s.saved.RefreshToken) != ""
 }
 
+func (s *TokenSource) CredentialProfile() (*runnerconfig.CredentialProfile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.saved == nil {
+		return nil, nil
+	}
+	profile := *s.saved
+	return &profile, nil
+}
+
 func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, error) {
 	if s.saved == nil {
-		return s.Config.Token, nil
+		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
 	}
 	previousAccessToken := s.saved.AccessToken
 	next, err := runnerconfig.UpdateCredentialProfile(
@@ -133,6 +141,7 @@ func (s *TokenSource) refreshCredentialProfile(ctx context.Context, current runn
 		settings.ClientID,
 		current.RefreshToken,
 		settings.Resource,
+		current.DPoPPrivateKey,
 	)
 	if err != nil {
 		return runnerconfig.CredentialProfile{}, err

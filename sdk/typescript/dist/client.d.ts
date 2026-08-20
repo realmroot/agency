@@ -1,9 +1,12 @@
 import type * as types from './generated/types.gen.js';
 export interface AmaClientConfig {
     baseUrl: string;
-    accessToken?: string;
     projectId?: string;
     headers?: Record<string, string>;
+    authorize?: (url: string, method: string) => Promise<{
+        accessToken: string;
+        dpopProof: string;
+    }>;
 }
 export declare class AmaApiError extends Error {
     readonly status: number | undefined;
@@ -34,9 +37,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
     };
     auth: {
         config: (query?: types.ReadAuthConfigData["query"]) => Promise<types.AuthConfig>;
-        createSession: (body: types.CreateAuthSessionRequest) => Promise<types.AuthSession>;
         currentSession: () => Promise<types.AuthSession>;
-        deleteCurrentSession: () => Promise<void>;
     };
     projects: {
         list: (query?: types.ListProjectsData["query"]) => Promise<types.ProjectListResponse>;
@@ -104,7 +105,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateSessionRequest) => Promise<types.Session>;
         get: (sessionId: string) => Promise<types.Session>;
         update: (sessionId: string, body: types.UpdateSessionRequest) => Promise<types.Session>;
-        stream: (sessionId: string) => SessionStream;
+        stream: (sessionId: string) => Promise<SessionStream>;
         listMessages: (sessionId: string, query?: types.ListSessionMessagesData["query"]) => Promise<types.SessionMessageListResponse>;
         createMessage: (sessionId: string, body: types.CreateSessionMessageRequest) => Promise<types.SessionMessage>;
         getMessage: (sessionId: string, messageId: string) => Promise<types.SessionMessage>;
@@ -157,7 +158,7 @@ export declare function createAmaRunnerClient(config: AmaClientConfig): {
         create: (body: types.CreateRunnerRequest) => Promise<types.Runner>;
         get: (runnerId: string) => Promise<types.Runner>;
         update: (runnerId: string, body: types.UpdateRunnerRequest) => Promise<types.Runner>;
-        channel: (runnerId: string) => RunnerChannel;
+        channel: (runnerId: string) => Promise<RunnerChannel>;
         getHeartbeat: (runnerId: string) => Promise<types.RunnerHeartbeat>;
         putHeartbeat: (runnerId: string, body: types.PutRunnerHeartbeatRequest) => Promise<types.RunnerHeartbeat>;
     };

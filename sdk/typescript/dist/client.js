@@ -25,16 +25,31 @@ async function unwrap(call) {
 function websocketURL(config, path) {
     const url = new URL(path, config.baseUrl);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    if (config.accessToken) {
-        url.searchParams.set('access_token', config.accessToken);
-    }
     if (config.projectId) {
         url.searchParams.set('x-ama-project-id', config.projectId);
     }
     return url;
 }
-function createSessionStream(config, sessionId) {
-    const socket = new WebSocket(websocketURL(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`).toString());
+function base64Url(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = '';
+    for (const byte of bytes)
+        binary += String.fromCharCode(byte);
+    return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+async function authenticatedWebSocket(config, path) {
+    if (!config.authorize)
+        throw new Error('Realmroot DPoP authorizer is required for AMA WebSocket connections');
+    const url = websocketURL(config, path);
+    const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET');
+    return new WebSocket(url.toString(), [
+        'ama-dpop',
+        `ama-access.${base64Url(authorization.accessToken)}`,
+        `ama-proof.${base64Url(authorization.dpopProof)}`,
+    ]);
+}
+async function createSessionStream(config, sessionId) {
+    const socket = await authenticatedWebSocket(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`);
     const buffered = [];
     const waiters = [];
     const backfillWaiters = new Map();
@@ -103,8 +118,8 @@ function createSessionStream(config, sessionId) {
         },
     };
 }
-function createRunnerChannel(config, runnerId) {
-    const socket = new WebSocket(websocketURL(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`).toString());
+async function createRunnerChannel(config, runnerId) {
+    const socket = await authenticatedWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`);
     const buffered = [];
     const waiters = [];
     let done = false;
@@ -156,10 +171,20 @@ function createRunnerChannel(config, runnerId) {
     };
 }
 function createConfiguredClient(config) {
+    const authenticatedFetch = async (input, init) => {
+        const request = new Request(input, init);
+        const headers = new Headers(request.headers);
+        if (config.authorize) {
+            const authorization = await config.authorize(request.url, request.method);
+            headers.set('authorization', `DPoP ${authorization.accessToken}`);
+            headers.set('dpop', authorization.dpopProof);
+        }
+        return fetch(new Request(request, { headers }));
+    };
     return createClient(createConfig({
         baseUrl: config.baseUrl,
+        fetch: authenticatedFetch,
         headers: {
-            ...(config.accessToken ? { authorization: `Bearer ${config.accessToken}` } : {}),
             ...(config.projectId ? { 'x-ama-project-id': config.projectId } : {}),
             ...config.headers,
         },
@@ -174,9 +199,7 @@ export function createAmaClient(config) {
         },
         auth: {
             config: (query) => unwrap(ops.readAuthConfig({ client, query })),
-            createSession: (body) => unwrap(ops.createAuthSession({ client, body })),
             currentSession: () => unwrap(ops.readCurrentAuthSession({ client })),
-            deleteCurrentSession: () => unwrap(ops.deleteCurrentAuthSession({ client })),
         },
         projects: {
             list: (query) => unwrap(ops.listProjects({ client, query })),

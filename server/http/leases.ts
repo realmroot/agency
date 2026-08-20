@@ -13,7 +13,7 @@ import { wakeSerialHttpTriggerForSettledSession } from '../usecases/dispatch-tri
 import { claimLease } from '../usecases/leases'
 import { type LeaseRecord, RunnerConflictError, RunnerValidationError } from '../usecases/ports'
 import { dispatchPrompt } from '../usecases/runtime/cloud-turn'
-import { runnerForbidden, runnerOperationAuthorized } from './runner-auth'
+import { runnerForbidden, runnerOperationAuthorized, runnerRuntimeAuthorized } from './runner-auth'
 
 type LeaseRoutes = OpenAPIHono<DepsEnv>
 
@@ -198,7 +198,7 @@ export function registerLeaseRoutes(routes: LeaseRoutes) {
       if (!runner) {
         return errorResponse(c, 404, 'not_found', 'Runner not found')
       }
-      if (!runnerOperationAuthorized(c.env, auth, runner)) {
+      if (!runnerRuntimeAuthorized(c.env, auth, runner)) {
         return runnerForbidden(c)
       }
       try {
@@ -298,7 +298,7 @@ export function registerLeaseRoutes(routes: LeaseRoutes) {
       if (!runner) {
         return errorResponse(c, 404, 'not_found', 'Runner not found')
       }
-      if (!runnerOperationAuthorized(c.env, auth, runner)) {
+      if (!runnerRuntimeAuthorized(c.env, auth, runner)) {
         return runnerForbidden(c)
       }
       const requestedState = body.state ?? 'active'

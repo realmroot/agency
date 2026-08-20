@@ -1,7 +1,7 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -15,10 +15,14 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
+}
+
+async function runnerJsonFetch(path: string, authorization: string, init: RequestInit = {}) {
+  return await jsonFetch(path, asRunnerAuthorization(authorization), init)
 }
 
 async function createSelfHostedEnvironment(authorization: string) {
@@ -119,7 +123,8 @@ async function registerActiveRunner(
   options: { runtimeNames?: string[]; maxConcurrent?: number } = {},
 ) {
   const runtimeNames = options.runtimeNames ?? [DEFAULT_AMA_RUNNER_CAPABILITY]
-  const runnerRes = await jsonFetch('/api/v1/runners', authorization, {
+  const runnerAuthorization = asRunnerAuthorization(authorization)
+  const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
     method: 'POST',
     body: JSON.stringify({
       name: `Lease runner ${crypto.randomUUID()}`,
@@ -129,7 +134,7 @@ async function registerActiveRunner(
   })
   expect(runnerRes.status).toBe(201)
   const runner = (await runnerRes.json()) as { id: string }
-  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, authorization, {
+  const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
     method: 'PUT',
     body: JSON.stringify({
       state: 'active',
@@ -153,7 +158,7 @@ async function availableWorkItem(authorization: string, sessionId: string) {
 }
 
 async function claimLease(authorization: string, workItemId: string, runnerId: string, leaseDurationSeconds = 90) {
-  return await jsonFetch('/api/v1/leases', authorization, {
+  return await jsonFetch('/api/v1/leases', asRunnerAuthorization(authorization), {
     method: 'POST',
     body: JSON.stringify({ workItemId, runnerId, leaseDurationSeconds }),
   })
@@ -177,6 +182,11 @@ describe('[CF] /api/v1/leases', () => {
     })
 
     const workItem = await availableWorkItem(authorization, session.id)
+    const operatorClaimRes = await jsonFetch('/api/v1/leases', authorization, {
+      method: 'POST',
+      body: JSON.stringify({ workItemId: workItem.id, runnerId: runner.id, leaseDurationSeconds: 90 }),
+    })
+    expect(operatorClaimRes.status).toBe(403)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as Record<string, unknown>
@@ -191,6 +201,12 @@ describe('[CF] /api/v1/leases', () => {
     // The lease no longer embeds the work item: details come from /work-items.
     expect(lease.workItem).toBeUndefined()
     const leaseId = lease.id as string
+
+    const operatorRenewRes = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ leaseDurationSeconds: 120 }),
+    })
+    expect(operatorRenewRes.status).toBe(403)
 
     const runningSessionRes = await jsonFetch(`/api/v1/sessions/${session.id}`, authorization)
     expect(runningSessionRes.status).toBe(200)
@@ -219,7 +235,7 @@ describe('[CF] /api/v1/leases', () => {
     const conflictRes = await claimLease(authorization, workItem.id, runner.id)
     expect(conflictRes.status).toBe(409)
 
-    const renewRes = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
+    const renewRes = await runnerJsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ leaseDurationSeconds: 120 }),
     })
@@ -231,14 +247,14 @@ describe('[CF] /api/v1/leases', () => {
     })
 
     const explicitExpiry = new Date(Date.now() + 120_000).toISOString()
-    const renewByExpiryRes = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
+    const renewByExpiryRes = await runnerJsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ expiresAt: explicitExpiry }),
     })
     expect(renewByExpiryRes.status).toBe(200)
     await expect(renewByExpiryRes.json()).resolves.toMatchObject({ id: leaseId, expiresAt: explicitExpiry })
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
+    const completeRes = await runnerJsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'completed', result: { ok: true } }),
     })
@@ -288,7 +304,7 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const completeRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({
         state: 'completed',
@@ -343,7 +359,7 @@ describe('[CF] /api/v1/leases', () => {
     })
     expect(archiveRes.status).toBe(200)
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const completeRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({
         state: 'completed',
@@ -398,7 +414,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
 
-    const offlineRunnerRes = await jsonFetch('/api/v1/runners', authorization, {
+    const offlineRunnerRes = await runnerJsonFetch('/api/v1/runners', authorization, {
       method: 'POST',
       body: JSON.stringify({
         name: 'Offline runner',
@@ -464,14 +480,14 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const renewRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const renewRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: session.id }),
     })
     expect(renewRes.status).toBe(200)
     await expect(renewRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: session.id })
 
-    const interruptRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const interruptRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'interrupted', resumeToken: session.id }),
     })
@@ -523,7 +539,7 @@ describe('[CF] /api/v1/leases', () => {
       status: { phase: 'running', reason: null },
     })
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${reclaimedLease.id}`, authorization, {
+    const completeRes = await runnerJsonFetch(`/api/v1/leases/${reclaimedLease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'completed', result: { ok: true } }),
     })
@@ -549,14 +565,14 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const bindRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const bindRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: session.id }),
     })
     expect(bindRes.status).toBe(200)
     await expect(bindRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: session.id })
 
-    const conflictRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const conflictRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'runtime-session-2' }),
     })
@@ -594,14 +610,14 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const bindRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const bindRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'codex-thread-1' }),
     })
     expect(bindRes.status).toBe(200)
     await expect(bindRes.json()).resolves.toMatchObject({ id: lease.id, resumeToken: 'codex-thread-1' })
 
-    const conflictRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const conflictRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'active', leaseDurationSeconds: 90, resumeToken: 'codex-thread-2' }),
     })
@@ -630,7 +646,7 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const failRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const failRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'failed', error: { message: 'Command failed' } }),
     })
@@ -651,7 +667,7 @@ describe('[CF] /api/v1/leases', () => {
     })
 
     // A finished lease can no longer be renewed or completed again.
-    const staleRenewRes = await jsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+    const staleRenewRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ leaseDurationSeconds: 60 }),
     })
@@ -709,7 +725,7 @@ describe('[CF] /api/v1/leases', () => {
     expect(secondClaim.status).toBe(201)
     const secondLease = (await secondClaim.json()) as { id: string }
 
-    const completeRes = await jsonFetch(`/api/v1/leases/${secondLease.id}`, authorization, {
+    const completeRes = await runnerJsonFetch(`/api/v1/leases/${secondLease.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ state: 'completed', result: { ok: true } }),
     })

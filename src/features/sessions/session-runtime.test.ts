@@ -6,7 +6,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SessionEvent } from '@/lib/amarpc'
 import * as oidcModule from '@/lib/oidc'
-import { initialSessionRuntimeState, sessionRuntimeReducer, sessionSocketUrl } from './session-runtime'
+import { initialSessionRuntimeState, sessionRuntimeReducer, sessionSocketConnection } from './session-runtime'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -893,34 +893,44 @@ describe('sessionRuntimeReducer', () => {
 })
 
 // ---------------------------------------------------------------------------
-// sessionSocketUrl — URL construction branches
+// sessionSocketConnection — URL and DPoP subprotocol construction
 // ---------------------------------------------------------------------------
 
-describe('sessionSocketUrl', () => {
-  it('keeps the advertised session socket path', () => {
+describe('sessionSocketConnection', () => {
+  it('keeps the advertised session socket path and requires DPoP subprotocol credentials', async () => {
     stubWindowLocation('https://example.com/app')
-    vi.spyOn(oidcModule, 'getStoredAccessToken').mockReturnValue(null)
+    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({
+      authorization: 'DPoP test_token_xyz',
+      dpop: 'signed-proof',
+    })
 
-    const url = sessionSocketUrl('/api/v1/sessions/s1/socket')
-    expect(url).toContain('/api/v1/sessions/s1/socket')
-    expect(url.startsWith('wss:')).toBe(true)
+    const connection = await sessionSocketConnection('/api/v1/sessions/s1/socket')
+    expect(connection.url).toContain('/api/v1/sessions/s1/socket')
+    expect(connection.url.startsWith('wss:')).toBe(true)
+    expect(connection.url).not.toContain('access_token')
+    expect(connection.protocols).toEqual([
+      'ama-dpop',
+      `ama-access.${btoa('test_token_xyz').replaceAll('=', '')}`,
+      `ama-proof.${btoa('signed-proof').replaceAll('=', '')}`,
+    ])
   })
 
-  it('uses ws: protocol for http: origins', () => {
+  it('uses ws: protocol for http: origins', async () => {
     stubWindowLocation('http://localhost:3000/')
-    vi.spyOn(oidcModule, 'getStoredAccessToken').mockReturnValue(null)
+    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({ authorization: 'DPoP token', dpop: 'proof' })
 
-    const url = sessionSocketUrl('/api/v1/sessions/s1/socket')
-    expect(url.startsWith('ws:')).toBe(true)
-    expect(url.startsWith('wss:')).toBe(false)
+    const connection = await sessionSocketConnection('/api/v1/sessions/s1/socket')
+    expect(connection.url.startsWith('ws:')).toBe(true)
+    expect(connection.url.startsWith('wss:')).toBe(false)
   })
 
-  it('appends access_token query param when token is present', () => {
+  it('fails closed when the Realmroot DPoP credential is unavailable', async () => {
     stubWindowLocation('https://example.com/')
-    vi.spyOn(oidcModule, 'getStoredAccessToken').mockReturnValue('test_token_xyz')
+    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({})
 
-    const url = sessionSocketUrl('/api/v1/sessions/s1/socket')
-    expect(url).toContain('access_token=test_token_xyz')
+    await expect(sessionSocketConnection('/api/v1/sessions/s1/socket')).rejects.toThrow(
+      'Realmroot DPoP credential is unavailable',
+    )
   })
 })
 

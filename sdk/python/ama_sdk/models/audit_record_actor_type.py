@@ -1,6 +1,7 @@
 from enum import Enum
 
 class AuditRecordActorType(str, Enum):
+    AGENT = "agent"
     SYSTEM = "system"
     USER = "user"
 

@@ -28,7 +28,7 @@ Claude Managed Agents is purpose-built for Claude. Any Managed Agents is built f
 
 - Manages agents, environments, sessions, providers, usage records, audit records, and governance metadata.
 - Creates one isolated Cloudflare Sandbox execution environment per running cloud session.
-- Publishes a Hono/OpenAPI control-plane API for direct HTTP clients, restish workflows, and generated SDKs.
+- Publishes a Realmroot-native Hono/OpenAPI control-plane API for Realmroot Toolbox and DPoP-aware generated SDKs.
 - Uses an OIDC provider for authentication and tenancy instead of maintaining local user tables.
 - Stores platform metadata in D1 and secret references in Cloudflare-managed secret storage.
 - Provides a React console for authenticated project, agent, environment, and session workflows.
@@ -50,7 +50,7 @@ Claude Managed Agents is purpose-built for Claude. Any Managed Agents is built f
 ```txt
 +-------------------------------------------------------------+
 | Access                                                      |
-| Web console, OpenAPI clients, restish, generated SDKs       |
+| Web console, Realmroot Toolbox, DPoP-aware generated SDKs   |
 +-----------------------------+-------------------------------+
                               |
 +-----------------------------v-------------------------------+
@@ -85,7 +85,7 @@ The project is moving toward a release where a signed-in user can create an envi
 - [Contributor Guide](CONTRIBUTING.md) - local setup, verification, contribution workflow, and engineering rules.
 - [Product Spec](docs/product/spec.md) - product model, architecture boundary, and acceptance criteria.
 - [Product Decisions](docs/product/decisions.md) - fixed decisions for architecture and scope.
-- [SDK and API Boundary](docs/product/sdk.md) - OpenAPI, generated SDKs, and restish usage.
+- [SDK and API Boundary](docs/product/sdk.md) - Realmroot, OpenAPI, and generated SDK usage.
 - [Cloudflare Deployment](docs/infra/cloudflare-deploy.md) - Cloudflare resources, OIDC, runtime, and deployment notes.
 
 ## Verification

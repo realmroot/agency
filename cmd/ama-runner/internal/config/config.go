@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -9,12 +10,27 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
 )
 
+func ValidateAPIServerURL(value string) error {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("AMA API server URL must be an absolute URL")
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("AMA API server URL must not contain userinfo, query, or fragment")
+	}
+	host := parsed.Hostname()
+	ip := net.ParseIP(host)
+	loopback := host == "localhost" || ip != nil && ip.IsLoopback()
+	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && loopback) {
+		return fmt.Errorf("AMA API server URL must use HTTPS except for loopback development")
+	}
+	return nil
+}
+
 type Config struct {
 	ConfigPath            string        `json:"-" mapstructure:"config"`
 	CredentialPath        string        `json:"-" mapstructure:"-"`
-	TokenExplicit         bool          `json:"-" mapstructure:"-"`
 	APIServer             string        `json:"apiServer" mapstructure:"apiServer"`
-	Token                 string        `json:"-" mapstructure:"-"`
 	ProjectID             string        `json:"projectId" mapstructure:"projectId"`
 	EnvironmentID         string        `json:"environmentId" mapstructure:"environmentId"`
 	AllowUnsafeProcess    bool          `json:"allowUnsafeProcess" mapstructure:"allowUnsafeProcess"`
@@ -34,12 +50,8 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.APIServer) == "" {
 		return fmt.Errorf("AMA API server URL is required")
 	}
-	parsed, err := url.Parse(c.APIServer)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return fmt.Errorf("AMA API server URL must be an absolute URL")
-	}
-	if strings.TrimSpace(c.Token) == "" {
-		return fmt.Errorf("AMA token is required")
+	if err := ValidateAPIServerURL(c.APIServer); err != nil {
+		return err
 	}
 	if strings.TrimSpace(c.EnvironmentID) == "" {
 		return fmt.Errorf("AMA environment id is required")

@@ -13,7 +13,6 @@ import { createAuditReadRepo } from './adapters/repos/audit-records'
 import { createBudgetRepo } from './adapters/repos/budgets'
 import { createConnectorRepo } from './adapters/repos/connectors'
 import { createEnvironmentRepo } from './adapters/repos/environments'
-import { createFederatedTenantRepo } from './adapters/repos/federated-tenants'
 import { createLeaseRepo } from './adapters/repos/leases'
 import { createMemoryStoreRepo } from './adapters/repos/memory-stores'
 import { createPolicyRepo } from './adapters/repos/policies'
@@ -70,7 +69,6 @@ export function createDeps(env: Env): Deps {
     triggerDispatch: createTriggerDispatchRepo(db),
     triggerDispatchQueue: createTriggerDispatchQueue(env),
     projects: createProjectRepo(db),
-    federatedTenants: createFederatedTenantRepo(db),
     runners: createRunnerRepo(db),
     workItems: createWorkItemRepo(db),
     leases: createLeaseRepo(db),

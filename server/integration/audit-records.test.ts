@@ -1,13 +1,13 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setupOidcProvider, signIn } from './auth'
+import { dpopHeaders, setupOidcProvider, signIn } from './auth'
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
   return await SELF.fetch(`https://example.com${path}`, {
     ...init,
     headers: {
       'content-type': 'application/json',
-      authorization,
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
       ...init.headers,
     },
   })
@@ -46,6 +46,9 @@ describe('[CF] v1 audit records', () => {
     const list = (await listRes.json()) as { data: Array<Record<string, unknown>> }
     expect(list.data).toContainEqual(
       expect.objectContaining({
+        actorType: 'user',
+        actorUserId: expect.stringMatching(/^user_e2e_/),
+        controllerUserId: null,
         action: 'budget.create',
         resourceType: 'budget',
         resourceId: budget.id,
@@ -93,7 +96,7 @@ describe('[CF] v1 audit records', () => {
     const body = await res.text()
     const lines = body.trimEnd().split('\n')
     expect(lines[0]).toBe(
-      'id,createdAt,projectId,actorType,actorUserId,action,resourceType,resourceId,outcome,requestId,correlationId,sessionId,policyCategory,metadata,before,after',
+      'id,createdAt,projectId,actorType,actorUserId,controllerUserId,action,resourceType,resourceId,outcome,requestId,correlationId,sessionId,policyCategory,metadata,before,after',
     )
     expect(lines.length).toBeGreaterThan(1)
     expect(body).toContain('top-secret-credential')

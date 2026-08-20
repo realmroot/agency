@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
-from urllib.parse import quote, urlencode, urlparse, urlunparse
+from urllib.parse import quote, urlparse, urlunparse
 
 import websockets
 
-from .client import AuthenticatedClient, Client
+from .client import Client
 from .api.agents import create_agent as create_agent_api
 from .api.agents import list_agent_versions as list_agent_versions_api
 from .api.agents import list_agents as list_agents_api
@@ -17,8 +17,6 @@ from .api.agents import read_agent_version as read_agent_version_api
 from .api.agents import update_agent as update_agent_api
 from .api.audit import list_audit_records as list_audit_records_api
 from .api.audit import read_audit_record as read_audit_record_api
-from .api.auth import create_auth_session as create_auth_session_api
-from .api.auth import delete_current_auth_session as delete_current_auth_session_api
 from .api.auth import read_auth_config as read_auth_config_api
 from .api.auth import read_current_auth_session as read_current_auth_session_api
 from .api.config import read_configz as read_configz_api
@@ -222,22 +220,22 @@ class _ClientCore:
     def __init__(
         self,
         base_url: str,
-        access_token: str | None = None,
         project_id: str | None = None,
         headers: dict[str, str] | None = None,
-        client: AuthenticatedClient | Client | None = None,
+        client: Client | None = None,
+        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
     ) -> None:
         merged_headers = dict(headers or {})
         if project_id:
             merged_headers["x-ama-project-id"] = project_id
         self.base_url = base_url
-        self.access_token = access_token
+        self.websocket_authorizer = websocket_authorizer
         self.project_id = project_id
         self.headers = merged_headers
-        self.client = client or _new_generated_client(base_url, access_token, merged_headers)
+        self.client = client or Client(base_url=base_url, headers=merged_headers)
 
     @property
-    def raw(self) -> AuthenticatedClient | Client:
+    def raw(self) -> Client:
         return self.client
 
 
@@ -245,12 +243,12 @@ class AmaClient:
     def __init__(
         self,
         base_url: str,
-        access_token: str | None = None,
         project_id: str | None = None,
         headers: dict[str, str] | None = None,
-        client: AuthenticatedClient | Client | None = None,
+        client: Client | None = None,
+        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
     ) -> None:
-        self._core = _ClientCore(base_url, access_token, project_id, headers, client)
+        self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)
         self.configz = _ConfigzResource(self._core)
         self.auth = _AuthResource(self._core)
         self.projects = _ProjectsResource(self._core)
@@ -268,7 +266,7 @@ class AmaClient:
         self.usage = _UsageResource(self._core)
 
     @property
-    def raw(self) -> AuthenticatedClient | Client:
+    def raw(self) -> Client:
         return self._core.raw
 
 
@@ -276,12 +274,12 @@ class AmaRunnerClient:
     def __init__(
         self,
         base_url: str,
-        access_token: str | None = None,
         project_id: str | None = None,
         headers: dict[str, str] | None = None,
-        client: AuthenticatedClient | Client | None = None,
+        client: Client | None = None,
+        websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
     ) -> None:
-        self._core = _ClientCore(base_url, access_token, project_id, headers, client)
+        self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)
         self.configz = _RunnerConfigzResource(self._core)
         self.runners = _RunnerRunnersResource(self._core)
         self.work_items = _RunnerWorkItemsResource(self._core)
@@ -289,35 +287,31 @@ class AmaRunnerClient:
         self.sessions = _RunnerSessionsResource(self._core)
 
     @property
-    def raw(self) -> AuthenticatedClient | Client:
+    def raw(self) -> Client:
         return self._core.raw
 
 
 def create_ama_client(
     base_url: str,
-    access_token: str | None = None,
     project_id: str | None = None,
     headers: dict[str, str] | None = None,
+    client: Client | None = None,
+    websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
 ) -> AmaClient:
-    return AmaClient(base_url=base_url, access_token=access_token, project_id=project_id, headers=headers)
+    return AmaClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)
 
 
 def create_ama_runner_client(
     base_url: str,
-    access_token: str | None = None,
     project_id: str | None = None,
     headers: dict[str, str] | None = None,
+    client: Client | None = None,
+    websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
 ) -> AmaRunnerClient:
-    return AmaRunnerClient(base_url=base_url, access_token=access_token, project_id=project_id, headers=headers)
+    return AmaRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)
 
 
-def _new_generated_client(base_url: str, access_token: str | None, headers: dict[str, str]) -> AuthenticatedClient | Client:
-    if access_token:
-        return AuthenticatedClient(base_url=base_url, token=access_token, headers=headers)
-    return Client(base_url=base_url, headers=headers)
-
-
-def _websocket_url(base_url: str, path: str, access_token: str | None, project_id: str | None) -> str:
+def _websocket_url(base_url: str, path: str) -> str:
     parsed = urlparse(base_url.rstrip("/") + path)
     if parsed.scheme == "https":
         scheme = "wss"
@@ -325,20 +319,15 @@ def _websocket_url(base_url: str, path: str, access_token: str | None, project_i
         scheme = "ws"
     else:
         raise ValueError("AMA base URL must use http or https")
-    query = {}
-    if access_token:
-        query["access_token"] = access_token
-    if project_id:
-        query["x-ama-project-id"] = project_id
-    return urlunparse((scheme, parsed.netloc, parsed.path, "", urlencode(query), ""))
+    return urlunparse((scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
-def _websocket_headers(headers: dict[str, str], access_token: str | None, project_id: str | None) -> dict[str, str]:
-    result = dict(headers)
-    if access_token:
-        result["authorization"] = f"Bearer {access_token}"
-    if project_id:
-        result["x-ama-project-id"] = project_id
+def _websocket_headers(owner: _ClientCore, url: str) -> dict[str, str]:
+    if owner.websocket_authorizer is None:
+        raise RuntimeError("Realmroot DPoP WebSocket authorizer is required")
+    result = {**owner.headers, **owner.websocket_authorizer(url.replace("ws", "http", 1), "GET")}
+    if owner.project_id:
+        result["x-ama-project-id"] = owner.project_id
     return result
 
 
@@ -371,14 +360,8 @@ class _AuthResource:
     def config(self, **query: Any) -> Any:
         return _unwrap(read_auth_config_api.sync_detailed(client=self._client, **query))
 
-    def create_session(self, body: Any) -> Any:
-        return _unwrap(create_auth_session_api.sync_detailed(client=self._client, body=body))
-
     def current_session(self) -> Any:
         return _unwrap(read_current_auth_session_api.sync_detailed(client=self._client))
-
-    def delete_current_session(self) -> Any:
-        return _unwrap(delete_current_auth_session_api.sync_detailed(client=self._client))
 
 class _ProjectsResource:
     def __init__(self, owner: _ClientCore) -> None:
@@ -566,10 +549,8 @@ class _SessionsResource:
         return _unwrap(update_session_api.sync_detailed(session_id=session_id, client=self._client, body=body))
 
     def stream(self, session_id: str) -> SessionStream:
-        return SessionStream(
-            _websocket_url(self._owner.base_url, f"/api/v1/sessions/{quote(session_id)}/socket", self._owner.access_token, self._owner.project_id),
-            _websocket_headers(self._owner.headers, self._owner.access_token, self._owner.project_id),
-        )
+        url = _websocket_url(self._owner.base_url, f"/api/v1/sessions/{quote(session_id)}/socket")
+        return SessionStream(url, _websocket_headers(self._owner, url))
 
     def list_messages(self, session_id: str, **query: Any) -> Any:
         return _unwrap(list_session_messages_api.sync_detailed(session_id=session_id, client=self._client, **query))
@@ -699,10 +680,8 @@ class _RunnerRunnersResource:
         return _unwrap(update_runner_api.sync_detailed(runner_id=runner_id, client=self._client, body=body))
 
     def channel(self, runner_id: str) -> RunnerChannel:
-        return RunnerChannel(
-            _websocket_url(self._owner.base_url, f"/api/v1/runners/{quote(runner_id)}/channel", self._owner.access_token, self._owner.project_id),
-            _websocket_headers(self._owner.headers, self._owner.access_token, self._owner.project_id),
-        )
+        url = _websocket_url(self._owner.base_url, f"/api/v1/runners/{quote(runner_id)}/channel")
+        return RunnerChannel(url, _websocket_headers(self._owner, url))
 
     def get_heartbeat(self, runner_id: str) -> Any:
         return _unwrap(read_runner_heartbeat_api.sync_detailed(runner_id=runner_id, client=self._client))

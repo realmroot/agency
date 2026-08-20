@@ -19,11 +19,12 @@ Feature: Runners
     And local sandbox tool work requires the AMA runtime while other unscoped non-session work is claimable by any runner
 
   @runners/auth-binding @domain
-  Scenario: Bind runner registration to its OIDC or federated token
-    Given a runner registers with a device-login or federated token
+  Scenario: Bind runner registration to its Realmroot token
+    Given a runner registers with a Realmroot device-login token
     When the registration auth mode and environment are resolved
     Then the auth mode and bound environment follow the token binding
-    And a device-login token cannot register a non-OIDC runner and a federated token cannot register a non-federated runner
+    And the runner sends a fresh DPoP proof for every control-plane request
+    And a device-login token cannot register a non-OIDC runner
     And raw secret material in runner metadata or runtime diagnostics is rejected
 
   @runners/local-credential-refresh @domain
@@ -37,7 +38,7 @@ Feature: Runners
     Given an operator registers a runner with usable environment and credential references
     When the runner is created, updated, or archived
     Then references are validated, secret material is rejected, and archive uses the archived flag
-    And a machine-bound federated runner re-registers instead of inserting a duplicate
+    And a machine-bound Realmroot runner re-registers instead of inserting a duplicate
 
   @runners/claim-eligibility @usecase
   Scenario: Claim a lease only for eligible available work

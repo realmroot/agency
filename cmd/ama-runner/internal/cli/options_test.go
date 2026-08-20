@@ -18,7 +18,6 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CONFIG", configPath)
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	t.Setenv("AMA_TOKEN", "")
 	if err := runnerconfig.SaveLocalConfigValue(configPath, "apiServer", "https://ama.example.test"); err != nil {
 		t.Fatal(err)
 	}
@@ -29,11 +28,12 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
-		AccessToken: "saved-token",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      "https://ama.example.test",
+		AccessToken:    "saved-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "test-key",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -46,29 +46,11 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected run config, got %v", err)
 	}
-	if config.Token != "saved-token" || config.APIServer != "https://ama.example.test" || config.EnvironmentID != "env_1" {
+	if config.APIServer != "https://ama.example.test" || config.EnvironmentID != "env_1" {
 		t.Fatalf("expected saved login and config file values, got %#v", config)
 	}
-	if config.CredentialPath != credentialPath || config.ConfigPath != configPath || config.TokenExplicit {
+	if config.CredentialPath != credentialPath || config.ConfigPath != configPath {
 		t.Fatalf("unexpected path/token flags: %#v", config)
-	}
-}
-
-func TestLoadRunConfigUsesExplicitToken(t *testing.T) {
-	t.Setenv("AMA_TOKEN", "explicit-token")
-	t.Setenv("AMA_API_SERVER", "https://ama.example.test")
-	t.Setenv("AMA_ENVIRONMENT_ID", "env_1")
-	t.Setenv("AMA_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
-	command := runConfigTestCommand(t,
-		"--work-dir", t.TempDir(),
-		"--state-dir", t.TempDir(),
-	)
-	config, err := LoadRunConfig(command)
-	if err != nil {
-		t.Fatalf("expected run config, got %v", err)
-	}
-	if config.Token != "explicit-token" || !config.TokenExplicit {
-		t.Fatalf("expected explicit token, got %#v", config)
 	}
 }
 
@@ -76,7 +58,12 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.json")
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	t.Setenv("AMA_TOKEN", "explicit-token")
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token",
+		TokenType: "DPoP", DPoPPrivateKey: "test-key",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if err := runnerconfig.SaveLocalConfigValue(configPath, "apiServer", "https://ama.example.test"); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +103,6 @@ func TestRegisterRunFlagsSupportsDurationOptions(t *testing.T) {
 }
 
 func TestLoadRunConfigReturnsValidationError(t *testing.T) {
-	t.Setenv("AMA_TOKEN", "token")
 	command := runConfigTestCommand(t)
 	if _, err := LoadRunConfig(command); err == nil {
 		t.Fatal("expected invalid run config to fail")
@@ -135,14 +121,15 @@ func TestOptionBindingErrorsWhenCommandsMissExpectedFlags(t *testing.T) {
 	}
 }
 
-func TestApplySavedLoginFillsServerAndToken(t *testing.T) {
+func TestApplySavedLoginFillsServerFromDPoPProfile(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
-		AccessToken: "saved-token",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      "https://ama.example.test",
+		AccessToken:    "saved-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "test-key",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -150,8 +137,8 @@ func TestApplySavedLoginFillsServerAndToken(t *testing.T) {
 	if err := applySavedLogin(&config); err != nil {
 		t.Fatalf("apply saved login: %v", err)
 	}
-	if config.APIServer != "https://ama.example.test" || config.Token != "saved-token" {
-		t.Fatalf("expected saved server/token, got %#v", config)
+	if config.APIServer != "https://ama.example.test" {
+		t.Fatalf("expected saved server, got %#v", config)
 	}
 }
 
@@ -215,14 +202,15 @@ func TestAuthLoginAndSwitchConfigUseEnvironment(t *testing.T) {
 	}
 }
 
-func TestApplySavedLoginKeepsExplicitServerTokenEmptyWhenServerDiffers(t *testing.T) {
+func TestApplySavedLoginRejectsUnknownExplicitServer(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:   "acct_1",
-		APIServer:   "https://saved.example.test",
-		AccessToken: "saved-token",
-		TokenType:   "Bearer",
-		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:      "acct_1",
+		APIServer:      "https://saved.example.test",
+		AccessToken:    "saved-token",
+		TokenType:      "DPoP",
+		DPoPPrivateKey: "test-key",
+		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -230,11 +218,8 @@ func TestApplySavedLoginKeepsExplicitServerTokenEmptyWhenServerDiffers(t *testin
 		CredentialPath: credentialPath,
 		APIServer:      "https://other.example.test",
 	}
-	if err := applySavedLogin(&config); err != nil {
-		t.Fatalf("apply saved login: %v", err)
-	}
-	if config.Token != "" || config.APIServer != "https://other.example.test" {
-		t.Fatalf("expected explicit server without token fill, got %#v", config)
+	if err := applySavedLogin(&config); err == nil || !strings.Contains(err.Error(), "not logged in") {
+		t.Fatalf("expected explicit unknown server to require login, got %v", err)
 	}
 }
 

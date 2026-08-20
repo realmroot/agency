@@ -76,11 +76,8 @@ describe('agent builder model', () => {
   })
 
   it('renders API examples with allowed tools [spec: agents/builder-examples]', () => {
-    const examples = agentApiExamples(
-      'https://example.com',
-      resourceAgent({ systemPrompt: 'Do the work', allowedTools: ['read'] }),
-    )
-    expect(examples.curl).toContain('"allowedTools":["read"]')
-    expect(examples.restish).toContain('/api/v1/agents')
+    const examples = agentApiExamples(resourceAgent({ systemPrompt: 'Do the work', allowedTools: ['read'] }))
+    expect(examples.realmroot).toContain('"allowedTools":["read"]')
+    expect(examples.realmroot).toContain('--scope agents:write')
   })
 })

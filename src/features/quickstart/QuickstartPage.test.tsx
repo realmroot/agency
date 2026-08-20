@@ -269,7 +269,7 @@ describe('QuickstartPage loaded — step navigation', () => {
     )
     renderPage('/quickstart?step=integration')
     await waitFor(() =>
-      expect(screen.getByText('Call the same control-plane API from curl, restish, or a generated SDK.')).toBeTruthy(),
+      expect(screen.getByText('Call the same control-plane API through Realmroot Agent identity.')).toBeTruthy(),
     )
   })
 
@@ -325,9 +325,9 @@ describe('QuickstartPage loaded — step navigation', () => {
     )
     renderPage('/quickstart?step=integration')
     await waitFor(() =>
-      expect(screen.getByText('Call the same control-plane API from curl, restish, or a generated SDK.')).toBeTruthy(),
+      expect(screen.getByText('Call the same control-plane API through Realmroot Agent identity.')).toBeTruthy(),
     )
-    expect(screen.getByText('TypeScript SDK')).toBeTruthy()
+    expect(screen.getByText('Realmroot CLI')).toBeTruthy()
   })
 })
 
@@ -448,9 +448,7 @@ describe('QuickstartPage integration step — integration examples', () => {
       }),
     )
     renderPage('/quickstart?step=integration')
-    await waitFor(() => expect(screen.getByText('curl')).toBeTruthy())
-    expect(screen.getByText('restish')).toBeTruthy()
-    expect(screen.getByText('TypeScript SDK')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Realmroot CLI')).toBeTruthy())
   })
 
   it('prefers session matching previewSessionId param for integration examples', async () => {
@@ -467,7 +465,7 @@ describe('QuickstartPage integration step — integration examples', () => {
       }),
     )
     renderPage('/quickstart?step=integration&session=session_preview')
-    await waitFor(() => expect(screen.getByText('TypeScript SDK')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Realmroot CLI')).toBeTruthy())
   })
 
   it('falls back to sessions[0] when no idle/running session matches', async () => {
@@ -480,7 +478,7 @@ describe('QuickstartPage integration step — integration examples', () => {
       }),
     )
     renderPage('/quickstart?step=integration')
-    await waitFor(() => expect(screen.getByText('TypeScript SDK')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Realmroot CLI')).toBeTruthy())
   })
 
   it('falls back to sessions[0] when session is in error state', async () => {
@@ -493,7 +491,7 @@ describe('QuickstartPage integration step — integration examples', () => {
       }),
     )
     renderPage('/quickstart?step=integration')
-    await waitFor(() => expect(screen.getByText('TypeScript SDK')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Realmroot CLI')).toBeTruthy())
   })
 })
 
@@ -721,7 +719,7 @@ describe('QuickstartPage session step — onSessionCreated and onContinue', () =
 
     fireEvent.click(screen.getByText('Continue to integration'))
     await waitFor(() =>
-      expect(screen.getByText('Call the same control-plane API from curl, restish, or a generated SDK.')).toBeTruthy(),
+      expect(screen.getByText('Call the same control-plane API through Realmroot Agent identity.')).toBeTruthy(),
     )
   })
 })

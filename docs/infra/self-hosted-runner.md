@@ -25,13 +25,13 @@ Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64. W
 
 ## Login And Configuration
 
-Authenticate the runner with FlareAuth/OIDC device login before starting the daemon:
+Authenticate the runner with Realmroot device authorization before starting the daemon:
 
 ```bash
 ama-runner auth login --api-server "https://ama.example.com"
 ```
 
-The command discovers the AMA control plane OIDC metadata from `/api/v1/configz`, starts the provider device authorization flow for the registered runner client, prints the verification URL/code, and stores the returned token material in the local runner credential file. It never prints access or refresh tokens.
+The command discovers Realmroot metadata from `/api/v1/configz`, creates a runner-local ES256 DPoP key, starts the registered public-native device flow, and stores the DPoP-bound token material and private key in the local credential file. It never prints access or refresh tokens.
 
 By default, the config file is:
 
@@ -98,9 +98,9 @@ Timing defaults:
 - Poll interval when no work is available: `5s`
 - Max concurrent leases: `5`
 
-The daemon loads the saved device-login access token at startup when `AMA_TOKEN` is not provided. `AMA_TOKEN` remains available for tests and temporary process-local overrides, and it takes precedence over the saved token. Operators should prefer `ama-runner auth login` for normal self-hosted runners.
+The daemon requires a saved Realmroot device login and its DPoP private key. `AMA_TOKEN`, static token overrides, Bearer authentication, and token-print commands are unsupported.
 
-The daemon fails fast when the API server, token, environment binding, work directory, timing values, or an unsafe adapter acknowledgement required by the host is invalid. Windows CLI-only runners do not enable the AMA process adapter and therefore do not require `--allow-unsafe-process`. Runner registration stores only OIDC subject/client binding metadata, supported runtimes and models, environment binding metadata, heartbeat/load state, and secret references; raw token material is not stored in D1 or returned by runner APIs. Runner device-login tokens are accepted only for runner registration and runtime runner APIs, not for general control-plane resources such as environments, agents, sessions, providers, or vaults.
+The daemon fails fast when the API server, Realmroot DPoP login, environment binding, work directory, timing values, or unsafe adapter acknowledgement is invalid. Runner registration stores only Realmroot subject/client binding metadata; raw token and DPoP key material never reaches D1. Runner scopes are limited to registration, work items, leases, and session event upload.
 
 ## Local Executor Boundary
 
@@ -129,7 +129,7 @@ Do not use this adapter for untrusted workloads. Docker/OCI isolation should be 
 At startup, the daemon:
 
 1. Checks `/api/v1/configz` for an AMA control plane.
-2. Loads the saved FlareAuth/OIDC device-login token unless an explicit token override is supplied.
+2. Loads the saved Realmroot device-login profile and DPoP private key.
 3. Registers a runner when no runner id is configured.
 4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
 5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.

@@ -148,14 +148,12 @@ export function sandboxAgentInput(agent: Agent): Partial<AgentInput> {
 // ─── Integration step ───
 
 export interface QuickstartIntegrationInput {
-  origin: string
   agentId: string
   environmentId: string | null
   sessionId: string
 }
 
 export function quickstartIntegrationExamples(input: QuickstartIntegrationInput) {
-  const authHeader = '-H "Authorization: Bearer $AMA_ACCESS_TOKEN"'
   const sessionBody = JSON.stringify({
     spec: {
       agentId: input.agentId,
@@ -164,29 +162,11 @@ export function quickstartIntegrationExamples(input: QuickstartIntegrationInput)
     },
     prompt: SAFE_EXAMPLE_PROMPT,
   })
-  const liveSessionUrl = `${input.origin}/api/v1/sessions/${input.sessionId}/socket`
-  const curl = [
-    `curl -X POST "${input.origin}/api/v1/sessions" \\`,
-    `  ${authHeader} \\`,
-    '  -H "Content-Type: application/json" \\',
-    `  -d '${sessionBody}'`,
-    `curl "${input.origin}/api/v1/sessions/${input.sessionId}/events" ${authHeader}`,
-    `curl "${liveSessionUrl}" ${authHeader}`,
+  const realmroot = [
+    'realmroot toolbox sync any-managed-agents',
+    `realmroot toolbox post any-managed-agents/api/v1/sessions '${sessionBody}' --scope sessions:write`,
+    `realmroot toolbox get any-managed-agents/api/v1/sessions/${input.sessionId} --scope sessions:read`,
+    `realmroot toolbox get any-managed-agents/api/v1/sessions/${input.sessionId}/events --scope sessions:read`,
   ].join('\n')
-  const restish = [
-    `restish ${input.origin}/api/v1/openapi.json`,
-    `printf '%s\\n' '${sessionBody}' | restish post ${input.origin}/api/v1/sessions ${authHeader}`,
-    `restish get ${input.origin}/api/v1/sessions/${input.sessionId} ${authHeader}`,
-  ].join('\n')
-  const sdk = [
-    "import { createAmaClient } from '@any-managed-agents/sdk'",
-    '',
-    'const client = createAmaClient({',
-    `  baseUrl: '${input.origin}',`,
-    '  accessToken: process.env.AMA_ACCESS_TOKEN ?? "",',
-    '})',
-    `const session = await client.sessions.get('${input.sessionId}')`,
-    `const events = await client.sessions.listEvents('${input.sessionId}')`,
-  ].join('\n')
-  return { curl, restish, sdk }
+  return { realmroot }
 }

@@ -85,17 +85,27 @@ export async function setupOidcProvider() {
 export async function signIn(claims = defaultClaims()) {
   counter += 1
   const runId = `${claims.sub}_${counter}`.replaceAll(/[^A-Za-z0-9_-]/g, '_')
-  return `Bearer e2e:${runId}`
+  return `DPoP e2e:${runId}`
 }
 
 export async function signInRunner(claims = defaultClaims()) {
   counter += 1
   const runId = `${claims.sub}_${counter}`.replaceAll(/[^A-Za-z0-9_-]/g, '_')
-  return `Bearer e2e-runner:${runId}`
+  return `DPoP e2e-runner:${runId}`
 }
 
-export function signInFederatedRunner(externalTenantId: string, runnerId: string, environmentId?: string) {
-  return `Bearer e2e-federated-runner:${externalTenantId}:${runnerId}${environmentId ? `:${environmentId}` : ''}`
+export function asRunnerAuthorization(authorization: string) {
+  return authorization.replace(/^DPoP e2e:/, 'DPoP e2e-runner:')
+}
+
+export function dpopHeaders(authorization: string, method: string, path: string) {
+  const target = new URL(path, 'https://example.com')
+  target.hash = ''
+  target.search = ''
+  return {
+    authorization,
+    dpop: `e2e-proof:${method.toUpperCase()}:${target.toString()}`,
+  }
 }
 
 export async function signInUser(suffix: string) {
@@ -113,7 +123,7 @@ export function expectAuthRequired(body: unknown) {
     error: {
       type: 'authentication_required',
       message: 'Authentication required',
-      details: { reason: 'missing_or_invalid_bearer_token' },
+      details: { reason: 'missing_or_invalid_dpop_credential' },
     },
   })
 }

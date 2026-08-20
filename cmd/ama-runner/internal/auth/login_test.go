@@ -24,6 +24,10 @@ func TestValidateLoginCommand(t *testing.T) {
 	}{
 		{name: "missing api server", command: LoginCommand{CredentialPath: "/tmp/credentials.json"}, want: "URL is required"},
 		{name: "relative api server", command: LoginCommand{APIServer: "ama.example.test", CredentialPath: "/tmp/credentials.json"}, want: "absolute URL"},
+		{name: "remote http api server", command: LoginCommand{APIServer: "http://ama.example.test", CredentialPath: "/tmp/credentials.json"}, want: "HTTPS"},
+		{name: "api server userinfo", command: LoginCommand{APIServer: "https://user:secret@ama.example.test", CredentialPath: "/tmp/credentials.json"}, want: "userinfo"},
+		{name: "api server query", command: LoginCommand{APIServer: "https://ama.example.test?token=secret", CredentialPath: "/tmp/credentials.json"}, want: "query"},
+		{name: "api server fragment", command: LoginCommand{APIServer: "https://ama.example.test#fragment", CredentialPath: "/tmp/credentials.json"}, want: "fragment"},
 		{name: "missing credential path", command: LoginCommand{APIServer: "https://ama.example.test"}, want: "credential path"},
 	}
 	for _, tc := range tests {

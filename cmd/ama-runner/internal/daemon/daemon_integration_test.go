@@ -28,10 +28,16 @@ func TestDaemonRunOnceExecutesSandboxWorkThroughControlPlane(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	workDir := t.TempDir()
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_integration", APIServer: server.URL, AccessToken: "e2e-runner:integration",
+		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	config := runnerconfig.Config{
 		APIServer:             server.URL,
-		Token:                 "runner-token",
-		TokenExplicit:         true,
+		CredentialPath:        credentialPath,
 		ProjectID:             "project_integration",
 		EnvironmentID:         "env_integration",
 		AllowUnsafeProcess:    true,
@@ -204,7 +210,7 @@ func (p *runnerIntegrationControlPlane) runner(state ama.RunnerState) ama.Runner
 		Name:          "Integration runner",
 		ProjectId:     "project_integration",
 		EnvironmentId: lo.ToPtr("env_integration"),
-		AuthMode:      ama.Bearer,
+		AuthMode:      ama.RunnerAuthModeRealmroot,
 		State:         state,
 		MaxConcurrent: 1,
 		CurrentLoad:   0,

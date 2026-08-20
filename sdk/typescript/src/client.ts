@@ -7,9 +7,9 @@ import type * as types from './generated/types.gen.js'
 
 export interface AmaClientConfig {
   baseUrl: string
-  accessToken?: string
   projectId?: string
   headers?: Record<string, string>
+  authorize?: (url: string, method: string) => Promise<{ accessToken: string; dpopProof: string }>
 }
 
 export class AmaApiError extends Error {
@@ -53,17 +53,32 @@ type SessionSocketServerMessage =
 function websocketURL(config: AmaClientConfig, path: string): URL {
   const url = new URL(path, config.baseUrl)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  if (config.accessToken) {
-    url.searchParams.set('access_token', config.accessToken)
-  }
   if (config.projectId) {
     url.searchParams.set('x-ama-project-id', config.projectId)
   }
   return url
 }
 
-function createSessionStream(config: AmaClientConfig, sessionId: string): SessionStream {
-  const socket = new WebSocket(websocketURL(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`).toString())
+function base64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+}
+
+async function authenticatedWebSocket(config: AmaClientConfig, path: string): Promise<WebSocket> {
+  if (!config.authorize) throw new Error('Realmroot DPoP authorizer is required for AMA WebSocket connections')
+  const url = websocketURL(config, path)
+  const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET')
+  return new WebSocket(url.toString(), [
+    'ama-dpop',
+    `ama-access.${base64Url(authorization.accessToken)}`,
+    `ama-proof.${base64Url(authorization.dpopProof)}`,
+  ])
+}
+
+async function createSessionStream(config: AmaClientConfig, sessionId: string): Promise<SessionStream> {
+  const socket = await authenticatedWebSocket(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`)
   const buffered: types.SessionEvent[] = []
   const waiters: Array<(result: IteratorResult<types.SessionEvent>) => void> = []
   const backfillWaiters = new Map<string, (response: types.SessionSocketBackfillMessage) => void>()
@@ -135,8 +150,8 @@ function createSessionStream(config: AmaClientConfig, sessionId: string): Sessio
   }
 }
 
-function createRunnerChannel(config: AmaClientConfig, runnerId: string): RunnerChannel {
-  const socket = new WebSocket(websocketURL(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`).toString())
+async function createRunnerChannel(config: AmaClientConfig, runnerId: string): Promise<RunnerChannel> {
+  const socket = await authenticatedWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`)
   const buffered: types.RunnerChannelMessage[] = []
   const waiters: Array<(result: IteratorResult<types.RunnerChannelMessage>) => void> = []
   let done = false
@@ -192,11 +207,21 @@ function createRunnerChannel(config: AmaClientConfig, runnerId: string): RunnerC
 }
 
 function createConfiguredClient(config: AmaClientConfig) {
+  const authenticatedFetch: typeof fetch = async (input, init) => {
+    const request = new Request(input, init)
+    const headers = new Headers(request.headers)
+    if (config.authorize) {
+      const authorization = await config.authorize(request.url, request.method)
+      headers.set('authorization', `DPoP ${authorization.accessToken}`)
+      headers.set('dpop', authorization.dpopProof)
+    }
+    return fetch(new Request(request, { headers }))
+  }
   return createClient(
     createConfig({
       baseUrl: config.baseUrl,
+      fetch: authenticatedFetch,
       headers: {
-        ...(config.accessToken ? { authorization: `Bearer ${config.accessToken}` } : {}),
         ...(config.projectId ? { 'x-ama-project-id': config.projectId } : {}),
         ...config.headers,
       },
@@ -218,9 +243,7 @@ export function createAmaClient(config: AmaClientConfig) {
 
     auth: {
       config: (query?: types.ReadAuthConfigData['query']) => unwrap(ops.readAuthConfig({ client, query })),
-      createSession: (body: types.CreateAuthSessionRequest) => unwrap(ops.createAuthSession({ client, body })),
       currentSession: () => unwrap(ops.readCurrentAuthSession({ client })),
-      deleteCurrentSession: () => unwrap(ops.deleteCurrentAuthSession({ client })),
     },
 
     projects: {
@@ -296,7 +319,7 @@ export function createAmaClient(config: AmaClientConfig) {
       create: (body: types.CreateSessionRequest) => unwrap(ops.createSession({ client, body })),
       get: (sessionId: string) => unwrap(ops.readSession({ client, path: { sessionId } })),
       update: (sessionId: string, body: types.UpdateSessionRequest) => unwrap(ops.updateSession({ client, path: { sessionId }, body })),
-      stream: (sessionId: string): SessionStream => createSessionStream(config, sessionId),
+      stream: (sessionId: string): Promise<SessionStream> => createSessionStream(config, sessionId),
       listMessages: (sessionId: string, query?: types.ListSessionMessagesData['query']) => unwrap(ops.listSessionMessages({ client, path: { sessionId }, query })),
       createMessage: (sessionId: string, body: types.CreateSessionMessageRequest) => unwrap(ops.createSessionMessage({ client, path: { sessionId }, body })),
       getMessage: (sessionId: string, messageId: string) => unwrap(ops.readSessionMessage({ client, path: { sessionId, messageId } })),
@@ -356,7 +379,7 @@ export function createAmaRunnerClient(config: AmaClientConfig) {
       create: (body: types.CreateRunnerRequest) => unwrap(ops.createRunner({ client, body })),
       get: (runnerId: string) => unwrap(ops.readRunner({ client, path: { runnerId } })),
       update: (runnerId: string, body: types.UpdateRunnerRequest) => unwrap(ops.updateRunner({ client, path: { runnerId }, body })),
-      channel: (runnerId: string): RunnerChannel => createRunnerChannel(config, runnerId),
+      channel: (runnerId: string): Promise<RunnerChannel> => createRunnerChannel(config, runnerId),
       getHeartbeat: (runnerId: string) => unwrap(ops.readRunnerHeartbeat({ client, path: { runnerId } })),
       putHeartbeat: (runnerId: string, body: types.PutRunnerHeartbeatRequest) => unwrap(ops.putRunnerHeartbeat({ client, path: { runnerId }, body })),
     },

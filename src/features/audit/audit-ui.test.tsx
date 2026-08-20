@@ -14,6 +14,7 @@ function buildRecord(overrides: Partial<AuditRecord> = {}): AuditRecord {
     id: 'audit_1',
     projectId: 'project_1',
     actorUserId: 'user_1',
+    controllerUserId: null,
     actorType: 'user',
     action: 'access_rule.create',
     resourceType: 'access_rule',

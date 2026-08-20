@@ -226,7 +226,6 @@ function fakeDeps(
     triggers: undefined as unknown as Deps['triggers'],
     triggerDispatch: undefined as unknown as Deps['triggerDispatch'],
     projects: undefined as unknown as Deps['projects'],
-    federatedTenants: undefined as unknown as Deps['federatedTenants'],
     runners: undefined as unknown as Deps['runners'],
     workItems: undefined as unknown as Deps['workItems'],
     leases: undefined as unknown as Deps['leases'],

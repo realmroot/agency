@@ -1,45 +1,39 @@
 Feature: Auth
-  The platform delegates identity to an OIDC provider and applies a single tenant
+  The platform delegates identity to Realmroot and applies a single tenant
   context (user, organization, project) to both the control plane and the runtime.
 
   # ── OIDC claim resolution (domain: pure token-to-scope rules) ──
 
   @auth/oidc-claims @domain
   Scenario: Resolve a tenant scope from OIDC claims
-    Given a valid OIDC access token with identity claims and the AMA resource audience
+    Given a valid Realmroot access token with identity claims and the exact AMA resource audience
     When the platform resolves the request context
     Then it derives user, organization, and project context from the claims
     And deterministic runner tokens require a configured runner client
-    And a token without explicit roles or permissions receives no implicit owner authority
-    And each control-plane operation requires its resource read or write permission
+    And a token without an explicit operation scope receives no implicit owner authority
+    And each control-plane operation requires its resource read or write scope
 
   @auth/oidc-audience @domain
   Scenario: Reject an access token issued for another resource
-    Given a signed OIDC access token from the configured issuer
+    Given a signed Realmroot access token from the configured issuer
     When its audience does not identify the AMA resource
     Then authentication fails closed before tenant context is resolved
 
   # ── Session and context API (api: assembled server, real D1) ──
 
-  @auth/session-create @api
-  Scenario: Resolve bearer context from a valid access token
-    Given an OIDC provider can issue a valid access token
-    When the user submits the token for context resolution
-    Then the bearer token resolves user, organization, and default project
-    And the project response never exposes the organization id
-
-  @auth/session-reject @api
-  Scenario: Reject invalid tokens, disallowed origins, and malformed payloads
-    When context resolution is requested with an invalid token, a disallowed origin, or a malformed payload
-    Then the request is rejected with the standard OIDC, forbidden, or validation envelope
-    And no tenant data is returned
+  @auth/dpop @api
+  Scenario: Require proof of possession for every protected request
+    Given Realmroot issued an at+jwt access token for the exact AMA resource
+    When a caller omits the DPoP proof, replays it, changes its method or URL, uses another key, or sends Bearer authentication
+    Then authentication fails closed with a DPoP challenge
+    And a fresh proof whose key matches cnf.jkt is accepted once
 
   @auth/session-current @api
-  Scenario: Read the bearer-authenticated context and acknowledge sign-out
+  Scenario: Read the DPoP-authenticated context
     Given an authenticated user
-    When the user reads the current session context and then signs out
+    When the user reads the current session context
     Then the context returns user, organization, and project without the organization id
-    And sign-out does not create or clear a server-managed cookie
+    And AMA does not create a server-managed login session or cookie
 
   @auth/guard @api
   Scenario: Guard protected resources against unauthenticated access
@@ -56,22 +50,22 @@ Feature: Auth
 
   @auth/sso-discovery @api
   Scenario: Discover an organization's sign-in methods
-    Given an organization identifier
+    Given the public AMA configuration
     When the user requests the discovery config
-    Then the available OIDC sign-in options are returned, optionally hinted by organization
+    Then the Realmroot issuer, browser client, runner client, exact resource, and required scopes are returned
 
   @auth/delegated-bootstrap @api
   Scenario: Delegate first-admin bootstrap to the OIDC provider
     Given AMA starts without local users or organizations
-    Then the OIDC provider remains responsible for first-admin bootstrap and credential rotation
-    And AMA accepts only OIDC identity claims for product access
+    Then Realmroot remains responsible for first-admin bootstrap and credential rotation
+    And AMA accepts only validated Realmroot identity and authority claims for product access
 
   # ── Web console (web: login action and auth redirect) ──
 
   @auth/login-page @web
-  Scenario: Render the OIDC sign-in action and preserve the return path
+  Scenario: Render the Realmroot sign-in action and preserve the return path
     When the user opens the login page
-    Then the page offers OIDC provider sign-in and preserves the requested return path
+    Then the page offers Realmroot sign-in and preserves the requested return path
 
   @auth/web-redirect @web
   Scenario: Redirect unauthenticated users and return after sign-in
@@ -83,6 +77,7 @@ Feature: Auth
 
   @auth/e2e-sign-in @e2e
   Scenario: Complete sign in
-    When a user completes the OIDC callback
-    Then the browser stores the OIDC token and API requests resolve user, organization, and project context
-    And invalid OIDC provider callbacks return the standard OIDC error envelope
+    When a user completes the Realmroot PKCE callback
+    Then the browser stores a DPoP-bound Realmroot token and every API request carries a fresh proof
+    And API requests resolve user, organization, and project context
+    And invalid Realmroot callbacks return the standard OIDC error envelope

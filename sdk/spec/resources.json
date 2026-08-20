@@ -8,9 +8,7 @@
         ] },
         { "name": "auth", "methods": [
           { "name": "config", "operationId": "readAuthConfig" },
-          { "name": "createSession", "operationId": "createAuthSession" },
-          { "name": "currentSession", "operationId": "readCurrentAuthSession" },
-          { "name": "deleteCurrentSession", "operationId": "deleteCurrentAuthSession" }
+          { "name": "currentSession", "operationId": "readCurrentAuthSession" }
         ] },
         { "name": "projects", "methods": [
           { "name": "list", "operationId": "listProjects" },

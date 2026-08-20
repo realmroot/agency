@@ -22,14 +22,11 @@ carry its own OpenAPI copy.
 Usage:
 
 ```python
-from ama_sdk import create_ama_client
+from ama_sdk import AuthenticatedClient, create_ama_client
 from ama_sdk.models.create_project_request import CreateProjectRequest
 
-client = create_ama_client(
-    base_url="https://ama.example.com",
-    access_token=access_token,
-    project_id=project_id,
-)
+generated = AuthenticatedClient(base_url="https://ama.example.com", auth=realmroot_dpop_httpx_auth)
+client = create_ama_client(base_url="https://ama.example.com", client=generated, project_id=project_id)
 
 project = client.projects.create(CreateProjectRequest(name="Control Plane"))
 ```
@@ -45,7 +42,8 @@ from ama_sdk.models.put_runner_heartbeat_request_state import PutRunnerHeartbeat
 
 runner = create_ama_runner_client(
     base_url="https://ama.example.com",
-    access_token=access_token,
+    client=generated,
+    websocket_authorizer=realmroot_dpop_websocket_authorizer,
     project_id=project_id,
 )
 
