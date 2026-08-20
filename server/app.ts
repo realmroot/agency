@@ -143,7 +143,7 @@ export function createApp() {
       title: 'Any Managed Agents API',
       version: '1.0.0',
       description:
-        'Realmroot-native control-plane API for Any Managed Agents. Console operations use Bearer tokens while runner and Agent operations require DPoP; every protected operation requires an exact resource scope.',
+        'Realmroot-native control-plane API for Any Managed Agents. Console and runner operations use Bearer tokens while Agent operations require DPoP; every protected operation requires an exact resource scope.',
     },
     servers: [{ url: '/' }],
   }

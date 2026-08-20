@@ -24,8 +24,6 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/securefile"
 )
 
-const testDPoPPrivateKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"
-
 var testRSAKey = sync.OnceValue(func() *rsa.PrivateKey {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -60,7 +58,7 @@ func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
 				"access_token":  "access-token",
 				"refresh_token": "refresh-token",
 				"id_token":      testIDToken("http://"+r.Host, "runner-client", "user_1", "runner@example.test", "Runner"),
-				"token_type":    "DPoP",
+				"token_type":    "Bearer",
 			})
 		default:
 			t.Fatalf("unexpected request %s", r.URL.Path)
@@ -87,7 +85,6 @@ func TestLoginPerformsHealthCheckAndDeviceFlow(t *testing.T) {
 func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "ama-runner", "credentials.json")
 	polls := 0
-	deviceJKT := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/.well-known/openid-configuration":
@@ -103,10 +100,12 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 			if r.FormValue("client_id") != "runner-client" || r.FormValue("scope") != "openid profile email offline_access" {
 				t.Fatalf("unexpected device request form: %s", r.Form.Encode())
 			}
-			if r.FormValue("resource") != "https://ama.example.test" || r.FormValue("dpop_jkt") == "" {
-				t.Fatalf("expected exact resource and DPoP JKT: %s", r.Form.Encode())
+			if r.FormValue("resource") != "https://ama.example.test" || r.FormValue("dpop_jkt") != "" {
+				t.Fatalf("expected exact resource without DPoP JKT: %s", r.Form.Encode())
 			}
-			deviceJKT = r.FormValue("dpop_jkt")
+			if r.Header.Get("content-type") != "application/x-www-form-urlencoded" {
+				t.Fatalf("device authorization must use form encoding, got %q", r.Header.Get("content-type"))
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"device_code":               "device-code",
 				"user_code":                 "ABCD-EFGH",
@@ -117,8 +116,8 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 			})
 		case "/token":
 			polls += 1
-			if r.Header.Get("dpop") == "" {
-				t.Fatal("expected token poll DPoP proof")
+			if r.Header.Get("dpop") != "" {
+				t.Fatal("token poll must not send a DPoP proof")
 			}
 			if r.FormValue("grant_type") != deviceGrantType ||
 				r.FormValue("device_code") != "device-code" ||
@@ -129,7 +128,7 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 				"access_token":  "access-token-secret",
 				"refresh_token": "refresh-token-secret",
 				"id_token":      testIDToken("http://"+r.Host, "runner-client", "user_1", "runner@example.test", "Runner User"),
-				"token_type":    "DPoP",
+				"token_type":    "Bearer",
 				"expires_in":    3600,
 				"scope":         "openid profile email offline_access",
 			})
@@ -171,12 +170,8 @@ func TestLoginWithDeviceAuthorizationStoresTokenWithoutPrintingIt(t *testing.T) 
 		t.Fatal(err)
 	}
 	if saved.AccountID != "user_1" || saved.Email != "runner@example.test" || saved.Name != "Runner User" ||
-		saved.AccessToken != "access-token-secret" || saved.RefreshToken != "refresh-token-secret" {
+		saved.AccessToken != "access-token-secret" || saved.RefreshToken != "refresh-token-secret" || saved.TokenType != "Bearer" {
 		t.Fatalf("unexpected saved credentials: %#v", saved)
-	}
-	savedJKT, err := dpopJKT(saved.DPoPPrivateKey)
-	if err != nil || savedJKT != deviceJKT {
-		t.Fatalf("expected device and token flow to retain one DPoP key, device=%q saved=%q err=%v", deviceJKT, savedJKT, err)
 	}
 }
 
@@ -227,7 +222,7 @@ func TestLoginWithDeviceAuthorizationRejectsUnsupportedDeviceEndpointMediaType(t
 				"access_token":  "access-token-secret",
 				"refresh_token": "refresh-token-secret",
 				"id_token":      testIDToken("http://"+r.Host, "runner-client", "user_1", "runner@example.test", "Runner User"),
-				"token_type":    "DPoP",
+				"token_type":    "Bearer",
 				"expires_in":    3600,
 				"scope":         "openid profile email offline_access",
 			})
@@ -355,7 +350,7 @@ func TestLoginWithDeviceAuthorizationErrors(t *testing.T) {
 					"access_token":  "token",
 					"refresh_token": "refresh",
 					"id_token":      testIDToken("http://"+r.Host, "runner-client", "user_1", "runner@example.test", "Runner User"),
-					"token_type":    "DPoP",
+					"token_type":    "Bearer",
 				})
 			default:
 				t.Fatalf("unexpected request %s", r.URL.Path)
@@ -387,7 +382,7 @@ func TestLoginWithDeviceAuthorizationErrors(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{
 					"access_token": "token",
 					"id_token":     testIDToken("http://"+r.Host, "runner-client", "user_1", "runner@example.test", "Runner User"),
-					"token_type":   "DPoP",
+					"token_type":   "Bearer",
 				})
 			default:
 				t.Fatalf("unexpected request %s", r.URL.Path)
@@ -421,7 +416,7 @@ func TestLoginWithDeviceAuthorizationErrors(t *testing.T) {
 					"access_token":  "token",
 					"refresh_token": "refresh",
 					"id_token":      "bad.payload.",
-					"token_type":    "DPoP",
+					"token_type":    "Bearer",
 				})
 			default:
 				t.Fatalf("unexpected request %s", r.URL.Path)
@@ -463,7 +458,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 				payload["device_code"] != "device" {
 				t.Fatalf("unexpected token JSON payload: %#v", payload)
 			}
-			_, _ = w.Write([]byte(`{"access_token":"token","token_type":"DPoP"}`))
+			_, _ = w.Write([]byte(`{"access_token":"token","token_type": "Bearer"}`))
 		}))
 		defer server.Close()
 		token, err := (DeviceAuthClient{HTTPClient: server.Client()}).PollDeviceToken(
@@ -473,7 +468,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "415") || token.AccessToken != "" || polls != 1 {
 			t.Fatalf("expected fail-closed token endpoint error, token=%#v polls=%d err=%v", token, polls, err)
@@ -492,7 +486,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"error":"slow_down"}`))
 			default:
-				_, _ = w.Write([]byte(`{"access_token":"token","token_type":"DPoP"}`))
+				_, _ = w.Write([]byte(`{"access_token":"token","token_type": "Bearer"}`))
 			}
 		}))
 		defer server.Close()
@@ -503,7 +497,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err != nil || token.AccessToken != "token" || polls != 3 {
 			t.Fatalf("unexpected polling result token=%#v polls=%d err=%v", token, polls, err)
@@ -523,7 +516,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "bad device code") {
 			t.Fatalf("expected provider error, got %v", err)
@@ -543,7 +535,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "expired") {
 			t.Fatalf("expected expired error, got %v", err)
@@ -563,7 +554,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "denied") {
 			t.Fatalf("expected denied error, got %v", err)
@@ -572,7 +562,7 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 
 	t.Run("missing access token", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = w.Write([]byte(`{"token_type":"DPoP"}`))
+			_, _ = w.Write([]byte(`{"token_type": "Bearer"}`))
 		}))
 		defer server.Close()
 		_, err := (DeviceAuthClient{HTTPClient: server.Client()}).PollDeviceToken(
@@ -582,10 +572,27 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "access token") {
 			t.Fatalf("expected missing access token error, got %v", err)
+		}
+	})
+
+	t.Run("rejects a non-Bearer token", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"access_token":"token","token_type":"DPoP"}`))
+		}))
+		defer server.Close()
+		_, err := (DeviceAuthClient{HTTPClient: server.Client()}).PollDeviceToken(
+			context.Background(),
+			server.URL,
+			"runner-client",
+			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
+			time.Millisecond,
+			"",
+		)
+		if err == nil || !strings.Contains(err.Error(), "did not issue a Bearer token") {
+			t.Fatalf("expected non-Bearer token rejection, got %v", err)
 		}
 	})
 
@@ -597,7 +604,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: -1},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "expired") {
 			t.Fatalf("expected local expiry error, got %v", err)
@@ -614,7 +620,6 @@ func TestDeviceTokenPollingHandlesPendingSlowDownExpiredAndErrors(t *testing.T) 
 			deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 60},
 			time.Millisecond,
 			"",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "context canceled") {
 			t.Fatalf("expected context cancellation, got %v", err)
@@ -635,7 +640,6 @@ func TestDeviceAuthorizationStartAndDiscoveryErrors(t *testing.T) {
 			"runner-client",
 			"openid profile email offline_access",
 			"https://ama.example.test",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "client rejected") {
 			t.Fatalf("expected device endpoint error, got %v", err)
@@ -653,7 +657,6 @@ func TestDeviceAuthorizationStartAndDiscoveryErrors(t *testing.T) {
 			"runner-client",
 			"openid profile email offline_access",
 			"https://ama.example.test",
-			testDPoPPrivateKey,
 		)
 		if err == nil || !strings.Contains(err.Error(), "incomplete") {
 			t.Fatalf("expected incomplete response error, got %v", err)
@@ -817,10 +820,6 @@ func TestDeviceAuthProtocolFailureAndUtilityBranches(t *testing.T) {
 	if _, err := client.Discover(t.Context(), "https://issuer.example.test"); err == nil {
 		t.Fatal("expected discovery transport error")
 	}
-	if _, err := (DeviceAuthClient{}).StartDeviceAuthorization(t.Context(), "https://issuer.example.test/device", "runner", "openid", "", "invalid"); err == nil {
-		t.Fatal("expected invalid DPoP key to fail device authorization")
-	}
-
 	unsafeDiscovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"issuer":                        "http://" + request.Host,
@@ -845,7 +844,7 @@ func TestDeviceAuthProtocolFailureAndUtilityBranches(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := (DeviceAuthClient{}).PollDeviceToken(ctx, "https://issuer.example.test/token", "runner", deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 30}, 0, "", testDPoPPrivateKey); !errors.Is(err, context.Canceled) {
+	if _, err := (DeviceAuthClient{}).PollDeviceToken(ctx, "https://issuer.example.test/token", "runner", deviceAuthorizationResponse{DeviceCode: "device", ExpiresIn: 30}, 0, ""); !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected canceled poll with default interval, got %v", err)
 	}
 }
@@ -856,8 +855,8 @@ func TestRefreshTokenRejectsProtocolFailures(t *testing.T) {
 		body string
 		want string
 	}{
-		{name: "missing access token", body: `{"token_type":"DPoP"}`, want: "did not include an access token"},
-		{name: "wrong token type", body: `{"access_token":"fresh","token_type":"Bearer"}`, want: "did not issue a DPoP token"},
+		{name: "missing access token", body: `{"token_type": "Bearer"}`, want: "did not include an access token"},
+		{name: "wrong token type", body: `{"access_token":"fresh","token_type":"DPoP"}`, want: "did not issue a Bearer token"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -865,7 +864,7 @@ func TestRefreshTokenRejectsProtocolFailures(t *testing.T) {
 				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer server.Close()
-			_, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner", "refresh", "", testDPoPPrivateKey)
+			_, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner", "refresh", "")
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("expected %q error, got %v", tc.want, err)
 			}
@@ -876,20 +875,20 @@ func TestRefreshTokenRejectsProtocolFailures(t *testing.T) {
 		w.WriteHeader(http.StatusBadGateway)
 	}))
 	defer failing.Close()
-	if _, err := (DeviceAuthClient{HTTPClient: failing.Client()}).RefreshToken(t.Context(), failing.URL, "runner", "refresh", "", testDPoPPrivateKey); err == nil {
+	if _, err := (DeviceAuthClient{HTTPClient: failing.Client()}).RefreshToken(t.Context(), failing.URL, "runner", "refresh", ""); err == nil {
 		t.Fatal("expected refresh HTTP error")
 	}
 }
 
 func TestRefreshTokenValidationAndDefaults(t *testing.T) {
-	if _, err := (DeviceAuthClient{}).RefreshToken(context.Background(), "https://issuer.example.test/token", "runner-client", " ", "", testDPoPPrivateKey); err == nil {
+	if _, err := (DeviceAuthClient{}).RefreshToken(context.Background(), "https://issuer.example.test/token", "runner-client", " ", ""); err == nil {
 		t.Fatal("expected missing refresh token error")
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("resource") != "https://ama.example.test" {
 			t.Fatalf("unexpected refresh resource: %s", r.Form.Encode())
 		}
-		_, _ = w.Write([]byte(`{"access_token":"fresh","token_type":"DPoP"}`))
+		_, _ = w.Write([]byte(`{"access_token":"fresh","token_type": "Bearer"}`))
 	}))
 	defer server.Close()
 	token, err := (DeviceAuthClient{HTTPClient: server.Client()}).RefreshToken(
@@ -898,25 +897,23 @@ func TestRefreshTokenValidationAndDefaults(t *testing.T) {
 		"runner-client",
 		"refresh",
 		"https://ama.example.test",
-		testDPoPPrivateKey,
 	)
 	if err != nil {
 		t.Fatalf("expected refresh success, got %v", err)
 	}
-	if token.AccessToken != "fresh" || token.TokenType != "DPoP" {
-		t.Fatalf("expected DPoP token, got %#v", token)
+	if token.AccessToken != "fresh" || token.TokenType != "Bearer" {
+		t.Fatalf("expected Bearer token, got %#v", token)
 	}
 }
 
 func TestLoadActiveCredentialProfileRejectsExpiredToken(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		AccessToken:    "expired-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: testDPoPPrivateKey,
-		ExpiresAt:      time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_1",
+		APIServer:   "https://ama.example.test",
+		AccessToken: "expired-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -942,12 +939,11 @@ func TestRunnerConfigValidationHelpers(t *testing.T) {
 	}
 	badDatePath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(badDatePath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		AccessToken:    "token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: testDPoPPrivateKey,
-		ExpiresAt:      "soon",
+		AccountID:   "acct_1",
+		APIServer:   "https://ama.example.test",
+		AccessToken: "token",
+		TokenType:   "Bearer",
+		ExpiresAt:   "soon",
 	}); err != nil {
 		t.Fatal(err)
 	}

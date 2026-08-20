@@ -31,7 +31,7 @@ func TestDaemonRunOnceExecutesSandboxWorkThroughControlPlane(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_integration", APIServer: server.URL, AccessToken: "e2e-runner:integration",
-		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}

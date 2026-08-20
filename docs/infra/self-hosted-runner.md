@@ -31,7 +31,7 @@ Authenticate the runner with Realmroot device authorization before starting the 
 ama-runner auth login --api-server "https://ama.example.com"
 ```
 
-The command discovers Realmroot metadata from `/api/v1/configz`, creates a runner-local ES256 DPoP key, starts the registered public-native device flow, and stores the DPoP-bound token material and private key in the local credential file. It never prints access or refresh tokens.
+The command discovers Realmroot metadata from `/api/v1/configz`, starts the registered public-native device flow, and stores the short-lived Bearer access token plus rotating refresh credential in the local credential file. It never prints access or refresh tokens.
 
 By default, the config file is:
 
@@ -98,9 +98,9 @@ Timing defaults:
 - Poll interval when no work is available: `5s`
 - Max concurrent leases: `5`
 
-The daemon requires a saved Realmroot device login and its DPoP private key. `AMA_TOKEN`, static token overrides, Bearer authentication, and token-print commands are unsupported.
+The daemon requires a saved Realmroot device login. The registered runner client receives short-lived Bearer access tokens and refreshes them through Realmroot; `AMA_TOKEN`, static token overrides, and token-print commands are unsupported.
 
-The daemon fails fast when the API server, Realmroot DPoP login, environment binding, work directory, timing values, or unsafe adapter acknowledgement is invalid. Runner registration stores only Realmroot subject/client binding metadata; raw token and DPoP key material never reaches D1. Runner scopes are limited to registration, work items, leases, and session event upload.
+The daemon fails fast when the API server, Realmroot Bearer login, environment binding, work directory, timing values, or unsafe adapter acknowledgement is invalid. Runner registration stores only Realmroot subject/client binding metadata; raw access and refresh tokens never reach D1. Runner scopes are limited to registration, work items, leases, and session event upload.
 
 ## Local Executor Boundary
 

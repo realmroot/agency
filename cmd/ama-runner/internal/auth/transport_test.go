@@ -22,16 +22,16 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 		switch r.URL.Path {
 		case "/secure":
 			secureRequests += 1
-			if r.Header.Get("authorization") == "DPoP stale-access-token" {
+			if r.Header.Get("authorization") == "Bearer stale-access-token" {
 				w.WriteHeader(http.StatusUnauthorized)
 				_, _ = w.Write([]byte(`{"error":{"message":"expired"}}`))
 				return
 			}
-			if r.Header.Get("authorization") != "DPoP fresh-access-token" {
+			if r.Header.Get("authorization") != "Bearer fresh-access-token" {
 				t.Fatalf("unexpected authorization header: %s", r.Header.Get("authorization"))
 			}
-			if r.Header.Get("dpop") == "" {
-				t.Fatal("expected DPoP proof header")
+			if r.Header.Get("dpop") != "" {
+				t.Fatal("runner transport must not send a DPoP proof header")
 			}
 			_, _ = w.Write([]byte(`{"ok":true}`))
 		case "/api/v1/configz":
@@ -51,7 +51,7 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 		case "/token":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token": "fresh-access-token",
-				"token_type":   "DPoP",
+				"token_type":   "Bearer",
 				"expires_in":   3600,
 			})
 		default:
@@ -60,13 +60,12 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 	}))
 	defer server.Close()
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      server.URL,
-		AccessToken:    "stale-access-token",
-		RefreshToken:   "refresh-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:    "acct_1",
+		APIServer:    server.URL,
+		AccessToken:  "stale-access-token",
+		RefreshToken: "refresh-token",
+		TokenType:    "Bearer",
+		ExpiresAt:    time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -121,14 +120,14 @@ func TestAuthTransportReturnsBaseErrors(t *testing.T) {
 
 func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) {
 	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
-		AccessToken: "saved-token", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		AccessToken: "saved-token",
 	}}
 	requests := 0
 	transport := AuthTransport{
 		Tokens: source,
 		Base: roundTripperFunc(func(request *http.Request) (*http.Response, error) {
 			requests++
-			if request.Header.Get("authorization") != "DPoP saved-token" || request.Header.Get("dpop") == "" {
+			if request.Header.Get("authorization") != "Bearer saved-token" || request.Header.Get("dpop") != "" {
 				t.Fatalf("unexpected authorization header %q", request.Header.Get("authorization"))
 			}
 			return &http.Response{
@@ -155,7 +154,7 @@ func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) 
 
 func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
-		AccessToken: "saved-token", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		AccessToken: "saved-token",
 	}}
 	transport := AuthTransport{Tokens: source}
 	request, err := http.NewRequest(http.MethodPost, "https://ama.example.test/secure", strings.NewReader("body"))
@@ -171,23 +170,24 @@ func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 	}
 }
 
-func TestAuthTransportBuildsSyntheticDPoPProofWithoutQueryOrFragment(t *testing.T) {
+func TestAuthTransportUsesBearerAndStripsLegacyDPoPHeader(t *testing.T) {
 	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
-		AccessToken: "e2e-token", DPoPPrivateKey: testDPoPPrivateKey,
+		AccessToken: "e2e-token",
 	}}
 	request, err := http.NewRequest(http.MethodPatch, "https://ama.example.test/api/v1/runners/runner_1/heartbeat?ignored=yes#fragment", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	request.Header.Set("dpop", "legacy-proof-must-not-leak")
 	authorized, err := (AuthTransport{Tokens: source}).authorizedRequest(request, false)
 	if err != nil {
 		t.Fatalf("authorizedRequest: %v", err)
 	}
-	if got := authorized.Header.Get("authorization"); got != "DPoP e2e-token" {
+	if got := authorized.Header.Get("authorization"); got != "Bearer e2e-token" {
 		t.Fatalf("authorization = %q", got)
 	}
-	if got := authorized.Header.Get("dpop"); got != "e2e-proof:PATCH:https://ama.example.test/api/v1/runners/runner_1/heartbeat" {
-		t.Fatalf("DPoP proof = %q", got)
+	if got := authorized.Header.Get("dpop"); got != "" {
+		t.Fatalf("legacy DPoP proof leaked: %q", got)
 	}
 }
 

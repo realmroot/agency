@@ -26,12 +26,12 @@ Feature: Auth
     Given Realmroot issued an at+jwt access token for the exact AMA resource
     When the Console client sends Bearer authentication
     Then the request is accepted without a proof-of-possession requirement
-    And runner and Realmroot CLI clients still require a fresh DPoP proof whose key matches cnf.jkt
+    And the runner client also uses Bearer authentication while the Realmroot CLI client requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
 
   @auth/dpop @api
-  Scenario: Require proof of possession for machine and Agent requests
-    Given Realmroot issued a DPoP-bound runner or Agent token for the exact AMA resource
+  Scenario: Require proof of possession for Agent requests
+    Given Realmroot issued a DPoP-bound Agent token for the exact AMA resource
     When the caller omits the DPoP proof, replays it, changes its method or URL, or uses another key
     Then authentication fails closed with a DPoP challenge
     And a fresh proof whose key matches cnf.jkt is accepted once

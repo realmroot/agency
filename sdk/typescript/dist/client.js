@@ -48,6 +48,18 @@ async function authenticatedWebSocket(config, path) {
         `ama-proof.${base64Url(authorization.dpopProof)}`,
     ]);
 }
+async function runnerWebSocket(config, path) {
+    if (!config.webSocketFactory)
+        throw new Error('Runner WebSocket factory with Bearer header support is required');
+    const headers = Object.fromEntries(Object.entries(config.headers ?? {}).filter(([name]) => name.toLowerCase() !== 'dpop'));
+    const authorization = Object.entries(headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1];
+    if (!authorization || !/^Bearer [^ ]+$/.test(authorization)) {
+        throw new Error('Runner WebSocket requires an Authorization: Bearer header');
+    }
+    if (config.projectId)
+        headers['x-ama-project-id'] = config.projectId;
+    return config.webSocketFactory(websocketURL(config, path).toString(), headers);
+}
 async function createSessionStream(config, sessionId) {
     const socket = await authenticatedWebSocket(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`);
     const buffered = [];
@@ -119,7 +131,7 @@ async function createSessionStream(config, sessionId) {
     };
 }
 async function createRunnerChannel(config, runnerId) {
-    const socket = await authenticatedWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`);
+    const socket = await runnerWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`);
     const buffered = [];
     const waiters = [];
     let done = false;
@@ -174,7 +186,7 @@ function createConfiguredClient(config) {
     const authenticatedFetch = async (input, init) => {
         const request = new Request(input, init);
         const headers = new Headers(request.headers);
-        if (config.authorize) {
+        if ('authorize' in config && config.authorize) {
             const authorization = await config.authorize(request.url, request.method);
             headers.set('authorization', `DPoP ${authorization.accessToken}`);
             headers.set('dpop', authorization.dpopProof);

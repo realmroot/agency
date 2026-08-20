@@ -16,15 +16,15 @@ export const ApiSecuritySchemes = {
   realmrootConsoleBearer: {
     type: 'openIdConnect',
     openIdConnectUrl: 'https://id.realmroot.dev/api/auth/.well-known/openid-configuration',
-    description: 'Realmroot-issued at+jwt Bearer token for the registered AMA Console client.',
-    'x-realmroot-client-mode': 'console',
+    description: 'Realmroot-issued at+jwt Bearer token for registered AMA Console and runner clients.',
+    'x-realmroot-client-mode': 'console-or-runner',
   },
   realmrootDpop: {
     type: 'openIdConnect',
     openIdConnectUrl: 'https://id.realmroot.dev/api/auth/.well-known/openid-configuration',
-    description: 'Realmroot-issued, DPoP-bound at+jwt access token for runner and Agent clients.',
+    description: 'Realmroot-issued, DPoP-bound at+jwt access token for Realmroot Agent clients.',
     'x-dpop-required': true,
-    'x-realmroot-client-mode': 'machine-or-agent',
+    'x-realmroot-client-mode': 'agent',
   },
 } as const
 

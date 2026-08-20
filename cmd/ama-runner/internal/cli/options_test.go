@@ -28,12 +28,11 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		AccessToken:    "saved-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "test-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_1",
+		APIServer:   "https://ama.example.test",
+		AccessToken: "saved-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +59,7 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token",
-		TokenType: "DPoP", DPoPPrivateKey: "test-key",
+		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -121,15 +120,14 @@ func TestOptionBindingErrorsWhenCommandsMissExpectedFlags(t *testing.T) {
 	}
 }
 
-func TestApplySavedLoginFillsServerFromDPoPProfile(t *testing.T) {
+func TestApplySavedLoginFillsServerFromBearerProfile(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://ama.example.test",
-		AccessToken:    "saved-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "test-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_1",
+		APIServer:   "https://ama.example.test",
+		AccessToken: "saved-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -205,12 +203,11 @@ func TestAuthLoginAndSwitchConfigUseEnvironment(t *testing.T) {
 func TestApplySavedLoginRejectsUnknownExplicitServer(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID:      "acct_1",
-		APIServer:      "https://saved.example.test",
-		AccessToken:    "saved-token",
-		TokenType:      "DPoP",
-		DPoPPrivateKey: "test-key",
-		ExpiresAt:      time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		AccountID:   "acct_1",
+		APIServer:   "https://saved.example.test",
+		AccessToken: "saved-token",
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
 	}

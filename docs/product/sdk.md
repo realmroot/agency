@@ -1,12 +1,12 @@
 # SDK and API Boundary
 
-This repository publishes the Any Managed Agents control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. Each SDK requires request-aware Realmroot DPoP authentication; none accepts a raw Bearer-token shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
+This repository publishes the Any Managed Agents control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. Agent-facing clients require request-aware Realmroot DPoP authentication, while runner clients receive Bearer authentication through their configured transport; none accepts a raw access-token constructor shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
 
 ## SDK Layers
 
 ```txt
 User application
-  -> Realmroot Toolbox or a DPoP-authorized Any Managed Agents SDK
+  -> Realmroot Toolbox, an Agent DPoP SDK, or a runner Bearer SDK
   -> Any Managed Agents OpenAPI control-plane API
   -> AMA session endpoint
   -> selected session runtime
@@ -64,7 +64,7 @@ realmroot toolbox sync any-managed-agents
 realmroot toolbox get any-managed-agents/api/v1/configz
 ```
 
-Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and the generated Agent/runner SDK facades require a Realmroot-issued DPoP-bound token and a fresh proof for every request; Bearer credentials from those clients are rejected. The OpenAPI document separately describes the Bearer mode used only by the registered browser Console client and its single-use session socket ticket exchange.
+Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and generated Agent SDK usage require a Realmroot-issued DPoP-bound token and a fresh proof for every request. The registered browser Console and native runner clients use Bearer access tokens; the Console exchanges its token for a single-use session socket ticket, while the runner authenticates its own control-plane channel directly.
 
 This repository includes:
 

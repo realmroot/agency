@@ -146,7 +146,7 @@
   "facadeExclusions": [
     {
       "operationId": "createSessionSocketTicket",
-      "reason": "Browser Console transport helper; stable Agent and runner SDK facades authenticate with DPoP and cannot call this Bearer-only operation."
+      "reason": "Browser Console-only transport helper; the stable Agent facade uses DPoP, and the runner facade does not expose browser session sockets."
     }
   ]
 }

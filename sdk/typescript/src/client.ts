@@ -12,6 +12,13 @@ export interface AmaClientConfig {
   authorize?: (url: string, method: string) => Promise<{ accessToken: string; dpopProof: string }>
 }
 
+export interface AmaRunnerClientConfig {
+  baseUrl: string
+  projectId?: string
+  headers?: Record<string, string>
+  webSocketFactory?: (url: string, headers: Record<string, string>) => WebSocket | Promise<WebSocket>
+}
+
 export class AmaApiError extends Error {
   constructor(
     readonly status: number | undefined,
@@ -50,7 +57,7 @@ type SessionSocketServerMessage =
   | (types.SessionSocketBackfillMessage & { type: 'backfill' })
   | { type: 'runner_unavailable'; message: string }
 
-function websocketURL(config: AmaClientConfig, path: string): URL {
+function websocketURL(config: Pick<AmaClientConfig, 'baseUrl' | 'projectId'>, path: string): URL {
   const url = new URL(path, config.baseUrl)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   if (config.projectId) {
@@ -75,6 +82,19 @@ async function authenticatedWebSocket(config: AmaClientConfig, path: string): Pr
     `ama-access.${base64Url(authorization.accessToken)}`,
     `ama-proof.${base64Url(authorization.dpopProof)}`,
   ])
+}
+
+async function runnerWebSocket(config: AmaRunnerClientConfig, path: string): Promise<WebSocket> {
+  if (!config.webSocketFactory) throw new Error('Runner WebSocket factory with Bearer header support is required')
+  const headers = Object.fromEntries(
+    Object.entries(config.headers ?? {}).filter(([name]) => name.toLowerCase() !== 'dpop'),
+  )
+  const authorization = Object.entries(headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1]
+  if (!authorization || !/^Bearer [^ ]+$/.test(authorization)) {
+    throw new Error('Runner WebSocket requires an Authorization: Bearer header')
+  }
+  if (config.projectId) headers['x-ama-project-id'] = config.projectId
+  return config.webSocketFactory(websocketURL(config, path).toString(), headers)
 }
 
 async function createSessionStream(config: AmaClientConfig, sessionId: string): Promise<SessionStream> {
@@ -150,8 +170,8 @@ async function createSessionStream(config: AmaClientConfig, sessionId: string): 
   }
 }
 
-async function createRunnerChannel(config: AmaClientConfig, runnerId: string): Promise<RunnerChannel> {
-  const socket = await authenticatedWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`)
+async function createRunnerChannel(config: AmaRunnerClientConfig, runnerId: string): Promise<RunnerChannel> {
+  const socket = await runnerWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`)
   const buffered: types.RunnerChannelMessage[] = []
   const waiters: Array<(result: IteratorResult<types.RunnerChannelMessage>) => void> = []
   let done = false
@@ -206,11 +226,11 @@ async function createRunnerChannel(config: AmaClientConfig, runnerId: string): P
   }
 }
 
-function createConfiguredClient(config: AmaClientConfig) {
+function createConfiguredClient(config: AmaClientConfig | AmaRunnerClientConfig) {
   const authenticatedFetch: typeof fetch = async (input, init) => {
     const request = new Request(input, init)
     const headers = new Headers(request.headers)
-    if (config.authorize) {
+    if ('authorize' in config && config.authorize) {
       const authorization = await config.authorize(request.url, request.method)
       headers.set('authorization', `DPoP ${authorization.accessToken}`)
       headers.set('dpop', authorization.dpopProof)
@@ -364,7 +384,7 @@ export function createAmaClient(config: AmaClientConfig) {
 
 export type AmaRunnerClient = ReturnType<typeof createAmaRunnerClient>
 
-export function createAmaRunnerClient(config: AmaClientConfig) {
+export function createAmaRunnerClient(config: AmaRunnerClientConfig) {
   const client = createConfiguredClient(config)
 
   return {

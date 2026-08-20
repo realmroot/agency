@@ -33,8 +33,8 @@ func NewTokenSource(config runnerconfig.Config, httpClient *http.Client) (*Token
 	if err != nil {
 		return nil, err
 	}
-	if saved == nil || strings.TrimSpace(saved.DPoPPrivateKey) == "" {
-		return nil, fmt.Errorf("AMA runner requires a Realmroot DPoP login; run ama-runner auth login")
+	if saved == nil || !strings.EqualFold(strings.TrimSpace(saved.TokenType), "Bearer") {
+		return nil, fmt.Errorf("AMA runner requires a Realmroot Bearer login; run ama-runner auth login")
 	}
 	source.saved = saved
 	return source, nil
@@ -44,7 +44,7 @@ func (s *TokenSource) AccessToken(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
+		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
 	}
 	if !s.needsRefresh(*s.saved) {
 		if strings.TrimSpace(s.saved.AccessToken) == "" {
@@ -59,7 +59,7 @@ func (s *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
+		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
 	}
 	return s.refreshLocked(ctx, true)
 }
@@ -70,19 +70,9 @@ func (s *TokenSource) CanRefresh() bool {
 	return s.saved != nil && strings.TrimSpace(s.saved.RefreshToken) != ""
 }
 
-func (s *TokenSource) CredentialProfile() (*runnerconfig.CredentialProfile, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.saved == nil {
-		return nil, nil
-	}
-	profile := *s.saved
-	return &profile, nil
-}
-
 func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, error) {
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot DPoP login")
+		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
 	}
 	previousAccessToken := s.saved.AccessToken
 	next, err := runnerconfig.UpdateCredentialProfile(
@@ -141,7 +131,6 @@ func (s *TokenSource) refreshCredentialProfile(ctx context.Context, current runn
 		settings.ClientID,
 		current.RefreshToken,
 		settings.Resource,
-		current.DPoPPrivateKey,
 	)
 	if err != nil {
 		return runnerconfig.CredentialProfile{}, err

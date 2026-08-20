@@ -13,16 +13,15 @@ import (
 )
 
 type CredentialProfile struct {
-	AccountID      string `json:"accountId" mapstructure:"accountId"`
-	APIServer      string `json:"apiServer" mapstructure:"apiServer"`
-	Email          string `json:"email,omitempty" mapstructure:"email"`
-	Name           string `json:"name,omitempty" mapstructure:"name"`
-	AccessToken    string `json:"accessToken" mapstructure:"accessToken"`
-	RefreshToken   string `json:"refreshToken,omitempty" mapstructure:"refreshToken"`
-	TokenType      string `json:"tokenType" mapstructure:"tokenType"`
-	ExpiresAt      string `json:"expiresAt,omitempty" mapstructure:"expiresAt"`
-	Scope          string `json:"scope,omitempty" mapstructure:"scope"`
-	DPoPPrivateKey string `json:"dpopPrivateKey" mapstructure:"dpopPrivateKey"`
+	AccountID    string `json:"accountId" mapstructure:"accountId"`
+	APIServer    string `json:"apiServer" mapstructure:"apiServer"`
+	Email        string `json:"email,omitempty" mapstructure:"email"`
+	Name         string `json:"name,omitempty" mapstructure:"name"`
+	AccessToken  string `json:"accessToken" mapstructure:"accessToken"`
+	RefreshToken string `json:"refreshToken,omitempty" mapstructure:"refreshToken"`
+	TokenType    string `json:"tokenType" mapstructure:"tokenType"`
+	ExpiresAt    string `json:"expiresAt,omitempty" mapstructure:"expiresAt"`
+	Scope        string `json:"scope,omitempty" mapstructure:"scope"`
 }
 
 type CredentialStore struct {
@@ -46,8 +45,8 @@ func saveCredentialProfileUnlocked(path string, profile CredentialProfile) error
 	if strings.TrimSpace(profile.AccountID) == "" {
 		return fmt.Errorf("runner account id is required")
 	}
-	if strings.TrimSpace(profile.DPoPPrivateKey) == "" {
-		return fmt.Errorf("runner DPoP private key is required")
+	if !strings.EqualFold(strings.TrimSpace(profile.TokenType), "Bearer") {
+		return fmt.Errorf("runner token type must be Bearer")
 	}
 	values, err := loadRawCredentialFile(path)
 	if err != nil {

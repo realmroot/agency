@@ -91,10 +91,7 @@ export async function getDpopClaims(env: Env, request: Request, expectedAudience
 
 export async function getBearerClaims(env: Env, request: Request, expectedAudience?: string): Promise<UserInfoClaims> {
   const accessToken = bearerAccessToken(request)
-  return normalizeClaims(
-    env,
-    await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience), 'console-bearer'),
-  )
+  return normalizeClaims(env, await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience), 'bearer'))
 }
 
 export async function getAccessTokenClaims(
@@ -109,7 +106,7 @@ async function verifyAccessToken(
   env: Env,
   accessToken: string,
   audience: string,
-  credentialMode?: 'console-bearer' | 'dpop',
+  credentialMode?: 'bearer' | 'dpop',
 ): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
@@ -262,19 +259,19 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
   }
 }
 
-function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'console-bearer' | 'dpop') {
+function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop') {
   const clientId = stringClaim(claims.client_id)
   const allowedClients = [env.OIDC_CLIENT_ID, env.OIDC_RUNNER_CLIENT_ID, 'realmroot-cli'].filter(Boolean)
   if (!clientId || !allowedClients.includes(clientId))
     throw new OidcError('Realmroot access token client is not allowed')
-  if (credentialMode === 'console-bearer' && clientId !== env.OIDC_CLIENT_ID) {
-    throw new OidcError('Realmroot machine and Agent clients require DPoP')
+  if (credentialMode === 'bearer' && clientId === 'realmroot-cli') {
+    throw new OidcError('Realmroot Agent clients require DPoP')
   }
-  if (credentialMode === 'console-bearer' && claims.cnf !== undefined) {
+  if (credentialMode === 'bearer' && claims.cnf !== undefined) {
     throw new OidcError('Realmroot sender-constrained tokens require proof-of-possession authentication')
   }
-  if (credentialMode === 'dpop' && clientId === env.OIDC_CLIENT_ID) {
-    throw new OidcError('Realmroot Console clients require Bearer authentication')
+  if (credentialMode === 'dpop' && clientId !== 'realmroot-cli') {
+    throw new OidcError('Realmroot Console and runner clients require Bearer authentication')
   }
   if (clientId !== 'realmroot-cli') return
   const actor = objectClaim(claims.act)
@@ -286,7 +283,7 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
 function bearerAccessToken(request: Request) {
   const authorization = request.headers.get('authorization')
   const match = authorization?.match(/^Bearer[\t ]+([^\t ]+)[\t ]*$/i)
-  if (!match?.[1]) throw new OidcError('A Bearer access token is required for the Realmroot Console client')
+  if (!match?.[1]) throw new OidcError('A Bearer access token is required')
   return match[1]
 }
 

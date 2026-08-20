@@ -66,7 +66,7 @@ async function request(
   }
   getBearerClaimsMock.mockResolvedValue(claims)
   getDpopClaimsMock.mockResolvedValue(claims)
-  const usesDpop = values.runner || values.agentDpop
+  const usesDpop = values.agentDpop === true
   const authorization = usesDpop ? 'DPoP native-token' : 'Bearer console-token'
   return await app.request(
     `https://ama.example.com${path}`,

@@ -26,7 +26,7 @@ func TestRunFailsOnInvalidConfig(t *testing.T) {
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_1", APIServer: "://bad", AccessToken: "e2e-runner:test",
-		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
 				"access_token":  "login-access-token",
 				"refresh_token": "login-refresh-token",
 				"id_token":      testIDToken("http://"+r.Host+"/issuer", "runner-client", "user_1", "runner@example.test", "Runner User"),
-				"token_type":    "DPoP",
+				"token_type":    "Bearer",
 				"expires_in":    3600,
 			})
 		default:
@@ -221,8 +221,7 @@ func TestRunAuthStatusCommand(t *testing.T) {
     "accountId": "acct_1",
     "apiServer": "https://ama.example.test",
     "accessToken": "token",
-    "tokenType": "DPoP",
-    "dpopPrivateKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"
+    "tokenType": "Bearer"
   }]
 }`
 	if err := os.WriteFile(credentialPath, []byte(data), 0o600); err != nil {
@@ -262,7 +261,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/leases":
 			_, _ = w.Write([]byte(`{"data":[],"pagination":{"limit":100,"hasMore":false,"nextCursor":null}}`))
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/channel"):
-			if got := r.Header.Get("authorization"); got != "DPoP e2e-runner:root-test" || r.Header.Get("dpop") == "" {
+			if got := r.Header.Get("authorization"); got != "Bearer e2e-runner:root-test" || r.Header.Get("dpop") != "" {
 				t.Fatalf("expected runner channel authorization header, got %q", got)
 			}
 			// The relay hub dials the runner pool channel via WebSocket upgrade.
@@ -278,7 +277,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_1", APIServer: server.URL, AccessToken: "e2e-runner:root-test",
-		TokenType: "DPoP", DPoPPrivateKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE",
+		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
