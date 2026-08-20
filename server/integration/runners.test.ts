@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
+import { asRunnerAuthorization, dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
 
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
 
@@ -76,7 +76,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('registers a runner with a vault secret ref and serves the heartbeat singleton [spec: runners/heartbeat]', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
     const environment = await createSelfHostedEnvironment(authorization)
     const credential = await createRunnerCredential(authorization)
 
@@ -154,7 +154,7 @@ describe('[CF] /api/v1/runners', () => {
   })
 
   it('rejects secret refs that are not active vault credentials', async () => {
-    const authorization = (await signIn()).replace('e2e:', 'e2e-runner:')
+    const authorization = asRunnerAuthorization(await signIn())
     const res = await jsonFetch('/api/v1/runners', authorization, {
       method: 'POST',
       body: JSON.stringify({
@@ -172,7 +172,7 @@ describe('[CF] /api/v1/runners', () => {
   })
 
   it('rejects raw secret material in runner metadata', async () => {
-    const authorization = (await signIn()).replace('e2e:', 'e2e-runner:')
+    const authorization = asRunnerAuthorization(await signIn())
     const res = await jsonFetch('/api/v1/runners', authorization, {
       method: 'POST',
       body: JSON.stringify({
@@ -188,7 +188,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('updates runner management fields and archives via PATCH', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
     const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
       method: 'POST',
       body: JSON.stringify({ name: 'Managed runner' }),
@@ -241,7 +241,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('filters runner lists by state and environment', async () => {
     const authorization = await signIn()
-    const activeRunnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const activeRunnerAuthorization = asRunnerAuthorization(authorization)
     const environment = await createSelfHostedEnvironment(authorization)
     const activeRunnerRes = await jsonFetch('/api/v1/runners', activeRunnerAuthorization, {
       method: 'POST',
@@ -252,7 +252,7 @@ describe('[CF] /api/v1/runners', () => {
       method: 'PUT',
       body: JSON.stringify({ state: 'active' }),
     })
-    const offlineRunnerAuthorization = (await signInUser('offline-runner')).replace('e2e:', 'e2e-runner:')
+    const offlineRunnerAuthorization = asRunnerAuthorization(await signInUser('offline-runner'))
     const offlineRunnerRes = await jsonFetch('/api/v1/runners', offlineRunnerAuthorization, {
       method: 'POST',
       body: JSON.stringify({ name: 'Offline runner' }),
@@ -271,7 +271,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('keeps disabled runners from heartbeating themselves active', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
     const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
       method: 'POST',
       body: JSON.stringify({ name: 'Disabled runner' }),
@@ -309,7 +309,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('guards the runner relay channel: 426 without upgrade, 404 for missing runner, 101 for valid runner [spec: runners/channel]', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
 
     // 426: non-WebSocket upgrade request
     const noUpgradeRes = await jsonFetch('/api/v1/runners/runner_missing/channel', runnerAuthorization)
@@ -351,7 +351,7 @@ describe('[CF] /api/v1/runners', () => {
 
   it('binds Realmroot runner tokens to their registered runner', async () => {
     const operatorAuthorization = await signIn()
-    const runnerAuthorization = operatorAuthorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(operatorAuthorization)
     const environment = await createSelfHostedEnvironment(operatorAuthorization)
 
     const consoleRegisterRes = await jsonFetch('/api/v1/runners', operatorAuthorization, {
@@ -409,7 +409,7 @@ describe('[CF] /api/v1/runners', () => {
     expect(operatorChannelRes.status).toBe(403)
 
     // A different user's runner token cannot operate it either.
-    const intruderAuthorization = (await signInUser('intruder')).replace('e2e:', 'e2e-runner:')
+    const intruderAuthorization = asRunnerAuthorization(await signInUser('intruder'))
     const intruderHeartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, intruderAuthorization, {
       method: 'PUT',
       body: JSON.stringify({ state: 'active' }),

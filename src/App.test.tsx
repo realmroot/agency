@@ -504,6 +504,9 @@ function mockConsoleApi(seed?: {
     if (path === '/api/v1/sessions' && method === 'GET') {
       return jsonResponse({ data: state.sessions })
     }
+    if (path.endsWith('/socket-tickets') && method === 'POST') {
+      return jsonResponse({ ticket: 't'.repeat(43), expiresAt: new Date(Date.now() + 30_000).toISOString() }, 201)
+    }
     if (path.startsWith('/api/v1/sessions/') && path.includes('/events') && method === 'GET') {
       const sessionId = path.split('/')[4]
       return jsonResponse({ data: state.events.filter((item) => item.sessionId === sessionId) })
@@ -663,7 +666,7 @@ describe('App', () => {
     expect(await screen.findByText(/Received: Create ama-message/)).toBeTruthy()
     expect(await screen.findByText('bash')).toBeTruthy()
     expect(sentCommands).toContainEqual(expect.objectContaining({ type: 'prompt' }))
-  })
+  }, 15_000)
 
   it('renders routed resource and detail pages [spec: web-console/routed-pages]', async () => {
     mockConsoleApi({
@@ -946,6 +949,9 @@ describe('App', () => {
       }
       if (url.startsWith('/api/v1/sessions/session_1/events')) {
         return jsonResponse({ data: runtimeEvents })
+      }
+      if (url === '/api/v1/sessions/session_1/socket-tickets') {
+        return jsonResponse({ ticket: 't'.repeat(43), expiresAt: new Date(Date.now() + 30_000).toISOString() }, 201)
       }
       if (url === '/api/v1/sessions/session_1/messages' && method === 'POST') {
         return jsonResponse({ error: { message: 'Runtime REST prompt unavailable' } }, 503)

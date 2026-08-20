@@ -2,7 +2,7 @@ import type { InferRequestType, InferResponseType } from 'hono/client'
 import { hc } from 'hono/client'
 import type { StatusCode } from 'hono/utils/http-status'
 import type { AppType } from '../../../server/app'
-import { getDpopHeaders } from '../oidc'
+import { getAuthHeaders } from '../oidc'
 import { getSelectedProjectId } from '../project-selection'
 
 export class ApiError extends Error {
@@ -25,17 +25,12 @@ export const rpc = hc<AppType>('/', {
     }
   },
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(
-      typeof input === 'string' ? input : input instanceof URL ? input : input.url,
-      window.location.href,
-    )
-    const method = init?.method ?? (input instanceof Request ? input.method : 'GET')
     const headers = new Headers(input instanceof Request ? input.headers : undefined)
     new Headers(init?.headers).forEach((value, key) => {
       headers.set(key, value)
     })
-    const dpop = await getDpopHeaders(url.toString(), method)
-    Object.entries(dpop).forEach(([key, value]) => {
+    const auth = await getAuthHeaders()
+    Object.entries(auth).forEach(([key, value]) => {
       headers.set(key, value)
     })
     return fetch(input, { ...init, headers })

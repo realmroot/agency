@@ -56,7 +56,10 @@ These decisions define the intended end state for Any Managed Agents.
 
 - Authentication integrates exclusively with Realmroot.
 - This project must not reimplement a parallel authentication system.
-- Control-plane and runtime requests require Realmroot-issued, DPoP-bound `at+jwt` access tokens.
+- The verified Realmroot `client_id` selects one credential mode. The registered browser Console client uses Bearer; runner and `realmroot-cli` Agent clients require DPoP. A credential presented through the wrong mode is rejected without fallback.
+- The Console is a direct public SPA client owned by the AMA maintainers. It uses authorization code with PKCE, the exact `https://ama.tftt.cc/api` audience, and explicit AMA resource scopes. Realmroot controls access-token expiry and rotates opaque refresh tokens; AMA rejects expired access tokens. OAuth credentials are stored only in tab-scoped `sessionStorage`, never in URLs, logs, IndexedDB, or cross-restart `localStorage`.
+- The direct SPA design accepts that same-origin script compromise can exfiltrate the current tab's Bearer or refresh credential. The boundary must therefore avoid unreviewed script execution and raw HTML, keep credentials tab-scoped, rely on Realmroot rotation/revocation, and retain server-side scope, tenant, ownership, and audit enforcement. A BFF becomes required if AMA introduces regulated data, irreversible financial actions, privileged credentials readable through the API, long-lived non-rotating browser credentials, or unreviewed third-party scripts.
+- Console session WebSockets never carry an OAuth credential in their URL or subprotocol. The Console exchanges Bearer authentication for an opaque 30-second, single-use ticket bound to the exact session and browser origin. Agent SDK WebSockets continue to use DPoP.
 - Runner daemon authentication uses Realmroot device authorization and a runner-local DPoP key. Static tokens and Bearer fallback are unsupported.
 - Access tokens must identify the exact `https://ama.tftt.cc/api` audience. Missing scopes grant no implicit owner authority.
 - The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; the exact scope authorizes the operation. Runner tokens remain limited to their bound runner workflow.

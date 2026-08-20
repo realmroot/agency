@@ -6,6 +6,7 @@ import { errorResponse } from '../errors'
 import { logError } from '../logging'
 import { DpopError, dpopChallenge } from './dpop'
 import {
+  getBearerClaims,
   getDpopClaims,
   OidcError,
   oidcAudience,
@@ -90,15 +91,32 @@ function missingPermission<E extends HonoEnv>(c: AppContext<E>, auth: Pick<AuthC
 }
 
 function authorizationErrorResponse<E extends HonoEnv>(c: AppContext<E>, error: AuthorizationError) {
-  c.header('WWW-Authenticate', dpopChallenge('insufficient_scope', error.requiredPermission))
+  c.header('WWW-Authenticate', authenticationChallenge(c.req.raw, 'insufficient_scope', error.requiredPermission))
   return errorResponse(c, 403, 'forbidden', error.message, {
     requiredPermission: error.requiredPermission,
   }) as never
 }
 
+function bearerChallenge(error?: 'invalid_token' | 'insufficient_scope', scope?: string) {
+  const parameters = error ? [`error="${error}"`] : []
+  if (scope) parameters.push(`scope="${scope}"`)
+  return `Bearer${parameters.length ? ` ${parameters.join(', ')}` : ''}`
+}
+
+function authenticationChallenge(
+  request: Request,
+  error?: DpopError['kind'] | 'invalid_token' | 'insufficient_scope',
+  scope?: string,
+) {
+  if (/^Bearer\s+/i.test(request.headers.get('authorization') ?? '')) {
+    return bearerChallenge(error === 'invalid_dpop_proof' ? 'invalid_token' : error, scope)
+  }
+  return dpopChallenge(error, scope)
+}
+
 function logAuthenticationFailure<E extends HonoEnv>(c: AppContext<E>, error: OidcError | DpopError) {
   const url = new URL(c.req.url)
-  logError('auth.dpop.rejected', error, {
+  logError('auth.realmroot.rejected', error, {
     method: c.req.method,
     path: url.pathname,
     cfRay: c.req.raw.headers.get('cf-ray'),
@@ -116,8 +134,8 @@ export async function resolveAuthContext<E extends HonoEnv>(
   const requestedProjectId =
     c.req.raw.headers.get('x-ama-project-id') ?? new URL(c.req.url).searchParams.get('x-ama-project-id') ?? undefined
 
-  if (hasDpopCredential(c.req.raw)) {
-    const claims = await getDpopClaims(c.env, dpopRequest(c.req.raw), oidcAudience(c.env, c.req.url))
+  if (hasAuthCredential(c.req.raw)) {
+    const claims = await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
     const identity = authIdentityFromClaims(claims)
     const requiredPermission = missingPermission(c, identity)
     if (requiredPermission) throw new AuthorizationError(requiredPermission)
@@ -151,17 +169,20 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
-      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
+      c.header(
+        'WWW-Authenticate',
+        authenticationChallenge(c.req.raw, err instanceof DpopError ? err.kind : 'invalid_token'),
+      )
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_dpop_credential',
+        reason: 'missing_or_invalid_realmroot_credential',
       })
     }
     throw err
   }
   if (!auth) {
-    c.header('WWW-Authenticate', dpopChallenge())
+    c.header('WWW-Authenticate', `${bearerChallenge()}, ${dpopChallenge()}`)
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_dpop_credential',
+      reason: 'missing_or_invalid_realmroot_credential',
     })
   }
   return auth
@@ -175,15 +196,15 @@ export async function resolveProjectForClaims(env: Env, claims: UserInfoClaims, 
 }
 
 export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): Promise<AuthIdentity | null> {
-  if (hasDpopCredential(c.req.raw)) {
-    const claims = await getDpopClaims(c.env, dpopRequest(c.req.raw), oidcAudience(c.env, c.req.url))
+  if (hasAuthCredential(c.req.raw)) {
+    const claims = await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
     return authIdentityFromClaims(claims)
   }
 
   return null
 }
 
-function authIdentityFromClaims(claims: Awaited<ReturnType<typeof getDpopClaims>>): AuthIdentity {
+function authIdentityFromClaims(claims: UserInfoClaims): AuthIdentity {
   return {
     user: {
       id: claims.sub,
@@ -217,17 +238,20 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
   } catch (err) {
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
-      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
+      c.header(
+        'WWW-Authenticate',
+        authenticationChallenge(c.req.raw, err instanceof DpopError ? err.kind : 'invalid_token'),
+      )
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_dpop_credential',
+        reason: 'missing_or_invalid_realmroot_credential',
       })
     }
     throw err
   }
   if (!auth) {
-    c.header('WWW-Authenticate', dpopChallenge())
+    c.header('WWW-Authenticate', `${bearerChallenge()}, ${dpopChallenge()}`)
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_dpop_credential',
+      reason: 'missing_or_invalid_realmroot_credential',
     })
   }
   if (isRunnerOidcAuth(c.env, auth) && !isRunnerTokenPath(new URL(c.req.url).pathname)) {
@@ -249,17 +273,20 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
-      c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
+      c.header(
+        'WWW-Authenticate',
+        authenticationChallenge(c.req.raw, err instanceof DpopError ? err.kind : 'invalid_token'),
+      )
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-        reason: 'missing_or_invalid_dpop_credential',
+        reason: 'missing_or_invalid_realmroot_credential',
       })
     }
     throw err
   }
   if (!auth) {
-    c.header('WWW-Authenticate', dpopChallenge())
+    c.header('WWW-Authenticate', `${bearerChallenge()}, ${dpopChallenge()}`)
     return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
-      reason: 'missing_or_invalid_dpop_credential',
+      reason: 'missing_or_invalid_realmroot_credential',
     })
   }
   if (isRunnerOidcAuth(c.env, auth) && !isRunnerTokenPath(new URL(c.req.url).pathname)) {
@@ -268,8 +295,15 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
   return auth
 }
 
-function hasDpopCredential(request: Request) {
-  return /^DPoP\s+/i.test(request.headers.get('authorization') ?? '') || hasSocketCredential(request)
+function hasAuthCredential(request: Request) {
+  return /^(?:Bearer|DPoP)\s+/i.test(request.headers.get('authorization') ?? '') || hasSocketCredential(request)
+}
+
+function requestClaims(env: Env, request: Request, audience: string) {
+  if (/^Bearer\s+/i.test(request.headers.get('authorization') ?? '')) {
+    return getBearerClaims(env, request, audience)
+  }
+  return getDpopClaims(env, dpopRequest(request), audience)
 }
 
 function dpopRequest(request: Request) {

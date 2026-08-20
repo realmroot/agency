@@ -30,12 +30,12 @@ Collection reads require `<resource>:read`, mutations require
 `<resource>:write`, and narrowly scoped administration may use
 `<resource>:*`. A missing permission claim is denied.
 
-The browser uses `oidc-client-ts` for authorization-code PKCE and browser DPoP key binding. The Worker uses `jose` for JWT/JWKS and ES256 DPoP verification. Bearer tokens and legacy identity service bindings are not accepted.
+The browser uses `oidc-client-ts` for authorization-code PKCE and sends the registered Console client's access token as Bearer authentication. The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for runner, Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the permitted credential mode; cross-mode fallback and legacy identity service bindings are not accepted.
 
 Control-plane settings:
 
 - `AMA_ALLOWED_ORIGINS`: comma-separated browser origins allowed for
-  DPoP-authenticated CORS requests.
+  Realmroot-authenticated CORS requests.
 
 ## Sandbox tool executor
 

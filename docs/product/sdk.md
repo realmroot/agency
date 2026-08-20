@@ -64,7 +64,7 @@ realmroot toolbox sync any-managed-agents
 realmroot toolbox get any-managed-agents/api/v1/configz
 ```
 
-Use the protected Resource URL `https://ama.tftt.cc/api`. The OpenAPI security scheme requires a Realmroot-issued DPoP-bound token and a fresh proof for every request; Bearer is rejected.
+Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and the generated Agent/runner SDK facades require a Realmroot-issued DPoP-bound token and a fresh proof for every request; Bearer credentials from those clients are rejected. The OpenAPI document separately describes the Bearer mode used only by the registered browser Console client and its single-use session socket ticket exchange.
 
 This repository includes:
 

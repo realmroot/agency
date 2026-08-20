@@ -1,7 +1,7 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { AMA_SESSION_EVENT_TYPES, type AmaEvent } from '@shared/session-events'
 import type { Context } from 'hono'
-import { isRunnerOidcAuth, requireAuth, requireAuthIdentity, requireSessionEventsAuth } from '../auth/session'
+import { isRunnerOidcAuth, requireAuth, requireSessionEventsAuth } from '../auth/session'
 import {
   EnvironmentHostingModeSchema,
   EnvironmentNetworkingSchema,
@@ -524,6 +524,13 @@ const SessionSocketClientMessageSchema = z
   ])
   .openapi('SessionSocketClientMessage')
 
+const SessionSocketTicketSchema = z
+  .object({
+    ticket: z.string().openapi({ description: 'Single-use opaque browser WebSocket ticket.' }),
+    expiresAt: z.string().datetime(),
+  })
+  .openapi('SessionSocketTicket')
+
 // The component schemas above are emitted into the OpenAPI document (and so the
 // generated SDK types) only when registered; connectSessionSocket is a bare
 // upgrade with no body, so register them explicitly.
@@ -787,6 +794,41 @@ function upgradeSessionBrowserSocket(
   return stub.fetch(new Request(url, request))
 }
 
+async function issueSessionBrowserSocketTicket(
+  env: Env,
+  doName: string,
+  scope: {
+    sessionId: string
+    organizationId: string
+    projectId: string
+    userId: string
+    runnerEnvironmentId?: string
+  },
+  origin: string,
+) {
+  const stub = env.SESSION.get(env.SESSION.idFromName(doName))
+  const response = await stub.fetch('https://session-object/browser-tickets', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scope, origin }),
+  })
+  if (!response.ok) throw new Error(`Session socket ticket issuance failed with HTTP ${response.status}`)
+  return (await response.json()) as { ticket: string; expiresAt: string }
+}
+
+function upgradeSessionBrowserSocketTicket(env: Env, request: Request, doName: string) {
+  const stub = env.SESSION.get(env.SESSION.idFromName(doName))
+  const url = new URL('https://session-object/browser')
+  url.searchParams.set('sessionId', doName)
+  return stub.fetch(new Request(url, request))
+}
+
+function hasBrowserSocketTicket(request: Request) {
+  return (request.headers.get('sec-websocket-protocol') ?? '')
+    .split(',')
+    .some((value) => value.trim().startsWith('ama-ticket.'))
+}
+
 function asSessionMessageResponse(record: SessionMessage): z.infer<typeof SessionMessageSchema> {
   return record as z.infer<typeof SessionMessageSchema>
 }
@@ -1014,13 +1056,34 @@ const updateSessionRoute = createRoute({
   },
 })
 
+const createSessionSocketTicketRoute = createRoute({
+  method: 'post',
+  path: '/{sessionId}/socket-tickets',
+  operationId: 'createSessionSocketTicket',
+  tags: ['Sessions'],
+  summary: 'Create a single-use browser session socket ticket',
+  description:
+    'Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.',
+  security: [{ realmrootConsoleBearer: ['sessions:write'] }],
+  request: { params: ParamsSchema },
+  responses: {
+    201: {
+      description: 'Socket ticket created',
+      content: { 'application/json': { schema: SessionSocketTicketSchema } },
+    },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    403: { description: 'Console client required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Session not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
 const connectSessionSocketRoute = createRoute({
   method: 'get',
   path: '/{sessionId}/socket',
   operationId: 'connectSessionSocket',
   tags: ['Sessions'],
   summary: 'Open the session browser WebSocket (live events + backfill + input)',
-  ...AuthenticatedOperation,
+  security: [{ sessionSocketTicket: [] }, { realmrootDpop: ['sessions:write'] }],
   request: { params: ParamsSchema },
   responses: {
     101: { description: 'Session browser socket accepted as a WebSocket upgrade' },
@@ -1337,15 +1400,57 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         return sessionValidationOr(c, error)
       }
     })
-    .openapi(connectSessionSocketRoute, async (c) => {
-      // Authorise that the connecting user owns the session, then forward the
-      // upgrade to the per-session Session DO. This route is the browser socket,
-      // not a discovery resource; non-upgrade callers get an explicit 426.
+    .openapi(createSessionSocketTicketRoute, async (c) => {
       const { sessionId } = c.req.valid('param')
       const deps = c.get('deps')
-      const auth = await requireAuthIdentity(c)
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      if (auth.oidc.clientId !== c.env.OIDC_CLIENT_ID) {
+        return errorResponse(c, 403, 'forbidden', 'Only the Realmroot Console client may create browser socket tickets')
+      }
+      const requestOrigin = new URL(c.req.url).origin
+      const browserOrigin = c.req.header('origin')
+      if (browserOrigin !== requestOrigin) {
+        return errorResponse(c, 403, 'forbidden', 'Browser socket tickets require the same-origin Realmroot Console')
+      }
+      const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
+      if (!session) return errorResponse(c, 404, 'not_found', 'Session not found')
+      const ticket = await issueSessionBrowserSocketTicket(
+        c.env,
+        sessionId,
+        {
+          sessionId,
+          organizationId: auth.organization.id,
+          projectId: session.metadata.pid,
+          userId: auth.user.id,
+          ...(session.status.placement?.hostingMode === 'self_hosted' && session.spec.environmentId
+            ? { runnerEnvironmentId: session.spec.environmentId }
+            : {}),
+        },
+        browserOrigin,
+      )
+      return c.json(ticket, 201)
+    })
+    .openapi(connectSessionSocketRoute, async (c) => {
+      // Console browsers authenticate through a single-use ticket. DPoP-native
+      // SDK clients are authorised here before the scope is forwarded to the
+      // per-session DO. Non-upgrade callers get an explicit 426.
+      const { sessionId } = c.req.valid('param')
+      if (hasBrowserSocketTicket(c.req.raw)) {
+        return upgradeSessionBrowserSocketTicket(c.env, c.req.raw, sessionId)
+      }
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
       if (auth instanceof Response) {
         return auth
+      }
+      if (auth.oidc.clientId === c.env.OIDC_CLIENT_ID) {
+        return errorResponse(
+          c,
+          403,
+          'forbidden',
+          'Realmroot Console clients must exchange Bearer authentication for a browser socket ticket',
+        )
       }
       const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
       if (!session) {

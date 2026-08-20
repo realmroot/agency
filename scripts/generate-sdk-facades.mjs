@@ -9,6 +9,7 @@ const SPEC_PATH = path.join(ROOT, 'sdk/spec/resources.json')
 const openapi = JSON.parse(readFileSync(OPENAPI_PATH, 'utf8'))
 const spec = JSON.parse(readFileSync(SPEC_PATH, 'utf8'))
 const facades = normalizeFacades(spec)
+const facadeExclusions = normalizeFacadeExclusions(spec)
 const operations = collectOperations(openapi)
 const pythonModules = collectPythonModules(path.join(ROOT, 'sdk/python/ama_sdk/api'))
 
@@ -52,7 +53,7 @@ export const getAuthToken = async (
 
   const sdkPath = path.join(ROOT, 'sdk/typescript/src/generated/sdk.gen.ts')
   const sdkSource = readFileSync(sdkPath, 'utf8')
-  writeFileSync(sdkPath, sdkSource.replaceAll(/    security: \[\{ scheme: '[^']+', type: 'http' \}\],\n/g, ''))
+  writeFileSync(sdkPath, sdkSource.replaceAll(/    security: \[[\s\S]*?\],\n(?=    url:)/g, ''))
 }
 
 function rewritePythonAuthenticatedClient() {
@@ -106,6 +107,12 @@ function normalizeFacades(document) {
     return document.facades
   }
   return { public: { resources: document.resources ?? [] } }
+}
+
+function normalizeFacadeExclusions(document) {
+  const exclusions = document.facadeExclusions ?? []
+  if (!Array.isArray(exclusions)) throw new Error('SDK facadeExclusions must be an array')
+  return exclusions
 }
 
 function collectOperations(document) {
@@ -179,7 +186,30 @@ function validateSpec() {
       }
     }
   }
-  const missing = [...operations.keys()].filter((operationId) => !covered.has(operationId)).sort()
+  const excluded = new Set()
+  for (const exclusion of facadeExclusions) {
+    if (
+      !exclusion ||
+      typeof exclusion.operationId !== 'string' ||
+      typeof exclusion.reason !== 'string' ||
+      !exclusion.reason.trim()
+    ) {
+      throw new Error('Every SDK facade exclusion requires an operationId and non-empty reason')
+    }
+    if (!operations.has(exclusion.operationId)) {
+      throw new Error(`SDK facade exclusion references missing operationId: ${exclusion.operationId}`)
+    }
+    if (covered.has(exclusion.operationId)) {
+      throw new Error(`SDK operation cannot be both covered and excluded: ${exclusion.operationId}`)
+    }
+    if (excluded.has(exclusion.operationId)) {
+      throw new Error(`SDK facade excludes operationId twice: ${exclusion.operationId}`)
+    }
+    excluded.add(exclusion.operationId)
+  }
+  const missing = [...operations.keys()]
+    .filter((operationId) => !covered.has(operationId) && !excluded.has(operationId))
+    .sort()
   if (missing.length > 0) {
     throw new Error(`SDK facades do not cover OpenAPI operations:\n${missing.join('\n')}`)
   }

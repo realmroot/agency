@@ -149,6 +149,6 @@ describe('[CF] Realmroot toolbox/OpenAPI control-plane path [spec: api-contracts
     })
 
     const socketRes = await jsonFetch(`/api/v1/sessions/${session.metadata.uid}/socket`, authorization)
-    expect(socketRes.status).toBe(426)
+    expect(socketRes.status).toBe(403)
   })
 })

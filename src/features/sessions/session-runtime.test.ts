@@ -893,43 +893,56 @@ describe('sessionRuntimeReducer', () => {
 })
 
 // ---------------------------------------------------------------------------
-// sessionSocketConnection — URL and DPoP subprotocol construction
+// sessionSocketConnection — URL and one-time ticket subprotocol construction
 // ---------------------------------------------------------------------------
 
 describe('sessionSocketConnection', () => {
-  it('keeps the advertised session socket path and requires DPoP subprotocol credentials', async () => {
+  it('exchanges Console Bearer auth for a one-time ticket without exposing the access token', async () => {
     stubWindowLocation('https://example.com/app')
-    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({
-      authorization: 'DPoP test_token_xyz',
-      dpop: 'signed-proof',
-    })
+    vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({ authorization: 'Bearer test_token_xyz' })
+    const ticket = 'a'.repeat(43)
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ticket }))
+    vi.stubGlobal('fetch', fetchMock)
 
     const connection = await sessionSocketConnection('/api/v1/sessions/s1/socket')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/sessions/s1/socket-tickets', {
+      method: 'POST',
+      headers: { authorization: 'Bearer test_token_xyz' },
+    })
     expect(connection.url).toContain('/api/v1/sessions/s1/socket')
     expect(connection.url.startsWith('wss:')).toBe(true)
-    expect(connection.url).not.toContain('access_token')
-    expect(connection.protocols).toEqual([
-      'ama-dpop',
-      `ama-access.${btoa('test_token_xyz').replaceAll('=', '')}`,
-      `ama-proof.${btoa('signed-proof').replaceAll('=', '')}`,
-    ])
+    expect(connection.url).not.toContain('test_token_xyz')
+    expect(connection.protocols).toEqual(['ama-ticket', `ama-ticket.${ticket}`])
+    expect(connection.protocols.join(',')).not.toContain('test_token_xyz')
   })
 
   it('uses ws: protocol for http: origins', async () => {
     stubWindowLocation('http://localhost:3000/')
-    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({ authorization: 'DPoP token', dpop: 'proof' })
+    vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({ authorization: 'Bearer token' })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ ticket: 'b'.repeat(43) })))
 
     const connection = await sessionSocketConnection('/api/v1/sessions/s1/socket')
     expect(connection.url.startsWith('ws:')).toBe(true)
     expect(connection.url.startsWith('wss:')).toBe(false)
   })
 
-  it('fails closed when the Realmroot DPoP credential is unavailable', async () => {
+  it('fails closed when the ticket endpoint rejects the Console credential', async () => {
     stubWindowLocation('https://example.com/')
-    vi.spyOn(oidcModule, 'getDpopHeaders').mockResolvedValue({})
+    vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({})
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
 
     await expect(sessionSocketConnection('/api/v1/sessions/s1/socket')).rejects.toThrow(
-      'Realmroot DPoP credential is unavailable',
+      'Session socket ticket request failed with HTTP 401',
+    )
+  })
+
+  it('rejects malformed ticket responses', async () => {
+    stubWindowLocation('https://example.com/')
+    vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({ authorization: 'Bearer token' })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ ticket: 'too-short' })))
+
+    await expect(sessionSocketConnection('/api/v1/sessions/s1/socket')).rejects.toThrow(
+      'Session socket ticket response is invalid',
     )
   })
 })

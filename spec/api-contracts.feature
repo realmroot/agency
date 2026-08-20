@@ -18,14 +18,14 @@ Feature: API contracts
     Given the Worker app is initialized
     When the OpenAPI document is requested
     Then it is generated from Hono route schemas and stays entirely under /api/v1
-    And every operation has a unique id, summary, tags, a documented success response, and scoped Realmroot DPoP auth on protected paths
+    And every operation has a unique id, summary, tags, a documented success response, and scoped Realmroot auth on protected paths
     And it does not describe a replacement for AMA runtime session traffic
 
   @api-contracts/resource-discovery @api
   Scenario: Publish the Realmroot protected Resource contract
     Given the Worker app is initialized
     When a client discovers the exact AMA Resource
-    Then RFC 9728 metadata publishes the exact resource, Realmroot issuer, DPoP requirement, and complete scope catalog
+    Then RFC 9728 metadata publishes the exact resource, Realmroot issuer, supported Bearer and DPoP modes, and complete scope catalog
     And the Resource response links the live OpenAPI document with service-desc
     And every OpenAPI operation scope belongs to the published catalog
 

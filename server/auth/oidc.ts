@@ -84,9 +84,17 @@ export function oidcAudience(
 
 export async function getDpopClaims(env: Env, request: Request, expectedAudience?: string): Promise<UserInfoClaims> {
   const verified = await verifyDpopCredential(env, request, (accessToken) =>
-    verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience)),
+    verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience), 'dpop'),
   )
   return normalizeClaims(env, verified.payload)
+}
+
+export async function getBearerClaims(env: Env, request: Request, expectedAudience?: string): Promise<UserInfoClaims> {
+  const accessToken = bearerAccessToken(request)
+  return normalizeClaims(
+    env,
+    await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience), 'console-bearer'),
+  )
 }
 
 export async function getAccessTokenClaims(
@@ -101,16 +109,21 @@ async function verifyAccessToken(
   env: Env,
   accessToken: string,
   audience: string,
+  credentialMode?: 'console-bearer' | 'dpop',
 ): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
-    return e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
+    const payload = e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
+    validateRealmrootClient(env, payload, credentialMode)
+    return payload
   }
   if (e2eTestMode && accessToken.startsWith('e2e-runner:')) {
     if (!env.OIDC_RUNNER_CLIENT_ID) {
       throw new OidcError('OIDC_RUNNER_CLIENT_ID is required for runner e2e tokens')
     }
-    return e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
+    const payload = e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
+    validateRealmrootClient(env, payload, credentialMode)
+    return payload
   }
   if (accessToken.split('.').length !== 3) {
     throw new OidcError('Realmroot access token must be a JWT')
@@ -133,12 +146,12 @@ async function verifyAccessToken(
       audience,
       typ: 'at+jwt',
       algorithms: ['RS256'],
-      requiredClaims: ['sub', 'iat', 'exp', 'client_id', 'scope', 'cnf'],
+      requiredClaims: ['sub', 'iat', 'exp', 'client_id', 'scope'],
     })
     if (!payload.sub) {
       throw new OidcError('Realmroot access token did not include required subject')
     }
-    validateRealmrootClient(env, payload)
+    validateRealmrootClient(env, payload, credentialMode)
     return { ...payload, sub: payload.sub }
   } catch (err) {
     throw toOidcError(err)
@@ -249,16 +262,32 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
   }
 }
 
-function validateRealmrootClient(env: Env, claims: JWTPayload) {
+function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'console-bearer' | 'dpop') {
   const clientId = stringClaim(claims.client_id)
   const allowedClients = [env.OIDC_CLIENT_ID, env.OIDC_RUNNER_CLIENT_ID, 'realmroot-cli'].filter(Boolean)
   if (!clientId || !allowedClients.includes(clientId))
     throw new OidcError('Realmroot access token client is not allowed')
+  if (credentialMode === 'console-bearer' && clientId !== env.OIDC_CLIENT_ID) {
+    throw new OidcError('Realmroot machine and Agent clients require DPoP')
+  }
+  if (credentialMode === 'console-bearer' && claims.cnf !== undefined) {
+    throw new OidcError('Realmroot sender-constrained tokens require proof-of-possession authentication')
+  }
+  if (credentialMode === 'dpop' && clientId === env.OIDC_CLIENT_ID) {
+    throw new OidcError('Realmroot Console clients require Bearer authentication')
+  }
   if (clientId !== 'realmroot-cli') return
   const actor = objectClaim(claims.act)
   if (!actor || actor.iss !== env.OIDC_ISSUER?.replace(/\/$/, '') || typeof actor.sub !== 'string' || !actor.sub) {
     throw new OidcError('Realmroot Agent token omitted the stable Agent actor')
   }
+}
+
+function bearerAccessToken(request: Request) {
+  const authorization = request.headers.get('authorization')
+  const match = authorization?.match(/^Bearer[\t ]+([^\t ]+)[\t ]*$/i)
+  if (!match?.[1]) throw new OidcError('A Bearer access token is required for the Realmroot Console client')
+  return match[1]
 }
 
 function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoClaims, 'actor'> | object {

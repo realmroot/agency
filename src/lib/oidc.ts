@@ -1,4 +1,4 @@
-import { IndexedDbDPoPStore, type User, UserManager, WebStorageStateStore } from 'oidc-client-ts'
+import { type User, UserManager, WebStorageStateStore } from 'oidc-client-ts'
 
 interface OidcConfigResponse {
   authority: string
@@ -65,57 +65,22 @@ export async function getOidcManager() {
         response_type: 'code',
         scope: config.scope,
         resource: config.resource,
-        dpop: { bind_authorization_code: true, store: new IndexedDbDPoPStore() },
         automaticSilentRenew: true,
-        userStore: new WebStorageStateStore({ store: window.localStorage }),
+        userStore: new WebStorageStateStore({ store: window.sessionStorage }),
       }),
   )
   return managerPromise
 }
 
-export async function getAccessToken() {
-  const storedToken = getStoredAccessToken()
-  if (storedToken) {
-    return storedToken
-  }
-
-  const manager = await getOidcManager()
-  userPromise ??= manager.getUser()
-  const user = await userPromise
-  if (!user || user.expired) {
-    return null
-  }
-  if (!isSerializedJwt(user.access_token)) {
-    userPromise = undefined
-    await manager.removeUser()
-    return null
-  }
-  return user.access_token
-}
-
-export async function getDpopHeaders(url: string, method: string) {
+export async function getAuthHeaders() {
   const accessToken = getStoredAccessToken()
   if (!accessToken) return {}
-  const absoluteUrl = new URL(url, window.location.href).toString()
-  if (accessToken.startsWith('e2e:')) {
-    const proofUrl = new URL(absoluteUrl)
-    proofUrl.search = ''
-    proofUrl.hash = ''
-    return {
-      authorization: `DPoP ${accessToken}`,
-      dpop: `e2e-proof:${method.toUpperCase()}:${proofUrl.toString()}`,
-    }
-  }
+  if (accessToken.startsWith('e2e:')) return { authorization: `Bearer ${accessToken}` }
   const manager = await getOidcManager()
   userPromise ??= manager.getUser()
   const user = await userPromise
   if (!user || user.expired || user.access_token !== accessToken) return {}
-  const proofUrl = new URL(absoluteUrl)
-  proofUrl.search = ''
-  proofUrl.hash = ''
-  const proof = await manager.dpopProof(proofUrl.toString(), user, method)
-  if (!proof) throw new Error('Realmroot DPoP proof generation failed')
-  return { authorization: `DPoP ${accessToken}`, dpop: proof }
+  return { authorization: `Bearer ${accessToken}` }
 }
 
 export async function getCurrentUser() {
@@ -126,7 +91,7 @@ export async function getCurrentUser() {
     return {
       expired: false,
       access_token: e2eToken,
-      token_type: 'DPoP',
+      token_type: 'Bearer',
       scope: 'openid email profile',
       session_state: null,
       state: undefined,
@@ -161,10 +126,10 @@ export function getStoredAccessToken() {
   if (e2eToken) {
     return e2eToken
   }
-  for (let index = 0; index < window.localStorage.length; index += 1) {
-    const key = window.localStorage.key(index)
+  for (let index = 0; index < window.sessionStorage.length; index += 1) {
+    const key = window.sessionStorage.key(index)
     if (!key?.startsWith('oidc.user:')) continue
-    const raw = window.localStorage.getItem(key)
+    const raw = window.sessionStorage.getItem(key)
     if (!raw) continue
     try {
       const user = JSON.parse(raw) as { access_token?: string; expires_at?: number }
@@ -172,7 +137,7 @@ export function getStoredAccessToken() {
         if (isSerializedJwt(user.access_token)) {
           return user.access_token
         }
-        window.localStorage.removeItem(key)
+        window.sessionStorage.removeItem(key)
       }
     } catch {}
   }

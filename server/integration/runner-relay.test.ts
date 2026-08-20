@@ -199,8 +199,18 @@ async function openRunnerChannel(authorization: string, runnerId: string) {
 // per-session Session DO; RunnerPool writes relayed runner events into it.
 async function openBrowserSocket(authorization: string, sessionId: string) {
   const path = `/api/v1/sessions/${sessionId}/socket`
+  const ticketResponse = await jsonFetch(`/api/v1/sessions/${sessionId}/socket-tickets`, authorization, {
+    method: 'POST',
+    headers: { Origin: 'https://example.com' },
+  })
+  if (ticketResponse.status !== 201) throw new Error(`Browser ticket issuance failed: ${ticketResponse.status}`)
+  const { ticket } = (await ticketResponse.json()) as { ticket: string }
   const res = await SELF.fetch(`https://example.com${path}`, {
-    headers: { ...dpopHeaders(authorization, 'GET', path), Upgrade: 'websocket' },
+    headers: {
+      Upgrade: 'websocket',
+      Origin: 'https://example.com',
+      'Sec-WebSocket-Protocol': `ama-ticket, ama-ticket.${ticket}`,
+    },
   })
   if (res.status !== 101 || !res.webSocket) throw new Error(`Browser socket upgrade failed: ${res.status}`)
   const ws = res.webSocket as WebSocket

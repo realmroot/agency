@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createApp } from '../server/app'
+import { AMA_CANONICAL_RESOURCE } from '../server/auth/scopes'
 import type { Env } from '../server/env'
 
 type OpenApiDocument = {
@@ -97,7 +98,12 @@ function generateSdkFacades() {
 
 async function routeGeneratedOpenApi() {
   const app = createApp()
-  const response = await app.fetch(new Request('https://example.test/api/v1/openapi.json'), {} as Env)
+  const env = {
+    OIDC_RESOURCE: AMA_CANONICAL_RESOURCE,
+    OIDC_ISSUER: 'https://id.realmroot.dev/api/auth',
+    OIDC_CLIENT_ID: 'ama-console',
+  } as Env
+  const response = await app.fetch(new Request('https://example.test/api/v1/openapi.json'), env)
   if (!response.ok) {
     throw new Error(`OpenAPI generation failed with HTTP ${response.status}`)
   }

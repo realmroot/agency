@@ -1,4 +1,4 @@
-export const AMA_RESOURCE_PATH = '/api'
+export const AMA_CANONICAL_RESOURCE = 'https://ama.tftt.cc/api'
 export const AMA_RESOURCE_NAME = 'Any Managed Agents API'
 export const AMA_RESOURCE_DESCRIPTION =
   'Realmroot-protected control plane for managed Agents, environments, sessions, runners, governance, usage, and audit.'
@@ -36,14 +36,19 @@ export function requiredScope(method: string, requestUrl: string) {
   return `${resource}:${operation}`
 }
 
-export function protectedResourceMetadata(origin: string, issuer: string) {
+export function protectedResourceMetadata(resource: string, issuer: string) {
   return {
-    resource: `${origin}${AMA_RESOURCE_PATH}`,
+    resource,
     authorization_servers: [issuer],
     scopes_supported: AMA_SCOPES,
-    bearer_methods_supported: [],
+    bearer_methods_supported: ['header'],
     resource_name: AMA_RESOURCE_NAME,
     dpop_signing_alg_values_supported: ['ES256'],
-    dpop_bound_access_tokens_required: true,
+    dpop_bound_access_tokens_required: false,
+    realmroot_client_authentication: {
+      console: 'bearer',
+      runner: 'dpop',
+      agent: 'dpop',
+    },
   }
 }

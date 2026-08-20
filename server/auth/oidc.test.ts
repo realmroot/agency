@@ -1,8 +1,16 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
+import { calculateJwkThumbprint, exportJWK, generateKeyPair, type JSONWebKeySet, SignJWT } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
-import { getAccessTokenClaims, OidcError, oidcAudience, organizationIdForClaims, upsertProjectForClaims } from './oidc'
+import {
+  getAccessTokenClaims,
+  getBearerClaims,
+  getDpopClaims,
+  OidcError,
+  oidcAudience,
+  organizationIdForClaims,
+  upsertProjectForClaims,
+} from './oidc'
 
 type ProjectRawRow = [string, string, string, string, string]
 
@@ -95,6 +103,145 @@ function requestedPaths(fetchMock: ReturnType<typeof vi.fn>) {
     ([input]) => new URL(input instanceof Request ? input.url : input.toString()).pathname,
   )
 }
+
+function testAuthEnv(overrides: Partial<Env> = {}) {
+  return {
+    AMA_RUNTIME_MODE: 'test',
+    AMA_E2E_TEST_AUTH: 'true',
+    OIDC_CLIENT_ID: 'ama',
+    OIDC_RUNNER_CLIENT_ID: 'ama-runner',
+    OIDC_RESOURCE: 'https://ama.example.com',
+    ...overrides,
+  } as Env
+}
+
+function e2eDpopRequest(accessToken: string, path = '/api/v1/runners') {
+  const url = `https://ama.example.com${path}`
+  return new Request(url, {
+    headers: {
+      authorization: `DPoP ${accessToken}`,
+      dpop: `e2e-proof:GET:${url}`,
+    },
+  })
+}
+
+function replayDb() {
+  return {
+    prepare() {
+      return {
+        bind() {
+          return {
+            async run() {
+              return { meta: { changes: 1 } }
+            },
+          }
+        },
+      }
+    },
+  } as unknown as D1Database
+}
+
+async function tokenHash(value: string) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
+  let binary = ''
+  for (const byte of digest) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+}
+
+describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('accepts Console Bearer and rejects Console DPoP', async () => {
+    const env = testAuthEnv()
+    await expect(
+      getBearerClaims(
+        env,
+        new Request('https://ama.example.com/api/v1/agents', {
+          headers: { authorization: 'Bearer e2e:console' },
+        }),
+      ),
+    ).resolves.toMatchObject({ client_id: 'ama' })
+    await expect(getDpopClaims(env, e2eDpopRequest('e2e:console'))).rejects.toMatchObject({
+      message: 'Realmroot Console clients require Bearer authentication',
+    })
+  })
+
+  it('rejects a sender-constrained Console JWT presented as Bearer', async () => {
+    const issuer = 'https://id-console-sender-constrained.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'ama',
+        cnf: { jkt: 'console-bound-key-thumbprint' },
+      },
+    })
+    stubJwks(jwks)
+
+    await expect(
+      getBearerClaims(
+        envFor(issuer),
+        new Request('https://ama.example.com/api/v1/agents', {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: 'OidcError',
+      message: 'Realmroot sender-constrained tokens require proof-of-possession authentication',
+    })
+  })
+
+  it('accepts runner DPoP and rejects runner Bearer', async () => {
+    const env = testAuthEnv()
+    await expect(getDpopClaims(env, e2eDpopRequest('e2e-runner:runner'))).resolves.toMatchObject({
+      client_id: 'ama-runner',
+      roles: ['runner'],
+    })
+    await expect(
+      getBearerClaims(
+        env,
+        new Request('https://ama.example.com/api/v1/runners', {
+          headers: { authorization: 'Bearer e2e-runner:runner' },
+        }),
+      ),
+    ).rejects.toMatchObject({ message: 'Realmroot machine and Agent clients require DPoP' })
+  })
+
+  it('accepts a verified realmroot-cli Agent only with a bound DPoP proof', async () => {
+    const issuer = 'https://id-agent-credential.test/api/auth'
+    const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true })
+    const publicJwk = await exportJWK(publicKey)
+    const thumbprint = await calculateJwkThumbprint(publicJwk)
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'realmroot-cli',
+        act: { iss: issuer, sub: 'agent_profile_1' },
+        cnf: { jkt: thumbprint },
+      },
+    })
+    stubJwks(jwks)
+    const url = 'https://ama.example.com/api/v1/agents'
+    const proof = await new SignJWT({
+      htu: url,
+      htm: 'GET',
+      ath: await tokenHash(token),
+      jti: 'agent-proof-once',
+    })
+      .setProtectedHeader({ typ: 'dpop+jwt', alg: 'ES256', jwk: publicJwk })
+      .setIssuedAt()
+      .sign(privateKey)
+    const env = envFor(issuer, { DB: replayDb() })
+
+    await expect(
+      getDpopClaims(env, new Request(url, { headers: { authorization: `DPoP ${token}`, dpop: proof } })),
+    ).resolves.toMatchObject({
+      client_id: 'realmroot-cli',
+      actor: { issuer, subject: 'agent_profile_1', profile: 'ai_agent' },
+    })
+  })
+})
 
 describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () => {
   afterEach(() => {

@@ -1,7 +1,7 @@
 import type { SessionSocketClientMessage } from '@ama/runtime-contracts/session-socket'
 import type { AmaSessionEventType } from '@shared/session-events'
 import type { SessionEvent } from '@/lib/amarpc'
-import { getDpopHeaders } from '@/lib/oidc'
+import { getAuthHeaders } from '@/lib/oidc'
 
 export type SessionRuntimeConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 export type SessionRuntimeRunState = 'idle' | 'running' | 'error'
@@ -97,23 +97,18 @@ export function sessionRuntimeReducer(state: SessionRuntimeState, action: Sessio
 
 export async function sessionSocketConnection(socketPath: string) {
   const url = new URL(socketPath, window.location.href)
-  const proofUrl = url.toString()
-  const headers = await getDpopHeaders(proofUrl, 'GET')
-  const authorization = headers.authorization?.slice('DPoP '.length)
-  if (!authorization || !headers.dpop) throw new Error('Realmroot DPoP credential is unavailable')
+  const ticketResponse = await fetch(`${url.pathname.replace(/\/socket$/, '/socket-tickets')}`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!ticketResponse.ok) throw new Error(`Session socket ticket request failed with HTTP ${ticketResponse.status}`)
+  const { ticket } = (await ticketResponse.json()) as { ticket?: string }
+  if (!ticket || !/^[A-Za-z0-9_-]{43}$/.test(ticket)) throw new Error('Session socket ticket response is invalid')
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return {
     url: url.toString(),
-    protocols: [
-      'ama-dpop',
-      `ama-access.${encodeSocketCredential(authorization)}`,
-      `ama-proof.${encodeSocketCredential(headers.dpop)}`,
-    ],
+    protocols: ['ama-ticket', `ama-ticket.${ticket}`],
   }
-}
-
-function encodeSocketCredential(value: string) {
-  return btoa(value).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
 function mergePersistedEvents(state: SessionRuntimeState, events: SessionEvent[]) {

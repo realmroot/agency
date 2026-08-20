@@ -83,8 +83,8 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     )
     const headers = fetchMock.mock.calls[0]?.[1]?.headers
     expect(headerValue(headers, 'accept')).toBe('application/json')
-    expect(headerValue(headers, 'authorization')).toBe('DPoP e2e:api-test')
-    expect(headerValue(headers, 'dpop')).toBe('e2e-proof:GET:http://localhost:3000/api/v1/agents')
+    expect(headerValue(headers, 'authorization')).toBe('Bearer e2e:api-test')
+    expect(headerValue(headers, 'dpop')).toBeNull()
     expect(headerValue(headers, 'x-ama-project-id')).toBe('project_test')
     expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
   })
@@ -111,8 +111,8 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       }),
     )
     const headers = fetchMock.mock.calls[0]?.[1]?.headers
-    expect(headerValue(headers, 'authorization')).toBe('DPoP e2e:api-test')
-    expect(headerValue(headers, 'dpop')).toBe('e2e-proof:GET:http://localhost:3000/api/v1/sessions')
+    expect(headerValue(headers, 'authorization')).toBe('Bearer e2e:api-test')
+    expect(headerValue(headers, 'dpop')).toBeNull()
     expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
   })
 

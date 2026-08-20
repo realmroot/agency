@@ -5,7 +5,7 @@ const baseURL = `http://localhost:${PORT}`
 
 // E2E runs against the real stack: vite dev serves the SPA + the Worker against a
 // local D1 migrated by `e2e:server` on boot, with AMA_E2E_TEST_AUTH so the suite
-// mints explicit synthetic DPoP credentials instead of driving a real IdP. Reserved for genuinely
+// mints explicit synthetic Console Bearer credentials instead of driving a real IdP. Reserved for genuinely
 // cross-stack crown journeys — the pyramid's tip, not full-branch coverage.
 export default defineConfig({
   testDir: './e2e',
