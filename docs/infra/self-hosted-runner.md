@@ -129,7 +129,7 @@ Do not use this adapter for untrusted workloads. Docker/OCI isolation should be 
 At startup, the daemon:
 
 1. Checks `/api/v1/configz` for an AMA control plane.
-2. Loads the saved Realmroot device-login profile and DPoP private key.
+2. Loads the saved Realmroot Bearer device-login profile.
 3. Registers a runner when no runner id is configured.
 4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
 5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.
