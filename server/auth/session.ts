@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import type { Context, Env as HonoEnv } from 'hono'
 import type { Env } from '../env'
 import { errorResponse } from '../errors'
+import { logError } from '../logging'
 import { DpopError, dpopChallenge } from './dpop'
 import {
   getDpopClaims,
@@ -95,6 +96,16 @@ function authorizationErrorResponse<E extends HonoEnv>(c: AppContext<E>, error: 
   }) as never
 }
 
+function logAuthenticationFailure<E extends HonoEnv>(c: AppContext<E>, error: OidcError | DpopError) {
+  const url = new URL(c.req.url)
+  logError('auth.dpop.rejected', error, {
+    method: c.req.method,
+    path: url.pathname,
+    cfRay: c.req.raw.headers.get('cf-ray'),
+    rejectionKind: error instanceof DpopError ? error.kind : 'invalid_token',
+  })
+}
+
 export async function resolveAuthContext<E extends HonoEnv>(
   c: AppContext<E>,
   db: DrizzleD1Database,
@@ -139,6 +150,7 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError || err instanceof DpopError) {
+      logAuthenticationFailure(c, err)
       c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
         reason: 'missing_or_invalid_dpop_credential',
@@ -204,6 +216,7 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
     auth = await resolveAuthIdentity(c)
   } catch (err) {
     if (err instanceof OidcError || err instanceof DpopError) {
+      logAuthenticationFailure(c, err)
       c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
         reason: 'missing_or_invalid_dpop_credential',
@@ -235,6 +248,7 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
     if (err instanceof OidcError || err instanceof DpopError) {
+      logAuthenticationFailure(c, err)
       c.header('WWW-Authenticate', dpopChallenge(err instanceof DpopError ? err.kind : 'invalid_token'))
       return errorResponse(c, 401, 'authentication_required', 'Authentication required', {
         reason: 'missing_or_invalid_dpop_credential',
