@@ -2,8 +2,9 @@ import { SELF } from 'cloudflare:test'
 import { isAmaSessionEventType } from '@shared/session-events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import openapi from '../../sdk/openapi.json'
+import resources from '../../sdk/spec/resources.json'
 import type { AmaClient } from '../../sdk/typescript/src/index'
-import { createAmaClient } from '../../sdk/typescript/src/index'
+import { createAmaClient, createAmaRunnerClient, createSessionSocketTicket } from '../../sdk/typescript/src/index'
 import { dpopHeaders, seedPlatformProvider, signIn } from './auth'
 
 // The SDK's external operation inventory, derived from the published OpenAPI
@@ -50,14 +51,14 @@ function resourceSpec(resource: Json) {
 
 async function newSdk() {
   const authorization = await signIn()
-  const accessToken = authorization.replace(/^DPoP\s+/i, '')
+  const accessToken = authorization.replace(/^Bearer\s+/i, '')
   const runId = accessToken.replace(/^e2e:/, '')
   return {
     ama: createAmaClient({
       baseUrl: 'https://example.com',
       authorize: async (url, method) => {
-        const headers = dpopHeaders(authorization, method, url)
-        return { accessToken, dpopProof: headers.dpop }
+        const headers = dpopHeaders(`DPoP ${accessToken}`, method, url)
+        return { accessToken, dpopProof: headers.dpop as string }
       },
     }),
     runId,
@@ -126,7 +127,17 @@ describe('[CF] generated SDK contract', () => {
     // generated client issues `fetch(new Request(url, init))` — a single Request
     // that already carries method, headers, and body — so the stub forwards it
     // whole; reducing it to a bare url would strip auth + body (HTTP 401).
-    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => SELF.fetch(input as RequestInfo, init))
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const authorization = request.headers.get('authorization')
+      if (authorization?.startsWith('DPoP e2e:')) {
+        const headers = new Headers(request.headers)
+        headers.set('authorization', authorization.replace(/^DPoP /, 'Bearer '))
+        headers.delete('dpop')
+        return SELF.fetch(new Request(request, { headers }))
+      }
+      return SELF.fetch(request)
+    })
   })
 
   afterEach(() => {
@@ -175,6 +186,30 @@ describe('[CF] generated SDK contract', () => {
     expect(auditRecord.properties).toEqual(
       expect.objectContaining({ actorUserId: expect.any(Object), controllerUserId: expect.any(Object) }),
     )
+  })
+
+  it('keeps the Console-only socket ticket operation raw and excludes it from stable DPoP facades', () => {
+    const exclusions = resources.facadeExclusions
+    expect(exclusions).toEqual([
+      {
+        operationId: 'createSessionSocketTicket',
+        reason: expect.stringContaining('Bearer-only'),
+      },
+    ])
+    expect(new Set(exclusions.map(({ operationId }) => operationId)).size).toBe(exclusions.length)
+    expect(operations).toContainEqual({
+      operationId: 'createSessionSocketTicket',
+      path: '/api/v1/sessions/{sessionId}/socket-tickets',
+    })
+    expect(createSessionSocketTicket).toEqual(expect.any(Function))
+
+    const authorize = vi.fn(async () => ({ accessToken: 'token', dpopProof: 'proof' }))
+    const agent = createAmaClient({ baseUrl: 'https://example.com', authorize })
+    const runner = createAmaRunnerClient({ baseUrl: 'https://example.com', authorize })
+    expect(agent.sessions).not.toHaveProperty('createSocketTicket')
+    expect(runner.sessions).not.toHaveProperty('createSocketTicket')
+    expect(agent.raw).toBeTruthy()
+    expect(runner.raw).toBeTruthy()
   })
 
   it('external product manages standard AMA resources through the SDK [spec: projects/external-resources]', async () => {

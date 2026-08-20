@@ -615,7 +615,7 @@ describe('[spec: web-console/project-switcher] CreateProjectSheet', () => {
 // Error/null-user tests spy only on @/lib/oidc (allowed — not @/lib/amarpc).
 // The projects endpoint is handled by MSW — no @/lib/amarpc mock ever.
 //
-// IMPORTANT: the e2e token in localStorage is also used by getAccessToken() for
+// IMPORTANT: the e2e token in localStorage is also used by getAuthHeaders() for
 // API request headers. Never remove it — only spy on getCurrentUser when you need
 // a different profile. Spies are cleaned up via afterEach(vi.restoreAllMocks).
 

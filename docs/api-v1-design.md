@@ -10,7 +10,7 @@ v1 不兼容旧版（旧路径全部删除，无兼容层）。
 - 所有接口挂载在 `/api/v1` 下，全部进 OpenAPI 文档。
 - 资源名：复数 kebab-case。字段名：camelCase。enum 值：snake_case
   （外部标识符例外：provider type 如 `workers-ai` 保持 kebab）。
-- 认证：Realmroot OIDC + RFC 9449 DPoP；Bearer 一律拒绝。租户由
+- 认证：Realmroot OIDC，Console 使用 Bearer，runner、Agent 与 Toolbox 使用 RFC 9449 DPoP；凭据模式由已验证的 OAuth `client_id` 严格区分。租户由
   认证上下文 + `X-AMA-Project-ID` 头限定，资源路径不再嵌套 project。
 
 ### 1.2 严格 REST 规则（无例外条款见 1.8）

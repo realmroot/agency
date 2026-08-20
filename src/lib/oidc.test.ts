@@ -10,7 +10,6 @@ const mockSigninRedirectCallback = vi.fn()
 const mockSignoutRedirect = vi.fn()
 const mockUserManagerConstructor = vi.fn()
 const mockRemoveUser = vi.fn()
-const mockDpopProof = vi.fn()
 const jwtAccessToken = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature'
 
 vi.mock('oidc-client-ts', () => {
@@ -25,7 +24,6 @@ vi.mock('oidc-client-ts', () => {
     signinRedirectCallback = mockSigninRedirectCallback
     signoutRedirect = mockSignoutRedirect
     removeUser = mockRemoveUser
-    dpopProof = mockDpopProof
   }
 
   return {
@@ -83,11 +81,13 @@ describe('oidc helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.localStorage.clear()
+    window.sessionStorage.clear()
     vi.stubGlobal('fetch', configzFetch())
   })
 
   afterEach(() => {
     window.localStorage.clear()
+    window.sessionStorage.clear()
   })
 
   // ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ describe('oidc helpers', () => {
       expect(getStoredAccessToken()).toBe('e2e:myrun')
     })
 
-    it('returns null when localStorage is empty', async () => {
+    it('returns null when browser auth storage is empty', async () => {
       const { getStoredAccessToken } = await freshOidc()
       expect(getStoredAccessToken()).toBeNull()
     })
@@ -108,7 +108,7 @@ describe('oidc helpers', () => {
     it('returns token from oidc.user: key when not expired', async () => {
       const { getStoredAccessToken } = await freshOidc()
       const futureExpiry = Math.floor(Date.now() / 1000) + 3600
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
         JSON.stringify({ access_token: jwtAccessToken, expires_at: futureExpiry }),
       )
@@ -118,18 +118,18 @@ describe('oidc helpers', () => {
     it('does not return opaque oidc access tokens', async () => {
       const { getStoredAccessToken } = await freshOidc()
       const futureExpiry = Math.floor(Date.now() / 1000) + 3600
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
         JSON.stringify({ access_token: 'opaque_token_abc', expires_at: futureExpiry }),
       )
       expect(getStoredAccessToken()).toBeNull()
-      expect(window.localStorage.getItem('oidc.user:https://auth.example.com:test-client-id')).toBeNull()
+      expect(window.sessionStorage.getItem('oidc.user:https://auth.example.com:test-client-id')).toBeNull()
     })
 
     it('returns null when oidc token is expired', async () => {
       const { getStoredAccessToken } = await freshOidc()
       const pastExpiry = Math.floor(Date.now() / 1000) - 1
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
         JSON.stringify({ access_token: 'expired_token', expires_at: pastExpiry }),
       )
@@ -138,7 +138,7 @@ describe('oidc helpers', () => {
 
     it('returns token when oidc entry has no expires_at', async () => {
       const { getStoredAccessToken } = await freshOidc()
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
         JSON.stringify({ access_token: jwtAccessToken }),
       )
@@ -147,87 +147,43 @@ describe('oidc helpers', () => {
 
     it('skips keys that do not start with oidc.user:', async () => {
       const { getStoredAccessToken } = await freshOidc()
-      window.localStorage.setItem('other:key', JSON.stringify({ access_token: 'should_not_return' }))
+      window.sessionStorage.setItem('other:key', JSON.stringify({ access_token: 'should_not_return' }))
       expect(getStoredAccessToken()).toBeNull()
     })
 
     it('handles malformed JSON in oidc.user: key gracefully', async () => {
       const { getStoredAccessToken } = await freshOidc()
-      window.localStorage.setItem('oidc.user:https://auth.example.com:test-client-id', 'not-json{')
+      window.sessionStorage.setItem('oidc.user:https://auth.example.com:test-client-id', 'not-json{')
+      expect(getStoredAccessToken()).toBeNull()
+    })
+
+    it('does not accept a production oidc.user token persisted in localStorage', async () => {
+      const { getStoredAccessToken } = await freshOidc()
+      window.localStorage.setItem(
+        'oidc.user:https://auth.example.com:test-client-id',
+        JSON.stringify({ access_token: jwtAccessToken, expires_at: Math.floor(Date.now() / 1000) + 3600 }),
+      )
       expect(getStoredAccessToken()).toBeNull()
     })
   })
 
-  // ---------------------------------------------------------------------------
-  // getAccessToken — each test needs a clean userPromise singleton.
-  // ---------------------------------------------------------------------------
-  describe('getAccessToken', () => {
-    it('returns the e2e stored token without calling oidc manager', async () => {
-      const { getAccessToken } = await freshOidc()
-      window.localStorage.setItem('ama:e2e-access-token', 'e2e:stored')
-      const token = await getAccessToken()
-      expect(token).toBe('e2e:stored')
-      expect(mockGetUser).not.toHaveBeenCalled()
-    })
-
-    it('returns null when manager returns null user', async () => {
-      const { getAccessToken } = await freshOidc()
-      mockGetUser.mockResolvedValueOnce(null)
-      const token = await getAccessToken()
-      expect(token).toBeNull()
-    })
-
-    it('returns null when user is expired', async () => {
-      const { getAccessToken } = await freshOidc()
-      mockGetUser.mockResolvedValueOnce({ expired: true, access_token: 'old_token' })
-      const token = await getAccessToken()
-      expect(token).toBeNull()
-    })
-
-    it('returns access_token from a valid user', async () => {
-      const { getAccessToken } = await freshOidc()
-      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: jwtAccessToken })
-      const token = await getAccessToken()
-      expect(token).toBe(jwtAccessToken)
-      expect(mockUserManagerConstructor).toHaveBeenCalledWith(
-        expect.objectContaining({ resource: window.location.origin }),
-      )
-    })
-
-    it('removes current oidc user and returns null for opaque access tokens', async () => {
-      const { getAccessToken } = await freshOidc()
-      mockGetUser.mockResolvedValueOnce({ expired: false, access_token: 'opaque_token' })
-      const token = await getAccessToken()
-      expect(token).toBeNull()
-      expect(mockRemoveUser).toHaveBeenCalled()
-    })
-  })
-
-  describe('getDpopHeaders', () => {
-    it('creates an explicit synthetic proof only for the test-gated e2e token', async () => {
-      const { getDpopHeaders } = await freshOidc()
+  describe('getAuthHeaders', () => {
+    it('uses Bearer for the test-gated Console token', async () => {
+      const { getAuthHeaders } = await freshOidc()
       window.localStorage.setItem('ama:e2e-access-token', 'e2e:proof-test')
-      await expect(getDpopHeaders('/api/v1/agents?cursor=secret', 'get')).resolves.toEqual({
-        authorization: 'DPoP e2e:proof-test',
-        dpop: 'e2e-proof:GET:http://localhost:3000/api/v1/agents',
-      })
+      await expect(getAuthHeaders()).resolves.toEqual({ authorization: 'Bearer e2e:proof-test' })
     })
 
-    it('uses the OIDC manager DPoP key for a matching signed access token', async () => {
-      const { getDpopHeaders } = await freshOidc()
+    it('uses Bearer for the matching signed Console access token', async () => {
+      const { getAuthHeaders } = await freshOidc()
       const futureExpiry = Math.floor(Date.now() / 1000) + 3600
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         'oidc.user:https://auth.example.com:test-client-id',
         JSON.stringify({ access_token: jwtAccessToken, expires_at: futureExpiry }),
       )
       const user = { expired: false, access_token: jwtAccessToken } as User
       mockGetUser.mockResolvedValueOnce(user)
-      mockDpopProof.mockResolvedValueOnce('signed-proof')
-      await expect(getDpopHeaders('/api/v1/agents?cursor=secret', 'GET')).resolves.toEqual({
-        authorization: `DPoP ${jwtAccessToken}`,
-        dpop: 'signed-proof',
-      })
-      expect(mockDpopProof).toHaveBeenCalledWith('http://localhost:3000/api/v1/agents', user, 'GET')
+      await expect(getAuthHeaders()).resolves.toEqual({ authorization: `Bearer ${jwtAccessToken}` })
     })
   })
 

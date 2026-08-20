@@ -20,7 +20,7 @@ Any Managed Agents is a Cloudflare-native managed agents system. It is inspired 
 - Anthropic is optional, not required.
 - Authentication and delegated authority are provided exclusively by Realmroot.
 - Realmroot owns users and organizations; AMA stores project and product-resource metadata only.
-- The exact AMA protected Resource is `https://ama.tftt.cc/api`. Protected API calls require Realmroot-issued `at+jwt` tokens and a fresh RFC 9449 DPoP proof; Bearer fallback is forbidden.
+- The exact AMA protected Resource is `https://ama.tftt.cc/api`. Browser Console calls use Realmroot-issued Bearer `at+jwt` tokens from the registered Console client; runner, Agent, and Toolbox calls use sender-constrained tokens with a fresh RFC 9449 DPoP proof. Credentials cannot be downgraded or used across client modes.
 - Secret values are stored in Cloudflare Secrets; D1 stores metadata and references only.
 - BDD specs are the agent-facing acceptance contract for development and verification.
 - E2E specs use native Playwright specs traced to BDD-lite scenario ids.
@@ -55,13 +55,13 @@ The platform owns the control-plane OpenAPI contract. Repo-local generated SDK s
 
 Command-line usage is a control-plane concern. Operators use Realmroot Toolbox with the published OpenAPI document. Realmroot owns controller approval, scoped credentials, DPoP, and Agent attribution.
 
-The web console is an internal control-plane entrypoint. It uses Hono RPC with Realmroot PKCE and DPoP. External developers and operators use Realmroot Toolbox or DPoP-aware generated SDKs.
+The web console is an internal control-plane entrypoint. It uses Realmroot authorization code with PKCE, keeps rotating refresh and short-lived access credentials in tab-scoped session storage, sends its access token as Bearer authentication through Hono RPC, and exchanges that credential for a short-lived single-use ticket before opening a session WebSocket. External developers and operators use Realmroot Toolbox or DPoP-aware generated SDKs. AMA selects the credential mode from the verified Realmroot client identity and never falls back between modes.
 
 ## Runtime Shape
 
 ```txt
 Control plane:
-  web console -> Hono RPC client -> /api/* -> Hono OpenAPI routes -> D1 / governance / metadata
+  web console -> Realmroot Bearer Hono RPC client -> /api/* -> Hono OpenAPI routes -> D1 / governance / metadata
   Realmroot Toolbox / DPoP SDK -> protected Resource + OpenAPI -> Hono routes -> D1 / governance / metadata
 
 Runtime:
@@ -145,8 +145,8 @@ inspect persisted session events, and stop the session.
 
 Release verification must include:
 
-- Realmroot PKCE login through `oidc-client-ts`, with DPoP binding enabled.
-- Realmroot access-token and DPoP proof validation at the Worker boundary, including issuer, audience, signature, `typ`, scope, `cnf.jkt`, `ath`, method, URI, freshness, and replay checks.
+- Realmroot PKCE login through `oidc-client-ts`, with Bearer tokens kept in tab-scoped session storage.
+- Realmroot access-token validation at the Worker boundary for every client; runner and Agent credentials additionally require DPoP validation including `cnf.jkt`, `ath`, method, URI, freshness, and replay checks.
 - Agent, environment, and session CRUD covered by Cloudflare integration tests.
 - OpenAPI generated from Hono route schemas for auth, agents, environments, and
   sessions.

@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
+import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInRunner, signInUser } from './auth'
 
 async function jsonFetch(path: string, authorization?: string, init?: { method?: string; body?: unknown }) {
   const method = init?.method ?? (init?.body !== undefined ? 'POST' : 'GET')
@@ -27,16 +27,16 @@ describe('[CF] auth v1', () => {
     const res = await SELF.fetch('https://example.com/api/v1/auth/config')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      methods: [{ type: 'oidc', issuer: 'https://oidc.test', clientId: 'ama-test' }],
+      methods: [{ type: 'oidc', issuer: 'https://identity.alias.test/api/auth', clientId: 'ama-test' }],
     })
   })
 
   it('publishes RFC 9728 Realmroot resource metadata with the exact AMA scope catalog [spec: api-contracts/resource-discovery]', async () => {
-    const res = await SELF.fetch('https://example.com/.well-known/oauth-protected-resource/api')
+    const res = await SELF.fetch('https://hostile.example/.well-known/oauth-protected-resource/api')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      resource: 'https://example.com/api',
-      authorization_servers: ['https://oidc.test'],
+      resource: 'https://ama.tftt.cc/api',
+      authorization_servers: ['https://identity.alias.test/api/auth'],
       scopes_supported: [
         'agents:read',
         'agents:write',
@@ -73,20 +73,25 @@ describe('[CF] auth v1', () => {
         'work-items:read',
         'work-items:write',
       ],
-      bearer_methods_supported: [],
+      bearer_methods_supported: ['header'],
       resource_name: 'Any Managed Agents API',
       dpop_signing_alg_values_supported: ['ES256'],
-      dpop_bound_access_tokens_required: true,
+      dpop_bound_access_tokens_required: false,
+      realmroot_client_authentication: {
+        console: 'bearer',
+        runner: 'dpop',
+        agent: 'dpop',
+      },
     })
   })
 
   it('links the AMA resource root to the canonical OpenAPI service description', async () => {
-    const res = await SELF.fetch('https://example.com/api')
+    const res = await SELF.fetch('https://alias.example/api')
     expect(res.status).toBe(200)
     expect(res.headers.get('link')).toBe(
-      '<https://example.com/api/v1/openapi.json>; rel="service-desc"; type="application/openapi+json"',
+      '<https://ama.tftt.cc/api/v1/openapi.json>; rel="service-desc"; type="application/openapi+json"',
     )
-    await expect(res.json()).resolves.toMatchObject({ resource: 'https://example.com/api' })
+    await expect(res.json()).resolves.toMatchObject({ resource: 'https://ama.tftt.cc/api' })
   })
 
   it('exposes public browser config through configz', async () => {
@@ -100,8 +105,8 @@ describe('[CF] auth v1', () => {
       },
       auth: {
         oidc: {
-          issuer: 'https://oidc.test',
-          resource: 'https://example.com',
+          issuer: 'https://identity.alias.test/api/auth',
+          resource: 'https://ama.tftt.cc/api',
           browser: {
             clientId: 'ama-test',
             scopes: ['openid', 'profile', 'email', 'offline_access'],
@@ -122,7 +127,7 @@ describe('[CF] auth v1', () => {
     expect(body.methods).toHaveLength(1)
   })
 
-  it('reads the current session context from a DPoP credential [spec: auth/session-current]', async () => {
+  it('reads the current session context from a Console Bearer credential [spec: auth/session-current] [spec: auth/credential-mode]', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/auth/sessions/current', authorization)
     expect(res.status).toBe(200)
@@ -141,24 +146,37 @@ describe('[CF] auth v1', () => {
     expectAuthRequired(await res.json())
   })
 
-  it('rejects Bearer credentials even when the token is otherwise accepted in explicit test mode', async () => {
-    const authorization = await signIn()
+  it('rejects a Console token presented as DPoP [spec: auth/credential-mode]', async () => {
+    const authorization = (await signIn()).replace(/^Bearer /, 'DPoP ')
     const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
-      headers: { authorization: authorization.replace(/^DPoP /, 'Bearer ') },
+      headers: {
+        ...dpopHeaders(authorization, 'GET', '/api/v1/auth/sessions/current'),
+      },
     })
     expect(res.status).toBe(401)
     expect(res.headers.get('www-authenticate')).toMatch(/^DPoP /)
     expectAuthRequired(await res.json())
   })
 
-  it('rejects a DPoP token without its proof', async () => {
-    const authorization = await signIn()
+  it('rejects a runner token presented as Bearer [spec: auth/credential-mode]', async () => {
+    const authorization = (await signInRunner()).replace(/^DPoP /, 'Bearer ')
     const res = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
       headers: { authorization },
     })
     expect(res.status).toBe(401)
-    expect(res.headers.get('www-authenticate')).toContain('error="invalid_dpop_proof"')
+    expect(res.headers.get('www-authenticate')).toBe('Bearer error="invalid_token"')
     expectAuthRequired(await res.json())
+  })
+
+  it('accepts a runner token with DPoP on a runner resource [spec: auth/credential-mode]', async () => {
+    const authorization = await signInRunner()
+    const res = await jsonFetch('/api/v1/runners', authorization)
+    expect(res.status).toBe(200)
+  })
+
+  it('advertises both credential schemes when authentication is missing', async () => {
+    const res = await jsonFetch('/api/v1/auth/sessions/current')
+    expect(res.headers.get('www-authenticate')).toBe('Bearer, DPoP algs="ES256"')
   })
 })
 

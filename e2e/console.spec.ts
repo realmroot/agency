@@ -1,6 +1,8 @@
 import { expect, gotoAuthed, test } from './fixtures'
 
-test('starts Realmroot PKCE with a DPoP-bound authorization code [spec: auth/e2e-sign-in]', async ({ page }) => {
+test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: auth/e2e-sign-in]', async ({
+  page,
+}) => {
   let authorizationNonce = ''
   const callbackAccessToken = [
     Buffer.from(JSON.stringify({ alg: 'none', typ: 'at+jwt' })).toString('base64url'),
@@ -41,7 +43,7 @@ test('starts Realmroot PKCE with a DPoP-bound authorization code [spec: auth/e2e
         headers: {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'POST',
-          'access-control-allow-headers': 'content-type,dpop',
+          'access-control-allow-headers': 'content-type',
         },
       })
     }
@@ -64,7 +66,7 @@ test('starts Realmroot PKCE with a DPoP-bound authorization code [spec: auth/e2e
           ).toString('base64url'),
           'e2e-signature',
         ].join('.'),
-        token_type: 'DPoP',
+        token_type: 'Bearer',
         expires_in: 3600,
         scope: 'openid profile email offline_access',
       }),
@@ -87,28 +89,35 @@ test('starts Realmroot PKCE with a DPoP-bound authorization code [spec: auth/e2e
   expect(authorizationUrl.searchParams.get('response_type')).toBe('code')
   expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
   expect(authorizationUrl.searchParams.get('code_challenge')).toBeTruthy()
-  expect(authorizationUrl.searchParams.get('dpop_jkt')).toBeTruthy()
+  expect(authorizationUrl.searchParams.has('dpop_jkt')).toBe(false)
   expect(authorizationUrl.searchParams.get('resource')).toBe(amaResource)
   expect(authorizationUrl.searchParams.get('state')).toBeTruthy()
 
   const tokenRequest = await tokenRequestPromise
-  expect(tokenRequest.headers().dpop).toBeTruthy()
+  expect(tokenRequest.headers().dpop).toBeUndefined()
   expect(tokenRequest.postData() ?? '').toContain('code=realmroot-e2e-code')
   expect(tokenRequest.postData() ?? '').toMatch(/code_verifier=[^&]+/)
   await expect(page).toHaveURL(/\/agents$/)
   await expect
     .poll(() =>
       page.evaluate(() => {
-        for (let index = 0; index < window.localStorage.length; index += 1) {
-          const key = window.localStorage.key(index)
+        let sessionUser: { access_token?: string; token_type?: string } | null = null
+        for (let index = 0; index < window.sessionStorage.length; index += 1) {
+          const key = window.sessionStorage.key(index)
           if (!key?.startsWith('oidc.user:')) continue
-          const value = window.localStorage.getItem(key)
-          if (value) return JSON.parse(value) as { access_token?: string; token_type?: string }
+          const value = window.sessionStorage.getItem(key)
+          if (value) sessionUser = JSON.parse(value) as { access_token?: string; token_type?: string }
         }
-        return null
+        const localOidcKeys = Array.from({ length: window.localStorage.length }, (_, index) =>
+          window.localStorage.key(index),
+        ).filter((key): key is string => Boolean(key?.startsWith('oidc.user:')))
+        return { sessionUser, localOidcKeys }
       }),
     )
-    .toMatchObject({ access_token: callbackAccessToken, token_type: 'DPoP' })
+    .toMatchObject({
+      sessionUser: { access_token: callbackAccessToken, token_type: 'Bearer' },
+      localOidcKeys: [],
+    })
 })
 
 // The browser dimension of the e2e crown: drives the real SPA + Worker + D1 + auth
@@ -140,12 +149,8 @@ test.describe('console (real browser)', () => {
     expect(protectedRpcRequests.length).toBeGreaterThan(0)
     for (const request of protectedRpcRequests) {
       const headers = request.headers()
-      const proofUrl = new URL(request.url())
-      proofUrl.search = ''
-      proofUrl.hash = ''
-      expect(headers.authorization).toBe(`DPoP ${token.accessToken}`)
-      expect(headers.dpop).toBe(`e2e-proof:${request.method()}:${proofUrl.toString()}`)
-      expect(headers.authorization).not.toMatch(/^Bearer /i)
+      expect(headers.authorization).toBe(`Bearer ${token.accessToken}`)
+      expect(headers.dpop).toBeUndefined()
     }
     expect(
       apiRequests.some(

@@ -6,7 +6,17 @@ import { setupServer } from 'msw/node'
 // client's request building, error mapping, and refetch logic are exercised for
 // real — never mock @/lib/amarpc. Handlers are backed by a small in-memory store so
 // a create's post-mutation refetch converges instead of flapping on a fixed body.
-export const server = setupServer()
+export const server = setupServer(
+  http.post('*/api/v1/sessions/:sessionId/socket-tickets', () =>
+    HttpResponse.json(
+      {
+        ticket: 't'.repeat(43),
+        expiresAt: new Date(Date.now() + 30_000).toISOString(),
+      },
+      { status: 201 },
+    ),
+  ),
+)
 
 type CollectionItem = { id: string } | { metadata: { uid: string } }
 

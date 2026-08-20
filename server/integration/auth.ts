@@ -85,7 +85,7 @@ export async function setupOidcProvider() {
 export async function signIn(claims = defaultClaims()) {
   counter += 1
   const runId = `${claims.sub}_${counter}`.replaceAll(/[^A-Za-z0-9_-]/g, '_')
-  return `DPoP e2e:${runId}`
+  return `Bearer e2e:${runId}`
 }
 
 export async function signInRunner(claims = defaultClaims()) {
@@ -95,10 +95,13 @@ export async function signInRunner(claims = defaultClaims()) {
 }
 
 export function asRunnerAuthorization(authorization: string) {
-  return authorization.replace(/^DPoP e2e:/, 'DPoP e2e-runner:')
+  return authorization.replace(/^Bearer e2e:/, 'DPoP e2e-runner:')
 }
 
 export function dpopHeaders(authorization: string, method: string, path: string) {
+  if (authorization.startsWith('Bearer ')) {
+    return { authorization }
+  }
   const target = new URL(path, 'https://example.com')
   target.hash = ''
   target.search = ''
@@ -123,7 +126,7 @@ export function expectAuthRequired(body: unknown) {
     error: {
       type: 'authentication_required',
       message: 'Authentication required',
-      details: { reason: 'missing_or_invalid_dpop_credential' },
+      details: { reason: 'missing_or_invalid_realmroot_credential' },
     },
   })
 }

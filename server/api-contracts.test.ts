@@ -12,7 +12,11 @@ const routeSources = {
 }
 
 async function openApiDoc() {
-  const response = await createApp().fetch(new Request('https://example.test/api/v1/openapi.json'), {} as Env)
+  const response = await createApp().fetch(new Request('https://example.test/api/v1/openapi.json'), {
+    OIDC_ISSUER: 'https://identity.contract.test/api/auth',
+    OIDC_CLIENT_ID: 'ama-contract-test',
+    OIDC_RESOURCE: 'https://ama.tftt.cc/api',
+  } as Env)
   assert.equal(response.status, 200)
   return (await response.json()) as {
     components?: { schemas?: Record<string, { properties?: Record<string, unknown> }> }

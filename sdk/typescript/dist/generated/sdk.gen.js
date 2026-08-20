@@ -503,6 +503,15 @@ export const updateSession = (options) => (options.client ?? client).patch({
     }
 });
 /**
+ * Create a single-use browser session socket ticket
+ *
+ * Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.
+ */
+export const createSessionSocketTicket = (options) => (options.client ?? client).post({
+    url: '/api/v1/sessions/{sessionId}/socket-tickets',
+    ...options
+});
+/**
  * Open the session browser WebSocket (live events + backfill + input)
  */
 export const connectSessionSocket = (options) => (options.client ?? client).get({

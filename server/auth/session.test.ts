@@ -2,13 +2,15 @@ import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
 
-const { getDpopClaimsMock, upsertProjectForClaimsMock } = vi.hoisted(() => ({
+const { getBearerClaimsMock, getDpopClaimsMock, upsertProjectForClaimsMock } = vi.hoisted(() => ({
+  getBearerClaimsMock: vi.fn(),
   getDpopClaimsMock: vi.fn(),
   upsertProjectForClaimsMock: vi.fn(),
 }))
 
 vi.mock('./oidc', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./oidc')>()),
+  getBearerClaims: getBearerClaimsMock,
   getDpopClaims: getDpopClaimsMock,
   upsertProjectForClaims: upsertProjectForClaimsMock,
 }))
@@ -35,6 +37,10 @@ app.post('/api/v1/sessions/:id/events', async (c) => {
   const auth = await requireSessionEventsAuth(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
 })
+app.get('/api/v1/sessions/:id/socket', async (c) => {
+  const auth = await requireAuth(c)
+  return auth instanceof Response ? auth : c.json({ authorized: true })
+})
 app.get('/api/v1/work-items/:id', async (c) => {
   const auth = await requireAuth(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
@@ -49,15 +55,28 @@ const baseClaims = {
   teams: [],
 }
 
-async function request(path: string, values: { method?: string; permissions?: string[]; runner?: boolean } = {}) {
-  getDpopClaimsMock.mockResolvedValue({
+async function request(
+  path: string,
+  values: { method?: string; permissions?: string[]; runner?: boolean; agentDpop?: boolean } = {},
+) {
+  const claims = {
     ...baseClaims,
     permissions: values.permissions ?? [],
     ...(values.runner ? { client_id: 'runner-client' } : {}),
-  })
+  }
+  getBearerClaimsMock.mockResolvedValue(claims)
+  getDpopClaimsMock.mockResolvedValue(claims)
+  const usesDpop = values.runner || values.agentDpop
+  const authorization = usesDpop ? 'DPoP native-token' : 'Bearer console-token'
   return await app.request(
     `https://ama.example.com${path}`,
-    { method: values.method ?? 'GET', headers: { authorization: 'DPoP token', dpop: 'proof' } },
+    {
+      method: values.method ?? 'GET',
+      headers: {
+        authorization,
+        ...(usesDpop ? { dpop: 'proof' } : {}),
+      },
+    },
     {
       DB: {} as D1Database,
       OIDC_RESOURCE: 'https://ama.example.com',
@@ -68,6 +87,7 @@ async function request(path: string, values: { method?: string; permissions?: st
 
 describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
   beforeEach(() => {
+    getBearerClaimsMock.mockReset()
     getDpopClaimsMock.mockReset()
     upsertProjectForClaimsMock.mockReset()
     upsertProjectForClaimsMock.mockResolvedValue({ id: 'project_1', name: 'Project', organizationId: 'org_1' })
@@ -78,19 +98,25 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
   })
 
   it.each([
-    ['invalid access token', new OidcError('OIDC access token is invalid'), 'invalid_token'],
-    ['invalid DPoP proof', new DpopError('invalid_dpop_proof', 'The DPoP proof is invalid'), 'invalid_dpop_proof'],
-  ])('logs a redacted structured rejection for %s', async (_case, error, rejectionKind) => {
+    ['Bearer', 'invalid access token', new OidcError('OIDC access token is invalid'), 'invalid_token'],
+    [
+      'DPoP',
+      'invalid DPoP proof',
+      new DpopError('invalid_dpop_proof', 'The DPoP proof is invalid'),
+      'invalid_dpop_proof',
+    ],
+  ])('logs a redacted structured rejection for %s %s', async (scheme, _case, error, rejectionKind) => {
     const accessToken = 'access-token-must-not-be-logged'
     const proof = 'proof-must-not-be-logged'
-    getDpopClaimsMock.mockRejectedValue(error)
+    const claimsMock = scheme === 'Bearer' ? getBearerClaimsMock : getDpopClaimsMock
+    claimsMock.mockRejectedValue(error)
     const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const response = await app.request(
       'https://ama.example.com/api/v1/agents/agent_1?authorization=query-secret',
       {
         headers: {
-          authorization: `DPoP ${accessToken}`,
+          authorization: `${scheme} ${accessToken}`,
           dpop: proof,
           'cf-ray': 'ray_123',
         },
@@ -108,7 +134,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     const payload = JSON.parse(serialized) as Record<string, unknown>
     expect(payload).toMatchObject({
       level: 'error',
-      event: 'auth.dpop.rejected',
+      event: 'auth.realmroot.rejected',
       method: 'GET',
       path: '/api/v1/agents/agent_1',
       cfRay: 'ray_123',
@@ -175,6 +201,19 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
       (
         await request('/api/v1/sessions/session_1/events', {
           method: 'POST',
+          permissions: ['sessions:write'],
+        })
+      ).status,
+    ).toBe(200)
+  })
+
+  it('requires exact sessions:write before a DPoP SDK socket can be upgraded', async () => {
+    expect((await request('/api/v1/sessions/session_1/socket', { agentDpop: true })).status).toBe(403)
+    expect(upsertProjectForClaimsMock).not.toHaveBeenCalled()
+    expect(
+      (
+        await request('/api/v1/sessions/session_1/socket', {
+          agentDpop: true,
           permissions: ['sessions:write'],
         })
       ).status,

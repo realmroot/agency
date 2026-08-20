@@ -1,6 +1,6 @@
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
-import { requireOidcConfig } from './auth/oidc'
+import { oidcAudience, requireOidcConfig } from './auth/oidc'
 import { AMA_RESOURCE_DESCRIPTION, AMA_RESOURCE_NAME, protectedResourceMetadata } from './auth/scopes'
 import { createDeps } from './composition'
 import { RUNNER_PROTOCOL_SCHEMAS } from './contracts/runner-protocol'
@@ -27,7 +27,12 @@ import { registerUsageSummaryRoutes } from './http/usage-summary'
 import { registerVaultRoutes } from './http/vaults'
 import { registerWorkItemRoutes } from './http/work-items'
 import { logError, requestLogContext } from './logging'
-import { ApiSecuritySchemes, createDepsApiRouter, finalizeOpenApiDocument } from './openapi'
+import {
+  ApiSecuritySchemes,
+  configureOpenApiIdentityProvider,
+  createDepsApiRouter,
+  finalizeOpenApiDocument,
+} from './openapi'
 
 export function createApp() {
   const app = createDepsApiRouter()
@@ -85,15 +90,14 @@ export function createApp() {
   const memoryStores = registerMemoryStoreRoutes(createDepsApiRouter())
 
   app.get('/.well-known/oauth-protected-resource/api', (c) => {
-    const origin = new URL(c.req.url).origin
     const { issuer } = requireOidcConfig(c.env)
-    return c.json(protectedResourceMetadata(origin, issuer))
+    return c.json(protectedResourceMetadata(oidcAudience(c.env, c.req.url), issuer))
   })
   app.get('/api', (c) => {
-    const origin = new URL(c.req.url).origin
-    const serviceDescription = `${origin}/api/v1/openapi.json`
+    const resource = oidcAudience(c.env, c.req.url)
+    const serviceDescription = `${resource}/v1/openapi.json`
     c.header('Link', `<${serviceDescription}>; rel="service-desc"; type="application/openapi+json"`)
-    return c.json({ resource: `${origin}/api`, name: AMA_RESOURCE_NAME, description: AMA_RESOURCE_DESCRIPTION })
+    return c.json({ resource, name: AMA_RESOURCE_NAME, description: AMA_RESOURCE_DESCRIPTION })
   })
 
   const routes = app
@@ -118,6 +122,16 @@ export function createApp() {
     .route('/api/v1/memory-stores', memoryStores)
     .route('/api/v1/vaults', vaults)
 
+  routes.openAPIRegistry.registerComponent(
+    'securitySchemes',
+    'sessionSocketTicket',
+    ApiSecuritySchemes.sessionSocketTicket,
+  )
+  routes.openAPIRegistry.registerComponent(
+    'securitySchemes',
+    'realmrootConsoleBearer',
+    ApiSecuritySchemes.realmrootConsoleBearer,
+  )
   routes.openAPIRegistry.registerComponent('securitySchemes', 'realmrootDpop', ApiSecuritySchemes.realmrootDpop)
   for (const [name, schema] of Object.entries(RUNNER_PROTOCOL_SCHEMAS)) {
     routes.openAPIRegistry.register(name, schema)
@@ -129,13 +143,17 @@ export function createApp() {
       title: 'Any Managed Agents API',
       version: '1.0.0',
       description:
-        'Realmroot-native control-plane API for Any Managed Agents. Every protected operation requires a DPoP-bound Realmroot token with an exact resource scope.',
+        'Realmroot-native control-plane API for Any Managed Agents. Console operations use Bearer tokens while runner and Agent operations require DPoP; every protected operation requires an exact resource scope.',
     },
     servers: [{ url: '/' }],
   }
   routes.get('/api/v1/openapi.json', (c) => {
-    const document = finalizeOpenApiDocument(routes.getOpenAPIDocument(openApiConfig))
-    document.servers = [{ url: new URL(c.req.url).origin }]
+    const { issuer } = requireOidcConfig(c.env)
+    const document = configureOpenApiIdentityProvider(
+      finalizeOpenApiDocument(routes.getOpenAPIDocument(openApiConfig)),
+      issuer,
+    )
+    document.servers = [{ url: new URL(oidcAudience(c.env, c.req.url)).origin }]
     c.header('Content-Type', 'application/openapi+json')
     return c.json(document)
   })

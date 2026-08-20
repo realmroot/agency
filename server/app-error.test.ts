@@ -12,8 +12,7 @@ describe('app error handling', () => {
     const response = await createApp().fetch(
       new Request('https://example.test/api/v1/projects', {
         headers: {
-          authorization: 'DPoP e2e:logging_error',
-          dpop: 'e2e-proof:GET:https://example.test/api/v1/projects',
+          authorization: 'Bearer e2e:logging_error',
           'x-request-id': 'req_logging_error',
           'x-ama-project-id': 'project_logging',
         },
@@ -44,6 +43,38 @@ describe('app error handling', () => {
         name: 'TypeError',
         message: expect.stringContaining('Cannot read properties of undefined'),
       },
+    })
+  })
+
+  it.each([
+    '/.well-known/oauth-protected-resource/api',
+    '/api',
+    '/api/v1/openapi.json',
+  ])('fails closed for canonical resource endpoint %s when OIDC_RESOURCE is missing', async (path) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const response = await createApp().fetch(new Request(`https://hostile.example${path}`), {
+      AMA_RUNTIME_MODE: 'live',
+      OIDC_ISSUER: 'https://id.example.test/api/auth',
+      OIDC_CLIENT_ID: 'ama-test',
+    } as Env)
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { type: 'internal_error', message: 'Internal server error' },
+    })
+  })
+
+  it('fails closed when OpenAPI identity-provider discovery has no OIDC_ISSUER', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const response = await createApp().fetch(new Request('https://hostile.example/api/v1/openapi.json'), {
+      AMA_RUNTIME_MODE: 'live',
+      OIDC_CLIENT_ID: 'ama-test',
+      OIDC_RESOURCE: 'https://ama.tftt.cc/api',
+    } as Env)
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { type: 'internal_error', message: 'Internal server error' },
     })
   })
 })

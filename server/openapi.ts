@@ -7,21 +7,60 @@ import type { Env } from './env'
 import type { Deps } from './usecases/deps'
 
 export const ApiSecuritySchemes = {
+  sessionSocketTicket: {
+    type: 'apiKey',
+    in: 'header',
+    name: 'Sec-WebSocket-Protocol',
+    description: 'Single-use opaque ticket created by POST /sessions/{sessionId}/socket-tickets.',
+  },
+  realmrootConsoleBearer: {
+    type: 'openIdConnect',
+    openIdConnectUrl: 'https://id.realmroot.dev/api/auth/.well-known/openid-configuration',
+    description: 'Realmroot-issued at+jwt Bearer token for the registered AMA Console client.',
+    'x-realmroot-client-mode': 'console',
+  },
   realmrootDpop: {
     type: 'openIdConnect',
     openIdConnectUrl: 'https://id.realmroot.dev/api/auth/.well-known/openid-configuration',
-    description: 'Realmroot-issued, DPoP-bound at+jwt access token. Bearer tokens are rejected.',
+    description: 'Realmroot-issued, DPoP-bound at+jwt access token for runner and Agent clients.',
     'x-dpop-required': true,
+    'x-realmroot-client-mode': 'machine-or-agent',
   },
 } as const
 
 export const AuthenticatedOperation = {
-  security: [{ realmrootDpop: [] }],
+  security: [{ realmrootConsoleBearer: [] }, { realmrootDpop: [] }],
 }
 
 type OpenApiOperation = {
   security?: Array<Record<string, string[]>>
   responses?: Record<string, unknown>
+}
+
+type OpenApiIdentityProviderDocument = {
+  components?: {
+    securitySchemes?: Record<string, unknown>
+  }
+}
+
+export function configureOpenApiIdentityProvider<T extends OpenApiIdentityProviderDocument>(
+  document: T,
+  issuer: string,
+) {
+  const discoveryUrl = `${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`
+  for (const name of ['realmrootConsoleBearer', 'realmrootDpop']) {
+    const scheme = document.components?.securitySchemes?.[name]
+    if (
+      typeof scheme !== 'object' ||
+      scheme === null ||
+      !('openIdConnectUrl' in scheme) ||
+      typeof scheme.openIdConnectUrl !== 'string'
+    ) {
+      throw new Error(`OpenAPI OpenID Connect security scheme ${name} is missing`)
+    }
+    scheme.openIdConnectUrl = discoveryUrl
+  }
+  return document
 }
 
 export function finalizeOpenApiDocument<T extends { paths: object }>(document: T) {
@@ -31,10 +70,15 @@ export function finalizeOpenApiDocument<T extends { paths: object }>(document: T
     for (const [method, operation] of Object.entries(operations)) {
       if (!operation.security?.some((requirement) => Object.hasOwn(requirement, 'realmrootDpop'))) continue
       const scope = requiredScope(method.toUpperCase(), `https://ama.invalid${path}`)
-      operation.security = [{ realmrootDpop: scope ? [scope] : [] }]
+      const sessionSocketTicket = operation.security.some((requirement) =>
+        Object.hasOwn(requirement, 'sessionSocketTicket'),
+      )
+      operation.security = sessionSocketTicket
+        ? [{ sessionSocketTicket: [] }, { realmrootDpop: scope ? [scope] : [] }]
+        : [{ realmrootConsoleBearer: scope ? [scope] : [] }, { realmrootDpop: scope ? [scope] : [] }]
       operation.responses ??= {}
       operation.responses['401'] ??= {
-        description: 'A valid Realmroot DPoP credential is required',
+        description: 'A valid Realmroot credential in the client-specific authentication mode is required',
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/ErrorResponse' },

@@ -9,6 +9,7 @@ import {
   seedPlatformProvider,
   setupOidcProvider,
   signIn,
+  signInUser,
 } from './auth'
 import { seedPolicy } from './policy-seed'
 
@@ -24,6 +25,27 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
       ...requestInit.headers,
     },
   })
+}
+
+async function issueBrowserSocketTicket(sessionId: string, authorization: string) {
+  const response = await jsonFetch(`/api/v1/sessions/${sessionId}/socket-tickets`, authorization, {
+    method: 'POST',
+    headers: { Origin: 'https://example.com' },
+  })
+  expect(response.status).toBe(201)
+  const body = (await response.json()) as { ticket: string; expiresAt: string }
+  expect(body.ticket).toMatch(/^[A-Za-z0-9_-]{43}$/)
+  expect(Date.parse(body.expiresAt) - Date.now()).toBeGreaterThan(25_000)
+  expect(Date.parse(body.expiresAt) - Date.now()).toBeLessThanOrEqual(30_000)
+  return body.ticket
+}
+
+function browserTicketUpgradeHeaders(ticket: string, origin = 'https://example.com') {
+  return {
+    Upgrade: 'websocket',
+    Origin: origin,
+    'Sec-WebSocket-Protocol': `ama-ticket, ama-ticket.${ticket}`,
+  }
 }
 
 function normalizeTestRequest(path: string, init: RequestInit) {
@@ -517,7 +539,7 @@ describe('[CF] /api/v1/sessions', () => {
     await expect(readRes.json()).resolves.toMatchObject({ metadata: { uid: createdId }, status: { phase: 'idle' } })
 
     const socketMetadataRes = await jsonFetch(`/api/v1/sessions/${createdId}/socket`, authorization)
-    expect(socketMetadataRes.status).toBe(426)
+    expect(socketMetadataRes.status).toBe(403)
 
     const taskRes = await jsonFetch(`/api/v1/sessions/${createdId}/messages`, authorization, {
       method: 'POST',
@@ -781,7 +803,7 @@ describe('[CF] /api/v1/sessions', () => {
 
   it('queues self-hosted sessions for runner lease support [spec: sessions/memory-store-resources] [spec: runtime/self-hosted-ama-cloud-loop]', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
     const credential = await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization, {
       name: 'Self-hosted workspace',
@@ -881,7 +903,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
 
     const socketMetadataRes = await jsonFetch(`/api/v1/sessions/${createdId}/socket`, authorization)
-    expect(socketMetadataRes.status).toBe(426)
+    expect(socketMetadataRes.status).toBe(403)
 
     const workItemsRes = await jsonFetch(`/api/v1/work-items?sessionId=${createdId}`, authorization)
     expect(workItemsRes.status).toBe(200)
@@ -1048,7 +1070,7 @@ describe('[CF] /api/v1/sessions', () => {
 
   it('materializes credential-backed env and workspace volumes for runner use [spec: sessions/secret-projection]', async () => {
     const authorization = await signIn()
-    const runnerAuthorization = authorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(authorization)
     const environment = await createEnvironment(authorization, {
       name: `Self-hosted credential workspace ${crypto.randomUUID()}`,
       hostingMode: 'self_hosted',
@@ -1573,8 +1595,9 @@ describe('[CF] /api/v1/sessions', () => {
     })
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
-      headers: { ...dpopHeaders(authorization, 'GET', socketPath), Upgrade: 'websocket' },
+      headers: browserTicketUpgradeHeaders(ticket),
     })
     expect(socketRes.status).toBe(101)
     const ws = socketRes.webSocket as WebSocket
@@ -1628,6 +1651,11 @@ describe('[CF] /api/v1/sessions', () => {
     expect((live.record as { type: string }).type).toBe('message.completed')
 
     ws.close()
+
+    const replay = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: browserTicketUpgradeHeaders(ticket),
+    })
+    expect(replay.status).toBe(401)
   })
 
   it('opens the browser WebSocket from session ownership without project scope', async () => {
@@ -1652,13 +1680,68 @@ describe('[CF] /api/v1/sessions', () => {
     const created = JSON.parse(createdText) as { metadata: { uid: string } }
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
-      headers: { ...dpopHeaders(authorization, 'GET', socketPath), Upgrade: 'websocket' },
+      headers: browserTicketUpgradeHeaders(ticket),
     })
     expect(socketRes.status).toBe(101)
     const ws = socketRes.webSocket as WebSocket
     ws.accept()
     ws.close()
+
+    const consoleBypass = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: { authorization, Upgrade: 'websocket' },
+    })
+    expect(consoleBypass.status).toBe(403)
+
+    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const wrongOrigin = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: browserTicketUpgradeHeaders(wrongOriginTicket, 'https://evil.example.com'),
+    })
+    expect(wrongOrigin.status).toBe(401)
+    const acceptedAfterWrongOrigin = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: browserTicketUpgradeHeaders(wrongOriginTicket),
+    })
+    expect(acceptedAfterWrongOrigin.status).toBe(101)
+    acceptedAfterWrongOrigin.webSocket?.accept()
+    acceptedAfterWrongOrigin.webSocket?.close()
+    const replayAfterAccepted = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: browserTicketUpgradeHeaders(wrongOriginTicket),
+    })
+    expect(replayAfterAccepted.status).toBe(401)
+
+    const missingOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+      method: 'POST',
+    })
+    expect(missingOrigin.status).toBe(403)
+    const crossOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+      method: 'POST',
+      headers: { Origin: 'https://evil.example.com' },
+    })
+    expect(crossOrigin.status).toBe(403)
+
+    const malformed = await SELF.fetch(`https://example.com${socketPath}`, {
+      headers: {
+        Upgrade: 'websocket',
+        Origin: 'https://example.com',
+        'Sec-WebSocket-Protocol': 'ama-ticket.not-valid',
+      },
+    })
+    expect(malformed.status).toBe(401)
+
+    const otherAuthorization = await signInUser('socket-ticket-intruder')
+    const otherTicket = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, otherAuthorization, {
+      method: 'POST',
+      headers: { Origin: 'https://example.com' },
+    })
+    expect(otherTicket.status).toBe(404)
+
+    const runnerTicket = await jsonFetch(
+      `/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      asRunnerAuthorization(authorization),
+      { method: 'POST', headers: { Origin: 'https://example.com' } },
+    )
+    expect(runnerTicket.status).toBe(403)
   })
 
   it('accepts self-hosted sessions when cloud sandbox startup is disabled [spec: environments/self-hosted]', async () => {
@@ -2035,7 +2118,7 @@ describe('[CF] /api/v1/sessions', () => {
         body: JSON.stringify({ events: [{ type: 'turn.completed', payload: {} }] }),
       }),
     ])
-    expect(crossProjectReads.map((response) => response.status)).toEqual([404, 404, 404, 404, 404, 404, 404])
+    expect(crossProjectReads.map((response) => response.status)).toEqual([404, 403, 404, 404, 404, 404, 404])
   })
 
   it('blocks disabled sandbox startup before creating a runtime [spec: audit/runtime-policy]', async () => {

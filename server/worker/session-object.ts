@@ -32,6 +32,15 @@ type RelayAppendBody = {
   raw: RelayedRunnerEvent
 }
 
+type BrowserTicketRecord = {
+  scope: BrowserScope
+  origin: string
+  expiresAt: string
+}
+
+const BROWSER_TICKET_TTL_MS = 30_000
+const BROWSER_TICKET_PREFIX = 'browser-ticket:'
+
 export class SessionObject implements DurableObject {
   private eventSchemaReady = false
 
@@ -45,10 +54,17 @@ export class SessionObject implements DurableObject {
     if (url.pathname === '/browser') {
       return this.connectBrowser(request, url)
     }
+    if (url.pathname === '/browser-tickets' && request.method === 'POST') {
+      return this.issueBrowserTicket((await request.json()) as { scope: BrowserScope; origin: string })
+    }
     if (url.pathname.startsWith('/events/') && request.method === 'POST') {
       return this.handleEvents(url.pathname, await request.json())
     }
     return new Response('Not found', { status: 404 })
+  }
+
+  async alarm() {
+    await this.deleteExpiredBrowserTickets()
   }
 
   // The cloud event store routes. Appends are serialised by the DO single-thread,
@@ -110,16 +126,37 @@ export class SessionObject implements DurableObject {
   }
 
   // ── browser transport ───────────────────────────────────────────────────────
-  // One hibernatable WebSocket per browser tab. The HTTP layer authorises that the
-  // connecting user owns the session before upgrading, so the DO trusts the
-  // upgrade and stores the scope on the socket (surviving hibernation). The socket
+  // One hibernatable WebSocket per browser tab. Console clients consume a
+  // single-use ticket issued after HTTP auth and tenancy checks; DPoP-native SDK
+  // clients arrive with the already-authorised scope stamped by the HTTP layer.
+  // The DO stores the scope on the socket (surviving hibernation). The socket
   // carries live events (server→browser, fanned out on append), a backfill replay
   // on request, and inbound prompt/abort messages over the same socket.
-  private connectBrowser(request: Request, url: URL): Response {
+  private async issueBrowserTicket(body: { scope: BrowserScope; origin: string }) {
+    const ticket = randomTicket()
+    const expiresAt = new Date(Date.now() + BROWSER_TICKET_TTL_MS).toISOString()
+    await this.durableState.storage.put(ticketStorageKey(await ticketHash(ticket)), {
+      scope: body.scope,
+      origin: body.origin,
+      expiresAt,
+    } satisfies BrowserTicketRecord)
+    const alarm = await this.durableState.storage.getAlarm()
+    const expiry = Date.parse(expiresAt)
+    if (alarm === null || alarm > expiry) await this.durableState.storage.setAlarm(expiry)
+    return Response.json({ ticket, expiresAt })
+  }
+
+  private async connectBrowser(request: Request, url: URL): Promise<Response> {
     if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
       return new Response('WebSocket upgrade required', { status: 426 })
     }
-    const scope = browserScopeFromUrl(url)
+    const ticketProtocol = browserTicketProtocol(request)
+    const ticket = browserTicketFromProtocol(ticketProtocol)
+    if (ticketProtocol && !ticket) return new Response('Invalid or expired browser socket ticket', { status: 401 })
+    const scope = ticket
+      ? await this.consumeBrowserTicket(ticket, requiredParam(url, 'sessionId'), request.headers.get('origin'))
+      : browserScopeFromUrl(url)
+    if (!scope) return new Response('Invalid or expired browser socket ticket', { status: 401 })
     const pair = new WebSocketPair()
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
     this.durableState.acceptWebSocket(server, ['browser'])
@@ -127,10 +164,38 @@ export class SessionObject implements DurableObject {
     // Push history immediately on connect so the chat renders from the socket alone
     // — events never travel over HTTP. Live events follow via fanOutToBrowsers.
     this.durableState.waitUntil(this.sendBackfill(server, scope.sessionId, { order: 'asc', limit: 200 }))
-    const headers = request.headers.get('sec-websocket-protocol')?.includes('ama-dpop')
-      ? { 'Sec-WebSocket-Protocol': 'ama-dpop' }
-      : undefined
+    const protocols = request.headers.get('sec-websocket-protocol') ?? ''
+    const selectedProtocol = ticket ? 'ama-ticket' : protocols.includes('ama-dpop') ? 'ama-dpop' : null
+    const headers = selectedProtocol ? { 'Sec-WebSocket-Protocol': selectedProtocol } : undefined
     return new Response(null, { status: 101, webSocket: client, ...(headers ? { headers } : {}) })
+  }
+
+  private async consumeBrowserTicket(ticket: string, sessionId: string, origin: string | null) {
+    const key = ticketStorageKey(await ticketHash(ticket))
+    return await this.durableState.storage.transaction(async (transaction) => {
+      const stored = await transaction.get<BrowserTicketRecord>(key)
+      if (!stored) return null
+      if (Date.parse(stored.expiresAt) <= Date.now()) {
+        await transaction.delete(key)
+        return null
+      }
+      if (stored.scope.sessionId !== sessionId || stored.origin !== origin) return null
+      await transaction.delete(key)
+      return stored.scope
+    })
+  }
+
+  private async deleteExpiredBrowserTickets() {
+    const tickets = await this.durableState.storage.list<BrowserTicketRecord>({ prefix: BROWSER_TICKET_PREFIX })
+    const now = Date.now()
+    const expired = [...tickets].filter(([, record]) => Date.parse(record.expiresAt) <= now).map(([key]) => key)
+    if (expired.length) await this.durableState.storage.delete(expired)
+    const nextExpiry = [...tickets]
+      .filter(([key]) => !expired.includes(key))
+      .map(([, record]) => Date.parse(record.expiresAt))
+      .filter(Number.isFinite)
+      .sort((left, right) => left - right)[0]
+    if (nextExpiry !== undefined) await this.durableState.storage.setAlarm(nextExpiry)
   }
 
   // Fan a frame to every browser socket watching `sessionId`.
@@ -329,6 +394,38 @@ function browserScopeFromUrl(url: URL): BrowserScope {
       ? { runnerEnvironmentId: url.searchParams.get('runnerEnvironmentId') as string }
       : {}),
   }
+}
+
+function browserTicketProtocol(request: Request) {
+  return (request.headers.get('sec-websocket-protocol') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .find((value) => value.startsWith('ama-ticket.'))
+}
+
+function browserTicketFromProtocol(protocol: string | undefined) {
+  const ticket = protocol?.slice('ama-ticket.'.length)
+  return ticket && /^[A-Za-z0-9_-]{43}$/.test(ticket) ? ticket : null
+}
+
+function randomTicket() {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return base64Url(bytes)
+}
+
+async function ticketHash(ticket: string) {
+  return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ticket))))
+}
+
+function ticketStorageKey(hash: string) {
+  return `${BROWSER_TICKET_PREFIX}${hash}`
+}
+
+function base64Url(bytes: Uint8Array) {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
 }
 
 function browserAuthScope(scope: BrowserScope): AuthScope {

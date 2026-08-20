@@ -21,15 +21,23 @@ Feature: Auth
 
   # ── Session and context API (api: assembled server, real D1) ──
 
-  @auth/dpop @api
-  Scenario: Require proof of possession for every protected request
+  @auth/credential-mode @api
+  Scenario: Select the credential mode from the verified Realmroot client
     Given Realmroot issued an at+jwt access token for the exact AMA resource
-    When a caller omits the DPoP proof, replays it, changes its method or URL, uses another key, or sends Bearer authentication
+    When the Console client sends Bearer authentication
+    Then the request is accepted without a proof-of-possession requirement
+    And runner and Realmroot CLI clients still require a fresh DPoP proof whose key matches cnf.jkt
+    And using a client through the wrong credential mode fails closed without fallback
+
+  @auth/dpop @api
+  Scenario: Require proof of possession for machine and Agent requests
+    Given Realmroot issued a DPoP-bound runner or Agent token for the exact AMA resource
+    When the caller omits the DPoP proof, replays it, changes its method or URL, or uses another key
     Then authentication fails closed with a DPoP challenge
     And a fresh proof whose key matches cnf.jkt is accepted once
 
   @auth/session-current @api
-  Scenario: Read the DPoP-authenticated context
+  Scenario: Read the Realmroot-authenticated context
     Given an authenticated user
     When the user reads the current session context
     Then the context returns user, organization, and project without the organization id
@@ -78,6 +86,6 @@ Feature: Auth
   @auth/e2e-sign-in @e2e
   Scenario: Complete sign in
     When a user completes the Realmroot PKCE callback
-    Then the browser stores a DPoP-bound Realmroot token and every API request carries a fresh proof
+    Then the browser stores a short-lived Realmroot Console token and sends it as Bearer authentication
     And API requests resolve user, organization, and project context
     And invalid Realmroot callbacks return the standard OIDC error envelope

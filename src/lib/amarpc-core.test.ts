@@ -36,7 +36,8 @@ describe('AMARPC transport input normalization', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(input, expect.objectContaining({ headers: expect.any(Headers) }))
     const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers
-    expect(headers.get('dpop')).toBe('e2e-proof:GET:https://ama.example.test/api/v1/agents')
+    expect(headers.get('authorization')).toBe('Bearer e2e:core-transport')
+    expect(headers.has('dpop')).toBe(false)
   })
 
   it('uses Request methods and merges Request headers with init headers', async () => {
@@ -54,6 +55,7 @@ describe('AMARPC transport input normalization', () => {
     const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers
     expect(headers.get('x-request-header')).toBe('request')
     expect(headers.get('x-init-header')).toBe('init')
-    expect(headers.get('dpop')).toBe('e2e-proof:PATCH:https://ama.example.test/api/v1/agents/agent_1')
+    expect(headers.get('authorization')).toBe('Bearer e2e:core-transport')
+    expect(headers.has('dpop')).toBe(false)
   })
 })

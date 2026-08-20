@@ -221,7 +221,7 @@ describe('[CF] /api/v1/work-items', () => {
 
   it('lets runner tokens read the queue so they can pick work to claim', async () => {
     const operatorAuthorization = await signIn()
-    const runnerAuthorization = operatorAuthorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(operatorAuthorization)
     const environment = await createSelfHostedEnvironment(operatorAuthorization)
     const agent = await createAgent(operatorAuthorization)
 
@@ -243,7 +243,7 @@ describe('[CF] /api/v1/work-items', () => {
 
   it('materializes secrets only for the OIDC-bound runner holding the active lease [spec: runners/work-items]', async () => {
     const operatorAuthorization = await signIn()
-    const runnerAuthorization = operatorAuthorization.replace('e2e:', 'e2e-runner:')
+    const runnerAuthorization = asRunnerAuthorization(operatorAuthorization)
     const environment = await createSelfHostedEnvironment(operatorAuthorization)
     const agent = await createAgent(operatorAuthorization)
     const envFrom = await createSessionEnvFrom(operatorAuthorization)
