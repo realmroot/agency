@@ -35,7 +35,7 @@ describe('deployment environment example', () => {
   it('documents the self-hosted runner as Bearer-only', () => {
     const guide = readFileSync('docs/infra/self-hosted-runner.md', 'utf8')
 
-    expect(guide).toContain('Loads the saved Realmroot Bearer device-login profile.')
+    expect(guide).toContain('Loads the saved Realmroot Bearer Context-login profile.')
     expect(guide).not.toContain('device-login profile and DPoP private key')
   })
 })

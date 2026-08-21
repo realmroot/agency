@@ -11,9 +11,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,9 +105,11 @@ func TestWriterOrDiscard(t *testing.T) {
 	}
 }
 
-func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
+func TestRunLoginCompletesLoopbackPKCEAndStoresToken(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	var output bytes.Buffer
+	output := &rootLockedBuffer{}
+	var nonceMu sync.Mutex
+	loginNonce := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
 		switch r.URL.Path {
@@ -133,25 +137,29 @@ func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
 			})
 		case "/issuer/.well-known/openid-configuration":
 			_ = json.NewEncoder(w).Encode(map[string]string{
-				"issuer":                        "http://" + r.Host + "/issuer",
-				"device_authorization_endpoint": "http://" + r.Host + "/device",
-				"token_endpoint":                "http://" + r.Host + "/token",
-				"jwks_uri":                      "http://" + r.Host + "/jwks",
+				"issuer":                 "http://" + r.Host + "/issuer",
+				"authorization_endpoint": "http://" + r.Host + "/authorize",
+				"token_endpoint":         "http://" + r.Host + "/token",
+				"jwks_uri":               "http://" + r.Host + "/jwks",
 			})
 		case "/jwks":
 			_ = json.NewEncoder(w).Encode(rootTestJWKS())
-		case "/device":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"device_code":      "device-code",
-				"user_code":        "LOGIN-CODE",
-				"verification_uri": "https://issuer.example.test/device",
-				"expires_in":       60,
-			})
 		case "/token":
+			if r.FormValue("grant_type") != "authorization_code" || r.FormValue("code") != "root-login-code" ||
+				r.FormValue("redirect_uri") != "http://127.0.0.1:49174/oauth/callback" || r.FormValue("client_id") != "runner-client" ||
+				r.FormValue("code_verifier") == "" || r.FormValue("resource") != "http://"+r.Host {
+				t.Fatalf("unexpected root login token exchange: %s", r.Form.Encode())
+			}
+			if r.FormValue("client_secret") != "" || r.Header.Get("authorization") != "" {
+				t.Fatal("public root login sent a client secret")
+			}
+			nonceMu.Lock()
+			nonce := loginNonce
+			nonceMu.Unlock()
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token":  "login-access-token",
 				"refresh_token": "login-refresh-token",
-				"id_token":      testIDToken("http://"+r.Host+"/issuer", "runner-client", "user_1", "runner@example.test", "Runner User"),
+				"id_token":      testIDToken("http://"+r.Host+"/issuer", "runner-client", "user_1", "runner@example.test", "Runner User", nonce),
 				"token_type":    "Bearer",
 				"expires_in":    3600,
 			})
@@ -162,11 +170,35 @@ func TestRunLoginDiscoversDeviceFlowAndStoresToken(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	err := execute(context.Background(), []string{"auth", "login", "--api-server", server.URL}, testBuild(), &output, nil)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- execute(context.Background(), []string{"auth", "login", "--api-server", server.URL}, testBuild(), output, nil)
+	}()
+	authorize := waitForRootAuthorizationURL(t, output)
+	if authorize.Query().Get("redirect_uri") != "http://127.0.0.1:49174/oauth/callback" || authorize.Query().Get("code_challenge_method") != "S256" {
+		t.Fatalf("unexpected root login authorize URL %s", authorize)
+	}
+	nonceMu.Lock()
+	loginNonce = authorize.Query().Get("nonce")
+	nonceMu.Unlock()
+	callback, _ := url.Parse(authorize.Query().Get("redirect_uri"))
+	query := callback.Query()
+	query.Set("code", "root-login-code")
+	query.Set("state", authorize.Query().Get("state"))
+	callback.RawQuery = query.Encode()
+	response, callbackErr := (&http.Client{Transport: &http.Transport{DisableKeepAlives: true}}).Get(callback.String())
+	if callbackErr != nil {
+		t.Fatal(callbackErr)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected root login callback status %d", response.StatusCode)
+	}
+	err := <-errCh
 	if err != nil {
 		t.Fatalf("expected login to succeed, got %v", err)
 	}
-	if !strings.Contains(output.String(), "LOGIN-CODE") || strings.Contains(output.String(), "login-access-token") {
+	if !strings.Contains(output.String(), "authenticated") || strings.Contains(output.String(), "login-access-token") {
 		t.Fatalf("unexpected login output: %s", output.String())
 	}
 	data, err := os.ReadFile(credentialPath)
@@ -315,12 +347,12 @@ func rootTestJWKS() map[string]any {
 	}}}
 }
 
-func testIDToken(issuer string, audience string, subject string, email string, name string) string {
+func testIDToken(issuer string, audience string, subject string, email string, name string, nonce string) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","kid":"root-test-key"}`))
 	now := time.Now().Unix()
 	payload, err := json.Marshal(map[string]any{
 		"iss": issuer, "aud": audience, "sub": subject, "email": email, "name": name,
-		"iat": now, "exp": now + 300,
+		"nonce": nonce, "iat": now, "exp": now + 300,
 	})
 	if err != nil {
 		panic(err)
@@ -333,4 +365,40 @@ func testIDToken(issuer string, audience string, subject string, email string, n
 		panic(err)
 	}
 	return signed + "." + base64.RawURLEncoding.EncodeToString(signature)
+}
+
+type rootLockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (buffer *rootLockedBuffer) Write(data []byte) (int, error) {
+	buffer.mu.Lock()
+	defer buffer.mu.Unlock()
+	return buffer.b.Write(data)
+}
+
+func (buffer *rootLockedBuffer) String() string {
+	buffer.mu.Lock()
+	defer buffer.mu.Unlock()
+	return buffer.b.String()
+}
+
+func waitForRootAuthorizationURL(t *testing.T, output *rootLockedBuffer) *url.URL {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		text := output.String()
+		if index := strings.Index(text, "Open: "); index >= 0 {
+			line := strings.TrimSpace(strings.SplitN(text[index+len("Open: "):], "\n", 2)[0])
+			parsed, err := url.Parse(line)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return parsed
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("root login did not print authorize URL: %s", output.String())
+	return nil
 }

@@ -43,10 +43,10 @@ func TestAuthTransportRefreshesAndRetriesUnauthorizedRequest(t *testing.T) {
 			))
 		case "/issuer/.well-known/openid-configuration":
 			_ = json.NewEncoder(w).Encode(map[string]string{
-				"issuer":                        "http://" + r.Host + "/issuer",
-				"device_authorization_endpoint": "http://" + r.Host + "/device",
-				"token_endpoint":                "http://" + r.Host + "/token",
-				"jwks_uri":                      "http://" + r.Host + "/jwks",
+				"issuer":                 "http://" + r.Host + "/issuer",
+				"authorization_endpoint": "http://" + r.Host + "/authorize",
+				"token_endpoint":         "http://" + r.Host + "/token",
+				"jwks_uri":               "http://" + r.Host + "/jwks",
 			})
 		case "/token":
 			_ = json.NewEncoder(w).Encode(map[string]any{

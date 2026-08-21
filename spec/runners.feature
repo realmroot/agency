@@ -20,11 +20,11 @@ Feature: Runners
 
   @runners/auth-binding @domain
   Scenario: Bind runner registration to its Realmroot token
-    Given a runner registers with a Realmroot device-login token
+    Given a runner registers with a Realmroot Context login token from loopback PKCE
     When the registration auth mode and environment are resolved
     Then the auth mode and bound environment follow the token binding
     And the runner sends its short-lived access token as Bearer authentication
-    And a device-login token cannot register a non-OIDC runner
+    And a runner login token cannot register a non-OIDC runner
     And raw secret material in runner metadata or runtime diagnostics is rejected
 
   @runners/local-credential-refresh @domain

@@ -13,15 +13,16 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 
 ## Realmroot Applications and Resource Server
 
-Create public Realmroot applications for the browser SPA and runner device flow. Register AMA as the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728 discovery document and OpenAPI document are live.
+Create public Realmroot applications for the browser SPA and runner loopback PKCE flow. Register AMA as the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728 discovery document and OpenAPI document are live.
 
 Required settings:
 
 - Issuer: `OIDC_ISSUER`
 - Client id: `OIDC_CLIENT_ID`
-- No client secret: both clients are public and use PKCE or device authorization.
+- No client secret: both clients are public and use authorization-code PKCE.
 - Resource audience: the exact protected Resource URL, including `/api`.
-- Redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`
+- Console redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`.
+- Runner redirect URI: configure exactly `http://127.0.0.1:49174/oauth/callback`; do not register wildcard ports.
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE
 
@@ -30,7 +31,7 @@ Collection reads require `<resource>:read`, mutations require
 `<resource>:write`, and narrowly scoped administration may use
 `<resource>:*`. A missing permission claim is denied.
 
-The browser uses `oidc-client-ts` for authorization-code PKCE and sends the registered Console client's access token as Bearer authentication. The native runner also uses Realmroot Bearer access tokens from device authorization. The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the permitted credential mode; cross-mode fallback and legacy identity service bindings are not accepted.
+The browser uses `oidc-client-ts` for authorization-code PKCE and sends the registered Console client's access token as Bearer authentication. The native runner uses authorization-code PKCE with an exact loopback callback so the operator selects the same Realmroot personal or organization Context as the AMA project, then sends Realmroot Bearer access tokens. The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the permitted credential mode; cross-mode fallback and legacy identity service bindings are not accepted.
 
 Control-plane settings:
 

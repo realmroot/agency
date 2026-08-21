@@ -47,8 +47,8 @@ func Login(ctx context.Context, command LoginCommand, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	authClient := DeviceAuthClient{HTTPClient: httpClient}
-	result, err := LoginWithDeviceAuthorization(ctx, authClient, DeviceLoginOptions{
+	authClient := OAuthClient{HTTPClient: httpClient}
+	result, err := LoginWithAuthorizationCode(ctx, authClient, AuthorizationCodeLoginOptions{
 		APIServer:      command.APIServer,
 		Issuer:         settings.Issuer,
 		Resource:       settings.Resource,
@@ -56,7 +56,6 @@ func Login(ctx context.Context, command LoginCommand, output io.Writer) error {
 		Scopes:         settings.Scopes,
 		CredentialPath: command.CredentialPath,
 		Output:         output,
-		PollInterval:   time.Second,
 	})
 	if err != nil {
 		return err
