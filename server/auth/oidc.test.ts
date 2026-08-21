@@ -168,6 +168,51 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     })
   })
 
+  it('accepts a trusted Web application Bearer token for the exact AMA resource', async () => {
+    const issuer = 'https://id-trusted-web.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'ak-web',
+        cnf: undefined,
+      },
+    })
+    stubJwks(jwks)
+
+    await expect(
+      getBearerClaims(
+        envFor(issuer, { OIDC_TRUSTED_BEARER_CLIENT_IDS: 'another-web, ak-web' }),
+        new Request('https://ama.example.com/api/v1/agents', {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      ),
+    ).resolves.toMatchObject({ client_id: 'ak-web', sub: 'user_real' })
+  })
+
+  it('rejects a Web application that is not explicitly trusted', async () => {
+    const issuer = 'https://id-untrusted-web.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'unknown-web',
+        cnf: undefined,
+      },
+    })
+    stubJwks(jwks)
+
+    await expect(
+      getBearerClaims(
+        envFor(issuer, { OIDC_TRUSTED_BEARER_CLIENT_IDS: 'ak-web' }),
+        new Request('https://ama.example.com/api/v1/agents', {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: 'OidcError',
+      message: 'Realmroot access token client is not allowed',
+    })
+  })
+
   it('rejects a sender-constrained Console JWT presented as Bearer', async () => {
     const issuer = 'https://id-console-sender-constrained.test/api/auth'
     const { token, jwks } = await signedToken({
