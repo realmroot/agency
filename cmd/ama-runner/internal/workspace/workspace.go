@@ -448,10 +448,18 @@ func CleanupStale(ctx context.Context, workDir string, retention time.Duration) 
 }
 
 func cleanupStaleSessionArtifacts(sessionDir string) error {
-	entries, err := os.ReadDir(sessionDir)
+	info, err := os.Stat(sessionDir)
 	if os.IsNotExist(err) {
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("runtime session path is not a directory: %s", sessionDir)
+	}
+
+	entries, err := os.ReadDir(sessionDir)
 	if err != nil {
 		return err
 	}

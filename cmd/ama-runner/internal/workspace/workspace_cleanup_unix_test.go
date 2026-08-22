@@ -12,6 +12,38 @@ import (
 )
 
 func TestCleanupStalePropagatesFilesystemPermissionErrors(t *testing.T) {
+	t.Run("stat session root", func(t *testing.T) {
+		parent := t.TempDir()
+		root := filepath.Join(parent, "session_inaccessible")
+		if err := os.Chmod(parent, 0o000); err != nil {
+			t.Fatal(err)
+		}
+		err := cleanupStaleSessionArtifacts(root)
+		if restoreErr := os.Chmod(parent, 0o755); restoreErr != nil {
+			t.Fatal(restoreErr)
+		}
+		if err == nil {
+			t.Fatal("expected inaccessible session root parent to fail stat")
+		}
+	})
+
+	t.Run("read session root", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "session_inaccessible")
+		if err := os.Mkdir(root, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(root, 0o000); err != nil {
+			t.Fatal(err)
+		}
+		err := cleanupStaleSessionArtifacts(root)
+		if restoreErr := os.Chmod(root, 0o755); restoreErr != nil {
+			t.Fatal(restoreErr)
+		}
+		if err == nil {
+			t.Fatal("expected unreadable session root to fail directory read")
+		}
+	})
+
 	t.Run("stat sessions path", func(t *testing.T) {
 		workDir := t.TempDir()
 		if err := os.Mkdir(filepath.Join(workDir, SessionsDirName), 0o755); err != nil {

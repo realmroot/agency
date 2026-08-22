@@ -633,8 +633,8 @@ func TestCleanupStaleSessionArtifactsHandlesMissingAndInvalidRoots(t *testing.T)
 	if err := os.WriteFile(rootFile, []byte("not a directory"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := cleanupStaleSessionArtifacts(rootFile); err == nil {
-		t.Fatal("expected session artifact cleanup to reject a non-directory root")
+	if err := cleanupStaleSessionArtifacts(rootFile); err == nil || !strings.Contains(err.Error(), "runtime session path is not a directory") {
+		t.Fatalf("expected explicit non-directory root rejection, got %v", err)
 	}
 }
 
