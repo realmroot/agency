@@ -797,7 +797,7 @@ func TestPrepareWorkspaceSerializesSharedRepositoryCache(t *testing.T) {
 func TestCleanupStaleWorkspacesRemovesExpiredSessionRoots(t *testing.T) {
 	workDir := t.TempDir()
 	sessionRoot := filepath.Join(workDir, "sessions", "session_old")
-	if err := os.MkdirAll(filepath.Join(sessionRoot, ".ama"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(sessionRoot, WorkspaceDirName), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	old := time.Now().Add(-2 * time.Hour)

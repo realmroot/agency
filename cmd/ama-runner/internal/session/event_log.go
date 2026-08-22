@@ -32,8 +32,9 @@ type Event struct {
 
 // EventLog is the runner's local, durable, per-session event log for
 // CLI relay-only runtimes (claude-code/codex/copilot, loop on the runner). Their
-// events live here — the cloud keeps no copy — surviving a runner restart, and
-// the RunnerPool relays backfill reads to this store. Append-only JSONL.
+// events live here — the cloud keeps no copy — surviving runner restarts and
+// stale workspace cleanup. The RunnerPool relays backfill reads to this store.
+// Append-only JSONL.
 type EventLog struct {
 	path      string
 	sessionID string

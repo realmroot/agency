@@ -75,6 +75,17 @@ Feature: Runtime
     Then the runner stores those provider events outside the canonical session event log
     And rebuild maps the stored provider events through the same runtime mapper used during live execution
 
+  @runtime/session-history-retention @usecase
+  Scenario: Preserve durable session history while expiring runner workspaces
+    Given an old self-hosted session has durable history, disposable runner artifacts, and unknown diagnostic artifacts
+    When the runner applies workspace retention cleanup
+    Then only workspace, state, home, temporary, credential, and non-file log lookalikes are removed
+    And regular-file session histories remain unchanged and readable after repeated cleanup
+    And unknown files and directories remain available for diagnosis
+    And a failed workspace cleanup preserves the session state and artifacts for a later retry
+    And log lookalike directories and symbolic links are removed rather than retained as history
+    And a stale session without durable history is removed while a recent session remains untouched
+
   @runtime/sandbox-toolset @usecase
   Scenario: Gate sandbox tools by the agent allow-list
     Given an agent declares a sandbox tool allow-list

@@ -80,7 +80,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	if err := os.MkdirAll(d.Config.WorkDir, 0o755); err != nil {
 		return err
 	}
-	if err := workspace.CleanupStale(ctx, d.Config.WorkDir, workspace.RuntimeRetention); err != nil {
+	if err := workspace.CleanupStale(ctx, d.Config.WorkDir, workspace.RuntimeWorkspaceRetention); err != nil {
 		return err
 	}
 	configz, err := d.Client.Configz.Get(ctx)

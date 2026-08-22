@@ -15,7 +15,9 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 )
 
-const RuntimeRetention = 24 * time.Hour
+// RuntimeWorkspaceRetention applies only to disposable runtime artifacts.
+// Session event logs are durable history and are never removed by workspace cleanup.
+const RuntimeWorkspaceRetention = 24 * time.Hour
 
 const SessionsDirName = "sessions"
 const WorkspaceDirName = "workspace"
@@ -385,7 +387,7 @@ func (w *Workspace) Cleanup(ctx context.Context) error {
 		}
 		lock.Unlock()
 	}
-	if w.Root != "" {
+	if len(errs) == 0 && w.Root != "" {
 		if err := os.RemoveAll(w.Root); err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -433,8 +435,9 @@ func CleanupStale(ctx context.Context, workDir string, retention time.Duration) 
 		workspace := staleWorkspace(workDir, root)
 		if err := workspace.Cleanup(ctx); err != nil {
 			errs = append(errs, err.Error())
+			continue
 		}
-		if err := os.RemoveAll(root); err != nil {
+		if err := cleanupStaleSessionArtifacts(root); err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
@@ -442,6 +445,66 @@ func CleanupStale(ctx context.Context, workDir string, retention time.Duration) 
 		return fmt.Errorf("cleanup stale runtime workspaces failed: %s", strings.Join(errs, "; "))
 	}
 	return nil
+}
+
+func cleanupStaleSessionArtifacts(sessionDir string) error {
+	entries, err := os.ReadDir(sessionDir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	retainedLog := false
+	var errs []string
+	for _, entry := range entries {
+		if isDurableSessionLog(entry) {
+			retainedLog = true
+			continue
+		}
+		if !isDisposableSessionArtifact(entry) {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(sessionDir, entry.Name())); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("remove stale session artifacts failed: %s", strings.Join(errs, "; "))
+	}
+	if retainedLog {
+		return nil
+	}
+	remaining, err := os.ReadDir(sessionDir)
+	if err != nil {
+		return err
+	}
+	if len(remaining) > 0 {
+		return nil
+	}
+	if err := os.Remove(sessionDir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func isDurableSessionLog(entry os.DirEntry) bool {
+	if !entry.Type().IsRegular() {
+		return false
+	}
+	return entry.Name() == "events.jsonl" || entry.Name() == "provider-events.jsonl"
+}
+
+func isDisposableSessionArtifact(entry os.DirEntry) bool {
+	switch entry.Name() {
+	case WorkspaceDirName, SessionStateFileName, ".home", ".tmp", ".git-clone-credentials":
+		return true
+	case "events.jsonl", "provider-events.jsonl":
+		return !entry.Type().IsRegular()
+	default:
+		return false
+	}
 }
 
 func staleWorkspace(workDir string, sessionDir string) *Workspace {
