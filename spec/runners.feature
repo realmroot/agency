@@ -114,7 +114,11 @@ Feature: Runners
   Scenario: Deliver prompts to a live self-hosted runner session
     Given a self-hosted session is already leased to an online runner
     When the user sends another prompt to that running session
-    Then AMA delivers the prompt over the runner session command channel
+    Then AMA delivers the prompt over the runner session command channel only through a runner that supports command acknowledgements
+    And AMA accepts the prompt only after the runner writes it to the live runtime bridge
+    And retries across channel reconnection reuse one request id so a lost acknowledgement cannot deliver the prompt twice while the runner process remains alive
+    And restarting the runner process is an explicit at-least-once delivery boundary
+    And a runner without the acknowledgement capability returns a retryable conflict until it is upgraded
     And the prompt does not create a second queued work item
     And live session events continue to stream through the browser session socket
 

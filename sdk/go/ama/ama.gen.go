@@ -1274,13 +1274,13 @@ func (e RunnerChannelMessage2Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage3Type.
 const (
-	SandboxRequest RunnerChannelMessage3Type = "sandbox.request"
+	SessionCommandResult RunnerChannelMessage3Type = "session.command.result"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage3Type enum.
 func (e RunnerChannelMessage3Type) Valid() bool {
 	switch e {
-	case SandboxRequest:
+	case SessionCommandResult:
 		return true
 	default:
 		return false
@@ -1289,13 +1289,13 @@ func (e RunnerChannelMessage3Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage4Type.
 const (
-	SandboxResponse RunnerChannelMessage4Type = "sandbox.response"
+	SandboxRequest RunnerChannelMessage4Type = "sandbox.request"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage4Type enum.
 func (e RunnerChannelMessage4Type) Valid() bool {
 	switch e {
-	case SandboxResponse:
+	case SandboxRequest:
 		return true
 	default:
 		return false
@@ -1304,13 +1304,13 @@ func (e RunnerChannelMessage4Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage5Type.
 const (
-	SessionBackfillRequest RunnerChannelMessage5Type = "session.backfill_request"
+	SandboxResponse RunnerChannelMessage5Type = "sandbox.response"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage5Type enum.
 func (e RunnerChannelMessage5Type) Valid() bool {
 	switch e {
-	case SessionBackfillRequest:
+	case SandboxResponse:
 		return true
 	default:
 		return false
@@ -1319,13 +1319,13 @@ func (e RunnerChannelMessage5Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage6Type.
 const (
-	SessionBackfillResponse RunnerChannelMessage6Type = "session.backfill_response"
+	SessionBackfillRequest RunnerChannelMessage6Type = "session.backfill_request"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage6Type enum.
 func (e RunnerChannelMessage6Type) Valid() bool {
 	switch e {
-	case SessionBackfillResponse:
+	case SessionBackfillRequest:
 		return true
 	default:
 		return false
@@ -1334,13 +1334,13 @@ func (e RunnerChannelMessage6Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage7Type.
 const (
-	RunnerEvent RunnerChannelMessage7Type = "runner.event"
+	SessionBackfillResponse RunnerChannelMessage7Type = "session.backfill_response"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage7Type enum.
 func (e RunnerChannelMessage7Type) Valid() bool {
 	switch e {
-	case RunnerEvent:
+	case SessionBackfillResponse:
 		return true
 	default:
 		return false
@@ -1349,13 +1349,13 @@ func (e RunnerChannelMessage7Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage8Type.
 const (
-	RunnerEventAccepted RunnerChannelMessage8Type = "runner.event.accepted"
+	RunnerEvent RunnerChannelMessage8Type = "runner.event"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage8Type enum.
 func (e RunnerChannelMessage8Type) Valid() bool {
 	switch e {
-	case RunnerEventAccepted:
+	case RunnerEvent:
 		return true
 	default:
 		return false
@@ -1364,11 +1364,26 @@ func (e RunnerChannelMessage8Type) Valid() bool {
 
 // Defines values for RunnerChannelMessage9Type.
 const (
-	SessionChannelError RunnerChannelMessage9Type = "session.channel.error"
+	RunnerEventAccepted RunnerChannelMessage9Type = "runner.event.accepted"
 )
 
 // Valid indicates whether the value is a known member of the RunnerChannelMessage9Type enum.
 func (e RunnerChannelMessage9Type) Valid() bool {
+	switch e {
+	case RunnerEventAccepted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RunnerChannelMessage10Type.
+const (
+	SessionChannelError RunnerChannelMessage10Type = "session.channel.error"
+)
+
+// Valid indicates whether the value is a known member of the RunnerChannelMessage10Type enum.
+func (e RunnerChannelMessage10Type) Valid() bool {
 	switch e {
 	case SessionChannelError:
 		return true
@@ -3464,8 +3479,9 @@ type CreateSessionEventsRequest struct {
 
 // CreateSessionMessageRequest defines model for CreateSessionMessageRequest.
 type CreateSessionMessageRequest struct {
-	Content string                          `json:"content"`
-	Type    CreateSessionMessageRequestType `json:"type"`
+	Content   string                          `json:"content"`
+	RequestId *string                         `json:"requestId,omitempty"`
+	Type      CreateSessionMessageRequestType `json:"type"`
 }
 
 // CreateSessionMessageRequestType defines model for CreateSessionMessageRequest.Type.
@@ -4275,6 +4291,7 @@ type RunnerChannelMessage1Type string
 // RunnerChannelMessage2 defines model for .
 type RunnerChannelMessage2 struct {
 	Command   RunnerSessionCommand      `json:"command"`
+	RequestId *string                   `json:"requestId,omitempty"`
 	RunnerId  *string                   `json:"runnerId,omitempty"`
 	SessionId string                    `json:"sessionId"`
 	Type      RunnerChannelMessage2Type `json:"type"`
@@ -4285,7 +4302,8 @@ type RunnerChannelMessage2Type string
 
 // RunnerChannelMessage3 defines model for .
 type RunnerChannelMessage3 struct {
-	Request   RunnerSandboxRequest      `json:"request"`
+	Accepted  bool                      `json:"accepted"`
+	Error     *string                   `json:"error,omitempty"`
 	RequestId string                    `json:"requestId"`
 	RunnerId  *string                   `json:"runnerId,omitempty"`
 	SessionId string                    `json:"sessionId"`
@@ -4297,10 +4315,8 @@ type RunnerChannelMessage3Type string
 
 // RunnerChannelMessage4 defines model for .
 type RunnerChannelMessage4 struct {
-	Error     *string                   `json:"error,omitempty"`
-	Ok        bool                      `json:"ok"`
+	Request   RunnerSandboxRequest      `json:"request"`
 	RequestId string                    `json:"requestId"`
-	Result    *RunnerOpaqueJsonObject   `json:"result,omitempty"`
 	RunnerId  *string                   `json:"runnerId,omitempty"`
 	SessionId string                    `json:"sessionId"`
 	Type      RunnerChannelMessage4Type `json:"type"`
@@ -4311,7 +4327,11 @@ type RunnerChannelMessage4Type string
 
 // RunnerChannelMessage5 defines model for .
 type RunnerChannelMessage5 struct {
-	EventId   string                    `json:"eventId"`
+	Error     *string                   `json:"error,omitempty"`
+	Ok        bool                      `json:"ok"`
+	RequestId string                    `json:"requestId"`
+	Result    *RunnerOpaqueJsonObject   `json:"result,omitempty"`
+	RunnerId  *string                   `json:"runnerId,omitempty"`
 	SessionId string                    `json:"sessionId"`
 	Type      RunnerChannelMessage5Type `json:"type"`
 }
@@ -4321,9 +4341,7 @@ type RunnerChannelMessage5Type string
 
 // RunnerChannelMessage6 defines model for .
 type RunnerChannelMessage6 struct {
-	Error     *string                   `json:"error,omitempty"`
 	EventId   string                    `json:"eventId"`
-	Events    []RunnerOpaqueJsonObject  `json:"events"`
 	SessionId string                    `json:"sessionId"`
 	Type      RunnerChannelMessage6Type `json:"type"`
 }
@@ -4333,7 +4351,9 @@ type RunnerChannelMessage6Type string
 
 // RunnerChannelMessage7 defines model for .
 type RunnerChannelMessage7 struct {
-	Record    RunnerOpaqueJsonObject    `json:"record"`
+	Error     *string                   `json:"error,omitempty"`
+	EventId   string                    `json:"eventId"`
+	Events    []RunnerOpaqueJsonObject  `json:"events"`
 	SessionId string                    `json:"sessionId"`
 	Type      RunnerChannelMessage7Type `json:"type"`
 }
@@ -4343,8 +4363,9 @@ type RunnerChannelMessage7Type string
 
 // RunnerChannelMessage8 defines model for .
 type RunnerChannelMessage8 struct {
-	EventId string                    `json:"eventId"`
-	Type    RunnerChannelMessage8Type `json:"type"`
+	Record    RunnerOpaqueJsonObject    `json:"record"`
+	SessionId string                    `json:"sessionId"`
+	Type      RunnerChannelMessage8Type `json:"type"`
 }
 
 // RunnerChannelMessage8Type defines model for RunnerChannelMessage.8.Type.
@@ -4352,13 +4373,22 @@ type RunnerChannelMessage8Type string
 
 // RunnerChannelMessage9 defines model for .
 type RunnerChannelMessage9 struct {
-	EventId *string                   `json:"eventId,omitempty"`
-	Message string                    `json:"message"`
+	EventId string                    `json:"eventId"`
 	Type    RunnerChannelMessage9Type `json:"type"`
 }
 
 // RunnerChannelMessage9Type defines model for RunnerChannelMessage.9.Type.
 type RunnerChannelMessage9Type string
+
+// RunnerChannelMessage10 defines model for .
+type RunnerChannelMessage10 struct {
+	EventId *string                    `json:"eventId,omitempty"`
+	Message string                     `json:"message"`
+	Type    RunnerChannelMessage10Type `json:"type"`
+}
+
+// RunnerChannelMessage10Type defines model for RunnerChannelMessage.10.Type.
+type RunnerChannelMessage10Type string
 
 // RunnerChannelMetadata defines model for RunnerChannelMetadata.
 type RunnerChannelMetadata struct {
@@ -7239,6 +7269,32 @@ func (t *RunnerChannelMessage) FromRunnerChannelMessage9(v RunnerChannelMessage9
 
 // MergeRunnerChannelMessage9 performs a merge with any union data inside the RunnerChannelMessage, using the provided RunnerChannelMessage9
 func (t *RunnerChannelMessage) MergeRunnerChannelMessage9(v RunnerChannelMessage9) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRunnerChannelMessage10 returns the union data inside the RunnerChannelMessage as a RunnerChannelMessage10
+func (t RunnerChannelMessage) AsRunnerChannelMessage10() (RunnerChannelMessage10, error) {
+	var body RunnerChannelMessage10
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRunnerChannelMessage10 overwrites any union data inside the RunnerChannelMessage as the provided RunnerChannelMessage10
+func (t *RunnerChannelMessage) FromRunnerChannelMessage10(v RunnerChannelMessage10) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRunnerChannelMessage10 performs a merge with any union data inside the RunnerChannelMessage, using the provided RunnerChannelMessage10
+func (t *RunnerChannelMessage) MergeRunnerChannelMessage10(v RunnerChannelMessage10) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

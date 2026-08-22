@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.runner_channel_message_type_9_type import RunnerChannelMessageType9Type
-from ..types import UNSET, Unset
 
 
 
@@ -25,13 +24,11 @@ class RunnerChannelMessageType9:
     """ 
         Attributes:
             type_ (RunnerChannelMessageType9Type):
-            message (str):
-            event_id (str | Unset):
+            event_id (str):
      """
 
     type_: RunnerChannelMessageType9Type
-    message: str
-    event_id: str | Unset = UNSET
+    event_id: str
 
 
 
@@ -40,8 +37,6 @@ class RunnerChannelMessageType9:
     def to_dict(self) -> dict[str, Any]:
         type_ = self.type_.value
 
-        message = self.message
-
         event_id = self.event_id
 
 
@@ -49,10 +44,8 @@ class RunnerChannelMessageType9:
 
         field_dict.update({
             "type": type_,
-            "message": message,
+            "eventId": event_id,
         })
-        if event_id is not UNSET:
-            field_dict["eventId"] = event_id
 
         return field_dict
 
@@ -66,13 +59,10 @@ class RunnerChannelMessageType9:
 
 
 
-        message = d.pop("message")
-
-        event_id = d.pop("eventId", UNSET)
+        event_id = d.pop("eventId")
 
         runner_channel_message_type_9 = cls(
             type_=type_,
-            message=message,
             event_id=event_id,
         )
 

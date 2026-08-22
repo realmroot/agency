@@ -10,6 +10,7 @@ type RunnerScope = {
   organizationId: string
   projectId: string
   environmentId: string
+  commandAcknowledgement: boolean
 }
 
 type RunnerConnection = {
@@ -25,6 +26,16 @@ type PendingSandboxRequest = {
   timer: ReturnType<typeof setTimeout>
 }
 
+type PendingCommandRequest = {
+  connection: RunnerConnection
+  sessionId: string
+  requestId: string
+  commandJson: string
+  resolve: (accepted: boolean) => void
+  reject: (error: Error) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
 type PendingBackfillRequest = {
   runnerId: string
   resolve: (events: RelayedRunnerEvent[]) => void
@@ -36,6 +47,7 @@ export class RunnerPoolObject implements DurableObject {
   private readonly runners = new Map<string, RunnerConnection>()
   private readonly sessionRunners = new Map<string, string>()
   private readonly sessionBackfillRunners = new Map<string, string>()
+  private readonly pendingCommandRequests = new Map<string, PendingCommandRequest>()
   private readonly pendingSandboxRequests = new Map<string, PendingSandboxRequest>()
   private readonly pendingBackfillRequests = new Map<string, PendingBackfillRequest>()
 
@@ -73,6 +85,9 @@ export class RunnerPoolObject implements DurableObject {
     }
     const scope = runnerScopeFromUrl(url)
     const previous = this.runners.get(scope.runnerId)
+    if (previous) {
+      this.rejectPendingCommands(previous, 'runner channel superseded')
+    }
     if (previous?.socket.readyState === WebSocket.OPEN) {
       previous.socket.close(4000, 'Superseded runner channel')
     }
@@ -100,6 +115,7 @@ export class RunnerPoolObject implements DurableObject {
   }
 
   private closeRunner(connection: RunnerConnection) {
+    this.rejectPendingCommands(connection, 'runner channel closed')
     if (this.runners.get(connection.scope.runnerId) !== connection) {
       return
     }
@@ -129,6 +145,17 @@ export class RunnerPoolObject implements DurableObject {
       pending.reject(new Error('runner channel closed'))
       clearTimeout(pending.timer)
       this.pendingBackfillRequests.delete(requestId)
+    }
+  }
+
+  private rejectPendingCommands(connection: RunnerConnection, message: string) {
+    for (const [requestId, pending] of this.pendingCommandRequests) {
+      if (pending.connection !== connection) {
+        continue
+      }
+      pending.reject(new Error(message))
+      clearTimeout(pending.timer)
+      this.pendingCommandRequests.delete(requestId)
     }
   }
 
@@ -239,23 +266,74 @@ export class RunnerPoolObject implements DurableObject {
     )
   }
 
-  private async dispatch(body: { sessionId?: string; command?: unknown }): Promise<Response> {
+  private async dispatch(body: { sessionId?: string; command?: unknown; requestId?: unknown }): Promise<Response> {
     if (typeof body.sessionId !== 'string') {
       return Response.json({ active: false }, { status: 409 })
     }
-    const connection = this.connectionForBackfill(body.sessionId)
+    const connection = this.connectionForSession(body.sessionId)
     if (!connection || connection.socket.readyState !== WebSocket.OPEN) {
       return Response.json({ active: false }, { status: 409 })
     }
-    connection.socket.send(
-      JSON.stringify({
-        type: 'session.command',
-        sessionId: body.sessionId,
-        runnerId: connection.scope.runnerId,
-        command: body.command,
-      }),
-    )
-    return Response.json({ active: true }, { status: 202 })
+    if (!connection.scope.commandAcknowledgement) {
+      return Response.json(
+        { active: false, error: 'Runner must be upgraded to accept acknowledged commands' },
+        { status: 409 },
+      )
+    }
+    try {
+      const requestId =
+        typeof body.requestId === 'string' && body.requestId.length > 0 && body.requestId.length <= 160
+          ? body.requestId
+          : `command_${crypto.randomUUID()}`
+      const accepted = await this.sendCommandRequest(connection, body.sessionId, body.command, requestId)
+      return Response.json({ active: accepted }, { status: accepted ? 202 : 409 })
+    } catch {
+      return Response.json({ active: false }, { status: 409 })
+    }
+  }
+
+  private sendCommandRequest(
+    connection: RunnerConnection,
+    sessionId: string,
+    command: unknown,
+    requestId: string,
+  ): Promise<boolean> {
+    const pendingKey = commandRequestKey(sessionId, requestId)
+    const commandJson = JSON.stringify(command)
+    const existing = this.pendingCommandRequests.get(pendingKey)
+    if (existing) {
+      const reason =
+        existing.commandJson === commandJson ? 'runner command is already pending' : 'runner command id conflict'
+      return Promise.reject(new Error(reason))
+    }
+    return new Promise<boolean>((resolve, reject) => {
+      let pending: PendingCommandRequest
+      const timer = setTimeout(() => {
+        if (this.pendingCommandRequests.get(pendingKey) === pending) {
+          this.pendingCommandRequests.delete(pendingKey)
+        }
+        reject(new Error('runner command acknowledgement timed out'))
+      }, 5_000)
+      pending = { connection, sessionId, requestId, commandJson, resolve, reject, timer }
+      this.pendingCommandRequests.set(pendingKey, pending)
+      try {
+        connection.socket.send(
+          JSON.stringify({
+            type: 'session.command',
+            requestId,
+            sessionId,
+            runnerId: connection.scope.runnerId,
+            command,
+          }),
+        )
+      } catch (error) {
+        clearTimeout(timer)
+        if (this.pendingCommandRequests.get(pendingKey) === pending) {
+          this.pendingCommandRequests.delete(pendingKey)
+        }
+        reject(error instanceof Error ? error : new Error('runner command send failed'))
+      }
+    })
   }
 
   private async requestRunnerSandbox(body: {
@@ -429,6 +507,10 @@ export class RunnerPoolObject implements DurableObject {
     } catch {
       return
     }
+    if (frame.type === 'session.command.result') {
+      this.resolveCommandResponse(connection, frame)
+      return
+    }
     if (frame.type === 'sandbox.response') {
       this.resolveSandboxResponse(frame)
       return
@@ -450,6 +532,28 @@ export class RunnerPoolObject implements DurableObject {
       return
     }
     await this.handleRunnerEvent(connection.scope, frame)
+  }
+
+  private resolveCommandResponse(connection: RunnerConnection, record: Record<string, unknown>): void {
+    const requestId = typeof record.requestId === 'string' ? record.requestId : null
+    const sessionId = typeof record.sessionId === 'string' ? record.sessionId : null
+    const runnerId = typeof record.runnerId === 'string' ? record.runnerId : null
+    if (!requestId || !sessionId || runnerId !== connection.scope.runnerId) {
+      return
+    }
+    const pendingKey = commandRequestKey(sessionId, requestId)
+    const pending = this.pendingCommandRequests.get(pendingKey)
+    if (
+      !pending ||
+      pending.connection !== connection ||
+      pending.sessionId !== sessionId ||
+      pending.requestId !== requestId
+    ) {
+      return
+    }
+    clearTimeout(pending.timer)
+    this.pendingCommandRequests.delete(pendingKey)
+    pending.resolve(record.accepted === true)
   }
 
   private resolveSandboxResponse(record: Record<string, unknown>): void {
@@ -602,6 +706,10 @@ function requiredParam(url: URL, name: string) {
   return value
 }
 
+function commandRequestKey(sessionId: string, requestId: string) {
+  return `${sessionId}\u0000${requestId}`
+}
+
 function objectRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
@@ -612,5 +720,6 @@ function runnerScopeFromUrl(url: URL): RunnerScope {
     organizationId: requiredParam(url, 'organizationId'),
     projectId: requiredParam(url, 'projectId'),
     environmentId: requiredParam(url, 'environmentId'),
+    commandAcknowledgement: url.searchParams.get('commandAcknowledgement') === 'true',
   }
 }

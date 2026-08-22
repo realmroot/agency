@@ -374,6 +374,7 @@ async function connectRunnerChannel(c: Context<DepsEnv>) {
     auth.organization.id,
     auth.project.id,
     runner.environmentId,
+    runner.metadata.commandAcknowledgement === true,
   )
 }
 
@@ -384,6 +385,7 @@ function upgradeRunnerRelayChannel(
   organizationId: string,
   projectId: string,
   environmentId: string,
+  commandAcknowledgement: boolean,
 ) {
   const stub = env.RUNNER_POOL.get(env.RUNNER_POOL.idFromName(environmentId))
   const url = new URL('https://runner-pool/runner-connect')
@@ -391,6 +393,7 @@ function upgradeRunnerRelayChannel(
   url.searchParams.set('organizationId', organizationId)
   url.searchParams.set('projectId', projectId)
   url.searchParams.set('environmentId', environmentId)
+  url.searchParams.set('commandAcknowledgement', commandAcknowledgement ? 'true' : 'false')
   return stub.fetch(new Request(url, request))
 }
 

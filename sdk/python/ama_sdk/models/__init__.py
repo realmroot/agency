@@ -261,6 +261,8 @@ from .runner_auth_mode import RunnerAuthMode
 from .runner_channel_message_type_0 import RunnerChannelMessageType0
 from .runner_channel_message_type_0_type import RunnerChannelMessageType0Type
 from .runner_channel_message_type_1 import RunnerChannelMessageType1
+from .runner_channel_message_type_10 import RunnerChannelMessageType10
+from .runner_channel_message_type_10_type import RunnerChannelMessageType10Type
 from .runner_channel_message_type_1_type import RunnerChannelMessageType1Type
 from .runner_channel_message_type_2 import RunnerChannelMessageType2
 from .runner_channel_message_type_2_type import RunnerChannelMessageType2Type
@@ -788,6 +790,8 @@ __all__ = (
     "RunnerChannelMessageType0",
     "RunnerChannelMessageType0Type",
     "RunnerChannelMessageType1",
+    "RunnerChannelMessageType10",
+    "RunnerChannelMessageType10Type",
     "RunnerChannelMessageType1Type",
     "RunnerChannelMessageType2",
     "RunnerChannelMessageType2Type",

@@ -2102,6 +2102,9 @@
                   "session.command"
                 ]
               },
+              "requestId": {
+                "type": "string"
+              },
               "sessionId": {
                 "type": "string",
                 "example": "session_abc123"
@@ -2118,6 +2121,41 @@
               "type",
               "sessionId",
               "command"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "session.command.result"
+                ]
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": "string",
+                "example": "session_abc123"
+              },
+              "runnerId": {
+                "type": "string",
+                "example": "runner_abc123"
+              },
+              "accepted": {
+                "type": "boolean"
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "requestId",
+              "sessionId",
+              "accepted"
             ],
             "additionalProperties": false
           },
@@ -7189,6 +7227,11 @@
               "prompt"
             ],
             "example": "prompt"
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
           },
           "content": {
             "type": "string",

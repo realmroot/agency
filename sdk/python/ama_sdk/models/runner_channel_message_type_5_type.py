@@ -1,7 +1,7 @@
 from enum import Enum
 
 class RunnerChannelMessageType5Type(str, Enum):
-    SESSION_BACKFILL_REQUEST = "session.backfill_request"
+    SANDBOX_RESPONSE = "sandbox.response"
 
     def __str__(self) -> str:
         return str(self.value)

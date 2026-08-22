@@ -28,7 +28,7 @@ function bodyFields(source: string): string[] {
   const destructured = [...source.matchAll(/const \{([^}]+)\}\s*=\s*c\.req\.valid\('json'\)/gs)].flatMap((match) =>
     match[1]!
       .split(',')
-      .map((field) => field.trim())
+      .map((field) => field.trim().split(':', 1)[0]!.trim())
       .filter(Boolean),
   )
   return [...propertyAccess, ...destructured].sort()
@@ -80,6 +80,7 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
       'metadata',
       'prompt',
       'reason',
+      'requestId',
       'result',
       'spec',
       'state',
@@ -87,7 +88,7 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
 
     expect(schemaFields(doc, 'CreateSessionRequest')).toEqual(['metadata', 'prompt', 'spec'])
     expect(schemaFields(doc, 'UpdateSessionRequest')).toEqual(['archived', 'metadata', 'state'])
-    expect(schemaFields(doc, 'CreateSessionMessageRequest')).toEqual(['content', 'type'])
+    expect(schemaFields(doc, 'CreateSessionMessageRequest')).toEqual(['content', 'requestId', 'type'])
     expect(schemaFields(doc, 'SessionApprovalDecisionRequest')).toEqual(['decision', 'reason', 'result'])
   })
 })

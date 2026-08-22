@@ -30,12 +30,14 @@ class RunnerChannelMessageType2:
             type_ (RunnerChannelMessageType2Type):
             session_id (str):  Example: session_abc123.
             command (RunnerSessionCommand):
+            request_id (str | Unset):
             runner_id (str | Unset):  Example: runner_abc123.
      """
 
     type_: RunnerChannelMessageType2Type
     session_id: str
     command: RunnerSessionCommand
+    request_id: str | Unset = UNSET
     runner_id: str | Unset = UNSET
 
 
@@ -50,6 +52,8 @@ class RunnerChannelMessageType2:
 
         command = self.command.to_dict()
 
+        request_id = self.request_id
+
         runner_id = self.runner_id
 
 
@@ -60,6 +64,8 @@ class RunnerChannelMessageType2:
             "sessionId": session_id,
             "command": command,
         })
+        if request_id is not UNSET:
+            field_dict["requestId"] = request_id
         if runner_id is not UNSET:
             field_dict["runnerId"] = runner_id
 
@@ -83,12 +89,15 @@ class RunnerChannelMessageType2:
 
 
 
+        request_id = d.pop("requestId", UNSET)
+
         runner_id = d.pop("runnerId", UNSET)
 
         runner_channel_message_type_2 = cls(
             type_=type_,
             session_id=session_id,
             command=command,
+            request_id=request_id,
             runner_id=runner_id,
         )
 

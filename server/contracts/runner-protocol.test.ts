@@ -40,11 +40,20 @@ describe('runner protocol schemas', () => {
     expect(
       RunnerChannelMessageSchema.parse({
         type: 'session.command',
+        requestId: 'command_1',
         sessionId: 'session_1',
         runnerId: 'runner_1',
         command,
       }),
     ).toMatchObject({ command })
+    expect(
+      RunnerChannelMessageSchema.parse({
+        type: 'session.command',
+        sessionId: 'legacy_session',
+        runnerId: 'legacy_runner',
+        command,
+      }),
+    ).toMatchObject({ command, sessionId: 'legacy_session' })
     expect(RunnerSessionCommandSchema.safeParse([]).success).toBe(false)
   })
 
@@ -72,7 +81,27 @@ describe('runner protocol schemas', () => {
     const variants = [
       { type: 'runner.channel.accepted', runnerId: 'runner_1', environmentId: 'env_1' },
       { type: 'work.assigned', runnerId: 'runner_1', lease: { id: 'lease_1' }, workItem: { id: 'work_1' } },
-      { type: 'session.command', sessionId: 'session_1', command: { type: 'send', message: 'hi' } },
+      {
+        type: 'session.command',
+        requestId: 'command_1',
+        sessionId: 'session_1',
+        command: { type: 'send', message: 'hi' },
+      },
+      {
+        type: 'session.command.result',
+        requestId: 'command_1',
+        sessionId: 'session_1',
+        runnerId: 'runner_1',
+        accepted: true,
+      },
+      {
+        type: 'session.command.result',
+        requestId: 'command_2',
+        sessionId: 'session_1',
+        runnerId: 'runner_1',
+        accepted: false,
+        error: 'inactive session',
+      },
       { type: 'sandbox.request', requestId: 'req_1', sessionId: 'session_1', request: { type: 'sandbox.stop' } },
       { type: 'sandbox.response', requestId: 'req_1', sessionId: 'session_1', ok: true, result: { ok: true } },
       { type: 'sandbox.response', requestId: 'req_1', sessionId: 'session_1', ok: false, error: 'failed' },
@@ -99,9 +128,19 @@ describe('runner protocol schemas', () => {
   })
 
   it('rejects malformed runner channel envelopes', () => {
-    expect(RunnerChannelMessageSchema.safeParse({ type: 'session.command', command: { type: 'send' } }).success).toBe(
-      false,
-    )
+    expect(
+      RunnerChannelMessageSchema.safeParse({
+        type: 'session.command',
+        command: { type: 'send' },
+      }).success,
+    ).toBe(false)
+    expect(
+      RunnerChannelMessageSchema.safeParse({
+        type: 'session.command.result',
+        requestId: 'command_1',
+        sessionId: 'session_1',
+      }).success,
+    ).toBe(false)
     expect(
       RunnerChannelMessageSchema.safeParse({ type: 'sandbox.request', requestId: 'req_1', sessionId: 'session_1' })
         .success,

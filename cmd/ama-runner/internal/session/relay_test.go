@@ -38,6 +38,19 @@ type fakeChannel struct {
 	autoAck bool
 }
 
+type failFirstWriteChannel struct {
+	*fakeChannel
+	failed bool
+}
+
+func (ch *failFirstWriteChannel) WriteJSON(ctx context.Context, value any) error {
+	if !ch.failed {
+		ch.failed = true
+		return errors.New("acknowledgement lost")
+	}
+	return ch.fakeChannel.WriteJSON(ctx, value)
+}
+
 func newFakeChannel(reads ...any) *fakeChannel {
 	channel := &fakeChannel{reads: make(chan any, 16), autoAck: true}
 	for _, read := range reads {
@@ -147,18 +160,27 @@ func TestRelayEventWritesSessionTaggedFrame(t *testing.T) {
 
 func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
 	workDir := t.TempDir()
+	ch := newFakeChannel()
 	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
 
 	var received string
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+		if err != nil {
+			t.Fatalf("read prompt log during delivery: %v", err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("prompt was recorded before bridge delivery succeeded: %#v", events)
+		}
 		received = string(command)
 		return nil
 	})
 
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), ch, protocol.RunnerChannelMessage{
 		Type:      "session.command",
+		RequestId: ptr("command_1"),
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"build it"}`),
 	})
@@ -182,10 +204,96 @@ func TestRelayRoutesCommandToRegisteredSession(t *testing.T) {
 	if block["text"] != "build it" {
 		t.Fatalf("expected live prompt text recorded, got %#v", block)
 	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["type"] != "session.command.result" || ch.writes[0]["requestId"] != "command_1" || ch.writes[0]["accepted"] != true {
+		t.Fatalf("expected accepted command acknowledgement, got %#v", ch.writes)
+	}
+}
+
+func TestRelayAcknowledgesRetriedDeliveredCommandWithoutDuplicateDeliveryOrPrompt(t *testing.T) {
+	workDir := t.TempDir()
+	ch := &failFirstWriteChannel{fakeChannel: newFakeChannel()}
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	router := NewHostHandle("session_1")
+	hub.Register("session_1", router)
+
+	var deliveries int
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		deliveries += 1
+		return nil
+	})
+	message := protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		RequestId: ptr("command_retry_1"),
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"build it once"}`),
+	}
+
+	hub.routeCommand(context.Background(), ch, message)
+	hub.routeCommand(context.Background(), ch, message)
+
+	if deliveries != 1 {
+		t.Fatalf("expected one bridge delivery across an acknowledgement retry, got %d", deliveries)
+	}
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read prompt log: %v", err)
+	}
+	if len(events) != 1 || events[0].Type != "message.completed" {
+		t.Fatalf("expected one recorded prompt across the retry, got %#v", events)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["requestId"] != "command_retry_1" || ch.writes[0]["accepted"] != true {
+		t.Fatalf("expected the retried command to receive an accepted acknowledgement, got %#v", ch.writes)
+	}
+}
+
+func TestRelayRejectsRequestIDReuseWithDifferentCommandContent(t *testing.T) {
+	workDir := t.TempDir()
+	ch := newFakeChannel()
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	router := NewHostHandle("session_1")
+	hub.Register("session_1", router)
+
+	var deliveries int
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		deliveries += 1
+		return nil
+	})
+	first := protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		RequestId: ptr("command_reused"),
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"first content"}`),
+	}
+	second := first
+	second.Command = protocol.RunnerSessionCommand(`{"type":"send","message":"different content"}`)
+
+	hub.routeCommand(context.Background(), ch, first)
+	hub.routeCommand(context.Background(), ch, second)
+
+	if deliveries != 1 {
+		t.Fatalf("expected reused request id with different content not to reach the bridge, got %d deliveries", deliveries)
+	}
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read prompt log: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected only the original prompt to be recorded, got %#v", events)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 2 || ch.writes[0]["accepted"] != true || ch.writes[1]["accepted"] != false {
+		t.Fatalf("expected accepted original and rejected conflicting reuse, got %#v", ch.writes)
+	}
 }
 
 func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
 	workDir := t.TempDir()
+	ch := newFakeChannel()
 	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
 	router := NewHostHandle("session_1")
 	hub.Register("session_1", router)
@@ -193,8 +301,9 @@ func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
 		return errors.New("stdin closed")
 	})
 
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), ch, protocol.RunnerChannelMessage{
 		Type:      "session.command",
+		RequestId: ptr("command_failed"),
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"build it"}`),
 	})
@@ -203,17 +312,107 @@ func TestRelayRecordsRuntimeErrorWhenLivePromptForwardFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read live prompt events: %v", err)
 	}
-	if len(events) != 2 {
-		t.Fatalf("expected prompt plus runtime error, got %d events", len(events))
+	if len(events) != 1 {
+		t.Fatalf("expected only runtime error after failed delivery, got %d events", len(events))
 	}
-	if events[0].Type != "message.completed" || events[1].Type != "runtime.error" {
-		t.Fatalf("expected prompt then runtime error, got %s then %s", events[0].Type, events[1].Type)
+	if events[0].Type != "runtime.error" {
+		t.Fatalf("expected runtime error without a user prompt, got %s", events[0].Type)
 	}
-	if events[0].Sequence != 1 || events[1].Sequence != 2 {
-		t.Fatalf("expected monotonic sequences 1,2 got %d,%d", events[0].Sequence, events[1].Sequence)
+	if events[0].Sequence != 1 {
+		t.Fatalf("expected first sequence to be runtime error, got %d", events[0].Sequence)
 	}
-	if events[1].Payload["code"] != "runtime_prompt_delivery_failed" {
-		t.Fatalf("expected runtime prompt delivery error code, got %#v", events[1].Payload)
+	if events[0].Payload["code"] != "runtime_prompt_delivery_failed" {
+		t.Fatalf("expected runtime prompt delivery error code, got %#v", events[0].Payload)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["requestId"] != "command_failed" || ch.writes[0]["accepted"] != false {
+		t.Fatalf("expected rejected command acknowledgement, got %#v", ch.writes)
+	}
+}
+
+func TestRelayRejectsAcknowledgedCommandBeforeBridgeReadyWithoutLegacyBuffering(t *testing.T) {
+	workDir := t.TempDir()
+	ch := newFakeChannel()
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	router := NewHostHandle("session_1")
+	hub.Register("session_1", router)
+
+	hub.routeCommand(context.Background(), ch, protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		RequestId: ptr("command_not_ready"),
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"must not buffer"}`),
+	})
+
+	var received []string
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		received = append(received, string(command))
+		return nil
+	})
+	if len(received) != 0 {
+		t.Fatalf("acknowledged command was incorrectly buffered through the legacy path: %v", received)
+	}
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read prompt log: %v", err)
+	}
+	if len(events) != 1 || events[0].Type != "runtime.error" {
+		t.Fatalf("expected only the failed-delivery runtime error, got %#v", events)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["accepted"] != false {
+		t.Fatalf("expected rejected acknowledgement while bridge is not ready, got %#v", ch.writes)
+	}
+}
+
+func TestRelayKeepsLegacyCommandBufferingWithoutRequestID(t *testing.T) {
+	workDir := t.TempDir()
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	router := NewHostHandle("session_1")
+	hub.Register("session_1", router)
+
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"legacy buffered prompt"}`),
+	})
+
+	var received string
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		received = string(command)
+		return nil
+	})
+	if received != `{"type":"send","message":"legacy buffered prompt"}` {
+		t.Fatalf("expected legacy command to flush after bridge registration, got %q", received)
+	}
+}
+
+func TestRelayRejectsCommandForHandlerWithoutCommandSupport(t *testing.T) {
+	workDir := t.TempDir()
+	ch := newFakeChannel()
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	hub.Register("session_1", &closeCountingHandle{})
+
+	hub.routeCommand(context.Background(), ch, protocol.RunnerChannelMessage{
+		Type:      "session.command",
+		RequestId: ptr("command_unsupported"),
+		SessionId: ptr("session_1"),
+		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"must not record"}`),
+	})
+
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "session_1")))
+	if err != nil {
+		t.Fatalf("read prompt log: %v", err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("unsupported handler recorded a user prompt: %#v", events)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["accepted"] != false {
+		t.Fatalf("expected rejected command acknowledgement, got %#v", ch.writes)
 	}
 }
 
@@ -228,7 +427,7 @@ func TestRelayRoutesStopCommandToRegisteredSession(t *testing.T) {
 		return nil
 	})
 
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
 		Type:      "session.command",
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"abort","reason":"user cancelled"}`),
@@ -250,7 +449,7 @@ func TestRelayRoutesPermissionCommandToRegisteredSession(t *testing.T) {
 		return nil
 	})
 
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
 		Type:      "session.command",
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"permissionDecision","permissionId":"perm_3","allowed":true}`),
@@ -262,19 +461,33 @@ func TestRelayRoutesPermissionCommandToRegisteredSession(t *testing.T) {
 }
 
 func TestRelayDropsCommandForUnregisteredSession(t *testing.T) {
-	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
-	// No session registered — must not panic
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	workDir := t.TempDir()
+	ch := newFakeChannel()
+	hub := NewRelay(&fakeOpener{}, "runner_1", workDir)
+	hub.routeCommand(context.Background(), ch, protocol.RunnerChannelMessage{
 		Type:      "session.command",
+		RequestId: ptr("command_inactive"),
 		SessionId: ptr("ghost_session"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":"hello"}`),
 	})
+	events, err := ReadEventLog(EventLogPath(filepath.Join(workDir, "sessions", "ghost_session")))
+	if err != nil {
+		t.Fatalf("read inactive session log: %v", err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("inactive session recorded a user prompt: %#v", events)
+	}
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if len(ch.writes) != 1 || ch.writes[0]["requestId"] != "command_inactive" || ch.writes[0]["accepted"] != false {
+		t.Fatalf("expected inactive-session rejection, got %#v", ch.writes)
+	}
 }
 
 func TestRelayDropsCommandWithEmptySessionID(t *testing.T) {
 	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	// A command with no sessionId must be silently dropped
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
 		Type:    "session.command",
 		Command: protocol.RunnerSessionCommand(`{"type":"send","message":"hello"}`),
 	})
@@ -289,7 +502,7 @@ func TestRelayRoutesUnknownCommandTypeOpaque(t *testing.T) {
 		received = string(command)
 		return nil
 	})
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
 		Type:      "session.command",
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"unknown_cmd","payload":{"keep":true}}`),
@@ -308,7 +521,7 @@ func TestRelayRoutesPromptCommandWithEmptyMessageOpaque(t *testing.T) {
 		received = append(received, string(command))
 		return nil
 	})
-	hub.routeCommand(protocol.RunnerChannelMessage{
+	hub.routeCommand(context.Background(), newFakeChannel(), protocol.RunnerChannelMessage{
 		Type:      "session.command",
 		SessionId: ptr("session_1"),
 		Command:   protocol.RunnerSessionCommand(`{"type":"send","message":""}`),

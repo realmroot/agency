@@ -9,7 +9,10 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.runner_channel_message_type_8_type import RunnerChannelMessageType8Type
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.runner_opaque_json_object import RunnerOpaqueJsonObject
 
 
 
@@ -24,27 +27,33 @@ class RunnerChannelMessageType8:
     """ 
         Attributes:
             type_ (RunnerChannelMessageType8Type):
-            event_id (str):
+            session_id (str):  Example: session_abc123.
+            record (RunnerOpaqueJsonObject):
      """
 
     type_: RunnerChannelMessageType8Type
-    event_id: str
+    session_id: str
+    record: RunnerOpaqueJsonObject
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.runner_opaque_json_object import RunnerOpaqueJsonObject
         type_ = self.type_.value
 
-        event_id = self.event_id
+        session_id = self.session_id
+
+        record = self.record.to_dict()
 
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
             "type": type_,
-            "eventId": event_id,
+            "sessionId": session_id,
+            "record": record,
         })
 
         return field_dict
@@ -53,17 +62,24 @@ class RunnerChannelMessageType8:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.runner_opaque_json_object import RunnerOpaqueJsonObject
         d = dict(src_dict)
         type_ = RunnerChannelMessageType8Type(d.pop("type"))
 
 
 
 
-        event_id = d.pop("eventId")
+        session_id = d.pop("sessionId")
+
+        record = RunnerOpaqueJsonObject.from_dict(d.pop("record"))
+
+
+
 
         runner_channel_message_type_8 = cls(
             type_=type_,
-            event_id=event_id,
+            session_id=session_id,
+            record=record,
         )
 
         return runner_channel_message_type_8

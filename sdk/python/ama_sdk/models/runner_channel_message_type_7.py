@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.runner_channel_message_type_7_type import RunnerChannelMessageType7Type
+from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
@@ -27,13 +28,17 @@ class RunnerChannelMessageType7:
     """ 
         Attributes:
             type_ (RunnerChannelMessageType7Type):
+            event_id (str):
             session_id (str):  Example: session_abc123.
-            record (RunnerOpaqueJsonObject):
+            events (list[RunnerOpaqueJsonObject]):
+            error (str | Unset):
      """
 
     type_: RunnerChannelMessageType7Type
+    event_id: str
     session_id: str
-    record: RunnerOpaqueJsonObject
+    events: list[RunnerOpaqueJsonObject]
+    error: str | Unset = UNSET
 
 
 
@@ -43,18 +48,30 @@ class RunnerChannelMessageType7:
         from ..models.runner_opaque_json_object import RunnerOpaqueJsonObject
         type_ = self.type_.value
 
+        event_id = self.event_id
+
         session_id = self.session_id
 
-        record = self.record.to_dict()
+        events = []
+        for events_item_data in self.events:
+            events_item = events_item_data.to_dict()
+            events.append(events_item)
+
+
+
+        error = self.error
 
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
             "type": type_,
+            "eventId": event_id,
             "sessionId": session_id,
-            "record": record,
+            "events": events,
         })
+        if error is not UNSET:
+            field_dict["error"] = error
 
         return field_dict
 
@@ -69,17 +86,28 @@ class RunnerChannelMessageType7:
 
 
 
+        event_id = d.pop("eventId")
+
         session_id = d.pop("sessionId")
 
-        record = RunnerOpaqueJsonObject.from_dict(d.pop("record"))
+        events = []
+        _events = d.pop("events")
+        for events_item_data in (_events):
+            events_item = RunnerOpaqueJsonObject.from_dict(events_item_data)
 
 
 
+            events.append(events_item)
+
+
+        error = d.pop("error", UNSET)
 
         runner_channel_message_type_7 = cls(
             type_=type_,
+            event_id=event_id,
             session_id=session_id,
-            record=record,
+            events=events,
+            error=error,
         )
 
         return runner_channel_message_type_7
