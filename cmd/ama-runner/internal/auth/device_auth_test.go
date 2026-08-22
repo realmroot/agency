@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/testutil"
 )
 
 const testRunnerScopes = "openid profile email offline_access runners:register runners:heartbeat runners:work runners:lease"
@@ -36,12 +38,15 @@ var testRSAKey = sync.OnceValue(func() *rsa.PrivateKey {
 
 func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 	// [spec: runners/auth-binding]
+	lockRunnerCallbackPort(t)
 	credentialPath := filepath.Join(t.TempDir(), "ama-runner", "credentials.json")
 	fixture := newOIDCLoginFixture(t)
 	defer fixture.Close()
-	output := &lockedBuffer{}
+	output := newLockedBuffer()
 	result := make(chan loginResult, 1)
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		login, err := LoginWithAuthorizationCode(context.Background(), OAuthClient{HTTPClient: fixture.Client()}, AuthorizationCodeLoginOptions{
 			APIServer:      "https://ama.example.test/",
 			Issuer:         fixture.URL(),
@@ -54,9 +59,14 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 		result <- loginResult{Result: login, Err: err}
 	}()
 
-	authorize := waitForAuthorizationURL(t, output)
+	authorize := waitForAuthorizationURL(t, output, done)
 	assertAuthorizationURL(t, authorize, fixture.URL()+"/authorize")
 	fixture.SetNonce(authorize.Query().Get("nonce"))
+	notCallback := callbackURL(authorize)
+	notCallback.Path = "/not-the-oauth-callback"
+	if status, _ := getLoopback(t, notCallback); status != http.StatusNotFound {
+		t.Fatalf("unexpected non-callback status %d", status)
+	}
 	callback := callbackURL(authorize)
 	query := callback.Query()
 	query.Set("code", "one-time-code")
@@ -118,15 +128,18 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 }
 
 func TestLoopbackWrongStateDoesNotTerminateLogin(t *testing.T) {
+	lockRunnerCallbackPort(t)
 	fixture := newOIDCLoginFixture(t)
 	defer fixture.Close()
-	output := &lockedBuffer{}
+	output := newLockedBuffer()
 	result := make(chan error, 1)
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_, err := LoginWithAuthorizationCode(context.Background(), OAuthClient{HTTPClient: fixture.Client()}, loginOptions(fixture, filepath.Join(t.TempDir(), "credentials.json"), output))
 		result <- err
 	}()
-	authorize := waitForAuthorizationURL(t, output)
+	authorize := waitForAuthorizationURL(t, output, done)
 	fixture.SetNonce(authorize.Query().Get("nonce"))
 
 	wrong := callbackURL(authorize)
@@ -166,6 +179,7 @@ func TestLoopbackWrongStateDoesNotTerminateLogin(t *testing.T) {
 }
 
 func TestLoopbackCallbackErrorsFailClosed(t *testing.T) {
+	lockRunnerCallbackPort(t)
 	cases := []struct {
 		name  string
 		query func(url.Values, string)
@@ -176,6 +190,10 @@ func TestLoopbackCallbackErrorsFailClosed(t *testing.T) {
 			query.Set("error", "access_denied")
 			query.Set("error_description", "operator denied access")
 		}, want: "OIDC authorization failed: access_denied: operator denied access"},
+		{name: "OAuth error without description", query: func(query url.Values, state string) {
+			query.Set("state", state)
+			query.Set("error", "access_denied")
+		}, want: "OIDC authorization failed: access_denied"},
 		{name: "missing code", query: func(query url.Values, state string) { query.Set("state", state) }, want: "OIDC callback did not include an authorization code"},
 		{name: "issuer mismatch", query: func(query url.Values, state string) {
 			query.Set("state", state)
@@ -187,13 +205,15 @@ func TestLoopbackCallbackErrorsFailClosed(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			fixture := newOIDCLoginFixture(t)
 			defer fixture.Close()
-			output := &lockedBuffer{}
+			output := newLockedBuffer()
 			result := make(chan error, 1)
+			done := make(chan struct{})
 			go func() {
+				defer close(done)
 				_, err := LoginWithAuthorizationCode(context.Background(), OAuthClient{HTTPClient: fixture.Client()}, loginOptions(fixture, filepath.Join(t.TempDir(), "credentials.json"), output))
 				result <- err
 			}()
-			authorize := waitForAuthorizationURL(t, output)
+			authorize := waitForAuthorizationURL(t, output, done)
 			callback := callbackURL(authorize)
 			query := callback.Query()
 			testCase.query(query, authorize.Query().Get("state"))
@@ -214,6 +234,7 @@ func TestLoopbackCallbackErrorsFailClosed(t *testing.T) {
 }
 
 func TestLoopbackPortOccupiedTimeoutAndRelease(t *testing.T) {
+	lockRunnerCallbackPort(t)
 	t.Run("occupied", func(t *testing.T) {
 		fixture := newOIDCLoginFixture(t)
 		defer fixture.Close()
@@ -279,15 +300,74 @@ func TestValidateIDTokenRequiresNonceSignatureIssuerAndAudience(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("malformed compact token", func(t *testing.T) {
+		_, err := (OAuthClient{HTTPClient: fixture.Client()}).validateIDToken(t.Context(), metadata, "not-a-jwt", "runner-client", "expected-nonce")
+		if err == nil || !strings.Contains(err.Error(), "did not include an id token") {
+			t.Fatalf("expected malformed compact token error, got %v", err)
+		}
+	})
+
+	t.Run("invalid JOSE header", func(t *testing.T) {
+		token := testSignedRawIDToken([]byte(`{"alg":"HS256","kid":"test-key"}`), mustJSON(base), testRSAKey())
+		_, err := (OAuthClient{HTTPClient: fixture.Client()}).validateIDToken(t.Context(), metadata, token, "runner-client", "expected-nonce")
+		if err == nil || !strings.Contains(err.Error(), "header is invalid") {
+			t.Fatalf("expected invalid JOSE header error, got %v", err)
+		}
+	})
+
+	t.Run("unavailable signing key", func(t *testing.T) {
+		token := testSignedRawIDToken([]byte(`{"alg":"RS256","kid":"unknown-key"}`), mustJSON(base), testRSAKey())
+		_, err := (OAuthClient{HTTPClient: fixture.Client()}).validateIDToken(t.Context(), metadata, token, "runner-client", "expected-nonce")
+		if err == nil || !strings.Contains(err.Error(), "signing key is unavailable") {
+			t.Fatalf("expected unavailable signing key error, got %v", err)
+		}
+	})
+
+	t.Run("invalid signature encoding", func(t *testing.T) {
+		parts := strings.Split(valid, ".")
+		parts[2] = "*"
+		_, err := (OAuthClient{HTTPClient: fixture.Client()}).validateIDToken(t.Context(), metadata, strings.Join(parts, "."), "runner-client", "expected-nonce")
+		if err == nil || !strings.Contains(err.Error(), "signature is invalid") {
+			t.Fatalf("expected invalid signature encoding error, got %v", err)
+		}
+	})
+
+	t.Run("malformed signed claims", func(t *testing.T) {
+		token := testSignedRawIDToken([]byte(`{"alg":"RS256","kid":"test-key"}`), []byte("{"), testRSAKey())
+		_, err := (OAuthClient{HTTPClient: fixture.Client()}).validateIDToken(t.Context(), metadata, token, "runner-client", "expected-nonce")
+		if err == nil || !strings.Contains(err.Error(), "claims are invalid") {
+			t.Fatalf("expected malformed signed claims error, got %v", err)
+		}
+	})
 }
 
 func TestAuthorizationCodeAndDiscoveryProtocolFailures(t *testing.T) {
+	if _, err := LoginWithAuthorizationCode(t.Context(), OAuthClient{}, AuthorizationCodeLoginOptions{}); err == nil || !strings.Contains(err.Error(), "OIDC metadata") {
+		t.Fatalf("expected missing published OIDC settings error, got %v", err)
+	}
+
 	t.Run("incomplete metadata", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"issuer":"issuer"}`)) }))
 		defer server.Close()
 		_, err := (OAuthClient{HTTPClient: server.Client()}).Discover(t.Context(), server.URL)
 		if err == nil || !strings.Contains(err.Error(), "incomplete or mismatched") {
 			t.Fatalf("expected incomplete metadata error, got %v", err)
+		}
+	})
+
+	t.Run("unsafe metadata endpoint", func(t *testing.T) {
+		var server *httptest.Server
+		server = httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(response).Encode(map[string]string{
+				"issuer": server.URL, "authorization_endpoint": "http://identity.example.test/authorize",
+				"token_endpoint": server.URL + "/token", "jwks_uri": server.URL + "/jwks",
+			})
+		}))
+		defer server.Close()
+		_, err := (OAuthClient{HTTPClient: server.Client()}).Discover(t.Context(), server.URL)
+		if err == nil || !strings.Contains(err.Error(), "unsafe endpoint") {
+			t.Fatalf("expected unsafe discovery endpoint error, got %v", err)
 		}
 	})
 
@@ -304,6 +384,113 @@ func TestAuthorizationCodeAndDiscoveryProtocolFailures(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestOAuthClientPropagatesTransportAndProviderErrors(t *testing.T) {
+	t.Run("structured OAuth error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			response.WriteHeader(http.StatusBadRequest)
+			_, _ = response.Write([]byte(`{"error":"invalid_grant","error_description":"refresh expired"}`))
+		}))
+		defer server.Close()
+
+		_, err := (OAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner-client", "expired", "")
+		var tokenErr oauthTokenError
+		if !errors.As(err, &tokenErr) || tokenErr.Code != "invalid_grant" || tokenErr.Description != "refresh expired" || tokenErr.Error() != "refresh expired" {
+			t.Fatalf("unexpected structured OAuth error %#v from %v", tokenErr, err)
+		}
+	})
+
+	t.Run("unstructured provider status", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			response.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = response.Write([]byte("provider unavailable"))
+		}))
+		defer server.Close()
+
+		_, err := (OAuthClient{HTTPClient: server.Client()}).Discover(t.Context(), server.URL)
+		var statusErr oidcStatusError
+		if !errors.As(err, &statusErr) || statusErr.Path != "/.well-known/openid-configuration" || statusErr.Status != http.StatusServiceUnavailable {
+			t.Fatalf("unexpected OIDC status error %#v from %v", statusErr, err)
+		}
+		if statusErr.Error() != "OIDC /.well-known/openid-configuration failed with status 503" {
+			t.Fatalf("unexpected OIDC status message %q", statusErr.Error())
+		}
+	})
+
+	t.Run("invalid successful JSON", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			_, _ = response.Write([]byte("{"))
+		}))
+		defer server.Close()
+		if _, err := (OAuthClient{HTTPClient: server.Client()}).Discover(t.Context(), server.URL); err == nil {
+			t.Fatal("expected malformed successful discovery response to fail")
+		}
+	})
+
+	t.Run("transport error", func(t *testing.T) {
+		expected := errors.New("identity provider offline")
+		client := OAuthClient{HTTPClient: &http.Client{Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+			return nil, expected
+		})}}
+		if _, err := client.Discover(t.Context(), "https://identity.example.test"); !errors.Is(err, expected) {
+			t.Fatalf("expected transport error propagation, got %v", err)
+		}
+	})
+
+	t.Run("response read error", func(t *testing.T) {
+		expected := errors.New("response body interrupted")
+		client := OAuthClient{HTTPClient: &http.Client{Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(failingReader{err: expected}),
+				Header:     make(http.Header),
+			}, nil
+		})}}
+		if _, err := client.Discover(t.Context(), "https://identity.example.test"); !errors.Is(err, expected) {
+			t.Fatalf("expected response read error propagation, got %v", err)
+		}
+	})
+
+	t.Run("default HTTP client", func(t *testing.T) {
+		var server *httptest.Server
+		server = httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(response).Encode(map[string]string{
+				"issuer": server.URL, "authorization_endpoint": server.URL + "/authorize",
+				"token_endpoint": server.URL + "/token", "jwks_uri": server.URL + "/jwks",
+			})
+		}))
+		defer server.Close()
+		metadata, err := (OAuthClient{}).Discover(t.Context(), server.URL)
+		if err != nil || metadata.Issuer != server.URL {
+			t.Fatalf("expected default HTTP client discovery, metadata=%#v err=%v", metadata, err)
+		}
+	})
+}
+
+func TestOIDCHelpersHandleBoundaryValues(t *testing.T) {
+	if got := tokenAudiences(json.RawMessage(`{"unexpected":true}`)); got != nil {
+		t.Fatalf("invalid audience shape should not produce audiences, got %#v", got)
+	}
+	if got := expiresAt(0); got != "" {
+		t.Fatalf("non-positive expiry should be absent, got %q", got)
+	}
+	if got := errorDescription(tokenResponse{Error: "invalid_grant"}); got != "invalid_grant" {
+		t.Fatalf("OAuth code fallback = %q", got)
+	}
+	if got := errorDescription(tokenResponse{}); got != "provider_error" {
+		t.Fatalf("empty provider error fallback = %q", got)
+	}
+	if _, err := buildAuthorizationURL("http://[::1", AuthorizationCodeLoginOptions{}, "state", "verifier", "nonce"); err == nil {
+		t.Fatal("expected invalid authorization endpoint to fail parsing")
+	}
+	var response map[string]any
+	if err := (OAuthClient{}).getJSON(t.Context(), "http://identity.example.test/invalid url", &response); err == nil {
+		t.Fatal("expected invalid discovery request URL to fail")
+	}
+	if err := (OAuthClient{}).postForm(t.Context(), "http://identity.example.test/invalid url", url.Values{}, &response); err == nil {
+		t.Fatal("expected invalid token request URL to fail")
+	}
 }
 
 func TestRefreshTokenRejectsProtocolFailures(t *testing.T) {
@@ -453,23 +640,24 @@ func assertAuthorizationURL(t *testing.T, authorize *url.URL, endpoint string) {
 	}
 }
 
-func waitForAuthorizationURL(t *testing.T, output *lockedBuffer) *url.URL {
+func waitForAuthorizationURL(t *testing.T, output *lockedBuffer, loginDone <-chan struct{}) *url.URL {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		text := output.String()
-		if index := strings.Index(text, "Open: "); index >= 0 {
-			line := strings.TrimSpace(strings.SplitN(text[index+len("Open: "):], "\n", 2)[0])
-			parsed, err := url.Parse(line)
-			if err != nil {
-				t.Fatal(err)
-			}
-			return parsed
-		}
-		time.Sleep(time.Millisecond)
+	select {
+	case <-output.Ready():
+	case <-loginDone:
+		t.Fatalf("login terminated before printing authorization URL: %s", output.String())
 	}
-	t.Fatalf("authorization URL was not printed: %s", output.String())
-	return nil
+	text := output.String()
+	index := strings.Index(text, "Open: ")
+	if index < 0 {
+		t.Fatalf("authorization output did not contain URL: %s", text)
+	}
+	line := strings.TrimSpace(strings.SplitN(text[index+len("Open: "):], "\n", 2)[0])
+	parsed, err := url.Parse(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parsed
 }
 
 func callbackURL(authorize *url.URL) *url.URL {
@@ -507,14 +695,22 @@ func waitForCallbackPortRelease(t *testing.T) {
 }
 
 type lockedBuffer struct {
-	mu sync.Mutex
-	b  bytes.Buffer
+	mu        sync.Mutex
+	b         bytes.Buffer
+	ready     chan struct{}
+	readyOnce sync.Once
+}
+
+func newLockedBuffer() *lockedBuffer {
+	return &lockedBuffer{ready: make(chan struct{})}
 }
 
 func (buffer *lockedBuffer) Write(data []byte) (int, error) {
 	buffer.mu.Lock()
 	defer buffer.mu.Unlock()
-	return buffer.b.Write(data)
+	written, err := buffer.b.Write(data)
+	buffer.readyOnce.Do(func() { close(buffer.ready) })
+	return written, err
 }
 func (buffer *lockedBuffer) String() string {
 	buffer.mu.Lock()
@@ -522,9 +718,34 @@ func (buffer *lockedBuffer) String() string {
 	return buffer.b.String()
 }
 
+func (buffer *lockedBuffer) Ready() <-chan struct{} {
+	return buffer.ready
+}
+
 type loginResult struct {
 	Result AuthorizationCodeLoginResult
 	Err    error
+}
+
+func lockRunnerCallbackPort(t *testing.T) {
+	t.Helper()
+	release, err := testutil.AcquireRunnerCallbackTestLock(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := release(); err != nil {
+			t.Errorf("release runner callback test lock: %v", err)
+		}
+	})
+}
+
+type failingReader struct {
+	err error
+}
+
+func (reader failingReader) Read([]byte) (int, error) {
+	return 0, reader.err
 }
 
 func testJWKS() map[string]any {
@@ -536,12 +757,12 @@ func testJWKS() map[string]any {
 }
 
 func testSignedIDToken(claims map[string]any, key *rsa.PrivateKey) string {
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","kid":"test-key"}`))
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		panic(err)
-	}
-	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	return testSignedRawIDToken([]byte(`{"alg":"RS256","kid":"test-key"}`), mustJSON(claims), key)
+}
+
+func testSignedRawIDToken(headerJSON []byte, payloadJSON []byte, key *rsa.PrivateKey) string {
+	header := base64.RawURLEncoding.EncodeToString(headerJSON)
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payloadJSON)
 	signed := header + "." + encodedPayload
 	digest := sha256.Sum256([]byte(signed))
 	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
@@ -549,6 +770,14 @@ func testSignedIDToken(claims map[string]any, key *rsa.PrivateKey) string {
 		panic(err)
 	}
 	return signed + "." + base64.RawURLEncoding.EncodeToString(signature)
+}
+
+func mustJSON(value any) []byte {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
 }
 
 func cloneClaims(source map[string]any, replacements ...any) map[string]any {

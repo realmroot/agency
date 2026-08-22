@@ -20,6 +20,7 @@ import (
 	"time"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/testutil"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
 )
 
@@ -106,6 +107,7 @@ func TestWriterOrDiscard(t *testing.T) {
 }
 
 func TestRunLoginCompletesLoopbackPKCEAndStoresToken(t *testing.T) {
+	lockRunnerCallbackPort(t)
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	output := &rootLockedBuffer{}
 	var nonceMu sync.Mutex
@@ -208,6 +210,19 @@ func TestRunLoginCompletesLoopbackPKCEAndStoresToken(t *testing.T) {
 	if !strings.Contains(string(data), "login-access-token") || !strings.Contains(string(data), server.URL) {
 		t.Fatalf("expected saved credentials, got %s", string(data))
 	}
+}
+
+func lockRunnerCallbackPort(t *testing.T) {
+	t.Helper()
+	release, err := testutil.AcquireRunnerCallbackTestLock(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := release(); err != nil {
+			t.Errorf("release runner callback test lock: %v", err)
+		}
+	})
 }
 
 func TestRunConfigSetUsesRunnerConfigEnvironmentPath(t *testing.T) {

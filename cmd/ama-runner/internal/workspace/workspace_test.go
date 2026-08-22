@@ -623,6 +623,21 @@ func TestCleanupStaleReturnsReadDirError(t *testing.T) {
 	}
 }
 
+func TestCleanupStaleSessionArtifactsHandlesMissingAndInvalidRoots(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing-session")
+	if err := cleanupStaleSessionArtifacts(missing); err != nil {
+		t.Fatalf("missing session root should be an idempotent no-op: %v", err)
+	}
+
+	rootFile := filepath.Join(t.TempDir(), "session-file")
+	if err := os.WriteFile(rootFile, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := cleanupStaleSessionArtifacts(rootFile); err == nil {
+		t.Fatal("expected session artifact cleanup to reject a non-directory root")
+	}
+}
+
 func TestCleanupStaleSkipsNonDirectoryEntries(t *testing.T) {
 	workDir := t.TempDir()
 	sessionsDir := filepath.Join(workDir, SessionsDirName)
