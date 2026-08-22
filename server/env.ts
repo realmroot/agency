@@ -23,6 +23,9 @@ export interface Env {
   AMA_AI_GATEWAY_ID?: string
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
+  // Additional confidential/public Web applications allowed to present
+  // Realmroot Bearer tokens for the exact AMA Resource.
+  OIDC_TRUSTED_BEARER_CLIENT_IDS?: string
   // Exact Realmroot protected-resource audience accepted by the API. Required
   // outside the explicit E2E test gate.
   OIDC_RESOURCE?: string

@@ -23,6 +23,11 @@ type CommandHandler interface {
 	DeliverCommand(command protocol.RunnerSessionCommand) error
 }
 
+type AcknowledgedCommandHandler interface {
+	CommandHandler
+	DeliverAcknowledgedCommand(command protocol.RunnerSessionCommand) error
+}
+
 type SandboxHandler interface {
 	Handle
 	ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (ama.JSON, error)
@@ -47,17 +52,36 @@ func (h *HostHandle) DeliverCommand(command protocol.RunnerSessionCommand) error
 	return h.deliverControl(runtime.BridgeControlFrame(command))
 }
 
+func (h *HostHandle) DeliverAcknowledgedCommand(command protocol.RunnerSessionCommand) error {
+	if len(command) == 0 {
+		return nil
+	}
+	return h.deliverAcknowledgedControl(runtime.BridgeControlFrame(command))
+}
+
 func (h *HostHandle) Close(context.Context) error {
 	return nil
 }
 
 func (h *HostHandle) deliverControl(command runtime.BridgeControlFrame) error {
+	return h.deliverControlWithBuffer(command, true)
+}
+
+func (h *HostHandle) deliverAcknowledgedControl(command runtime.BridgeControlFrame) error {
+	return h.deliverControlWithBuffer(command, false)
+}
+
+func (h *HostHandle) deliverControlWithBuffer(command runtime.BridgeControlFrame, allowBuffer bool) error {
 	h.mu.Lock()
 	send := h.sendControl
 	if send == nil {
-		h.pendingControls = append(h.pendingControls, command)
+		if allowBuffer {
+			h.pendingControls = append(h.pendingControls, command)
+			h.mu.Unlock()
+			return nil
+		}
 		h.mu.Unlock()
-		return nil
+		return errors.New("runtime bridge control is not ready")
 	}
 	h.mu.Unlock()
 	if err := send(command); err != nil {
@@ -68,7 +92,8 @@ func (h *HostHandle) deliverControl(command runtime.BridgeControlFrame) error {
 }
 
 // RegisterControlSender is handed to the runtime adapter as
-// runtime.Request.RegisterControlSender; buffered controls flush immediately.
+// runtime.Request.RegisterControlSender; legacy unacknowledged controls flush
+// immediately for rolling compatibility with an older control plane.
 func (h *HostHandle) RegisterControlSender(send func(runtime.BridgeControlFrame) error) {
 	h.mu.Lock()
 	pending := h.pendingControls
@@ -78,7 +103,6 @@ func (h *HostHandle) RegisterControlSender(send func(runtime.BridgeControlFrame)
 	for _, command := range pending {
 		if err := send(command); err != nil {
 			slog.Warn("runner failed to forward buffered control frame", "sessionId", h.sessionID, "error", err)
-			continue
 		}
 	}
 }

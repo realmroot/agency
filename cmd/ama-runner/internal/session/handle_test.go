@@ -18,10 +18,14 @@ func rawControl(value string) runtime.BridgeControlFrame {
 	return runtime.BridgeControlFrame(value)
 }
 
-func TestHostHandleBuffersOpaqueCommandsBeforeSenderRegistered(t *testing.T) {
+func TestHostHandleBuffersLegacyCommandsBeforeSenderRegistered(t *testing.T) {
 	router := NewHostHandle("session_1")
-	router.deliverControl(rawControl(`{"type":"send","message":"first prompt"}`))
-	router.deliverControl(rawControl(`{"type":"permissionDecision","permissionId":"perm_1","allowed":true}`))
+	if err := router.DeliverCommand(rawControl(`{"type":"send","message":"first prompt"}`)); err != nil {
+		t.Fatalf("buffer first legacy command: %v", err)
+	}
+	if err := router.DeliverCommand(rawControl(`{"type":"permissionDecision","permissionId":"perm_1","allowed":true}`)); err != nil {
+		t.Fatalf("buffer second legacy command: %v", err)
+	}
 
 	var received []string
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
@@ -30,10 +34,27 @@ func TestHostHandleBuffersOpaqueCommandsBeforeSenderRegistered(t *testing.T) {
 	})
 
 	if len(received) != 2 {
-		t.Fatalf("expected two buffered commands flushed, got %v", received)
+		t.Fatalf("expected two buffered legacy commands, got %v", received)
 	}
 	if received[0] != `{"type":"send","message":"first prompt"}` || received[1] != `{"type":"permissionDecision","permissionId":"perm_1","allowed":true}` {
-		t.Fatalf("expected opaque commands flushed unchanged, got %v", received)
+		t.Fatalf("expected opaque legacy commands flushed unchanged, got %v", received)
+	}
+}
+
+func TestHostHandleRejectsAcknowledgedCommandBeforeSenderRegisteredWithoutCaching(t *testing.T) {
+	router := NewHostHandle("session_1")
+	if err := router.DeliverAcknowledgedCommand(rawControl(`{"type":"send","message":"first prompt"}`)); err == nil {
+		t.Fatal("expected an explicit error before the bridge sender is registered")
+	}
+
+	var received []string
+	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
+		received = append(received, string(command))
+		return nil
+	})
+
+	if len(received) != 0 {
+		t.Fatalf("failed acknowledged command was cached and delivered later: %v", received)
 	}
 }
 
@@ -45,7 +66,7 @@ func TestHostHandleDeliversOpaqueCommandAfterSenderRegistered(t *testing.T) {
 		received = string(command)
 		return nil
 	})
-	router.deliverControl(rawControl(`{"type":"abort","reason":"user cancelled"}`))
+	router.DeliverCommand(rawControl(`{"type":"abort","reason":"user cancelled"}`))
 
 	if received != `{"type":"abort","reason":"user cancelled"}` {
 		t.Fatalf("expected opaque command delivered unchanged, got %q", received)
@@ -87,15 +108,19 @@ func TestHostHandleLogsWhenLiveSendErrors(t *testing.T) {
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
 		return errors.New("send failed")
 	})
-	if err := router.deliverControl(rawControl(`{"type":"send","message":"failing prompt"}`)); err == nil {
+	if err := router.DeliverCommand(rawControl(`{"type":"send","message":"failing prompt"}`)); err == nil {
 		t.Fatal("expected live send error")
 	}
 }
 
-func TestHostHandleRegisterControlSenderLogsFlushErrorAndContinues(t *testing.T) {
+func TestHostHandleRegisterControlSenderLogsLegacyFlushErrorAndContinues(t *testing.T) {
 	router := NewHostHandle("session_1")
-	router.deliverControl(rawControl(`{"type":"send","message":"first"}`))
-	router.deliverControl(rawControl(`{"type":"abort","reason":"second"}`))
+	if err := router.DeliverCommand(rawControl(`{"type":"send","message":"first"}`)); err != nil {
+		t.Fatalf("buffer first legacy command: %v", err)
+	}
+	if err := router.DeliverCommand(rawControl(`{"type":"abort","reason":"second"}`)); err != nil {
+		t.Fatalf("buffer second legacy command: %v", err)
+	}
 
 	var calls int
 	router.RegisterControlSender(func(command runtime.BridgeControlFrame) error {
@@ -104,7 +129,7 @@ func TestHostHandleRegisterControlSenderLogsFlushErrorAndContinues(t *testing.T)
 	})
 
 	if calls != 2 {
-		t.Fatalf("expected every buffered command to flush despite errors, got %d", calls)
+		t.Fatalf("expected every buffered legacy command to flush despite errors, got %d", calls)
 	}
 }
 

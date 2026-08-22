@@ -564,9 +564,17 @@ export type RunnerChannelMessage = {
     workItem: RunnerOpaqueJsonObject;
 } | {
     type: 'session.command';
+    requestId?: string;
     sessionId: string;
     runnerId?: string;
     command: RunnerSessionCommand;
+} | {
+    type: 'session.command.result';
+    requestId: string;
+    sessionId: string;
+    runnerId?: string;
+    accepted: boolean;
+    error?: string;
 } | {
     type: 'sandbox.request';
     requestId: string;
@@ -1757,6 +1765,7 @@ export type SessionMessage = {
 
 export type CreateSessionMessageRequest = {
     type: 'prompt';
+    requestId?: string;
     content: string;
 };
 

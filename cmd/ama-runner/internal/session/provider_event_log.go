@@ -17,7 +17,8 @@ import (
 // ProviderEvent is the runner's durable copy of one raw provider SDK stream
 // event. It is intentionally not a canonical SessionEvent and is never relayed
 // to the cloud transcript directly; rebuild tools replay it through the same
-// runtime mapper used during live execution.
+// runtime mapper used during live execution. Workspace retention cleanup keeps
+// this log after removing disposable runtime files.
 type ProviderEvent struct {
 	Sequence  int64    `json:"sequence"`
 	CreatedAt string   `json:"createdAt"`

@@ -3,14 +3,15 @@ package auth
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,15 +20,16 @@ import (
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 )
 
-const deviceGrantType = "urn:ietf:params:oauth:grant-type:device_code"
 const refreshGrantType = "refresh_token"
 const RefreshGrantType = refreshGrantType
+const runnerCallbackURL = "http://127.0.0.1:49174/oauth/callback"
+const runnerLoginTimeout = 10 * time.Minute
 
-type DeviceAuthClient struct {
+type OAuthClient struct {
 	HTTPClient *http.Client
 }
 
-type DeviceLoginOptions struct {
+type AuthorizationCodeLoginOptions struct {
 	APIServer      string
 	Issuer         string
 	Resource       string
@@ -35,28 +37,18 @@ type DeviceLoginOptions struct {
 	Scopes         string
 	CredentialPath string
 	Output         io.Writer
-	PollInterval   time.Duration
 }
 
-type DeviceLoginResult struct {
+type AuthorizationCodeLoginResult struct {
 	APIServer      string
 	CredentialPath string
 }
 
 type oidcMetadata struct {
-	Issuer                      string `json:"issuer"`
-	DeviceAuthorizationEndpoint string `json:"device_authorization_endpoint"`
-	TokenEndpoint               string `json:"token_endpoint"`
-	JWKSURI                     string `json:"jwks_uri"`
-}
-
-type deviceAuthorizationResponse struct {
-	DeviceCode              string `json:"device_code"`
-	UserCode                string `json:"user_code"`
-	VerificationURI         string `json:"verification_uri"`
-	VerificationURIComplete string `json:"verification_uri_complete"`
-	ExpiresIn               int    `json:"expires_in"`
-	Interval                int    `json:"interval"`
+	Issuer                string `json:"issuer"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+	JWKSURI               string `json:"jwks_uri"`
 }
 
 type tokenResponse struct {
@@ -70,43 +62,117 @@ type tokenResponse struct {
 	Description  string `json:"error_description"`
 }
 
-func LoginWithDeviceAuthorization(
+func LoginWithAuthorizationCode(
 	ctx context.Context,
-	client DeviceAuthClient,
-	options DeviceLoginOptions,
-) (DeviceLoginResult, error) {
+	client OAuthClient,
+	options AuthorizationCodeLoginOptions,
+) (AuthorizationCodeLoginResult, error) {
 	if strings.TrimSpace(options.Issuer) == "" || strings.TrimSpace(options.ClientID) == "" {
-		return DeviceLoginResult{}, fmt.Errorf("AMA control plane did not publish runner OIDC metadata")
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("AMA control plane did not publish runner OIDC metadata")
 	}
 	metadata, err := client.Discover(ctx, options.Issuer)
 	if err != nil {
-		return DeviceLoginResult{}, err
+		return AuthorizationCodeLoginResult{}, err
 	}
-	device, err := client.StartDeviceAuthorization(
-		ctx,
-		metadata.DeviceAuthorizationEndpoint,
-		options.ClientID,
-		options.Scopes,
-		options.Resource,
-	)
+	state, err := randomBase64URL(32)
 	if err != nil {
-		return DeviceLoginResult{}, err
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("generate OIDC state: %w", err)
+	}
+	verifier, err := randomBase64URL(32)
+	if err != nil {
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("generate PKCE verifier: %w", err)
+	}
+	nonce, err := randomBase64URL(32)
+	if err != nil {
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("generate OIDC nonce: %w", err)
+	}
+
+	listener, err := net.Listen("tcp", "127.0.0.1:49174")
+	if err != nil {
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("start Realmroot callback listener: %w", err)
+	}
+	defer listener.Close()
+
+	loginContext, cancel := context.WithTimeout(ctx, runnerLoginTimeout)
+	defer cancel()
+	callback := make(chan authorizationCallback, 1)
+	server := &http.Server{
+		ReadHeaderTimeout: 5 * time.Second,
+		Handler: http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+			if request.Method != http.MethodGet || request.URL.Path != "/oauth/callback" {
+				http.NotFound(response, request)
+				return
+			}
+			query := request.URL.Query()
+			if query.Get("state") != state {
+				http.Error(response, "Invalid OAuth state", http.StatusBadRequest)
+				return
+			}
+			result := authorizationCallback{Code: strings.TrimSpace(query.Get("code"))}
+			if callbackIssuer := strings.TrimSpace(query.Get("iss")); callbackIssuer != "" && callbackIssuer != metadata.Issuer {
+				result.Err = fmt.Errorf("OIDC callback issuer is invalid")
+			} else if code := strings.TrimSpace(query.Get("error")); code != "" {
+				result.Err = fmt.Errorf("OIDC authorization failed: %s", safeOAuthError(code, query.Get("error_description")))
+			} else if result.Code == "" {
+				result.Err = fmt.Errorf("OIDC callback did not include an authorization code")
+			}
+			select {
+			case callback <- result:
+			default:
+			}
+			if result.Err != nil {
+				http.Error(response, "AMA runner authentication failed. You may close this window.", http.StatusBadRequest)
+				return
+			}
+			response.Header().Set("content-type", "text/plain; charset=utf-8")
+			_, _ = io.WriteString(response, "AMA runner authentication complete. You may close this window.\n")
+		}),
+	}
+	serverError := make(chan error, 1)
+	go func() {
+		if serveErr := server.Serve(listener); serveErr != nil && serveErr != http.ErrServerClosed {
+			serverError <- serveErr
+		}
+	}()
+	defer func() {
+		shutdownContext, shutdownCancel := context.WithTimeout(context.Background(), time.Second)
+		defer shutdownCancel()
+		_ = server.Shutdown(shutdownContext)
+	}()
+
+	authorizationURL, err := buildAuthorizationURL(metadata.AuthorizationEndpoint, options, state, verifier, nonce)
+	if err != nil {
+		return AuthorizationCodeLoginResult{}, err
 	}
 	output := options.Output
 	if output == nil {
 		output = io.Discard
 	}
-	printDeviceInstructions(output, device)
-	token, err := client.PollDeviceToken(ctx, metadata.TokenEndpoint, options.ClientID, device, options.PollInterval, options.Resource)
+	fmt.Fprintf(output, "Open: %s\n", authorizationURL)
+
+	var code string
+	select {
+	case <-loginContext.Done():
+		return AuthorizationCodeLoginResult{}, loginContext.Err()
+	case err := <-serverError:
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("serve Realmroot callback: %w", err)
+	case result := <-callback:
+		if result.Err != nil {
+			return AuthorizationCodeLoginResult{}, result.Err
+		}
+		code = result.Code
+	}
+
+	token, err := client.ExchangeAuthorizationCode(loginContext, metadata.TokenEndpoint, options.ClientID, code, verifier, options.Resource)
 	if err != nil {
-		return DeviceLoginResult{}, err
+		return AuthorizationCodeLoginResult{}, err
 	}
 	if strings.TrimSpace(token.RefreshToken) == "" {
-		return DeviceLoginResult{}, fmt.Errorf("OIDC token response did not include a refresh token; runner client must allow offline_access")
+		return AuthorizationCodeLoginResult{}, fmt.Errorf("OIDC token response did not include a refresh token; runner client must allow offline_access")
 	}
-	identity, err := client.validateIDToken(ctx, metadata, token.IDToken, options.ClientID)
+	identity, err := client.validateIDToken(ctx, metadata, token.IDToken, options.ClientID, nonce)
 	if err != nil {
-		return DeviceLoginResult{}, err
+		return AuthorizationCodeLoginResult{}, err
 	}
 	if err := runnerconfig.SaveCredentialProfile(options.CredentialPath, runnerconfig.CredentialProfile{
 		AccountID:    identity.Subject,
@@ -119,9 +185,14 @@ func LoginWithDeviceAuthorization(
 		ExpiresAt:    expiresAt(token.ExpiresIn),
 		Scope:        token.Scope,
 	}); err != nil {
-		return DeviceLoginResult{}, err
+		return AuthorizationCodeLoginResult{}, err
 	}
-	return DeviceLoginResult{APIServer: strings.TrimRight(options.APIServer, "/"), CredentialPath: options.CredentialPath}, nil
+	return AuthorizationCodeLoginResult{APIServer: strings.TrimRight(options.APIServer, "/"), CredentialPath: options.CredentialPath}, nil
+}
+
+type authorizationCallback struct {
+	Code string
+	Err  error
 }
 
 type tokenIdentityClaims struct {
@@ -130,11 +201,12 @@ type tokenIdentityClaims struct {
 	Name    string `json:"name"`
 }
 
-func (c DeviceAuthClient) validateIDToken(
+func (c OAuthClient) validateIDToken(
 	ctx context.Context,
 	metadata oidcMetadata,
 	idToken string,
 	clientID string,
+	expectedNonce string,
 ) (tokenIdentityClaims, error) {
 	parts := strings.Split(idToken, ".")
 	if len(parts) != 3 || strings.TrimSpace(parts[1]) == "" {
@@ -197,12 +269,13 @@ func (c DeviceAuthClient) validateIDToken(
 		Authorized string          `json:"azp"`
 		ExpiresAt  int64           `json:"exp"`
 		IssuedAt   int64           `json:"iat"`
+		Nonce      string          `json:"nonce"`
 	}
 	if err := decodeJWTJSON(parts[1], &envelope); err != nil {
 		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token claims are invalid: %w", err)
 	}
 	now := time.Now().Unix()
-	if envelope.Issuer != metadata.Issuer || !audienceContains(envelope.Audience, clientID) || envelope.ExpiresAt <= now || envelope.IssuedAt <= 0 || envelope.IssuedAt > now+60 {
+	if envelope.Issuer != metadata.Issuer || !audienceContains(envelope.Audience, clientID) || envelope.ExpiresAt <= now || envelope.IssuedAt <= 0 || envelope.IssuedAt > now+60 || envelope.Nonce != expectedNonce {
 		return tokenIdentityClaims{}, fmt.Errorf("OIDC id token claims are invalid")
 	}
 	if audienceCount(envelope.Audience) > 1 && envelope.Authorized != clientID {
@@ -255,17 +328,17 @@ func isLoopbackHost(host string) bool {
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
-func (c DeviceAuthClient) Discover(ctx context.Context, issuer string) (oidcMetadata, error) {
+func (c OAuthClient) Discover(ctx context.Context, issuer string) (oidcMetadata, error) {
 	issuer = strings.TrimRight(issuer, "/")
 	endpoint := issuer + "/.well-known/openid-configuration"
 	var metadata oidcMetadata
 	if err := c.getJSON(ctx, endpoint, &metadata); err != nil {
 		return oidcMetadata{}, err
 	}
-	if metadata.Issuer != issuer || metadata.DeviceAuthorizationEndpoint == "" || metadata.TokenEndpoint == "" || metadata.JWKSURI == "" {
+	if metadata.Issuer != issuer || metadata.AuthorizationEndpoint == "" || metadata.TokenEndpoint == "" || metadata.JWKSURI == "" {
 		return oidcMetadata{}, fmt.Errorf("OIDC issuer metadata is incomplete or mismatched")
 	}
-	for _, value := range []string{metadata.DeviceAuthorizationEndpoint, metadata.TokenEndpoint, metadata.JWKSURI} {
+	for _, value := range []string{metadata.AuthorizationEndpoint, metadata.TokenEndpoint, metadata.JWKSURI} {
 		parsed, err := url.Parse(value)
 		if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLoopbackHost(parsed.Hostname()))) {
 			return oidcMetadata{}, fmt.Errorf("OIDC issuer metadata contains an unsafe endpoint")
@@ -274,100 +347,37 @@ func (c DeviceAuthClient) Discover(ctx context.Context, issuer string) (oidcMeta
 	return metadata, nil
 }
 
-func (c DeviceAuthClient) StartDeviceAuthorization(
+func (c OAuthClient) ExchangeAuthorizationCode(
 	ctx context.Context,
 	endpoint string,
 	clientID string,
-	scopes string,
+	code string,
+	verifier string,
 	resource string,
-) (deviceAuthorizationResponse, error) {
+) (tokenResponse, error) {
 	values := url.Values{}
+	values.Set("grant_type", "authorization_code")
+	values.Set("code", code)
 	values.Set("client_id", clientID)
-	if strings.TrimSpace(scopes) != "" {
-		values.Set("scope", scopes)
-	}
+	values.Set("redirect_uri", runnerCallbackURL)
+	values.Set("code_verifier", verifier)
 	if strings.TrimSpace(resource) != "" {
 		values.Set("resource", strings.TrimRight(resource, "/"))
 	}
-	var response deviceAuthorizationResponse
-	if err := c.postForm(ctx, endpoint, values, &response); err != nil {
-		return deviceAuthorizationResponse{}, err
+	var token tokenResponse
+	if err := c.postForm(ctx, endpoint, values, &token); err != nil {
+		return tokenResponse{}, err
 	}
-	if response.DeviceCode == "" || response.UserCode == "" || response.VerificationURI == "" || response.ExpiresIn <= 0 {
-		return deviceAuthorizationResponse{}, fmt.Errorf("OIDC device authorization response is incomplete")
+	if token.AccessToken == "" {
+		return tokenResponse{}, fmt.Errorf("OIDC token response did not include an access token")
 	}
-	return response, nil
+	if !strings.EqualFold(token.TokenType, "Bearer") {
+		return tokenResponse{}, fmt.Errorf("Realmroot token response did not issue a Bearer token")
+	}
+	return token, nil
 }
 
-func (c DeviceAuthClient) PollDeviceToken(
-	ctx context.Context,
-	endpoint string,
-	clientID string,
-	device deviceAuthorizationResponse,
-	fallbackInterval time.Duration,
-	resource string,
-) (tokenResponse, error) {
-	interval := time.Duration(device.Interval) * time.Second
-	if interval <= 0 {
-		interval = fallbackInterval
-	}
-	if interval <= 0 {
-		interval = 5 * time.Second
-	}
-	expires := time.Now().Add(time.Duration(device.ExpiresIn) * time.Second)
-	for {
-		if time.Now().After(expires) {
-			return tokenResponse{}, fmt.Errorf("OIDC device authorization expired")
-		}
-		select {
-		case <-ctx.Done():
-			return tokenResponse{}, ctx.Err()
-		case <-time.After(interval):
-		}
-
-		values := url.Values{}
-		values.Set("grant_type", deviceGrantType)
-		values.Set("device_code", device.DeviceCode)
-		values.Set("client_id", clientID)
-		if strings.TrimSpace(resource) != "" {
-			values.Set("resource", strings.TrimRight(resource, "/"))
-		}
-		var token tokenResponse
-		err := c.postForm(ctx, endpoint, values, &token)
-		if err == nil && token.Error == "" {
-			if token.AccessToken == "" {
-				return tokenResponse{}, fmt.Errorf("OIDC token response did not include an access token")
-			}
-			if !strings.EqualFold(token.TokenType, "Bearer") {
-				return tokenResponse{}, fmt.Errorf("Realmroot token response did not issue a Bearer token")
-			}
-			return token, nil
-		}
-		var pollErr deviceTokenError
-		if err != nil && !errors.As(err, &pollErr) {
-			return tokenResponse{}, err
-		}
-		if token.Error == "" {
-			token.Error = pollErr.Code
-			token.Description = pollErr.Description
-		}
-		switch token.Error {
-		case "authorization_pending":
-			continue
-		case "slow_down":
-			interval += 5 * time.Second
-			continue
-		case "expired_token":
-			return tokenResponse{}, fmt.Errorf("OIDC device authorization expired")
-		case "access_denied":
-			return tokenResponse{}, fmt.Errorf("OIDC device authorization was denied")
-		default:
-			return tokenResponse{}, fmt.Errorf("OIDC token polling failed: %s", errorDescription(token))
-		}
-	}
-}
-
-func (c DeviceAuthClient) RefreshToken(
+func (c OAuthClient) RefreshToken(
 	ctx context.Context,
 	endpoint string,
 	clientID string,
@@ -397,7 +407,7 @@ func (c DeviceAuthClient) RefreshToken(
 	return token, nil
 }
 
-func (c DeviceAuthClient) getJSON(ctx context.Context, endpoint string, out any) error {
+func (c OAuthClient) getJSON(ctx context.Context, endpoint string, out any) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
@@ -406,11 +416,7 @@ func (c DeviceAuthClient) getJSON(ctx context.Context, endpoint string, out any)
 	return c.do(request, out)
 }
 
-func (c DeviceAuthClient) postForm(ctx context.Context, endpoint string, values url.Values, out any) error {
-	return c.postFormOnly(ctx, endpoint, values, out)
-}
-
-func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, values url.Values, out any) error {
+func (c OAuthClient) postForm(ctx context.Context, endpoint string, values url.Values, out any) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(values.Encode()))
 	if err != nil {
 		return err
@@ -420,7 +426,7 @@ func (c DeviceAuthClient) postFormOnly(ctx context.Context, endpoint string, val
 	return c.do(request, out)
 }
 
-func (c DeviceAuthClient) do(request *http.Request, out any) error {
+func (c OAuthClient) do(request *http.Request, out any) error {
 	httpClient := c.HTTPClient
 	if httpClient == nil {
 		httpClient = http.DefaultClient
@@ -437,7 +443,7 @@ func (c DeviceAuthClient) do(request *http.Request, out any) error {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		var tokenErr tokenResponse
 		if json.Unmarshal(body, &tokenErr) == nil && tokenErr.Error != "" {
-			return deviceTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
+			return oauthTokenError{Code: tokenErr.Error, Description: tokenErr.Description}
 		}
 		return oidcStatusError{Path: request.URL.Path, Status: response.StatusCode}
 	}
@@ -456,21 +462,56 @@ func (e oidcStatusError) Error() string {
 	return fmt.Sprintf("OIDC %s failed with status %d", e.Path, e.Status)
 }
 
-type deviceTokenError struct {
+type oauthTokenError struct {
 	Code        string
 	Description string
 }
 
-func (e deviceTokenError) Error() string {
+func (e oauthTokenError) Error() string {
 	return errorDescription(tokenResponse{Error: e.Code, Description: e.Description})
 }
 
-func printDeviceInstructions(output io.Writer, device deviceAuthorizationResponse) {
-	if device.VerificationURIComplete != "" {
-		fmt.Fprintf(output, "Open: %s\n", device.VerificationURIComplete)
+func randomBase64URL(size int) (string, error) {
+	value := make([]byte, size)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
 	}
-	fmt.Fprintf(output, "Verification URL: %s\n", device.VerificationURI)
-	fmt.Fprintf(output, "Code: %s\n", device.UserCode)
+	return base64.RawURLEncoding.EncodeToString(value), nil
+}
+
+func buildAuthorizationURL(
+	endpoint string,
+	options AuthorizationCodeLoginOptions,
+	state string,
+	verifier string,
+	nonce string,
+) (string, error) {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("parse OIDC authorization endpoint: %w", err)
+	}
+	challenge := sha256.Sum256([]byte(verifier))
+	query := parsed.Query()
+	query.Set("response_type", "code")
+	query.Set("client_id", options.ClientID)
+	query.Set("redirect_uri", runnerCallbackURL)
+	query.Set("scope", options.Scopes)
+	query.Set("resource", strings.TrimRight(options.Resource, "/"))
+	query.Set("code_challenge", base64.RawURLEncoding.EncodeToString(challenge[:]))
+	query.Set("code_challenge_method", "S256")
+	query.Set("state", state)
+	query.Set("nonce", nonce)
+	parsed.RawQuery = query.Encode()
+	return parsed.String(), nil
+}
+
+func safeOAuthError(code string, description string) string {
+	code = strings.TrimSpace(code)
+	description = strings.TrimSpace(description)
+	if description == "" {
+		return code
+	}
+	return code + ": " + description
 }
 
 func expiresAt(seconds int) string {

@@ -90,6 +90,7 @@ async function registerRunner(authorization: string, environmentId: string) {
     body: JSON.stringify({
       name: `Relay test runner ${crypto.randomUUID()}`,
       environmentId,
+      metadata: { commandAcknowledgement: true },
     }),
   })
   if (res.status !== 201) throw new Error(`Runner registration failed: ${res.status} ${await res.text()}`)
@@ -416,19 +417,11 @@ describe('[CF] per-runner relay end-to-end', () => {
 
     const browser = await openBrowserSocket(authorization, session.id)
     const followUp = 'Reviewer rejected this task; resume it live.'
-    const messageRes = await jsonFetch(`/api/v1/sessions/${session.id}/messages`, authorization, {
+    const requestId = `reject_resume_${crypto.randomUUID()}`
+    const messageResponsePromise = jsonFetch(`/api/v1/sessions/${session.id}/messages`, authorization, {
       method: 'POST',
-      body: JSON.stringify({ type: 'prompt', content: followUp }),
+      body: JSON.stringify({ type: 'prompt', requestId, content: followUp }),
     })
-    expect(messageRes.status).toBe(201)
-    await expect(messageRes.json()).resolves.toMatchObject({
-      sessionId: session.id,
-      type: 'prompt',
-      content: followUp,
-      delivery: 'live',
-      state: 'delivered',
-    })
-
     const commandFrame = await runnerCh.waitForFrame(
       (f) =>
         f.type === 'session.command' &&
@@ -438,6 +431,26 @@ describe('[CF] per-runner relay end-to-end', () => {
       'session.command live prompt',
     )
     expect(commandFrame).toMatchObject({ type: 'session.command', sessionId: session.id, runnerId: runner.id })
+    expect(commandFrame.requestId).toBe(requestId)
+    runnerCh.ws.send(
+      JSON.stringify({
+        type: 'session.command.result',
+        requestId: commandFrame.requestId,
+        sessionId: session.id,
+        runnerId: runner.id,
+        accepted: true,
+      }),
+    )
+
+    const messageRes = await messageResponsePromise
+    expect(messageRes.status).toBe(201)
+    await expect(messageRes.json()).resolves.toMatchObject({
+      sessionId: session.id,
+      type: 'prompt',
+      content: followUp,
+      delivery: 'live',
+      state: 'delivered',
+    })
 
     runnerCh.ws.send(runnerMessageFrame(session.id, 'event_live_prompt_user', 2, 'user', followUp))
     runnerCh.ws.send(

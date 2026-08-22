@@ -1510,7 +1510,7 @@ export interface RunnerChannel {
   // Whether the session's runner channel DO has an accepted (active) runner.
   isAccepted(sessionId: string): Promise<boolean>
   // Dispatches a command to the runner over the channel; true when accepted.
-  dispatch(sessionId: string, command: Record<string, unknown>): Promise<boolean>
+  dispatch(sessionId: string, command: Record<string, unknown>, requestId?: string | null): Promise<boolean>
   // Executes one sandbox tool against the runner-owned workspace for AMA cloud-loop sessions.
   executeSandboxTool(input: ToolExecutionInput): Promise<ToolExecutionResult>
   // Stops a runner-owned sandbox workspace for AMA cloud-loop sessions.

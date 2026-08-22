@@ -25,13 +25,13 @@ Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64. W
 
 ## Login And Configuration
 
-Authenticate the runner with Realmroot device authorization before starting the daemon:
+Authenticate the runner with Realmroot loopback PKCE before starting the daemon. Select the same personal or organization Context that owns the AMA project:
 
 ```bash
 ama-runner auth login --api-server "https://ama.example.com"
 ```
 
-The command discovers Realmroot metadata from `/api/v1/configz`, starts the registered public-native device flow, and stores the short-lived Bearer access token plus rotating refresh credential in the local credential file. It never prints access or refresh tokens.
+The command discovers Realmroot metadata from `/api/v1/configz`, starts a loopback listener at `http://127.0.0.1:49174/oauth/callback`, opens the public-native authorization-code PKCE flow, and stores the short-lived Bearer access token plus rotating refresh credential in the local credential file. Register that exact callback in Realmroot; wildcard ports are unsupported. The command never prints access or refresh tokens.
 
 By default, the config file is:
 
@@ -98,7 +98,7 @@ Timing defaults:
 - Poll interval when no work is available: `5s`
 - Max concurrent leases: `5`
 
-The daemon requires a saved Realmroot device login. The registered runner client receives short-lived Bearer access tokens and refreshes them through Realmroot; `AMA_TOKEN`, static token overrides, and token-print commands are unsupported.
+The daemon requires a saved Realmroot Context login. The registered runner client receives short-lived Bearer access tokens and refreshes them through Realmroot; `AMA_TOKEN`, static token overrides, and token-print commands are unsupported.
 
 The daemon fails fast when the API server, Realmroot Bearer login, environment binding, work directory, timing values, or unsafe adapter acknowledgement is invalid. Runner registration stores only Realmroot subject/client binding metadata; raw access and refresh tokens never reach D1. Runner scopes are limited to registration, work items, leases, and session event upload.
 
@@ -129,7 +129,7 @@ Do not use this adapter for untrusted workloads. Docker/OCI isolation should be 
 At startup, the daemon:
 
 1. Checks `/api/v1/configz` for an AMA control plane.
-2. Loads the saved Realmroot Bearer device-login profile.
+2. Loads the saved Realmroot Bearer Context-login profile.
 3. Registers a runner when no runner id is configured.
 4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
 5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.

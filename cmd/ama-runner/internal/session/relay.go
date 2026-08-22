@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"log/slog"
 	"path/filepath"
@@ -43,8 +44,10 @@ type Relay struct {
 	// mu guards sessions. The map intentionally survives reconnect cycles: a session
 	// registered before a socket drop keeps receiving commands once the channel
 	// re-establishes, so a transient blip never loses command routing.
-	mu       sync.Mutex
-	sessions map[string]Handle
+	mu                    sync.Mutex
+	sessions              map[string]Handle
+	deliveredCommandKeys  map[string][sha256.Size]byte
+	deliveredCommandOrder []string
 
 	// writeMu guards conn AND serialises every write (relay events + backfill
 	// responses), so the conn check and the write are atomic — a concurrent
@@ -65,15 +68,17 @@ func NewRelay(opener Opener, runnerID string, workDir string, assignmentHandlers
 		assign = assignmentHandlers[0]
 	}
 	return &Relay{
-		opener:   opener,
-		runnerID: runnerID,
-		assign:   assign,
-		storeDir: filepath.Join(workDir, workspace.SessionsDirName),
-		sessions: map[string]Handle{},
+		opener:               opener,
+		runnerID:             runnerID,
+		assign:               assign,
+		storeDir:             filepath.Join(workDir, workspace.SessionsDirName),
+		sessions:             map[string]Handle{},
+		deliveredCommandKeys: map[string][sha256.Size]byte{},
 	}
 }
 
 const relayReconnectDelay = 3 * time.Second
+const deliveredCommandHistoryLimit = 1024
 
 // run maintains the channel for the runner's lifetime: dial, handshake, read until
 // the socket drops, then reconnect after a short delay. A live event written while
@@ -151,7 +156,7 @@ func (h *Relay) readLoop(ctx context.Context, conn Channel) error {
 		case "session.backfill_request":
 			h.handleBackfillRequest(ctx, conn, message)
 		case "session.command":
-			h.routeCommand(message)
+			h.routeCommand(ctx, conn, message)
 		case "sandbox.request":
 			h.handleSandboxRequest(ctx, conn, message)
 		default:
@@ -215,11 +220,32 @@ func (h *Relay) handleSandboxRequest(ctx context.Context, conn Channel, message 
 	h.writeResponse(ctx, conn, response, "runner failed to write sandbox response", sessionID)
 }
 
-func (h *Relay) routeCommand(message protocol.RunnerChannelMessage) {
+func (h *Relay) routeCommand(ctx context.Context, conn Channel, message protocol.RunnerChannelMessage) {
 	sessionID := protocol.MessageSessionID(message)
+	requestID := protocol.MessageRequestID(message)
 	command := protocol.MessageCommand(message)
 	if sessionID == "" {
 		return
+	}
+	respond := func(accepted bool) {
+		if requestID == "" {
+			return
+		}
+		response := ama.JSON{
+			"type":      "session.command.result",
+			"requestId": requestID,
+			"sessionId": sessionID,
+			"runnerId":  h.runnerID,
+			"accepted":  accepted,
+		}
+		h.writeResponse(ctx, conn, response, "runner failed to write command acknowledgement", sessionID)
+	}
+	commandKey := sessionID + "\x00" + requestID
+	if requestID != "" {
+		if seen, matches := h.commandDelivery(commandKey, command); seen {
+			respond(matches)
+			return
+		}
 	}
 	h.mu.Lock()
 	router := h.sessions[sessionID]
@@ -229,20 +255,60 @@ func (h *Relay) routeCommand(message protocol.RunnerChannelMessage) {
 		// command for it cannot be delivered to a runtime handle.
 		slog.Info("runner relay command for an inactive session; dropping",
 			"sessionId", sessionID)
+		respond(false)
 		return
 	}
 	commandHandler, ok := router.(CommandHandler)
 	if !ok {
 		slog.Info("runner relay command for session without command handler; dropping",
 			"sessionId", sessionID)
+		respond(false)
 		return
+	}
+	deliver := commandHandler.DeliverCommand
+	if requestID != "" {
+		acknowledgedHandler, supportsAcknowledgement := router.(AcknowledgedCommandHandler)
+		if !supportsAcknowledgement {
+			respond(false)
+			return
+		}
+		deliver = acknowledgedHandler.DeliverAcknowledgedCommand
+	}
+	if err := deliver(command); err != nil {
+		h.recordRuntimeErrorEvent(sessionID, "Runner failed to forward live prompt to runtime bridge: "+err.Error(), "runtime_prompt_delivery_failed")
+		respond(false)
+		return
+	}
+	if requestID != "" {
+		h.rememberDeliveredCommand(commandKey, command)
 	}
 	if prompt, ok := livePromptMessage(command); ok {
 		h.recordLivePromptEvent(sessionID, prompt)
 	}
-	if err := commandHandler.DeliverCommand(command); err != nil {
-		h.recordRuntimeErrorEvent(sessionID, "Runner failed to forward live prompt to runtime bridge: "+err.Error(), "runtime_prompt_delivery_failed")
+	respond(true)
+}
+
+func (h *Relay) commandDelivery(key string, command protocol.RunnerSessionCommand) (bool, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	digest, ok := h.deliveredCommandKeys[key]
+	return ok, !ok || digest == sha256.Sum256(command)
+}
+
+func (h *Relay) rememberDeliveredCommand(key string, command protocol.RunnerSessionCommand) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, exists := h.deliveredCommandKeys[key]; exists {
+		return
 	}
+	h.deliveredCommandKeys[key] = sha256.Sum256(command)
+	h.deliveredCommandOrder = append(h.deliveredCommandOrder, key)
+	if len(h.deliveredCommandOrder) <= deliveredCommandHistoryLimit {
+		return
+	}
+	oldest := h.deliveredCommandOrder[0]
+	h.deliveredCommandOrder = h.deliveredCommandOrder[1:]
+	delete(h.deliveredCommandKeys, oldest)
 }
 
 func livePromptMessage(command protocol.RunnerSessionCommand) (string, bool) {

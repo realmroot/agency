@@ -58,11 +58,11 @@ export function createRunnerChannel(
       return body.active === true
     },
 
-    async dispatch(sessionId: string, command: Record<string, unknown>): Promise<boolean> {
+    async dispatch(sessionId: string, command: Record<string, unknown>, requestId?: string | null): Promise<boolean> {
       const stub = await pool(sessionId)
       const response = await stub.fetch('https://runner-pool/dispatch', {
         method: 'POST',
-        body: JSON.stringify({ sessionId, command }),
+        body: JSON.stringify({ sessionId, command, requestId }),
       })
       return response.status === 202
     },

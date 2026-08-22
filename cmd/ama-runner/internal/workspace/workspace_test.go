@@ -623,6 +623,21 @@ func TestCleanupStaleReturnsReadDirError(t *testing.T) {
 	}
 }
 
+func TestCleanupStaleSessionArtifactsHandlesMissingAndInvalidRoots(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing-session")
+	if err := cleanupStaleSessionArtifacts(missing); err != nil {
+		t.Fatalf("missing session root should be an idempotent no-op: %v", err)
+	}
+
+	rootFile := filepath.Join(t.TempDir(), "session-file")
+	if err := os.WriteFile(rootFile, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := cleanupStaleSessionArtifacts(rootFile); err == nil || !strings.Contains(err.Error(), "runtime session path is not a directory") {
+		t.Fatalf("expected explicit non-directory root rejection, got %v", err)
+	}
+}
+
 func TestCleanupStaleSkipsNonDirectoryEntries(t *testing.T) {
 	workDir := t.TempDir()
 	sessionsDir := filepath.Join(workDir, SessionsDirName)
@@ -797,7 +812,7 @@ func TestPrepareWorkspaceSerializesSharedRepositoryCache(t *testing.T) {
 func TestCleanupStaleWorkspacesRemovesExpiredSessionRoots(t *testing.T) {
 	workDir := t.TempDir()
 	sessionRoot := filepath.Join(workDir, "sessions", "session_old")
-	if err := os.MkdirAll(filepath.Join(sessionRoot, ".ama"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(sessionRoot, WorkspaceDirName), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	old := time.Now().Add(-2 * time.Hour)

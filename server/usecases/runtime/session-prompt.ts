@@ -64,7 +64,11 @@ export async function dispatchSessionPrompt(
       if (!(await deps.runnerChannel.isAccepted(session.id))) {
         return { ok: false, status: 409, message: 'Session runtime is not accepting live prompts' }
       }
-      const delivered = await deps.runnerChannel.dispatch(session.id, { type: 'send', message: content })
+      const delivered = await deps.runnerChannel.dispatch(
+        session.id,
+        { type: 'send', message: content },
+        requestIdFrom(requestId),
+      )
       if (delivered) {
         await deps.audit.record(auth, {
           action: 'session.command',

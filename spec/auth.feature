@@ -26,6 +26,7 @@ Feature: Auth
     Given Realmroot issued an at+jwt access token for the exact AMA resource
     When the Console client sends Bearer authentication
     Then the request is accepted without a proof-of-possession requirement
+    And an explicitly trusted Web application may present its own Bearer token for the exact AMA resource
     And the runner client also uses Bearer authentication while the Realmroot CLI client requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
 

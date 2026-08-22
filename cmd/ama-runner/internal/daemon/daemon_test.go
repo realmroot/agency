@@ -599,6 +599,9 @@ func TestRunOnceRegistersRunnerWhenIDIsMissing(t *testing.T) {
 	if got := createMetadata(client.creates[0])["runnerCommit"]; got != build.Commit {
 		t.Fatalf("expected runner commit metadata %q, got %#v", build.Commit, got)
 	}
+	if got := createMetadata(client.creates[0])["commandAcknowledgement"]; got != true {
+		t.Fatalf("expected command acknowledgement capability in create metadata, got %#v", got)
+	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "completed" {
 		t.Fatalf("expected completed update, got %#v", client.updates)
 	}
@@ -1043,6 +1046,9 @@ func TestStartRegistersRunnerAndSendsOfflineHeartbeatOnShutdown(t *testing.T) {
 	build := version.Default()
 	if got := heartbeatMetadata(client.heartbeats[0])["runnerVersion"]; got != build.Version {
 		t.Fatalf("expected runner version heartbeat metadata %q, got %#v", build.Version, got)
+	}
+	if got := heartbeatMetadata(client.heartbeats[0])["commandAcknowledgement"]; got != true {
+		t.Fatalf("expected command acknowledgement capability in heartbeat metadata, got %#v", got)
 	}
 }
 

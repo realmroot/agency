@@ -10,10 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.runner_channel_message_type_3_type import RunnerChannelMessageType3Type
 from ..types import UNSET, Unset
-from typing import cast
 
-if TYPE_CHECKING:
-  from ..models.runner_sandbox_request import RunnerSandboxRequest
 
 
 
@@ -30,31 +27,34 @@ class RunnerChannelMessageType3:
             type_ (RunnerChannelMessageType3Type):
             request_id (str):
             session_id (str):  Example: session_abc123.
-            request (RunnerSandboxRequest):
+            accepted (bool):
             runner_id (str | Unset):  Example: runner_abc123.
+            error (str | Unset):
      """
 
     type_: RunnerChannelMessageType3Type
     request_id: str
     session_id: str
-    request: RunnerSandboxRequest
+    accepted: bool
     runner_id: str | Unset = UNSET
+    error: str | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.runner_sandbox_request import RunnerSandboxRequest
         type_ = self.type_.value
 
         request_id = self.request_id
 
         session_id = self.session_id
 
-        request = self.request.to_dict()
+        accepted = self.accepted
 
         runner_id = self.runner_id
+
+        error = self.error
 
 
         field_dict: dict[str, Any] = {}
@@ -63,10 +63,12 @@ class RunnerChannelMessageType3:
             "type": type_,
             "requestId": request_id,
             "sessionId": session_id,
-            "request": request,
+            "accepted": accepted,
         })
         if runner_id is not UNSET:
             field_dict["runnerId"] = runner_id
+        if error is not UNSET:
+            field_dict["error"] = error
 
         return field_dict
 
@@ -74,7 +76,6 @@ class RunnerChannelMessageType3:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.runner_sandbox_request import RunnerSandboxRequest
         d = dict(src_dict)
         type_ = RunnerChannelMessageType3Type(d.pop("type"))
 
@@ -85,19 +86,19 @@ class RunnerChannelMessageType3:
 
         session_id = d.pop("sessionId")
 
-        request = RunnerSandboxRequest.from_dict(d.pop("request"))
-
-
-
+        accepted = d.pop("accepted")
 
         runner_id = d.pop("runnerId", UNSET)
+
+        error = d.pop("error", UNSET)
 
         runner_channel_message_type_3 = cls(
             type_=type_,
             request_id=request_id,
             session_id=session_id,
-            request=request,
+            accepted=accepted,
             runner_id=runner_id,
+            error=error,
         )
 
         return runner_channel_message_type_3

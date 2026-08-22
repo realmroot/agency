@@ -126,6 +126,18 @@ describe('dispatchSessionPrompt [spec: sessions/prompt]', () => {
     expect(queueSessionWorkWhenState).not.toHaveBeenCalled()
   })
 
+  it('does not report live delivery when the runner rejects the command acknowledgement', async () => {
+    const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession(), {
+      channelAccepted: true,
+      dispatchResult: false,
+    })
+
+    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'resume after review rejection')
+
+    expect(result).toEqual({ ok: false, status: 409, message: 'Session runtime did not accept the live prompt' })
+    expect(queueSessionWorkWhenState).not.toHaveBeenCalled()
+  })
+
   it('queues the first self-hosted prompt without resume metadata when the session has no prior work item', async () => {
     const { deps, queueSessionWorkWhenState } = depsForFirstPrompt(selfHostedSession({ state: 'idle' }))
 

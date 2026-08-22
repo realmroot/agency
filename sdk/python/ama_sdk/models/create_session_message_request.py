@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.create_session_message_request_type import CreateSessionMessageRequestType
+from ..types import UNSET, Unset
 
 
 
@@ -25,10 +26,12 @@ class CreateSessionMessageRequest:
         Attributes:
             type_ (CreateSessionMessageRequestType):  Example: prompt.
             content (str):  Example: Please continue the task and summarize the current blocker..
+            request_id (str | Unset):
      """
 
     type_: CreateSessionMessageRequestType
     content: str
+    request_id: str | Unset = UNSET
 
 
 
@@ -39,6 +42,8 @@ class CreateSessionMessageRequest:
 
         content = self.content
 
+        request_id = self.request_id
+
 
         field_dict: dict[str, Any] = {}
 
@@ -46,6 +51,8 @@ class CreateSessionMessageRequest:
             "type": type_,
             "content": content,
         })
+        if request_id is not UNSET:
+            field_dict["requestId"] = request_id
 
         return field_dict
 
@@ -61,9 +68,12 @@ class CreateSessionMessageRequest:
 
         content = d.pop("content")
 
+        request_id = d.pop("requestId", UNSET)
+
         create_session_message_request = cls(
             type_=type_,
             content=content,
+            request_id=request_id,
         )
 
         return create_session_message_request

@@ -166,9 +166,20 @@ export const RunnerChannelMessageSchema = z
     z
       .object({
         type: z.literal('session.command'),
+        requestId: z.string().optional(),
         sessionId: z.string().openapi({ example: 'session_abc123' }),
         runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
         command: RunnerSessionCommandSchema,
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('session.command.result'),
+        requestId: z.string(),
+        sessionId: z.string().openapi({ example: 'session_abc123' }),
+        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        accepted: z.boolean(),
+        error: z.string().optional(),
       })
       .strict(),
     z

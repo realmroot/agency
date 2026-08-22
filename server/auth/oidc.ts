@@ -261,9 +261,13 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
 
 function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop') {
   const clientId = stringClaim(claims.client_id)
-  const allowedClients = [env.OIDC_CLIENT_ID, env.OIDC_RUNNER_CLIENT_ID, 'realmroot-cli'].filter(Boolean)
-  if (!clientId || !allowedClients.includes(clientId))
-    throw new OidcError('Realmroot access token client is not allowed')
+  const allowedClients = new Set([
+    env.OIDC_CLIENT_ID,
+    env.OIDC_RUNNER_CLIENT_ID,
+    ...trustedBearerClientIds(env),
+    'realmroot-cli',
+  ])
+  if (!clientId || !allowedClients.has(clientId)) throw new OidcError('Realmroot access token client is not allowed')
   if (credentialMode === 'bearer' && clientId === 'realmroot-cli') {
     throw new OidcError('Realmroot Agent clients require DPoP')
   }
@@ -278,6 +282,13 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   if (!actor || actor.iss !== env.OIDC_ISSUER?.replace(/\/$/, '') || typeof actor.sub !== 'string' || !actor.sub) {
     throw new OidcError('Realmroot Agent token omitted the stable Agent actor')
   }
+}
+
+function trustedBearerClientIds(env: Env) {
+  return (env.OIDC_TRUSTED_BEARER_CLIENT_IDS ?? '')
+    .split(/[\s,]+/)
+    .map((clientId) => clientId.trim())
+    .filter(Boolean)
 }
 
 function bearerAccessToken(request: Request) {

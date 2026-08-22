@@ -80,7 +80,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	if err := os.MkdirAll(d.Config.WorkDir, 0o755); err != nil {
 		return err
 	}
-	if err := workspace.CleanupStale(ctx, d.Config.WorkDir, workspace.RuntimeRetention); err != nil {
+	if err := workspace.CleanupStale(ctx, d.Config.WorkDir, workspace.RuntimeWorkspaceRetention); err != nil {
 		return err
 	}
 	configz, err := d.Client.Configz.Get(ctx)
@@ -434,14 +434,15 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 		EnvironmentId: lo.EmptyableToPtr(d.Config.EnvironmentID),
 		MaxConcurrent: lo.ToPtr(d.Config.MaxConcurrent),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  sandbox.HostAdapterName(),
-			"os":              hostInfo.OS,
-			"arch":            hostInfo.Arch,
-			"machineId":       machineID,
-			"hostname":        displayName(),
-			"runnerVersion":   build.Version,
-			"runnerCommit":    build.Commit,
-			"runnerBuildDate": build.BuildDate,
+			"sandboxAdapter":         sandbox.HostAdapterName(),
+			"commandAcknowledgement": true,
+			"os":                     hostInfo.OS,
+			"arch":                   hostInfo.Arch,
+			"machineId":              machineID,
+			"hostname":               displayName(),
+			"runnerVersion":          build.Version,
+			"runnerCommit":           build.Commit,
+			"runnerBuildDate":        build.BuildDate,
 		}),
 	})
 	if err != nil {
@@ -463,15 +464,16 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 		RuntimeUsage: lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
 		Runtimes:     lo.ToPtr(runnerRuntimes(runtimes)),
 		Metadata: lo.ToPtr(ama.JSON{
-			"sandboxAdapter":  sandbox.HostAdapterName(),
-			"os":              hostInfo.OS,
-			"arch":            hostInfo.Arch,
-			"machineId":       machineID,
-			"hostname":        displayName(),
-			"runnerVersion":   build.Version,
-			"runnerCommit":    build.Commit,
-			"runnerBuildDate": build.BuildDate,
-			"unsafe":          true,
+			"sandboxAdapter":         sandbox.HostAdapterName(),
+			"commandAcknowledgement": true,
+			"os":                     hostInfo.OS,
+			"arch":                   hostInfo.Arch,
+			"machineId":              machineID,
+			"hostname":               displayName(),
+			"runnerVersion":          build.Version,
+			"runnerCommit":           build.Commit,
+			"runnerBuildDate":        build.BuildDate,
+			"unsafe":                 true,
 		}),
 	})
 	return err

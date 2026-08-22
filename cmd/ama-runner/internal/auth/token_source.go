@@ -20,14 +20,14 @@ type TokenSource struct {
 
 	mu     sync.Mutex
 	saved  *runnerconfig.CredentialProfile
-	client DeviceAuthClient
+	client OAuthClient
 }
 
 func NewTokenSource(config runnerconfig.Config, httpClient *http.Client) (*TokenSource, error) {
 	source := &TokenSource{
 		Config:     config,
 		HTTPClient: httpClient,
-		client:     DeviceAuthClient{HTTPClient: httpClient},
+		client:     OAuthClient{HTTPClient: httpClient},
 	}
 	saved, err := runnerconfig.LoadCredentialProfile(config.CredentialPath, config.APIServer)
 	if err != nil {

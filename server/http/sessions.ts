@@ -591,6 +591,7 @@ const SessionMessageSchema = z
 const CreateSessionMessageSchema = z
   .object({
     type: z.literal('prompt').openapi({ example: 'prompt' }),
+    requestId: z.string().trim().min(1).max(160).optional(),
     content: z
       .string()
       .trim()
@@ -1504,7 +1505,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
     })
     .openapi(createSessionMessageRoute, async (c) => {
       const { sessionId } = c.req.valid('param')
-      const { content } = c.req.valid('json')
+      const { content, requestId: messageRequestId } = c.req.valid('json')
       const deps = c.get('deps')
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
@@ -1514,7 +1515,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       if (!session) {
         return errorResponse(c, 404, 'not_found', 'Session not found')
       }
-      const outcome = await sendSessionMessage(deps, auth as never, session, content, requestId(c))
+      const outcome = await sendSessionMessage(deps, auth as never, session, content, messageRequestId ?? requestId(c))
       if (!outcome.ok) {
         return errorResponse(
           c,
