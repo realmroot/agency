@@ -45,7 +45,7 @@ func TestMaterializeSecretMountWritableAndRejectsUnsafePaths(t *testing.T) {
 		t.Fatalf("expected secret file, got %q err=%v", data, err)
 	}
 	secretPath := filepath.Join(path, "TOKEN")
-	if info, err := os.Stat(secretPath); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(secretPath); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o600) {
 		t.Fatalf("expected writable seeded secret mode 0600, info=%v err=%v", info, err)
 	}
 	if err := os.WriteFile(secretPath, []byte("session-update"), 0o600); err != nil {

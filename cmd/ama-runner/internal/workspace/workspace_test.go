@@ -58,6 +58,35 @@ func TestWorkspaceSafety(t *testing.T) {
 	}
 }
 
+func TestRuntimeEnvMapsWorkspacePathsWithoutMutatingInput(t *testing.T) {
+	workspace := &Workspace{Root: filepath.Join(t.TempDir(), "workspace")}
+	input := map[string]string{
+		"REALMROOT_STATE_DIR": "/workspace/realmroot",
+		"CONFIG_PATH":         "/workspace/config/settings.json",
+		"EXTERNAL_PATH":       "/var/run/service",
+	}
+
+	resolved := workspace.RuntimeEnv(input)
+
+	if got, want := resolved["REALMROOT_STATE_DIR"], filepath.Join(workspace.Root, "realmroot"); got != want {
+		t.Fatalf("expected mapped state path %q, got %q", want, got)
+	}
+	if got, want := resolved["CONFIG_PATH"], filepath.Join(workspace.Root, "config", "settings.json"); got != want {
+		t.Fatalf("expected mapped config path %q, got %q", want, got)
+	}
+	if resolved["EXTERNAL_PATH"] != input["EXTERNAL_PATH"] {
+		t.Fatalf("expected external path to remain unchanged, got %q", resolved["EXTERNAL_PATH"])
+	}
+	if input["REALMROOT_STATE_DIR"] != "/workspace/realmroot" {
+		t.Fatal("RuntimeEnv mutated the caller environment")
+	}
+
+	var absent *Workspace
+	if got := absent.RuntimeEnv(map[string]string{"PATH": "/workspace/bin"})["PATH"]; got != "/workspace/bin" {
+		t.Fatalf("expected nil workspace to leave paths unchanged, got %q", got)
+	}
+}
+
 func TestOpenRejectsSessionSymlinkEscape(t *testing.T) {
 	workDir := t.TempDir()
 	outside := t.TempDir()
