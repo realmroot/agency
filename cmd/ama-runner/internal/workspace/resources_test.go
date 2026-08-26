@@ -113,6 +113,64 @@ func TestMaterializeSecretMountReadOnly(t *testing.T) {
 	}
 }
 
+func TestMaterializeSecretMountReportsFilesystemConflicts(t *testing.T) {
+	root := t.TempDir()
+	conflict := filepath.Join(root, "secrets")
+	if err := os.WriteFile(conflict, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets"}); err == nil {
+		t.Fatal("expected secret mount directory conflict")
+	}
+
+	root = t.TempDir()
+	conflict = filepath.Join(root, "secrets", "nested")
+	if err := os.MkdirAll(filepath.Dir(conflict), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(conflict, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		Files:     []protocol.WorkspaceFile{{Path: "nested/TOKEN", Content: "value"}},
+	}); err == nil {
+		t.Fatal("expected secret parent directory conflict")
+	}
+
+	root = t.TempDir()
+	secretPath := filepath.Join(root, "secrets", "TOKEN")
+	if err := os.MkdirAll(secretPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		Files:     []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+	}); err == nil {
+		t.Fatal("expected secret file conflict")
+	}
+
+	if runtime.GOOS != "windows" {
+		root = t.TempDir()
+		mountPath := filepath.Join(root, "secrets")
+		if err := os.MkdirAll(mountPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_ = os.Chmod(mountPath, 0o700)
+		})
+		if err := os.Symlink(filepath.Join(root, "missing"), filepath.Join(mountPath, "TOKEN")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+			MountPath: "/workspace/secrets",
+			ReadOnly:  true,
+		}); err == nil {
+			t.Fatal("expected read-only secret permission error")
+		}
+	}
+}
+
 func TestMaterializeMemoryStoreRejectsInvalidRefsAndPaths(t *testing.T) {
 	root := t.TempDir()
 	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "bad"}); err == nil {
