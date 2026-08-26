@@ -195,6 +195,12 @@ function oidcFetch(url: string, init: RequestInit) {
   return fetch(url, init)
 }
 
+async function defaultProjectId(organizationId: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(organizationId))
+  const value = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `project_${value.slice(0, 32)}`
+}
+
 export async function upsertProjectForClaims(
   db: DrizzleD1Database,
   claims: UserInfoClaims,
@@ -229,13 +235,13 @@ export async function upsertProjectForClaims(
     .get()
   if (!project) {
     project = {
-      id: newId('project'),
+      id: await defaultProjectId(organizationId),
       organizationId,
       name: projectName,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
-    await db.insert(projects).values(project)
+    await db.insert(projects).values(project).onConflictDoNothing()
   }
   return { id: project.id, name: project.name, organizationId: project.organizationId }
 }
