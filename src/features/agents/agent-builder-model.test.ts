@@ -14,6 +14,7 @@ import {
 const validDraft = {
   ...emptyBuilderDraft,
   name: 'Reviewer',
+  username: 'reviewer',
   systemPrompt: 'Review changes carefully.',
   model: 'gpt-4',
   provider: 'workers-ai',
@@ -48,6 +49,7 @@ describe('agent builder model', () => {
     expect(input).toMatchObject({
       metadata: { name: 'Reviewer', description: 'Reviews code.' },
       spec: {
+        runtime: 'codex',
         systemPrompt: 'Review changes carefully.',
         model: 'gpt-4',
         skills: ['ama@code-review'],

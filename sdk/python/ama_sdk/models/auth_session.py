@@ -27,11 +27,13 @@ T = TypeVar("T", bound="AuthSession")
 class AuthSession:
     """ 
         Attributes:
+            csrf_token (str):
             user (AuthUser):
             organization (AuthOrganization):
             project (AuthProject):
      """
 
+    csrf_token: str
     user: AuthUser
     organization: AuthOrganization
     project: AuthProject
@@ -45,6 +47,8 @@ class AuthSession:
         from ..models.auth_organization import AuthOrganization
         from ..models.auth_project import AuthProject
         from ..models.auth_user import AuthUser
+        csrf_token = self.csrf_token
+
         user = self.user.to_dict()
 
         organization = self.organization.to_dict()
@@ -55,6 +59,7 @@ class AuthSession:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "csrfToken": csrf_token,
             "user": user,
             "organization": organization,
             "project": project,
@@ -70,6 +75,8 @@ class AuthSession:
         from ..models.auth_project import AuthProject
         from ..models.auth_user import AuthUser
         d = dict(src_dict)
+        csrf_token = d.pop("csrfToken")
+
         user = AuthUser.from_dict(d.pop("user"))
 
 
@@ -86,6 +93,7 @@ class AuthSession:
 
 
         auth_session = cls(
+            csrf_token=csrf_token,
             user=user,
             organization=organization,
             project=project,

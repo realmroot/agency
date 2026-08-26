@@ -746,7 +746,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     expect(screen.getAllByText('My Org').length).toBeGreaterThan(0)
   })
 
-  it('falls back to organization_name when org_name is absent', async () => {
+  it('ignores legacy organization_name when canonical org_name is absent', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
       expired: false,
       profile: { sub: 'u1', email: 'u@x.com', name: 'A', picture: null, organization_name: 'Fallback Org' },
@@ -754,7 +754,8 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
-    expect(screen.getAllByText('Fallback Org').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Fallback Org')).toBeNull()
+    expect(screen.getAllByText('Personal workspace').length).toBeGreaterThan(0)
   })
 
   it('shows Personal workspace only for the user Context sentinel', async () => {

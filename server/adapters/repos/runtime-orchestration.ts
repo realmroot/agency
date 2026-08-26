@@ -35,6 +35,7 @@ import {
   vaultCredentialVersions,
   workItems,
 } from '../../db/schema'
+
 import { domainSessionState, persistedSessionState, persistedSessionStates } from '../../db/session-state'
 import { type ConnectorCatalogEntry, DEFAULT_CONNECTORS } from '../../domain/connector'
 import { amaMemoryRef, memoryStoreMountPath } from '../../domain/memory-store'
@@ -138,6 +139,20 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
           .get()) ?? null,
       )
+    },
+
+    async activeSessionsForAgent(projectId, agentId) {
+      const rows = await db
+        .select()
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.projectId, projectId),
+            eq(sessions.agentId, agentId),
+            inArray(sessions.state, ['pending', 'running', 'idle']),
+          ),
+        )
+      return rows.map(domainSessionRow)
     },
 
     async sessionState(projectId: string, sessionId: string): Promise<{ state: string } | null> {
@@ -325,7 +340,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select()
           .from(agents)
-          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+          .where(
+            and(
+              eq(agents.id, agentId),
+              eq(agents.projectId, projectId),
+              isNotNull(agents.currentVersionId),
+              isNotNull(agents.identityCredentialRef),
+            ),
+          )
           .get()) ?? null
       )
     },
@@ -471,11 +493,25 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           available: row.currentLoad < row.maxConcurrent,
         }))
         .filter((row) => runtimesSupport(row.runtimes, runtime, model))
-      if (capable.length === 0) {
-        return null
+      if (capable.length > 0) {
+        const chosen = capable.find((row) => row.available) ?? capable[0]
+        return chosen?.environmentId ?? null
       }
-      const chosen = capable.find((row) => row.available) ?? capable[0]
-      return chosen?.environmentId ?? null
+      if (runtime !== 'ama') return null
+      const cloud = await db
+        .select({ id: environments.id })
+        .from(environments)
+        .where(
+          and(
+            eq(environments.projectId, projectId),
+            eq(environments.hostingMode, 'cloud'),
+            isNull(environments.archivedAt),
+            isNotNull(environments.currentVersionId),
+          ),
+        )
+        .orderBy(asc(environments.createdAt), asc(environments.id))
+        .get()
+      return cloud?.id ?? null
     },
 
     // ── MCP manifest resolution ────────────────────────────────────────────

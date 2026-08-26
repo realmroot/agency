@@ -34,6 +34,7 @@ function buildSessionAgentSnapshot(overrides: Partial<SessionAgentSnapshot> = {}
     agentId: 'agent_1',
     projectId: 'project_1',
     version: 1,
+    runtime: 'codex',
     systemPrompt: 'Do the work',
     provider: 'workers-ai',
     model: '@cf/moonshotai/kimi-k2.6',
@@ -41,6 +42,13 @@ function buildSessionAgentSnapshot(overrides: Partial<SessionAgentSnapshot> = {}
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
+    identity: {
+      issuer: 'https://realmroot.example/api/auth',
+      subject: 'agent-subject-1',
+      username: 'coding-agent',
+      runtime: 'ama',
+      credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
+    },
     createdAt: now,
     ...overrides,
   }

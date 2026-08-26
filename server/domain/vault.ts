@@ -193,7 +193,11 @@ function optionalKeys(type: CredentialType): string[] {
   return type === 'ama.dev/oauth-token' ? ['refresh-token', 'token-type', 'expires-at', 'scopes'] : []
 }
 
-export function validateSecretData(type: CredentialType, stringData: Record<string, string>) {
+export function validateSecretData(
+  type: CredentialType,
+  stringData: Record<string, string>,
+  options: { allowLoopbackRealmrootHttp?: boolean } = {},
+) {
   const keys = Object.keys(stringData)
   if (keys.length === 0) {
     return { stringData: 'At least one data key is required.' }
@@ -235,7 +239,7 @@ export function validateSecretData(type: CredentialType, stringData: Record<stri
   }
   if (type === 'ama.dev/realmroot-agent-state') {
     try {
-      parseRealmrootAgentState(stringData['state.json'] ?? '')
+      parseRealmrootAgentState(stringData['state.json'] ?? '', options)
     } catch (error) {
       return {
         'stringData.state.json': error instanceof Error ? error.message : 'Realmroot Agent state is invalid.',
@@ -481,7 +485,10 @@ function decodedBase64UrlLength(value: string) {
   }
 }
 
-export function parseRealmrootAgentState(content: string): RealmrootAgentStateMetadata {
+export function parseRealmrootAgentState(
+  content: string,
+  options: { allowLoopbackRealmrootHttp?: boolean } = {},
+): RealmrootAgentStateMetadata {
   let parsed: unknown
   try {
     parsed = JSON.parse(content)
@@ -517,7 +524,7 @@ export function parseRealmrootAgentState(content: string): RealmrootAgentStateMe
   } catch {
     throw new Error('Realmroot Agent state origin must be a safe HTTPS URL.')
   }
-  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.search || origin.hash) {
+  if (!safeRealmrootStateUrl(origin, options.allowLoopbackRealmrootHttp === true)) {
     throw new Error('Realmroot Agent state origin must be a safe HTTPS URL.')
   }
   let issuer: URL
@@ -526,7 +533,7 @@ export function parseRealmrootAgentState(content: string): RealmrootAgentStateMe
   } catch {
     throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
   }
-  if (issuer.protocol !== 'https:' || issuer.username || issuer.password || issuer.search || issuer.hash) {
+  if (!safeRealmrootStateUrl(issuer, options.allowLoopbackRealmrootHttp === true)) {
     throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
   }
   if (state.runtime !== 'ama') {
@@ -544,6 +551,13 @@ export function parseRealmrootAgentState(content: string): RealmrootAgentStateMe
   }
 }
 
+function safeRealmrootStateUrl(url: URL, allowLoopbackHttp: boolean) {
+  if (url.username || url.password || url.search || url.hash) return false
+  if (url.protocol === 'https:') return true
+  if (!allowLoopbackHttp || url.protocol !== 'http:') return false
+  return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]'
+}
+
 // Builds the safe reference for a credential version from the requested secret
 // material, validating the provider-specific field combination. Throws on an
 // invalid combination so the http layer maps it to a 400.
@@ -552,9 +566,10 @@ export function secretReference(
   version: number,
   type: CredentialType,
   values: SecretMaterial,
+  options: { allowLoopbackRealmrootHttp?: boolean } = {},
 ): SecretReference {
   const stringData = values.stringData ?? {}
-  const invalid = validateSecretData(type, stringData)
+  const invalid = validateSecretData(type, stringData, options)
   if (invalid) {
     throw new Error(Object.values(invalid)[0] ?? 'Invalid credential data')
   }

@@ -42,6 +42,7 @@ export function metadata(overrides: ResourceMetadataOverrides = {}): ResourceMet
 
 export type AgentOverrides = ResourceMetadataOverrides &
   Partial<AgentSpec> & {
+    identity?: Agent['identity']
     currentVersionId?: string | null
     version?: number
   }
@@ -55,6 +56,7 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       ...overrides,
     }),
     spec: {
+      runtime: overrides.runtime ?? 'codex',
       systemPrompt: overrides.systemPrompt === undefined ? 'Do the work' : overrides.systemPrompt,
       provider: overrides.provider === undefined ? 'workers-ai' : overrides.provider,
       model: overrides.model === undefined ? '@cf/moonshotai/kimi-k2.6' : overrides.model,
@@ -62,10 +64,17 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       subagents: overrides.subagents ?? [],
       allowedTools: overrides.allowedTools ?? ['read', 'write'],
       mcpConnectors: overrides.mcpConnectors ?? [],
-      realmroot: overrides.realmroot ?? null,
+    },
+    identity: overrides.identity ?? {
+      issuer: 'https://realmroot.example/api/auth',
+      subject: 'agent-subject-1',
+      username: 'coding-agent',
+      runtime: 'ama',
     },
     status: {
       phase: overrides.archivedAt ? 'archived' : 'active',
+      ready: !overrides.archivedAt,
+      retirementStage: null,
       currentVersionId: overrides.currentVersionId === undefined ? 'agentver_1' : overrides.currentVersionId,
       version: overrides.version ?? 1,
     },

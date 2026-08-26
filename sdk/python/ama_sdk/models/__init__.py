@@ -3,7 +3,10 @@
 from .agent import Agent
 from .agent_list_response import AgentListResponse
 from .agent_spec import AgentSpec
+from .agent_spec_runtime import AgentSpecRuntime
 from .agent_status import AgentStatus
+from .agent_status_phase import AgentStatusPhase
+from .agent_status_retirement_stage import AgentStatusRetirementStage
 from .agent_subagent import AgentSubagent
 from .agent_subagent_input import AgentSubagentInput
 from .agent_version import AgentVersion
@@ -70,6 +73,7 @@ from .connector_tool_policy_metadata import ConnectorToolPolicyMetadata
 from .connector_trust_level import ConnectorTrustLevel
 from .create_agent_request import CreateAgentRequest
 from .create_agent_request_spec import CreateAgentRequestSpec
+from .create_agent_request_spec_runtime import CreateAgentRequestSpecRuntime
 from .create_budget_request import CreateBudgetRequest
 from .create_budget_request_limit_type import CreateBudgetRequestLimitType
 from .create_budget_request_metadata import CreateBudgetRequestMetadata
@@ -92,6 +96,7 @@ from .create_runner_request import CreateRunnerRequest
 from .create_runner_request_auth_mode import CreateRunnerRequestAuthMode
 from .create_runner_request_metadata import CreateRunnerRequestMetadata
 from .create_session_events_request import CreateSessionEventsRequest
+from .create_session_execution_spec import CreateSessionExecutionSpec
 from .create_session_message_request import CreateSessionMessageRequest
 from .create_session_message_request_type import CreateSessionMessageRequestType
 from .create_session_request import CreateSessionRequest
@@ -163,7 +168,6 @@ from .event_tool_call_type_7_name import EventToolCallType7Name
 from .event_tool_call_type_8 import EventToolCallType8
 from .event_tool_call_type_8_name import EventToolCallType8Name
 from .execution_env import ExecutionEnv
-from .execution_spec_input import ExecutionSpecInput
 from .external_tool_call import ExternalToolCall
 from .external_tool_call_input import ExternalToolCallInput
 from .fetch_tool_input import FetchToolInput
@@ -247,7 +251,8 @@ from .put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMeta
 from .put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
 from .read_tool_input import ReadToolInput
 from .read_usage_summary_group_by import ReadUsageSummaryGroupBy
-from .realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+from .realmroot_agent_identity import RealmrootAgentIdentity
+from .realmroot_agent_identity_runtime import RealmrootAgentIdentityRuntime
 from .reasoning_content_block import ReasoningContentBlock
 from .reasoning_content_block_type import ReasoningContentBlockType
 from .resource_create_metadata import ResourceCreateMetadata
@@ -383,7 +388,8 @@ from .session_metadata import SessionMetadata
 from .session_metadata_annotations import SessionMetadataAnnotations
 from .session_metadata_labels import SessionMetadataLabels
 from .session_placement_type_0 import SessionPlacementType0
-from .session_realmroot_binding_type_0 import SessionRealmrootBindingType0
+from .session_realmroot_identity import SessionRealmrootIdentity
+from .session_realmroot_identity_runtime import SessionRealmrootIdentityRuntime
 from .session_socket_abort_message import SessionSocketAbortMessage
 from .session_socket_abort_message_type import SessionSocketAbortMessageType
 from .session_socket_ack_message import SessionSocketAckMessage
@@ -444,6 +450,7 @@ from .trigger_update_metadata import TriggerUpdateMetadata
 from .turn_payload import TurnPayload
 from .update_agent_request import UpdateAgentRequest
 from .update_agent_request_spec import UpdateAgentRequestSpec
+from .update_agent_request_spec_runtime import UpdateAgentRequestSpecRuntime
 from .update_budget_request import UpdateBudgetRequest
 from .update_budget_request_metadata import UpdateBudgetRequestMetadata
 from .update_budget_request_window import UpdateBudgetRequestWindow
@@ -532,7 +539,10 @@ __all__ = (
     "Agent",
     "AgentListResponse",
     "AgentSpec",
+    "AgentSpecRuntime",
     "AgentStatus",
+    "AgentStatusPhase",
+    "AgentStatusRetirementStage",
     "AgentSubagent",
     "AgentSubagentInput",
     "AgentVersion",
@@ -599,6 +609,7 @@ __all__ = (
     "ConnectorTrustLevel",
     "CreateAgentRequest",
     "CreateAgentRequestSpec",
+    "CreateAgentRequestSpecRuntime",
     "CreateBudgetRequest",
     "CreateBudgetRequestLimitType",
     "CreateBudgetRequestMetadata",
@@ -621,6 +632,7 @@ __all__ = (
     "CreateRunnerRequestAuthMode",
     "CreateRunnerRequestMetadata",
     "CreateSessionEventsRequest",
+    "CreateSessionExecutionSpec",
     "CreateSessionMessageRequest",
     "CreateSessionMessageRequestType",
     "CreateSessionRequest",
@@ -692,7 +704,6 @@ __all__ = (
     "EventToolCallType8",
     "EventToolCallType8Name",
     "ExecutionEnv",
-    "ExecutionSpecInput",
     "ExternalToolCall",
     "ExternalToolCallInput",
     "FetchToolInput",
@@ -776,7 +787,8 @@ __all__ = (
     "PutRunnerHeartbeatRequestState",
     "ReadToolInput",
     "ReadUsageSummaryGroupBy",
-    "RealmrootAgentBindingType0",
+    "RealmrootAgentIdentity",
+    "RealmrootAgentIdentityRuntime",
     "ReasoningContentBlock",
     "ReasoningContentBlockType",
     "ResourceCreateMetadata",
@@ -912,7 +924,8 @@ __all__ = (
     "SessionMetadataAnnotations",
     "SessionMetadataLabels",
     "SessionPlacementType0",
-    "SessionRealmrootBindingType0",
+    "SessionRealmrootIdentity",
+    "SessionRealmrootIdentityRuntime",
     "SessionSocketAbortMessage",
     "SessionSocketAbortMessageType",
     "SessionSocketAckMessage",
@@ -973,6 +986,7 @@ __all__ = (
     "TurnPayload",
     "UpdateAgentRequest",
     "UpdateAgentRequestSpec",
+    "UpdateAgentRequestSpecRuntime",
     "UpdateBudgetRequest",
     "UpdateBudgetRequestMetadata",
     "UpdateBudgetRequestWindow",

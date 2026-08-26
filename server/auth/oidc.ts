@@ -102,6 +102,18 @@ export async function getAccessTokenClaims(
   return normalizeClaims(env, await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience)))
 }
 
+export async function getBearerClaimsForAudience(env: Env, accessToken: string, audience: string) {
+  const exactAudience = oidcAudience(
+    {
+      OIDC_RESOURCE: audience,
+      ...(env.AMA_RUNTIME_MODE !== undefined ? { AMA_RUNTIME_MODE: env.AMA_RUNTIME_MODE } : {}),
+      ...(env.AMA_E2E_TEST_AUTH !== undefined ? { AMA_E2E_TEST_AUTH: env.AMA_E2E_TEST_AUTH } : {}),
+    },
+    audience,
+  )
+  return normalizeClaims(env, await verifyAccessToken(env, accessToken, exactAudience, 'bearer'))
+}
+
 async function verifyAccessToken(
   env: Env,
   accessToken: string,
@@ -343,6 +355,7 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPay
     : AMA_SCOPES
   const scope = ['openid', 'profile', 'email', 'offline_access', ...resourceScopes].join(' ')
   return {
+    ...(env.OIDC_ISSUER ? { iss: env.OIDC_ISSUER } : {}),
     sub: `user_e2e_${safeRunId}`,
     email: `${safeRunId}@e2e.example.com`,
     name: `E2E User ${safeRunId}`,

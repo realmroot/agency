@@ -24,6 +24,75 @@ const (
 	SessionSocketTicketScopes    sessionSocketTicketContextKey    = "sessionSocketTicket.Scopes"
 )
 
+// Defines values for AgentSpecRuntime.
+const (
+	AgentSpecRuntimeAma        AgentSpecRuntime = "ama"
+	AgentSpecRuntimeClaudeCode AgentSpecRuntime = "claude-code"
+	AgentSpecRuntimeCodex      AgentSpecRuntime = "codex"
+	AgentSpecRuntimeCopilot    AgentSpecRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the AgentSpecRuntime enum.
+func (e AgentSpecRuntime) Valid() bool {
+	switch e {
+	case AgentSpecRuntimeAma:
+		return true
+	case AgentSpecRuntimeClaudeCode:
+		return true
+	case AgentSpecRuntimeCodex:
+		return true
+	case AgentSpecRuntimeCopilot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentStatusPhase.
+const (
+	AgentStatusPhaseActive   AgentStatusPhase = "active"
+	AgentStatusPhaseArchived AgentStatusPhase = "archived"
+	AgentStatusPhaseRetired  AgentStatusPhase = "retired"
+	AgentStatusPhaseRetiring AgentStatusPhase = "retiring"
+)
+
+// Valid indicates whether the value is a known member of the AgentStatusPhase enum.
+func (e AgentStatusPhase) Valid() bool {
+	switch e {
+	case AgentStatusPhaseActive:
+		return true
+	case AgentStatusPhaseArchived:
+		return true
+	case AgentStatusPhaseRetired:
+		return true
+	case AgentStatusPhaseRetiring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentStatusRetirementStage.
+const (
+	AgentStatusRetirementStageIdentityRetired AgentStatusRetirementStage = "identity_retired"
+	AgentStatusRetirementStageRetired         AgentStatusRetirementStage = "retired"
+	AgentStatusRetirementStageStopping        AgentStatusRetirementStage = "stopping"
+)
+
+// Valid indicates whether the value is a known member of the AgentStatusRetirementStage enum.
+func (e AgentStatusRetirementStage) Valid() bool {
+	switch e {
+	case AgentStatusRetirementStageIdentityRetired:
+		return true
+	case AgentStatusRetirementStageRetired:
+		return true
+	case AgentStatusRetirementStageStopping:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AmaEvent0Type.
 const (
 	AmaEvent0TypeRuntimeStarted AmaEvent0Type = "runtime.started"
@@ -456,6 +525,30 @@ func (e ConnectorToolApprovalMode) Valid() bool {
 	case PerCall:
 		return true
 	case ProjectPolicy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateAgentRequestSpecRuntime.
+const (
+	CreateAgentRequestSpecRuntimeAma        CreateAgentRequestSpecRuntime = "ama"
+	CreateAgentRequestSpecRuntimeClaudeCode CreateAgentRequestSpecRuntime = "claude-code"
+	CreateAgentRequestSpecRuntimeCodex      CreateAgentRequestSpecRuntime = "codex"
+	CreateAgentRequestSpecRuntimeCopilot    CreateAgentRequestSpecRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the CreateAgentRequestSpecRuntime enum.
+func (e CreateAgentRequestSpecRuntime) Valid() bool {
+	switch e {
+	case CreateAgentRequestSpecRuntimeAma:
+		return true
+	case CreateAgentRequestSpecRuntimeClaudeCode:
+		return true
+	case CreateAgentRequestSpecRuntimeCodex:
+		return true
+	case CreateAgentRequestSpecRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -1149,6 +1242,21 @@ func (e PutRunnerHeartbeatRequestState) Valid() bool {
 	case PutRunnerHeartbeatRequestStateDraining:
 		return true
 	case PutRunnerHeartbeatRequestStateOffline:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RealmrootAgentIdentityRuntime.
+const (
+	RealmrootAgentIdentityRuntimeAma RealmrootAgentIdentityRuntime = "ama"
+)
+
+// Valid indicates whether the value is a known member of the RealmrootAgentIdentityRuntime enum.
+func (e RealmrootAgentIdentityRuntime) Valid() bool {
+	switch e {
+	case RealmrootAgentIdentityRuntimeAma:
 		return true
 	default:
 		return false
@@ -1935,6 +2043,21 @@ func (e SessionMessageType) Valid() bool {
 	}
 }
 
+// Defines values for SessionRealmrootIdentityRuntime.
+const (
+	SessionRealmrootIdentityRuntimeAma SessionRealmrootIdentityRuntime = "ama"
+)
+
+// Valid indicates whether the value is a known member of the SessionRealmrootIdentityRuntime enum.
+func (e SessionRealmrootIdentityRuntime) Valid() bool {
+	switch e {
+	case SessionRealmrootIdentityRuntimeAma:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SessionSocketAbortMessageType.
 const (
 	Abort SessionSocketAbortMessageType = "abort"
@@ -2208,6 +2331,30 @@ const (
 func (e TriggerSource1Type) Valid() bool {
 	switch e {
 	case TriggerSource1TypeHttp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateAgentRequestSpecRuntime.
+const (
+	UpdateAgentRequestSpecRuntimeAma        UpdateAgentRequestSpecRuntime = "ama"
+	UpdateAgentRequestSpecRuntimeClaudeCode UpdateAgentRequestSpecRuntime = "claude-code"
+	UpdateAgentRequestSpecRuntimeCodex      UpdateAgentRequestSpecRuntime = "codex"
+	UpdateAgentRequestSpecRuntimeCopilot    UpdateAgentRequestSpecRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the UpdateAgentRequestSpecRuntime enum.
+func (e UpdateAgentRequestSpecRuntime) Valid() bool {
+	switch e {
+	case UpdateAgentRequestSpecRuntimeAma:
+		return true
+	case UpdateAgentRequestSpecRuntimeClaudeCode:
+		return true
+	case UpdateAgentRequestSpecRuntimeCodex:
+		return true
+	case UpdateAgentRequestSpecRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2516,13 +2663,13 @@ func (e VaultCredentialStatusPhase) Valid() bool {
 
 // Defines values for VaultCredentialVersionSpecProvider.
 const (
-	Ama VaultCredentialVersionSpecProvider = "ama"
+	VaultCredentialVersionSpecProviderAma VaultCredentialVersionSpecProvider = "ama"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialVersionSpecProvider enum.
 func (e VaultCredentialVersionSpecProvider) Valid() bool {
 	switch e {
-	case Ama:
+	case VaultCredentialVersionSpecProviderAma:
 		return true
 	default:
 		return false
@@ -3017,9 +3164,10 @@ func (e ListWorkItemsParamsState) Valid() bool {
 
 // Agent defines model for Agent.
 type Agent struct {
-	Metadata ResourceMetadata `json:"metadata"`
-	Spec     AgentSpec        `json:"spec"`
-	Status   AgentStatus      `json:"status"`
+	Identity RealmrootAgentIdentity `json:"identity"`
+	Metadata ResourceMetadata       `json:"metadata"`
+	Spec     AgentSpec              `json:"spec"`
+	Status   AgentStatus            `json:"status"`
 }
 
 // AgentListResponse defines model for AgentListResponse.
@@ -3030,22 +3178,33 @@ type AgentListResponse struct {
 
 // AgentSpec defines model for AgentSpec.
 type AgentSpec struct {
-	AllowedTools  []string               `json:"allowedTools"`
-	McpConnectors []string               `json:"mcpConnectors"`
-	Model         *string                `json:"model"`
-	Provider      *string                `json:"provider"`
-	Realmroot     *RealmrootAgentBinding `json:"realmroot"`
-	Skills        []string               `json:"skills"`
-	Subagents     []AgentSubagent        `json:"subagents"`
-	SystemPrompt  string                 `json:"systemPrompt"`
+	AllowedTools  []string         `json:"allowedTools"`
+	McpConnectors []string         `json:"mcpConnectors"`
+	Model         *string          `json:"model"`
+	Provider      *string          `json:"provider"`
+	Runtime       AgentSpecRuntime `json:"runtime"`
+	Skills        []string         `json:"skills"`
+	Subagents     []AgentSubagent  `json:"subagents"`
+	SystemPrompt  string           `json:"systemPrompt"`
 }
+
+// AgentSpecRuntime defines model for AgentSpec.Runtime.
+type AgentSpecRuntime string
 
 // AgentStatus defines model for AgentStatus.
 type AgentStatus struct {
-	CurrentVersionId *string       `json:"currentVersionId"`
-	Phase            ResourcePhase `json:"phase"`
-	Version          int           `json:"version"`
+	CurrentVersionId *string                     `json:"currentVersionId"`
+	Phase            AgentStatusPhase            `json:"phase"`
+	Ready            bool                        `json:"ready"`
+	RetirementStage  *AgentStatusRetirementStage `json:"retirementStage"`
+	Version          int                         `json:"version"`
 }
+
+// AgentStatusPhase defines model for AgentStatus.Phase.
+type AgentStatusPhase string
+
+// AgentStatusRetirementStage defines model for AgentStatus.RetirementStage.
+type AgentStatusRetirementStage string
 
 // AgentSubagent defines model for AgentSubagent.
 type AgentSubagent struct {
@@ -3263,6 +3422,7 @@ type AuthProject struct {
 
 // AuthSession defines model for AuthSession.
 type AuthSession struct {
+	CsrfToken    string           `json:"csrfToken"`
 	Organization AuthOrganization `json:"organization"`
 	Project      AuthProject      `json:"project"`
 	User         AuthUser         `json:"user"`
@@ -3376,16 +3536,20 @@ type ConnectorToolApprovalMode string
 type CreateAgentRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
-		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
-		Model         *string                `json:"model,omitempty"`
-		Provider      *string                `json:"provider,omitempty"`
-		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
-		Skills        *[]string              `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
-		SystemPrompt  string                 `json:"systemPrompt"`
+		AllowedTools  *[]string                     `json:"allowedTools,omitempty"`
+		McpConnectors *[]string                     `json:"mcpConnectors,omitempty"`
+		Model         *string                       `json:"model,omitempty"`
+		Provider      *string                       `json:"provider,omitempty"`
+		Runtime       CreateAgentRequestSpecRuntime `json:"runtime"`
+		Skills        *[]string                     `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput         `json:"subagents,omitempty"`
+		SystemPrompt  string                        `json:"systemPrompt"`
 	} `json:"spec"`
+	Username string `json:"username"`
 }
+
+// CreateAgentRequestSpecRuntime defines model for CreateAgentRequest.Spec.Runtime.
+type CreateAgentRequestSpecRuntime string
 
 // CreateBudgetRequest defines model for CreateBudgetRequest.
 type CreateBudgetRequest struct {
@@ -3477,6 +3641,17 @@ type CreateSessionEventsRequest struct {
 	Events []AmaEvent `json:"events"`
 }
 
+// CreateSessionExecutionSpec defines model for CreateSessionExecutionSpec.
+type CreateSessionExecutionSpec struct {
+	AgentId       string          `json:"agentId"`
+	Env           *ExecutionEnv   `json:"env,omitempty"`
+	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
+	EnvironmentId *string         `json:"environmentId,omitempty"`
+	Runtime       *RuntimeName    `json:"runtime,omitempty"`
+	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
+	Volumes       *[]Volume       `json:"volumes,omitempty"`
+}
+
 // CreateSessionMessageRequest defines model for CreateSessionMessageRequest.
 type CreateSessionMessageRequest struct {
 	Content   string                          `json:"content"`
@@ -3489,9 +3664,9 @@ type CreateSessionMessageRequestType string
 
 // CreateSessionRequest defines model for CreateSessionRequest.
 type CreateSessionRequest struct {
-	Metadata *SessionCreateMetadata `json:"metadata,omitempty"`
-	Prompt   string                 `json:"prompt"`
-	Spec     ExecutionSpecInput     `json:"spec"`
+	Metadata *SessionCreateMetadata     `json:"metadata,omitempty"`
+	Prompt   string                     `json:"prompt"`
+	Spec     CreateSessionExecutionSpec `json:"spec"`
 }
 
 // CreateTriggerRequest defines model for CreateTriggerRequest.
@@ -3816,17 +3991,6 @@ type EventToolCall8Name string
 
 // ExecutionEnv defines model for ExecutionEnv.
 type ExecutionEnv map[string]string
-
-// ExecutionSpecInput defines model for ExecutionSpecInput.
-type ExecutionSpecInput struct {
-	AgentId       string          `json:"agentId"`
-	Env           *ExecutionEnv   `json:"env,omitempty"`
-	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
-	EnvironmentId *string         `json:"environmentId,omitempty"`
-	Runtime       RuntimeName     `json:"runtime"`
-	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
-	Volumes       *[]Volume       `json:"volumes,omitempty"`
-}
 
 // ExternalToolCall defines model for ExternalToolCall.
 type ExternalToolCall struct {
@@ -4191,12 +4355,16 @@ type ReadToolInput struct {
 	Path   string `json:"path"`
 }
 
-// RealmrootAgentBinding defines model for RealmrootAgentBinding.
-type RealmrootAgentBinding struct {
-	AgentId       string `json:"agentId"`
-	CredentialRef string `json:"credentialRef"`
-	Origin        string `json:"origin"`
+// RealmrootAgentIdentity defines model for RealmrootAgentIdentity.
+type RealmrootAgentIdentity struct {
+	Issuer   string                        `json:"issuer"`
+	Runtime  RealmrootAgentIdentityRuntime `json:"runtime"`
+	Subject  string                        `json:"subject"`
+	Username string                        `json:"username"`
 }
+
+// RealmrootAgentIdentityRuntime defines model for RealmrootAgentIdentity.Runtime.
+type RealmrootAgentIdentityRuntime string
 
 // ReasoningContentBlock defines model for ReasoningContentBlock.
 type ReasoningContentBlock struct {
@@ -4617,11 +4785,12 @@ type SessionAgentSnapshot struct {
 	AllowedTools  []string                 `json:"allowedTools"`
 	CreatedAt     time.Time                `json:"createdAt"`
 	Id            string                   `json:"id"`
+	Identity      SessionRealmrootIdentity `json:"identity"`
 	McpConnectors []string                 `json:"mcpConnectors"`
 	Model         *string                  `json:"model"`
 	ProjectId     string                   `json:"projectId"`
 	Provider      string                   `json:"provider"`
-	Realmroot     *SessionRealmrootBinding `json:"realmroot,omitempty"`
+	Runtime       RuntimeName              `json:"runtime"`
 	Skills        []string                 `json:"skills"`
 	Subagents     []SessionSubagent        `json:"subagents"`
 	SystemPrompt  string                   `json:"systemPrompt"`
@@ -4948,12 +5117,17 @@ type SessionPlacement struct {
 	Provider    string                 `json:"provider"`
 }
 
-// SessionRealmrootBinding defines model for SessionRealmrootBinding.
-type SessionRealmrootBinding struct {
-	AgentId       string `json:"agentId"`
-	CredentialRef string `json:"credentialRef"`
-	Origin        string `json:"origin"`
+// SessionRealmrootIdentity defines model for SessionRealmrootIdentity.
+type SessionRealmrootIdentity struct {
+	CredentialRef string                          `json:"credentialRef"`
+	Issuer        string                          `json:"issuer"`
+	Runtime       SessionRealmrootIdentityRuntime `json:"runtime"`
+	Subject       string                          `json:"subject"`
+	Username      string                          `json:"username"`
 }
+
+// SessionRealmrootIdentityRuntime defines model for SessionRealmrootIdentity.Runtime.
+type SessionRealmrootIdentityRuntime string
 
 // SessionSocketAbortMessage defines model for SessionSocketAbortMessage.
 type SessionSocketAbortMessage struct {
@@ -5289,16 +5463,19 @@ type UpdateAgentRequest struct {
 	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
-		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
-		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
-		Model         *string                `json:"model,omitempty"`
-		Provider      *string                `json:"provider,omitempty"`
-		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
-		Skills        *[]string              `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
-		SystemPrompt  *string                `json:"systemPrompt,omitempty"`
+		AllowedTools  *[]string                      `json:"allowedTools,omitempty"`
+		McpConnectors *[]string                      `json:"mcpConnectors,omitempty"`
+		Model         *string                        `json:"model,omitempty"`
+		Provider      *string                        `json:"provider,omitempty"`
+		Runtime       *UpdateAgentRequestSpecRuntime `json:"runtime,omitempty"`
+		Skills        *[]string                      `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput          `json:"subagents,omitempty"`
+		SystemPrompt  *string                        `json:"systemPrompt,omitempty"`
 	} `json:"spec,omitempty"`
 }
+
+// UpdateAgentRequestSpecRuntime defines model for UpdateAgentRequest.Spec.Runtime.
+type UpdateAgentRequestSpecRuntime string
 
 // UpdateBudgetRequest defines model for UpdateBudgetRequest.
 type UpdateBudgetRequest struct {
@@ -5722,16 +5899,32 @@ type sessionSocketTicketContextKey string
 // ListAgentsParams defines parameters for ListAgents.
 type ListAgentsParams struct {
 	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                   `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Archived        *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
+	Search          *string                   `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom     *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo       *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit           *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor          *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+	IdentityIssuer  *string                   `form:"identityIssuer,omitempty" json:"identityIssuer,omitempty"`
+	IdentitySubject *string                   `form:"identitySubject,omitempty" json:"identitySubject,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
 type ListAgentsParamsArchived string
+
+// CreateAgentParams defines parameters for CreateAgent.
+type CreateAgentParams struct {
+	IdempotencyKey string `json:"Idempotency-Key"`
+
+	// XAMARealmrootAuthorization Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
+	XAMARealmrootAuthorization *string `json:"X-AMA-Realmroot-Authorization,omitempty"`
+}
+
+// RetireAgentParams defines parameters for RetireAgent.
+type RetireAgentParams struct {
+	// XAMARealmrootAuthorization Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
+	XAMARealmrootAuthorization *string `json:"X-AMA-Realmroot-Authorization,omitempty"`
+}
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
 type ListAuditRecordsParams struct {
@@ -5747,9 +5940,20 @@ type ListAuditRecordsParams struct {
 	Cursor       *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// FinishWebLoginParams defines parameters for FinishWebLogin.
+type FinishWebLoginParams struct {
+	Code  string `form:"code" json:"code"`
+	State string `form:"state" json:"state"`
+}
+
 // ReadAuthConfigParams defines parameters for ReadAuthConfig.
 type ReadAuthConfigParams struct {
 	Organization *string `form:"organization,omitempty" json:"organization,omitempty"`
+}
+
+// BeginWebLoginParams defines parameters for BeginWebLogin.
+type BeginWebLoginParams struct {
+	ReturnTo *string `form:"returnTo,omitempty" json:"returnTo,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -8434,9 +8638,12 @@ type ClientInterface interface {
 	ListAgents(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAgentWithBody request with any body
-	CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RetireAgent request
+	RetireAgent(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8458,8 +8665,17 @@ type ClientInterface interface {
 	// ReadAuditRecord request
 	ReadAuditRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// FinishWebLogin request
+	FinishWebLogin(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadAuthConfig request
 	ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// BeginWebLogin request
+	BeginWebLogin(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EndCurrentAuthSession request
+	EndCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadCurrentAuthSession request
 	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8768,8 +8984,8 @@ func (c *APIClient) ListAgents(ctx context.Context, params *ListAgentsParams, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8780,8 +8996,20 @@ func (c *APIClient) CreateAgentWithBody(ctx context.Context, contentType string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequest(c.Server, body)
+func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) RetireAgent(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRetireAgentRequest(c.Server, agentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -8876,8 +9104,44 @@ func (c *APIClient) ReadAuditRecord(ctx context.Context, recordId string, reqEdi
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) FinishWebLogin(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewFinishWebLoginRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadAuthConfigRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) BeginWebLogin(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBeginWebLoginRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) EndCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEndCurrentAuthSessionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10272,6 +10536,30 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 
 		}
 
+		if params.IdentityIssuer != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identityIssuer", *params.IdentityIssuer, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uri"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.IdentitySubject != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identitySubject", *params.IdentitySubject, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -10287,18 +10575,18 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 }
 
 // NewCreateAgentRequest calls the generic CreateAgent builder with application/json body
-func NewCreateAgentRequest(server string, body CreateAgentJSONRequestBody) (*http.Request, error) {
+func NewCreateAgentRequest(server string, params *CreateAgentParams, body CreateAgentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateAgentRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateAgentRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateAgentRequestWithBody generates requests for CreateAgent with any type of body
-func NewCreateAgentRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -10322,6 +10610,79 @@ func NewCreateAgentRequestWithBody(server string, contentType string, body io.Re
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Idempotency-Key", headerParam0)
+
+		if params.XAMARealmrootAuthorization != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Realmroot-Authorization", *params.XAMARealmrootAuthorization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Realmroot-Authorization", headerParam1)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewRetireAgentRequest generates requests for RetireAgent
+func NewRetireAgentRequest(server string, agentId string, params *RetireAgentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "agentId", agentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/agents/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMARealmrootAuthorization != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Realmroot-Authorization", *params.XAMARealmrootAuthorization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Realmroot-Authorization", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -10678,6 +11039,64 @@ func NewReadAuditRecordRequest(server string, recordId string) (*http.Request, e
 	return req, nil
 }
 
+// NewFinishWebLoginRequest generates requests for FinishWebLogin
+func NewFinishWebLoginRequest(server string, params *FinishWebLoginParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/callback")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "code", params.Code, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "state", params.State, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewReadAuthConfigRequest generates requests for ReadAuthConfig
 func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*http.Request, error) {
 	var err error
@@ -10725,6 +11144,87 @@ func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*htt
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewBeginWebLoginRequest generates requests for BeginWebLogin
+func NewBeginWebLoginRequest(server string, params *BeginWebLoginParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/login")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.ReturnTo != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "returnTo", *params.ReturnTo, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewEndCurrentAuthSessionRequest generates requests for EndCurrentAuthSession
+func NewEndCurrentAuthSessionRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/sessions/current")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -15222,9 +15722,12 @@ type ClientWithResponsesInterface interface {
 	ListAgentsWithResponse(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*ListAgentsResponse, error)
 
 	// CreateAgentWithBodyWithResponse request with any body
-	CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+	CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
-	CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+
+	// RetireAgentWithResponse request
+	RetireAgentWithResponse(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error)
 
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
@@ -15246,8 +15749,17 @@ type ClientWithResponsesInterface interface {
 	// ReadAuditRecordWithResponse request
 	ReadAuditRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadAuditRecordResponse, error)
 
+	// FinishWebLoginWithResponse request
+	FinishWebLoginWithResponse(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*FinishWebLoginResponse, error)
+
 	// ReadAuthConfigWithResponse request
 	ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error)
+
+	// BeginWebLoginWithResponse request
+	BeginWebLoginWithResponse(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*BeginWebLoginResponse, error)
+
+	// EndCurrentAuthSessionWithResponse request
+	EndCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EndCurrentAuthSessionResponse, error)
 
 	// ReadCurrentAuthSessionWithResponse request
 	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
@@ -15584,6 +16096,8 @@ type CreateAgentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON409      *ErrorResponse
+	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -15604,6 +16118,39 @@ func (r CreateAgentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateAgentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RetireAgentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON502      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r RetireAgentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RetireAgentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RetireAgentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -15811,6 +16358,37 @@ func (r ReadAuditRecordResponse) ContentType() string {
 	return ""
 }
 
+type FinishWebLoginResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *ErrorResponse
+	JSON502      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r FinishWebLoginResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r FinishWebLoginResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r FinishWebLoginResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ReadAuthConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -15835,6 +16413,65 @@ func (r ReadAuthConfigResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadAuthConfigResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type BeginWebLoginResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r BeginWebLoginResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BeginWebLoginResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r BeginWebLoginResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type EndCurrentAuthSessionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r EndCurrentAuthSessionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r EndCurrentAuthSessionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r EndCurrentAuthSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18527,20 +19164,29 @@ func (c *ClientWithResponses) ListAgentsWithResponse(ctx context.Context, params
 }
 
 // CreateAgentWithBodyWithResponse request with arbitrary body returning *CreateAgentResponse
-func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgentWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgentWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateAgentResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgent(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgent(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateAgentResponse(rsp)
+}
+
+// RetireAgentWithResponse request returning *RetireAgentResponse
+func (c *ClientWithResponses) RetireAgentWithResponse(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error) {
+	rsp, err := c.RetireAgent(ctx, agentId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRetireAgentResponse(rsp)
 }
 
 // ReadAgentWithResponse request returning *ReadAgentResponse
@@ -18605,6 +19251,15 @@ func (c *ClientWithResponses) ReadAuditRecordWithResponse(ctx context.Context, r
 	return ParseReadAuditRecordResponse(rsp)
 }
 
+// FinishWebLoginWithResponse request returning *FinishWebLoginResponse
+func (c *ClientWithResponses) FinishWebLoginWithResponse(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*FinishWebLoginResponse, error) {
+	rsp, err := c.FinishWebLogin(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseFinishWebLoginResponse(rsp)
+}
+
 // ReadAuthConfigWithResponse request returning *ReadAuthConfigResponse
 func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error) {
 	rsp, err := c.ReadAuthConfig(ctx, params, reqEditors...)
@@ -18612,6 +19267,24 @@ func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, pa
 		return nil, err
 	}
 	return ParseReadAuthConfigResponse(rsp)
+}
+
+// BeginWebLoginWithResponse request returning *BeginWebLoginResponse
+func (c *ClientWithResponses) BeginWebLoginWithResponse(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*BeginWebLoginResponse, error) {
+	rsp, err := c.BeginWebLogin(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBeginWebLoginResponse(rsp)
+}
+
+// EndCurrentAuthSessionWithResponse request returning *EndCurrentAuthSessionResponse
+func (c *ClientWithResponses) EndCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EndCurrentAuthSessionResponse, error) {
+	rsp, err := c.EndCurrentAuthSession(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEndCurrentAuthSessionResponse(rsp)
 }
 
 // ReadCurrentAuthSessionWithResponse request returning *ReadCurrentAuthSessionResponse
@@ -19639,6 +20312,67 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRetireAgentResponse parses an HTTP response from a RetireAgentWithResponse call
+func ParseRetireAgentResponse(rsp *http.Response) (*RetireAgentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RetireAgentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
 	}
 
 	return response, nil
@@ -19950,6 +20684,39 @@ func ParseReadAuditRecordResponse(rsp *http.Response) (*ReadAuditRecordResponse,
 	return response, nil
 }
 
+// ParseFinishWebLoginResponse parses an HTTP response from a FinishWebLoginWithResponse call
+func ParseFinishWebLoginResponse(rsp *http.Response) (*FinishWebLoginResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &FinishWebLoginResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReadAuthConfigResponse parses an HTTP response from a ReadAuthConfigWithResponse call
 func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -19970,6 +20737,48 @@ func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseBeginWebLoginResponse parses an HTTP response from a BeginWebLoginWithResponse call
+func ParseBeginWebLoginResponse(rsp *http.Response) (*BeginWebLoginResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &BeginWebLoginResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseEndCurrentAuthSessionResponse parses an HTTP response from a EndCurrentAuthSessionWithResponse call
+func ParseEndCurrentAuthSessionResponse(rsp *http.Response) (*EndCurrentAuthSessionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &EndCurrentAuthSessionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

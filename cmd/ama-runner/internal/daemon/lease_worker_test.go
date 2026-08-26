@@ -446,6 +446,10 @@ func TestLeaseWorkerLeafHelpers(t *testing.T) {
 	if got := workPrompt(protocol.WorkPayload{}); got != "" {
 		t.Fatalf("expected empty prompt, got %q", got)
 	}
+	prompt := "AMA execution context:\n- Task: http://localhost:61863/api/tasks/task_1\n\nUser prompt:\nbuild it"
+	if got := workPrompt(protocol.WorkPayload{Prompt: &prompt}); got != prompt {
+		t.Fatalf("runner changed the control-plane execution prompt: %q", got)
+	}
 	if got := promptWithSkillRefresh("build it", workspace.AgentPrepareReport{}); got != "build it" {
 		t.Fatalf("expected unchanged prompt without skill changes, got %q", got)
 	}

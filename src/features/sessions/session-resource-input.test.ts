@@ -26,20 +26,12 @@ describe('sessionResourcesInput', () => {
     expect(result.volumes).toEqual([
       { name: 'vault-vault-one', type: 'secret', secretRef: 'ama://vaults/vault%2Fone' },
       { name: 'repo-repo-one', type: 'git_repository', url: 'https://github.com/saltbo/slink.git', ref: 'main' },
-      {
-        name: 'memory-mem_store-alpha',
-        type: 'memory',
-        memoryRef: 'ama://memories/mem_store%3Aalpha',
-      },
+      { name: 'memory-mem_store-alpha', type: 'memory', memoryRef: 'ama://memories/mem_store%3Aalpha' },
     ])
     expect(result.volumeMounts).toEqual([
       { name: 'vault-vault-one', mountPath: '/workspace/.ama/secrets/vault/one', readOnly: true },
       { name: 'repo-repo-one', mountPath: '/workspace/repos/github.com/saltbo/slink', readOnly: true },
-      {
-        name: 'memory-mem_store-alpha',
-        mountPath: '/workspace/.ama/memory-stores/mem_store:alpha',
-        readOnly: false,
-      },
+      { name: 'memory-mem_store-alpha', mountPath: '/workspace/.ama/memory-stores/mem_store:alpha', readOnly: false },
     ])
   })
 

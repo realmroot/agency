@@ -31,7 +31,13 @@ export const agentsApi = {
   listAgents: (options: ListOptions = {}) =>
     rpcRequest<ListResponse<Agent>>(v1.agents.$get(queryArg<typeof v1.agents.$get>(options))),
   readAgent: (id: string) => rpcRequest<Agent>(v1.agents[':agentId'].$get({ param: { agentId: id } })),
-  createAgent: (input: AgentInput) => rpcRequest<Agent>(v1.agents.$post(jsonArg<typeof v1.agents.$post>(input))),
+  createAgent: (input: AgentInput) =>
+    rpcRequest<Agent>(
+      v1.agents.$post({
+        ...jsonArg<typeof v1.agents.$post>(input),
+        header: { 'Idempotency-Key': crypto.randomUUID() },
+      }),
+    ),
   updateAgent: (id: string, input: Partial<AgentInput> & { archived?: boolean }) =>
     rpcRequest<Agent>(
       v1.agents[':agentId'].$patch({

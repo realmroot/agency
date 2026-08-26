@@ -19,7 +19,8 @@ type Fixtures = {
 }
 
 type E2eApi = {
-  post(url: string, options?: { data?: unknown }): Promise<APIResponse>
+  get(url: string): Promise<APIResponse>
+  post(url: string, options?: { data?: unknown; headers?: Record<string, string> }): Promise<APIResponse>
 }
 
 export const test = base.extend<Fixtures>({
@@ -43,18 +44,51 @@ export const test = base.extend<Fixtures>({
       baseURL: BASE,
     })
     await use({
+      get: (url) =>
+        ctx.get(url, {
+          headers: {
+            authorization: `Bearer ${token.accessToken}`,
+            'x-ama-project-id': token.projectId,
+          },
+        }),
       post: (url, options) =>
         ctx.post(url, {
           ...options,
           headers: {
             authorization: `Bearer ${token.accessToken}`,
             'x-ama-project-id': token.projectId,
+            ...options?.headers,
           },
         }),
     })
     await ctx.dispose()
   },
 })
+
+export async function createReadyAgent(api: E2eApi, runId: string, name: string) {
+  const accepted = await api.post('/api/v1/agents', {
+    headers: { 'Idempotency-Key': `e2e-agent-${runId}` },
+    data: {
+      username: `e2e-${runId}`
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9_.-]/g, '-')
+        .slice(0, 64),
+      metadata: { name },
+      spec: {
+        runtime: 'ama',
+        systemPrompt: 'E2E view journey',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+      },
+    },
+  })
+  expect(accepted.status(), 'create ready Agent').toBe(201)
+  expect(accepted.headers().location).toMatch(/^\/api\/v1\/agents\//)
+  return (await accepted.json()) as {
+    metadata: { uid: string }
+    identity: { issuer: string; subject: string }
+  }
+}
 
 // Sign the browser in the way the SPA expects: seed the e2e access token + project
 // id into localStorage (the oidc client's e2e fast-path reads them) before the app

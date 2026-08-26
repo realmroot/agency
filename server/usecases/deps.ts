@@ -18,6 +18,8 @@ import type {
   ProjectRepo,
   ProviderCatalogGateway,
   ProviderRepo,
+  RealmrootEnrollmentGateway,
+  RealmrootManagementAuthority,
   RunnerChannel,
   RunnerRepo,
   RuntimeSecretGateway,
@@ -48,7 +50,10 @@ type CreateApprovalGate = (values: {
 // Aggregates every port a usecase may reach for. Constructed once per request
 // by composition.createDeps and handed to routes via Hono context.
 export interface Deps {
+  allowLoopbackRealmrootHttp?: boolean
   agents: AgentRepo
+  realmrootEnrollment?: RealmrootEnrollmentGateway
+  realmrootManagementAuthority?: RealmrootManagementAuthority
   environments: EnvironmentRepo
   providers: ProviderRepo
   providerCatalog: ProviderCatalogGateway

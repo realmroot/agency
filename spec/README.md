@@ -110,5 +110,4 @@ exist but whose breadcrumbs are still being fanned out.
 | triggers   | migrated | scheduled-triggers |
 | api-contracts | migrated | api-contracts, cli-openapi-contract, control-plane, list-route-pagination, list-date-range-filters, storage-cloudflare-d1, destructive-ops, external-product-integration, events-api |
 | web-console | migrated | web-ui, layout, web-api-client-consolidation |
-| quickstart | migrated | quickstart |
 | projects   | migrated | external-product-integration |

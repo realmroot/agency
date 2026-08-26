@@ -13,6 +13,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.agent_spec import AgentSpec
   from ..models.agent_status import AgentStatus
+  from ..models.realmroot_agent_identity import RealmrootAgentIdentity
   from ..models.resource_metadata import ResourceMetadata
 
 
@@ -28,11 +29,13 @@ class Agent:
     """ 
         Attributes:
             metadata (ResourceMetadata):
+            identity (RealmrootAgentIdentity):
             spec (AgentSpec):
             status (AgentStatus):
      """
 
     metadata: ResourceMetadata
+    identity: RealmrootAgentIdentity
     spec: AgentSpec
     status: AgentStatus
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -44,8 +47,11 @@ class Agent:
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_spec import AgentSpec
         from ..models.agent_status import AgentStatus
+        from ..models.realmroot_agent_identity import RealmrootAgentIdentity
         from ..models.resource_metadata import ResourceMetadata
         metadata = self.metadata.to_dict()
+
+        identity = self.identity.to_dict()
 
         spec = self.spec.to_dict()
 
@@ -56,6 +62,7 @@ class Agent:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "metadata": metadata,
+            "identity": identity,
             "spec": spec,
             "status": status,
         })
@@ -68,9 +75,15 @@ class Agent:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_spec import AgentSpec
         from ..models.agent_status import AgentStatus
+        from ..models.realmroot_agent_identity import RealmrootAgentIdentity
         from ..models.resource_metadata import ResourceMetadata
         d = dict(src_dict)
         metadata = ResourceMetadata.from_dict(d.pop("metadata"))
+
+
+
+
+        identity = RealmrootAgentIdentity.from_dict(d.pop("identity"))
 
 
 
@@ -87,6 +100,7 @@ class Agent:
 
         agent = cls(
             metadata=metadata,
+            identity=identity,
             spec=spec,
             status=status,
         )

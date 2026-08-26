@@ -18,11 +18,14 @@ export interface Env {
   AMA_DEFAULT_MODEL?: string
   AMA_RUNTIME_MODE?: string
   AMA_VAULT_ENCRYPTION_KEY?: string
+  AMA_WEB_SESSION_ENCRYPTION_KEY?: string
   // AI Gateway name for third-party ({vendor}/{model}) cloud models (Unified
   // Billing / BYOK); defaults to 'ama'. '@cf/' models stay gateway-free.
   AMA_AI_GATEWAY_ID?: string
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
+  OIDC_CLIENT_SECRET?: string
+  REALMROOT_MANAGEMENT_RESOURCE?: string
   // Additional confidential/public Web applications allowed to present
   // Realmroot Bearer tokens for the exact AMA Resource.
   OIDC_TRUSTED_BEARER_CLIENT_IDS?: string
@@ -34,4 +37,13 @@ export interface Env {
   OIDC_RUNNER_SCOPES?: string
   AMA_ALLOWED_ORIGINS?: string
   AMA_E2E_TEST_AUTH?: string
+  // Enables the in-process Realmroot enrollment fixture only in hermetic AMA
+  // tests. Runtime mode=test alone still uses the real Realmroot wire protocol.
+  AMA_E2E_FAKE_REALMROOT_ENROLLMENT?: string
+}
+
+export function fakeRealmrootEnrollmentEnabled(
+  env: Pick<Env, 'AMA_E2E_TEST_AUTH' | 'AMA_E2E_FAKE_REALMROOT_ENROLLMENT'>,
+) {
+  return env.AMA_E2E_TEST_AUTH === 'true' && env.AMA_E2E_FAKE_REALMROOT_ENROLLMENT === 'true'
 }

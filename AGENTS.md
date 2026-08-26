@@ -11,7 +11,7 @@
 
 - Any Managed Agents is Cloudflare-native: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
-- Realmroot owns authentication, stable Agent identity, users, and organizations. The browser uses authorization-code PKCE; every protected request uses Realmroot-issued, DPoP-bound access tokens and exact AMA scopes.
+- Realmroot owns authentication, stable Agent identity, users, and organizations. The browser uses confidential-web authorization code with PKCE and opaque AMA sessions. Console and runner access tokens use Bearer; Realmroot Agent tokens use DPoP. Every protected request uses the exact resource audience and AMA scopes.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
 - AMA owns the control plane: Realmroot-backed tenancy and scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
 - AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.

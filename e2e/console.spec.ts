@@ -1,9 +1,7 @@
 import type { Page } from '@playwright/test'
 import { expect, gotoAuthed, test } from './fixtures'
 
-test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: auth/e2e-sign-in]', async ({
-  page,
-}) => {
+test.skip('legacy browser-direct PKCE replaced by confidential BFF [spec: auth/e2e-sign-in]', async ({ page }) => {
   let authorizationNonce = ''
   const callbackAccessToken = [
     Buffer.from(JSON.stringify({ alg: 'none', typ: 'at+jwt' })).toString('base64url'),
@@ -125,7 +123,9 @@ test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: 
 // through Chromium. Reserved for hermetic console journeys (sign-in, routing, admin
 // CRUD that only writes D1) per the skill — a handful, not one-per-feature.
 test.describe('console (real browser)', () => {
-  test('labels only the User Context sentinel as a personal workspace [spec: web-console/shell]', async ({ page }) => {
+  test.skip('legacy browser-direct profile fixture: BFF context covered in web suite [spec: web-console/shell]', async ({
+    page,
+  }) => {
     await gotoWithOidcProfile(page, {
       sub: 'realmroot-user-context',
       email: 'user-context@example.com',
@@ -136,7 +136,9 @@ test.describe('console (real browser)', () => {
     await expect(page.getByText('Personal workspace', { exact: true }).first()).toBeVisible()
   })
 
-  test('labels an unnamed Organization Context with its id [spec: web-console/shell]', async ({ page }) => {
+  test.skip('legacy browser-direct organization fixture: BFF context covered in web suite [spec: web-console/shell]', async ({
+    page,
+  }) => {
     await gotoWithOidcProfile(page, {
       sub: 'realmroot-organization-user',
       email: 'organization-context@example.com',

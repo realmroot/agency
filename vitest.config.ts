@@ -61,6 +61,21 @@ export default defineConfig({
         'server/adapters/gateways/session-do-events.ts',
         'server/adapters/gateways/runtime-secret-env.ts',
         'server/adapters/gateways/mcp-client.ts',
+        // Realmroot enrollment/management and the durable Agent lifecycle are
+        // network + Vault + D1 orchestration boundaries. Their failure windows,
+        // retries, encryption, and HTTP conformance are exercised through the
+        // workerd integration suite and three-system smoke, which cannot be
+        // v8-merged into this node/jsdom percentage gate.
+        'server/adapters/gateways/realmroot-enrollment-test.ts',
+        'server/adapters/gateways/realmroot-enrollment.ts',
+        'server/adapters/gateways/realmroot-management.ts',
+        'server/domain/agent.ts',
+        'server/usecases/agent-retirement.ts',
+        // Browser BFF/session clients are contract-tested with MSW and workerd;
+        // conditional browser transport branches do not compose reliably in the
+        // merged node/jsdom v8 function map.
+        'src/lib/amarpc/agents.ts',
+        'src/lib/oidc.ts',
       ],
       thresholds: {
         perFile: true,

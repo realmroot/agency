@@ -117,7 +117,7 @@ export async function resolveRuntimeWorkspaceManifest(
         type: 'secret',
         name: volume.name,
         mountPath: mountPath ?? `/workspace/.ama/secrets/${volume.name}`,
-        readOnly: true,
+        readOnly: volumeMountReadOnly(volume.name, volumeMounts),
         files: resolved,
       })
     }

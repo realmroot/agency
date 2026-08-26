@@ -1,6 +1,7 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { requireOidcConfig } from '../auth/oidc'
 import { requireAuth } from '../auth/session'
+import { beginWebLogin, endWebSession, finishWebLogin, readWebSession, WebCsrfError } from '../auth/web-session'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
 // Mounted at /api/v1/auth (docs/api-v1-design.md §2 Auth). The auth resource's
@@ -60,6 +61,7 @@ const AuthProjectSchema = z
 
 const AuthSessionSchema = z
   .object({
+    csrfToken: z.string(),
     user: AuthUserSchema,
     organization: AuthOrganizationSchema,
     project: AuthProjectSchema,
@@ -91,6 +93,42 @@ const readCurrentAuthSessionRoute = createRoute({
   },
 })
 
+const beginLoginRoute = createRoute({
+  method: 'get',
+  path: '/login',
+  operationId: 'beginWebLogin',
+  tags: ['Auth'],
+  summary: 'Begin confidential web sign-in',
+  request: { query: z.object({ returnTo: z.string().optional() }) },
+  responses: { 302: { description: 'Redirect to Realmroot' } },
+})
+
+const finishLoginRoute = createRoute({
+  method: 'get',
+  path: '/callback',
+  operationId: 'finishWebLogin',
+  tags: ['Auth'],
+  summary: 'Complete confidential web sign-in',
+  request: { query: z.object({ code: z.string(), state: z.string() }) },
+  responses: {
+    302: { description: 'Opaque web session established' },
+    400: { description: 'Invalid callback', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    502: { description: 'Realmroot exchange failed', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const endSessionRoute = createRoute({
+  method: 'delete',
+  path: '/sessions/current',
+  operationId: 'endCurrentAuthSession',
+  tags: ['Auth'],
+  summary: 'End the current web session',
+  responses: {
+    204: { description: 'Session ended' },
+    403: { description: 'Invalid CSRF token', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
 // Registration order is load-bearing: static segments (/config, /sessions)
 // register before parameter segments and the auth wall guards
 // /sessions/current. The assembler in app.ts calls this at the auth resource's
@@ -107,6 +145,16 @@ export function registerAuthRoutes(routes: AuthRoutes) {
       }
       return c.json({ methods }, 200)
     })
+    .openapi(beginLoginRoute, (c) => beginWebLogin(c) as never)
+    .openapi(finishLoginRoute, (c) => finishWebLogin(c) as never)
+    .openapi(endSessionRoute, async (c) => {
+      try {
+        return (await endWebSession(c)) as never
+      } catch (error) {
+        if (error instanceof WebCsrfError) return c.json({ error: { type: 'forbidden', message: error.message } }, 403)
+        throw error
+      }
+    })
     .openapi(readCurrentAuthSessionRoute, async (c) => {
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
@@ -115,6 +163,7 @@ export function registerAuthRoutes(routes: AuthRoutes) {
 
       return c.json(
         {
+          csrfToken: (await readWebSession(c))?.csrfToken ?? '',
           user: {
             id: auth.user.id,
             email: auth.user.email,

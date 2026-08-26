@@ -3,12 +3,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultClaims, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
+  const isCreate = path === '/api/v1/agents' && init.method === 'POST' && typeof init.body === 'string'
+  const body = isCreate ? (JSON.parse(init.body as string) as Record<string, unknown>) : null
+  const requestInit = isCreate
+    ? {
+        ...init,
+        body: JSON.stringify({
+          username: `test-agent-${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`,
+          ...body,
+          ...(body?.spec && typeof body.spec === 'object'
+            ? { spec: { runtime: 'ama', ...(body.spec as Record<string, unknown>) } }
+            : {}),
+        }),
+      }
+    : init
   return await SELF.fetch(`https://example.com${path}`, {
-    ...init,
+    ...requestInit,
     headers: {
       'content-type': 'application/json',
-      ...dpopHeaders(authorization, init.method ?? 'GET', path),
-      ...init.headers,
+      ...dpopHeaders(authorization, requestInit.method ?? 'GET', path),
+      ...(isCreate ? { 'Idempotency-Key': `agent-${crypto.randomUUID()}` } : {}),
+      ...requestInit.headers,
     },
   })
 }
@@ -51,8 +66,11 @@ describe('[CF] /api/v1/agents', () => {
   it('requires authentication before creating project-scoped agents', async () => {
     const createRes = await SELF.fetch('https://example.com/api/v1/agents', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(agentBody('Research assistant', { systemPrompt: 'Answer with citations.' })),
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': 'unauthenticated-agent-create' },
+      body: JSON.stringify({
+        username: 'research-assistant',
+        ...agentBody('Research assistant', { runtime: 'ama', systemPrompt: 'Answer with citations.' }),
+      }),
     })
 
     expect(createRes.status).toBe(401)
@@ -83,6 +101,41 @@ describe('[CF] /api/v1/agents', () => {
         error: { type: 'validation_error', message: 'Invalid request' },
       })
     }
+  })
+
+  it('creates one ready Agent for concurrent idempotent requests and rejects conflicting reuse', async () => {
+    const authorization = await signIn()
+    const idempotencyKey = `agent-concurrent-${crypto.randomUUID()}`
+    const body = JSON.stringify({
+      username: `concurrent-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
+      ...agentBody('Concurrent Agent', { runtime: 'ama', systemPrompt: 'Handle one creation.' }),
+    })
+    const create = (requestBody: string) =>
+      jsonFetch('/api/v1/agents', authorization, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: requestBody,
+      })
+
+    const [first, second] = await Promise.all([create(body), create(body)])
+    expect([first.status, second.status]).toEqual([201, 201])
+    const [firstAgent, secondAgent] = (await Promise.all([first.json(), second.json()])) as Array<{
+      metadata: { uid: string }
+      status: { ready: boolean; version: number }
+    }>
+    expect(secondAgent.metadata.uid).toBe(firstAgent.metadata.uid)
+    expect(first.headers.get('location')).toBe(`/api/v1/agents/${firstAgent.metadata.uid}`)
+    expect(second.headers.get('location')).toBe(`/api/v1/agents/${firstAgent.metadata.uid}`)
+    expect(firstAgent.status).toMatchObject({ ready: true, version: 1 })
+
+    const conflict = await create(
+      JSON.stringify({
+        username: `different-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
+        ...agentBody('Different Agent', { runtime: 'ama', systemPrompt: 'Different request.' }),
+      }),
+    )
+    expect(conflict.status).toBe(409)
+    await expect(conflict.json()).resolves.toMatchObject({ error: { type: 'conflict' } })
   })
 
   it('creates, reads, updates, versions, and archives project-scoped agents [spec: agents/api-crud] [spec: agents/api-archive]', async () => {
@@ -214,10 +267,6 @@ describe('[CF] /api/v1/agents', () => {
 
     const invalidVersionRes = await jsonFetch(`/api/v1/agents/${createdId}/versions/not-a-number`, authorization)
     expect(invalidVersionRes.status).toBe(400)
-
-    // Archive = PATCH {archived: true}; DELETE no longer exists.
-    const deleteRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, { method: 'DELETE' })
-    expect(deleteRes.status).toBe(404)
 
     const archiveRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
       method: 'PATCH',

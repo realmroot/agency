@@ -9,6 +9,18 @@ export const readConfigz = (options) => (options?.client ?? client).get({ url: '
  */
 export const readAuthConfig = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/config', ...options });
 /**
+ * Begin confidential web sign-in
+ */
+export const beginWebLogin = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/login', ...options });
+/**
+ * Complete confidential web sign-in
+ */
+export const finishWebLogin = (options) => (options.client ?? client).get({ url: '/api/v1/auth/callback', ...options });
+/**
+ * End the current web session
+ */
+export const endCurrentAuthSession = (options) => (options?.client ?? client).delete({ url: '/api/v1/auth/sessions/current', ...options });
+/**
  * Read the authenticated session context
  */
 export const readCurrentAuthSession = (options) => (options?.client ?? client).get({
@@ -57,6 +69,13 @@ export const createAgent = (options) => (options.client ?? client).post({
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+/**
+ * Permanently retire an Agent identity and destroy its managed Vault
+ */
+export const retireAgent = (options) => (options.client ?? client).delete({
+    url: '/api/v1/agents/{agentId}',
+    ...options
 });
 /**
  * Read an agent

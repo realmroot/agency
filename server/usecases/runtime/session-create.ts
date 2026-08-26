@@ -59,12 +59,18 @@ const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
 const REALMROOT_SOURCE_VOLUME = 'realmroot-agent-state'
-const REALMROOT_SOURCE_MOUNT = '/workspace/.ama/realmroot-source'
 const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
 const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
 
 function pathsOverlap(left: string, right: string) {
   return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
+}
+
+function base64Url(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
 // The create flow delegates the inline cloud launch to the cloud-turn usecase,
@@ -307,7 +313,7 @@ function sessionTitleFromPrompt(prompt: string) {
 }
 
 function realmrootRuntimeInputs(
-  binding: AgentSnapshot['realmroot'],
+  identity: AgentSnapshot['identity'],
   env: Record<string, string>,
   envFrom: EnvFromEntry[],
   volumes: Volume[],
@@ -315,16 +321,15 @@ function realmrootRuntimeInputs(
 ):
   | { env: Record<string, string>; volumes: Volume[]; volumeMounts: VolumeMount[] }
   | { fields: Record<string, string> } {
-  if (!binding) return { env, volumes, volumeMounts }
   const reserved = Object.keys(env).find((name) => REALMROOT_RESERVED_ENV.has(name))
   if (reserved) {
-    return { fields: { [`env.${reserved}`]: `${reserved} is managed by the Realmroot Agent binding.` } }
+    return { fields: { [`env.${reserved}`]: `${reserved} is managed by the Realmroot Agent identity.` } }
   }
   const reservedEnvFromIndex = envFrom.findIndex((entry) => entry.name && REALMROOT_RESERVED_ENV.has(entry.name))
   if (reservedEnvFromIndex >= 0) {
     return {
       fields: {
-        [`envFrom.${reservedEnvFromIndex}.name`]: 'Realmroot Agent environment variables are managed by the binding.',
+        [`envFrom.${reservedEnvFromIndex}.name`]: 'Realmroot Agent environment variables are managed by AMA.',
       },
     }
   }
@@ -340,19 +345,14 @@ function realmrootRuntimeInputs(
   if (volumes.some((volume) => volume.name === REALMROOT_SOURCE_VOLUME)) {
     return { fields: { volumes: `Volume name ${REALMROOT_SOURCE_VOLUME} is reserved for Realmroot Agent state.` } }
   }
-  if (
-    volumeMounts.some(
-      (mount) =>
-        pathsOverlap(mount.mountPath, REALMROOT_SOURCE_MOUNT) || pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR),
-    )
-  ) {
+  if (volumeMounts.some((mount) => pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR))) {
     return { fields: { volumeMounts: 'Realmroot Agent state mount paths are reserved.' } }
   }
   return {
     env: {
       ...env,
       AGENT: 'ama',
-      REALMROOT_ORIGIN: binding.origin,
+      REALMROOT_ORIGIN: new URL(identity.issuer).origin,
       REALMROOT_STATE_DIR,
     },
     volumes: [
@@ -360,14 +360,16 @@ function realmrootRuntimeInputs(
       {
         name: REALMROOT_SOURCE_VOLUME,
         type: 'secret',
-        secretRef: binding.credentialRef,
-        items: [{ key: 'state.json', path: 'state.json' }],
+        secretRef: identity.credentialRef,
+        items: [
+          {
+            key: 'state.json',
+            path: `identities/${base64Url(identity.issuer)}/${base64Url(identity.runtime)}.json`,
+          },
+        ],
       },
     ],
-    volumeMounts: [
-      ...volumeMounts,
-      { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_SOURCE_MOUNT, readOnly: true },
-    ],
+    volumeMounts: [...volumeMounts, { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_STATE_DIR, readOnly: false }],
   }
 }
 
@@ -573,11 +575,26 @@ export async function createSessionForAgent(
   if (agent.archivedAt) {
     return { ok: false, error: { status: 409, code: 'conflict', message: 'Archived agents cannot create sessions' } }
   }
+  if (agent.retirementState || !agent.identityCredentialRef) {
+    return { ok: false, error: { status: 409, code: 'conflict', message: 'Agent is not execution-ready' } }
+  }
 
   const agentVersion = await currentAgentVersion(store, agent)
   if (!agentVersion) {
     throw new Error('Agent current version is required')
   }
+  if (options.runtime && options.runtime !== agentVersion.runtime) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Requested runtime does not match the selected Agent Profile',
+        detail: { requestedRuntime: options.runtime, agentRuntime: agentVersion.runtime },
+      },
+    }
+  }
+  const runtime = options.runtime ?? agentVersion.runtime
   if (!agentVersion.providerId) {
     return {
       ok: false,
@@ -590,9 +607,15 @@ export async function createSessionForAgent(
     }
   }
   const providerId = agentVersion.providerId
-  const agentSnapshot = createAgentSnapshot(agentVersion, providerId)
+  const agentSnapshot = createAgentSnapshot(agentVersion, providerId, {
+    issuer: agent.identityIssuer,
+    subject: agent.identitySubject,
+    username: agent.username,
+    runtime: 'ama',
+    credentialRef: agent.identityCredentialRef,
+  })
   const realmrootInputs = realmrootRuntimeInputs(
-    agentSnapshot.realmroot,
+    agentSnapshot.identity,
     options.env ?? {},
     options.envFrom ?? [],
     normalizedWorkspaceVolumes.volumes,
@@ -669,15 +692,14 @@ export async function createSessionForAgent(
   // active runner can serve this runtime/model. Cloud runtimes have no runner,
   // so they resolve to nothing and must pin an environment explicitly.
   const environmentId =
-    requestedEnvironmentId ??
-    (await store.resolveEnvironmentForRuntime(auth.project.id, options.runtime, agentVersion.model))
+    requestedEnvironmentId ?? (await store.resolveEnvironmentForRuntime(auth.project.id, runtime, agentVersion.model))
   if (!environmentId) {
     return {
       ok: false,
       error: {
         status: 409,
         code: 'conflict',
-        message: `No environment has an active runner for runtime "${options.runtime}"; specify environmentId`,
+        message: `No execution environment is available for runtime "${runtime}"`,
       },
     }
   }
@@ -752,7 +774,6 @@ export async function createSessionForAgent(
   const runtimeConfig = options.runtimeConfig ?? {}
   const environmentSnapshot = baseEnvironmentSnapshot
   const hostingMode = environmentHostingMode(environmentSnapshot)
-  const runtime = options.runtime
   const usesCloudLoop = runtime === 'ama'
   if (
     !(await validateRuntimeProviderModel(

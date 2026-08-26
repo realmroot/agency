@@ -2500,9 +2500,49 @@
           "clientId"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "validation_error"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "type",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
       "AuthSession": {
         "type": "object",
         "properties": {
+          "csrfToken": {
+            "type": "string"
+          },
           "user": {
             "$ref": "#/components/schemas/AuthUser"
           },
@@ -2514,6 +2554,7 @@
           }
         },
         "required": [
+          "csrfToken",
           "user",
           "organization",
           "project"
@@ -2574,43 +2615,6 @@
         "required": [
           "id",
           "name"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "example": "validation_error"
-              },
-              "message": {
-                "type": "string",
-                "example": "Invalid request"
-              },
-              "issues": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "type",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "ProjectListResponse": {
@@ -2719,6 +2723,9 @@
           "metadata": {
             "$ref": "#/components/schemas/ResourceMetadata"
           },
+          "identity": {
+            "$ref": "#/components/schemas/RealmrootAgentIdentity"
+          },
           "spec": {
             "$ref": "#/components/schemas/AgentSpec"
           },
@@ -2728,6 +2735,7 @@
         },
         "required": [
           "metadata",
+          "identity",
           "spec",
           "status"
         ]
@@ -2796,9 +2804,52 @@
           "archivedAt"
         ]
       },
+      "RealmrootAgentIdentity": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://id.realmroot.dev/api/auth"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "example": "agt_backend_worker_1"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64,
+            "example": "backend-worker"
+          },
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "ama"
+            ]
+          }
+        },
+        "required": [
+          "issuer",
+          "subject",
+          "username",
+          "runtime"
+        ],
+        "additionalProperties": false
+      },
       "AgentSpec": {
         "type": "object",
         "properties": {
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "ama",
+              "claude-code",
+              "codex",
+              "copilot"
+            ]
+          },
           "systemPrompt": {
             "type": "string",
             "example": "Answer with citations."
@@ -2867,20 +2918,17 @@
             "example": [
               "github"
             ]
-          },
-          "realmroot": {
-            "$ref": "#/components/schemas/RealmrootAgentBinding"
           }
         },
         "required": [
+          "runtime",
           "systemPrompt",
           "provider",
           "model",
           "skills",
           "subagents",
           "allowedTools",
-          "mcpConnectors",
-          "realmroot"
+          "mcpConnectors"
         ]
       },
       "AgentSubagent": {
@@ -2945,39 +2993,29 @@
         ],
         "additionalProperties": false
       },
-      "RealmrootAgentBinding": {
-        "type": "object",
-        "nullable": true,
-        "properties": {
-          "agentId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 160,
-            "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
-          },
-          "origin": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://id.realmroot.dev"
-          },
-          "credentialRef": {
-            "type": "string",
-            "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
-          }
-        },
-        "required": [
-          "agentId",
-          "origin",
-          "credentialRef"
-        ],
-        "additionalProperties": false
-      },
       "AgentStatus": {
         "type": "object",
         "properties": {
           "phase": {
-            "$ref": "#/components/schemas/ResourcePhase"
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "retiring",
+              "retired"
+            ]
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "retirementStage": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "stopping",
+              "identity_retired",
+              "retired"
+            ]
           },
           "currentVersionId": {
             "type": "string",
@@ -2991,26 +3029,35 @@
         },
         "required": [
           "phase",
+          "ready",
+          "retirementStage",
           "currentVersionId",
           "version"
-        ]
-      },
-      "ResourcePhase": {
-        "type": "string",
-        "enum": [
-          "active",
-          "archived"
         ]
       },
       "CreateAgentRequest": {
         "type": "object",
         "properties": {
+          "username": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]{3,64}$",
+            "example": "research-assistant"
+          },
           "metadata": {
             "$ref": "#/components/schemas/ResourceCreateMetadata"
           },
           "spec": {
             "type": "object",
             "properties": {
+              "runtime": {
+                "type": "string",
+                "enum": [
+                  "ama",
+                  "claude-code",
+                  "codex",
+                  "copilot"
+                ]
+              },
               "systemPrompt": {
                 "type": "string",
                 "minLength": 1,
@@ -3084,18 +3131,17 @@
                 "example": [
                   "github"
                 ]
-              },
-              "realmroot": {
-                "$ref": "#/components/schemas/RealmrootAgentBinding"
               }
             },
             "required": [
+              "runtime",
               "systemPrompt"
             ],
             "additionalProperties": false
           }
         },
         "required": [
+          "username",
           "metadata",
           "spec"
         ],
@@ -3206,6 +3252,15 @@
           "spec": {
             "type": "object",
             "properties": {
+              "runtime": {
+                "type": "string",
+                "enum": [
+                  "ama",
+                  "claude-code",
+                  "codex",
+                  "copilot"
+                ]
+              },
               "systemPrompt": {
                 "type": "string",
                 "minLength": 1,
@@ -3279,9 +3334,6 @@
                 "example": [
                   "github"
                 ]
-              },
-              "realmroot": {
-                "$ref": "#/components/schemas/RealmrootAgentBinding"
               }
             },
             "additionalProperties": false
@@ -3602,6 +3654,13 @@
           "phase",
           "currentVersionId",
           "version"
+        ]
+      },
+      "ResourcePhase": {
+        "type": "string",
+        "enum": [
+          "active",
+          "archived"
         ]
       },
       "CreateEnvironmentRequest": {
@@ -6739,6 +6798,9 @@
           "version": {
             "type": "integer"
           },
+          "runtime": {
+            "$ref": "#/components/schemas/RuntimeName"
+          },
           "systemPrompt": {
             "type": "string"
           },
@@ -6774,8 +6836,8 @@
               "type": "string"
             }
           },
-          "realmroot": {
-            "$ref": "#/components/schemas/SessionRealmrootBinding"
+          "identity": {
+            "$ref": "#/components/schemas/SessionRealmrootIdentity"
           },
           "createdAt": {
             "type": "string",
@@ -6787,6 +6849,7 @@
           "agentId",
           "projectId",
           "version",
+          "runtime",
           "systemPrompt",
           "provider",
           "model",
@@ -6794,6 +6857,7 @@
           "subagents",
           "allowedTools",
           "mcpConnectors",
+          "identity",
           "createdAt"
         ]
       },
@@ -6843,24 +6907,34 @@
         ],
         "additionalProperties": false
       },
-      "SessionRealmrootBinding": {
+      "SessionRealmrootIdentity": {
         "type": "object",
-        "nullable": true,
         "properties": {
-          "agentId": {
-            "type": "string"
-          },
-          "origin": {
+          "issuer": {
             "type": "string",
             "format": "uri"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "ama"
+            ]
           },
           "credentialRef": {
             "type": "string"
           }
         },
         "required": [
-          "agentId",
-          "origin",
+          "issuer",
+          "subject",
+          "username",
+          "runtime",
           "credentialRef"
         ],
         "additionalProperties": false
@@ -6957,7 +7031,7 @@
             "$ref": "#/components/schemas/SessionCreateMetadata"
           },
           "spec": {
-            "$ref": "#/components/schemas/ExecutionSpecInput"
+            "$ref": "#/components/schemas/CreateSessionExecutionSpec"
           },
           "prompt": {
             "type": "string",
@@ -7002,7 +7076,7 @@
         },
         "additionalProperties": false
       },
-      "ExecutionSpecInput": {
+      "CreateSessionExecutionSpec": {
         "type": "object",
         "properties": {
           "agentId": {
@@ -7045,8 +7119,7 @@
           }
         },
         "required": [
-          "agentId",
-          "runtime"
+          "agentId"
         ],
         "additionalProperties": false
       },
@@ -8504,7 +8577,105 @@
         }
       }
     },
+    "/api/v1/auth/login": {
+      "get": {
+        "operationId": "beginWebLogin",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Begin confidential web sign-in",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "returnTo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to Realmroot"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/callback": {
+      "get": {
+        "operationId": "finishWebLogin",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Complete confidential web sign-in",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "code",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "state",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Opaque web session established"
+          },
+          "400": {
+            "description": "Invalid callback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Realmroot exchange failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/sessions/current": {
+      "delete": {
+        "operationId": "endCurrentAuthSession",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "End the current web session",
+        "responses": {
+          "204": {
+            "description": "Session ended"
+          },
+          "403": {
+            "description": "Invalid CSRF token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "operationId": "readCurrentAuthSession",
         "tags": [
@@ -8866,6 +9037,25 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "required": false,
+            "name": "identityIssuer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "identitySubject",
+            "in": "query"
           }
         ],
         "responses": {
@@ -8900,7 +9090,7 @@
             }
           },
           "403": {
-            "description": "The Realmroot token lacks the scope required for this resource",
+            "description": "Realmroot management authority required",
             "content": {
               "application/json": {
                 "schema": {
@@ -8929,6 +9119,30 @@
             ]
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "Idempotency-Key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 8192,
+              "pattern": "^Bearer\\s+\\S+$",
+              "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token."
+            },
+            "required": false,
+            "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.",
+            "name": "X-AMA-Realmroot-Authorization",
+            "in": "header"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -8941,7 +9155,14 @@
         },
         "responses": {
           "201": {
-            "description": "Created agent",
+            "description": "Created Agent",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -8971,7 +9192,27 @@
             }
           },
           "403": {
-            "description": "The Realmroot token lacks the scope required for this resource",
+            "description": "Realmroot management authority required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Realmroot provisioning failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -9149,6 +9390,93 @@
           },
           "409": {
             "description": "Archived agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "retireAgent",
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Permanently retire an Agent identity and destroy its managed Vault",
+        "security": [
+          {
+            "realmrootConsoleBearer": [
+              "agents:write"
+            ]
+          },
+          {
+            "realmrootDpop": [
+              "agents:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "agent_abc123"
+            },
+            "required": true,
+            "name": "agentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 8192,
+              "pattern": "^Bearer\\s+\\S+$",
+              "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token."
+            },
+            "required": false,
+            "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.",
+            "name": "X-AMA-Realmroot-Authorization",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Agent retired"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Realmroot management authority required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Retirement failed before the identity was retired",
             "content": {
               "application/json": {
                 "schema": {

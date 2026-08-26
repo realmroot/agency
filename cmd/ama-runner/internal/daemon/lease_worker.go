@@ -358,17 +358,17 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 	runtimeEnv := workspace.RuntimeEnv(payload.Env)
 	var writeMu sync.Mutex
 	result := runtimeRunner.Run(leaseCtx, runtime.Request{
-		SessionID:     payload.SessionID,
-		Runtime:       payload.Runtime,
-		RuntimeConfig: payload.RuntimeConfig,
-		Env:           runtimeEnv,
-		Provider:      payload.Provider,
-		Model:         payload.Model,
-		AgentSnapshot: payload.AgentSnapshot,
-		Prompt:        promptWithSkillRefresh(workPrompt(payload), agentReport),
-		Resume:        payload.Resume,
-		ResumeToken:   payload.ResumeToken,
-		WorkDir:       workspace.Cwd,
+		SessionID:          payload.SessionID,
+		Runtime:            payload.Runtime,
+		RuntimeConfig:      payload.RuntimeConfig,
+		Env:                runtimeEnv,
+		Provider:           payload.Provider,
+		Model:              payload.Model,
+		AgentSnapshot:      payload.AgentSnapshot,
+		Prompt:             promptWithSkillRefresh(workPrompt(payload), agentReport),
+		Resume:             payload.Resume,
+		ResumeToken:        payload.ResumeToken,
+		WorkDir:            workspace.Cwd,
 		OnResumeToken: func(resumeToken string) error {
 			return r.persistResumeToken(leaseCtx, lease, resumeTokens, leaseUpdates, resumeToken)
 		},
@@ -509,6 +509,7 @@ func workPrompt(payload protocol.WorkPayload) string {
 	}
 	return *payload.Prompt
 }
+
 
 func promptWithSkillRefresh(prompt string, report workspace.AgentPrepareReport) string {
 	if prompt == "" || len(report.SkillChanges) == 0 {

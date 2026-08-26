@@ -3,6 +3,7 @@ import { createDeps } from './composition'
 import type { Env } from './env'
 import { type LogContext, logError } from './logging'
 import { dispatchDueScheduledTriggers } from './scheduled-dispatch'
+import { reconcileRetiredAgentCleanup } from './usecases/agent-retirement'
 import {
   consumeSerialHttpTriggerWake,
   recoverSerialHttpTriggers,
@@ -55,6 +56,9 @@ export default {
         scheduledAt,
       },
     )
+    waitUntilLogged(ctx, 'scheduled.agent-retirement-cleanup.failed', reconcileRetiredAgentCleanup(createDeps(env)), {
+      scheduledAt,
+    })
     waitUntilLogged(ctx, 'scheduled.stalled-sessions.failed', markStalledCloudSessions(createDeps(env)), {
       scheduledAt,
     })

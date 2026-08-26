@@ -13,7 +13,6 @@ import { McpPage } from '@/features/mcp/McpPage'
 import { MemoryStoreDetailPage } from '@/features/memory-stores/MemoryStoreDetailPage'
 import { MemoryStoresPage } from '@/features/memory-stores/MemoryStoresPage'
 import { ProvidersPage } from '@/features/providers/ProvidersPage'
-import { QuickstartPage } from '@/features/quickstart/QuickstartPage'
 import { SessionDetailPage } from '@/features/sessions/SessionDetailPage'
 import { SessionsPage } from '@/features/sessions/SessionsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -37,8 +36,7 @@ export function createAppRouter() {
       path: '/',
       element: <ConsoleLayout />,
       children: [
-        { index: true, element: <Navigate to="/quickstart" replace /> },
-        { path: 'quickstart', element: <QuickstartPage /> },
+        { index: true, element: <Navigate to="/agents" replace /> },
         { path: 'agents', element: <AgentsPage /> },
         { path: 'agents/new', element: <AgentBuilderPage /> },
         { path: 'agents/:agentId', element: <AgentDetailPage /> },
@@ -67,7 +65,7 @@ export function createAppRouter() {
             { path: 'mcp/:connectorId', element: <McpConnectorPage /> },
           ],
         },
-        { path: '*', element: <Navigate to="/quickstart" replace /> },
+        { path: '*', element: <Navigate to="/agents" replace /> },
       ],
     },
   ])

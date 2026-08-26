@@ -46,6 +46,11 @@ export function createProjectRepo(db: Db): ProjectRepo {
       return row ? recordFrom(row) : null
     },
 
+    async tenant(projectId) {
+      const row = await db.select().from(projects).where(eq(projects.id, projectId)).get()
+      return row ? { id: row.id, name: row.name, organizationId: row.organizationId } : null
+    },
+
     async insert(organizationId, name, timestamp) {
       const row: ProjectRow = {
         id: newId('project'),

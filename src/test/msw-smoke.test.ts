@@ -19,8 +19,9 @@ describe('web suite foundation (real api client + MSW)', () => {
     expect(page.data.map((a) => a.metadata.name)).toContain('Seeded')
 
     const created = await api.createAgent({
+      username: 'created-via-msw',
       metadata: { name: 'Created via MSW' },
-      spec: { systemPrompt: 'Do the work.' },
+      spec: { runtime: 'codex', systemPrompt: 'Do the work.' },
     })
     expect(created.metadata.uid).toBeTruthy()
 

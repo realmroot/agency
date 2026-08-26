@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Agent, Environment, Session } from '@/lib/amarpc'
-import { HttpResponse, http, server } from '@/test/msw'
+import { HttpResponse, http, provisionAgentHandlers, server } from '@/test/msw'
 import {
   type AgentOverrides,
   type EnvironmentOverrides,
@@ -238,10 +238,11 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
   it('navigates to done step and shows agent API examples after successful publish', async () => {
     const publishedAgent = buildAgent({ name: 'My Published Agent', version: 1 })
     setupDefaultHandlers()
-    server.use(http.post('*/api/v1/agents', () => HttpResponse.json(publishedAgent, { status: 201 })))
+    server.use(...provisionAgentHandlers(publishedAgent))
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My Published Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'my-published-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do the work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -264,6 +265,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'my-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do the work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -295,6 +297,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'my-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do the work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -312,6 +315,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'test-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -348,12 +352,13 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     // Keep the session POST pending so "Starting test session" label stays visible
     setupDefaultHandlers({ environments: [env] })
     server.use(
-      http.post('*/api/v1/agents', () => HttpResponse.json(agent, { status: 201 })),
+      ...provisionAgentHandlers(agent),
       http.post('*/api/v1/sessions', () => new Promise(() => {})),
     )
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'test-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do the work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -381,6 +386,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'test-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())
@@ -412,9 +418,8 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
       sessionResponse: buildSession({ id: session.metadata.uid, phase: 'idle' }),
     })
     server.use(
-      http.post('*/api/v1/agents', () => {
+      ...provisionAgentHandlers(agent, () => {
         agentCreated = true
-        return HttpResponse.json(agent, { status: 201 })
       }),
       http.post('*/api/v1/sessions', () => HttpResponse.json(session, { status: 201 })),
       http.patch('*/api/v1/agents/:agentId', async () => {
@@ -425,6 +430,7 @@ describe('[spec: agents/builder] AgentBuilderPage', () => {
     renderBuilderPage('?step=core')
     await waitFor(() => expect(screen.getByLabelText('Name')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Draft Agent' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'draft-agent' } })
     fireEvent.change(screen.getByLabelText('System prompt'), { target: { value: 'Do work' } })
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await waitFor(() => expect(screen.getByText('Tools and approvals')).toBeInTheDocument())

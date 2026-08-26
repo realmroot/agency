@@ -113,6 +113,12 @@ export function CoreStep({ draft, errors, setField }: StepProps) {
   const hasSelected = models.some((model) => model.providerId === draft.provider && model.modelId === draft.model)
   return (
     <div className="grid gap-4">
+      <TextField
+        label="Username"
+        value={draft.username}
+        onChange={(value) => setField('username', value)}
+        error={errors.username}
+      />
       <TextField label="Name" value={draft.name} onChange={(value) => setField('name', value)} error={errors.name} />
       <TextField
         label="Description"

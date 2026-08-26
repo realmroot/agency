@@ -17,6 +17,7 @@ export const BUILDER_STEP_TITLES: Record<BuilderStep, string> = {
 }
 
 export interface AgentBuilderDraft {
+  username: string
   name: string
   description: string
   systemPrompt: string
@@ -31,6 +32,7 @@ export interface AgentBuilderDraft {
 export const DEFAULT_BUILDER_PROVIDER = 'workers-ai'
 
 export const emptyBuilderDraft: AgentBuilderDraft = {
+  username: '',
   name: '',
   description: '',
   systemPrompt: '',
@@ -56,6 +58,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     summary: 'Implements changes and runs checks inside a managed sandbox.',
     draft: {
       ...emptyBuilderDraft,
+      username: 'coding-agent',
       name: 'Coding agent',
       description: 'Executes development work in a managed sandbox.',
       systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
@@ -70,6 +73,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     summary: 'Investigates questions and answers with citations.',
     draft: {
       ...emptyBuilderDraft,
+      username: 'research-assistant',
       name: 'Research assistant',
       description: 'Investigates questions and reports findings with sources.',
       systemPrompt:
@@ -83,6 +87,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     summary: 'Reviews incoming work and summarizes the next action.',
     draft: {
       ...emptyBuilderDraft,
+      username: 'operations-triage',
       name: 'Operations triage',
       description: 'Classifies incoming work and summarizes the next action.',
       systemPrompt:
@@ -97,6 +102,7 @@ export function draftFromGoal(goal: string): AgentBuilderDraft {
   const headline = trimmed.split(' ').slice(0, 6).join(' ')
   return {
     ...emptyBuilderDraft,
+    username: slugUsername(headline),
     name: `${headline.charAt(0).toUpperCase()}${headline.slice(1)} agent`.slice(0, 120),
     description: trimmed.slice(0, 1000),
     systemPrompt: `You are a managed agent.\nGoal: ${trimmed}\nWork in small verifiable steps and report what you did.`,
@@ -112,6 +118,8 @@ export function coreStepErrors(draft: AgentBuilderDraft): BuilderFieldErrors {
   else if (draft.name.trim().length > 120) errors.name = 'Name must be 120 characters or fewer.'
   if (!draft.systemPrompt.trim()) errors.systemPrompt = 'System prompt is required.'
   if (!draft.provider.trim()) errors.provider = 'Provider is required.'
+  if (!/^[a-z0-9_.-]{3,64}$/.test(draft.username))
+    errors.username = 'Use 3-64 lowercase letters, numbers, dots, underscores, or hyphens.'
   return errors
 }
 
@@ -127,11 +135,13 @@ export function stepErrors(step: BuilderStep, draft: AgentBuilderDraft): Builder
 export function toAgentInput(draft: AgentBuilderDraft): AgentInput {
   const description = draft.description.trim()
   return {
+    username: draft.username,
     metadata: {
       name: draft.name.trim(),
       ...(description ? { description } : {}),
     },
     spec: {
+      runtime: 'codex',
       systemPrompt: draft.systemPrompt.trim(),
       ...providerPatch(draft.provider),
       model: draft.model.trim() || null,
@@ -144,6 +154,7 @@ export function toAgentInput(draft: AgentBuilderDraft): AgentInput {
 }
 
 const SERVER_FIELD_MAP: Record<string, { field: keyof AgentBuilderDraft; step: BuilderStep }> = {
+  username: { field: 'username', step: 'core' },
   name: { field: 'name', step: 'core' },
   description: { field: 'description', step: 'core' },
   systemPrompt: { field: 'systemPrompt', step: 'core' },
@@ -152,6 +163,14 @@ const SERVER_FIELD_MAP: Record<string, { field: keyof AgentBuilderDraft; step: B
   allowedTools: { field: 'allowedTools', step: 'tools' },
   mcpConnectors: { field: 'mcpConnectors', step: 'tools' },
   skills: { field: 'skills', step: 'sandbox' },
+}
+
+function slugUsername(value: string) {
+  const slug = value
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9_.-]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
+  return (slug || 'agent').slice(0, 64)
 }
 
 export function apiErrorToBuilder(error: unknown): { errors: BuilderFieldErrors; step: BuilderStep | null } {
@@ -177,11 +196,13 @@ export function apiErrorToBuilder(error: unknown): { errors: BuilderFieldErrors;
 
 export function agentApiExamples(agent: Agent) {
   const body = JSON.stringify({
+    username: agent.identity.username,
     metadata: {
       name: agent.metadata.name,
       ...(agent.metadata.description ? { description: agent.metadata.description } : {}),
     },
     spec: {
+      runtime: agent.spec.runtime,
       ...(agent.spec.systemPrompt ? { systemPrompt: agent.spec.systemPrompt } : {}),
       provider: agent.spec.provider,
       model: agent.spec.model,

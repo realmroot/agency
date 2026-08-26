@@ -1,5 +1,5 @@
 import type { AgentVersionRow, EnvironmentVersionRow } from '@shared/runtime-rows'
-import type { AgentSubagent, RealmrootAgentBinding } from '../agent'
+import type { AgentSubagent, RealmrootAgentIdentity } from '../agent'
 import {
   defaultEnvironmentPackages,
   type EnvironmentNetworking,
@@ -25,12 +25,13 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-export function createAgentSnapshot(row: AgentVersionRow, providerId: string) {
+export function createAgentSnapshot(row: AgentVersionRow, providerId: string, identity: RealmrootAgentIdentity) {
   return {
     id: row.id,
     agentId: row.agentId,
     projectId: row.projectId,
     version: row.version,
+    runtime: row.runtime,
     systemPrompt: row.systemPrompt,
     provider: providerId,
     model: row.model,
@@ -38,7 +39,7 @@ export function createAgentSnapshot(row: AgentVersionRow, providerId: string) {
     subagents: JSON.parse(row.subagents) as AgentSubagent[],
     allowedTools: JSON.parse(row.allowedTools) as string[],
     mcpConnectors: JSON.parse(row.mcpConnectors) as string[],
-    realmroot: row.realmroot ? (JSON.parse(row.realmroot) as RealmrootAgentBinding) : null,
+    identity,
     createdAt: row.createdAt,
   }
 }
@@ -55,7 +56,7 @@ export function agentSnapshotWithWorkspaceContext(
   volumeMounts: VolumeMount[],
 ): AgentSnapshot {
   const block = workspaceSystemPromptBlock({ volumes, volumeMounts })
-  const realmrootBlock = agentSnapshot.realmroot
+  const realmrootBlock = agentSnapshot.identity
     ? 'Private Resources are available through the Realmroot Toolbox. Use `realmroot toolbox` to discover services and request only the authority required for the current task.'
     : null
   const context = [block, realmrootBlock].filter((value): value is string => Boolean(value)).join('\n\n')

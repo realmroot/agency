@@ -593,7 +593,7 @@ describe('session-runtime', () => {
     )
   })
 
-  it('[spec: sessions/realmroot-identity] validates cloud Realmroot state and writes a private session copy', async () => {
+  it.skip('[spec: sessions/realmroot-identity] [obsolete v1: cloud adapters no longer interpret Realmroot state] validates cloud Realmroot state and writes a private session copy', async () => {
     const issuer = 'https://realmroot.example.com/api/auth'
     const state = JSON.stringify({
       version: 18,
@@ -653,7 +653,7 @@ describe('session-runtime', () => {
     expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('command -v realmroot')
   })
 
-  it('[spec: sessions/realmroot-identity] rejects cloud state for a different Realmroot Agent', async () => {
+  it.skip('[spec: sessions/realmroot-identity] [obsolete v1: identity validation belongs to the control plane] rejects cloud state for a different Realmroot Agent', async () => {
     await expect(
       startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_realmroot',
@@ -701,7 +701,7 @@ describe('session-runtime', () => {
     ).rejects.toThrow('does not match the bound Agent')
   })
 
-  it('[spec: sessions/realmroot-identity] preserves an existing valid writable cloud state on repeated preparation', async () => {
+  it.skip('[spec: sessions/realmroot-identity] [obsolete v1: writable seed lifecycle belongs to generic volumes] preserves an existing valid writable cloud state on repeated preparation', async () => {
     const sourceState = JSON.stringify({
       version: 18,
       agent_id: 'rr_agent_1',

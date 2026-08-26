@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import type { Agent } from '@/lib/amarpc'
-import { createCollection, HttpResponse, http, server } from '@/test/msw'
+import { createCollection, HttpResponse, http, provisionAgentHandlers, server } from '@/test/msw'
 import { type AgentOverrides, agent as resourceAgent } from '@/test/resource-fixtures'
 import { CreateAgentSheet } from './CreateAgentSheet'
 
@@ -64,12 +64,9 @@ describe('CreateAgentSheet', () => {
             http.get('*/api/v1/agents', () =>
               HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
             ),
-            http.post('*/api/v1/agents', async ({ request }) => {
-              postedBody = (await request.json()) as Record<string, unknown>
-              const metadata = postedBody.metadata as { name?: string } | undefined
-              const agent = buildAgent({ id: 'agent_new', name: metadata?.name ?? 'Agent' })
-              agentsColl.put(agent)
-              return HttpResponse.json(agent, { status: 201 })
+            ...provisionAgentHandlers(buildAgent({ id: 'agent_new', name: 'Coding agent' }), (body) => {
+              postedBody = body
+              agentsColl.put(buildAgent({ id: 'agent_new', name: 'Coding agent' }))
             }),
           ]
         : []),

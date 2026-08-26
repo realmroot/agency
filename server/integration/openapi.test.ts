@@ -636,7 +636,8 @@ describe('[CF] OpenAPI documentation', () => {
         const required = operation.security as Array<Record<string, unknown>>
         const scopeOperation =
           path.endsWith('/socket') || path.endsWith('/channel') ? 'write' : method === 'get' ? 'read' : 'write'
-        const exactScope = `${path.split('/')[3]}:${scopeOperation}`
+        const resource = path.split('/')[3]
+        const exactScope = `${resource}:${scopeOperation}`
         if (path.endsWith('/socket-tickets')) {
           expect(required).toEqual([{ realmrootConsoleBearer: [exactScope] }])
         } else if (path.endsWith('/socket')) {

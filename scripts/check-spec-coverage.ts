@@ -21,7 +21,6 @@ const ENFORCED_CAPABILITIES = new Set([
   'mcp',
   'projects',
   'providers',
-  'quickstart',
   'runners',
   'runtime',
   'sessions',

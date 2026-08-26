@@ -1,4 +1,4 @@
-import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
+import type { Agent, AgentSpec, AgentVersion, RealmrootAgentIdentity } from '@server/domain/agent'
 import type { ConnectorAvailability, ConnectorCatalogEntry, ConnectorCatalogTool } from '@server/domain/connector'
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
 import type { Memory, MemoryStore } from '@server/domain/memory-store'
@@ -71,6 +71,12 @@ export interface AuthScope {
   permissions: string[]
   teams?: string[]
   agentActor?: { issuer: string; subject: string }
+  oidc?: {
+    issuer: string | null
+    clientId?: string | null
+    realmrootManagementAuthorization?: string
+    realmrootManagementSessionId?: string
+  }
 }
 
 // Organization-level identity: the AuthScope subset that org-scoped usecases
@@ -84,6 +90,8 @@ export interface AgentListQuery {
   search?: string
   createdFrom?: string
   createdTo?: string
+  identityIssuer?: string
+  identitySubject?: string
   limit: number
   cursor: { createdAt: string; id: string } | null
 }
@@ -94,7 +102,10 @@ export interface AgentListPage {
 }
 
 export interface CreateAgentInput {
+  id?: string
   projectId: string
+  username: string
+  identity: RealmrootAgentIdentity
   name: string
   description: string | null
   spec: AgentSpec
@@ -123,13 +134,81 @@ export interface AgentRepo {
   findVersion(projectId: string, agentId: string, version: number): Promise<AgentVersion | null>
 
   insert(input: CreateAgentInput, createdAt: string): Promise<Agent>
+  createWithInitialVersion(
+    input: CreateAgentInput & { id: string },
+    versionId: string,
+    createdAt: string,
+  ): Promise<Agent>
   setCurrentVersion(agentId: string, versionId: string): Promise<void>
   update(projectId: string, agentId: string, fields: UpdateAgentFields, updatedAt: string): Promise<void>
   unarchive(projectId: string, agentId: string, updatedAt: string): Promise<void>
+  delete(projectId: string, agentId: string): Promise<void>
+  markRetirement(
+    projectId: string,
+    agentId: string,
+    state: 'stopping' | 'identity_retired' | 'retired',
+    timestamp: string,
+  ): Promise<void>
+  retiring(limit: number): Promise<Agent[]>
 
   // Reference validation against sibling resources.
   providerEnabled(projectId: string, providerId: string): Promise<boolean>
   connectorAvailable(connectorId: string): Promise<boolean>
+}
+
+export interface RealmrootEnrollmentIdentity {
+  id: string
+  issuer: string
+  subject: string
+  username: string
+  name: string
+  runtime: 'ama'
+}
+
+export interface RealmrootEnrollmentCheckpoint {
+  stage: 'initialized' | 'enrolled'
+  state: Record<string, unknown>
+  identity?: RealmrootEnrollmentIdentity
+}
+
+export interface RealmrootEnrollmentGateway {
+  initialize(input: {
+    origin: string
+    nickname: string
+    idempotencyKey: string
+  }): Promise<RealmrootEnrollmentCheckpoint>
+  prepare(input: {
+    origin: string
+    username: string
+    nickname: string
+    organizationId?: string
+    idempotencyKey: string
+    managementCredential: RealmrootManagementCredential
+    checkpoint?: RealmrootEnrollmentCheckpoint | null
+    onCheckpoint: (checkpoint: RealmrootEnrollmentCheckpoint) => Promise<void>
+  }): Promise<RealmrootEnrollmentCheckpoint>
+  complete(input: {
+    origin: string
+    username: string
+    nickname: string
+    organizationId?: string
+    idempotencyKey: string
+    checkpoint: RealmrootEnrollmentCheckpoint
+    onCheckpoint: (checkpoint: RealmrootEnrollmentCheckpoint) => Promise<void>
+  }): Promise<{ identity: RealmrootEnrollmentIdentity; state: Record<string, unknown> }>
+  retire(input: {
+    issuer: string
+    identityId: string
+    managementCredential: RealmrootManagementCredential
+  }): Promise<void>
+}
+
+export interface RealmrootManagementCredential {
+  headers(method: string, url: string): Promise<Record<string, string>>
+}
+
+export interface RealmrootManagementAuthority {
+  forAgentAdministration(auth: AuthScope): Promise<RealmrootManagementCredential>
 }
 
 export interface AuditEntry {
@@ -513,6 +592,7 @@ export interface VaultVisibility {
 }
 
 export interface CreateVaultInput {
+  id?: string
   organizationId: string
   projectId: string | null
   name: string
@@ -589,6 +669,7 @@ export interface VaultRepo {
     previousActiveVersionId: string | null,
     timestamp: string,
   ): Promise<CredentialVersion>
+  destroyManagedVault(vaultId: string, credentialId: string): Promise<void>
 }
 
 // Secret-store boundary. Stores a secret value for a credential version and
@@ -1098,6 +1179,7 @@ export interface ProjectListQuery {
 export interface ProjectRepo {
   list(query: ProjectListQuery): Promise<ListPageResult<ProjectRecord>>
   find(organizationId: string, projectId: string): Promise<ProjectRecord | null>
+  tenant(projectId: string): Promise<{ id: string; name: string; organizationId: string } | null>
   insert(organizationId: string, name: string, timestamp: string): Promise<ProjectRecord>
 }
 
@@ -1685,6 +1767,7 @@ export type {
 export interface SessionOrchestrationStore {
   // ── session reads ──
   findSession(projectId: string, sessionId: string): Promise<SessionRow | null>
+  activeSessionsForAgent(projectId: string, agentId: string): Promise<SessionRow[]>
   sessionState(projectId: string, sessionId: string): Promise<{ state: string } | null>
   sessionMetadata(projectId: string, sessionId: string): Promise<{ metadata: string | null } | null>
 
@@ -1996,7 +2079,7 @@ export interface SessionCreateOptions {
   metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>
   volumes?: Volume[]
   volumeMounts?: VolumeMount[]
-  runtime: RuntimeName
+  runtime?: RuntimeName
   runtimeConfig?: Record<string, unknown>
   env?: Record<string, string>
   envFrom?: EnvFromEntry[]

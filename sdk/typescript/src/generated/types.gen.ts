@@ -649,7 +649,19 @@ export type AuthMethod = {
     clientId: string;
 };
 
+export type ErrorResponse = {
+    error: {
+        type: string;
+        message: string;
+        issues?: Array<unknown>;
+        details?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
 export type AuthSession = {
+    csrfToken: string;
     user: AuthUser;
     organization: AuthOrganization;
     project: AuthProject;
@@ -669,17 +681,6 @@ export type AuthOrganization = {
 export type AuthProject = {
     id: string;
     name: string;
-};
-
-export type ErrorResponse = {
-    error: {
-        type: string;
-        message: string;
-        issues?: Array<unknown>;
-        details?: {
-            [key: string]: unknown;
-        };
-    };
 };
 
 export type ProjectListResponse = {
@@ -711,6 +712,7 @@ export type AgentListResponse = {
 
 export type Agent = {
     metadata: ResourceMetadata;
+    identity: RealmrootAgentIdentity;
     spec: AgentSpec;
     status: AgentStatus;
 };
@@ -732,7 +734,15 @@ export type ResourceMetadata = {
     archivedAt: string | null;
 };
 
+export type RealmrootAgentIdentity = {
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: 'ama';
+};
+
 export type AgentSpec = {
+    runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
     systemPrompt: string;
     provider: string | null;
     model: string | null;
@@ -740,7 +750,6 @@ export type AgentSpec = {
     subagents: Array<AgentSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot: RealmrootAgentBinding;
 };
 
 export type AgentSubagent = {
@@ -753,23 +762,19 @@ export type AgentSubagent = {
     mcpConnectors: Array<string>;
 };
 
-export type RealmrootAgentBinding = {
-    agentId: string;
-    origin: string;
-    credentialRef: string;
-} | null;
-
 export type AgentStatus = {
-    phase: ResourcePhase;
+    phase: 'active' | 'archived' | 'retiring' | 'retired';
+    ready: boolean;
+    retirementStage: 'stopping' | 'identity_retired' | 'retired';
     currentVersionId: string | null;
     version: number;
 };
 
-export type ResourcePhase = 'active' | 'archived';
-
 export type CreateAgentRequest = {
+    username: string;
     metadata: ResourceCreateMetadata;
     spec: {
+        runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
         systemPrompt: string;
         provider?: string | null;
         model?: string | null;
@@ -777,7 +782,6 @@ export type CreateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
     };
 };
 
@@ -799,6 +803,7 @@ export type AgentSubagentInput = {
 export type UpdateAgentRequest = {
     metadata?: ResourceUpdateMetadata;
     spec?: {
+        runtime?: 'ama' | 'claude-code' | 'codex' | 'copilot';
         systemPrompt?: string;
         provider?: string | null;
         model?: string | null;
@@ -806,7 +811,6 @@ export type UpdateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
     };
     /**
      * Lifecycle transition: true archives the agent, false unarchives it.
@@ -885,6 +889,8 @@ export type EnvironmentStatus = {
     currentVersionId: string | null;
     version: number;
 };
+
+export type ResourcePhase = 'active' | 'archived';
 
 export type CreateEnvironmentRequest = {
     metadata: ResourceCreateMetadata & unknown;
@@ -1639,6 +1645,7 @@ export type SessionAgentSnapshot = {
     agentId: string;
     projectId: string;
     version: number;
+    runtime: RuntimeName;
     systemPrompt: string;
     provider: string;
     model: string | null;
@@ -1646,7 +1653,7 @@ export type SessionAgentSnapshot = {
     subagents: Array<SessionSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot?: SessionRealmrootBinding;
+    identity: SessionRealmrootIdentity;
     createdAt: string;
 };
 
@@ -1660,11 +1667,13 @@ export type SessionSubagent = {
     mcpConnectors: Array<string>;
 };
 
-export type SessionRealmrootBinding = {
-    agentId: string;
-    origin: string;
+export type SessionRealmrootIdentity = {
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: 'ama';
     credentialRef: string;
-} | null;
+};
 
 export type SessionEnvironmentSnapshot = {
     id: string;
@@ -1693,7 +1702,7 @@ export type EnvironmentHostingMode = 'cloud' | 'self_hosted';
 
 export type CreateSessionRequest = {
     metadata?: SessionCreateMetadata;
-    spec: ExecutionSpecInput;
+    spec: CreateSessionExecutionSpec;
     prompt: string;
 };
 
@@ -1707,10 +1716,10 @@ export type SessionCreateMetadata = {
     };
 };
 
-export type ExecutionSpecInput = {
+export type CreateSessionExecutionSpec = {
     agentId: string;
     environmentId?: string | null;
-    runtime: RuntimeName;
+    runtime?: RuntimeName;
     env?: ExecutionEnv;
     envFrom?: Array<EnvFromEntry>;
     volumes?: Array<Volume>;
@@ -2100,6 +2109,63 @@ export type ReadAuthConfigResponses = {
 
 export type ReadAuthConfigResponse = ReadAuthConfigResponses[keyof ReadAuthConfigResponses];
 
+export type BeginWebLoginData = {
+    body?: never;
+    path?: never;
+    query?: {
+        returnTo?: string;
+    };
+    url: '/api/v1/auth/login';
+};
+
+export type FinishWebLoginData = {
+    body?: never;
+    path?: never;
+    query: {
+        code: string;
+        state: string;
+    };
+    url: '/api/v1/auth/callback';
+};
+
+export type FinishWebLoginErrors = {
+    /**
+     * Invalid callback
+     */
+    400: ErrorResponse;
+    /**
+     * Realmroot exchange failed
+     */
+    502: ErrorResponse;
+};
+
+export type FinishWebLoginError = FinishWebLoginErrors[keyof FinishWebLoginErrors];
+
+export type EndCurrentAuthSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/sessions/current';
+};
+
+export type EndCurrentAuthSessionErrors = {
+    /**
+     * Invalid CSRF token
+     */
+    403: ErrorResponse;
+};
+
+export type EndCurrentAuthSessionError = EndCurrentAuthSessionErrors[keyof EndCurrentAuthSessionErrors];
+
+export type EndCurrentAuthSessionResponses = {
+    /**
+     * Session ended
+     */
+    204: void;
+};
+
+export type EndCurrentAuthSessionResponse = EndCurrentAuthSessionResponses[keyof EndCurrentAuthSessionResponses];
+
 export type ReadCurrentAuthSessionData = {
     body?: never;
     path?: never;
@@ -2242,6 +2308,8 @@ export type ListAgentsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
+        identityIssuer?: string;
+        identitySubject?: string;
     };
     url: '/api/v1/agents';
 };
@@ -2256,7 +2324,7 @@ export type ListAgentsErrors = {
      */
     401: ErrorResponse;
     /**
-     * The Realmroot token lacks the scope required for this resource
+     * Realmroot management authority required
      */
     403: ErrorResponse;
 };
@@ -2274,6 +2342,13 @@ export type ListAgentsResponse = ListAgentsResponses[keyof ListAgentsResponses];
 
 export type CreateAgentData = {
     body: CreateAgentRequest;
+    headers: {
+        'Idempotency-Key': string;
+        /**
+         * Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
+         */
+        'X-AMA-Realmroot-Authorization'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/agents';
@@ -2289,21 +2364,74 @@ export type CreateAgentErrors = {
      */
     401: ErrorResponse;
     /**
-     * The Realmroot token lacks the scope required for this resource
+     * Realmroot management authority required
      */
     403: ErrorResponse;
+    /**
+     * Idempotency conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Realmroot provisioning failed
+     */
+    502: ErrorResponse;
 };
 
 export type CreateAgentError = CreateAgentErrors[keyof CreateAgentErrors];
 
 export type CreateAgentResponses = {
     /**
-     * Created agent
+     * Created Agent
      */
     201: Agent;
 };
 
 export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponses];
+
+export type RetireAgentData = {
+    body?: never;
+    headers?: {
+        /**
+         * Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
+         */
+        'X-AMA-Realmroot-Authorization'?: string;
+    };
+    path: {
+        agentId: string;
+    };
+    query?: never;
+    url: '/api/v1/agents/{agentId}';
+};
+
+export type RetireAgentErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * Realmroot management authority required
+     */
+    403: ErrorResponse;
+    /**
+     * Agent not found
+     */
+    404: ErrorResponse;
+    /**
+     * Retirement failed before the identity was retired
+     */
+    502: ErrorResponse;
+};
+
+export type RetireAgentError = RetireAgentErrors[keyof RetireAgentErrors];
+
+export type RetireAgentResponses = {
+    /**
+     * Agent retired
+     */
+    204: void;
+};
+
+export type RetireAgentResponse = RetireAgentResponses[keyof RetireAgentResponses];
 
 export type ReadAgentData = {
     body?: never;

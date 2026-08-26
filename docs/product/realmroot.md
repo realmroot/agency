@@ -1,67 +1,63 @@
 # Realmroot Agent integration
 
-AMA binds an Agent directly to one Realmroot Agent. There is no identity broker
-and no AMA-issued Realmroot token: the Realmroot CLI uses the enrolled Agent
-identity to obtain controller-approved authority from Realmroot.
+An AMA Agent owns exactly one Realmroot identity. Identity is an Agent lifecycle
+concern, never a Profile/version field, and callers never create or bind it as a
+separate user action.
 
-## Enroll and store the identity
+## Creation
 
-Enroll the identity outside an AMA Session with the stable AMA runtime name:
+`POST /api/v1/agents` accepts an immutable Realmroot `username` plus the first
+Profile. Before contacting Realmroot, AMA creates the Agent's managed Vault,
+generates the Agent installation key and opaque protocol identifiers, and stores
+the initialization checkpoint as AES-GCM ciphertext. The same synchronous creation request then
+uses AMA's confidential Realmroot Application to call `POST /api/agents` with the
+public installation material and the authorization-code grant's User subject.
+The downstream request uses the confidential Application's unbound Bearer token
+for the Realmroot `/api` audience; it never uses an Application-only client-credentials
+identity. Realmroot returns the active stable identity
+directly; no registration, approval, or self-enrollment endpoint participates.
+Realmroot keeps one internal identity-materialization path behind both this
+management API and its unchanged self-enrollment flow.
 
-```bash
-export AGENT=ama
-export REALMROOT_STATE_DIR="$(mktemp -d)"
-realmroot agent enroll --username <agent-username> --realmroot-origin https://realmroot.example.com
-```
+The request must possess management authority before AMA creates any Vault or
+Realmroot state. AMA stores no caller token. It completes identity creation and
+atomically commits the Agent and first Profile before returning `201 Created`
+with the Agent representation and canonical `Location`. `Idempotency-Key` retries
+reuse stable internal Vault identifiers and the encrypted initialization checkpoint,
+so concurrent or interrupted requests replay the same Realmroot request. No
+provisioning operation or polling API is exposed. Only ready Agents with non-empty
+issuer and subject appear in the schedulable directory.
 
-Locate the resulting `YW1h.json` below
-`$REALMROOT_STATE_DIR/identities/<issuer>/`. Create an AMA Vault credential with
-type `ama.dev/realmroot-agent-state` and put the complete JSON document in the
-single `state.json` data key. Never place the document itself in an Agent spec,
-API log, event, or environment variable.
+The human caller is authorized and audited by AMA. AMA lazily exchanges the
+confidential-web session's rotating grant for the Realmroot management audience,
+validates that the returned Bearer still represents the signed-in User, and never
+persists an access token outside the encrypted BFF session. DPoP is reserved for
+the created Agent's own token and Resource calls. A trusted upstream BFF may send
+the same secondary credential in `X-AMA-Realmroot-Authorization`; AMA accepts it
+only with a primary Bearer and verifies an exact Realmroot `/api` audience,
+`agents:write`, the same User subject, and the same Application `client_id` as the
+primary AMA token. The secondary header is request-scoped and never enters logs,
+audit metadata, Vault state, or resource representations.
 
-AMA validates the pinned Realmroot v0.4.2 state contract before storage,
-including state version 18, protocol identifiers, enrollment idempotency key,
-and the encoded Ed25519 Agent private key. Hand-authored or partial JSON is
-rejected; use the file produced by `realmroot agent enroll`.
+## Storage and Session behavior
 
-Bind the AMA Agent using its Realmroot Agent id, Realmroot origin, and the
-credential-scoped reference:
+Realmroot private state exists only in encrypted managed Vault credential
+versions. D1 Agent rows contain issuer/subject and credential references—never
+state JSON, private keys, assertions, access
+tokens, or refresh tokens.
 
-```json
-{
-  "realmroot": {
-    "agentId": "agt_example",
-    "origin": "https://realmroot.example.com",
-    "credentialRef": "ama://vaults/vault_example/credentials/vaultcred_example"
-  }
-}
-```
+Session creation accepts the AMA `agentId` and ordinary runtime inputs. AMA resolves
+the Agent's stable Realmroot identity and current Profile internally, then projects only that Agent's
+credential. The Vault snapshot seeds a Session-isolated writable ephemeral
+volume with `0700` directories and `0600` files. The runtime and cloud/runner
+adapters see only generic volume and environment contracts. Updates remain in
+the Session copy, never flow back to Vault, and disappear with workspace cleanup.
 
-Version-pinned references are rejected. Credential rotation therefore changes
-the active Vault version without creating a new Agent version. Revoking the
-credential prevents new Sessions from starting. Existing Sessions retain only
-their already-materialized, session-local copy until that Session workspace is
-destroyed.
+## Retirement
 
-## Session behavior
-
-At Session creation AMA resolves only the bound credential and mounts its
-`state.json` read-only. Runtime setup checks that the state Agent id, origin,
-and runtime (`ama`) match the binding, then copies it to a private writable
-Session state directory with directory mode `0700` and file mode `0600`.
-Repeated preparation validates and preserves that working copy so pending
-approval and short-lived credential updates survive later turns in the same
-Session.
-
-The runtime receives `AGENT=ama`, `REALMROOT_ORIGIN`, and
-`REALMROOT_STATE_DIR`. It can use `realmroot toolbox` to discover private
-Resources and follow normal Realmroot controller approval. AMA never injects a
-user/controller token and never proxies Realmroot Resource Server traffic.
-Realmroot authorization denials and pending controller approval remain ordinary
-tool output in the Session transcript; AMA does not silently retry with broader
-authority or translate them into a different identity.
-
-Cloud images include the pinned Realmroot CLI. Self-hosted runners must provide
-it on `PATH`; otherwise only Realmroot-bound Session startup fails with a clear
-runtime error.
+Deleting an Agent permanently stops new scheduling, ends active Sessions,
+calls `DELETE /api/agents/{identity.id}` with Realmroot management authority,
+destroys the managed Vault and all credential versions, removes ephemeral
+workspaces, and retains a non-schedulable tombstone. Each stage is durable;
+failure never returns successful retirement and scheduled reconciliation resumes
+from the last safe checkpoint.

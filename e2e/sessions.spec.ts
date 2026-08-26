@@ -1,9 +1,9 @@
-import { expect, gotoAuthed, test } from './fixtures'
+import { createReadyAgent, expect, gotoAuthed, test } from './fixtures'
 
 // Real browser happy-path: a seeded session renders in the console list and its
 // routed detail page opens (session create drives the runtime + auto-selects the
 // active agent/env — that flow is covered by web component tests + integration).
-test('exchanges a Bearer credential for an opaque session socket ticket [spec: web-console/routed-pages] [spec: sessions/connection] [spec: quickstart/integration-examples]', async ({
+test('exchanges a Bearer credential for an opaque session socket ticket [spec: web-console/routed-pages] [spec: sessions/connection]', async ({
   page,
   token,
   api,
@@ -11,18 +11,7 @@ test('exchanges a Bearer credential for an opaque session socket ticket [spec: w
 }) => {
   // Agents must pin a provider+model from the global catalog; seed it first.
   await api.post('/api/v1/e2e/catalog/seed', { data: {} })
-  const agentRes = await api.post('/api/v1/agents', {
-    data: {
-      metadata: { name: `s-agent-${runId}` },
-      spec: {
-        systemPrompt: 'x',
-        provider: 'workers-ai',
-        model: '@cf/moonshotai/kimi-k2.6',
-      },
-    },
-  })
-  expect(agentRes.status(), 'seed session agent').toBe(201)
-  const agent = (await agentRes.json()) as { metadata: { uid: string } }
+  const agent = await createReadyAgent(api, runId, `s-agent-${runId}`)
   const environmentRes = await api.post('/api/v1/environments', {
     data: { metadata: { name: `s-env-${runId}` }, spec: {} },
   })
@@ -31,13 +20,12 @@ test('exchanges a Bearer credential for an opaque session socket ticket [spec: w
   const title = `ui-session-${runId}`
   const res = await api.post('/api/v1/sessions', {
     data: {
-      prompt: `Open seeded session ${runId}`,
-      metadata: { name: title },
       spec: {
         agentId: agent.metadata.uid,
         environmentId: environment.metadata.uid,
         runtime: 'ama',
       },
+      prompt: title,
     },
   })
   expect(res.status(), 'seed session').toBe(201)
@@ -129,11 +117,4 @@ test('exchanges a Bearer credential for an opaque session socket ticket [spec: w
   expect(socketAttempt!.protocols?.[1]).toMatch(/^ama-ticket\.[A-Za-z0-9_-]{43}$/)
   expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('ama-access.'))).toBe(false)
   expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('ama-proof.'))).toBe(false)
-
-  await page.goto(`/quickstart?step=integration&session=${session.metadata.uid}`)
-  await expect(page.getByText('Realmroot CLI')).toBeVisible()
-  await expect(page.locator('pre').filter({ hasText: 'realmroot toolbox sync any-managed-agents' })).toBeVisible()
-  await expect(page.locator('body')).not.toContainText(/\bBearer\b/i)
-  await expect(page.getByText('curl', { exact: true })).toHaveCount(0)
-  await expect(page.getByText('restish', { exact: true })).toHaveCount(0)
 })
