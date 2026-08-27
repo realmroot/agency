@@ -15,7 +15,7 @@ not_found_handling = "single-page-application"
 run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 
 [vars]
-AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
+AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev,https://agent-kanban.dev,https://ak.tftt.cc"
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
