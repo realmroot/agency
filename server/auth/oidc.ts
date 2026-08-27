@@ -350,7 +350,12 @@ function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoCl
 // `org` joins the synthesized user into another run's organization, and
 // `teams`/`roles` populate the corresponding OIDC claims so team-scoped
 // policy and role-gated overrides are testable without a real IdP.
-function e2eClaims(env: Env, spec: string, clientId: string | undefined, audience: string): JWTPayload & { sub: string } {
+function e2eClaims(
+  env: Env,
+  spec: string,
+  clientId: string | undefined,
+  audience: string,
+): JWTPayload & { sub: string } {
   const [rawRunId = '', ...directiveParts] = spec.split(';')
   const directives = new Map<string, string>()
   for (const part of directiveParts) {
