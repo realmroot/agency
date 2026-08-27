@@ -111,14 +111,14 @@ export async function getBearerClaimsForAudience(env: Env, accessToken: string, 
     },
     audience,
   )
-  return normalizeClaims(env, await verifyAccessToken(env, accessToken, exactAudience, 'bearer'))
+  return normalizeClaims(env, await verifyAccessToken(env, accessToken, exactAudience, 'management'))
 }
 
 async function verifyAccessToken(
   env: Env,
   accessToken: string,
   audience: string,
-  credentialMode?: 'bearer' | 'dpop',
+  credentialMode?: 'bearer' | 'dpop' | 'management',
 ): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
@@ -277,8 +277,17 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
   }
 }
 
-function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop') {
+function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop' | 'management') {
   const clientId = stringClaim(claims.client_id)
+  if (credentialMode === 'management') {
+    if (!clientId || clientId !== env.REALMROOT_TOKEN_EXCHANGE_CLIENT_ID) {
+      throw new OidcError('Realmroot management token client is not allowed')
+    }
+    if (claims.cnf !== undefined || claims.act !== undefined) {
+      throw new OidcError('Realmroot management token must be an unbound User delegation')
+    }
+    return
+  }
   const allowedClients = new Set([
     env.OIDC_CLIENT_ID,
     env.OIDC_RUNNER_CLIENT_ID,
