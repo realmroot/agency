@@ -282,7 +282,6 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   const allowedClients = new Set([
     env.OIDC_CLIENT_ID,
     env.OIDC_RUNNER_CLIENT_ID,
-    env.REALMROOT_TOKEN_EXCHANGE_CLIENT_ID,
     ...trustedBearerClientIds(env),
     'realmroot-cli',
   ])
@@ -295,6 +294,9 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   }
   if (credentialMode === 'dpop' && clientId !== 'realmroot-cli') {
     throw new OidcError('Realmroot Console and runner clients require Bearer authentication')
+  }
+  if (clientId !== 'realmroot-cli' && claims.act !== undefined) {
+    throw new OidcError('Only Realmroot Agent tokens may carry an Agent actor')
   }
   if (clientId !== 'realmroot-cli') return
   const actor = objectClaim(claims.act)
