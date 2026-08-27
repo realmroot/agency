@@ -195,12 +195,7 @@ describe('[CF] generated SDK contract', () => {
 
   it('keeps the Console-only socket ticket operation raw and excludes it from stable authenticated facades', () => {
     const exclusions = resources.facadeExclusions
-    expect(exclusions.map(({ operationId }) => operationId)).toEqual([
-      'beginWebLogin',
-      'finishWebLogin',
-      'endCurrentAuthSession',
-      'createSessionSocketTicket',
-    ])
+    expect(exclusions.map(({ operationId }) => operationId)).toEqual(['createSessionSocketTicket'])
     const socketTicketExclusion = exclusions.find(({ operationId }) => operationId === 'createSessionSocketTicket')
     expect(socketTicketExclusion?.reason).toContain('Console-only')
     expect(socketTicketExclusion?.reason).toContain('stable Agent facade')

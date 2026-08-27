@@ -196,6 +196,7 @@ export async function createManagedAgent(
   auth: AuthScope,
   idempotencyKey: string,
   request: AgentCreationRequest,
+  authorize: () => Promise<RealmrootManagementCredential>,
 ): Promise<Agent> {
   if (!idempotencyKey.trim() || idempotencyKey.length > 200) {
     throw new AgentCreationValidation({ idempotencyKey: 'Idempotency-Key must contain 1 to 200 characters.' })
@@ -212,14 +213,13 @@ export async function createManagedAgent(
     }
     return existingAgent
   }
-  const authorityGateway = deps.realmrootManagementAuthority
   const enrollmentGateway = deps.realmrootEnrollment
-  if (!authorityGateway || !enrollmentGateway) {
+  if (!enrollmentGateway) {
     throw new AgentCreationUpstreamError('Realmroot Agent creation dependencies are unavailable')
   }
   let authority: RealmrootManagementCredential
   try {
-    authority = await authorityGateway.forAgentAdministration(auth)
+    authority = await authorize()
   } catch (cause) {
     throw new AgentCreationUpstreamError(
       cause instanceof Error ? cause.message : 'Realmroot authority is unavailable',

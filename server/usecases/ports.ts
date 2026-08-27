@@ -74,8 +74,6 @@ export interface AuthScope {
   oidc?: {
     issuer: string | null
     clientId?: string | null
-    realmrootManagementAuthorization?: string
-    realmrootManagementSessionId?: string
   }
 }
 
@@ -208,7 +206,7 @@ export interface RealmrootManagementCredential {
 }
 
 export interface RealmrootManagementAuthority {
-  forAgentAdministration(auth: AuthScope): Promise<RealmrootManagementCredential>
+  forAgentAdministration(auth: AuthScope, authorization: string | null): Promise<RealmrootManagementCredential>
 }
 
 export interface AuditEntry {

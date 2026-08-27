@@ -29,7 +29,6 @@ Feature: Auth
     And an explicitly trusted Web application may present its own Bearer token for the exact AMA resource
     And the runner client also uses Bearer authentication while the Realmroot CLI client requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
-    And a trusted BFF secondary Realmroot Bearer must match the primary User subject and Application client
 
   @auth/dpop @api
   Scenario: Require proof of possession for Agent requests
@@ -38,12 +37,12 @@ Feature: Auth
     Then authentication fails closed with a DPoP challenge
     And a fresh proof whose key matches cnf.jkt is accepted once
 
-  @auth/session-current @api
-  Scenario: Read the Realmroot-authenticated context
-    Given the browser completed Realmroot authorization through AMA's confidential web client
-    When the browser reads the current opaque session context
-    Then the context returns user, organization, project, and a CSRF token without OAuth credentials
-    And Realmroot access and rotating refresh credentials remain encrypted server-side
+  @auth/resource-token @api
+  Scenario: Authenticate every API request with one Realmroot Resource token
+    Given the browser completed authorization code with PKCE for the exact AMA resource
+    When it calls a protected AMA operation
+    Then AMA accepts only the Realmroot token in the standard Authorization header
+    And AMA has no opaque Web Session, CSRF authentication mode, or secondary authorization header
 
   @auth/guard @api
   Scenario: Guard protected resources against unauthenticated access
@@ -87,9 +86,8 @@ Feature: Auth
 
   @auth/e2e-sign-in @e2e
   Scenario: Complete sign in
-    When a user completes the Realmroot confidential-web callback
-    Then AMA establishes an HttpOnly Secure SameSite opaque session cookie
-    And unsafe browser requests require the session CSRF token
+    When a user completes the Realmroot public-SPA PKCE callback
+    Then the browser stores the AMA Resource token in session storage
     And ordinary login and reads do not mint or consume a Realmroot management access token
     And API requests resolve user, organization, and project context
     And invalid Realmroot callbacks return the standard OIDC error envelope

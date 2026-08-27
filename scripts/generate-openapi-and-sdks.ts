@@ -60,7 +60,7 @@ async function main() {
   // 2. Drive each language's generator from that snapshot.
   generateTypeScriptSdk()
   generateGoSdk()
-  generatePythonSdk()
+  await generatePythonSdk()
   generateSdkFacades()
 
   // 3. In check mode, fail when regeneration changes the checked working tree.
@@ -107,7 +107,7 @@ function generateGoSdk() {
   run('oapi-codegen', ['-config', 'oapi-codegen.config.yaml', '../openapi.json'], path.join(ROOT, 'sdk/go'))
 }
 
-function generatePythonSdk() {
+async function generatePythonSdk() {
   // openapi-python-client refuses to overwrite a package it did not create, so
   // remove the previous output first; `--meta none` keeps the hand-maintained
   // pyproject.toml. py.typed is re-added because `--meta none` omits it.
@@ -119,6 +119,9 @@ function generatePythonSdk() {
     sdkDir,
   )
   execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
+  const retiredAgentApi = path.join(sdkDir, 'ama_sdk/api/agents/retire_agent.py')
+  const source = await readFile(retiredAgentApi, 'utf8')
+  await writeFile(retiredAgentApi, source.replace(/[ \t]+$/gm, ''))
 }
 
 function generateSdkFacades() {

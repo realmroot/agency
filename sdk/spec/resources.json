@@ -146,18 +146,6 @@
   },
   "facadeExclusions": [
     {
-      "operationId": "beginWebLogin",
-      "reason": "Browser BFF redirect endpoint; SDK clients use Realmroot Resource authorization."
-    },
-    {
-      "operationId": "finishWebLogin",
-      "reason": "Browser BFF callback endpoint; SDK clients use Realmroot Resource authorization."
-    },
-    {
-      "operationId": "endCurrentAuthSession",
-      "reason": "Browser cookie-session endpoint; SDK clients do not own browser sessions."
-    },
-    {
       "operationId": "createSessionSocketTicket",
       "reason": "Browser Console-only transport helper; the stable Agent facade uses DPoP, and the runner facade does not expose browser session sockets."
     }

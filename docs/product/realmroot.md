@@ -28,16 +28,14 @@ so concurrent or interrupted requests replay the same Realmroot request. No
 provisioning operation or polling API is exposed. Only ready Agents with non-empty
 issuer and subject appear in the schedulable directory.
 
-The human caller is authorized and audited by AMA. AMA lazily exchanges the
-confidential-web session's rotating grant for the Realmroot management audience,
-validates that the returned Bearer still represents the signed-in User, and never
-persists an access token outside the encrypted BFF session. DPoP is reserved for
-the created Agent's own token and Resource calls. A trusted upstream BFF may send
-the same secondary credential in `X-AMA-Realmroot-Authorization`; AMA accepts it
-only with a primary Bearer and verifies an exact Realmroot `/api` audience,
-`agents:write`, the same User subject, and the same Application `client_id` as the
-primary AMA token. The secondary header is request-scoped and never enters logs,
-audit metadata, Vault state, or resource representations.
+The human caller is authorized and audited by AMA using one AMA-audience Bearer
+in the standard `Authorization` header. For Agent creation or retirement, AMA
+authenticates its Machine Application and performs a restricted RFC 8693 exchange
+of that inbound token for the Realmroot management audience. AMA verifies the
+exchanged token's exact `/api` audience, `agents:write` scope, original User
+subject, and Machine Application `client_id`. It accepts no Agent actor or refresh
+token and never persists or returns the exchanged token. DPoP remains limited to
+the created Agent's own token and Resource calls.
 
 ## Storage and Session behavior
 

@@ -2500,49 +2500,9 @@
           "clientId"
         ]
       },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "example": "validation_error"
-              },
-              "message": {
-                "type": "string",
-                "example": "Invalid request"
-              },
-              "issues": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "type",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
       "AuthSession": {
         "type": "object",
         "properties": {
-          "csrfToken": {
-            "type": "string"
-          },
           "user": {
             "$ref": "#/components/schemas/AuthUser"
           },
@@ -2554,7 +2514,6 @@
           }
         },
         "required": [
-          "csrfToken",
           "user",
           "organization",
           "project"
@@ -2615,6 +2574,43 @@
         "required": [
           "id",
           "name"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "validation_error"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "type",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "ProjectListResponse": {
@@ -8577,111 +8573,13 @@
         }
       }
     },
-    "/api/v1/auth/login": {
-      "get": {
-        "operationId": "beginWebLogin",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Begin confidential web sign-in",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "returnTo",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Redirect to Realmroot"
-          }
-        }
-      }
-    },
-    "/api/v1/auth/callback": {
-      "get": {
-        "operationId": "finishWebLogin",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Complete confidential web sign-in",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "code",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "state",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Opaque web session established"
-          },
-          "400": {
-            "description": "Invalid callback",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Realmroot exchange failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/sessions/current": {
-      "delete": {
-        "operationId": "endCurrentAuthSession",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "End the current web session",
-        "responses": {
-          "204": {
-            "description": "Session ended"
-          },
-          "403": {
-            "description": "Invalid CSRF token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
       "get": {
         "operationId": "readCurrentAuthSession",
         "tags": [
           "Auth"
         ],
-        "summary": "Read the authenticated session context",
+        "summary": "Read the Realmroot-authenticated request context",
         "security": [
           {
             "realmrootConsoleBearer": [
@@ -8696,7 +8594,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Current session context",
+            "description": "Current request context",
             "content": {
               "application/json": {
                 "schema": {
@@ -9129,18 +9027,6 @@
             "required": true,
             "name": "Idempotency-Key",
             "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "maxLength": 8192,
-              "pattern": "^Bearer\\s+\\S+$",
-              "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token."
-            },
-            "required": false,
-            "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.",
-            "name": "X-AMA-Realmroot-Authorization",
-            "in": "header"
           }
         ],
         "requestBody": {
@@ -9427,18 +9313,6 @@
             "required": true,
             "name": "agentId",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "maxLength": 8192,
-              "pattern": "^Bearer\\s+\\S+$",
-              "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token."
-            },
-            "required": false,
-            "description": "Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.",
-            "name": "X-AMA-Realmroot-Authorization",
-            "in": "header"
           }
         ],
         "responses": {

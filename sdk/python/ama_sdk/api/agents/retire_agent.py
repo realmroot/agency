@@ -9,26 +9,19 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
     agent_id: str,
-    *,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    headers: dict[str, Any] = {}
-    if not isinstance(x_ama_realmroot_authorization, Unset):
-        headers["X-AMA-Realmroot-Authorization"] = x_ama_realmroot_authorization
 
 
 
-    
 
-    
+
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
@@ -36,7 +29,6 @@ def _get_kwargs(
     }
 
 
-    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -93,15 +85,12 @@ def sync_detailed(
     agent_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Response[Any | ErrorResponse]:
     """ Permanently retire an Agent identity and destroy its managed Vault
 
     Args:
         agent_id (str):  Example: agent_abc123.
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -114,7 +103,6 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         agent_id=agent_id,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )
 
@@ -128,15 +116,12 @@ def sync(
     agent_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Any | ErrorResponse | None:
     """ Permanently retire an Agent identity and destroy its managed Vault
 
     Args:
         agent_id (str):  Example: agent_abc123.
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -150,7 +135,6 @@ def sync(
     return sync_detailed(
         agent_id=agent_id,
 client=client,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     ).parsed
 
@@ -158,15 +142,12 @@ async def asyncio_detailed(
     agent_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Response[Any | ErrorResponse]:
     """ Permanently retire an Agent identity and destroy its managed Vault
 
     Args:
         agent_id (str):  Example: agent_abc123.
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -179,7 +160,6 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         agent_id=agent_id,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )
 
@@ -193,15 +173,12 @@ async def asyncio(
     agent_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Any | ErrorResponse | None:
     """ Permanently retire an Agent identity and destroy its managed Vault
 
     Args:
         agent_id (str):  Example: agent_abc123.
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -215,6 +192,5 @@ async def asyncio(
     return (await asyncio_detailed(
         agent_id=agent_id,
 client=client,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )).parsed

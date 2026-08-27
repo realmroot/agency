@@ -300,7 +300,9 @@ function harness() {
 }
 
 async function create(value: Harness, overrides: Partial<AgentCreationRequest> = {}, key = 'create-worker') {
-  return await createManagedAgent(value.deps, auth, key, request(overrides))
+  return await createManagedAgent(value.deps, auth, key, request(overrides), () =>
+    value.deps.realmrootManagementAuthority!.forAgentAdministration(auth, 'Bearer test'),
+  )
 }
 
 describe('[spec: agents/create] createManagedAgent', () => {
@@ -354,9 +356,11 @@ describe('[spec: agents/create] createManagedAgent', () => {
 
     const noOrigin = harness()
     const { oidc: _oidc, ...authWithoutOidc } = auth
-    await expect(createManagedAgent(noOrigin.deps, authWithoutOidc, 'key', request())).rejects.toMatchObject({
-      message: 'Realmroot origin is unavailable',
-    })
+    await expect(
+      createManagedAgent(noOrigin.deps, authWithoutOidc, 'key', request(), () =>
+        noOrigin.deps.realmrootManagementAuthority!.forAgentAdministration(authWithoutOidc, 'Bearer test'),
+      ),
+    ).rejects.toMatchObject({ message: 'Realmroot origin is unavailable' })
   })
 
   it('resumes from the encrypted final credential without registering again', async () => {

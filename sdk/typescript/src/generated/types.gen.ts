@@ -649,19 +649,7 @@ export type AuthMethod = {
     clientId: string;
 };
 
-export type ErrorResponse = {
-    error: {
-        type: string;
-        message: string;
-        issues?: Array<unknown>;
-        details?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
 export type AuthSession = {
-    csrfToken: string;
     user: AuthUser;
     organization: AuthOrganization;
     project: AuthProject;
@@ -681,6 +669,17 @@ export type AuthOrganization = {
 export type AuthProject = {
     id: string;
     name: string;
+};
+
+export type ErrorResponse = {
+    error: {
+        type: string;
+        message: string;
+        issues?: Array<unknown>;
+        details?: {
+            [key: string]: unknown;
+        };
+    };
 };
 
 export type ProjectListResponse = {
@@ -2109,63 +2108,6 @@ export type ReadAuthConfigResponses = {
 
 export type ReadAuthConfigResponse = ReadAuthConfigResponses[keyof ReadAuthConfigResponses];
 
-export type BeginWebLoginData = {
-    body?: never;
-    path?: never;
-    query?: {
-        returnTo?: string;
-    };
-    url: '/api/v1/auth/login';
-};
-
-export type FinishWebLoginData = {
-    body?: never;
-    path?: never;
-    query: {
-        code: string;
-        state: string;
-    };
-    url: '/api/v1/auth/callback';
-};
-
-export type FinishWebLoginErrors = {
-    /**
-     * Invalid callback
-     */
-    400: ErrorResponse;
-    /**
-     * Realmroot exchange failed
-     */
-    502: ErrorResponse;
-};
-
-export type FinishWebLoginError = FinishWebLoginErrors[keyof FinishWebLoginErrors];
-
-export type EndCurrentAuthSessionData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/auth/sessions/current';
-};
-
-export type EndCurrentAuthSessionErrors = {
-    /**
-     * Invalid CSRF token
-     */
-    403: ErrorResponse;
-};
-
-export type EndCurrentAuthSessionError = EndCurrentAuthSessionErrors[keyof EndCurrentAuthSessionErrors];
-
-export type EndCurrentAuthSessionResponses = {
-    /**
-     * Session ended
-     */
-    204: void;
-};
-
-export type EndCurrentAuthSessionResponse = EndCurrentAuthSessionResponses[keyof EndCurrentAuthSessionResponses];
-
 export type ReadCurrentAuthSessionData = {
     body?: never;
     path?: never;
@@ -2188,7 +2130,7 @@ export type ReadCurrentAuthSessionError = ReadCurrentAuthSessionErrors[keyof Rea
 
 export type ReadCurrentAuthSessionResponses = {
     /**
-     * Current session context
+     * Current request context
      */
     200: AuthSession;
 };
@@ -2344,10 +2286,6 @@ export type CreateAgentData = {
     body: CreateAgentRequest;
     headers: {
         'Idempotency-Key': string;
-        /**
-         * Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
-         */
-        'X-AMA-Realmroot-Authorization'?: string;
     };
     path?: never;
     query?: never;
@@ -2390,12 +2328,6 @@ export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponse
 
 export type RetireAgentData = {
     body?: never;
-    headers?: {
-        /**
-         * Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
-         */
-        'X-AMA-Realmroot-Authorization'?: string;
-    };
     path: {
         agentId: string;
     };

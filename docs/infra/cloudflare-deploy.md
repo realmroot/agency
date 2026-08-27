@@ -14,6 +14,7 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 ## Realmroot Applications and Resource Server
 
 Create public Realmroot applications for the browser SPA and runner loopback PKCE flow. Register AMA as the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728 discovery document and OpenAPI document are live.
+Create a separate Machine Application for AMA's restricted User token exchange.
 
 Required settings:
 
@@ -25,6 +26,12 @@ Required settings:
 - Runner redirect URI: configure exactly `http://127.0.0.1:49174/oauth/callback`; do not register wildcard ports.
 - Scopes: `openid email profile`
 - Flow: authorization code with PKCE
+
+The Machine Application uses `REALMROOT_TOKEN_EXCHANGE_CLIENT_ID` and the
+`REALMROOT_TOKEN_EXCHANGE_CLIENT_SECRET` Worker secret. Configure the AMA
+Resource Server as its token-exchange source, grant only the Realmroot `/api`
+`agents:write` Application Permission, and do not enable refresh-token issuance
+for delegated tokens.
 
 Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require

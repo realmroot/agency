@@ -251,4 +251,42 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
     ).toEqual({ actor_type: 'agent', actor_user_id: 'agent_1', controller_user_id: null })
     db.close()
   })
+
+  it('upgrades multiple legacy Agents without blank identity or username collisions', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0028_audit_actor_chain.sql')
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
+      INSERT INTO agents (id,project_id,name,system_prompt,realmroot,created_at,updated_at) VALUES
+        ('agent_bound','project_1','Bound','Work',
+          '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
+          '2026-01-01','2026-01-01'),
+        ('agent_unbound','project_1','Unbound','Work',null,'2026-01-01','2026-01-01');
+    `)
+
+    expect(() => apply(db, '0030_agent_identity_provisioning.sql')).not.toThrow()
+    expect(
+      db
+        .prepare('SELECT id,username,identity_issuer,identity_subject,identity_credential_ref FROM agents ORDER BY id')
+        .all(),
+    ).toEqual([
+      {
+        id: 'agent_bound',
+        username: 'legacy-agent-bound',
+        identity_issuer: 'https://id.realmroot.dev/api/auth',
+        identity_subject: 'rr_agent_1',
+        identity_credential_ref: 'ama://vaults/v1/credentials/c1',
+      },
+      {
+        id: 'agent_unbound',
+        username: 'legacy-agent-unbound',
+        identity_issuer: 'urn:ama:legacy:unbound',
+        identity_subject: 'agent_unbound',
+        identity_credential_ref: null,
+      },
+    ])
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    db.close()
+  })
 })

@@ -2,7 +2,7 @@ import type { Agent } from '@server/domain/agent'
 import { secretRefIdentity } from '@server/domain/vault'
 import type { WorkspaceManifestMount } from '@server/domain/workspace'
 import type { Deps } from './deps'
-import type { AuthScope } from './ports'
+import type { AuthScope, RealmrootManagementCredential } from './ports'
 import { closeSession } from './runtime/session-lifecycle'
 
 async function identityRecordId(deps: Deps, auth: AuthScope, agent: Agent) {
@@ -38,7 +38,12 @@ async function cleanup(deps: Deps, agent: Agent) {
   await deps.agents.markRetirement(agent.metadata.pid ?? '', agent.metadata.uid, 'retired', new Date().toISOString())
 }
 
-export async function retireAgent(deps: Deps, auth: AuthScope, agent: Agent) {
+export async function retireAgent(
+  deps: Deps,
+  auth: AuthScope,
+  agent: Agent,
+  authority?: RealmrootManagementCredential,
+) {
   if (agent.status.phase === 'retired') return
   if (agent.status.phase !== 'retiring') {
     await deps.agents.markRetirement(auth.project.id, agent.metadata.uid, 'stopping', new Date().toISOString())
@@ -50,7 +55,6 @@ export async function retireAgent(deps: Deps, auth: AuthScope, agent: Agent) {
   }
   if (agent.status.retirementStage !== 'identity_retired') {
     const identity = await identityRecordId(deps, auth, agent)
-    const authority = await deps.realmrootManagementAuthority?.forAgentAdministration(auth)
     if (!authority || !deps.realmrootEnrollment) throw new Error('Realmroot Agent retirement authority is unavailable')
     await deps.realmrootEnrollment.retire({
       issuer: agent.identity.issuer,
@@ -64,23 +68,20 @@ export async function retireAgent(deps: Deps, auth: AuthScope, agent: Agent) {
 
 export async function reconcileRetiredAgentCleanup(deps: Deps) {
   for (const agent of await deps.agents.retiring(25)) {
-    try {
-      const project = agent.metadata.pid ? await deps.projects.tenant(agent.metadata.pid) : null
-      if (!project) continue
-      await retireAgent(
-        deps,
-        {
-          organization: { id: project.organizationId, name: project.organizationId },
-          project: { id: project.id, name: project.name, organizationId: project.organizationId },
-          user: { id: 'ama-system' },
-          roles: ['system'],
-          permissions: ['agents:write', 'sessions:write', 'vaults:write'],
-          oidc: { issuer: agent.identity.issuer },
-        },
-        agent,
-      )
-    } catch {
-      /* next scheduled pass retries the durable retirement stage */
-    }
+    if (agent.status.retirementStage !== 'identity_retired') continue
+    const project = agent.metadata.pid ? await deps.projects.tenant(agent.metadata.pid) : null
+    if (!project) continue
+    await retireAgent(
+      deps,
+      {
+        organization: { id: project.organizationId, name: project.organizationId },
+        project: { id: project.id, name: project.name, organizationId: project.organizationId },
+        user: { id: 'ama-system' },
+        roles: ['system'],
+        permissions: ['agents:write', 'sessions:write', 'vaults:write'],
+        oidc: { issuer: agent.identity.issuer },
+      },
+      agent,
+    )
   }
 }

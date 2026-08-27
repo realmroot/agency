@@ -9,19 +9,7 @@ export const readConfigz = (options) => (options?.client ?? client).get({ url: '
  */
 export const readAuthConfig = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/config', ...options });
 /**
- * Begin confidential web sign-in
- */
-export const beginWebLogin = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/login', ...options });
-/**
- * Complete confidential web sign-in
- */
-export const finishWebLogin = (options) => (options.client ?? client).get({ url: '/api/v1/auth/callback', ...options });
-/**
- * End the current web session
- */
-export const endCurrentAuthSession = (options) => (options?.client ?? client).delete({ url: '/api/v1/auth/sessions/current', ...options });
-/**
- * Read the authenticated session context
+ * Read the Realmroot-authenticated request context
  */
 export const readCurrentAuthSession = (options) => (options?.client ?? client).get({
     url: '/api/v1/auth/sessions/current',

@@ -277,7 +277,7 @@ export function createAmaClient(config: AmaClientConfig) {
       create: (body: types.CreateAgentRequest, headers: types.CreateAgentData['headers']) => unwrap(ops.createAgent({ client, body, headers })),
       get: (agentId: string) => unwrap(ops.readAgent({ client, path: { agentId } })),
       update: (agentId: string, body: types.UpdateAgentRequest) => unwrap(ops.updateAgent({ client, path: { agentId }, body })),
-      retire: (agentId: string, headers: types.RetireAgentData['headers']) => unwrap(ops.retireAgent({ client, path: { agentId }, headers })),
+      retire: (agentId: string) => unwrap(ops.retireAgent({ client, path: { agentId } })),
       listVersions: (agentId: string) => unwrap(ops.listAgentVersions({ client, path: { agentId } })),
       getVersion: (agentId: string, version: number) => unwrap(ops.readAgentVersion({ client, path: { agentId, version } })),
     },

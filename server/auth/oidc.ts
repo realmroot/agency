@@ -282,6 +282,7 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   const allowedClients = new Set([
     env.OIDC_CLIENT_ID,
     env.OIDC_RUNNER_CLIENT_ID,
+    env.REALMROOT_TOKEN_EXCHANGE_CLIENT_ID,
     ...trustedBearerClientIds(env),
     'realmroot-cli',
   ])

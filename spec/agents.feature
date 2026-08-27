@@ -22,10 +22,12 @@ Feature: Agents
 
   @agents/realmroot-binding @usecase
   Scenario: Provision one Realmroot identity as part of Agent creation
-    Given a signed-in User authorized the AMA confidential Application for Realmroot Agent management
+    Given a signed-in User authorized agents:write for the AMA Resource
     When the caller creates one Agent with an immutable username
     Then AMA initializes key material in an encrypted managed Vault before calling Realmroot
-    And AMA uses the User-subject authorization-code Bearer to create the stable identity through POST /api/agents without approval
+    And AMA authenticates its Machine Application and performs a restricted RFC 8693 exchange of the inbound User token
+    And AMA uses the exchanged User-subject Realmroot /api Bearer to create the stable identity through POST /api/agents without approval
+    And the exchanged token contains no Agent actor and is never returned, persisted, or refreshed by AMA
     And concurrent or interrupted retries reuse the same encrypted Vault checkpoint and exact Realmroot request
     And POST returns 201 with the ready Agent and its canonical Location without exposing a provisioning resource
     And only a ready Agent with non-empty issuer and subject enters the directory

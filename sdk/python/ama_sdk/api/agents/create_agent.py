@@ -11,7 +11,6 @@ from ... import errors
 from ...models.agent import Agent
 from ...models.create_agent_request import CreateAgentRequest
 from ...models.error_response import ErrorResponse
-from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -20,14 +19,10 @@ def _get_kwargs(
     *,
     body: CreateAgentRequest,
     idempotency_key: str,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
     headers["Idempotency-Key"] = idempotency_key
-
-    if not isinstance(x_ama_realmroot_authorization, Unset):
-        headers["X-AMA-Realmroot-Authorization"] = x_ama_realmroot_authorization
 
 
 
@@ -112,15 +107,12 @@ def sync_detailed(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
         idempotency_key (str):
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
         body (CreateAgentRequest):
 
     Raises:
@@ -135,7 +127,6 @@ def sync_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )
 
@@ -150,15 +141,12 @@ def sync(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
         idempotency_key (str):
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
         body (CreateAgentRequest):
 
     Raises:
@@ -174,7 +162,6 @@ def sync(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     ).parsed
 
@@ -183,15 +170,12 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
         idempotency_key (str):
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
         body (CreateAgentRequest):
 
     Raises:
@@ -206,7 +190,6 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )
 
@@ -221,15 +204,12 @@ async def asyncio(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str,
-    x_ama_realmroot_authorization: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
         idempotency_key (str):
-        x_ama_realmroot_authorization (str | Unset): Internal BFF boundary: a Realmroot /api
-            audience User Bearer for the same subject and Application as the primary AMA token.
         body (CreateAgentRequest):
 
     Raises:
@@ -245,6 +225,5 @@ async def asyncio(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
-x_ama_realmroot_authorization=x_ama_realmroot_authorization,
 
     )).parsed

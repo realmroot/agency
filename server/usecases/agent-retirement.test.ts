@@ -45,6 +45,7 @@ function agent(): Agent {
 }
 
 function deps(options: { retireIdentity?: () => Promise<void> } = {}) {
+  const managementCredential = { accessToken: 'management-token', tokenType: 'DPoP' } as never
   const markRetirement = vi.fn(async (_projectId: string, _agentId: string, _stage: string, _at: string) => {})
   const destroyManagedVault = vi.fn(async (_vaultId: string, _credentialId: string) => {})
   const retireIdentity = vi.fn(async (_input: unknown) => options.retireIdentity?.())
@@ -65,18 +66,18 @@ function deps(options: { retireIdentity?: () => Promise<void> } = {}) {
       }),
     },
     realmrootManagementAuthority: {
-      forAgentAdministration: async () => ({ accessToken: 'management-token', tokenType: 'DPoP' }),
+      forAgentAdministration: async () => managementCredential,
     },
     realmrootEnrollment: { retire: retireIdentity },
     vaults: { destroyManagedVault },
   } as unknown as Deps
-  return { value, markRetirement, destroyManagedVault, retireIdentity }
+  return { value, markRetirement, destroyManagedVault, retireIdentity, managementCredential }
 }
 
 describe('[spec: agents/retirement] retireAgent', () => {
   it('retires the Realmroot identity and destroys the managed Vault before leaving a tombstone', async () => {
     const fixture = deps()
-    await retireAgent(fixture.value, auth, agent())
+    await retireAgent(fixture.value, auth, agent(), fixture.managementCredential)
 
     expect(fixture.retireIdentity).toHaveBeenCalledWith({
       issuer: 'https://realmroot.example/api/auth',
@@ -97,7 +98,9 @@ describe('[spec: agents/retirement] retireAgent', () => {
         throw new Error('Realmroot unavailable')
       },
     })
-    await expect(retireAgent(fixture.value, auth, agent())).rejects.toThrow('Realmroot unavailable')
+    await expect(retireAgent(fixture.value, auth, agent(), fixture.managementCredential)).rejects.toThrow(
+      'Realmroot unavailable',
+    )
     expect(fixture.markRetirement.mock.calls.map((call) => call[2])).toEqual(['stopping'])
     expect(fixture.destroyManagedVault).not.toHaveBeenCalled()
   })

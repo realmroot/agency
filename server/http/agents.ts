@@ -186,16 +186,6 @@ const AgentPayloadSchema = z
   .strict()
 
 const CreateAgentSchema = AgentPayloadSchema.openapi('CreateAgentRequest')
-const RealmrootManagementAuthorizationHeaderSchema = z
-  .string()
-  .regex(/^Bearer\s+\S+$/)
-  .max(8192)
-  .optional()
-  .openapi({
-    param: { name: 'X-AMA-Realmroot-Authorization', in: 'header' },
-    description:
-      'Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.',
-  })
 const UpdateAgentSchema = z
   .object({
     metadata: ResourceUpdateMetadataSchema.optional(),
@@ -269,7 +259,6 @@ const createAgentRoute = createRoute({
   request: {
     headers: z.object({
       'Idempotency-Key': z.string().min(1).max(200),
-      'X-AMA-Realmroot-Authorization': RealmrootManagementAuthorizationHeaderSchema,
     }),
     body: { required: true, content: { 'application/json': { schema: CreateAgentSchema } } },
   },
@@ -337,10 +326,7 @@ const deleteAgentRoute = createRoute({
   tags: ['Agents'],
   summary: 'Permanently retire an Agent identity and destroy its managed Vault',
   ...AuthenticatedOperation,
-  request: {
-    params: AgentParamsSchema,
-    headers: z.object({ 'X-AMA-Realmroot-Authorization': RealmrootManagementAuthorizationHeaderSchema }),
-  },
+  request: { params: AgentParamsSchema },
   responses: {
     204: { description: 'Agent retired' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
@@ -448,13 +434,25 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
+      if (auth.agentActor) {
+        return c.json({ error: { type: 'forbidden', message: 'Only a Realmroot User can create managed Agents' } }, 403)
+      }
       try {
-        const agent = await createManagedAgent(deps, auth, c.req.valid('header')['Idempotency-Key'], {
-          username: body.username,
-          name: body.metadata.name,
-          description: body.metadata.description ?? null,
-          spec: specFromPayload(body),
-        })
+        if (!deps.realmrootManagementAuthority) {
+          throw new AgentCreationUpstreamError('Realmroot Agent management authority is unavailable')
+        }
+        const agent = await createManagedAgent(
+          deps,
+          auth,
+          c.req.valid('header')['Idempotency-Key'],
+          {
+            username: body.username,
+            name: body.metadata.name,
+            description: body.metadata.description ?? null,
+            spec: specFromPayload(body),
+          },
+          () => deps.realmrootManagementAuthority!.forAgentAdministration(auth, c.req.header('Authorization') ?? null),
+        )
         c.header('Location', `/api/v1/agents/${encodeURIComponent(agent.metadata.uid)}`)
         return c.json(serializeAgent(agent), 201)
       } catch (error) {
@@ -534,12 +532,21 @@ export function registerAgentRoutes(routes: AgentRoutes) {
     .openapi(deleteAgentRoute, async (c) => {
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
+      if (auth.agentActor) {
+        return c.json({ error: { type: 'forbidden', message: 'Only a Realmroot User can retire managed Agents' } }, 403)
+      }
       const { agentId } = c.req.valid('param')
-      const agent = await c.get('deps').agents.find(auth.project.id, agentId)
+      const deps = c.get('deps')
+      const agent = await deps.agents.find(auth.project.id, agentId)
       if (!agent) return notFound(c)
       try {
-        await retireAgent(c.get('deps'), auth, agent)
-        await c.get('deps').audit.record(auth, {
+        const authority = await deps.realmrootManagementAuthority?.forAgentAdministration(
+          auth,
+          c.req.header('Authorization') ?? null,
+        )
+        if (!authority) throw new Error('Realmroot Agent management authority is unavailable')
+        await retireAgent(deps, auth, agent, authority)
+        await deps.audit.record(auth, {
           action: 'agent.retire',
           resourceType: 'agent',
           resourceId: agentId,

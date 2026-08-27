@@ -40,7 +40,6 @@ function envFor(issuer: string, overrides: Partial<Env> = {}) {
   return {
     OIDC_ISSUER: issuer,
     OIDC_CLIENT_ID: 'ama',
-    OIDC_CLIENT_SECRET: 'secret',
     OIDC_RESOURCE: 'https://ama.example.com',
     OIDC_USE_SERVICE_BINDING: 'false',
     ...overrides,

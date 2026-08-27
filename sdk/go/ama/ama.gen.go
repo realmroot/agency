@@ -3422,7 +3422,6 @@ type AuthProject struct {
 
 // AuthSession defines model for AuthSession.
 type AuthSession struct {
-	CsrfToken    string           `json:"csrfToken"`
 	Organization AuthOrganization `json:"organization"`
 	Project      AuthProject      `json:"project"`
 	User         AuthUser         `json:"user"`
@@ -5915,15 +5914,6 @@ type ListAgentsParamsArchived string
 // CreateAgentParams defines parameters for CreateAgent.
 type CreateAgentParams struct {
 	IdempotencyKey string `json:"Idempotency-Key"`
-
-	// XAMARealmrootAuthorization Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
-	XAMARealmrootAuthorization *string `json:"X-AMA-Realmroot-Authorization,omitempty"`
-}
-
-// RetireAgentParams defines parameters for RetireAgent.
-type RetireAgentParams struct {
-	// XAMARealmrootAuthorization Internal BFF boundary: a Realmroot /api audience User Bearer for the same subject and Application as the primary AMA token.
-	XAMARealmrootAuthorization *string `json:"X-AMA-Realmroot-Authorization,omitempty"`
 }
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
@@ -5940,20 +5930,9 @@ type ListAuditRecordsParams struct {
 	Cursor       *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
-// FinishWebLoginParams defines parameters for FinishWebLogin.
-type FinishWebLoginParams struct {
-	Code  string `form:"code" json:"code"`
-	State string `form:"state" json:"state"`
-}
-
 // ReadAuthConfigParams defines parameters for ReadAuthConfig.
 type ReadAuthConfigParams struct {
 	Organization *string `form:"organization,omitempty" json:"organization,omitempty"`
-}
-
-// BeginWebLoginParams defines parameters for BeginWebLogin.
-type BeginWebLoginParams struct {
-	ReturnTo *string `form:"returnTo,omitempty" json:"returnTo,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -8643,7 +8622,7 @@ type ClientInterface interface {
 	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RetireAgent request
-	RetireAgent(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8665,17 +8644,8 @@ type ClientInterface interface {
 	// ReadAuditRecord request
 	ReadAuditRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// FinishWebLogin request
-	FinishWebLogin(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ReadAuthConfig request
 	ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// BeginWebLogin request
-	BeginWebLogin(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// EndCurrentAuthSession request
-	EndCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadCurrentAuthSession request
 	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9008,8 +8978,8 @@ func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) RetireAgent(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRetireAgentRequest(c.Server, agentId, params)
+func (c *APIClient) RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRetireAgentRequest(c.Server, agentId)
 	if err != nil {
 		return nil, err
 	}
@@ -9104,44 +9074,8 @@ func (c *APIClient) ReadAuditRecord(ctx context.Context, recordId string, reqEdi
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) FinishWebLogin(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewFinishWebLoginRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *APIClient) ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadAuthConfigRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) BeginWebLogin(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewBeginWebLoginRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) EndCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewEndCurrentAuthSessionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10622,24 +10556,13 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 
 		req.Header.Set("Idempotency-Key", headerParam0)
 
-		if params.XAMARealmrootAuthorization != nil {
-			var headerParam1 string
-
-			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Realmroot-Authorization", *params.XAMARealmrootAuthorization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-AMA-Realmroot-Authorization", headerParam1)
-		}
-
 	}
 
 	return req, nil
 }
 
 // NewRetireAgentRequest generates requests for RetireAgent
-func NewRetireAgentRequest(server string, agentId string, params *RetireAgentParams) (*http.Request, error) {
+func NewRetireAgentRequest(server string, agentId string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -10667,21 +10590,6 @@ func NewRetireAgentRequest(server string, agentId string, params *RetireAgentPar
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XAMARealmrootAuthorization != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Realmroot-Authorization", *params.XAMARealmrootAuthorization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-AMA-Realmroot-Authorization", headerParam0)
-		}
-
 	}
 
 	return req, nil
@@ -11039,64 +10947,6 @@ func NewReadAuditRecordRequest(server string, recordId string) (*http.Request, e
 	return req, nil
 }
 
-// NewFinishWebLoginRequest generates requests for FinishWebLogin
-func NewFinishWebLoginRequest(server string, params *FinishWebLoginParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/callback")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "code", params.Code, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "state", params.State, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewReadAuthConfigRequest generates requests for ReadAuthConfig
 func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*http.Request, error) {
 	var err error
@@ -11144,87 +10994,6 @@ func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*htt
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewBeginWebLoginRequest generates requests for BeginWebLogin
-func NewBeginWebLoginRequest(server string, params *BeginWebLoginParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/login")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if params.ReturnTo != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "returnTo", *params.ReturnTo, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewEndCurrentAuthSessionRequest generates requests for EndCurrentAuthSession
-func NewEndCurrentAuthSessionRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/sessions/current")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -15727,7 +15496,7 @@ type ClientWithResponsesInterface interface {
 	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
 	// RetireAgentWithResponse request
-	RetireAgentWithResponse(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error)
+	RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error)
 
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
@@ -15749,17 +15518,8 @@ type ClientWithResponsesInterface interface {
 	// ReadAuditRecordWithResponse request
 	ReadAuditRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadAuditRecordResponse, error)
 
-	// FinishWebLoginWithResponse request
-	FinishWebLoginWithResponse(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*FinishWebLoginResponse, error)
-
 	// ReadAuthConfigWithResponse request
 	ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error)
-
-	// BeginWebLoginWithResponse request
-	BeginWebLoginWithResponse(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*BeginWebLoginResponse, error)
-
-	// EndCurrentAuthSessionWithResponse request
-	EndCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EndCurrentAuthSessionResponse, error)
 
 	// ReadCurrentAuthSessionWithResponse request
 	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
@@ -16358,37 +16118,6 @@ func (r ReadAuditRecordResponse) ContentType() string {
 	return ""
 }
 
-type FinishWebLoginResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *ErrorResponse
-	JSON502      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r FinishWebLoginResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r FinishWebLoginResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r FinishWebLoginResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 type ReadAuthConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -16413,65 +16142,6 @@ func (r ReadAuthConfigResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadAuthConfigResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type BeginWebLoginResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r BeginWebLoginResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r BeginWebLoginResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r BeginWebLoginResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type EndCurrentAuthSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON403      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r EndCurrentAuthSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r EndCurrentAuthSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r EndCurrentAuthSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -19181,8 +18851,8 @@ func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, param
 }
 
 // RetireAgentWithResponse request returning *RetireAgentResponse
-func (c *ClientWithResponses) RetireAgentWithResponse(ctx context.Context, agentId string, params *RetireAgentParams, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error) {
-	rsp, err := c.RetireAgent(ctx, agentId, params, reqEditors...)
+func (c *ClientWithResponses) RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error) {
+	rsp, err := c.RetireAgent(ctx, agentId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19251,15 +18921,6 @@ func (c *ClientWithResponses) ReadAuditRecordWithResponse(ctx context.Context, r
 	return ParseReadAuditRecordResponse(rsp)
 }
 
-// FinishWebLoginWithResponse request returning *FinishWebLoginResponse
-func (c *ClientWithResponses) FinishWebLoginWithResponse(ctx context.Context, params *FinishWebLoginParams, reqEditors ...RequestEditorFn) (*FinishWebLoginResponse, error) {
-	rsp, err := c.FinishWebLogin(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseFinishWebLoginResponse(rsp)
-}
-
 // ReadAuthConfigWithResponse request returning *ReadAuthConfigResponse
 func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error) {
 	rsp, err := c.ReadAuthConfig(ctx, params, reqEditors...)
@@ -19267,24 +18928,6 @@ func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, pa
 		return nil, err
 	}
 	return ParseReadAuthConfigResponse(rsp)
-}
-
-// BeginWebLoginWithResponse request returning *BeginWebLoginResponse
-func (c *ClientWithResponses) BeginWebLoginWithResponse(ctx context.Context, params *BeginWebLoginParams, reqEditors ...RequestEditorFn) (*BeginWebLoginResponse, error) {
-	rsp, err := c.BeginWebLogin(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseBeginWebLoginResponse(rsp)
-}
-
-// EndCurrentAuthSessionWithResponse request returning *EndCurrentAuthSessionResponse
-func (c *ClientWithResponses) EndCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EndCurrentAuthSessionResponse, error) {
-	rsp, err := c.EndCurrentAuthSession(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseEndCurrentAuthSessionResponse(rsp)
 }
 
 // ReadCurrentAuthSessionWithResponse request returning *ReadCurrentAuthSessionResponse
@@ -20684,39 +20327,6 @@ func ParseReadAuditRecordResponse(rsp *http.Response) (*ReadAuditRecordResponse,
 	return response, nil
 }
 
-// ParseFinishWebLoginResponse parses an HTTP response from a FinishWebLoginWithResponse call
-func ParseFinishWebLoginResponse(rsp *http.Response) (*FinishWebLoginResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &FinishWebLoginResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseReadAuthConfigResponse parses an HTTP response from a ReadAuthConfigWithResponse call
 func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -20737,48 +20347,6 @@ func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseBeginWebLoginResponse parses an HTTP response from a BeginWebLoginWithResponse call
-func ParseBeginWebLoginResponse(rsp *http.Response) (*BeginWebLoginResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &BeginWebLoginResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	return response, nil
-}
-
-// ParseEndCurrentAuthSessionResponse parses an HTTP response from a EndCurrentAuthSessionWithResponse call
-func ParseEndCurrentAuthSessionResponse(rsp *http.Response) (*EndCurrentAuthSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &EndCurrentAuthSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
 
 	}
 

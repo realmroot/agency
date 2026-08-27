@@ -70,7 +70,6 @@ async function request(
     permissions?: string[]
     runner?: boolean
     agentDpop?: boolean
-    realmrootAuthorization?: string
     claims?: Record<string, unknown>
   } = {},
 ) {
@@ -91,7 +90,6 @@ async function request(
       headers: {
         authorization,
         ...(usesDpop ? { dpop: 'proof' } : {}),
-        ...(values.realmrootAuthorization ? { 'x-ama-realmroot-authorization': values.realmrootAuthorization } : {}),
       },
     },
     {
@@ -205,54 +203,6 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     expect((await request('/api/v1/agents/agent_1', { method: 'POST', permissions: ['agents:write'] })).status).toBe(
       200,
     )
-  })
-
-  it('preserves a secondary Realmroot User Bearer only for a primary Bearer request', async () => {
-    const response = await request('/auth-context', {
-      method: 'POST',
-      permissions: ['agents:write'],
-      claims: { client_id: 'ama-web' },
-      realmrootAuthorization: 'Bearer realmroot-management-token',
-    })
-
-    expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toMatchObject({
-      oidc: { realmrootManagementAuthorization: 'Bearer realmroot-management-token' },
-    })
-  })
-
-  it('does not synthesize a secondary Realmroot credential when the header is missing', async () => {
-    const response = await request('/auth-context', {
-      method: 'POST',
-      permissions: ['agents:write'],
-      claims: { client_id: 'ama-web' },
-    })
-
-    expect(response.status).toBe(200)
-    const body = (await response.json()) as { oidc: Record<string, unknown> }
-    expect(body.oidc).not.toHaveProperty('realmrootManagementAuthorization')
-  })
-
-  it('rejects forwarding a secondary Realmroot Bearer from an Agent DPoP request', async () => {
-    const response = await request('/auth-context', {
-      method: 'POST',
-      permissions: ['agents:write'],
-      agentDpop: true,
-      claims: {
-        client_id: 'realmroot-native-agent',
-        actor: { issuer: 'https://realmroot.example/api/auth', subject: 'agt_1', profile: 'ai_agent' },
-      },
-      realmrootAuthorization: 'Bearer realmroot-management-token',
-    })
-
-    expect(response.status).toBe(401)
-    await expect(response.json()).resolves.toMatchObject({
-      error: {
-        type: 'authentication_required',
-        details: { reason: 'missing_or_invalid_realmroot_credential' },
-      },
-    })
-    expect(upsertProjectForClaimsMock).not.toHaveBeenCalled()
   })
 
   it('enforces the same resource wall for requireAuthIdentity', async () => {

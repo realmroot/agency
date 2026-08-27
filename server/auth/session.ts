@@ -15,14 +15,12 @@ import {
   upsertProjectForClaims,
 } from './oidc'
 import { requiredScope } from './scopes'
-import { resolveWebSession, WebCsrfError } from './web-session'
 
 // Routes may or may not carry extra context Variables (e.g. an injected Deps
 // object). Context's Variables are invariant, so a fixed param would reject one
 // shape or the other. These helpers only read env/request, so the param is
 // generic over the caller's full Hono env (with Bindings pinned to ours).
 type AppContext<E extends HonoEnv = { Bindings: Env }> = Context<E & { Bindings: Env }>
-const REALMROOT_MANAGEMENT_AUTHORIZATION_HEADER = 'x-ama-realmroot-authorization'
 
 export interface AuthContext {
   user: {
@@ -53,25 +51,7 @@ export interface AuthContext {
     issuer: string | null
     runnerId: string | null
     agentActorSubject: string | null
-    // Present only for an opaque AMA BFF session. It is never serialized or
-    // persisted in product resources and is consumed by the Realmroot gateway.
-    realmrootManagementAuthorization?: string
-    realmrootManagementSessionId?: string
   }
-}
-
-function forwardedRealmrootManagementAuthorization(request: Request, identity: AuthIdentity) {
-  const authorization = request.headers.get(REALMROOT_MANAGEMENT_AUTHORIZATION_HEADER)
-  if (!authorization) return undefined
-  if (
-    identity.agentActor ||
-    !/^Bearer\s+\S+$/i.test(request.headers.get('authorization') ?? '') ||
-    !/^Bearer\s+\S+$/i.test(authorization) ||
-    authorization.length > 8192
-  ) {
-    throw new OidcError('Realmroot management credential forwarding is invalid')
-  }
-  return authorization
 }
 
 export interface AuthIdentity {
@@ -157,7 +137,6 @@ export async function resolveAuthContext<E extends HonoEnv>(
   if (hasAuthCredential(c.req.raw)) {
     const claims = await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
     const identity = authIdentityFromClaims(claims)
-    const realmrootManagementAuthorization = forwardedRealmrootManagementAuthorization(c.req.raw, identity)
     const requiredPermission = missingPermission(c, identity)
     if (requiredPermission) throw new AuthorizationError(requiredPermission)
     const project = await upsertProjectForClaims(db, claims, new Date().toISOString(), requestedProjectId)
@@ -170,26 +149,7 @@ export async function resolveAuthContext<E extends HonoEnv>(
         id: project.organizationId ?? identity.organization.id,
       },
       project,
-      oidc: {
-        ...identity.oidc,
-        ...(realmrootManagementAuthorization ? { realmrootManagementAuthorization } : {}),
-      },
-    }
-  }
-
-  const web = await resolveWebSession(c)
-  if (web) {
-    const identity = authIdentityFromClaims(web.claims)
-    const requiredPermission = missingPermission(c, identity)
-    if (requiredPermission) throw new AuthorizationError(requiredPermission)
-    const project = await upsertProjectForClaims(db, web.claims, new Date().toISOString(), requestedProjectId)
-    const { agentActor, ...baseIdentity } = identity
-    return {
-      ...baseIdentity,
-      ...(agentActor ? { agentActor } : {}),
-      organization: { ...identity.organization, id: project.organizationId ?? identity.organization.id },
-      project,
-      oidc: { ...identity.oidc, realmrootManagementSessionId: web.sessionId },
+      oidc: identity.oidc,
     }
   }
 
@@ -242,15 +202,6 @@ export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): 
     return authIdentityFromClaims(claims)
   }
 
-  const web = await resolveWebSession(c)
-  if (web) {
-    const identity = authIdentityFromClaims(web.claims)
-    return {
-      ...identity,
-      oidc: { ...identity.oidc, realmrootManagementSessionId: web.sessionId },
-    }
-  }
-
   return null
 }
 
@@ -290,7 +241,6 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
   try {
     auth = await resolveAuthIdentity(c)
   } catch (err) {
-    if (err instanceof WebCsrfError) return errorResponse(c, 403, 'forbidden', err.message) as never
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
       c.header(
@@ -326,7 +276,6 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
-    if (err instanceof WebCsrfError) return errorResponse(c, 403, 'forbidden', err.message) as never
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
       c.header(

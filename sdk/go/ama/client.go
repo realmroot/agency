@@ -335,8 +335,8 @@ func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAg
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
-func (s AgentsService) Retire(ctx context.Context, agentID string, params *RetireAgentParams) error {
-	response, err := s.client.raw.RetireAgentWithResponse(ctx, agentID, params)
+func (s AgentsService) Retire(ctx context.Context, agentID string) error {
+	response, err := s.client.raw.RetireAgentWithResponse(ctx, agentID)
 	if err != nil {
 		return err
 	}
