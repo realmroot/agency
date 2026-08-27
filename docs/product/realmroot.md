@@ -37,6 +37,12 @@ subject, and Machine Application `client_id`. It accepts no Agent actor or refre
 token and never persists or returns the exchanged token. DPoP remains limited to
 the created Agent's own token and Resource calls.
 
+Other Resource Servers may call AMA with their own Machine Application token.
+Deployments list those client IDs in `OIDC_TRUSTED_BEARER_CLIENT_IDS`; AMA still
+requires the exact AMA audience and operation scopes. Browser integrations use
+their own AMA-audience token directly and do not pass a second credential or a
+custom authorization header through the upstream Resource Server.
+
 ## Storage and Session behavior
 
 Realmroot private state exists only in encrypted managed Vault credential
