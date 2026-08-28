@@ -59,6 +59,15 @@ describe('Realmroot User token exchange through the confidential AMA application
     await expect(credential.headers('POST', 'https://realmroot.example/api/agents')).resolves.toEqual({
       authorization: 'Bearer delegated-user-token',
     })
+    await expect(credential.headers('GET', 'https://realmroot.example/api/agents')).rejects.toThrow(
+      'cannot be sent to this endpoint',
+    )
+    await expect(credential.headers('POST', 'https://realmroot.example/api/agents/other')).rejects.toThrow(
+      'cannot be sent to this endpoint',
+    )
+    await expect(credential.headers('POST', 'https://attacker.example/api/agents')).rejects.toThrow(
+      'cannot be sent to this endpoint',
+    )
     const [, init] = vi.mocked(fetch).mock.calls[0]!
     expect(init?.headers).toMatchObject({ authorization: expect.stringMatching(/^Basic /) })
     const basic = (init?.headers as Record<string, string>).authorization

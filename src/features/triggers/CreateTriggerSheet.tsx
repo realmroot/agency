@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { isArchived } from '@/console/format'
 import { TextAreaField, TextField } from '@/console/forms'
-import { api, type RuntimeName } from '@/lib/amarpc'
+import { api } from '@/lib/amarpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -29,7 +29,6 @@ interface TriggerFormState {
   name: string
   agentId: string
   environmentId: string
-  runtime: RuntimeName
   promptTemplate: string
   intervalValue: string
   intervalUnit: IntervalUnit
@@ -41,7 +40,6 @@ const emptyTrigger: TriggerFormState = {
   name: '',
   agentId: '',
   environmentId: '',
-  runtime: 'ama',
   promptTemplate: '',
   intervalValue: '1',
   intervalUnit: 'days',
@@ -100,7 +98,6 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
             spec: {
               agentId: form.agentId,
               environmentId: form.environmentId,
-              runtime: form.runtime,
               promptTemplate: form.promptTemplate,
               env: {},
               envFrom: [],
@@ -213,26 +210,6 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                   </SelectContent>
                 </Select>
                 <FieldDescription>{environmentDescription}</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel>Runtime</FieldLabel>
-                <Select
-                  value={form.runtime}
-                  onValueChange={(runtime) => setForm({ ...form, runtime: runtime as RuntimeName })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="ama">AMA</SelectItem>
-                      <SelectItem value="claude-code">Claude Code</SelectItem>
-                      <SelectItem value="codex">Codex</SelectItem>
-                      <SelectItem value="copilot">Copilot</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FieldDescription>Runtime used for every dispatched session.</FieldDescription>
               </Field>
               <TextAreaField
                 label="Prompt template"

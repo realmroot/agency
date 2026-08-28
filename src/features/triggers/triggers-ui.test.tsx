@@ -580,12 +580,13 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
           spec: {
             agentId: 'agent_1',
             environmentId: 'env_1',
-            runtime: 'ama',
             promptTemplate: 'Research the latest offers.',
           },
         },
       },
     })
+    const submitted = postedBody as { spec: { template: { spec: Record<string, unknown> } } } | null
+    expect(submitted?.spec.template.spec).not.toHaveProperty('runtime')
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
   })
 
@@ -784,8 +785,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
     })
   })
 
-  it('updates the runtime when a different runtime is selected', async () => {
-    stubPointerEvents()
+  it('derives runtime from the Agent and does not send a caller-selected runtime', async () => {
     let postedBody: Record<string, unknown> | null = null
     renderSheet([
       http.post('*/api/v1/triggers', async ({ request }) => {
@@ -797,18 +797,12 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
       ),
     ])
     const submitButton = await fillRequiredFields()
-
-    // Runtime is the 4th combobox in the DOM (Type=0, Agent=1, Environment=2, Runtime=3)
-    const runtimeSelect = screen.getAllByRole('combobox')[3] as HTMLElement
-    runtimeSelect.focus()
-    fireEvent.pointerDown(runtimeSelect, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
-    fireEvent.mouseDown(runtimeSelect)
-    fireEvent.keyDown(runtimeSelect, { key: 'ArrowDown' })
-    fireEvent.click(await screen.findByRole('option', { name: 'Codex' }))
-
+    expect(screen.queryByRole('combobox', { name: 'Runtime' })).not.toBeInTheDocument()
     fireEvent.click(submitButton)
     await waitFor(() => expect(postedBody).not.toBeNull())
-    expect((postedBody!.spec as { template: { spec: { runtime: string } } }).template.spec.runtime).toBe('codex')
+    expect((postedBody!.spec as { template: { spec: Record<string, unknown> } }).template.spec).not.toHaveProperty(
+      'runtime',
+    )
   })
 
   it('updates intervalUnit when a different unit is selected', async () => {

@@ -1,4 +1,5 @@
 import type { RealmrootEnrollmentGateway, RealmrootEnrollmentIdentity } from '@server/usecases/ports'
+import type { RuntimeName } from '@shared/runtime-types'
 import { exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from 'jose'
 
 type AgentConfiguration = {
@@ -14,7 +15,7 @@ type PendingState = Record<string, unknown> & {
   version: 18
   origin: string
   issuer: string
-  runtime: 'ama'
+  runtime: RuntimeName
   name: string
   agent_id: string
   host_id: string
@@ -44,29 +45,6 @@ async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
     throw new Error(`Realmroot ${new URL(url).pathname} returned ${response.status}: ${problem.slice(0, 400)}`)
   }
   return (await response.json()) as T
-}
-
-async function noContentRequest(url: string, init: RequestInit): Promise<void> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      accept: 'application/json',
-      ...init.headers,
-    },
-    signal: AbortSignal.timeout(15_000),
-  })
-  if (!response.ok) {
-    const problem = await response.text()
-    throw new Error(`Realmroot ${new URL(url).pathname} returned ${response.status}: ${problem.slice(0, 400)}`)
-  }
-  if (response.status !== 204) {
-    throw new Error(
-      `Realmroot ${new URL(url).pathname} returned unexpected success status ${response.status}; expected 204`,
-    )
-  }
-  if ((await response.text()).length !== 0) {
-    throw new Error(`Realmroot ${new URL(url).pathname} returned a body for a 204 response`)
-  }
 }
 
 async function configuration(origin: string): Promise<AgentConfiguration> {
@@ -156,7 +134,7 @@ function decodeBase64Url(value: string) {
 
 async function initialize(
   config: AgentConfiguration,
-  input: { origin: string; nickname: string; idempotencyKey: string },
+  input: { origin: string; nickname: string; runtime: RuntimeName; idempotencyKey: string },
 ) {
   const agent = await generateKeyPair('EdDSA', { extractable: true })
   const agentJwk = await exportJWK(agent.privateKey)
@@ -164,7 +142,7 @@ async function initialize(
     version: 18,
     origin: input.origin,
     issuer: config.agent_identity_issuer,
-    runtime: 'ama',
+    runtime: input.runtime,
     name: input.nickname,
     agent_id: randomId('agent'),
     host_id: randomId('host'),
@@ -205,7 +183,7 @@ async function createAgent(
     body: JSON.stringify({
       username: input.username,
       name: input.nickname,
-      runtime: 'ama',
+      runtime: state.runtime,
       installation: {
         agentId: state.agent_id,
         hostId: state.host_id,
@@ -215,7 +193,7 @@ async function createAgent(
       },
     }),
   })
-  return directAgentIdentity(response, config.agent_identity_issuer)
+  return directAgentIdentity(response, config.agent_identity_issuer, state.runtime)
 }
 
 async function dpopProof(jwk: JWK, method: string, uri: string, accessToken?: string) {
@@ -274,7 +252,7 @@ function exactObject(value: unknown, keys: readonly string[], message: string) {
   return record
 }
 
-function directAgentIdentity(value: unknown, issuer: string): RealmrootEnrollmentIdentity {
+function directAgentIdentity(value: unknown, issuer: string, runtime: RuntimeName): RealmrootEnrollmentIdentity {
   const agent = exactObject(
     value,
     ['id', 'issuer', 'subject', 'username', 'name', 'runtime', 'homeSpace', 'status', 'createdAt', 'updatedAt'],
@@ -299,7 +277,7 @@ function directAgentIdentity(value: unknown, issuer: string): RealmrootEnrollmen
     typeof agent.subject !== 'string' ||
     typeof agent.username !== 'string' ||
     typeof agent.name !== 'string' ||
-    agent.runtime !== 'ama'
+    agent.runtime !== runtime
   ) {
     throw new Error('Realmroot Agent identity response is incomplete')
   }
@@ -309,11 +287,11 @@ function directAgentIdentity(value: unknown, issuer: string): RealmrootEnrollmen
     subject: agent.subject,
     username: agent.username,
     name: agent.name,
-    runtime: agent.runtime,
+    runtime: agent.runtime as RuntimeName,
   }
 }
 
-function enrollmentIdentity(value: unknown, issuer: string): RealmrootEnrollmentIdentity {
+function enrollmentIdentity(value: unknown, issuer: string, runtime: RuntimeName): RealmrootEnrollmentIdentity {
   const response = exactObject(
     value,
     ['enrollment', 'agent', 'installation'],
@@ -327,7 +305,7 @@ function enrollmentIdentity(value: unknown, issuer: string): RealmrootEnrollment
   if (enrollment.state !== 'enrolled' || enrollment.pending !== null) {
     throw new Error('Realmroot Agent identity response is incomplete')
   }
-  return directAgentIdentity(response.agent, issuer)
+  return directAgentIdentity(response.agent, issuer, runtime)
 }
 
 async function readIdentity(config: AgentConfiguration, state: PendingState): Promise<RealmrootEnrollmentIdentity> {
@@ -352,7 +330,7 @@ async function readIdentity(config: AgentConfiguration, state: PendingState): Pr
     method: 'GET',
     headers: { authorization: `DPoP ${token.access_token}`, dpop: proof },
   })
-  const identity = enrollmentIdentity(response, config.agent_identity_issuer)
+  const identity = enrollmentIdentity(response, config.agent_identity_issuer, state.runtime)
   state.protocol_credential = {
     resource_indicator: `${new URL(config.issuer).origin}/api`,
     credential_endpoint: config.agent_token_endpoint,
@@ -398,14 +376,19 @@ export function createRealmrootEnrollmentGateway(): RealmrootEnrollmentGateway {
       if (checkpoint.stage !== 'enrolled' || !checkpoint.identity) {
         throw new Error('Realmroot Agent creation is incomplete')
       }
-      return { identity: checkpoint.identity, state: checkpoint.state }
-    },
-    async retire(input) {
-      const url = `${new URL(input.issuer).origin}/api/agents/${encodeURIComponent(input.identityId)}`
-      await noContentRequest(url, {
-        method: 'DELETE',
-        headers: await input.managementCredential.headers('DELETE', url),
-      })
+      const config = await configuration(input.origin)
+      const state = checkpoint.state as PendingState
+      const identity = await readIdentity(config, state)
+      if (
+        identity.id !== checkpoint.identity.id ||
+        identity.issuer !== checkpoint.identity.issuer ||
+        identity.subject !== checkpoint.identity.subject ||
+        identity.username !== checkpoint.identity.username ||
+        identity.runtime !== checkpoint.identity.runtime
+      ) {
+        throw new Error('Realmroot Agent checkpoint does not match its authenticated identity')
+      }
+      return { identity, state }
     },
   }
 }

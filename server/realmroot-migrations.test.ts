@@ -161,6 +161,10 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
       PRAGMA foreign_keys=on;
       INSERT INTO projects (id,organization_id,name,created_at,updated_at)
         VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
+      INSERT INTO providers (id,slug,display_name,created_at,updated_at) VALUES
+        ('anthropic','anthropic','Anthropic','2026-01-01','2026-01-01'),
+        ('openai','openai','OpenAI','2026-01-01','2026-01-01'),
+        ('workers-ai','workers-ai','Workers AI','2026-01-01','2026-01-01');
       INSERT INTO agents (id,project_id,name,system_prompt,created_at,updated_at)
         VALUES ('agent_1','project_1','Agent','Work','2026-01-01','2026-01-01');
       INSERT INTO environments (id,project_id,name,hosting_mode,created_at,updated_at)
@@ -269,26 +273,53 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
   it('expands legacy Agents without guessing identity or colliding duplicate bindings', () => {
     const db = new DatabaseSync(':memory:')
     applyThrough(db, '0028_audit_actor_chain.sql')
+    db.exec('PRAGMA foreign_keys = OFF')
     db.exec(`
       INSERT INTO projects (id,organization_id,name,created_at,updated_at)
         VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
-      INSERT INTO agents (id,project_id,name,system_prompt,realmroot,created_at,updated_at) VALUES
-        ('agent_bound_1','project_1','Bound one','Work',
+      INSERT INTO agents (id,project_id,name,system_prompt,provider_id,realmroot,created_at,updated_at) VALUES
+        ('agent_bound_1','project_1','Bound one','Work','anthropic',
           '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
           '2026-01-01','2026-01-01'),
-        ('agent_bound_2','project_1','Bound two','Work',
+        ('agent_bound_2','project_1','Bound two','Work','openai',
           '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
           '2026-01-01','2026-01-01'),
-        ('agent_unbound','project_1','Unbound','Work',null,'2026-01-01','2026-01-01');
+        ('agent_github','project_1','GitHub','Work','github-copilot',null,'2026-01-01','2026-01-01'),
+        ('agent_unbound','project_1','Unbound','Work','workers-ai',null,'2026-01-01','2026-01-01');
       INSERT INTO agent_versions (
         id,agent_id,project_id,version,system_prompt,provider_id,model,skills,subagents,allowed_tools,mcp_connectors,
         realmroot,created_at
-      ) VALUES (
+      ) VALUES
+      (
         'version_bound','agent_bound_1','project_1',1,'Work',null,null,'[]','[]','[]','[]',
         '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
         '2026-01-01'
+      ),
+      (
+        'version_session','agent_bound_2','project_1',1,'Work',null,null,'[]','[]','[]','[]',null,'2026-01-01'
+      ),
+      (
+        'version_github','agent_github','project_1',1,'Work',null,null,'[]','[]','[]','[]',null,'2026-01-01'
+      ),
+      (
+        'version_unbound','agent_unbound','project_1',1,'Work',null,null,'[]','[]','[]','[]',null,'2026-01-01'
       );
+      INSERT INTO sessions
+        (id,agent_id,project_id,durable_object_name,state,metadata,created_at,updated_at)
+      VALUES
+        ('session_old','agent_bound_2','project_1','session_old','stopped','{"runtime":"ama"}',
+          '2026-01-02','2026-01-02'),
+        ('session_latest_a','agent_bound_2','project_1','session_latest_a','stopped','{"runtime":"codex"}',
+          '2026-01-03','2026-01-03'),
+        ('session_latest_b','agent_bound_2','project_1','session_latest_b','stopped','{"runtime":"copilot"}',
+          '2026-01-03','2026-01-03');
+      INSERT INTO triggers
+        (id,organization_id,project_id,agent_id,runtime,name,prompt_template,interval_seconds,next_due_at,created_at,updated_at)
+      VALUES
+        ('trigger_bound_2','org_1','project_1','agent_bound_2','ama','Legacy trigger','Run work',3600,
+          '2026-01-04','2026-01-01','2026-01-01');
     `)
+    db.exec('PRAGMA foreign_keys = ON')
 
     expect(() => apply(db, '0031_agent_identity_provisioning.sql')).not.toThrow()
     expect(
@@ -300,36 +331,93 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
     ).toEqual([
       {
         id: 'agent_bound_1',
-        username: '',
-        identity_issuer: '',
-        identity_subject: '',
+        username: null,
+        identity_issuer: null,
+        identity_subject: null,
         identity_credential_ref: null,
         realmroot:
           '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
       },
       {
         id: 'agent_bound_2',
-        username: '',
-        identity_issuer: '',
-        identity_subject: '',
+        username: null,
+        identity_issuer: null,
+        identity_subject: null,
         identity_credential_ref: null,
         realmroot:
           '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
       },
       {
+        id: 'agent_github',
+        username: null,
+        identity_issuer: null,
+        identity_subject: null,
+        identity_credential_ref: null,
+        realmroot: null,
+      },
+      {
         id: 'agent_unbound',
-        username: '',
-        identity_issuer: '',
-        identity_subject: '',
+        username: null,
+        identity_issuer: null,
+        identity_subject: null,
         identity_credential_ref: null,
         realmroot: null,
       },
     ])
-    expect(db.prepare('SELECT runtime,realmroot FROM agent_versions WHERE id = ?').get('version_bound')).toEqual({
-      runtime: 'codex',
+    expect(db.prepare('SELECT realmroot FROM agent_versions WHERE id = ?').get('version_bound')).toEqual({
       realmroot:
         '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
     })
+    expect(db.prepare('SELECT id,runtime FROM agents ORDER BY id').all()).toEqual([
+      { id: 'agent_bound_1', runtime: 'claude-code' },
+      { id: 'agent_bound_2', runtime: 'codex' },
+      { id: 'agent_github', runtime: 'copilot' },
+      { id: 'agent_unbound', runtime: 'ama' },
+    ])
+    expect(db.prepare('SELECT agent_id,runtime FROM agent_versions ORDER BY agent_id').all()).toEqual([
+      { agent_id: 'agent_bound_1', runtime: 'claude-code' },
+      { agent_id: 'agent_bound_2', runtime: 'codex' },
+      { agent_id: 'agent_github', runtime: 'copilot' },
+      { agent_id: 'agent_unbound', runtime: 'ama' },
+    ])
+    expect(db.prepare("SELECT runtime FROM triggers WHERE id = 'trigger_bound_2'").get()).toEqual({
+      runtime: 'codex',
+    })
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO agents (id,project_id,name,system_prompt,created_at,updated_at)
+           VALUES ('agent_missing_runtime','project_1','Missing runtime','Work','2026-01-04','2026-01-04')`,
+        )
+        .run(),
+    ).toThrow(/agents\.runtime is required/)
+    expect(() => db.prepare("UPDATE agents SET runtime = 'ama' WHERE id = 'agent_bound_1'").run()).toThrow(
+      /agents\.runtime is immutable/,
+    )
+    expect(() => db.prepare("UPDATE agent_versions SET runtime = 'ama' WHERE id = 'version_bound'").run()).toThrow(
+      /agent_versions\.runtime is immutable/,
+    )
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO agents (id,project_id,username,runtime,name,system_prompt,created_at,updated_at)
+           VALUES ('agent_partial_identity','project_1','partial','ama','Partial','Work','2026-01-04','2026-01-04')`,
+        )
+        .run(),
+    ).toThrow(/agents identity must be entirely absent or complete/)
+    expect(() => db.prepare("UPDATE agents SET username = 'partial' WHERE id = 'agent_unbound'").run()).toThrow(
+      /agents identity must be entirely absent or complete/,
+    )
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO agent_versions
+           (id,agent_id,project_id,version,system_prompt,skills,subagents,allowed_tools,mcp_connectors,created_at)
+           VALUES ('version_missing_runtime','agent_bound_1','project_1',2,'Work','[]','[]','[]','[]','2026-01-04')`,
+        )
+        .run(),
+    ).toThrow(/agent_versions\.runtime is required/)
+    db.exec('UPDATE agents SET provider_id = NULL')
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
     db.close()
   })

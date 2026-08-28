@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.agent_status_phase import AgentStatusPhase
-from ..models.agent_status_retirement_stage import AgentStatusRetirementStage
 from typing import cast
 
 
@@ -27,14 +26,12 @@ class AgentStatus:
         Attributes:
             phase (AgentStatusPhase):
             ready (bool):
-            retirement_stage (AgentStatusRetirementStage):
             current_version_id (None | str):  Example: agentver_abc123.
             version (int):  Example: 1.
      """
 
     phase: AgentStatusPhase
     ready: bool
-    retirement_stage: AgentStatusRetirementStage
     current_version_id: None | str
     version: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -48,8 +45,6 @@ class AgentStatus:
 
         ready = self.ready
 
-        retirement_stage = self.retirement_stage.value
-
         current_version_id: None | str
         current_version_id = self.current_version_id
 
@@ -61,7 +56,6 @@ class AgentStatus:
         field_dict.update({
             "phase": phase,
             "ready": ready,
-            "retirementStage": retirement_stage,
             "currentVersionId": current_version_id,
             "version": version,
         })
@@ -80,11 +74,6 @@ class AgentStatus:
 
         ready = d.pop("ready")
 
-        retirement_stage = AgentStatusRetirementStage(d.pop("retirementStage"))
-
-
-
-
         def _parse_current_version_id(data: object) -> None | str:
             if data is None:
                 return data
@@ -98,7 +87,6 @@ class AgentStatus:
         agent_status = cls(
             phase=phase,
             ready=ready,
-            retirement_stage=retirement_stage,
             current_version_id=current_version_id,
             version=version,
         )

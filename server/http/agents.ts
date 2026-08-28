@@ -22,9 +22,8 @@ import {
   AgentCreationValidation,
   createManagedAgent,
 } from '../usecases/agent-creation'
-import { retireAgent } from '../usecases/agent-retirement'
 import { type UpdateAgentPatch, updateAgent } from '../usecases/agents'
-import { AgentArchivedError, AgentValidationError } from '../usecases/ports'
+import { AgentArchivedError, AgentInUseError, AgentValidationError } from '../usecases/ports'
 import { requestId } from './request-context'
 
 type AgentRoutes = OpenAPIHono<DepsEnv>
@@ -80,7 +79,7 @@ const RealmrootAgentIdentitySchema = z
     issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
     subject: z.string().min(1).openapi({ example: 'agt_backend_worker_1' }),
     username: z.string().min(3).max(64).openapi({ example: 'backend-worker' }),
-    runtime: z.literal('ama'),
+    runtime: z.enum(['ama', 'claude-code', 'codex', 'copilot']),
   })
   .strict()
   .openapi('RealmrootAgentIdentity')
@@ -112,9 +111,8 @@ const AgentSpecSchema = z
 
 const AgentStatusSchema = z
   .object({
-    phase: z.enum(['active', 'archived', 'retiring', 'retired']),
+    phase: z.enum(['active', 'archived']),
     ready: z.boolean(),
-    retirementStage: z.enum(['stopping', 'identity_retired', 'retired']).nullable(),
     currentVersionId: z.string().nullable().openapi({ example: 'agentver_abc123' }),
     version: z.number().int().openapi({ example: 1 }),
   })
@@ -189,7 +187,7 @@ const CreateAgentSchema = AgentPayloadSchema.openapi('CreateAgentRequest')
 const UpdateAgentSchema = z
   .object({
     metadata: ResourceUpdateMetadataSchema.optional(),
-    spec: AgentPayloadSchema.shape.spec.partial().optional(),
+    spec: AgentPayloadSchema.shape.spec.omit({ runtime: true }).partial().optional(),
     archived: z.boolean().optional().openapi({
       description: 'Lifecycle transition: true archives the agent, false unarchives it.',
       example: false,
@@ -220,8 +218,14 @@ const AgentVersionParamsSchema = AgentParamsSchema.extend({
 })
 
 const ListQuerySchema = listQuerySchema().extend({
-  identityIssuer: z.string().url().optional(),
-  identitySubject: z.string().min(1).max(200).optional(),
+  hasIdentity: z
+    .enum(['true', 'false'])
+    .optional()
+    .openapi({
+      param: { name: 'hasIdentity', in: 'query' },
+      description: 'Filter Agents by whether a Realmroot identity is present.',
+      example: 'true',
+    }),
 })
 const AgentListResponseSchema = listResponseSchema('AgentListResponse', AgentSchema)
 const AgentVersionListResponseSchema = listResponseSchema('AgentVersionListResponse', AgentVersionSchema)
@@ -322,25 +326,17 @@ const updateAgentRoute = createRoute({
 const deleteAgentRoute = createRoute({
   method: 'delete',
   path: '/{agentId}',
-  operationId: 'retireAgent',
+  operationId: 'deleteAgent',
   tags: ['Agents'],
-  summary: 'Permanently retire an Agent identity and destroy its managed Vault',
+  summary: 'Delete an Agent',
   ...AuthenticatedOperation,
   request: { params: AgentParamsSchema },
   responses: {
-    204: { description: 'Agent retired' },
+    204: { description: 'Agent deleted' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    403: {
-      description: 'Realmroot management authority required',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'Legacy Agent identity requires backfill',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    502: {
-      description: 'Retirement failed before the identity was retired',
+      description: 'Agent is referenced by Sessions or Triggers',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
@@ -393,16 +389,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const {
-        archived,
-        search,
-        createdFrom,
-        createdTo,
-        identityIssuer,
-        identitySubject,
-        limit = 50,
-        cursor,
-      } = c.req.valid('query')
+      const { archived, search, createdFrom, createdTo, hasIdentity, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -415,8 +402,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
-        ...(identityIssuer ? { identityIssuer } : {}),
-        ...(identitySubject ? { identitySubject } : {}),
+        ...(hasIdentity !== undefined ? { hasIdentity: hasIdentity === 'true' } : {}),
         limit,
         cursor: parsedCursor,
       })
@@ -537,41 +523,26 @@ export function registerAgentRoutes(routes: AgentRoutes) {
     .openapi(deleteAgentRoute, async (c) => {
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
-      if (auth.agentActor) {
-        return c.json({ error: { type: 'forbidden', message: 'Only a Realmroot User can retire managed Agents' } }, 403)
-      }
       const { agentId } = c.req.valid('param')
       const deps = c.get('deps')
       const agent = await deps.agents.find(auth.project.id, agentId)
       if (!agent) return notFound(c)
-      if (!agent.identity) {
-        return c.json(
-          { error: { type: 'conflict', message: 'Legacy Agent identity must be backfilled before retirement' } },
-          409,
-        )
-      }
       try {
-        const authority = await deps.realmrootManagementAuthority?.forAgentAdministration(
-          auth,
-          await authenticatedAccessToken(c, auth),
-        )
-        if (!authority) throw new Error('Realmroot Agent management authority is unavailable')
-        await retireAgent(deps, auth, agent, authority)
+        await deps.agents.delete(auth.project.id, agentId, auth.user.id, new Date().toISOString())
         await deps.audit.record(auth, {
-          action: 'agent.retire',
+          action: 'agent.delete',
           resourceType: 'agent',
           resourceId: agentId,
           outcome: 'success',
           requestId: requestId(c),
-          metadata: { issuer: agent.identity.issuer, subject: agent.identity.subject },
+          before: serializeAgent(agent),
         })
         return c.body(null, 204)
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Agent retirement failed'
-        if (/authority|403|permission|scope/i.test(message)) {
-          return c.json({ error: { type: 'forbidden', message } }, 403)
+        if (error instanceof AgentInUseError) {
+          return c.json({ error: { type: 'conflict', message: error.message } }, 409)
         }
-        return c.json({ error: { type: 'agent_retirement_failed', message } }, 502)
+        throw error
       }
     })
     .openapi(listAgentVersionsRoute, async (c) => {
@@ -622,7 +593,6 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
   return {
     ...(body.metadata?.name !== undefined ? { name: body.metadata.name } : {}),
     ...(body.metadata?.description !== undefined ? { description: body.metadata.description } : {}),
-    ...(spec?.runtime !== undefined ? { runtime: spec.runtime } : {}),
     ...(spec?.systemPrompt !== undefined ? { systemPrompt: spec.systemPrompt } : {}),
     ...(spec?.provider !== undefined ? { provider: spec.provider } : {}),
     ...(spec?.model !== undefined ? { model: spec.model } : {}),

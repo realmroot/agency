@@ -403,18 +403,5 @@ export function createVaultRepo(db: Db): VaultRepo {
       ])
       return versionRecordFrom(versionRow)
     },
-    async destroyManagedVault(vaultId, credentialId) {
-      const owned = await db
-        .select({ id: vaultCredentials.id })
-        .from(vaultCredentials)
-        .where(and(eq(vaultCredentials.vaultId, vaultId), eq(vaultCredentials.id, credentialId)))
-        .get()
-      if (!owned) throw new Error('Managed Agent credential does not belong to the Vault')
-      await db.batch([
-        db.delete(vaultCredentialVersions).where(eq(vaultCredentialVersions.vaultId, vaultId)),
-        db.delete(vaultCredentials).where(eq(vaultCredentials.vaultId, vaultId)),
-        db.delete(vaults).where(eq(vaults.id, vaultId)),
-      ])
-    },
   }
 }

@@ -296,6 +296,10 @@ async function prepareCloudWorkspace(
       await execOrThrow(sandbox, `mkdir -p ${shellQuote(parentPath)}`)
       await sandbox.writeFile(fullPath, content, { encoding: 'utf-8' })
     }
+    await execOrThrow(
+      sandbox,
+      `find ${shellQuote(mountPath)} -type d -exec chmod 700 {} + && find ${shellQuote(mountPath)} -type f -exec chmod 600 {} +`,
+    )
     if (mount.readOnly) {
       await execOrThrow(sandbox, `chmod -R a-w ${shellQuote(mountPath)}`)
     }

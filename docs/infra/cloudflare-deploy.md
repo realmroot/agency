@@ -8,7 +8,9 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 - Workers AI binding: `AI`
 - Cloudflare Sandbox container binding: `SANDBOX`
 - Production D1 database: `any-managed-agents-db`
-- Staging D1 database: `any-managed-agents-db-staging`
+- Staging v2 D1 database: `any-managed-agents-db-staging-v2` (the historical
+  `any-managed-agents-db-staging` database contains the unmounted v1 schema and
+  must not be rebound or migrated in place)
 - Container image built from this repository's `Dockerfile`
 
 ## Realmroot Applications and Resource Server
@@ -79,23 +81,19 @@ reused as a confidential client:
 4. Apply the migration and deploy production, then remove the superseded public
    SPA and machine Applications.
 
-`0031_agent_identity_provisioning.sql` is expand-only. It retains the legacy
-`realmroot` columns and excludes empty new identity fields from its partial
-unique indexes, so the old Worker remains usable during a forward deployment.
-The new Worker keeps legacy Agents and Session snapshots readable and executable
-without pretending the old protocol `agentId` is Realmroot's stable
-`identity.subject`. Backfill issuer, subject, username, and credential reference
-only by decrypting and validating each stored `state.json`; quarantine duplicate
-stable identities for operator review. Set the stable identity and clear the
-legacy `realmroot` binding on the Agent and all of its AgentVersions in one
-transaction. The migration's `codex` runtime value is only a non-null schema
-placeholder for legacy rows: until an Agent Profile is backfilled, Session
-creation must keep sending the explicit runtime as required by the old API, and
-AMA records that requested runtime in the new Session snapshot. Pause Agent
-mutations before rolling back to an old Worker because
-the old API can write legacy bindings again. Ship the backfill and the later column
-contraction as separate migrations after all environments report zero legacy
-rows and no legacy active Sessions.
+`0031_agent_identity_provisioning.sql` adds nullable username and identity
+columns. Existing Agents remain valid with `identity: null`; the deployment does
+not backfill or synthesize Realmroot identities for them. New Agent creation
+writes the complete username, issuer, subject, and credential reference together.
+Migration `0031_agent_identity_provisioning.sql` backfills every existing Agent
+runtime from its most recent compatible Session. Agents without a compatible
+Session are mapped from their configured provider (`anthropic` to
+`claude-code`, `openai` to `codex`, `github-copilot` to `copilot`, and all other
+providers to `ama`). Runtime is required and immutable afterward; Session and
+Trigger requests no longer accept it.
+The partial unique indexes apply only to rows that contain managed identity
+values. Consumers that require managed identities list Agents with
+`hasIdentity=true`.
 
 Set the three environment-specific values before step 3 (repeat without
 `--env staging` for production):

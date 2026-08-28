@@ -233,18 +233,29 @@ function PackageManagerFields({
 
 type AgentFormValues = AgentFormState | CreateAgentFormState
 
+function runtimeSupportsProviderSelection(runtime: AgentFormValues['runtime'] | string, provider: string) {
+  if (!provider) return true
+  if (runtime === 'ama') return true
+  if (runtime === 'claude-code') return provider === 'anthropic'
+  if (runtime === 'codex') return provider === 'openai'
+  if (runtime === 'copilot') return provider === 'github-copilot'
+  return false
+}
+
 export function AgentForm<T extends AgentFormValues>({
   value,
   setValue,
   onSubmit,
   submitLabel = 'Save agent',
   showIdentity = true,
+  showRuntime = true,
 }: {
   value: T
   setValue: (value: T) => void
   onSubmit: (event: FormEvent) => void
   submitLabel?: string
   showIdentity?: boolean
+  showRuntime?: boolean
 }) {
   return (
     <form className="flex flex-col gap-4" onSubmit={onSubmit}>
@@ -258,25 +269,38 @@ export function AgentForm<T extends AgentFormValues>({
           />
         ) : null}
         <TextField label="Name" value={value.name} onChange={(name) => setValue({ ...value, name })} />
-        <Field>
-          <FieldLabel htmlFor="agent-runtime">Runtime</FieldLabel>
-          <Select required value={value.runtime} onValueChange={(runtime) => setValue({ ...value, runtime } as T)}>
-            <SelectTrigger id="agent-runtime" aria-required="true" aria-describedby="agent-runtime-description">
-              <SelectValue placeholder="Select a runtime" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="codex">Codex</SelectItem>
-                <SelectItem value="claude-code">Claude Code</SelectItem>
-                <SelectItem value="copilot">Copilot</SelectItem>
-                <SelectItem value="ama">AMA</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <FieldDescription id="agent-runtime-description">
-            Required. Select the runtime that will execute this Agent.
-          </FieldDescription>
-        </Field>
+        {showRuntime ? (
+          <Field>
+            <FieldLabel htmlFor="agent-runtime">Runtime</FieldLabel>
+            <Select
+              required
+              value={value.runtime}
+              onValueChange={(runtime) => {
+                const keepModel = runtimeSupportsProviderSelection(runtime, value.provider)
+                setValue({
+                  ...value,
+                  runtime,
+                  ...(keepModel ? {} : { provider: '', model: '' }),
+                } as T)
+              }}
+            >
+              <SelectTrigger id="agent-runtime" aria-required="true" aria-describedby="agent-runtime-description">
+                <SelectValue placeholder="Select a runtime" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="codex">Codex</SelectItem>
+                  <SelectItem value="claude-code">Claude Code</SelectItem>
+                  <SelectItem value="copilot">Copilot</SelectItem>
+                  <SelectItem value="ama">AMA</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription id="agent-runtime-description">
+              Required and immutable after creation. Select the runtime that will execute this Agent.
+            </FieldDescription>
+          </Field>
+        ) : null}
         <TextField
           label="Description"
           value={value.description}
@@ -307,7 +331,7 @@ export function AgentForm<T extends AgentFormValues>({
           onChange={(mcpConnectors) => setValue({ ...value, mcpConnectors })}
         />
       </FieldGroup>
-      <Button type="submit" disabled={!value.runtime}>
+      <Button type="submit" disabled={showRuntime && !value.runtime}>
         <Bot data-icon="inline-start" />
         {submitLabel}
       </Button>
@@ -381,7 +405,9 @@ function AgentProviderModelFields<T extends AgentFormValues>({
     queryKey: queryKeys.providers.models,
     queryFn: () => api.listModels(),
   })
-  const models = (modelsQuery.data?.data ?? []).filter((model) => model.availability === 'available')
+  const models = (modelsQuery.data?.data ?? []).filter(
+    (model) => model.availability === 'available' && runtimeSupportsProviderSelection(value.runtime, model.providerId),
+  )
   const selectedModelKey = value.model ? `${value.provider}::${value.model}` : ''
   const hasSelected = models.some((model) => model.providerId === value.provider && model.modelId === value.model)
   return (
@@ -418,7 +444,7 @@ function AgentProviderModelFields<T extends AgentFormValues>({
         </SelectContent>
       </Select>
       <FieldDescription>
-        Leave this empty to let the runtime choose. Picking a model pins its vendor and model id.
+        Leave this empty to let the runtime choose. Only models supported by the Agent runtime are available.
       </FieldDescription>
     </Field>
   )
@@ -468,7 +494,7 @@ export function SessionForm({
           </Select>
           <FieldDescription>
             {selectedAgent
-              ? `Agent provider/model: ${selectedAgent.spec.provider ?? 'None'} / ${selectedAgent.spec.model ?? 'None'}`
+              ? `Agent runtime/provider/model: ${selectedAgent.spec.runtime} / ${selectedAgent.spec.provider ?? 'None'} / ${selectedAgent.spec.model ?? 'None'}`
               : 'The session will run the current version of this agent.'}
           </FieldDescription>
         </Field>
@@ -493,26 +519,6 @@ export function SessionForm({
               ? `Environment type: ${hostingModeLabel(selectedEnvironment.spec.type)}`
               : 'Select the hosting and policy environment for this session.'}
           </FieldDescription>
-        </Field>
-        <Field>
-          <FieldLabel>Runtime</FieldLabel>
-          <Select
-            value={value.runtime}
-            onValueChange={(runtime) => setValue({ ...value, runtime: runtime as SessionFormState['runtime'] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="ama">AMA</SelectItem>
-                <SelectItem value="claude-code">Claude Code</SelectItem>
-                <SelectItem value="codex">Codex</SelectItem>
-                <SelectItem value="copilot">Copilot</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <FieldDescription>Runtime is selected per session.</FieldDescription>
         </Field>
         <TextAreaField
           label="Prompt"

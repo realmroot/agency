@@ -6,7 +6,7 @@ These decisions define the intended end state for Any Managed Agents.
 
 - `Environment` is a long-lived sandbox hosting and workspace configuration, not a running sandbox.
 - `Environment.hostingMode` is exactly `cloud` or `self_hosted`.
-- Session and Trigger `runtime` is exactly `ama`, `claude-code`, `codex`, or `copilot`.
+- Agent `runtime` is exactly `ama`, `claude-code`, `codex`, or `copilot`, is required at creation, and is immutable.
 - Environments own hosting mode, workspace setup, safe secret references, network policy, resource limits, and runtime configuration.
 - The Environment API surface is `hostingMode` and `runtimeConfig`; compatibility aliases for hosting or runtime image fields are not part of the public contract.
 - `Sandbox` is an ephemeral workspace/runtime instance created from an environment snapshot when the selected hosting mode and session runtime require Cloudflare Sandbox.
@@ -18,13 +18,14 @@ These decisions define the intended end state for Any Managed Agents.
 
 ## Runtime Boundary
 
-- All agent products run as Session-selected runtimes behind the same AMA control plane and canonical session event surface.
+- All agent products run as Agent-selected runtimes behind the same AMA control plane and canonical session event surface.
 - The `ama` runtime is the first-party AMA/Pi runtime owned by the cloud control plane.
 - `claude-code`, `codex`, and `copilot` are external agent runtimes launched, managed, observed, and translated by self-hosted `ama-runner` processes.
 - `Agent` owns persona, instructions, policy, provider, model, skills, tools, and MCP connector configuration.
 - `Environment` owns hosting mode, workspace, secrets, network, resource limits, and runtime config.
-- `Session` owns runtime selection, snapshots the selected Agent and Environment, and validates the exact runtime, provider, and model combination before any runtime work starts.
-- Session creation must fail before workspace allocation when the selected session runtime does not support the Agent's exact provider/model.
+- `Agent` owns immutable runtime selection and mutable provider/model configuration. A model change is valid only when its vendor is supported by that runtime.
+- `Session` and `Trigger` do not accept runtime input. They derive it from the selected Agent, snapshot the selected Agent and Environment, and validate the exact runtime, provider, and model combination before any runtime work starts.
+- Session creation must fail before workspace allocation when the Agent runtime does not support the Agent's exact provider/model in the selected environment.
 - `cloud` environments run selected runtime execution through AMA-managed Cloudflare infrastructure. `self_hosted` environments run selected runtimes through registered self-hosted runtime runners.
 - Self-hosted runners are registered runtime hosts for `self_hosted` environments. They heartbeat safe capability/load metadata, claim session leases, renew or finish leases, open one outbound WebSocket per claimed session, execute runtime/tool work locally, and stream canonical AMA session events/results through AMA.
 - Runner HTTP queue and lease APIs are for dispatch, ownership, heartbeat, expiry, recovery, and audit. A claimed self-hosted session uses its runner-owned session WebSocket as the real-time runtime/tool execution path.
@@ -60,7 +61,7 @@ These decisions define the intended end state for Any Managed Agents.
 - The Console uses the AMA backend's confidential Web Application. The Worker owns authorization code, PKCE, callback, and client authentication; encrypts the short-lived access token in D1; and gives browser JavaScript only an opaque SameSite cookie. The cookie lifetime never exceeds the Realmroot access-token lifetime.
 - Cookie and direct JWT credentials normalize into the same claims, tenant, ownership, exact-scope, and audit enforcement. Unsafe cookie-authenticated requests require the Worker's exact Origin. OAuth tokens never enter browser storage, URLs, or logs.
 - Console session WebSockets never carry an OAuth credential in their URL or subprotocol. The Console exchanges its cookie session for an opaque 30-second, single-use ticket bound to the exact session and browser origin. Agent SDK WebSockets continue to use DPoP.
-- Agent creation and retirement lazily exchange the current User's AMA access token for a short-lived Realmroot `/api` token. The same confidential Web Application authenticates the exchange; there is no separate Machine Application. Both its token-exchange policy and the User Context must grant `agents:write`.
+- Agent creation lazily exchanges the current User's AMA access token for a short-lived Realmroot `/api` token. The same confidential Web Application authenticates the exchange; there is no separate Machine Application. Both its token-exchange policy and the User Context must grant `agents:write`.
 - Runner daemon authentication uses Realmroot authorization-code PKCE with an exact loopback callback and explicit Context selection, short-lived Bearer access tokens, rotating refresh credentials, exact audience validation, and least-privilege scopes. Static tokens are unsupported.
 - Access tokens must identify the exact `https://ama.tftt.cc/api` audience. Missing scopes grant no implicit owner authority.
 - The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; the exact scope authorizes the operation. Runner tokens remain limited to their bound runner workflow.
@@ -68,10 +69,11 @@ These decisions define the intended end state for Any Managed Agents.
 ## Realmroot Agent Identity
 
 - Creating an AMA Agent automatically creates exactly one Realmroot identity with an immutable username. AMA calls Realmroot's management `POST /api/agents`; Realmroot's existing self-enrollment endpoints and human approval flow remain separate public entrypoints. Both entrypoints use Realmroot's single internal Agent-identity materialization logic.
+- Agents created before managed identity provisioning expose `identity: null`. AMA does not backfill or synthesize identities for those records; callers that require identity-backed Agents use `hasIdentity=true` when listing.
 - Realmroot state and private keys exist only as AES-GCM encrypted managed Vault credential versions. Synchronous Agent creation keeps its retry checkpoint inside the managed Vault; no provisioning resource is exposed or persisted in D1. Profile versions never contain identity.
 - Session creation automatically attaches only the bound credential. It must not attach the containing vault or any unrelated credential.
 - Cloud and self-hosted runtimes receive only generic volume/env inputs. A Vault snapshot seeds a Session-local writable ephemeral volume (0600 files, 0700 directories); the source is never updated and the copy is deleted with the workspace.
-- AMA sets the Realmroot runtime identity to `ama` so one AMA Agent remains one stable Realmroot Agent across the concrete `ama`, `codex`, `claude-code`, and `copilot` session runtimes.
+- AMA creates the Realmroot identity with the Agent's concrete runtime. The AMA Agent runtime and Realmroot Agent identity runtime are the same immutable value.
 - AMA does not proxy Realmroot business API traffic, issue Realmroot tokens, or inject a controller's OIDC credentials into a runtime. Realmroot Toolbox obtains and refreshes short-lived Agent authority directly.
 
 ## Providers

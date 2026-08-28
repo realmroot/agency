@@ -51,8 +51,6 @@ func (e AgentSpecRuntime) Valid() bool {
 const (
 	AgentStatusPhaseActive   AgentStatusPhase = "active"
 	AgentStatusPhaseArchived AgentStatusPhase = "archived"
-	AgentStatusPhaseRetired  AgentStatusPhase = "retired"
-	AgentStatusPhaseRetiring AgentStatusPhase = "retiring"
 )
 
 // Valid indicates whether the value is a known member of the AgentStatusPhase enum.
@@ -61,31 +59,6 @@ func (e AgentStatusPhase) Valid() bool {
 	case AgentStatusPhaseActive:
 		return true
 	case AgentStatusPhaseArchived:
-		return true
-	case AgentStatusPhaseRetired:
-		return true
-	case AgentStatusPhaseRetiring:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AgentStatusRetirementStage.
-const (
-	AgentStatusRetirementStageIdentityRetired AgentStatusRetirementStage = "identity_retired"
-	AgentStatusRetirementStageRetired         AgentStatusRetirementStage = "retired"
-	AgentStatusRetirementStageStopping        AgentStatusRetirementStage = "stopping"
-)
-
-// Valid indicates whether the value is a known member of the AgentStatusRetirementStage enum.
-func (e AgentStatusRetirementStage) Valid() bool {
-	switch e {
-	case AgentStatusRetirementStageIdentityRetired:
-		return true
-	case AgentStatusRetirementStageRetired:
-		return true
-	case AgentStatusRetirementStageStopping:
 		return true
 	default:
 		return false
@@ -308,21 +281,6 @@ func (e AuditRecordOutcome) Valid() bool {
 	case AuditRecordOutcomeFailure:
 		return true
 	case AuditRecordOutcomeSuccess:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AuthMethodType.
-const (
-	Oidc AuthMethodType = "oidc"
-)
-
-// Valid indicates whether the value is a known member of the AuthMethodType enum.
-func (e AuthMethodType) Valid() bool {
-	switch e {
-	case Oidc:
 		return true
 	default:
 		return false
@@ -1249,13 +1207,22 @@ func (e PutRunnerHeartbeatRequestState) Valid() bool {
 
 // Defines values for RealmrootAgentIdentityRuntime.
 const (
-	RealmrootAgentIdentityRuntimeAma RealmrootAgentIdentityRuntime = "ama"
+	RealmrootAgentIdentityRuntimeAma        RealmrootAgentIdentityRuntime = "ama"
+	RealmrootAgentIdentityRuntimeClaudeCode RealmrootAgentIdentityRuntime = "claude-code"
+	RealmrootAgentIdentityRuntimeCodex      RealmrootAgentIdentityRuntime = "codex"
+	RealmrootAgentIdentityRuntimeCopilot    RealmrootAgentIdentityRuntime = "copilot"
 )
 
 // Valid indicates whether the value is a known member of the RealmrootAgentIdentityRuntime enum.
 func (e RealmrootAgentIdentityRuntime) Valid() bool {
 	switch e {
 	case RealmrootAgentIdentityRuntimeAma:
+		return true
+	case RealmrootAgentIdentityRuntimeClaudeCode:
+		return true
+	case RealmrootAgentIdentityRuntimeCodex:
+		return true
+	case RealmrootAgentIdentityRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2042,21 +2009,6 @@ func (e SessionMessageType) Valid() bool {
 	}
 }
 
-// Defines values for SessionRealmrootIdentityRuntime.
-const (
-	SessionRealmrootIdentityRuntimeAma SessionRealmrootIdentityRuntime = "ama"
-)
-
-// Valid indicates whether the value is a known member of the SessionRealmrootIdentityRuntime enum.
-func (e SessionRealmrootIdentityRuntime) Valid() bool {
-	switch e {
-	case SessionRealmrootIdentityRuntimeAma:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SessionSocketAbortMessageType.
 const (
 	Abort SessionSocketAbortMessageType = "abort"
@@ -2330,30 +2282,6 @@ const (
 func (e TriggerSource1Type) Valid() bool {
 	switch e {
 	case TriggerSource1TypeHttp:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpdateAgentRequestSpecRuntime.
-const (
-	UpdateAgentRequestSpecRuntimeAma        UpdateAgentRequestSpecRuntime = "ama"
-	UpdateAgentRequestSpecRuntimeClaudeCode UpdateAgentRequestSpecRuntime = "claude-code"
-	UpdateAgentRequestSpecRuntimeCodex      UpdateAgentRequestSpecRuntime = "codex"
-	UpdateAgentRequestSpecRuntimeCopilot    UpdateAgentRequestSpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the UpdateAgentRequestSpecRuntime enum.
-func (e UpdateAgentRequestSpecRuntime) Valid() bool {
-	switch e {
-	case UpdateAgentRequestSpecRuntimeAma:
-		return true
-	case UpdateAgentRequestSpecRuntimeClaudeCode:
-		return true
-	case UpdateAgentRequestSpecRuntimeCodex:
-		return true
-	case UpdateAgentRequestSpecRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2759,6 +2687,24 @@ func (e ListAgentsParamsArchived) Valid() bool {
 	}
 }
 
+// Defines values for ListAgentsParamsHasIdentity.
+const (
+	ListAgentsParamsHasIdentityFalse ListAgentsParamsHasIdentity = "false"
+	ListAgentsParamsHasIdentityTrue  ListAgentsParamsHasIdentity = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListAgentsParamsHasIdentity enum.
+func (e ListAgentsParamsHasIdentity) Valid() bool {
+	switch e {
+	case ListAgentsParamsHasIdentityFalse:
+		return true
+	case ListAgentsParamsHasIdentityTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListConnectorsParamsAvailability.
 const (
 	ListConnectorsParamsAvailabilityAvailable   ListConnectorsParamsAvailability = "available"
@@ -3079,16 +3025,16 @@ func (e ReadUsageSummaryParamsGroupBy) Valid() bool {
 
 // Defines values for ListVaultsParamsArchived.
 const (
-	False ListVaultsParamsArchived = "false"
-	True  ListVaultsParamsArchived = "true"
+	ListVaultsParamsArchivedFalse ListVaultsParamsArchived = "false"
+	ListVaultsParamsArchivedTrue  ListVaultsParamsArchived = "true"
 )
 
 // Valid indicates whether the value is a known member of the ListVaultsParamsArchived enum.
 func (e ListVaultsParamsArchived) Valid() bool {
 	switch e {
-	case False:
+	case ListVaultsParamsArchivedFalse:
 		return true
-	case True:
+	case ListVaultsParamsArchivedTrue:
 		return true
 	default:
 		return false
@@ -3115,19 +3061,19 @@ func (e ListVaultCredentialsParamsState) Valid() bool {
 
 // Defines values for ListVaultCredentialVersionsParamsState.
 const (
-	ListVaultCredentialVersionsParamsStateActive     ListVaultCredentialVersionsParamsState = "active"
-	ListVaultCredentialVersionsParamsStateRevoked    ListVaultCredentialVersionsParamsState = "revoked"
-	ListVaultCredentialVersionsParamsStateSuperseded ListVaultCredentialVersionsParamsState = "superseded"
+	Active     ListVaultCredentialVersionsParamsState = "active"
+	Revoked    ListVaultCredentialVersionsParamsState = "revoked"
+	Superseded ListVaultCredentialVersionsParamsState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListVaultCredentialVersionsParamsState enum.
 func (e ListVaultCredentialVersionsParamsState) Valid() bool {
 	switch e {
-	case ListVaultCredentialVersionsParamsStateActive:
+	case Active:
 		return true
-	case ListVaultCredentialVersionsParamsStateRevoked:
+	case Revoked:
 		return true
-	case ListVaultCredentialVersionsParamsStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -3192,18 +3138,14 @@ type AgentSpecRuntime string
 
 // AgentStatus defines model for AgentStatus.
 type AgentStatus struct {
-	CurrentVersionId *string                     `json:"currentVersionId"`
-	Phase            AgentStatusPhase            `json:"phase"`
-	Ready            bool                        `json:"ready"`
-	RetirementStage  *AgentStatusRetirementStage `json:"retirementStage"`
-	Version          int                         `json:"version"`
+	CurrentVersionId *string          `json:"currentVersionId"`
+	Phase            AgentStatusPhase `json:"phase"`
+	Ready            bool             `json:"ready"`
+	Version          int              `json:"version"`
 }
 
 // AgentStatusPhase defines model for AgentStatus.Phase.
 type AgentStatusPhase string
-
-// AgentStatusRetirementStage defines model for AgentStatus.RetirementStage.
-type AgentStatusRetirementStage string
 
 // AgentSubagent defines model for AgentSubagent.
 type AgentSubagent struct {
@@ -3390,47 +3332,6 @@ type AuditRecordOutcome string
 type AuditRecordListResponse struct {
 	Data       []AuditRecord  `json:"data"`
 	Pagination ListPagination `json:"pagination"`
-}
-
-// AuthConfig defines model for AuthConfig.
-type AuthConfig struct {
-	Methods []AuthMethod `json:"methods"`
-}
-
-// AuthMethod defines model for AuthMethod.
-type AuthMethod struct {
-	ClientId string         `json:"clientId"`
-	Issuer   string         `json:"issuer"`
-	Type     AuthMethodType `json:"type"`
-}
-
-// AuthMethodType defines model for AuthMethod.Type.
-type AuthMethodType string
-
-// AuthOrganization defines model for AuthOrganization.
-type AuthOrganization struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-
-// AuthProject defines model for AuthProject.
-type AuthProject struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-
-// AuthSession defines model for AuthSession.
-type AuthSession struct {
-	Organization AuthOrganization `json:"organization"`
-	Project      AuthProject      `json:"project"`
-	User         AuthUser         `json:"user"`
-}
-
-// AuthUser defines model for AuthUser.
-type AuthUser struct {
-	Email string  `json:"email"`
-	Id    string  `json:"id"`
-	Name  *string `json:"name"`
 }
 
 // BashToolInput defines model for BashToolInput.
@@ -3645,7 +3546,6 @@ type CreateSessionExecutionSpec struct {
 	Env           *ExecutionEnv   `json:"env,omitempty"`
 	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
 	EnvironmentId *string         `json:"environmentId,omitempty"`
-	Runtime       *RuntimeName    `json:"runtime,omitempty"`
 	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
 	Volumes       *[]Volume       `json:"volumes,omitempty"`
 }
@@ -3685,7 +3585,6 @@ type CreateTriggerRequest struct {
 				EnvFrom        *[]EnvFromEntry `json:"envFrom,omitempty"`
 				EnvironmentId  *string         `json:"environmentId,omitempty"`
 				PromptTemplate string          `json:"promptTemplate"`
-				Runtime        RuntimeName     `json:"runtime"`
 				VolumeMounts   *[]VolumeMount  `json:"volumeMounts,omitempty"`
 				Volumes        *[]Volume       `json:"volumes,omitempty"`
 			} `json:"spec"`
@@ -5116,14 +5015,11 @@ type SessionPlacement struct {
 
 // SessionRealmrootIdentity defines model for SessionRealmrootIdentity.
 type SessionRealmrootIdentity struct {
-	Issuer   string                          `json:"issuer"`
-	Runtime  SessionRealmrootIdentityRuntime `json:"runtime"`
-	Subject  string                          `json:"subject"`
-	Username string                          `json:"username"`
+	Issuer   string      `json:"issuer"`
+	Runtime  RuntimeName `json:"runtime"`
+	Subject  string      `json:"subject"`
+	Username string      `json:"username"`
 }
-
-// SessionRealmrootIdentityRuntime defines model for SessionRealmrootIdentity.Runtime.
-type SessionRealmrootIdentityRuntime string
 
 // SessionSocketAbortMessage defines model for SessionSocketAbortMessage.
 type SessionSocketAbortMessage struct {
@@ -5451,19 +5347,15 @@ type UpdateAgentRequest struct {
 	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
-		AllowedTools  *[]string                      `json:"allowedTools,omitempty"`
-		McpConnectors *[]string                      `json:"mcpConnectors,omitempty"`
-		Model         *string                        `json:"model,omitempty"`
-		Provider      *string                        `json:"provider,omitempty"`
-		Runtime       *UpdateAgentRequestSpecRuntime `json:"runtime,omitempty"`
-		Skills        *[]string                      `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput          `json:"subagents,omitempty"`
-		SystemPrompt  *string                        `json:"systemPrompt,omitempty"`
+		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
+		McpConnectors *[]string             `json:"mcpConnectors,omitempty"`
+		Model         *string               `json:"model,omitempty"`
+		Provider      *string               `json:"provider,omitempty"`
+		Skills        *[]string             `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput `json:"subagents,omitempty"`
+		SystemPrompt  *string               `json:"systemPrompt,omitempty"`
 	} `json:"spec,omitempty"`
 }
-
-// UpdateAgentRequestSpecRuntime defines model for UpdateAgentRequest.Spec.Runtime.
-type UpdateAgentRequestSpecRuntime string
 
 // UpdateBudgetRequest defines model for UpdateBudgetRequest.
 type UpdateBudgetRequest struct {
@@ -5563,7 +5455,6 @@ type UpdateTriggerRequest struct {
 				EnvFrom        *[]EnvFromEntry `json:"envFrom,omitempty"`
 				EnvironmentId  *string         `json:"environmentId,omitempty"`
 				PromptTemplate *string         `json:"promptTemplate,omitempty"`
-				Runtime        *RuntimeName    `json:"runtime,omitempty"`
 				VolumeMounts   *[]VolumeMount  `json:"volumeMounts,omitempty"`
 				Volumes        *[]Volume       `json:"volumes,omitempty"`
 			} `json:"spec,omitempty"`
@@ -5884,18 +5775,22 @@ type sessionSocketTicketContextKey string
 // ListAgentsParams defines parameters for ListAgents.
 type ListAgentsParams struct {
 	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived        *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search          *string                   `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom     *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo       *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit           *int                      `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor          *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
-	IdentityIssuer  *string                   `form:"identityIssuer,omitempty" json:"identityIssuer,omitempty"`
-	IdentitySubject *string                   `form:"identitySubject,omitempty" json:"identitySubject,omitempty"`
+	Archived    *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
+	Search      *string                   `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// HasIdentity Filter Agents by whether a Realmroot identity is present.
+	HasIdentity *ListAgentsParamsHasIdentity `form:"hasIdentity,omitempty" json:"hasIdentity,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
 type ListAgentsParamsArchived string
+
+// ListAgentsParamsHasIdentity defines parameters for ListAgents.
+type ListAgentsParamsHasIdentity string
 
 // CreateAgentParams defines parameters for CreateAgent.
 type CreateAgentParams struct {
@@ -5914,11 +5809,6 @@ type ListAuditRecordsParams struct {
 	To           *time.Time `form:"to,omitempty" json:"to,omitempty"`
 	Limit        *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor       *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
-// ReadAuthConfigParams defines parameters for ReadAuthConfig.
-type ReadAuthConfigParams struct {
-	Organization *string `form:"organization,omitempty" json:"organization,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -8607,8 +8497,8 @@ type ClientInterface interface {
 
 	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// RetireAgent request
-	RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteAgent request
+	DeleteAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8629,12 +8519,6 @@ type ClientInterface interface {
 
 	// ReadAuditRecord request
 	ReadAuditRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ReadAuthConfig request
-	ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ReadCurrentAuthSession request
-	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListBudgets request
 	ListBudgets(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8961,8 +8845,8 @@ func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRetireAgentRequest(c.Server, agentId)
+func (c *APIClient) DeleteAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAgentRequest(c.Server, agentId)
 	if err != nil {
 		return nil, err
 	}
@@ -9047,30 +8931,6 @@ func (c *APIClient) ListAuditRecords(ctx context.Context, params *ListAuditRecor
 
 func (c *APIClient) ReadAuditRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadAuditRecordRequest(c.Server, recordId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadAuthConfigRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadCurrentAuthSessionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10441,21 +10301,9 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 
 		}
 
-		if params.IdentityIssuer != nil {
+		if params.HasIdentity != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identityIssuer", *params.IdentityIssuer, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uri"}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.IdentitySubject != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identitySubject", *params.IdentitySubject, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "hasIdentity", *params.HasIdentity, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -10532,8 +10380,8 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 	return req, nil
 }
 
-// NewRetireAgentRequest generates requests for RetireAgent
-func NewRetireAgentRequest(server string, agentId string) (*http.Request, error) {
+// NewDeleteAgentRequest generates requests for DeleteAgent
+func NewDeleteAgentRequest(server string, agentId string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -10901,87 +10749,6 @@ func NewReadAuditRecordRequest(server string, recordId string) (*http.Request, e
 	}
 
 	operationPath := fmt.Sprintf("/api/v1/audit-records/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewReadAuthConfigRequest generates requests for ReadAuthConfig
-func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/config")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if params.Organization != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "organization", *params.Organization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewReadCurrentAuthSessionRequest generates requests for ReadCurrentAuthSession
-func NewReadCurrentAuthSessionRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/auth/sessions/current")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -15432,8 +15199,8 @@ type ClientWithResponsesInterface interface {
 
 	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
-	// RetireAgentWithResponse request
-	RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error)
+	// DeleteAgentWithResponse request
+	DeleteAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*DeleteAgentResponse, error)
 
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
@@ -15454,12 +15221,6 @@ type ClientWithResponsesInterface interface {
 
 	// ReadAuditRecordWithResponse request
 	ReadAuditRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadAuditRecordResponse, error)
-
-	// ReadAuthConfigWithResponse request
-	ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error)
-
-	// ReadCurrentAuthSessionWithResponse request
-	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
 
 	// ListBudgetsWithResponse request
 	ListBudgetsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBudgetsResponse, error)
@@ -15818,18 +15579,17 @@ func (r CreateAgentResponse) ContentType() string {
 	return ""
 }
 
-type RetireAgentResponse struct {
+type DeleteAgentResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
-	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r RetireAgentResponse) Status() string {
+func (r DeleteAgentResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -15837,7 +15597,7 @@ func (r RetireAgentResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RetireAgentResponse) StatusCode() int {
+func (r DeleteAgentResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15845,7 +15605,7 @@ func (r RetireAgentResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r RetireAgentResponse) ContentType() string {
+func (r DeleteAgentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -16047,68 +15807,6 @@ func (r ReadAuditRecordResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadAuditRecordResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ReadAuthConfigResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *AuthConfig
-}
-
-// Status returns HTTPResponse.Status
-func (r ReadAuthConfigResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ReadAuthConfigResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ReadAuthConfigResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type ReadCurrentAuthSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *AuthSession
-	JSON401      *ErrorResponse
-	JSON403      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r ReadCurrentAuthSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ReadCurrentAuthSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ReadCurrentAuthSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18531,6 +18229,7 @@ type UpdateVaultCredentialResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18752,13 +18451,13 @@ func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, param
 	return ParseCreateAgentResponse(rsp)
 }
 
-// RetireAgentWithResponse request returning *RetireAgentResponse
-func (c *ClientWithResponses) RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error) {
-	rsp, err := c.RetireAgent(ctx, agentId, reqEditors...)
+// DeleteAgentWithResponse request returning *DeleteAgentResponse
+func (c *ClientWithResponses) DeleteAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*DeleteAgentResponse, error) {
+	rsp, err := c.DeleteAgent(ctx, agentId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseRetireAgentResponse(rsp)
+	return ParseDeleteAgentResponse(rsp)
 }
 
 // ReadAgentWithResponse request returning *ReadAgentResponse
@@ -18821,24 +18520,6 @@ func (c *ClientWithResponses) ReadAuditRecordWithResponse(ctx context.Context, r
 		return nil, err
 	}
 	return ParseReadAuditRecordResponse(rsp)
-}
-
-// ReadAuthConfigWithResponse request returning *ReadAuthConfigResponse
-func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error) {
-	rsp, err := c.ReadAuthConfig(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseReadAuthConfigResponse(rsp)
-}
-
-// ReadCurrentAuthSessionWithResponse request returning *ReadCurrentAuthSessionResponse
-func (c *ClientWithResponses) ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error) {
-	rsp, err := c.ReadCurrentAuthSession(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseReadCurrentAuthSessionResponse(rsp)
 }
 
 // ListBudgetsWithResponse request returning *ListBudgetsResponse
@@ -19867,15 +19548,15 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 	return response, nil
 }
 
-// ParseRetireAgentResponse parses an HTTP response from a RetireAgentWithResponse call
-func ParseRetireAgentResponse(rsp *http.Response) (*RetireAgentResponse, error) {
+// ParseDeleteAgentResponse parses an HTTP response from a DeleteAgentWithResponse call
+func ParseDeleteAgentResponse(rsp *http.Response) (*DeleteAgentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RetireAgentResponse{
+	response := &DeleteAgentResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -19908,13 +19589,6 @@ func ParseRetireAgentResponse(rsp *http.Response) (*RetireAgentResponse, error) 
 			return nil, err
 		}
 		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
 
 	}
 
@@ -20221,72 +19895,6 @@ func ParseReadAuditRecordResponse(rsp *http.Response) (*ReadAuditRecordResponse,
 			return nil, err
 		}
 		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseReadAuthConfigResponse parses an HTTP response from a ReadAuthConfigWithResponse call
-func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ReadAuthConfigResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest AuthConfig
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseReadCurrentAuthSessionResponse parses an HTTP response from a ReadCurrentAuthSessionWithResponse call
-func ParseReadCurrentAuthSessionResponse(rsp *http.Response) (*ReadCurrentAuthSessionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ReadCurrentAuthSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest AuthSession
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
 
 	}
 
@@ -23955,6 +23563,13 @@ func ParseUpdateVaultCredentialResponse(rsp *http.Response) (*UpdateVaultCredent
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

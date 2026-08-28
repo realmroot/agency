@@ -35,7 +35,7 @@ interface AgentFormFields {
 }
 
 export interface AgentFormState extends AgentFormFields {
-  runtime: AgentRuntime
+  runtime: AgentRuntime | ''
 }
 
 export interface CreateAgentFormState extends AgentFormFields {
@@ -45,7 +45,6 @@ export interface CreateAgentFormState extends AgentFormFields {
 export interface SessionFormState {
   agentId: string
   environmentId: string
-  runtime: 'ama' | 'claude-code' | 'codex' | 'copilot'
   prompt: string
   credentialVaultIds: string[]
   resources: SessionResourceFormEntry[]

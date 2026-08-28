@@ -501,7 +501,7 @@ function listTree(root, limit = 120) {
 }
 
 function assertRealmrootIdentity(workspace, identity) {
-  if (!identity?.issuer || !identity?.subject || !identity?.username || identity.runtime !== 'ama') {
+  if (!identity?.issuer || !identity?.subject || !identity?.username || identity.runtime !== RUNTIME) {
     fail('created Agent is missing its Realmroot identity', JSON.stringify(identity, null, 2))
   }
   const stateFile = join(
@@ -660,7 +660,7 @@ async function main() {
       },
     })
     agentIdentity = agent.identity
-    if (!agentIdentity?.issuer || !agentIdentity?.subject || agentIdentity.runtime !== 'ama') {
+    if (!agentIdentity?.issuer || !agentIdentity?.subject || agentIdentity.runtime !== RUNTIME) {
       fail('Agent creation did not return a complete Realmroot identity', JSON.stringify(agent, null, 2))
     }
 
@@ -671,7 +671,6 @@ async function main() {
         spec: {
           agentId: agent.metadata.uid,
           environmentId,
-          runtime: RUNTIME,
           env: {},
           envFrom: [],
           volumes: [],

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.agent_list_response import AgentListResponse
 from ...models.error_response import ErrorResponse
 from ...models.list_agents_archived import ListAgentsArchived
+from ...models.list_agents_has_identity import ListAgentsHasIdentity
 from ...types import UNSET, Unset
 from typing import cast
 import datetime
@@ -25,8 +26,7 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
+    has_identity: ListAgentsHasIdentity | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -57,9 +57,11 @@ def _get_kwargs(
 
     params["cursor"] = cursor
 
-    params["identityIssuer"] = identity_issuer
+    json_has_identity: str | Unset = UNSET
+    if not isinstance(has_identity, Unset):
+        json_has_identity = has_identity.value
 
-    params["identitySubject"] = identity_subject
+    params["hasIdentity"] = json_has_identity
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -129,8 +131,7 @@ def sync_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
+    has_identity: ListAgentsHasIdentity | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -144,8 +145,8 @@ def sync_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
+        has_identity (ListAgentsHasIdentity | Unset): Filter Agents by whether a Realmroot
+            identity is present. Example: true.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -163,8 +164,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
+has_identity=has_identity,
 
     )
 
@@ -183,8 +183,7 @@ def sync(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
+    has_identity: ListAgentsHasIdentity | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -198,8 +197,8 @@ def sync(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
+        has_identity (ListAgentsHasIdentity | Unset): Filter Agents by whether a Realmroot
+            identity is present. Example: true.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -218,8 +217,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
+has_identity=has_identity,
 
     ).parsed
 
@@ -232,8 +230,7 @@ async def asyncio_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
+    has_identity: ListAgentsHasIdentity | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -247,8 +244,8 @@ async def asyncio_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
+        has_identity (ListAgentsHasIdentity | Unset): Filter Agents by whether a Realmroot
+            identity is present. Example: true.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -266,8 +263,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
+has_identity=has_identity,
 
     )
 
@@ -286,8 +282,7 @@ async def asyncio(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
+    has_identity: ListAgentsHasIdentity | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -301,8 +296,8 @@ async def asyncio(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
+        has_identity (ListAgentsHasIdentity | Unset): Filter Agents by whether a Realmroot
+            identity is present. Example: true.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -321,7 +316,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
+has_identity=has_identity,
 
     )).parsed

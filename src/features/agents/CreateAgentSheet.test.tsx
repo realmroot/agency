@@ -75,7 +75,9 @@ describe('[spec: agents/console-list] CreateAgentSheet', () => {
     const runtime = screen.getByRole('combobox', { name: 'Runtime' })
     expect(runtime).toHaveTextContent('Select a runtime')
     expect(runtime).toBeRequired()
-    expect(runtime).toHaveAccessibleDescription('Required. Select the runtime that will execute this Agent.')
+    expect(runtime).toHaveAccessibleDescription(
+      'Required and immutable after creation. Select the runtime that will execute this Agent.',
+    )
     const save = screen.getByRole('button', { name: 'Save agent' })
     expect(save).toBeDisabled()
 

@@ -6,7 +6,6 @@ from .agent_spec import AgentSpec
 from .agent_spec_runtime import AgentSpecRuntime
 from .agent_status import AgentStatus
 from .agent_status_phase import AgentStatusPhase
-from .agent_status_retirement_stage import AgentStatusRetirementStage
 from .agent_subagent import AgentSubagent
 from .agent_subagent_input import AgentSubagentInput
 from .agent_version import AgentVersion
@@ -43,13 +42,6 @@ from .audit_record_before import AuditRecordBefore
 from .audit_record_list_response import AuditRecordListResponse
 from .audit_record_metadata import AuditRecordMetadata
 from .audit_record_outcome import AuditRecordOutcome
-from .auth_config import AuthConfig
-from .auth_method import AuthMethod
-from .auth_method_type import AuthMethodType
-from .auth_organization import AuthOrganization
-from .auth_project import AuthProject
-from .auth_session import AuthSession
-from .auth_user import AuthUser
 from .bash_tool_input import BashToolInput
 from .budget import Budget
 from .budget_limit_type import BudgetLimitType
@@ -187,6 +179,7 @@ from .lease import Lease
 from .lease_list_response import LeaseListResponse
 from .lease_state import LeaseState
 from .list_agents_archived import ListAgentsArchived
+from .list_agents_has_identity import ListAgentsHasIdentity
 from .list_connectors_availability import ListConnectorsAvailability
 from .list_environments_archived import ListEnvironmentsArchived
 from .list_leases_state import ListLeasesState
@@ -389,7 +382,6 @@ from .session_metadata_annotations import SessionMetadataAnnotations
 from .session_metadata_labels import SessionMetadataLabels
 from .session_placement_type_0 import SessionPlacementType0
 from .session_realmroot_identity_type_0 import SessionRealmrootIdentityType0
-from .session_realmroot_identity_type_0_runtime import SessionRealmrootIdentityType0Runtime
 from .session_socket_abort_message import SessionSocketAbortMessage
 from .session_socket_abort_message_type import SessionSocketAbortMessageType
 from .session_socket_ack_message import SessionSocketAckMessage
@@ -449,7 +441,6 @@ from .trigger_update_metadata import TriggerUpdateMetadata
 from .turn_payload import TurnPayload
 from .update_agent_request import UpdateAgentRequest
 from .update_agent_request_spec import UpdateAgentRequestSpec
-from .update_agent_request_spec_runtime import UpdateAgentRequestSpecRuntime
 from .update_budget_request import UpdateBudgetRequest
 from .update_budget_request_metadata import UpdateBudgetRequestMetadata
 from .update_budget_request_window import UpdateBudgetRequestWindow
@@ -541,7 +532,6 @@ __all__ = (
     "AgentSpecRuntime",
     "AgentStatus",
     "AgentStatusPhase",
-    "AgentStatusRetirementStage",
     "AgentSubagent",
     "AgentSubagentInput",
     "AgentVersion",
@@ -578,13 +568,6 @@ __all__ = (
     "AuditRecordListResponse",
     "AuditRecordMetadata",
     "AuditRecordOutcome",
-    "AuthConfig",
-    "AuthMethod",
-    "AuthMethodType",
-    "AuthOrganization",
-    "AuthProject",
-    "AuthSession",
-    "AuthUser",
     "BashToolInput",
     "Budget",
     "BudgetLimitType",
@@ -722,6 +705,7 @@ __all__ = (
     "LeaseListResponse",
     "LeaseState",
     "ListAgentsArchived",
+    "ListAgentsHasIdentity",
     "ListConnectorsAvailability",
     "ListEnvironmentsArchived",
     "ListLeasesState",
@@ -924,7 +908,6 @@ __all__ = (
     "SessionMetadataLabels",
     "SessionPlacementType0",
     "SessionRealmrootIdentityType0",
-    "SessionRealmrootIdentityType0Runtime",
     "SessionSocketAbortMessage",
     "SessionSocketAbortMessageType",
     "SessionSocketAckMessage",
@@ -984,7 +967,6 @@ __all__ = (
     "TurnPayload",
     "UpdateAgentRequest",
     "UpdateAgentRequestSpec",
-    "UpdateAgentRequestSpecRuntime",
     "UpdateBudgetRequest",
     "UpdateBudgetRequestMetadata",
     "UpdateBudgetRequestWindow",

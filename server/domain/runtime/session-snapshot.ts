@@ -34,7 +34,7 @@ export function createAgentSnapshot(
   row: AgentVersionRow,
   providerId: string,
   identity: RealmrootAgentIdentity | null,
-  runtime: RuntimeName = row.runtime,
+  runtime: RuntimeName,
 ) {
   return {
     id: row.id,

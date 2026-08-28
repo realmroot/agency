@@ -598,7 +598,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
         spec: {
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
         },
         prompt: 'Run AMA session',
       })
@@ -766,7 +765,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
             spec: {
               agentId: 'agent_1',
               environmentId: null,
-              runtime: 'ama',
               promptTemplate: 'Run checks',
               env: {},
               envFrom: [],

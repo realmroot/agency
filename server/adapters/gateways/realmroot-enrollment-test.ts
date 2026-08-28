@@ -1,8 +1,9 @@
 import type { RealmrootEnrollmentGateway } from '@server/usecases/ports'
+import type { RuntimeName } from '@shared/runtime-types'
 
 type EnrollmentInput = Pick<
   Parameters<RealmrootEnrollmentGateway['initialize']>[0],
-  'origin' | 'nickname' | 'idempotencyKey'
+  'origin' | 'nickname' | 'runtime' | 'idempotencyKey'
 >
 
 function state(input: EnrollmentInput, identity?: Record<string, unknown>) {
@@ -10,7 +11,7 @@ function state(input: EnrollmentInput, identity?: Record<string, unknown>) {
     version: 18,
     origin: input.origin,
     issuer: `${input.origin}/api/auth`,
-    runtime: 'ama',
+    runtime: input.runtime,
     name: input.nickname,
     agent_id: `protocol-${input.idempotencyKey}`,
     host_id: 'ama-e2e-host',
@@ -31,19 +32,21 @@ export function createTestRealmrootEnrollmentGateway(): RealmrootEnrollmentGatew
     },
     async prepare(input) {
       if (input.checkpoint?.stage === 'enrolled') return input.checkpoint
+      const runtime = input.checkpoint?.state.runtime as RuntimeName
       const identity = {
         id: `identity-${input.username}`,
         issuer: `${input.origin}/api/auth`,
         subject: `agt_${input.username.replaceAll(/[^a-z0-9]/g, '_')}`,
         username: input.username,
         name: input.nickname,
-        runtime: 'ama' as const,
+        runtime,
       }
-      const enrolled = { stage: 'enrolled' as const, state: state(input, identity), identity }
+      const enrolled = { stage: 'enrolled' as const, state: state({ ...input, runtime }, identity), identity }
       await input.onCheckpoint(enrolled)
       return enrolled
     },
     async complete(input) {
+      const runtime = input.checkpoint.state.runtime as RuntimeName
       if (input.checkpoint.stage === 'enrolled' && input.checkpoint.identity) {
         return { identity: input.checkpoint.identity, state: input.checkpoint.state }
       }
@@ -53,9 +56,9 @@ export function createTestRealmrootEnrollmentGateway(): RealmrootEnrollmentGatew
         subject: `agt_${input.username.replaceAll(/[^a-z0-9]/g, '_')}`,
         username: input.username,
         name: input.nickname,
-        runtime: 'ama' as const,
+        runtime,
       }
-      const enrolled = state(input, identity)
+      const enrolled = state({ ...input, runtime }, identity)
       await input.onCheckpoint({
         stage: 'enrolled',
         state: enrolled,
@@ -63,6 +66,5 @@ export function createTestRealmrootEnrollmentGateway(): RealmrootEnrollmentGatew
       })
       return { identity, state: enrolled }
     },
-    async retire() {},
   }
 }

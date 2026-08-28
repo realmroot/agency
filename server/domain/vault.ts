@@ -4,6 +4,7 @@
 // gateway, not here.
 
 import type { ResourceMetadata, ResourcePhase } from './resource'
+import type { RuntimeName } from './runtime-catalog'
 
 export const SECRET_PROVIDERS = ['ama'] as const
 export const VAULT_SCOPES = ['project', 'organization'] as const
@@ -111,6 +112,24 @@ export interface CredentialVersionStatus {
   phase: VersionState
   supersededAt: string | null
   revokedAt: string | null
+}
+
+export function isAgentManagedCredentialMetadata(value: unknown): boolean {
+  let metadata: Record<string, unknown>
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false
+      metadata = parsed as Record<string, unknown>
+    } catch {
+      return false
+    }
+  } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+    metadata = value as Record<string, unknown>
+  } else {
+    return false
+  }
+  return metadata.managedBy === 'agent-creation'
 }
 
 function secretReferenceName(credentialId: string, version: number, requestedName: string | undefined) {
@@ -253,7 +272,7 @@ export interface RealmrootAgentStateMetadata {
   agentId: string
   origin: string
   issuer: string
-  runtime: 'ama'
+  runtime: RuntimeName
 }
 
 const REALMROOT_AGENT_STATE_VERSION = 18
@@ -536,8 +555,13 @@ export function parseRealmrootAgentState(
   if (!safeRealmrootStateUrl(issuer, options.allowLoopbackRealmrootHttp === true)) {
     throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
   }
-  if (state.runtime !== 'ama') {
-    throw new Error('Realmroot Agent state must be enrolled with AGENT=ama.')
+  if (
+    state.runtime !== 'ama' &&
+    state.runtime !== 'claude-code' &&
+    state.runtime !== 'codex' &&
+    state.runtime !== 'copilot'
+  ) {
+    throw new Error('Realmroot Agent state contains an unsupported runtime.')
   }
   if (typeof state.agent_private_key !== 'string' || decodedBase64UrlLength(state.agent_private_key) !== 64) {
     throw new Error('Realmroot Agent state contains an invalid Ed25519 private key.')
@@ -547,7 +571,7 @@ export function parseRealmrootAgentState(
     agentId: state.agent_id as string,
     origin: state.origin as string,
     issuer: state.issuer as string,
-    runtime: 'ama',
+    runtime: state.runtime,
   }
 }
 

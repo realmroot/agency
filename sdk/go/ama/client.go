@@ -40,7 +40,6 @@ type clientCore struct {
 type Client struct {
 	core         *clientCore
 	Configz      ConfigzService
-	Auth         AuthService
 	Projects     ProjectsService
 	Agents       AgentsService
 	Environments EnvironmentsService
@@ -72,7 +71,6 @@ func New(config ClientConfig) (*Client, error) {
 	}
 	client := &Client{core: core}
 	client.Configz = ConfigzService{client: core}
-	client.Auth = AuthService{client: core}
 	client.Projects = ProjectsService{client: core}
 	client.Agents = AgentsService{client: core}
 	client.Environments = EnvironmentsService{client: core}
@@ -251,26 +249,6 @@ func (s ConfigzService) Get(ctx context.Context) (*PublicConfig, error) {
 	return unwrap(response.StatusCode(), response.Body, response.JSON200)
 }
 
-type AuthService struct {
-	client *clientCore
-}
-
-func (s AuthService) Config(ctx context.Context, params *ReadAuthConfigParams) (*AuthConfig, error) {
-	response, err := s.client.raw.ReadAuthConfigWithResponse(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200)
-}
-
-func (s AuthService) CurrentSession(ctx context.Context) (*AuthSession, error) {
-	response, err := s.client.raw.ReadCurrentAuthSessionWithResponse(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403)
-}
-
 type ProjectsService struct {
 	client *clientCore
 }
@@ -335,12 +313,12 @@ func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAg
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
-func (s AgentsService) Retire(ctx context.Context, agentID string) error {
-	response, err := s.client.raw.RetireAgentWithResponse(ctx, agentID)
+func (s AgentsService) Delete(ctx context.Context, agentID string) error {
+	response, err := s.client.raw.DeleteAgentWithResponse(ctx, agentID)
 	if err != nil {
 		return err
 	}
-	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*AgentVersionListResponse, error) {
@@ -872,7 +850,7 @@ func (s VaultsService) UpdateCredential(ctx context.Context, vaultID string, cre
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s VaultsService) UpdateCredentialSecret(ctx context.Context, vaultID string, credentialID string, body UpdateVaultCredentialSecretRequest) (*VaultCredential, error) {

@@ -39,6 +39,7 @@ import { newId, now, requestIdFrom, stringify } from '@server/domain/runtime/uti
 import { runtimeRequirement } from '@server/domain/runtime-catalog'
 import { environmentHostingMode } from '@server/domain/runtime-session'
 import { hasSecretMaterial, sessionUserMetadata } from '@server/domain/session'
+import { isAgentManagedCredentialMetadata } from '@server/domain/vault'
 import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
 import { safeRuntimeError } from '@server/runtime-error'
 import { SESSION_DO_EVENT_STORE } from '@shared/session-events'
@@ -160,6 +161,9 @@ async function resolveEnvFromEntries(
         },
       }
     }
+    if (isAgentManagedCredentialMetadata(version.credentialMetadata)) {
+      return { fields: { [`${field}.secretRef`]: 'Managed Agent credentials cannot be used as environment secrets.' } }
+    }
     entries.push({
       type: 'secret',
       secretRef,
@@ -208,6 +212,7 @@ async function validateDeclaredVolumes(
   auth: AuthScope,
   volumes: Volume[],
   volumeMounts: VolumeMount[],
+  managedIdentityRef: string | null,
 ): Promise<{ volumes: Volume[]; volumeMounts: VolumeMount[] } | { fields: Record<string, string> }> {
   const volumeNames = new Set<string>()
   const normalizedVolumes: Volume[] = []
@@ -234,6 +239,9 @@ async function validateDeclaredVolumes(
             },
           }
         }
+        if (isAgentManagedCredentialMetadata(version.credentialMetadata)) {
+          return { fields: { [`${field}.secretRef`]: 'Managed Agent credentials cannot be used as Git secrets.' } }
+        }
         normalizedVolumes.push({ ...volume, secretRef: volume.secretRef } satisfies GitRepositoryVolume)
         continue
       }
@@ -252,6 +260,12 @@ async function validateDeclaredVolumes(
       if (version.state !== 'active') {
         return { fields: { [`${field}.secretRef`]: 'Secret reference must be active.' } }
       }
+      if (
+        isAgentManagedCredentialMetadata(version.credentialMetadata) &&
+        (volume.name !== REALMROOT_SOURCE_VOLUME || volume.secretRef !== managedIdentityRef)
+      ) {
+        return { fields: { [`${field}.secretRef`]: 'Managed Agent credentials cannot be mounted directly.' } }
+      }
       normalizedVolumes.push({ ...volume, secretRef: volume.secretRef })
       continue
     }
@@ -264,6 +278,9 @@ async function validateDeclaredVolumes(
       return {
         fields: { [`${field}.secretRef`]: 'Secret reference must point to an active credential version or vault.' },
       }
+    }
+    if (vaultVersions.some((candidate) => isAgentManagedCredentialMetadata(candidate.credentialMetadata))) {
+      return { fields: { [`${field}.secretRef`]: 'Vaults containing managed Agent credentials cannot be mounted.' } }
     }
     if (volume.items && volume.items.length > 0) {
       return { fields: { [`${field}.items`]: 'Secret items require a credential reference.' } }
@@ -365,7 +382,7 @@ function realmrootRuntimeInputs(
     return {
       env: {
         ...env,
-        AGENT: 'ama',
+        AGENT: identity.runtime,
         REALMROOT_ORIGIN: new URL(identity.issuer).origin,
         REALMROOT_STATE_DIR,
       },
@@ -615,37 +632,11 @@ export async function createSessionForAgent(
   if (agent.archivedAt) {
     return { ok: false, error: { status: 409, code: 'conflict', message: 'Archived agents cannot create sessions' } }
   }
-  if (agent.retirementState) {
-    return { ok: false, error: { status: 409, code: 'conflict', message: 'Agent is not execution-ready' } }
-  }
-
   const agentVersion = await currentAgentVersion(store, agent)
   if (!agentVersion) {
     throw new Error('Agent current version is required')
   }
-  const legacyAgent = !agent.username && !agent.identityIssuer && !agent.identitySubject
-  if (legacyAgent && !options.runtime) {
-    return {
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Legacy Agents require an explicit runtime until their Agent Profile is backfilled',
-      },
-    }
-  }
-  if (!legacyAgent && options.runtime && options.runtime !== agentVersion.runtime) {
-    return {
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Requested runtime does not match the selected Agent Profile',
-        detail: { requestedRuntime: options.runtime, agentRuntime: agentVersion.runtime },
-      },
-    }
-  }
-  const runtime = options.runtime ?? agentVersion.runtime
+  const runtime = agent.runtime
   const executionProfile = resolveAgentExecutionProfile(
     runtime,
     agentVersion.providerId,
@@ -653,14 +644,19 @@ export async function createSessionForAgent(
     deps.defaultCloudModel,
   )
   const providerId = executionProfile.provider
+  const identityValues = [agent.identityIssuer, agent.identitySubject, agent.username, agent.identityCredentialRef]
+  const identityFieldCount = identityValues.filter((value) => value !== null).length
+  if (identityFieldCount !== 0 && identityFieldCount !== identityValues.length) {
+    throw new Error(`Agent identity is incomplete: ${agent.id}`)
+  }
   const identity =
-    agent.identityIssuer && agent.identitySubject && agent.username && agent.identityCredentialRef
+    identityFieldCount === identityValues.length
       ? {
-          issuer: agent.identityIssuer,
-          subject: agent.identitySubject,
-          username: agent.username,
-          runtime: 'ama' as const,
-          credentialRef: agent.identityCredentialRef,
+          issuer: agent.identityIssuer!,
+          subject: agent.identitySubject!,
+          username: agent.username!,
+          runtime,
+          credentialRef: agent.identityCredentialRef!,
         }
       : null
   const agentSnapshot = createAgentSnapshot(
@@ -807,6 +803,7 @@ export async function createSessionForAgent(
     auth,
     resolvedWorkspaceVolumes.volumes,
     realmrootInputs.volumeMounts,
+    identity?.credentialRef ?? agentSnapshot.realmroot?.credentialRef ?? null,
   )
   if ('fields' in validatedVolumes) {
     return {

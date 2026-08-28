@@ -18,6 +18,58 @@ const configuration = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Realmroot managed Agent creation', () => {
+  it('rejects a Realmroot identity whose runtime differs from the initialized Agent runtime', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = new Request(input)
+        if (request.url.endsWith('/.well-known/agent-configuration')) return Response.json(configuration)
+        if (request.url.endsWith('/api/agents')) {
+          return Response.json(
+            {
+              id: 'identity-mismatch',
+              issuer: configuration.issuer,
+              subject: 'agt_mismatch',
+              username: 'mismatch',
+              name: 'Mismatch',
+              runtime: 'ama',
+              homeSpace: { type: 'organization', organizationId: 'organization-1' },
+              status: 'active',
+              createdAt: '2026-08-23T00:00:00.000Z',
+              updatedAt: '2026-08-23T00:00:00.000Z',
+            },
+            { status: 201 },
+          )
+        }
+        return new Response('unexpected request', { status: 500 })
+      }),
+    )
+
+    const gateway = createRealmrootEnrollmentGateway()
+    const initialized = await gateway.initialize({
+      origin,
+      nickname: 'Mismatch',
+      runtime: 'codex',
+      idempotencyKey: 'ama:project-1:mismatch',
+    })
+    await expect(
+      gateway.prepare({
+        origin,
+        username: 'mismatch',
+        nickname: 'Mismatch',
+        organizationId: 'organization-1',
+        idempotencyKey: 'ama:project-1:mismatch',
+        checkpoint: initialized,
+        managementCredential: {
+          async headers() {
+            return { authorization: 'Bearer management' }
+          },
+        },
+        async onCheckpoint() {},
+      }),
+    ).rejects.toThrow('Realmroot Agent identity response is incomplete')
+  })
+
   it('replays POST /api/agents with the same public installation after a failed checkpoint', async () => {
     const creations: Array<{ headers: Headers; body: Record<string, unknown> }> = []
     const identity = {
@@ -26,7 +78,7 @@ describe('Realmroot managed Agent creation', () => {
       subject: 'agt_backend_worker',
       username: 'backend-worker',
       name: 'Backend Worker',
-      runtime: 'ama',
+      runtime: 'codex',
       homeSpace: { type: 'organization', organizationId: 'organization-1' },
       status: 'active',
       createdAt: '2026-08-23T00:00:00.000Z',
@@ -59,6 +111,7 @@ describe('Realmroot managed Agent creation', () => {
     const initialized = await gateway.initialize({
       origin,
       nickname: 'Backend Worker',
+      runtime: 'codex',
       idempotencyKey: 'ama:project-1:agent-1',
     })
     const common = {
@@ -101,7 +154,7 @@ describe('Realmroot managed Agent creation', () => {
     expect(creations[0]!.body).toMatchObject({
       username: 'backend-worker',
       name: 'Backend Worker',
-      runtime: 'ama',
+      runtime: 'codex',
       installation: {
         agentId: expect.any(String),
         hostId: expect.any(String),
@@ -151,6 +204,7 @@ describe('Realmroot managed Agent creation', () => {
     const initialized = await gateway.initialize({
       origin,
       nickname: 'Build Agent',
+      runtime: 'ama',
       idempotencyKey: 'ama:project-1:agent-1',
     })
     const enrolled = await gateway.prepare({
@@ -167,6 +221,20 @@ describe('Realmroot managed Agent creation', () => {
       },
       async onCheckpoint() {},
     })
+    await expect(
+      gateway.complete({
+        origin,
+        username: 'build-agent',
+        nickname: 'Build Agent',
+        organizationId: 'organization-1',
+        idempotencyKey: 'ama:project-1:agent-1',
+        checkpoint: {
+          ...enrolled,
+          identity: { ...enrolled.identity!, subject: 'agt_tampered_checkpoint' },
+        },
+        async onCheckpoint() {},
+      }),
+    ).rejects.toThrow('checkpoint does not match its authenticated identity')
     const completed = await gateway.complete({
       origin,
       username: 'build-agent',
@@ -193,78 +261,10 @@ describe('Realmroot managed Agent creation', () => {
     expect(() => parseRealmrootAgentState(JSON.stringify(completed.state))).not.toThrow()
 
     expect(paths).toContain('/api/agents')
+    expect(paths.filter((path) => path === '/api/agent/token')).toHaveLength(3)
+    expect(paths.filter((path) => path === '/api/agent')).toHaveLength(3)
     expect(paths).not.toContain('/api/agent/register')
     expect(paths).not.toContain('/api/agent/enrollments')
     expect(paths.some((path) => path.includes('decision'))).toBe(false)
-  })
-})
-
-describe('Realmroot identity retirement', () => {
-  const retirement = {
-    issuer: configuration.issuer,
-    identityId: 'identity/one',
-    managementCredential: {
-      async headers() {
-        return { authorization: 'Bearer management' }
-      },
-    },
-  }
-
-  it('accepts the Realmroot 204 no-content retirement contract', async () => {
-    const fetch = vi.fn(async () => new Response(null, { status: 204 }))
-    vi.stubGlobal('fetch', fetch)
-
-    await expect(createRealmrootEnrollmentGateway().retire(retirement)).resolves.toBeUndefined()
-    expect(fetch).toHaveBeenCalledWith(
-      `${origin}/api/agents/identity%2Fone`,
-      expect.objectContaining({
-        method: 'DELETE',
-        headers: expect.objectContaining({ authorization: 'Bearer management' }),
-      }),
-    )
-  })
-
-  it('preserves Realmroot error details for unsuccessful retirement', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        Response.json({ type: 'forbidden', detail: 'organization authority required' }, { status: 403 }),
-      ),
-    )
-
-    await expect(createRealmrootEnrollmentGateway().retire(retirement)).rejects.toThrow(
-      'Realmroot /api/agents/identity%2Fone returned 403: {"type":"forbidden","detail":"organization authority required"}',
-    )
-  })
-
-  it('rejects a successful response that is not the 204 no-content contract', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => Response.json({ retired: true }, { status: 200 })),
-    )
-
-    await expect(createRealmrootEnrollmentGateway().retire(retirement)).rejects.toThrow(
-      'returned unexpected success status 200; expected 204',
-    )
-  })
-
-  it('rejects a malformed 204 response carrying a body', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          ({
-            ok: true,
-            status: 204,
-            async text() {
-              return '{}'
-            },
-          }) as Response,
-      ),
-    )
-
-    await expect(createRealmrootEnrollmentGateway().retire(retirement)).rejects.toThrow(
-      'returned a body for a 204 response',
-    )
   })
 })

@@ -1,5 +1,5 @@
 import { AMA_SANDBOX_TOOL_NAMES, isAmaSandboxToolName } from '@shared/agent-tools'
-import type { ResourceMetadata } from './resource'
+import type { ResourceMetadata, ResourcePhase } from './resource'
 import type { RuntimeName } from './runtime-catalog'
 
 export interface AgentSpec {
@@ -17,7 +17,7 @@ export interface RealmrootAgentIdentity {
   issuer: string
   subject: string
   username: string
-  runtime: 'ama'
+  runtime: RuntimeName
   credentialRef: string
 }
 
@@ -62,9 +62,6 @@ export function validateRealmrootIdentity(
   if (!allowedProtocol || issuer.username || issuer.password || issuer.search || issuer.hash) {
     return { identity: 'Realmroot issuer must be an absolute HTTPS URL without credentials, query, or fragment.' }
   }
-  if (identity.runtime !== 'ama') {
-    return { identity: 'Realmroot identity runtime must be ama.' }
-  }
   if (!identity.credentialRef.startsWith('ama://vaults/')) {
     return { identity: 'Realmroot state must use an AMA Vault credential reference.' }
   }
@@ -89,9 +86,8 @@ export interface Agent {
 }
 
 export interface AgentStatus {
-  phase: 'active' | 'archived' | 'retiring' | 'retired'
+  phase: ResourcePhase
   ready: boolean
-  retirementStage: 'stopping' | 'identity_retired' | 'retired' | null
   currentVersionId: string | null
   version: number
 }

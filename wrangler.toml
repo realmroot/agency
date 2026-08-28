@@ -195,8 +195,8 @@ dead_letter_queue = "ama-trigger-dispatches-staging-dlq"
 
 [[env.staging.d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db-staging"
-database_id = "8a30ad06-ace4-4cf7-a70d-61adc0e3e042"
+database_name = "any-managed-agents-db-staging-v2"
+database_id = "268c81ad-f417-493a-8498-0461e7596250"
 migrations_dir = "./migrations"
 
 [[env.staging.r2_buckets]]

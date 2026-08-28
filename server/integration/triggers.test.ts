@@ -128,7 +128,6 @@ async function createTrigger(
           spec: {
             agentId,
             environmentId,
-            runtime: 'ama',
             promptTemplate: 'Run scheduled work.',
             env: {},
             envFrom: [],
@@ -176,6 +175,34 @@ describe('[CF] /api/v1/triggers', () => {
     vi.unstubAllGlobals()
   })
 
+  it('rejects a caller-supplied Trigger runtime', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const response = await jsonFetch('/api/v1/triggers', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        metadata: { name: 'Caller-owned runtime' },
+        spec: {
+          source: { type: 'schedule', schedule: { type: 'interval', intervalSeconds: 3600 } },
+          template: {
+            metadata: { labels: {}, annotations: {} },
+            spec: {
+              agentId: agent.id,
+              runtime: 'codex',
+              promptTemplate: 'The Agent owns runtime selection.',
+              env: {},
+              envFrom: [],
+              volumes: [],
+              volumeMounts: [],
+            },
+          },
+        },
+      }),
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: { type: 'validation_error' } })
+  })
+
   it('creates, lists, reads, updates, pauses, archives, restores, and audits triggers [spec: triggers/api-crud]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
@@ -187,7 +214,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -209,7 +235,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -397,7 +422,6 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
               promptTemplate: 'Should not persist.',
               env: {},
               envFrom: [],
@@ -435,7 +459,6 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
               promptTemplate: 'Should not persist either.',
               env: { AK_API_TOKEN: 'raw-token-value' },
               envFrom: [],
@@ -465,7 +488,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -529,7 +551,6 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
               promptTemplate: 'Research current Canadian banking bonus offers.',
               volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
               volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' }],
@@ -951,7 +972,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Handle ticket {{ .body.ticket.id }} from {{ .body.source }} via {{ .header["x-source"] }}.',
           env: {},
           envFrom: [],
@@ -1027,7 +1047,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: '{% if .body.ticket.id %}Ticket',
           env: {},
           envFrom: [],
@@ -1064,7 +1083,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Handle {{ .body.event }} {{ .body.routing_key }}: {{ .body.comment.body }}.',
           env: {},
           envFrom: [],
@@ -1125,7 +1143,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Handle {{ .body.event }} for {{ .body.routing_key }}.',
           env: {},
           envFrom: [],
@@ -1209,7 +1226,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Handle {{ .body.routing_key }}.',
           env: {},
           envFrom: [],
@@ -1284,7 +1300,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Do not run.',
           env: {},
           envFrom: [],
@@ -1303,7 +1318,6 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
           promptTemplate: 'Do not run either.',
           env: {},
           envFrom: [],
@@ -1352,7 +1366,6 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: null,
-              runtime: 'ama',
               promptTemplate: 'Run scheduled work.',
               env: {},
               envFrom: [],
@@ -1407,7 +1420,6 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: null,
-              runtime: 'ama',
               promptTemplate: 'Run scheduled work.',
               env: {},
               envFrom: [],

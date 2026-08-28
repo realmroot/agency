@@ -50,12 +50,25 @@ async function seedLegacyAgent(authorization: string) {
   const agentId = ((await create.json()) as { metadata: { uid: string } }).metadata.uid
   await bindings.DB.prepare(
     `UPDATE agents SET
-      username = '', identity_issuer = '', identity_subject = '', identity_credential_ref = NULL, realmroot = NULL
+      username = NULL, identity_issuer = NULL, identity_subject = NULL, identity_credential_ref = NULL, realmroot = NULL
      WHERE id = ?`,
   )
     .bind(agentId)
     .run()
   return agentId
+}
+
+async function agentProject(agentId: string) {
+  const row = await env.DB.prepare(
+    `SELECT agents.project_id, projects.organization_id
+     FROM agents
+     JOIN projects ON projects.id = agents.project_id
+     WHERE agents.id = ?`,
+  )
+    .bind(agentId)
+    .first<{ project_id: string; organization_id: string }>()
+  if (!row) throw new Error(`Expected Agent ${agentId}`)
+  return row
 }
 
 describe('[CF] /api/v1/agents', () => {
@@ -102,9 +115,35 @@ describe('[CF] /api/v1/agents', () => {
     })
   })
 
-  it('lists and reads legacy Agents as ready without inventing a public identity', async () => {
+  it('requires an explicit runtime when creating an Agent', async () => {
+    const authorization = await signIn()
+    const path = '/api/v1/agents'
+    const createRes = await SELF.fetch(`https://example.com${path}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'Idempotency-Key': `agent-${crypto.randomUUID()}`,
+        ...dpopHeaders(authorization, 'POST', path),
+      },
+      body: JSON.stringify({
+        username: `missing-runtime-${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`,
+        ...agentBody('Missing runtime'),
+      }),
+    })
+
+    expect(createRes.status).toBe(400)
+    await expect(createRes.json()).resolves.toMatchObject({ error: { type: 'validation_error' } })
+  })
+
+  it('lists legacy Agents without invented identity and filters by complete identity', async () => {
     const authorization = await signIn()
     const agentId = await seedLegacyAgent(authorization)
+    const modernRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Identity-bound Agent')),
+    })
+    expect(modernRes.status).toBe(201)
+    const modernId = ((await modernRes.json()) as { metadata: { uid: string } }).metadata.uid
 
     const read = await jsonFetch(`/api/v1/agents/${agentId}`, authorization)
     expect(read.status).toBe(200)
@@ -121,6 +160,197 @@ describe('[CF] /api/v1/agents', () => {
     expect(body.data).toContainEqual(
       expect.objectContaining({ metadata: expect.objectContaining({ uid: agentId }), identity: null }),
     )
+
+    const withIdentityRes = await jsonFetch('/api/v1/agents?hasIdentity=true', authorization)
+    expect(withIdentityRes.status).toBe(200)
+    const withIdentity = (await withIdentityRes.json()) as {
+      data: Array<{ metadata: { uid: string }; identity: Record<string, unknown> | null }>
+    }
+    expect(withIdentity.data.map((agent) => agent.metadata.uid)).toEqual([modernId])
+    expect(withIdentity.data[0]?.identity).toMatchObject({ issuer: expect.any(String), subject: expect.any(String) })
+
+    const withoutIdentityRes = await jsonFetch('/api/v1/agents?hasIdentity=false', authorization)
+    expect(withoutIdentityRes.status).toBe(200)
+    const withoutIdentity = (await withoutIdentityRes.json()) as {
+      data: Array<{ metadata: { uid: string }; identity: Record<string, unknown> | null }>
+    }
+    expect(withoutIdentity.data).toEqual([
+      expect.objectContaining({ metadata: expect.objectContaining({ uid: agentId }), identity: null }),
+    ])
+  })
+
+  it('fails closed when a legacy database row contains a partial Agent identity', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Corrupt identity Agent')),
+    })
+    expect(createRes.status).toBe(201)
+    const agentId = ((await createRes.json()) as { metadata: { uid: string } }).metadata.uid
+
+    await env.DB.exec('DROP TRIGGER agents_identity_complete_update')
+    await env.DB.prepare('UPDATE agents SET identity_subject = NULL WHERE id = ?').bind(agentId).run()
+
+    const readRes = await jsonFetch(`/api/v1/agents/${agentId}`, authorization)
+    expect(readRes.status).toBe(500)
+    expect(await readRes.text()).not.toContain('Corrupt identity Agent')
+  })
+
+  it('[spec: agents/delete] protects and atomically revokes the managed credential when deleting an unreferenced Agent', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Locally deleted Agent')),
+    })
+    expect(createRes.status).toBe(201)
+    const created = (await createRes.json()) as { metadata: { uid: string } }
+    const agentId = created.metadata.uid
+    const managedCredentials = await env.DB.prepare(
+      `SELECT id,vault_id,type,state,active_version_id FROM vault_credentials
+       WHERE json_extract(metadata, '$.agentId') = ?
+         AND json_extract(metadata, '$.managedBy') = 'agent-creation'`,
+    )
+      .bind(agentId)
+      .all<{
+        id: string
+        vault_id: string
+        type: string
+        state: string
+        active_version_id: string | null
+      }>()
+    expect(managedCredentials.results).toHaveLength(2)
+    expect(managedCredentials.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'opaque', state: 'revoked', active_version_id: null }),
+        expect.objectContaining({ type: 'ama.dev/realmroot-agent-state', state: 'active' }),
+      ]),
+    )
+    const stateCredential = managedCredentials.results.find(
+      (credential) => credential.type === 'ama.dev/realmroot-agent-state',
+    )!
+    const credentialId = stateCredential.id
+    const vaultId = stateCredential.vault_id
+    for (const [method, body] of [
+      ['PATCH', { metadata: { owner: 'caller' } }],
+      ['PUT', { stringData: { value: 'replacement' } }],
+    ] as const) {
+      const response = await jsonFetch(`/api/v1/vaults/${vaultId}/credentials/${credentialId}`, authorization, {
+        method,
+        body: JSON.stringify(body),
+      })
+      expect(response.status).toBe(409)
+      await expect(response.json()).resolves.toMatchObject({ error: { type: 'conflict' } })
+    }
+    const versionsBefore = await env.DB.prepare('SELECT COUNT(*) AS count FROM agent_versions WHERE agent_id = ?')
+      .bind(agentId)
+      .first<{ count: number }>()
+    const vaultsBefore = await env.DB.prepare('SELECT COUNT(*) AS count FROM vaults').first<{ count: number }>()
+    expect(versionsBefore?.count).toBe(1)
+    expect(vaultsBefore?.count).toBeGreaterThan(0)
+    const versionsBeforeDelete = await env.DB.prepare(
+      `SELECT vault_credential_versions.state
+       FROM vault_credential_versions
+       JOIN vault_credentials ON vault_credentials.id = vault_credential_versions.credential_id
+       WHERE json_extract(vault_credentials.metadata, '$.agentId') = ?
+       ORDER BY vault_credentials.type`,
+    )
+      .bind(agentId)
+      .all<{ state: string }>()
+    expect(versionsBeforeDelete.results).toEqual(expect.arrayContaining([{ state: 'revoked' }, { state: 'active' }]))
+
+    const realmrootFetch = vi.fn(async () => {
+      throw new Error('DELETE must not call Realmroot')
+    })
+    vi.stubGlobal('fetch', realmrootFetch)
+    const deleteRes = await jsonFetch(`/api/v1/agents/${agentId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status, await deleteRes.clone().text()).toBe(204)
+    expect(realmrootFetch).not.toHaveBeenCalled()
+
+    const storedAgent = await env.DB.prepare('SELECT id FROM agents WHERE id = ?').bind(agentId).first()
+    const versionsAfter = await env.DB.prepare('SELECT COUNT(*) AS count FROM agent_versions WHERE agent_id = ?')
+      .bind(agentId)
+      .first<{ count: number }>()
+    const vaultsAfter = await env.DB.prepare('SELECT COUNT(*) AS count FROM vaults').first<{ count: number }>()
+    expect(storedAgent).toBeNull()
+    expect(versionsAfter?.count).toBe(0)
+    expect(vaultsAfter?.count).toBe(vaultsBefore?.count)
+    const credentialsAfterDelete = await env.DB.prepare(
+      `SELECT state,active_version_id FROM vault_credentials
+       WHERE json_extract(metadata, '$.agentId') = ?`,
+    )
+      .bind(agentId)
+      .all<{ state: string; active_version_id: string | null }>()
+    expect(credentialsAfterDelete.results).toEqual([
+      { state: 'revoked', active_version_id: null },
+      { state: 'revoked', active_version_id: null },
+    ])
+    const credentialVersionsAfterDelete = await env.DB.prepare(
+      `SELECT vault_credential_versions.state
+       FROM vault_credential_versions
+       JOIN vault_credentials ON vault_credentials.id = vault_credential_versions.credential_id
+       WHERE json_extract(vault_credentials.metadata, '$.agentId') = ?`,
+    )
+      .bind(agentId)
+      .all<{ state: string }>()
+    expect(credentialVersionsAfterDelete.results).toEqual([{ state: 'revoked' }, { state: 'revoked' }])
+
+    const readRes = await jsonFetch(`/api/v1/agents/${agentId}`, authorization)
+    expect(readRes.status).toBe(404)
+    const versionsRes = await jsonFetch(`/api/v1/agents/${agentId}/versions`, authorization)
+    expect(versionsRes.status).toBe(404)
+  })
+
+  it.each([
+    'session',
+    'trigger',
+  ] as const)('rejects deletion while a %s references the Agent and keeps the Agent and versions', async (reference) => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody(`${reference} referenced Agent`)),
+    })
+    expect(createRes.status).toBe(201)
+    const agentId = ((await createRes.json()) as { metadata: { uid: string } }).metadata.uid
+    const project = await agentProject(agentId)
+    const timestamp = new Date().toISOString()
+
+    if (reference === 'session') {
+      await env.DB.prepare(
+        `INSERT INTO sessions (id, agent_id, project_id, durable_object_name, state, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'stopped', ?, ?)`,
+      )
+        .bind(`session_${crypto.randomUUID()}`, agentId, project.project_id, `session:${agentId}`, timestamp, timestamp)
+        .run()
+    } else {
+      await env.DB.prepare(
+        `INSERT INTO triggers
+           (id, organization_id, project_id, agent_id, runtime, name, prompt_template,
+            interval_seconds, next_due_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'ama', ?, 'Run scheduled work', 3600, ?, ?, ?)`,
+      )
+        .bind(
+          `trigger_${crypto.randomUUID()}`,
+          project.organization_id,
+          project.project_id,
+          agentId,
+          `${reference} reference`,
+          timestamp,
+          timestamp,
+          timestamp,
+        )
+        .run()
+    }
+
+    const deleteRes = await jsonFetch(`/api/v1/agents/${agentId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(409)
+    await expect(deleteRes.json()).resolves.toMatchObject({ error: { type: 'conflict' } })
+
+    const readRes = await jsonFetch(`/api/v1/agents/${agentId}`, authorization)
+    expect(readRes.status).toBe(200)
+    const versions = await env.DB.prepare('SELECT COUNT(*) AS count FROM agent_versions WHERE agent_id = ?')
+      .bind(agentId)
+      .first<{ count: number }>()
+    expect(versions?.count).toBe(1)
   })
 
   it('rejects removed legacy fields (instructions, providerId, status, role, handoff, tools)', async () => {
@@ -220,6 +450,15 @@ describe('[CF] /api/v1/agents', () => {
     expect(created.metadata.archivedAt).toBeNull()
     expect(created.status.phase).toBe('active')
     expect(created.spec.allowedTools).toEqual(['read', 'fetch'])
+
+    const runtimeUpdateRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { runtime: 'codex' } }),
+    })
+    expect(runtimeUpdateRes.status).toBe(400)
+    const afterRuntimeUpdate = await jsonFetch(`/api/v1/agents/${createdId}`, authorization)
+    expect(afterRuntimeUpdate.status).toBe(200)
+    await expect(afterRuntimeUpdate.json()).resolves.toMatchObject({ spec: { runtime: 'ama' } })
 
     const readRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization)
     expect(readRes.status).toBe(200)

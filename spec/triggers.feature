@@ -12,6 +12,7 @@ Feature: Triggers
     Given a signed-in user with an active agent and environment
     When the user creates a scheduled trigger with a prompt template and schedule
     Then the trigger is stored active with a derived next-due time when omitted
+    And its effective runtime is derived from the immutable Agent runtime rather than accepted as input
     And a missing agent or archived environment is rejected before storing
 
   @triggers/http-create @usecase
@@ -96,6 +97,7 @@ Feature: Triggers
     Given the Worker app is initialized
     When the OpenAPI document is requested
     Then it includes the triggers collection, item, and runs paths
+    And Trigger create and update inputs do not expose runtime selection
     And the legacy scheduled-agent-triggers namespace is gone
 
   @triggers/console-list @web

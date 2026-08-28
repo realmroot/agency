@@ -12,7 +12,7 @@
     "deploy": "pnpm run db:migrate:d1:prod && pnpm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate:d1": "wrangler d1 migrations apply any-managed-agents-db --local",
-    "db:migrate:d1:staging": "wrangler d1 migrations apply any-managed-agents-db-staging --remote --env staging",
+    "db:migrate:d1:staging": "wrangler d1 migrations apply any-managed-agents-db-staging-v2 --remote --env staging",
     "db:migrate:d1:prod": "wrangler d1 migrations apply any-managed-agents-db --remote",
     "typecheck": "tsc --noEmit -p packages/runtime-contracts/tsconfig.json && tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p src/tsconfig.json && tsc --noEmit -p packages/runtime-bridge/tsconfig.json",
     "test": "vitest run",

@@ -1,13 +1,15 @@
 # Realmroot Agent integration
 
-An AMA Agent owns exactly one Realmroot identity. Identity is an Agent lifecycle
+New AMA Agents own exactly one Realmroot identity. Identity is an Agent lifecycle
 concern, never a Profile/version field, and callers never create or bind it as a
-separate user action.
+separate user action. Agents created before managed identity provisioning expose
+`identity: null`; AMA does not backfill them. Callers that require a managed
+identity list Agents with `hasIdentity=true`.
 
 ## Creation
 
-`POST /api/v1/agents` accepts an immutable Realmroot `username` plus the first
-Profile. Before contacting Realmroot, AMA creates the Agent's managed Vault,
+`POST /api/v1/agents` accepts an immutable Realmroot `username`, an immutable
+runtime, plus the first Profile. Before contacting Realmroot, AMA creates the Agent's managed Vault,
 generates the Agent installation key and opaque protocol identifiers, and stores
 the initialization checkpoint as AES-GCM ciphertext. The same synchronous creation request then
 uses AMA's confidential Realmroot Application to call `POST /api/agents` with the
@@ -30,7 +32,7 @@ issuer and subject appear in the schedulable directory.
 
 The human caller is authorized and audited by AMA using one AMA-audience access
 token, held inside the encrypted browser session or supplied by a direct Bearer
-client. For Agent creation or retirement, AMA authenticates the same confidential
+client. For Agent creation, AMA authenticates the same confidential
 Web Application and performs a restricted RFC 8693 exchange of that token for
 the Realmroot management audience. AMA verifies the
 exchanged token's exact `/api` audience, `agents:write` scope, original User
@@ -51,18 +53,20 @@ versions. D1 Agent rows contain issuer/subject and credential references—never
 state JSON, private keys, assertions, access
 tokens, or refresh tokens.
 
-Session creation accepts the AMA `agentId` and ordinary runtime inputs. AMA resolves
+Session and Trigger creation accept the AMA `agentId` but no runtime input. AMA resolves
 the Agent's stable Realmroot identity and current Profile internally, then projects only that Agent's
 credential. The Vault snapshot seeds a Session-isolated writable ephemeral
-volume with `0700` directories and `0600` files. The runtime and cloud/runner
+volume with `0700` directories and `0600` files. The immutable Agent runtime and cloud/runner
 adapters see only generic volume and environment contracts. Updates remain in
 the Session copy, never flow back to Vault, and disappear with workspace cleanup.
 
-## Retirement
+## Deletion
 
-Deleting an Agent permanently stops new scheduling, ends active Sessions,
-calls `DELETE /api/agents/{identity.id}` with Realmroot management authority,
-destroys the managed Vault and all credential versions, removes ephemeral
-workspaces, and retains a non-schedulable tombstone. Each stage is durable;
-failure never returns successful retirement and scheduled reconciliation resumes
-from the last safe checkpoint.
+`DELETE /api/v1/agents/{agentId}` deletes the AMA Agent and its Profile versions.
+It does not implement a retirement lifecycle or mutate the Realmroot identity.
+AMA irreversibly revokes every local version of the managed identity credential
+before deleting the Agent; the managed Vault remains as non-runnable audit
+metadata. Managed identity credentials cannot be edited, rotated, revoked, or
+mounted through the public Vault and Session inputs. An Agent referenced by a
+Session or Trigger returns a conflict until those independent resources no
+longer reference it.

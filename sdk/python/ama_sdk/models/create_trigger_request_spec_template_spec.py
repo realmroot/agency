@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.runtime_name import RuntimeName
 from ..types import UNSET, Unset
 from typing import cast
 
@@ -33,7 +32,6 @@ class CreateTriggerRequestSpecTemplateSpec:
     """ 
         Attributes:
             agent_id (str):  Example: agent_abc123.
-            runtime (RuntimeName):  Example: codex.
             prompt_template (str):  Example: Research current Canadian banking bonus offers..
             environment_id (None | str | Unset):  Example: env_abc123.
             env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
@@ -43,7 +41,6 @@ class CreateTriggerRequestSpecTemplateSpec:
      """
 
     agent_id: str
-    runtime: RuntimeName
     prompt_template: str
     environment_id: None | str | Unset = UNSET
     env: ExecutionEnv | Unset = UNSET
@@ -63,8 +60,6 @@ class CreateTriggerRequestSpecTemplateSpec:
         from ..models.secret_volume import SecretVolume
         from ..models.volume_mount import VolumeMount
         agent_id = self.agent_id
-
-        runtime = self.runtime.value
 
         prompt_template = self.prompt_template
 
@@ -117,7 +112,6 @@ class CreateTriggerRequestSpecTemplateSpec:
 
         field_dict.update({
             "agentId": agent_id,
-            "runtime": runtime,
             "promptTemplate": prompt_template,
         })
         if environment_id is not UNSET:
@@ -145,11 +139,6 @@ class CreateTriggerRequestSpecTemplateSpec:
         from ..models.volume_mount import VolumeMount
         d = dict(src_dict)
         agent_id = d.pop("agentId")
-
-        runtime = RuntimeName(d.pop("runtime"))
-
-
-
 
         prompt_template = d.pop("promptTemplate")
 
@@ -238,7 +227,6 @@ class CreateTriggerRequestSpecTemplateSpec:
 
         create_trigger_request_spec_template_spec = cls(
             agent_id=agent_id,
-            runtime=runtime,
             prompt_template=prompt_template,
             environment_id=environment_id,
             env=env,

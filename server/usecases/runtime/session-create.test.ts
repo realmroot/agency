@@ -157,9 +157,9 @@ const auth: AuthScope = {
 
 const readyAgentRow = {
   id: 'agent_1',
+  runtime: 'ama' as const,
   currentVersionId: 'agentver_1',
   archivedAt: null,
-  retirementState: null,
   identityIssuer: 'https://realmroot.example/api/auth',
   identitySubject: 'agent-subject-1',
   username: 'coding-agent',
@@ -185,7 +185,7 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     findEnvironmentMock.mockResolvedValue({ id: 'env_1', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
-    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active' })
+    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active', credentialMetadata: {} })
     assignWorkMock.mockClear()
   })
 
@@ -198,7 +198,6 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
         prompt: 'Start cloud session',
       },
       null,
@@ -234,7 +233,6 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
         prompt: 'Start cloud session',
       },
       'req_create_1',
@@ -267,7 +265,6 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
         prompt: 'Start inline session',
       },
       'req_inline_1',
@@ -290,7 +287,6 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       'agent_1',
       'env_1',
       {
-        runtime: 'codex',
         prompt: '',
       },
       null,
@@ -320,7 +316,7 @@ describe('createSessionForAgent — environment resolution', () => {
     insertSessionMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
-    findAgentMock.mockResolvedValue(readyAgentRow)
+    findAgentMock.mockResolvedValue({ ...readyAgentRow, runtime: 'codex' })
     findAgentVersionMock.mockResolvedValue({
       id: 'agentver_1',
       runtime: 'codex',
@@ -331,20 +327,13 @@ describe('createSessionForAgent — environment resolution', () => {
     findEnvironmentMock.mockResolvedValue({ id: 'env_resolved', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
-    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active' })
+    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active', credentialMetadata: {} })
   })
 
   it('resolves an environment for the runtime/model when none is pinned', async () => {
     resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
 
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      null,
-      { runtime: 'codex', prompt: 'Run Codex' },
-      null,
-    )
+    const result = await createSessionForAgent(deps, auth, 'agent_1', null, { prompt: 'Run Codex' }, null)
 
     expect(result.ok).toBe(true)
     expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', '@cf/x')
@@ -367,7 +356,7 @@ describe('createSessionForAgent — environment resolution', () => {
       auth,
       'agent_1',
       'env_resolved',
-      { runtime: 'codex', prompt: 'Use the platform provider' },
+      { prompt: 'Use the platform provider' },
       null,
     )
 
@@ -388,68 +377,7 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(inserted.modelProvider).toBe('openai')
   })
 
-  it.each([
-    'ama',
-    'claude-code',
-    'copilot',
-  ] as const)('accepts explicit %s for a legacy Agent with a codex migration placeholder', async (runtime) => {
-    findAgentMock.mockResolvedValue({
-      ...readyAgentRow,
-      username: '',
-      identityIssuer: '',
-      identitySubject: '',
-      identityCredentialRef: null,
-    })
-    resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
-
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      null,
-      { runtime, prompt: `Run legacy ${runtime}` },
-      null,
-    )
-
-    expect(result.ok).toBe(true)
-    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', runtime, '@cf/x')
-    expect(createAgentSnapshotMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runtime: 'codex' }),
-      'anthropic',
-      null,
-      runtime,
-    )
-    const inserted = (
-      insertSessionMock.mock.calls as unknown as Array<[{ metadata: string; agentSnapshot: string }]>
-    )[0]![0]
-    expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime })
-    expect(JSON.parse(inserted.agentSnapshot)).toMatchObject({ runtime, identity: null })
-  })
-
-  it('requires legacy Agents with a placeholder runtime to choose an explicit runtime', async () => {
-    findAgentMock.mockResolvedValue({
-      ...readyAgentRow,
-      username: '',
-      identityIssuer: '',
-      identitySubject: '',
-      identityCredentialRef: null,
-    })
-
-    const result = await createSessionForAgent(deps, auth, 'agent_1', null, { prompt: 'Run legacy profile' }, null)
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Legacy Agents require an explicit runtime until their Agent Profile is backfilled',
-      },
-    })
-    expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
-    expect(insertSessionMock).not.toHaveBeenCalled()
-  })
-
-  it('infers a missing Session runtime from the selected Agent Profile', async () => {
+  it('derives the Session runtime from the selected Agent', async () => {
     resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
 
     const result = await createSessionForAgent(
@@ -467,53 +395,16 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime: 'codex' })
   })
 
-  it('accepts an explicit Session runtime matching the selected Agent Profile', async () => {
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_pinned',
-      { runtime: 'codex', prompt: 'Run Codex' },
-      null,
-    )
+  it('uses the Agent runtime when the environment is explicitly pinned', async () => {
+    const result = await createSessionForAgent(deps, auth, 'agent_1', 'env_pinned', { prompt: 'Run Codex' }, null)
 
     expect(result.ok).toBe(true)
     const inserted = (insertSessionMock.mock.calls as unknown as Array<[{ metadata: string }]>)[0]![0]
     expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime: 'codex' })
   })
 
-  it('still rejects an explicit runtime that differs from a modern Agent Profile', async () => {
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_pinned',
-      { runtime: 'claude-code', prompt: 'Run Claude Code' },
-      null,
-    )
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Requested runtime does not match the selected Agent Profile',
-        detail: { requestedRuntime: 'claude-code', agentRuntime: 'codex' },
-      },
-    })
-    expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
-    expect(insertSessionMock).not.toHaveBeenCalled()
-  })
-
   it('does not resolve when an environment is pinned', async () => {
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_pinned',
-      { runtime: 'codex', prompt: 'Run Codex' },
-      null,
-    )
+    const result = await createSessionForAgent(deps, auth, 'agent_1', 'env_pinned', { prompt: 'Run Codex' }, null)
 
     expect(result.ok).toBe(true)
     expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
@@ -523,14 +414,7 @@ describe('createSessionForAgent — environment resolution', () => {
   it('returns a 409 and creates no session when no environment can be resolved', async () => {
     resolveEnvironmentForRuntimeMock.mockResolvedValue(null)
 
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      null,
-      { runtime: 'codex', prompt: 'Run Codex' },
-      null,
-    )
+    const result = await createSessionForAgent(deps, auth, 'agent_1', null, { prompt: 'Run Codex' }, null)
 
     expect(result).toEqual({
       ok: false,
@@ -582,6 +466,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       id: 'vaultver_rotated',
       state: 'active',
       metadata: '{}',
+      credentialMetadata: {},
       secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/vaultver_rotated',
     })
   })
@@ -592,7 +477,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Use private resources' },
+      { prompt: 'Use private resources' },
       null,
     )
 
@@ -641,14 +526,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       },
     } as never)
 
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_1',
-      { runtime: 'ama', prompt: 'Use stable identity' },
-      null,
-    )
+    const result = await createSessionForAgent(deps, auth, 'agent_1', 'env_1', { prompt: 'Use stable identity' }, null)
 
     expect(result.ok).toBe(true)
     const inserted = (
@@ -683,7 +561,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start', env: { [name]: 'override' } },
+      { prompt: 'Start', env: { [name]: 'override' } },
       null,
     )
 
@@ -701,7 +579,6 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
         prompt: 'Start',
         volumes: [
           {
@@ -726,7 +603,6 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
         prompt: 'Start',
         volumes: [
           {
@@ -748,6 +624,45 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
   })
 
   it.each([
+    {
+      envFrom: [{ type: 'secret', name: 'AGENT_STATE', key: 'state.json', secretRef: binding.credentialRef }],
+    },
+    {
+      volumes: [{ name: 'managed-secret', type: 'secret', secretRef: binding.credentialRef }],
+      volumeMounts: [{ name: 'managed-secret', mountPath: '/workspace/managed-secret' }],
+    },
+    {
+      volumes: [
+        {
+          name: 'managed-git',
+          type: 'git_repository',
+          url: 'https://github.com/saltbo/any-managed-agents.git',
+          secretRef: binding.credentialRef,
+        },
+      ],
+      volumeMounts: [{ name: 'managed-git', mountPath: '/workspace/managed-git' }],
+    },
+  ])('rejects use of the managed Agent credential as an ordinary runtime input', async (runtimeInput) => {
+    secretVersionForResolutionMock.mockResolvedValue({
+      id: 'vaultver_rotated',
+      state: 'active',
+      credentialMetadata: { managedBy: 'agent-creation' },
+      secretRef: `${binding.credentialRef}/versions/vaultver_rotated`,
+    })
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { prompt: 'Do not expose managed identity state', ...runtimeInput } as never,
+      null,
+    )
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'validation_error' } })
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
     { envFrom: [{ type: 'secret', secretRef: 'ama://vaults/vault_2/credentials/cred_2' }] },
     {
       envFrom: [
@@ -765,7 +680,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start', envFrom: envFrom as never },
+      { prompt: 'Start', envFrom: envFrom as never },
       null,
     )
 
@@ -777,13 +692,18 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
   })
 
   it('fails a new Session after the bound credential is revoked', async () => {
-    secretVersionForResolutionMock.mockResolvedValue({ state: 'revoked', metadata: '{}', secretRef: 'ref' })
+    secretVersionForResolutionMock.mockResolvedValue({
+      state: 'revoked',
+      metadata: '{}',
+      credentialMetadata: {},
+      secretRef: 'ref',
+    })
     const result = await createSessionForAgent(
       deps,
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start after revocation' },
+      { prompt: 'Start after revocation' },
       null,
     )
 

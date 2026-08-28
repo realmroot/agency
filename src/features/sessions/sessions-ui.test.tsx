@@ -107,13 +107,12 @@ function buildRuntimeState(overrides: Partial<SessionRuntimeState> = {}): Sessio
 }
 
 describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] sessions UI contracts', () => {
-  it('shows Agent-owned provider/model, Environment-owned hosting, and Session-owned runtime in session creation', () => {
+  it('shows Agent-owned runtime/provider/model and Environment-owned hosting in session creation', () => {
     render(
       <SessionForm
         value={{
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
           prompt: 'Run session',
           credentialVaultIds: [],
           resources: [],
@@ -125,10 +124,9 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
       />,
     )
 
-    expect(screen.getByText('Agent provider/model: workers-ai / @cf/moonshotai/kimi-k2.6')).toBeTruthy()
+    expect(screen.getByText('Agent runtime/provider/model: codex / workers-ai / @cf/moonshotai/kimi-k2.6')).toBeTruthy()
     expect(screen.getByText('Environment type: Self-hosted')).toBeTruthy()
-    expect(screen.getByText('Runtime is selected per session.')).toBeTruthy()
-    expect(screen.getAllByText('AMA').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('combobox', { name: 'Runtime' })).toBeNull()
   })
 
   it('formats structured runtime capability failures with exact runtime provider and model', () => {

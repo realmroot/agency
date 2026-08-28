@@ -111,7 +111,6 @@ async function createSessionThroughSdk(
     spec: {
       agentId: String(obj(agent.metadata).uid),
       environmentId: String(obj(environment.metadata).uid),
-      runtime: String(obj(agent.spec).runtime) as 'ama' | 'claude-code' | 'codex' | 'copilot',
       ...(Array.isArray(_volumes) ? { volumes: _volumes as never } : {}),
       ...(Array.isArray(_volumeMounts) ? { volumeMounts: _volumeMounts as never } : {}),
       ...(_env && typeof _env === 'object' && !Array.isArray(_env) ? { env: _env as Record<string, string> } : {}),

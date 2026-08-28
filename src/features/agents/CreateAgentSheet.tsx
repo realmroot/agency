@@ -53,9 +53,7 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Create Agent</SheetTitle>
-          <SheetDescription>
-            Define a reusable agent profile. Runtime environments are selected when creating sessions.
-          </SheetDescription>
+          <SheetDescription>Define a reusable agent profile and its immutable execution runtime.</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-4">
           <AgentForm

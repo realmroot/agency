@@ -11,11 +11,15 @@ function required(value: string | undefined, name: string) {
   return normalized
 }
 
-function bearerCredential(accessToken: string): RealmrootManagementCredential {
+function bearerCredential(accessToken: string, realmrootOrigin: string): RealmrootManagementCredential {
   if (!accessToken || /\s/.test(accessToken))
     throw new Error('Realmroot Agent management authority returned an invalid token')
   return {
-    async headers() {
+    async headers(method, url) {
+      const target = new URL(url)
+      if (method !== 'POST' || target.origin !== realmrootOrigin || target.pathname !== '/api/agents') {
+        throw new Error('Realmroot Agent management authority cannot be sent to this endpoint')
+      }
       return { authorization: `Bearer ${accessToken}` }
     },
   }
@@ -73,7 +77,9 @@ export function createRealmrootManagementAuthority(env: Env): RealmrootManagemen
   return {
     async forAgentAdministration(auth, subjectAccessToken) {
       if (auth.agentActor) throw new Error('Only a Realmroot User can administer managed Agent identities')
-      if (fakeRealmrootEnrollmentEnabled(env)) return bearerCredential(`ama-e2e-fixture:${auth.user.id}`)
+      const realmrootOrigin = new URL(required(env.OIDC_ISSUER, 'OIDC_ISSUER')).origin
+      if (fakeRealmrootEnrollmentEnabled(env))
+        return bearerCredential(`ama-e2e-fixture:${auth.user.id}`, realmrootOrigin)
       const exchanged = await exchangeUserToken(env, subjectAccessToken)
       const claims = await getBearerClaimsForAudience(env, exchanged.accessToken, managementResource(env))
       if (
@@ -85,7 +91,7 @@ export function createRealmrootManagementAuthority(env: Env): RealmrootManagemen
       ) {
         throw new Error('Realmroot Agent management authority does not represent the AMA User delegation')
       }
-      return bearerCredential(exchanged.accessToken)
+      return bearerCredential(exchanged.accessToken, realmrootOrigin)
     },
   }
 }

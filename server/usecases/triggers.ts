@@ -11,7 +11,7 @@ import { type AuthScope, type TriggerConfig, TriggerConflictError, TriggerValida
 // Raw secrets must be stored as secret references, so trigger metadata, resource
 // volumes, and plain env are rejected when they carry secret-like material.
 function rejectSecretMaterial(input: {
-  template?: TriggerSessionTemplate | undefined
+  template?: Pick<TriggerSessionTemplate, 'metadata'> | undefined
   templateMetadata?: Partial<TriggerSessionTemplate['metadata']> | undefined
   volumes?: TriggerSessionTemplate['spec']['volumes'] | undefined
   env?: Record<string, string> | undefined
@@ -54,8 +54,15 @@ async function assertReferencesUsable(deps: Deps, projectId: string, agentId: st
   }
 }
 
+type TriggerTemplateInput = Omit<TriggerSessionTemplate, 'spec'> & {
+  spec: Omit<TriggerSessionTemplate['spec'], 'runtime'>
+}
+
 export interface CreateTriggerInputDto {
-  config: Omit<TriggerConfig, 'nextDueAt'> & { nextDueAt: string | null }
+  config: Omit<TriggerConfig, 'template' | 'nextDueAt'> & {
+    template: TriggerTemplateInput
+    nextDueAt: string | null
+  }
 }
 
 function normalizeScheduleConfig(config: CreateTriggerInputDto['config']) {
@@ -90,6 +97,8 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     input.config.template.spec.agentId,
     input.config.template.spec.environmentId,
   )
+  const agent = await deps.agents.find(auth.project.id, input.config.template.spec.agentId)
+  if (!agent) throw new TriggerConflictError('Agent not found', 404)
 
   const timestamp = new Date().toISOString()
   const timing = normalizeScheduleConfig(input.config)
@@ -97,7 +106,10 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     name: input.config.name,
     source: timing.source,
     suspend: input.config.suspend,
-    template: input.config.template,
+    template: {
+      ...input.config.template,
+      spec: { ...input.config.template.spec, runtime: agent.spec.runtime },
+    },
     nextDueAt: timing.nextDueAt,
   }
   return deps.triggers.insert(
@@ -119,7 +131,7 @@ export interface UpdateTriggerPatch {
   suspend?: boolean
   template?: {
     metadata?: Partial<TriggerSessionTemplate['metadata']>
-    spec?: Partial<TriggerSessionTemplate['spec']>
+    spec?: Partial<Omit<TriggerSessionTemplate['spec'], 'runtime'>>
   }
   archived?: boolean
   nextDueAt?: string
@@ -222,6 +234,12 @@ export async function updateTrigger(
   if (patch.template?.spec?.agentId !== undefined || patch.template?.spec?.environmentId !== undefined) {
     await assertReferencesUsable(deps, auth.project.id, agentId, environmentId)
   }
+  const agent = await deps.agents.find(auth.project.id, agentId)
+  if (!agent) throw new TriggerConflictError('Agent not found', 404)
+  const effectiveTemplate: TriggerSessionTemplate = {
+    ...template,
+    spec: { ...template.spec, runtime: agent.spec.runtime },
+  }
 
   const timestamp = new Date().toISOString()
   const archivedAt =
@@ -234,7 +252,7 @@ export async function updateTrigger(
     name: patch.name ?? trigger.metadata.name,
     source: timing.source,
     suspend: patch.suspend ?? trigger.spec.suspend,
-    template,
+    template: effectiveTemplate,
     nextDueAt: timing.nextDueAt,
   }
   const updated = await deps.triggers.update(auth.project.id, trigger.metadata.uid, { config, archivedAt }, timestamp)

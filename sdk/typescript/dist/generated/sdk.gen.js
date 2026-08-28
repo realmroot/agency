@@ -5,17 +5,6 @@ import { client } from './client.gen.js';
  */
 export const readConfigz = (options) => (options?.client ?? client).get({ url: '/api/v1/configz', ...options });
 /**
- * Discover available sign-in methods for an organization
- */
-export const readAuthConfig = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/config', ...options });
-/**
- * Read the Realmroot-authenticated request context
- */
-export const readCurrentAuthSession = (options) => (options?.client ?? client).get({
-    url: '/api/v1/auth/sessions/current',
-    ...options
-});
-/**
  * List projects in the current organization
  */
 export const listProjects = (options) => (options?.client ?? client).get({
@@ -59,9 +48,9 @@ export const createAgent = (options) => (options.client ?? client).post({
     }
 });
 /**
- * Permanently retire an Agent identity and destroy its managed Vault
+ * Delete an Agent
  */
-export const retireAgent = (options) => (options.client ?? client).delete({
+export const deleteAgent = (options) => (options.client ?? client).delete({
     url: '/api/v1/agents/{agentId}',
     ...options
 });

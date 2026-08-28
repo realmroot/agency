@@ -10,7 +10,7 @@ Any Managed Agents is a Cloudflare-native managed agents system. It is inspired 
 - The web console uses the project-local Hono RPC client for internal control-plane calls.
 - Command-line automation uses Realmroot Toolbox against the published protected Resource and OpenAPI document.
 - The project provides an agent-facing skill that teaches automation agents how to use Realmroot Toolbox with stable Agent identity.
-- Agent products run as Session-selected runtimes on Environment-selected hosting. `ama`, `claude-code`, `codex`, and `copilot` are runtime choices behind one AMA control-plane and event surface.
+- Agent products run as Agent-selected runtimes on Environment-selected hosting. `ama`, `claude-code`, `codex`, and `copilot` are immutable Agent runtime choices behind one AMA control-plane and event surface.
 - The `ama` runtime is the first-party AMA/Pi runtime. External runtimes such as `claude-code`, `codex`, and `copilot` are runner-managed integrations, not replacements for AMA's control plane.
 - Runtime traffic goes through AMA session endpoints; clients do not connect directly to sandbox-owned or runner-owned agent processes.
 - The canonical AMA session event protocol is the only UI, API, and session-state contract.

@@ -2449,159 +2449,6 @@
           "scopes"
         ]
       },
-      "AuthConfig": {
-        "type": "object",
-        "properties": {
-          "methods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AuthMethod"
-            }
-          }
-        },
-        "required": [
-          "methods"
-        ]
-      },
-      "AuthMethod": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "oidc"
-            ],
-            "example": "oidc"
-          },
-          "issuer": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://id.example.com/api/auth"
-          },
-          "clientId": {
-            "type": "string",
-            "example": "client_abc123"
-          }
-        },
-        "required": [
-          "type",
-          "issuer",
-          "clientId"
-        ]
-      },
-      "AuthSession": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "$ref": "#/components/schemas/AuthUser"
-          },
-          "organization": {
-            "$ref": "#/components/schemas/AuthOrganization"
-          },
-          "project": {
-            "$ref": "#/components/schemas/AuthProject"
-          }
-        },
-        "required": [
-          "user",
-          "organization",
-          "project"
-        ]
-      },
-      "AuthUser": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "user_abc123"
-          },
-          "email": {
-            "type": "string",
-            "example": "user@example.com"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "example": "Ada Lovelace"
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "name"
-        ]
-      },
-      "AuthOrganization": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "org_abc123"
-          },
-          "name": {
-            "type": "string",
-            "example": "Example Org"
-          }
-        },
-        "required": [
-          "id",
-          "name"
-        ]
-      },
-      "AuthProject": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "project_abc123"
-          },
-          "name": {
-            "type": "string",
-            "example": "Default project"
-          }
-        },
-        "required": [
-          "id",
-          "name"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "example": "validation_error"
-              },
-              "message": {
-                "type": "string",
-                "example": "Invalid request"
-              },
-              "issues": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "type",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
       "ProjectListResponse": {
         "type": "object",
         "properties": {
@@ -2668,6 +2515,43 @@
           "limit",
           "nextCursor",
           "hasMore"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "validation_error"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "type",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "CreateProjectRequest": {
@@ -2812,7 +2696,10 @@
           "runtime": {
             "type": "string",
             "enum": [
-              "ama"
+              "ama",
+              "claude-code",
+              "codex",
+              "copilot"
             ]
           }
         },
@@ -2986,22 +2873,11 @@
             "type": "string",
             "enum": [
               "active",
-              "archived",
-              "retiring",
-              "retired"
+              "archived"
             ]
           },
           "ready": {
             "type": "boolean"
-          },
-          "retirementStage": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "stopping",
-              "identity_retired",
-              "retired"
-            ]
           },
           "currentVersionId": {
             "type": "string",
@@ -3016,7 +2892,6 @@
         "required": [
           "phase",
           "ready",
-          "retirementStage",
           "currentVersionId",
           "version"
         ]
@@ -3238,15 +3113,6 @@
           "spec": {
             "type": "object",
             "properties": {
-              "runtime": {
-                "type": "string",
-                "enum": [
-                  "ama",
-                  "claude-code",
-                  "codex",
-                  "copilot"
-                ]
-              },
               "systemPrompt": {
                 "type": "string",
                 "minLength": 1,
@@ -6072,9 +5938,6 @@
                         "minLength": 1,
                         "example": "env_abc123"
                       },
-                      "runtime": {
-                        "$ref": "#/components/schemas/RuntimeName"
-                      },
                       "env": {
                         "$ref": "#/components/schemas/ExecutionEnv"
                       },
@@ -6108,7 +5971,6 @@
                     },
                     "required": [
                       "agentId",
-                      "runtime",
                       "promptTemplate"
                     ],
                     "additionalProperties": false
@@ -6290,9 +6152,6 @@
                         "nullable": true,
                         "minLength": 1,
                         "example": "env_abc123"
-                      },
-                      "runtime": {
-                        "$ref": "#/components/schemas/RuntimeName"
                       },
                       "env": {
                         "$ref": "#/components/schemas/ExecutionEnv"
@@ -6908,10 +6767,7 @@
             "type": "string"
           },
           "runtime": {
-            "type": "string",
-            "enum": [
-              "ama"
-            ]
+            "$ref": "#/components/schemas/RuntimeName"
           }
         },
         "required": [
@@ -7072,9 +6928,6 @@
             "nullable": true,
             "minLength": 1,
             "example": "env_abc123"
-          },
-          "runtime": {
-            "$ref": "#/components/schemas/RuntimeName"
           },
           "env": {
             "$ref": "#/components/schemas/ExecutionEnv"
@@ -8509,88 +8362,6 @@
         }
       }
     },
-    "/api/v1/auth/config": {
-      "get": {
-        "operationId": "readAuthConfig",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Discover available sign-in methods for an organization",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 240,
-              "example": "example-org"
-            },
-            "required": false,
-            "name": "organization",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Available sign-in methods",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthConfig"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/sessions/current": {
-      "get": {
-        "operationId": "readCurrentAuthSession",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Read the Realmroot-authenticated request context",
-        "security": [
-          {
-            "oidcAccessToken": [
-              "auth:read"
-            ]
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Current request context",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthSession"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The Realmroot token lacks the scope required for this resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/projects": {
       "get": {
         "operationId": "listProjects",
@@ -8884,20 +8655,16 @@
           {
             "schema": {
               "type": "string",
-              "format": "uri"
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter Agents by whether a Realmroot identity is present.",
+              "example": "true"
             },
             "required": false,
-            "name": "identityIssuer",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "required": false,
-            "name": "identitySubject",
+            "description": "Filter Agents by whether a Realmroot identity is present.",
+            "name": "hasIdentity",
             "in": "query"
           }
         ],
@@ -9217,11 +8984,11 @@
         }
       },
       "delete": {
-        "operationId": "retireAgent",
+        "operationId": "deleteAgent",
         "tags": [
           "Agents"
         ],
-        "summary": "Permanently retire an Agent identity and destroy its managed Vault",
+        "summary": "Delete an Agent",
         "security": [
           {
             "oidcAccessToken": [
@@ -9242,7 +9009,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Agent retired"
+            "description": "Agent deleted"
           },
           "401": {
             "description": "Authentication required",
@@ -9255,7 +9022,7 @@
             }
           },
           "403": {
-            "description": "Realmroot management authority required",
+            "description": "The Realmroot token lacks the scope required for this resource",
             "content": {
               "application/json": {
                 "schema": {
@@ -9275,17 +9042,7 @@
             }
           },
           "409": {
-            "description": "Legacy Agent identity requires backfill",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Retirement failed before the identity was retired",
+            "description": "Agent is referenced by Sessions or Triggers",
             "content": {
               "application/json": {
                 "schema": {
@@ -16085,6 +15842,16 @@
           },
           "404": {
             "description": "Credential not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Managed credential cannot be modified",
             "content": {
               "application/json": {
                 "schema": {

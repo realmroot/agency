@@ -7,7 +7,7 @@ import type { ModelAvailability, ModelCatalogState } from '@server/domain/provid
 import type { ResourceMetadata } from '@server/domain/resource'
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
 import type { EnvFromEntry, MemoryVolume, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
-import type { RunnerRuntimeState } from '@server/domain/runtime-catalog'
+import type { RunnerRuntimeState, RuntimeName } from '@server/domain/runtime-catalog'
 import type {
   MessageDelivery,
   MessageState,
@@ -61,6 +61,13 @@ export class AgentArchivedError extends Error {
   }
 }
 
+export class AgentInUseError extends Error {
+  constructor() {
+    super('Agent cannot be deleted while Sessions or Triggers reference it')
+    this.name = 'AgentInUseError'
+  }
+}
+
 // Identity claims the audit + policy ports need. Mirrors the http auth context
 // without dragging the http auth module into usecases.
 export interface AuthScope {
@@ -88,8 +95,7 @@ export interface AgentListQuery {
   search?: string
   createdFrom?: string
   createdTo?: string
-  identityIssuer?: string
-  identitySubject?: string
+  hasIdentity?: boolean
   limit: number
   cursor: { createdAt: string; id: string } | null
 }
@@ -140,14 +146,7 @@ export interface AgentRepo {
   setCurrentVersion(agentId: string, versionId: string): Promise<void>
   update(projectId: string, agentId: string, fields: UpdateAgentFields, updatedAt: string): Promise<void>
   unarchive(projectId: string, agentId: string, updatedAt: string): Promise<void>
-  delete(projectId: string, agentId: string): Promise<void>
-  markRetirement(
-    projectId: string,
-    agentId: string,
-    state: 'stopping' | 'identity_retired' | 'retired',
-    timestamp: string,
-  ): Promise<void>
-  retiring(limit: number): Promise<Agent[]>
+  delete(projectId: string, agentId: string, deletedByUserId: string, timestamp: string): Promise<void>
 
   // Reference validation against sibling resources.
   providerEnabled(projectId: string, providerId: string): Promise<boolean>
@@ -160,7 +159,7 @@ export interface RealmrootEnrollmentIdentity {
   subject: string
   username: string
   name: string
-  runtime: 'ama'
+  runtime: RuntimeName
 }
 
 export interface RealmrootEnrollmentCheckpoint {
@@ -173,6 +172,7 @@ export interface RealmrootEnrollmentGateway {
   initialize(input: {
     origin: string
     nickname: string
+    runtime: RuntimeName
     idempotencyKey: string
   }): Promise<RealmrootEnrollmentCheckpoint>
   prepare(input: {
@@ -194,11 +194,6 @@ export interface RealmrootEnrollmentGateway {
     checkpoint: RealmrootEnrollmentCheckpoint
     onCheckpoint: (checkpoint: RealmrootEnrollmentCheckpoint) => Promise<void>
   }): Promise<{ identity: RealmrootEnrollmentIdentity; state: Record<string, unknown> }>
-  retire(input: {
-    issuer: string
-    identityId: string
-    managementCredential: RealmrootManagementCredential
-  }): Promise<void>
 }
 
 export interface RealmrootManagementCredential {
@@ -672,7 +667,6 @@ export interface VaultRepo {
     previousActiveVersionId: string | null,
     timestamp: string,
   ): Promise<CredentialVersion>
-  destroyManagedVault(vaultId: string, credentialId: string): Promise<void>
 }
 
 // Secret-store boundary. Stores a secret value for a credential version and
@@ -976,8 +970,6 @@ export interface AuditReadRepo {
 
 // --- triggers ---
 
-import type { RuntimeName } from '@server/contracts/environment-contracts'
-
 // Field-keyed validation error for trigger orchestration (secret-material
 // rejection). The http layer maps it to a 400.
 export class TriggerValidationError extends Error {
@@ -1067,8 +1059,7 @@ export interface TriggerRepo {
 
 // The dispatch-relevant projection of a due trigger. Carries only the fields the
 // dispatch orchestration reads — the parsed execution spec plus the scheduling
-// columns needed to advance the next due time. runtime is validated at the repo
-// boundary so the usecase never re-parses raw column strings.
+// columns needed to advance the next due time.
 export interface DueTrigger {
   id: string
   organizationId: string
@@ -1836,12 +1827,12 @@ export interface SessionOrchestrationStore {
     organizationId: string,
     projectId: string,
     secretRef: string,
-  ): Promise<{ state: string; metadata: string; secretRef: string } | null>
+  ): Promise<{ state: string; metadata: string; credentialMetadata: string; secretRef: string } | null>
   vaultVersionsForResolution(
     organizationId: string,
     projectId: string,
     secretRef: string,
-  ): Promise<{ name: string; state: string; metadata: string; secretRef: string }[] | null>
+  ): Promise<{ name: string; state: string; metadata: string; credentialMetadata: string; secretRef: string }[] | null>
 
   // ── work-item enqueue + resume ──
   insertWorkItem(row: WorkItemInsert): Promise<void>
@@ -2082,7 +2073,6 @@ export interface SessionCreateOptions {
   metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>
   volumes?: Volume[]
   volumeMounts?: VolumeMount[]
-  runtime?: RuntimeName
   runtimeConfig?: Record<string, unknown>
   env?: Record<string, string>
   envFrom?: EnvFromEntry[]

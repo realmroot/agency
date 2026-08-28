@@ -243,7 +243,6 @@ async function dispatchTrigger(deps: Deps, trigger: DueTrigger, heartbeatAt: str
       options: {
         name: trigger.name,
         metadata: sessionMetadata,
-        runtime: trigger.template.spec.runtime,
         prompt: trigger.template.spec.promptTemplate,
         env: trigger.template.spec.env,
         envFrom: trigger.template.spec.envFrom,
@@ -454,7 +453,6 @@ export async function dispatchHttpTrigger(
     options: {
       name: trigger.metadata.name,
       metadata: sessionMetadata,
-      runtime: trigger.spec.template.spec.runtime,
       prompt: renderedPrompt,
       env: trigger.spec.template.spec.env,
       envFrom: trigger.spec.template.spec.envFrom,
@@ -622,7 +620,6 @@ async function dispatchClaimedSerialHttpRun(
     options: {
       name: trigger.metadata.name,
       metadata: sessionMetadata,
-      runtime: trigger.spec.template.spec.runtime,
       prompt: pending.renderedPrompt,
       env: trigger.spec.template.spec.env,
       envFrom: trigger.spec.template.spec.envFrom,

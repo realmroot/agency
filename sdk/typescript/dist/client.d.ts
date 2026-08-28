@@ -41,10 +41,6 @@ export declare function createAmaClient(config: AmaClientConfig): {
     configz: {
         get: () => Promise<types.PublicConfig>;
     };
-    auth: {
-        config: (query?: types.ReadAuthConfigData["query"]) => Promise<types.AuthConfig>;
-        currentSession: () => Promise<types.AuthSession>;
-    };
     projects: {
         list: (query?: types.ListProjectsData["query"]) => Promise<types.ProjectListResponse>;
         create: (body: types.CreateProjectRequest) => Promise<types.Project>;
@@ -55,7 +51,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateAgentRequest, headers: types.CreateAgentData["headers"]) => Promise<types.Agent>;
         get: (agentId: string) => Promise<types.Agent>;
         update: (agentId: string, body: types.UpdateAgentRequest) => Promise<types.Agent>;
-        retire: (agentId: string) => Promise<void>;
+        delete: (agentId: string) => Promise<void>;
         listVersions: (agentId: string) => Promise<types.AgentVersionListResponse>;
         getVersion: (agentId: string, version: number) => Promise<types.AgentVersion>;
     };

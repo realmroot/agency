@@ -8,6 +8,8 @@ import {
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
+import { vendorFromModelId } from '@server/domain/model-catalog'
+import { runtimeSupportsProvider } from '@server/domain/runtime-catalog'
 import { secretRefIdentity } from '@server/domain/vault'
 import type { Deps } from './deps'
 import { AgentArchivedError, AgentValidationError, type AuthScope } from './ports'
@@ -25,6 +27,33 @@ export async function validateAgentConfig(deps: Deps, auth: AuthScope, config: A
   const providerError = await validateProviderRef(deps, auth.project.id, config.provider)
   if (providerError) {
     throw new AgentValidationError('Invalid agent configuration', providerError)
+  }
+  if (!runtimeSupportsProvider(config.runtime, config.provider)) {
+    throw new AgentValidationError('Invalid agent configuration', {
+      provider: `Runtime ${config.runtime} does not support provider ${config.provider}.`,
+    })
+  }
+  if (config.model) {
+    const modelVendor = vendorFromModelId(config.model)
+    if (modelVendor !== 'unknown' && config.provider && modelVendor !== config.provider) {
+      throw new AgentValidationError('Invalid agent configuration', {
+        model: `Model ${config.model} does not belong to provider ${config.provider}.`,
+      })
+    }
+    if (modelVendor !== 'unknown' && !runtimeSupportsProvider(config.runtime, modelVendor)) {
+      throw new AgentValidationError('Invalid agent configuration', {
+        model: `Runtime ${config.runtime} does not support model ${config.model}.`,
+      })
+    }
+  }
+  for (const subagent of config.subagents) {
+    if (!subagent.model) continue
+    const modelVendor = vendorFromModelId(subagent.model)
+    if (modelVendor !== 'unknown' && !runtimeSupportsProvider(config.runtime, modelVendor)) {
+      throw new AgentValidationError('Invalid agent configuration', {
+        subagents: `Runtime ${config.runtime} does not support model ${subagent.model} for sub-agent ${subagent.name}.`,
+      })
+    }
   }
   const skillsError = validateSkills(config.skills)
   if (skillsError) {
@@ -64,16 +93,9 @@ async function realmrootCredentialActive(deps: Deps, auth: AuthScope, reference:
   )
 }
 
-// A null provider defers project-default resolution to session start. The
-// legacy `workers-ai` transport alias does the same; session creation resolves
-// it to the model's real vendor or the selected host runtime. The model is NOT
-// checked against the catalog here:
-// an agent is environment-agnostic at creation, so the hosting mode is unknown,
-// and a self-hosted agent legitimately pins a runner-native model id (e.g.
-// `opus`) that never appears in the global catalog. Model validity is therefore
-// resolved at session creation, where the environment — and thus whether the
-// catalog (cloud) or the runner's runtime declarations (self-hosted) is authoritative —
-// is known.
+// A null provider lets the immutable runtime select its native vendor. Exact
+// runner model inventory remains environment-specific and is checked when a
+// Session is placed; this boundary owns the runtime-to-vendor invariant.
 async function validateProviderRef(deps: Deps, projectId: string, provider: string | null) {
   if (!provider || provider === 'workers-ai') {
     return null
@@ -148,6 +170,11 @@ export async function validateAgentCreation(
     allowLoopbackRealmrootHttp: deps.allowLoopbackRealmrootHttp === true,
   })
   if (identityError) throw new AgentValidationError('Invalid agent identity', identityError)
+  if (input.identity.runtime !== input.spec.runtime) {
+    throw new AgentValidationError('Invalid agent identity', {
+      identity: 'Realmroot identity runtime must match the Agent runtime.',
+    })
+  }
   if (!(await realmrootCredentialActive(deps, auth, input.identity.credentialRef))) {
     throw new AgentValidationError('Invalid agent identity', {
       identity: 'Realmroot state must reference an active credential in a visible AMA Vault.',
@@ -155,10 +182,9 @@ export async function validateAgentCreation(
   }
 }
 
-// The runtime config fields whose presence in a PATCH body forces a new version
-// snapshot. (name/description are not runtime config — they never version.)
-const RUNTIME_CONFIG_FIELDS = [
-  'runtime',
+// The mutable execution fields whose presence in a PATCH body forces a new
+// version snapshot. Runtime is immutable; name/description never version.
+const VERSIONED_AGENT_FIELDS = [
   'systemPrompt',
   'provider',
   'model',
@@ -169,7 +195,6 @@ const RUNTIME_CONFIG_FIELDS = [
 ] as const
 
 export interface UpdateAgentPatch {
-  runtime?: AgentSpec['runtime']
   name?: string
   description?: string | null
   systemPrompt?: string
@@ -221,7 +246,7 @@ export async function updateAgent(
   }
 
   const next = normalizeAgentSpec({
-    runtime: fields.runtime ?? agent.spec.runtime,
+    runtime: agent.spec.runtime,
     systemPrompt: fields.systemPrompt !== undefined ? fields.systemPrompt : agent.spec.systemPrompt,
     provider: fields.provider !== undefined ? fields.provider : agent.spec.provider,
     model: fields.model !== undefined ? fields.model : agent.spec.model,
@@ -233,10 +258,8 @@ export async function updateAgent(
   await validateAgentConfig(deps, auth, next)
 
   const updatedAt = new Date().toISOString()
-  const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => fields[field] !== undefined)
-  // A runtime change snapshots a new immutable version; otherwise the current
-  // version (id + number) is retained.
-  const version = runtimeChanged ? await deps.agents.insertVersion(agent, next, updatedAt) : null
+  const executionConfigChanged = VERSIONED_AGENT_FIELDS.some((field) => fields[field] !== undefined)
+  const version = executionConfigChanged ? await deps.agents.insertVersion(agent, next, updatedAt) : null
   const archivedAt = archived === true ? updatedAt : agent.metadata.archivedAt
   const name = fields.name ?? agent.metadata.name
   const description = fields.description !== undefined ? fields.description : agent.metadata.description

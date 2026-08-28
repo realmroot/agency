@@ -12,6 +12,7 @@ import {
   type Credential,
   type CredentialVersion,
   credentialDataKeys,
+  isAgentManagedCredentialMetadata,
   SECRET_PROVIDERS,
   stripStoredSecretMetadata,
   VAULT_SCOPES,
@@ -362,6 +363,10 @@ const updateCredentialRoute = createRoute({
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Credential not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Managed credential cannot be modified',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -658,6 +663,9 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       if (!vault || !credential) {
         return credentialNotFound(c)
       }
+      if (isAgentManagedCredentialMetadata(credential.spec.metadata)) {
+        return c.json({ error: { type: 'conflict', message: 'Managed Agent credentials cannot be modified' } }, 409)
+      }
       const timestamp = new Date().toISOString()
       const revoking = body.state === 'revoked'
       const fields = {
@@ -708,6 +716,9 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       const credential = vault ? await deps.vaults.findCredential(vault.metadata.uid, credentialId) : null
       if (!vault || !credential) {
         return credentialNotFound(c)
+      }
+      if (isAgentManagedCredentialMetadata(credential.spec.metadata)) {
+        return c.json({ error: { type: 'conflict', message: 'Managed Agent credentials cannot be rotated' } }, 409)
       }
       if (vault.metadata.archivedAt !== null || credential.status.phase !== 'active') {
         return c.json({ error: { type: 'conflict', message: 'Credential is not active' } }, 409)

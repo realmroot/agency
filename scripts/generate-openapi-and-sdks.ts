@@ -119,9 +119,6 @@ async function generatePythonSdk() {
     sdkDir,
   )
   execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
-  const retiredAgentApi = path.join(sdkDir, 'ama_sdk/api/agents/retire_agent.py')
-  const source = await readFile(retiredAgentApi, 'utf8')
-  await writeFile(retiredAgentApi, source.replace(/[ \t]+$/gm, ''))
 }
 
 function generateSdkFacades() {

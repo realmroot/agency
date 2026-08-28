@@ -50,13 +50,13 @@ function request(overrides: Partial<AgentCreationRequest> = {}): AgentCreationRe
   }
 }
 
-function realmrootState(identity = true) {
+function realmrootState(identity = true, runtime: AgentSpec['runtime'] = 'ama') {
   return {
     version: 18,
     agent_id: 'rr_agent_1',
     origin: 'https://realmroot.example.com',
     issuer: 'https://realmroot.example.com/api/auth',
-    runtime: 'ama',
+    runtime,
     host_id: 'host_1',
     agent_key_id: 'key_1',
     agent_private_key: privateKey,
@@ -69,7 +69,7 @@ function realmrootState(identity = true) {
             subject: 'rr_agent_1',
             username: 'worker',
             name: 'Worker',
-            runtime: 'ama',
+            runtime,
           },
         }
       : {}),
@@ -88,7 +88,7 @@ function agentFrom(input: Parameters<Deps['agents']['createWithInitialVersion']>
     }),
     identity: input.identity,
     spec: input.spec,
-    status: { phase: 'active', ready: true, retirementStage: null, currentVersionId: versionId, version: 1 },
+    status: { phase: 'active', ready: true, currentVersionId: versionId, version: 1 },
   }
 }
 
@@ -101,6 +101,7 @@ function harness() {
   const secrets = new Map<string, SecretMaterial>()
   const agents = new Map<string, Agent>()
   const calls = { initialize: 0, prepare: 0, complete: 0, authority: 0, commit: 0 }
+  let enrollmentRuntime: AgentSpec['runtime'] = 'ama'
   const deps: Deps = {
     agents: {
       find: async (_projectId: string, agentId: string) => agents.get(agentId) ?? null,
@@ -189,6 +190,36 @@ function harness() {
         versions.set(version.metadata.uid, version)
         return { credential, version }
       },
+      updateCredential: async (
+        credentialId: Parameters<Deps['vaults']['updateCredential']>[0],
+        fields: Parameters<Deps['vaults']['updateCredential']>[1],
+        updatedAt: Parameters<Deps['vaults']['updateCredential']>[2],
+        revokeActiveVersions: Parameters<Deps['vaults']['updateCredential']>[3],
+        revokedAt: Parameters<Deps['vaults']['updateCredential']>[4],
+      ) => {
+        const credential = credentials.get(credentialId)
+        if (!credential) return
+        credentials.set(credentialId, {
+          ...credential,
+          metadata: { ...credential.metadata, updatedAt },
+          spec: { ...credential.spec, metadata: fields.metadata },
+          status: {
+            phase: fields.state,
+            activeVersionId: fields.activeVersionId,
+            revokedAt: fields.revokedAt,
+            revokedByUserId: fields.revokedByUserId,
+            revokeReason: fields.revokeReason,
+          },
+        })
+        if (!revokeActiveVersions) return
+        for (const [versionId, version] of versions) {
+          if (version.spec.credentialId !== credentialId || version.status.phase !== 'active') continue
+          versions.set(versionId, {
+            ...version,
+            status: { ...version.status, phase: 'revoked', revokedAt },
+          })
+        }
+      },
     } as never,
     secretStore: {
       store: async (reference: Parameters<Deps['secretStore']['store']>[0], values: SecretMaterial) => {
@@ -230,22 +261,23 @@ function harness() {
       },
     },
     realmrootEnrollment: {
-      initialize: async (input: { origin: string }) => {
+      initialize: async (input) => {
         calls.initialize += 1
-        return { stage: 'initialized', state: { ...realmrootState(false), origin: input.origin } }
+        enrollmentRuntime = input.runtime
+        return { stage: 'initialized', state: { ...realmrootState(false, input.runtime), origin: input.origin } }
       },
       prepare: async (input: { onCheckpoint: (value: RealmrootEnrollmentCheckpoint) => Promise<void> }) => {
         calls.prepare += 1
         const checkpoint: RealmrootEnrollmentCheckpoint = {
           stage: 'enrolled',
-          state: realmrootState(),
+          state: realmrootState(true, enrollmentRuntime),
           identity: {
             id: 'identity_1',
             issuer: 'https://realmroot.example.com/api/auth',
             subject: 'rr_agent_1',
             username: 'worker',
             name: 'Worker',
-            runtime: 'ama',
+            runtime: enrollmentRuntime,
           },
         }
         await input.onCheckpoint(checkpoint)
@@ -261,12 +293,11 @@ function harness() {
             subject: 'rr_agent_1',
             username: 'worker',
             name: 'Worker',
-            runtime: 'ama',
+            runtime: enrollmentRuntime,
           },
-          state: realmrootState(),
+          state: realmrootState(true, enrollmentRuntime),
         }
       },
-      retire: async () => {},
     },
     environments: undefined as never,
     providers: undefined as never,
@@ -312,12 +343,31 @@ describe('[spec: agents/create] createManagedAgent', () => {
     const second = await create(value)
 
     expect(second).toEqual(first)
-    expect(first).toMatchObject({ identity: { username: 'worker' }, status: { ready: true, version: 1 } })
+    expect(first).toMatchObject({
+      identity: { username: 'worker', runtime: 'codex' },
+      spec: { runtime: 'codex' },
+      status: { ready: true, version: 1 },
+    })
     expect(value.calls).toEqual({ initialize: 1, prepare: 1, complete: 1, authority: 1, commit: 1 })
     expect([...value.credentials.values()].map((credential) => credential.spec.type).sort()).toEqual([
       'ama.dev/realmroot-agent-state',
       'opaque',
     ])
+    expect(
+      [...value.credentials.values()].map((credential) => ({
+        type: credential.spec.type,
+        phase: credential.status.phase,
+        activeVersionId: credential.status.activeVersionId,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'opaque', phase: 'revoked', activeVersionId: null }),
+        expect.objectContaining({ type: 'ama.dev/realmroot-agent-state', phase: 'active' }),
+      ]),
+    )
+    expect([...value.versions.values()].map((version) => version.status.phase)).toEqual(
+      expect.arrayContaining(['revoked', 'active']),
+    )
   })
 
   it('normalizes the legacy workers-ai transport alias before the managed Agent commit', async () => {
@@ -449,74 +499,23 @@ describe('[spec: agents/create] createManagedAgent', () => {
     await expect(create(value)).rejects.toMatchObject({ message: 'Managed Agent identity state is unavailable' })
   })
 
-  it('uses an exact credential created by a concurrent request and rejects credential drift', async () => {
-    for (const mutation of ['type', 'name', 'metadata', 'active'] as const) {
-      const value = harness()
-      await create(value)
-      value.agents.clear()
-      const state = [...value.credentials.values()].find(
-        (credential) => credential.spec.type === 'ama.dev/realmroot-agent-state',
-      )
-      if (!state) throw new Error('missing state credential')
-      const originalFind = value.deps.vaults.findCredential
-      let stateReads = 0
-      value.deps.vaults.findCredential = async (vaultId, credentialId) => {
-        if (credentialId === state.metadata.uid && stateReads++ === 0) return null
-        return await originalFind(vaultId, credentialId)
-      }
-      if (mutation === 'type') state.spec.type = 'opaque'
-      if (mutation === 'name') state.metadata.name = 'Other'
-      if (mutation === 'metadata') state.spec.metadata = { ...state.spec.metadata, managedBy: 'other' }
-      if (mutation === 'active') state.status.activeVersionId = null
-      await expect(create(value)).rejects.toBeInstanceOf(AgentCreationConflict)
-    }
+  it('resumes from the active final credential without falling back to revoked initialization state', async () => {
+    const value = harness()
+    await create(value)
+    value.agents.clear()
 
-    const exact = harness()
-    await create(exact)
-    exact.agents.clear()
-    const state = [...exact.credentials.values()].find(
+    await expect(create(value)).resolves.toMatchObject({ status: { ready: true } })
+
+    value.agents.clear()
+    const state = [...value.credentials.values()].find(
       (credential) => credential.spec.type === 'ama.dev/realmroot-agent-state',
     )
     if (!state) throw new Error('missing state credential')
-    const originalFind = exact.deps.vaults.findCredential
-    let stateReads = 0
-    exact.deps.vaults.findCredential = async (vaultId, credentialId) => {
-      if (credentialId === state.metadata.uid && stateReads++ === 0) return null
-      return await originalFind(vaultId, credentialId)
-    }
-    await expect(create(exact)).resolves.toMatchObject({ status: { ready: true } })
-  })
+    const originalFind = value.deps.vaults.findCredential
+    value.deps.vaults.findCredential = async (vaultId, credentialId) =>
+      credentialId === state.metadata.uid ? null : await originalFind(vaultId, credentialId)
 
-  it('handles credential write races and missing active versions without exposing state', async () => {
-    for (const outcome of ['exact', 'conflict', 'missing'] as const) {
-      const value = harness()
-      await create(value)
-      value.agents.clear()
-      const state = [...value.credentials.values()].find(
-        (credential) => credential.spec.type === 'ama.dev/realmroot-agent-state',
-      )
-      if (!state) throw new Error('missing state credential')
-      const originalFind = value.deps.vaults.findCredential
-      let stateReads = 0
-      value.deps.vaults.findCredential = async (vaultId, credentialId) => {
-        if (credentialId !== state.metadata.uid) return await originalFind(vaultId, credentialId)
-        stateReads += 1
-        if (stateReads <= 2) return null
-        if (outcome === 'missing') return null
-        return state
-      }
-      if (outcome === 'conflict') state.metadata.name = 'Other'
-      value.deps.vaults.insertCredentialWithVersion = async () => {
-        throw new Error('concurrent credential')
-      }
-      if (outcome === 'exact') {
-        await expect(create(value)).resolves.toMatchObject({ status: { ready: true } })
-      } else if (outcome === 'missing') {
-        await expect(create(value)).rejects.toMatchObject({ message: 'Could not persist managed Agent identity state' })
-      } else {
-        await expect(create(value)).rejects.toBeInstanceOf(AgentCreationConflict)
-      }
-    }
+    await expect(create(value)).rejects.toMatchObject({ message: 'Managed Agent identity state is unavailable' })
   })
 
   it('preserves creation errors raised while preparing the Realmroot identity', async () => {

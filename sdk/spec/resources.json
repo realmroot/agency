@@ -6,10 +6,6 @@
         { "name": "configz", "methods": [
           { "name": "get", "operationId": "readConfigz" }
         ] },
-        { "name": "auth", "methods": [
-          { "name": "config", "operationId": "readAuthConfig" },
-          { "name": "currentSession", "operationId": "readCurrentAuthSession" }
-        ] },
         { "name": "projects", "methods": [
           { "name": "list", "operationId": "listProjects" },
           { "name": "create", "operationId": "createProject" },
@@ -20,7 +16,7 @@
           { "name": "create", "operationId": "createAgent" },
           { "name": "get", "operationId": "readAgent" },
           { "name": "update", "operationId": "updateAgent" },
-          { "name": "retire", "operationId": "retireAgent" },
+          { "name": "delete", "operationId": "deleteAgent" },
           { "name": "listVersions", "operationId": "listAgentVersions" },
           { "name": "getVersion", "operationId": "readAgentVersion" }
         ] },

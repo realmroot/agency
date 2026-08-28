@@ -7,18 +7,19 @@ Feature: Agents
   @agents/create @usecase
   Scenario: Create an agent definition
     Given a signed-in user with access to a project
-    When the user creates an agent with instructions, provider, model, skills, tools, MCP connectors, and metadata
+    When the user creates an agent with an explicit runtime, instructions, provider, model, skills, tools, MCP connectors, and metadata
     Then the agent is stored with a current version, project id, timestamps, and archive state
     And the first version snapshots the normalized runtime configuration
     And the agent defaults to the project default provider without forcing a model
     And an unselected model remains null without a synthetic default model id
 
   @agents/update @usecase
-  Scenario: Version an agent on runtime-relevant change
+  Scenario: Version an agent on editable execution configuration change
     Given an agent exists at version 1
-    When the user changes a runtime-relevant field
+    When the user changes an editable provider, model, or instruction field
     Then a new immutable version is snapshotted and becomes current
     And sessions created before the change keep the version 1 snapshot
+    But the Agent runtime cannot be changed after creation
 
   @agents/realmroot-binding @usecase
   Scenario: Provision one Realmroot identity as part of Agent creation
@@ -33,12 +34,13 @@ Feature: Agents
     And only a ready Agent with non-empty issuer and subject enters the directory
     And raw Realmroot state, keys, and access tokens never enter Agent, Profile, or API records
 
-  @agents/retirement @api
-  Scenario: Permanently retire an Agent
-    Given an execution-ready Agent has active Sessions and encrypted Realmroot state
+  @agents/delete @api
+  Scenario: Delete an unreferenced Agent locally
+    Given an Agent is not referenced by a Session or Trigger
     When an authorized caller deletes the Agent
-    Then AMA ends active Sessions, retires the Realmroot identity, destroys its managed Vault, and retains a tombstone
-    And failed retirement stages remain non-schedulable and retry durably
+    Then AMA deletes the Agent and all of its immutable versions and returns 204
+    And AMA does not call Realmroot or destroy a managed Vault
+    But an Agent referenced by a Session or Trigger is retained and the request returns 409
 
   @agents/lifecycle @usecase
   Scenario: Partial updates leave omitted fields and prune null metadata
@@ -53,6 +55,7 @@ Feature: Agents
     Then the request is rejected with field-level validation details
     And secret material is never accepted inside policy, metadata, tools, or connector configuration
     And an invalid immutable username or unsupported runtime is rejected before provisioning
+    And claude-code accepts anthropic, codex accepts openai, copilot accepts github-copilot, and ama accepts any available vendor
 
   @agents/tool-contract @domain
   Scenario: Normalize and gate tool attachments
@@ -80,10 +83,11 @@ Feature: Agents
 
 	  @agents/api-pagination @api
 	  Scenario: List agents with pagination, filters, and tenant scope
-	    Given a project has active and archived agents created across dates
+	    Given a project has active and archived agents with and without complete Realmroot identities created across dates
 	    When the user lists agents with a page size
 	    Then the response includes data and cursor pagination metadata
 	    And archived agents are hidden unless archived filtering is requested
+    And hasIdentity=true returns only Agents with a complete identity while hasIdentity=false returns all others
     And created-date filters and project scope are respected
 
   @agents/api-archive @api

@@ -111,7 +111,10 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
     environmentUsable: async () => null,
     ...repo,
   }
-  return { triggers } as unknown as Deps
+  return {
+    triggers,
+    agents: { find: async () => ({ spec: { runtime: 'ama' } }) },
+  } as unknown as Deps
 }
 
 describe('[spec: triggers/create] createTrigger', () => {

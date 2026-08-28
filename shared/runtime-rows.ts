@@ -98,12 +98,10 @@ export interface AgentRow {
   allowedTools: string
   mcpConnectors: string
   realmroot: string | null
-  username: string
-  identityIssuer: string
-  identitySubject: string
+  username: string | null
+  identityIssuer: string | null
+  identitySubject: string | null
   identityCredentialRef: string | null
-  retirementState: 'stopping' | 'identity_retired' | 'retired' | null
-  retiredAt: string | null
   archivedAt: string | null
   currentVersionId: string | null
   createdAt: string

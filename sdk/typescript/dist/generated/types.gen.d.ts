@@ -573,42 +573,6 @@ export type PublicOidcClientConfig = {
     clientId: string;
     scopes: Array<string>;
 };
-export type AuthConfig = {
-    methods: Array<AuthMethod>;
-};
-export type AuthMethod = {
-    type: 'oidc';
-    issuer: string;
-    clientId: string;
-};
-export type AuthSession = {
-    user: AuthUser;
-    organization: AuthOrganization;
-    project: AuthProject;
-};
-export type AuthUser = {
-    id: string;
-    email: string;
-    name: string | null;
-};
-export type AuthOrganization = {
-    id: string;
-    name: string;
-};
-export type AuthProject = {
-    id: string;
-    name: string;
-};
-export type ErrorResponse = {
-    error: {
-        type: string;
-        message: string;
-        issues?: Array<unknown>;
-        details?: {
-            [key: string]: unknown;
-        };
-    };
-};
 export type ProjectListResponse = {
     data: Array<Project>;
     pagination: ListPagination;
@@ -623,6 +587,16 @@ export type ListPagination = {
     limit: number;
     nextCursor: string | null;
     hasMore: boolean;
+};
+export type ErrorResponse = {
+    error: {
+        type: string;
+        message: string;
+        issues?: Array<unknown>;
+        details?: {
+            [key: string]: unknown;
+        };
+    };
 };
 export type CreateProjectRequest = {
     name: string;
@@ -657,7 +631,7 @@ export type RealmrootAgentIdentity = {
     issuer: string;
     subject: string;
     username: string;
-    runtime: 'ama';
+    runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
 } | null;
 export type AgentSpec = {
     runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
@@ -679,9 +653,8 @@ export type AgentSubagent = {
     mcpConnectors: Array<string>;
 };
 export type AgentStatus = {
-    phase: 'active' | 'archived' | 'retiring' | 'retired';
+    phase: 'active' | 'archived';
     ready: boolean;
-    retirementStage: 'stopping' | 'identity_retired' | 'retired';
     currentVersionId: string | null;
     version: number;
 };
@@ -715,7 +688,6 @@ export type AgentSubagentInput = {
 export type UpdateAgentRequest = {
     metadata?: ResourceUpdateMetadata;
     spec?: {
-        runtime?: 'ama' | 'claude-code' | 'codex' | 'copilot';
         systemPrompt?: string;
         provider?: string | null;
         model?: string | null;
@@ -1315,7 +1287,6 @@ export type CreateTriggerRequest = {
             spec: {
                 agentId: string;
                 environmentId?: string | null;
-                runtime: RuntimeName;
                 env?: ExecutionEnv;
                 envFrom?: Array<EnvFromEntry>;
                 volumes?: Array<Volume>;
@@ -1360,7 +1331,6 @@ export type UpdateTriggerRequest = {
             spec?: {
                 agentId?: string;
                 environmentId?: string | null;
-                runtime?: RuntimeName;
                 env?: ExecutionEnv;
                 envFrom?: Array<EnvFromEntry>;
                 volumes?: Array<Volume>;
@@ -1490,7 +1460,7 @@ export type SessionRealmrootIdentity = {
     issuer: string;
     subject: string;
     username: string;
-    runtime: 'ama';
+    runtime: RuntimeName;
 } | null;
 export type SessionEnvironmentSnapshot = {
     id: string;
@@ -1530,7 +1500,6 @@ export type SessionCreateMetadata = {
 export type CreateSessionExecutionSpec = {
     agentId: string;
     environmentId?: string | null;
-    runtime?: RuntimeName;
     env?: ExecutionEnv;
     envFrom?: Array<EnvFromEntry>;
     volumes?: Array<Volume>;
@@ -1847,45 +1816,6 @@ export type ReadConfigzResponses = {
     200: PublicConfig;
 };
 export type ReadConfigzResponse = ReadConfigzResponses[keyof ReadConfigzResponses];
-export type ReadAuthConfigData = {
-    body?: never;
-    path?: never;
-    query?: {
-        organization?: string;
-    };
-    url: '/api/v1/auth/config';
-};
-export type ReadAuthConfigResponses = {
-    /**
-     * Available sign-in methods
-     */
-    200: AuthConfig;
-};
-export type ReadAuthConfigResponse = ReadAuthConfigResponses[keyof ReadAuthConfigResponses];
-export type ReadCurrentAuthSessionData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/auth/sessions/current';
-};
-export type ReadCurrentAuthSessionErrors = {
-    /**
-     * Authentication required
-     */
-    401: ErrorResponse;
-    /**
-     * The Realmroot token lacks the scope required for this resource
-     */
-    403: ErrorResponse;
-};
-export type ReadCurrentAuthSessionError = ReadCurrentAuthSessionErrors[keyof ReadCurrentAuthSessionErrors];
-export type ReadCurrentAuthSessionResponses = {
-    /**
-     * Current request context
-     */
-    200: AuthSession;
-};
-export type ReadCurrentAuthSessionResponse = ReadCurrentAuthSessionResponses[keyof ReadCurrentAuthSessionResponses];
 export type ListProjectsData = {
     body?: never;
     path?: never;
@@ -1984,8 +1914,10 @@ export type ListAgentsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
-        identityIssuer?: string;
-        identitySubject?: string;
+        /**
+         * Filter Agents by whether a Realmroot identity is present.
+         */
+        hasIdentity?: 'true' | 'false';
     };
     url: '/api/v1/agents';
 };
@@ -2050,7 +1982,7 @@ export type CreateAgentResponses = {
     201: Agent;
 };
 export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponses];
-export type RetireAgentData = {
+export type DeleteAgentData = {
     body?: never;
     path: {
         agentId: string;
@@ -2058,13 +1990,13 @@ export type RetireAgentData = {
     query?: never;
     url: '/api/v1/agents/{agentId}';
 };
-export type RetireAgentErrors = {
+export type DeleteAgentErrors = {
     /**
      * Authentication required
      */
     401: ErrorResponse;
     /**
-     * Realmroot management authority required
+     * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
     /**
@@ -2072,22 +2004,18 @@ export type RetireAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Legacy Agent identity requires backfill
+     * Agent is referenced by Sessions or Triggers
      */
     409: ErrorResponse;
-    /**
-     * Retirement failed before the identity was retired
-     */
-    502: ErrorResponse;
 };
-export type RetireAgentError = RetireAgentErrors[keyof RetireAgentErrors];
-export type RetireAgentResponses = {
+export type DeleteAgentError = DeleteAgentErrors[keyof DeleteAgentErrors];
+export type DeleteAgentResponses = {
     /**
-     * Agent retired
+     * Agent deleted
      */
     204: void;
 };
-export type RetireAgentResponse = RetireAgentResponses[keyof RetireAgentResponses];
+export type DeleteAgentResponse = DeleteAgentResponses[keyof DeleteAgentResponses];
 export type ReadAgentData = {
     body?: never;
     path: {
@@ -4665,6 +4593,10 @@ export type UpdateVaultCredentialErrors = {
      * Credential not found
      */
     404: ErrorResponse;
+    /**
+     * Managed credential cannot be modified
+     */
+    409: ErrorResponse;
 };
 export type UpdateVaultCredentialError = UpdateVaultCredentialErrors[keyof UpdateVaultCredentialErrors];
 export type UpdateVaultCredentialResponses = {

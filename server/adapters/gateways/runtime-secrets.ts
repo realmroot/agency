@@ -10,6 +10,7 @@ import {
   volumeMountPath,
   volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
+import { isAgentManagedCredentialMetadata } from '@server/domain/vault'
 import type {
   WorkspaceFile,
   WorkspaceGitCredential,
@@ -51,6 +52,9 @@ export async function resolveEnvFrom(
     }
     if (version.state === 'revoked') {
       throw new Error(`Runtime secret reference ${secretRef} is revoked by vault policy`)
+    }
+    if (isAgentManagedCredentialMetadata(version.credentialMetadata)) {
+      throw new Error(`Managed Agent credential ${secretRef} cannot be projected as environment data`)
     }
     const data = await decryptVersionData(env, version.metadata, secretRef)
     if (entry.name === undefined) {
@@ -112,7 +116,7 @@ export async function resolveRuntimeWorkspaceManifest(
       continue
     }
     if (volume.type === 'secret') {
-      const resolved = await resolveSecretMount(env, repo, scope, volume.secretRef, volume.items)
+      const resolved = await resolveSecretMount(env, repo, scope, volume.name, volume.secretRef, volume.items)
       mounts.push({
         type: 'secret',
         name: volume.name,
@@ -135,6 +139,9 @@ async function resolveGitCredential(
   const version = await repo.secretVersionForResolution(scope.organizationId, scope.projectId, secretRef)
   if (version?.state !== 'active') {
     throw new Error(`Runtime git secret reference ${secretRef} cannot be resolved`)
+  }
+  if (isAgentManagedCredentialMetadata(version.credentialMetadata)) {
+    throw new Error(`Managed Agent credential ${secretRef} cannot be used as a Git credential`)
   }
   return gitCredentialFromSecretData(
     projectSecretData(await decryptVersionData(env, version.metadata, version.secretRef), items, secretRef),
@@ -166,6 +173,7 @@ async function resolveSecretMount(
   env: Env,
   repo: ReturnType<typeof createRuntimeOrchestrationRepo>,
   scope: { organizationId: string; projectId: string },
+  volumeName: string,
   secretRef: string,
   items: SecretItem[] | undefined,
 ): Promise<WorkspaceFile[]> {
@@ -173,6 +181,13 @@ async function resolveSecretMount(
   if (version) {
     if (version.state !== 'active') {
       throw new Error(`Runtime secret reference ${secretRef} cannot be resolved`)
+    }
+    if (
+      isAgentManagedCredentialMetadata(version.credentialMetadata) &&
+      volumeName !== 'realmroot-agent-state' &&
+      volumeName !== 'agent-creation-state'
+    ) {
+      throw new Error(`Managed Agent credential ${secretRef} cannot be mounted directly`)
     }
     return filesFromSecretData(
       projectSecretData(await decryptVersionData(env, version.metadata, secretRef), items, secretRef),
@@ -189,6 +204,9 @@ async function resolveSecretMount(
   for (const credentialVersion of versions) {
     if (credentialVersion.state !== 'active') {
       continue
+    }
+    if (isAgentManagedCredentialMetadata(credentialVersion.credentialMetadata)) {
+      throw new Error(`Vault ${secretRef} contains a managed Agent credential and cannot be mounted`)
     }
     const credentialName = safeFileName(credentialVersion.name)
     for (const file of filesFromSecretData(

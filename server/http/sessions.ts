@@ -71,7 +71,7 @@ const SessionRealmrootIdentitySchema = z
     issuer: z.string().url(),
     subject: z.string(),
     username: z.string(),
-    runtime: z.literal('ama'),
+    runtime: RuntimeSchema,
   })
   .strict()
   .openapi('SessionRealmrootIdentity')
@@ -541,11 +541,7 @@ const SESSION_SOCKET_MESSAGE_SCHEMAS = {
   SessionSocketClientMessage: SessionSocketClientMessageSchema,
 } as const
 
-const CreateSessionExecutionSpecSchema = z
-  .object({
-    ...ExecutionSpecInputSchema.shape,
-    runtime: RuntimeSchema.optional(),
-  })
+const CreateSessionExecutionSpecSchema = ExecutionSpecInputSchema.omit({ runtime: true })
   .strict()
   .openapi('CreateSessionExecutionSpec')
 
@@ -1299,7 +1295,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         options: {
           ...(metadata.name !== undefined ? { name: metadata.name } : {}),
           metadata: { labels: metadata.labels ?? {}, annotations: metadata.annotations ?? {} },
-          ...(spec.runtime !== undefined ? { runtime: spec.runtime } : {}),
           runtimeConfig: {},
           ...(spec.env !== undefined ? { env: spec.env } : {}),
           ...(spec.envFrom !== undefined ? { envFrom: spec.envFrom } : {}),

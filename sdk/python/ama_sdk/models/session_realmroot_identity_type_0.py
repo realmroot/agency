@@ -8,7 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.session_realmroot_identity_type_0_runtime import SessionRealmrootIdentityType0Runtime
+from ..models.runtime_name import RuntimeName
 
 
 
@@ -26,13 +26,13 @@ class SessionRealmrootIdentityType0:
             issuer (str):
             subject (str):
             username (str):
-            runtime (SessionRealmrootIdentityType0Runtime):
+            runtime (RuntimeName):  Example: codex.
      """
 
     issuer: str
     subject: str
     username: str
-    runtime: SessionRealmrootIdentityType0Runtime
+    runtime: RuntimeName
 
 
 
@@ -70,7 +70,7 @@ class SessionRealmrootIdentityType0:
 
         username = d.pop("username")
 
-        runtime = SessionRealmrootIdentityType0Runtime(d.pop("runtime"))
+        runtime = RuntimeName(d.pop("runtime"))
 
 
 

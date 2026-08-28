@@ -74,7 +74,6 @@ export function agent(overrides: AgentOverrides = {}): Agent {
     status: {
       phase: overrides.archivedAt ? 'archived' : 'active',
       ready: !overrides.archivedAt,
-      retirementStage: null,
       currentVersionId: overrides.currentVersionId === undefined ? 'agentver_1' : overrides.currentVersionId,
       version: overrides.version ?? 1,
     },

@@ -61,7 +61,8 @@ describe('runtimeCatalogSupportsProviderModel', () => {
   it('returns true for any provider/model on a wildcard-model self-hosted runtime', () => {
     expect(runtimeCatalogSupportsProviderModel('self_hosted', 'claude-code', 'anthropic', 'claude-opus-4')).toBe(true)
     expect(runtimeCatalogSupportsProviderModel('self_hosted', 'codex', 'openai', 'gpt-4o')).toBe(true)
-    expect(runtimeCatalogSupportsProviderModel('self_hosted', 'copilot', 'azure', 'gpt-4.1')).toBe(true)
+    expect(runtimeCatalogSupportsProviderModel('self_hosted', 'copilot', 'azure', 'gpt-4.1')).toBe(false)
+    expect(runtimeCatalogSupportsProviderModel('self_hosted', 'copilot', 'github-copilot', 'gpt-4.1')).toBe(true)
   })
 
   it('accepts any provider on a wildcard runtime even when no model is given', () => {

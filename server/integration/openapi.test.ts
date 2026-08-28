@@ -24,7 +24,6 @@ interface OpenApiDocument {
 const METHODS = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const EXPECTED_RESTISH_OPERATIONS = {
   Config: ['readConfigz'],
-  Auth: ['readAuthConfig'],
   Projects: ['listProjects', 'createProject'],
   Agents: ['listAgents', 'createAgent'],
   Environments: ['listEnvironments', 'createEnvironment'],
@@ -86,12 +85,9 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths).not.toHaveProperty('/api/healthz')
     expect(doc.paths).toHaveProperty('/api/v1/configz')
     expect(doc.paths).toHaveProperty('/api/v1/projects')
-    expect(doc.paths).toHaveProperty('/api/v1/auth/config')
+    expect(doc.paths).not.toHaveProperty('/api/v1/auth/config')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/sessions')
-    expect(doc.paths).toHaveProperty('/api/v1/auth/sessions/current')
-    expect(doc.paths['/api/v1/auth/sessions/current']).toHaveProperty('get')
-    expect(doc.paths['/api/v1/auth/sessions/current']).not.toHaveProperty('post')
-    expect(doc.paths['/api/v1/auth/sessions/current']).not.toHaveProperty('delete')
+    expect(doc.paths).not.toHaveProperty('/api/v1/auth/sessions/current')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/authorization-attempts')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/authorization-responses')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/login-options')
@@ -234,7 +230,6 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths['/api/v1/triggers/{triggerId}/runs']).toHaveProperty('post')
 
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
-    expect(doc.paths['/api/v1/auth/config'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
     expect(doc.paths['/api/v1/environments'].get.security).toEqual([{ oidcAccessToken: ['environments:read'] }])
     expect(doc.paths['/api/v1/sessions'].get.security).toEqual([{ oidcAccessToken: ['sessions:read'] }])
@@ -315,6 +310,19 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.components?.schemas).toHaveProperty('ResourcePhase')
     expect(doc.components?.schemas).toHaveProperty('CreateAgentRequest')
     expect(doc.components?.schemas).toHaveProperty('UpdateAgentRequest')
+    const createAgentSpec = (
+      doc.components?.schemas?.CreateAgentRequest as {
+        properties?: { spec?: { properties?: Record<string, unknown>; required?: string[] } }
+      }
+    ).properties?.spec
+    expect(createAgentSpec?.properties).toHaveProperty('runtime')
+    expect(createAgentSpec?.required).toContain('runtime')
+    const updateAgentSpec = (
+      doc.components?.schemas?.UpdateAgentRequest as {
+        properties?: { spec?: { properties?: Record<string, unknown> } }
+      }
+    ).properties?.spec
+    expect(updateAgentSpec?.properties).not.toHaveProperty('runtime')
     expect(doc.components?.schemas).toHaveProperty('Agent')
     expect(doc.components?.schemas).toHaveProperty('AgentVersion')
     expect(doc.components?.schemas).toHaveProperty('CreateEnvironmentRequest')
@@ -471,6 +479,13 @@ describe('[CF] OpenAPI documentation', () => {
       minLength: 1,
       maxLength: 16000,
     })
+    expect(createSessionProperties?.spec).toMatchObject({
+      $ref: '#/components/schemas/CreateSessionExecutionSpec',
+    })
+    const createSessionSpec = doc.components?.schemas?.CreateSessionExecutionSpec as {
+      properties?: Record<string, unknown>
+    }
+    expect(createSessionSpec.properties).not.toHaveProperty('runtime')
 
     const createTriggerSchema = doc.components?.schemas?.CreateTriggerRequest as {
       properties?: Record<
@@ -519,16 +534,17 @@ describe('[CF] OpenAPI documentation', () => {
     expect(templateSpec?.properties).toMatchObject({
       agentId: { type: 'string', minLength: 1 },
       environmentId: { type: 'string', nullable: true, minLength: 1 },
-      runtime: { $ref: '#/components/schemas/RuntimeName' },
       promptTemplate: { type: 'string', minLength: 1, maxLength: 16000 },
       volumes: { type: 'array' },
       volumeMounts: { type: 'array' },
       env: { $ref: '#/components/schemas/ExecutionEnv' },
       envFrom: { type: 'array' },
     })
+    expect(templateSpec?.properties).not.toHaveProperty('runtime')
     // environmentId is optional: an unpinned trigger resolves an environment per
     // dispatch, so it must NOT be in the template spec required set.
-    expect(templateSpec?.required).toEqual(expect.arrayContaining(['agentId', 'runtime', 'promptTemplate']))
+    expect(templateSpec?.required).toEqual(expect.arrayContaining(['agentId', 'promptTemplate']))
+    expect(templateSpec?.required).not.toContain('runtime')
     expect(templateSpec?.required).not.toContain('environmentId')
 
     const triggerRunProperties = (

@@ -336,23 +336,25 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
 
     // ── snapshot reads (create-session orchestration) ─────────────────────
     async findAgent(projectId: string, agentId: string): Promise<AgentRow | null> {
-      return (
-        (await db
-          .select()
-          .from(agents)
-          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNotNull(agents.currentVersionId)))
-          .get()) ?? null
-      )
+      const row = await db
+        .select()
+        .from(agents)
+        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNotNull(agents.currentVersionId)))
+        .get()
+      if (!row) return null
+      if (!row.runtime) throw new Error(`Agent runtime is missing: ${row.id}`)
+      return { ...row, runtime: row.runtime }
     },
 
     async findAgentVersion(agentId: string, versionId: string): Promise<AgentVersionRow | null> {
-      return (
-        (await db
-          .select()
-          .from(agentVersions)
-          .where(and(eq(agentVersions.id, versionId), eq(agentVersions.agentId, agentId)))
-          .get()) ?? null
-      )
+      const row = await db
+        .select()
+        .from(agentVersions)
+        .where(and(eq(agentVersions.id, versionId), eq(agentVersions.agentId, agentId)))
+        .get()
+      if (!row) return null
+      if (!row.runtime) throw new Error(`Agent version runtime is missing: ${row.id}`)
+      return { ...row, runtime: row.runtime }
     },
 
     async findActiveMemoryStoreResource(projectId, storeId) {
@@ -564,7 +566,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       organizationId: string,
       projectId: string,
       secretRef: string,
-    ): Promise<{ state: string; metadata: string; secretRef: string } | null> {
+    ): Promise<{ state: string; metadata: string; credentialMetadata: string; secretRef: string } | null> {
       const identity = secretRefIdentity(secretRef)
       if (identity?.credentialId && !identity.versionId) {
         return (
@@ -572,6 +574,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             .select({
               state: vaultCredentialVersions.state,
               metadata: vaultCredentialVersions.metadata,
+              credentialMetadata: vaultCredentials.metadata,
               secretRef: vaultCredentialVersions.secretRef,
             })
             .from(vaultCredentials)
@@ -594,6 +597,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           .select({
             state: vaultCredentialVersions.state,
             metadata: vaultCredentialVersions.metadata,
+            credentialMetadata: vaultCredentials.metadata,
             secretRef: vaultCredentialVersions.secretRef,
           })
           .from(vaultCredentialVersions)
@@ -614,7 +618,9 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       organizationId: string,
       projectId: string,
       secretRef: string,
-    ): Promise<{ name: string; state: string; metadata: string; secretRef: string }[] | null> {
+    ): Promise<
+      { name: string; state: string; metadata: string; credentialMetadata: string; secretRef: string }[] | null
+    > {
       const vaultId = vaultIdFromRef(secretRef)
       if (!vaultId) {
         return null
@@ -624,6 +630,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           name: vaultCredentials.name,
           state: vaultCredentialVersions.state,
           metadata: vaultCredentialVersions.metadata,
+          credentialMetadata: vaultCredentials.metadata,
           secretRef: vaultCredentialVersions.secretRef,
         })
         .from(vaultCredentials)

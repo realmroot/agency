@@ -44,8 +44,8 @@ function AgentDetailContent({
   const [selectedVersionId, setSelectedVersionId] = useState('')
 
   useEffect(() => {
-    setSelectedVersionId((current) => current || versions[0]?.metadata.uid || '')
-  }, [versions])
+    setSelectedVersionId(agent.status.currentVersionId ?? '')
+  }, [agent.status.currentVersionId])
 
   const agentSessions = sessions.filter((session) => session.spec.agentId === agent.metadata.uid)
   const currentVersion = useMemo(

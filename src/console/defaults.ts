@@ -34,7 +34,6 @@ export const emptyAgent: CreateAgentFormState = {
 export const emptySession: SessionFormState = {
   agentId: '',
   environmentId: '',
-  runtime: 'ama',
   prompt: '',
   credentialVaultIds: [],
   resources: [],

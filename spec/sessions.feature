@@ -23,15 +23,16 @@ Feature: Sessions
 	  @sessions/create @api
 	  Scenario: Create a session from an active Agent
 	    Given a project has an execution-ready Agent and an active environment
-	    When a caller creates a Session with the AMA agentId and ordinary runtime inputs
+    When a caller creates a Session with the AMA agentId and ordinary execution inputs
 	    Then the response includes metadata uid, spec, status, connection, and runtime metadata
 	    And the session stores immutable agent and environment snapshots
 	    And internal placement and tenancy fields never leave the API
-	    And AMA resolves the Realmroot identity and encrypted Vault state internally from the Agent
+    And AMA resolves the Realmroot identity and encrypted Vault state internally from the Agent
+    And AMA derives the runtime from the Agent without accepting a caller-selected runtime
 	    And callers may use the existing env and volume inputs without introducing scheduler-specific resources
 
 	  @sessions/create-explicit-inputs @api
-	  Scenario: Create a session with explicit runtime and secret references
+  Scenario: Create a session with explicit execution and secret references
 	    Given a project has an active agent and active environments
 	    When the user creates a session with name, metadata, env, envFrom, volumes, and volumeMounts
 	    Then those values are stored as safe references

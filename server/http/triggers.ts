@@ -134,11 +134,13 @@ const SchedulePayloadSchema = z
   .strict()
 
 const CreateTriggerTemplateMetadataSchema = TriggerTemplateMetadataSchema.partial().optional()
-const CreateTriggerTemplateSpecSchema = ExecutionSpecInputSchema.extend({
-  promptTemplate: z.string().trim().min(1).max(16000).openapi({
-    example: 'Research current Canadian banking bonus offers.',
-  }),
-}).strict()
+const CreateTriggerTemplateSpecSchema = ExecutionSpecInputSchema.omit({ runtime: true })
+  .extend({
+    promptTemplate: z.string().trim().min(1).max(16000).openapi({
+      example: 'Research current Canadian banking bonus offers.',
+    }),
+  })
+  .strict()
 
 const CreateTriggerTemplateSchema = z
   .object({
@@ -432,7 +434,6 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
               spec: {
                 agentId: spec.template.spec.agentId,
                 environmentId: spec.template.spec.environmentId ?? null,
-                runtime: spec.template.spec.runtime,
                 promptTemplate: spec.template.spec.promptTemplate,
                 env: spec.template.spec.env ?? {},
                 envFrom: normalizeEnvFrom(spec.template.spec.envFrom ?? []),
@@ -663,7 +664,6 @@ function patchFromBody(body: z.infer<typeof UpdateTriggerSchema>): UpdateTrigger
           ...(spec.template.spec.environmentId !== undefined
             ? { environmentId: spec.template.spec.environmentId ?? null }
             : {}),
-          ...(spec.template.spec.runtime !== undefined ? { runtime: spec.template.spec.runtime } : {}),
           ...(spec.template.spec.promptTemplate !== undefined
             ? { promptTemplate: spec.template.spec.promptTemplate }
             : {}),

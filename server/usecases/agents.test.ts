@@ -1,4 +1,4 @@
-import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
+import type { Agent, AgentSpec, AgentVersion, RealmrootAgentIdentity } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
 import { createAgent as createReadyAgent, updateAgent } from './agents'
@@ -46,7 +46,7 @@ const realmroot = {
   issuer: 'https://realmroot.example.com/api/auth',
   subject: 'agt_worker',
   username: 'worker',
-  runtime: 'ama' as const,
+  runtime: 'codex' as const,
   credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
 }
 
@@ -74,7 +74,6 @@ function agentRecord(
     status: {
       phase: 'active',
       ready: true,
-      retirementStage: null,
       currentVersionId: 'agentver_1',
       version: 1,
       ...overrides.status,
@@ -124,8 +123,6 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     update: async () => {},
     unarchive: async () => {},
     delete: async () => {},
-    markRetirement: async () => {},
-    retiring: async () => [],
     providerEnabled: async () => true,
     connectorAvailable: async () => true,
     ...overrides.repo,
@@ -168,7 +165,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
 function createAgent(
   deps: Deps,
   scope: AuthScope,
-  input: { name: string; description: string | null; spec: AgentSpec; identity?: typeof realmroot },
+  input: { name: string; description: string | null; spec: AgentSpec; identity?: RealmrootAgentIdentity },
 ) {
   return createReadyAgent(deps, scope, {
     username: input.identity?.username ?? realmroot.username,
@@ -195,6 +192,35 @@ describe('[spec: agents/create] createAgent', () => {
     await expect(
       createAgent(fakeDeps(), auth, { name: 'x', description: null, spec: spec({ systemPrompt: '   ' }) }),
     ).rejects.toMatchObject({ fields: { systemPrompt: 'System prompt is required.' } })
+  })
+
+  it.each([
+    ['claude-code', 'openai'],
+    ['codex', 'anthropic'],
+    ['copilot', 'openai'],
+  ] as const)('rejects provider %s/%s when the immutable runtime does not support its vendor', async (runtime, provider) => {
+    await expect(
+      createAgent(fakeDeps(), auth, {
+        name: 'Unsupported vendor',
+        description: null,
+        spec: spec({ runtime, provider }),
+      }),
+    ).rejects.toMatchObject({ fields: { provider: expect.stringContaining(`Runtime ${runtime}`) } })
+  })
+
+  it.each([
+    ['ama', 'custom-vendor'],
+    ['claude-code', 'anthropic'],
+    ['codex', 'openai'],
+    ['copilot', 'github-copilot'],
+  ] as const)('accepts provider %s/%s when supported by the immutable runtime', async (runtime, provider) => {
+    const created = await createAgent(fakeDeps(), auth, {
+      name: 'Supported vendor',
+      description: null,
+      identity: { ...realmroot, runtime },
+      spec: spec({ runtime, provider }),
+    })
+    expect(created.spec).toMatchObject({ runtime, provider })
   })
 
   it('normalizes the legacy workers-ai transport alias before persisting the Agent and version', async () => {
@@ -261,7 +287,7 @@ describe('[spec: agents/create] createAgent', () => {
     const agent = await createAgent(fakeDeps(), auth, {
       name: 'x',
       description: null,
-      spec: spec({ provider: 'provider_x', model: 'opus' }),
+      spec: spec({ provider: 'openai', model: 'opus' }),
     })
     expect(agent.spec.model).toBe('opus')
   })
@@ -391,7 +417,7 @@ describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
 })
 
 describe('[spec: agents/update] updateAgent', () => {
-  it('snapshots a new version when a runtime field changes', async () => {
+  it('snapshots a new version when an editable Agent spec field changes', async () => {
     const inserted: AgentSpec[] = []
     const deps = fakeDeps({
       repo: {
@@ -434,11 +460,11 @@ describe('[spec: agents/update] updateAgent', () => {
 
   it('updates provider, model, and allowed tools when explicitly patched', async () => {
     const result = await updateAgent(fakeDeps(), auth, agentRecord(), {
-      provider: 'provider_new',
+      provider: 'openai',
       model: 'gpt-4',
       allowedTools: ['read'],
     })
-    expect(result.agent.spec.provider).toBe('provider_new')
+    expect(result.agent.spec.provider).toBe('openai')
     expect(result.agent.spec.model).toBe('gpt-4')
     expect(result.agent.spec.allowedTools).toEqual(['read'])
   })

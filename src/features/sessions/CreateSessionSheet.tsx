@@ -58,7 +58,6 @@ export function CreateSessionSheet({
         spec: {
           agentId: form.agentId,
           environmentId: form.environmentId,
-          runtime: form.runtime,
           volumes: resources.volumes,
           volumeMounts: resources.volumeMounts,
         },
@@ -104,7 +103,7 @@ export function CreateSessionSheet({
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Create Session</SheetTitle>
-          <SheetDescription>Select the agent, environment, and runtime for this session.</SheetDescription>
+          <SheetDescription>Select the agent and environment. Runtime comes from the Agent.</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-4">
           <SessionForm

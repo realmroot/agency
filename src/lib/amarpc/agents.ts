@@ -38,7 +38,7 @@ export const agentsApi = {
         header: { 'Idempotency-Key': crypto.randomUUID() },
       }),
     ),
-  updateAgent: (id: string, input: Partial<AgentInput> & { archived?: boolean }) =>
+  updateAgent: (id: string, input: AgentPatch) =>
     rpcRequest<Agent>(
       v1.agents[':agentId'].$patch({
         param: { agentId: id },

@@ -16,6 +16,7 @@ export type RuntimeSupport = Array<{
 type RuntimeCatalogEntry = {
   runtime: RuntimeName
   hostingModes: RuntimeHostingMode[]
+  providers: readonly string[] | '*'
   providerModels: Array<{ provider: string; model: string; displayName?: string }>
 }
 
@@ -27,6 +28,7 @@ export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
   {
     runtime: 'ama',
     hostingModes: ['cloud', 'self_hosted'],
+    providers: '*',
     // Models are no longer hardcoded here. Cloud validates the provider/model
     // against the GLOBAL catalog (server/domain/model-catalog.ts populated by
     // discovery), and self-hosted gates on the runner's reported runtimes —
@@ -36,19 +38,28 @@ export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
   {
     runtime: 'claude-code',
     hostingModes: ['self_hosted'],
+    providers: ['anthropic'],
     providerModels: [{ provider: '*', model: '*' }],
   },
   {
     runtime: 'codex',
     hostingModes: ['self_hosted'],
+    providers: ['openai'],
     providerModels: [{ provider: '*', model: '*' }],
   },
   {
     runtime: 'copilot',
     hostingModes: ['self_hosted'],
+    providers: ['github-copilot'],
     providerModels: [{ provider: '*', model: '*' }],
   },
 ]
+
+export function runtimeSupportsProvider(runtime: RuntimeName, provider: string | null) {
+  if (!provider) return true
+  const entry = RUNTIME_CATALOG.find((item) => item.runtime === runtime)
+  return entry?.providers === '*' || entry?.providers.includes(provider) === true
+}
 
 // Runtimes whose active bridge handle accepts mid-run prompt injection over the
 // runner session channel. The CLI-backed runtime bridge implements `send` for
@@ -82,7 +93,7 @@ export function runtimeCatalogSupportsProviderModel(
   model?: string | null,
 ) {
   const entry = RUNTIME_CATALOG.find((item) => item.runtime === runtime)
-  if (!entry?.hostingModes.includes(hostingMode)) {
+  if (!entry?.hostingModes.includes(hostingMode) || !runtimeSupportsProvider(runtime, provider)) {
     return false
   }
   // Every runtime entry now declares a wildcard provider/model, so a hosting-mode

@@ -10,16 +10,14 @@ import websockets
 
 from .client import Client
 from .api.agents import create_agent as create_agent_api
+from .api.agents import delete_agent as delete_agent_api
 from .api.agents import list_agent_versions as list_agent_versions_api
 from .api.agents import list_agents as list_agents_api
 from .api.agents import read_agent as read_agent_api
 from .api.agents import read_agent_version as read_agent_version_api
-from .api.agents import retire_agent as retire_agent_api
 from .api.agents import update_agent as update_agent_api
 from .api.audit import list_audit_records as list_audit_records_api
 from .api.audit import read_audit_record as read_audit_record_api
-from .api.auth import read_auth_config as read_auth_config_api
-from .api.auth import read_current_auth_session as read_current_auth_session_api
 from .api.config import read_configz as read_configz_api
 from .api.connectors import list_connectors as list_connectors_api
 from .api.connectors import read_connector as read_connector_api
@@ -251,7 +249,6 @@ class AmaClient:
     ) -> None:
         self._core = _ClientCore(base_url, project_id, headers, client, websocket_authorizer)
         self.configz = _ConfigzResource(self._core)
-        self.auth = _AuthResource(self._core)
         self.projects = _ProjectsResource(self._core)
         self.agents = _AgentsResource(self._core)
         self.environments = _EnvironmentsResource(self._core)
@@ -361,17 +358,6 @@ class _ConfigzResource:
     def get(self) -> Any:
         return _unwrap(read_configz_api.sync_detailed(client=self._client))
 
-class _AuthResource:
-    def __init__(self, owner: _ClientCore) -> None:
-        self._owner = owner
-        self._client = owner.raw
-
-    def config(self, **query: Any) -> Any:
-        return _unwrap(read_auth_config_api.sync_detailed(client=self._client, **query))
-
-    def current_session(self) -> Any:
-        return _unwrap(read_current_auth_session_api.sync_detailed(client=self._client))
-
 class _ProjectsResource:
     def __init__(self, owner: _ClientCore) -> None:
         self._owner = owner
@@ -403,8 +389,8 @@ class _AgentsResource:
     def update(self, agent_id: str, body: Any) -> Any:
         return _unwrap(update_agent_api.sync_detailed(agent_id=agent_id, client=self._client, body=body))
 
-    def retire(self, agent_id: str) -> Any:
-        return _unwrap(retire_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
+    def delete(self, agent_id: str) -> Any:
+        return _unwrap(delete_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
 
     def list_versions(self, agent_id: str) -> Any:
         return _unwrap(list_agent_versions_api.sync_detailed(agent_id=agent_id, client=self._client))

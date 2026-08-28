@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.update_agent_request_spec_runtime import UpdateAgentRequestSpecRuntime
 from ..types import UNSET, Unset
 from typing import cast
 
@@ -27,7 +26,6 @@ T = TypeVar("T", bound="UpdateAgentRequestSpec")
 class UpdateAgentRequestSpec:
     """ 
         Attributes:
-            runtime (UpdateAgentRequestSpecRuntime | Unset):
             system_prompt (str | Unset):  Example: Answer with citations..
             provider (None | str | Unset):  Example: workers-ai.
             model (None | str | Unset):  Example: @cf/moonshotai/kimi-k2.6.
@@ -39,7 +37,6 @@ class UpdateAgentRequestSpec:
             mcp_connectors (list[str] | Unset):  Example: ['github'].
      """
 
-    runtime: UpdateAgentRequestSpecRuntime | Unset = UNSET
     system_prompt: str | Unset = UNSET
     provider: None | str | Unset = UNSET
     model: None | str | Unset = UNSET
@@ -54,11 +51,6 @@ class UpdateAgentRequestSpec:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_subagent_input import AgentSubagentInput
-        runtime: str | Unset = UNSET
-        if not isinstance(self.runtime, Unset):
-            runtime = self.runtime.value
-
-
         system_prompt = self.system_prompt
 
         provider: None | str | Unset
@@ -105,8 +97,6 @@ class UpdateAgentRequestSpec:
 
         field_dict.update({
         })
-        if runtime is not UNSET:
-            field_dict["runtime"] = runtime
         if system_prompt is not UNSET:
             field_dict["systemPrompt"] = system_prompt
         if provider is not UNSET:
@@ -130,16 +120,6 @@ class UpdateAgentRequestSpec:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_subagent_input import AgentSubagentInput
         d = dict(src_dict)
-        _runtime = d.pop("runtime", UNSET)
-        runtime: UpdateAgentRequestSpecRuntime | Unset
-        if isinstance(_runtime,  Unset):
-            runtime = UNSET
-        else:
-            runtime = UpdateAgentRequestSpecRuntime(_runtime)
-
-
-
-
         system_prompt = d.pop("systemPrompt", UNSET)
 
         def _parse_provider(data: object) -> None | str | Unset:
@@ -184,7 +164,6 @@ class UpdateAgentRequestSpec:
 
 
         update_agent_request_spec = cls(
-            runtime=runtime,
             system_prompt=system_prompt,
             provider=provider,
             model=model,

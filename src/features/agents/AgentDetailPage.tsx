@@ -44,7 +44,6 @@ export function AgentDetailPage() {
           ...(input.description ? { description: input.description } : { description: null }),
         },
         spec: {
-          runtime: input.runtime,
           systemPrompt: input.systemPrompt,
           ...providerPatch(input.provider),
           model: input.model || null,
@@ -121,6 +120,7 @@ export function AgentDetailPage() {
                 setValue={setForm}
                 submitLabel={updateAgent.isPending ? 'Saving agent' : 'Save changes'}
                 showIdentity={false}
+                showRuntime={false}
                 onSubmit={(event) => {
                   event.preventDefault()
                   updateAgent.mutate(form)

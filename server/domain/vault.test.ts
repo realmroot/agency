@@ -109,8 +109,8 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
     expect(validateSecretData('opaque', { any: 'thing', token: 'ok' })).toBeNull()
   })
 
-  it('[spec: agents/realmroot-binding] accepts only an AGENT=ama Realmroot state object in state.json', () => {
-    const state = JSON.stringify({
+  it('[spec: agents/realmroot-binding] accepts every supported Agent runtime and rejects unknown runtimes', () => {
+    const state = {
       version: 18,
       agent_id: 'rr_agent_1',
       origin: 'https://realmroot.example.com',
@@ -120,16 +120,24 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
       agent_key_id: 'key_1',
       agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
       enrollment_idempotency_key: 'enroll_1',
-    })
-    expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': state })).toBeNull()
-    expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': state, extra: 'no' })).toEqual({
+    }
+    for (const runtime of ['ama', 'claude-code', 'codex', 'copilot']) {
+      expect(
+        validateSecretData('ama.dev/realmroot-agent-state', {
+          'state.json': JSON.stringify({ ...state, runtime }),
+        }),
+      ).toBeNull()
+    }
+    expect(
+      validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': JSON.stringify(state), extra: 'no' }),
+    ).toEqual({
       'stringData.extra': 'Credential type ama.dev/realmroot-agent-state does not define extra.',
     })
     expect(
       validateSecretData('ama.dev/realmroot-agent-state', {
-        'state.json': JSON.stringify({ ...JSON.parse(state), runtime: 'codex' }),
+        'state.json': JSON.stringify({ ...state, runtime: 'unknown' }),
       }),
-    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state must be enrolled with AGENT=ama.' })
+    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state contains an unsupported runtime.' })
     expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': '{bad' })).toEqual({
       'stringData.state.json': 'Realmroot Agent state must be valid JSON.',
     })

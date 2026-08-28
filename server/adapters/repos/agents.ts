@@ -1,6 +1,7 @@
 import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/domain/agent'
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
+import { isAgentManagedCredentialMetadata, secretRefIdentity } from '@server/domain/vault'
 import type {
   AgentListPage,
   AgentListQuery,
@@ -8,9 +9,19 @@ import type {
   CreateAgentInput,
   UpdateAgentFields,
 } from '@server/usecases/ports'
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { AgentInUseError } from '@server/usecases/ports'
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { agents, agentVersions, connectors, providers } from '../../db/schema'
+import {
+  agents,
+  agentVersions,
+  connectors,
+  providers,
+  sessions,
+  triggers,
+  vaultCredentials,
+  vaultCredentialVersions,
+} from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
@@ -29,6 +40,9 @@ function stringify(value: unknown) {
 }
 
 function specFromRow(row: AgentRow | AgentVersionRow): AgentSpec {
+  if (!row.runtime) {
+    throw new Error(`Agent runtime is missing: ${row.id}`)
+  }
   return {
     runtime: row.runtime,
     systemPrompt: row.systemPrompt,
@@ -58,6 +72,24 @@ function committedAgent() {
   return isNotNull(agents.currentVersionId)
 }
 
+function hasIdentity() {
+  return and(
+    isNotNull(agents.username),
+    isNotNull(agents.identityIssuer),
+    isNotNull(agents.identitySubject),
+    isNotNull(agents.identityCredentialRef),
+  )
+}
+
+function hasNoIdentity() {
+  return and(
+    isNull(agents.username),
+    isNull(agents.identityIssuer),
+    isNull(agents.identitySubject),
+    isNull(agents.identityCredentialRef),
+  )
+}
+
 async function versionNumberOf(db: Db, agentId: string, versionId: string | null) {
   if (!versionId) {
     return 0
@@ -71,6 +103,11 @@ async function versionNumberOf(db: Db, agentId: string, versionId: string | null
 }
 
 function agentRecordFrom(row: AgentRow, version: number): Agent {
+  const identityValues = [row.identityIssuer, row.identitySubject, row.username, row.identityCredentialRef]
+  const identityFieldCount = identityValues.filter((value) => value !== null).length
+  if (identityFieldCount !== 0 && identityFieldCount !== identityValues.length) {
+    throw new Error(`Agent identity is incomplete: ${row.id}`)
+  }
   return {
     metadata: resourceMetadata({
       uid: row.id,
@@ -87,20 +124,14 @@ function agentRecordFrom(row: AgentRow, version: number): Agent {
             issuer: row.identityIssuer,
             subject: row.identitySubject,
             username: row.username,
-            runtime: 'ama',
+            runtime: row.runtime!,
             credentialRef: row.identityCredentialRef,
           }
         : null,
     spec: specFromRow(row),
     status: {
-      phase:
-        row.retirementState === 'retired'
-          ? 'retired'
-          : row.retirementState
-            ? 'retiring'
-            : resourcePhase(row.archivedAt),
-      ready: !row.archivedAt && !row.retirementState && Boolean(row.currentVersionId),
-      retirementStage: row.retirementState,
+      phase: resourcePhase(row.archivedAt),
+      ready: !row.archivedAt && Boolean(row.currentVersionId),
       currentVersionId: row.currentVersionId,
       version,
     },
@@ -131,12 +162,11 @@ export function createAgentRepo(db: Db): AgentRepo {
         eq(agents.projectId, query.projectId),
         committedAgent(),
         query.archived ? isNotNull(agents.archivedAt) : isNull(agents.archivedAt),
-        query.archived ? undefined : isNull(agents.retirementState),
         query.search ? like(agents.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(agents.createdAt, query.createdFrom) : undefined,
         query.createdTo ? lte(agents.createdAt, query.createdTo) : undefined,
-        query.identityIssuer ? eq(agents.identityIssuer, query.identityIssuer) : undefined,
-        query.identitySubject ? eq(agents.identitySubject, query.identitySubject) : undefined,
+        query.hasIdentity === true ? hasIdentity() : undefined,
+        query.hasIdentity === false ? hasNoIdentity() : undefined,
         query.cursor
           ? or(
               lt(agents.createdAt, query.cursor.createdAt),
@@ -174,14 +204,7 @@ export function createAgentRepo(db: Db): AgentRepo {
       const rows = await db
         .select()
         .from(agents)
-        .where(
-          and(
-            eq(agents.projectId, projectId),
-            isNull(agents.archivedAt),
-            isNull(agents.retirementState),
-            committedAgent(),
-          ),
-        )
+        .where(and(eq(agents.projectId, projectId), isNull(agents.archivedAt), committedAgent()))
         .orderBy(desc(agents.createdAt), desc(agents.id))
       return Promise.all(
         rows.map(async (row) => agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))),
@@ -251,8 +274,6 @@ export function createAgentRepo(db: Db): AgentRepo {
         username: input.username,
         description: input.description,
         archivedAt: null,
-        retirementState: null,
-        retiredAt: null,
         currentVersionId: null,
         createdAt,
         updatedAt: createdAt,
@@ -274,8 +295,6 @@ export function createAgentRepo(db: Db): AgentRepo {
         username: input.username,
         description: input.description,
         archivedAt: null,
-        retirementState: null,
-        retiredAt: null,
         // Visibility is committed only after the immutable v1 row exists. A
         // null pointer is a durable, retryable creation checkpoint and is
         // excluded by committedAgent() from every public lookup/list path.
@@ -377,31 +396,72 @@ export function createAgentRepo(db: Db): AgentRepo {
         .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
     },
 
-    async delete(projectId, agentId) {
-      await db.delete(agents).where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
-    },
-
-    async markRetirement(projectId, agentId, state, timestamp) {
-      await db
-        .update(agents)
-        .set({
-          retirementState: state,
-          ...(state === 'retired' ? { retiredAt: timestamp, identityCredentialRef: null } : {}),
-          updatedAt: timestamp,
-        })
-        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
-    },
-
-    async retiring(limit) {
-      const rows = await db
-        .select()
+    async delete(projectId, agentId, deletedByUserId, timestamp) {
+      const [session, trigger] = await Promise.all([
+        db
+          .select({ id: sessions.id })
+          .from(sessions)
+          .where(and(eq(sessions.projectId, projectId), eq(sessions.agentId, agentId)))
+          .limit(1)
+          .get(),
+        db
+          .select({ id: triggers.id })
+          .from(triggers)
+          .where(and(eq(triggers.projectId, projectId), eq(triggers.agentId, agentId)))
+          .limit(1)
+          .get(),
+      ])
+      if (session || trigger) throw new AgentInUseError()
+      const agent = await db
+        .select({ identityCredentialRef: agents.identityCredentialRef })
         .from(agents)
-        .where(and(inArray(agents.retirementState, ['stopping', 'identity_retired']), committedAgent()))
-        .orderBy(asc(agents.updatedAt))
-        .limit(limit)
-      return await Promise.all(
-        rows.map(async (row) => agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))),
-      )
+        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+        .get()
+      const credentialIdentity = agent?.identityCredentialRef ? secretRefIdentity(agent.identityCredentialRef) : null
+      if (agent?.identityCredentialRef && (!credentialIdentity?.credentialId || credentialIdentity.versionId)) {
+        throw new Error(`Managed Agent credential reference is invalid: ${agentId}`)
+      }
+      if (!credentialIdentity?.credentialId) {
+        await db.batch([
+          db
+            .delete(agentVersions)
+            .where(and(eq(agentVersions.agentId, agentId), eq(agentVersions.projectId, projectId))),
+          db.delete(agents).where(and(eq(agents.id, agentId), eq(agents.projectId, projectId))),
+        ])
+        return
+      }
+      const credentials = await db
+        .select({ id: vaultCredentials.id, metadata: vaultCredentials.metadata })
+        .from(vaultCredentials)
+        .where(and(eq(vaultCredentials.vaultId, credentialIdentity.vaultId), eq(vaultCredentials.projectId, projectId)))
+      const managedCredentialIds = credentials
+        .filter((credential) => {
+          const metadata = parseJson<Record<string, unknown>>(credential.metadata)
+          return isAgentManagedCredentialMetadata(metadata) && metadata.agentId === agentId
+        })
+        .map((credential) => credential.id)
+      if (!managedCredentialIds.includes(credentialIdentity.credentialId)) {
+        throw new Error(`Managed Agent credential is unavailable: ${agentId}`)
+      }
+      await db.batch([
+        db
+          .update(vaultCredentialVersions)
+          .set({ state: 'revoked', revokedAt: timestamp })
+          .where(inArray(vaultCredentialVersions.credentialId, managedCredentialIds)),
+        db
+          .update(vaultCredentials)
+          .set({
+            state: 'revoked',
+            activeVersionId: null,
+            revokedAt: timestamp,
+            revokedByUserId: deletedByUserId,
+            revokeReason: 'AMA Agent deleted',
+            updatedAt: timestamp,
+          })
+          .where(inArray(vaultCredentials.id, managedCredentialIds)),
+        db.delete(agentVersions).where(and(eq(agentVersions.agentId, agentId), eq(agentVersions.projectId, projectId))),
+        db.delete(agents).where(and(eq(agents.id, agentId), eq(agents.projectId, projectId))),
+      ])
     },
 
     async providerEnabled(_projectId, providerId) {

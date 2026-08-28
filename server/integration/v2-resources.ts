@@ -3,7 +3,7 @@ import { dpopHeaders } from './auth'
 
 export type ReadyAgent = {
   metadata: { uid: string }
-  identity: { issuer: string; subject: string; username: string; runtime: 'ama' }
+  identity: { issuer: string; subject: string; username: string; runtime: 'ama' | 'claude-code' | 'codex' | 'copilot' }
   spec: { runtime: string; skills: string[] }
   status: { currentVersionId: string | null; ready: true }
 }
@@ -45,7 +45,12 @@ export async function createReadyAgent(
         runtime: input.runtime ?? 'ama',
         systemPrompt: input.systemPrompt ?? 'Complete the assigned work.',
         provider: input.provider === undefined ? 'workers-ai' : input.provider,
-        model: input.model === undefined ? '@cf/moonshotai/kimi-k2.6' : input.model,
+        model:
+          input.model === undefined
+            ? (input.runtime ?? 'ama') === 'ama'
+              ? '@cf/moonshotai/kimi-k2.6'
+              : null
+            : input.model,
         skills: input.skills ?? [],
         allowedTools: input.allowedTools ?? ['bash'],
       },
@@ -65,7 +70,7 @@ export async function createIdentitySession(
   const response = await request('/api/v1/sessions', authorization, input.projectId, {
     method: 'POST',
     body: JSON.stringify({
-      spec: { agentId: agent.metadata.uid, runtime: agent.spec.runtime },
+      spec: { agentId: agent.metadata.uid },
       prompt: input.prompt ?? 'Complete the integration test task.',
     }),
   })

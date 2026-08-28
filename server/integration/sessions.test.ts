@@ -89,7 +89,19 @@ function normalizeTestRequest(path: string, init: RequestInit) {
   if (path !== '/api/v1/sessions' || init.method !== 'POST' || typeof init.body !== 'string') return init
   const body = JSON.parse(init.body) as Record<string, unknown>
   if ('spec' in body) return init
-  const { agentId, environmentId, runtime, prompt, name, metadata, env, envFrom, volumes, volumeMounts, ...rest } = body
+  const {
+    agentId,
+    environmentId,
+    runtime: _runtime,
+    prompt,
+    name,
+    metadata,
+    env,
+    envFrom,
+    volumes,
+    volumeMounts,
+    ...rest
+  } = body
   return {
     ...init,
     body: JSON.stringify({
@@ -98,7 +110,6 @@ function normalizeTestRequest(path: string, init: RequestInit) {
       spec: {
         agentId,
         ...(environmentId !== undefined ? { environmentId } : {}),
-        runtime,
         ...(env && typeof env === 'object' ? { env } : {}),
         ...(Array.isArray(envFrom) ? { envFrom } : {}),
         ...(Array.isArray(volumes) ? { volumes } : {}),
@@ -236,7 +247,7 @@ async function makeLegacyAgent(agentId: string, bound: boolean) {
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE agents SET
-        username = '', identity_issuer = '', identity_subject = '', identity_credential_ref = NULL, realmroot = ?
+        username = NULL, identity_issuer = NULL, identity_subject = NULL, identity_credential_ref = NULL, realmroot = ?
        WHERE id = ?`,
     ).bind(realmroot, agentId),
     env.DB.prepare('UPDATE agent_versions SET realmroot = ? WHERE agent_id = ?').bind(realmroot, agentId),
@@ -401,6 +412,20 @@ describe('[CF] /api/v1/sessions', () => {
     vi.unstubAllGlobals()
   })
 
+  it('rejects a caller-supplied Session runtime', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const response = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        spec: { agentId: agent.id, runtime: 'codex' },
+        prompt: 'The Agent owns runtime selection.',
+      }),
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: { type: 'validation_error' } })
+  })
+
   it('creates Sessions for unbound and legacy-bound Agents without inventing identity', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
@@ -413,7 +438,7 @@ describe('[CF] /api/v1/sessions', () => {
       const response = await jsonFetch('/api/v1/sessions', authorization, {
         method: 'POST',
         body: JSON.stringify({
-          spec: { agentId, environmentId: environment.id, runtime: 'codex' },
+          spec: { agentId, environmentId: environment.id },
           prompt: 'Run a legacy Agent',
         }),
       })
@@ -470,7 +495,7 @@ describe('[CF] /api/v1/sessions', () => {
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
-        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'ama' },
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id },
         prompt: 'Use the default cloud model',
       }),
     })
@@ -542,7 +567,7 @@ describe('[CF] /api/v1/sessions', () => {
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
-        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'codex' },
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id },
         prompt: 'Run through the local Codex executor',
       }),
     })
@@ -607,7 +632,7 @@ describe('[CF] /api/v1/sessions', () => {
     const exhaustedRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
-        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'codex' },
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id },
         prompt: 'Budget should block this local Codex session',
       }),
     })
@@ -628,7 +653,7 @@ describe('[CF] /api/v1/sessions', () => {
     const create = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
-        spec: { agentId: agent.id, environmentId: environment.id, runtime: 'codex' },
+        spec: { agentId: agent.id, environmentId: environment.id },
         prompt: 'Read an old snapshot',
       }),
     })
@@ -676,7 +701,7 @@ describe('[CF] /api/v1/sessions', () => {
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
-        spec: { agentId: agent.id, runtime: 'ama' },
+        spec: { agentId: agent.id },
         prompt: 'Resolve environment',
       }),
     })
@@ -1984,7 +2009,6 @@ describe('[CF] /api/v1/sessions', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
         },
         prompt: 'Open socket without project scope',
       }),
@@ -2825,7 +2849,7 @@ describe('[CF] /api/v1/sessions', () => {
     const model = 'gpt-5.3-codex'
     const { providerId } = await createProviderModel(authorization, model)
     const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted', mcpPolicy: {} })
-    const agent = await createAgent(authorization, { runtime: 'codex', provider: providerId, model, mcpConnectors: [] })
+    const agent = await createAgent(authorization, { runtime: 'ama', provider: providerId, model, mcpConnectors: [] })
 
     // The vendor is disabled out of band (global catalog) after the agent saved.
     await env.DB.prepare('UPDATE providers SET enabled = 0 WHERE id = ?').bind(providerId).run()

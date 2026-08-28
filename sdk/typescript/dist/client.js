@@ -209,10 +209,6 @@ export function createAmaClient(config) {
         configz: {
             get: () => unwrap(ops.readConfigz({ client })),
         },
-        auth: {
-            config: (query) => unwrap(ops.readAuthConfig({ client, query })),
-            currentSession: () => unwrap(ops.readCurrentAuthSession({ client })),
-        },
         projects: {
             list: (query) => unwrap(ops.listProjects({ client, query })),
             create: (body) => unwrap(ops.createProject({ client, body })),
@@ -223,7 +219,7 @@ export function createAmaClient(config) {
             create: (body, headers) => unwrap(ops.createAgent({ client, body, headers })),
             get: (agentId) => unwrap(ops.readAgent({ client, path: { agentId } })),
             update: (agentId, body) => unwrap(ops.updateAgent({ client, path: { agentId }, body })),
-            retire: (agentId) => unwrap(ops.retireAgent({ client, path: { agentId } })),
+            delete: (agentId) => unwrap(ops.deleteAgent({ client, path: { agentId } })),
             listVersions: (agentId) => unwrap(ops.listAgentVersions({ client, path: { agentId } })),
             getVersion: (agentId, version) => unwrap(ops.readAgentVersion({ client, path: { agentId, version } })),
         },

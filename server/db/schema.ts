@@ -108,9 +108,9 @@ export const agents = sqliteTable(
       .notNull()
       .references(() => projects.id),
     name: text('name').notNull(),
-    username: text('username').notNull(),
+    username: text('username'),
     description: text('description'),
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
+    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }),
     systemPrompt: text('system_prompt').notNull(),
     // null = resolve the project default provider at session start.
     providerId: text('provider_id').references(() => providers.id),
@@ -122,14 +122,11 @@ export const agents = sqliteTable(
     // JSON array of connector slugs. Resolved against the platform MCP catalog
     // at session start, not FK'd (slugs are stable connector ids).
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
-    // Expand-only compatibility column. A later migration may remove it after
-    // every legacy credential has been decoded and backfilled by application code.
+    // Pre-provisioning Realmroot binding retained for existing Session behavior.
     realmroot: text('realmroot'),
-    identityIssuer: text('identity_issuer').notNull(),
-    identitySubject: text('identity_subject').notNull(),
+    identityIssuer: text('identity_issuer'),
+    identitySubject: text('identity_subject'),
     identityCredentialRef: text('identity_credential_ref'),
-    retirementState: text('retirement_state', { enum: ['stopping', 'identity_retired', 'retired'] }),
-    retiredAt: text('retired_at'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
@@ -143,8 +140,10 @@ export const agents = sqliteTable(
     index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id),
     uniqueIndex('idx_agents_identity')
       .on(table.identityIssuer, table.identitySubject)
-      .where(sql`${table.identityIssuer} <> '' and ${table.identitySubject} <> ''`),
-    uniqueIndex('idx_agents_username_project').on(table.projectId, table.username).where(sql`${table.username} <> ''`),
+      .where(sql`${table.identityIssuer} is not null and ${table.identitySubject} is not null`),
+    uniqueIndex('idx_agents_username_project')
+      .on(table.projectId, table.username)
+      .where(sql`${table.username} is not null`),
   ],
 )
 
@@ -162,7 +161,7 @@ export const agentVersions = sqliteTable(
       .notNull()
       .references(() => projects.id),
     version: integer('version').notNull(),
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
+    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }),
     systemPrompt: text('system_prompt').notNull(),
     // Snapshot value, intentionally NOT FK'd to providers: a version must survive
     // a hard provider delete (providers support DELETE). Resolved live only when
@@ -456,6 +455,7 @@ export const sessions = sqliteTable(
   },
   (table) => [
     index('idx_sessions_project_state_created').on(table.projectId, table.state, table.createdAt, table.id),
+    index('idx_sessions_agent_created').on(table.agentId, table.createdAt, table.id),
     // Supports the watchdog isNotNull(sandboxId) sweeps (leakedSandboxSessions /
     // markStalledCloudSessions) without splitting the runtime columns into a side table.
     index('idx_sessions_sandbox').on(table.sandboxId),
@@ -576,7 +576,8 @@ export const triggers = sqliteTable(
     httpConcurrencyMode: text('http_concurrency_mode', { enum: ['parallel', 'serial'] })
       .notNull()
       .default('parallel'),
-    // Mirrors RuntimeSchema (server/contracts/environment-contracts.ts) — keep in lockstep.
+    // Derived from the immutable Agent runtime when the Trigger is created or
+    // retargeted. It is never caller-selected.
     runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
     name: text('name').notNull(),
     promptTemplate: text('prompt_template').notNull(),
@@ -604,8 +605,7 @@ export const triggers = sqliteTable(
   (table) => [
     index('idx_triggers_project_next').on(table.projectId, table.enabled, table.nextDueAt, table.id),
     index('idx_triggers_due').on(table.enabled, table.nextDueAt, table.id),
-    // enum types the column; check enforces it in D1/SQLite, in parity with every
-    // other hardened enum column. Mirrors RuntimeSchema (contracts/environment-contracts).
+    // enum types the derived column; check enforces it in D1/SQLite.
     check('ck_triggers_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
     check('ck_triggers_type', sql`${table.triggerType} in ('scheduled','http')`),
     check('ck_triggers_http_concurrency', sql`${table.httpConcurrencyMode} in ('parallel','serial')`),

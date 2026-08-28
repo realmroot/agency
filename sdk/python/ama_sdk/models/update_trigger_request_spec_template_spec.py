@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.runtime_name import RuntimeName
 from ..types import UNSET, Unset
 from typing import cast
 
@@ -34,7 +33,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
         Attributes:
             agent_id (str | Unset):  Example: agent_abc123.
             environment_id (None | str | Unset):  Example: env_abc123.
-            runtime (RuntimeName | Unset):  Example: codex.
             env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
             env_from (list[EnvFromEntry] | Unset):
             volumes (list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset):
@@ -44,7 +42,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
 
     agent_id: str | Unset = UNSET
     environment_id: None | str | Unset = UNSET
-    runtime: RuntimeName | Unset = UNSET
     env: ExecutionEnv | Unset = UNSET
     env_from: list[EnvFromEntry] | Unset = UNSET
     volumes: list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
@@ -69,11 +66,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
             environment_id = UNSET
         else:
             environment_id = self.environment_id
-
-        runtime: str | Unset = UNSET
-        if not isinstance(self.runtime, Unset):
-            runtime = self.runtime.value
-
 
         env: dict[str, Any] | Unset = UNSET
         if not isinstance(self.env, Unset):
@@ -124,8 +116,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
             field_dict["agentId"] = agent_id
         if environment_id is not UNSET:
             field_dict["environmentId"] = environment_id
-        if runtime is not UNSET:
-            field_dict["runtime"] = runtime
         if env is not UNSET:
             field_dict["env"] = env
         if env_from is not UNSET:
@@ -160,16 +150,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
             return cast(None | str | Unset, data)
 
         environment_id = _parse_environment_id(d.pop("environmentId", UNSET))
-
-
-        _runtime = d.pop("runtime", UNSET)
-        runtime: RuntimeName | Unset
-        if isinstance(_runtime,  Unset):
-            runtime = UNSET
-        else:
-            runtime = RuntimeName(_runtime)
-
-
 
 
         _env = d.pop("env", UNSET)
@@ -250,7 +230,6 @@ class UpdateTriggerRequestSpecTemplateSpec:
         update_trigger_request_spec_template_spec = cls(
             agent_id=agent_id,
             environment_id=environment_id,
-            runtime=runtime,
             env=env,
             env_from=env_from,
             volumes=volumes,

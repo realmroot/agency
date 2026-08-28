@@ -75,10 +75,13 @@ function sameRequest(agent: Agent, request: AgentCreationRequest) {
 }
 
 function realmrootOrigin(auth: AuthScope, checkpoint?: RealmrootEnrollmentCheckpoint) {
+  if (!auth.oidc?.issuer) throw new AgentCreationUpstreamError('Realmroot origin is unavailable')
+  const expectedOrigin = new URL(auth.oidc.issuer).origin
   const checkpointOrigin = checkpoint && typeof checkpoint.state.origin === 'string' ? checkpoint.state.origin : null
-  if (checkpointOrigin) return new URL(checkpointOrigin).origin
-  if (auth.oidc?.issuer) return new URL(auth.oidc.issuer).origin
-  throw new AgentCreationUpstreamError('Realmroot origin is unavailable')
+  if (checkpointOrigin && new URL(checkpointOrigin).origin !== expectedOrigin) {
+    throw new AgentCreationUpstreamError('Managed Agent checkpoint origin does not match the authenticated Realmroot')
+  }
+  return expectedOrigin
 }
 
 async function ensureVault(deps: Deps, auth: AuthScope, ids: StableIds, username: string) {
@@ -191,6 +194,26 @@ async function readCheckpoint(
   return { stage, state, ...(identity ? { identity } : {}) }
 }
 
+async function revokeInitializationCredential(deps: Deps, auth: AuthScope, ids: StableIds) {
+  const credential = await deps.vaults.findCredential(ids.vaultId, ids.initializationCredentialId)
+  if (!credential || credential.status.phase === 'revoked') return
+  const timestamp = new Date().toISOString()
+  await deps.vaults.updateCredential(
+    credential.metadata.uid,
+    {
+      metadata: credential.spec.metadata,
+      state: 'revoked',
+      activeVersionId: null,
+      revokedAt: timestamp,
+      revokedByUserId: auth.user.id,
+      revokeReason: 'Realmroot Agent enrollment completed',
+    },
+    timestamp,
+    true,
+    timestamp,
+  )
+}
+
 export async function createManagedAgent(
   deps: Deps,
   auth: AuthScope,
@@ -237,6 +260,7 @@ export async function createManagedAgent(
     if (finalCredential.spec.metadata.requestFingerprint !== fingerprint) {
       throw new AgentCreationConflict('Idempotency-Key was already used with a different request')
     }
+    await revokeInitializationCredential(deps, auth, ids)
     checkpoint = await readCheckpoint(deps, visibility, ids.vaultId, ids.stateCredentialId, 'state.json', 'enrolled')
   } else {
     const initializationCredential = await deps.vaults.findCredential(ids.vaultId, ids.initializationCredentialId)
@@ -256,6 +280,7 @@ export async function createManagedAgent(
       checkpoint = await enrollmentGateway.initialize({
         origin: realmrootOrigin(auth),
         nickname: request.name,
+        runtime: request.spec.runtime,
         idempotencyKey: `ama:${auth.project.id}:${ids.agentId}`,
       })
       await ensureCredential(deps, vault, {
@@ -296,6 +321,7 @@ export async function createManagedAgent(
             agentId: ids.agentId,
             fingerprint,
           })
+          await revokeInitializationCredential(deps, auth, ids)
         },
       })
     } catch (cause) {
@@ -314,11 +340,14 @@ export async function createManagedAgent(
     checkpoint,
     async onCheckpoint() {},
   })
+  if (completed.identity.username !== request.username || completed.identity.runtime !== request.spec.runtime) {
+    throw new AgentCreationUpstreamError('Realmroot Agent identity does not match the creation request')
+  }
   const identity: RealmrootAgentIdentity = {
     issuer: completed.identity.issuer,
     subject: completed.identity.subject,
     username: completed.identity.username,
-    runtime: 'ama',
+    runtime: completed.identity.runtime,
     credentialRef: credentialScopedSecretRef({ vaultId: ids.vaultId, credentialId: ids.stateCredentialId }),
   }
   await validateAgentCreation(deps, auth, { identity, spec: request.spec })
