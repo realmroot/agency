@@ -9,7 +9,7 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
   api,
   runId,
 }) => {
-  // Agents must pin a provider+model from the global catalog; seed it first.
+  // Seed the catalog so the Agent can use the runtime's default model.
   await api.post('/api/v1/e2e/catalog/seed', { data: {} })
   const agent = await createReadyAgent(api, runId, `s-agent-${runId}`)
   const environmentRes = await api.post('/api/v1/environments', {
@@ -23,7 +23,6 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
       spec: {
         agentId: agent.metadata.uid,
         environmentId: environment.metadata.uid,
-        runtime: 'ama',
       },
       prompt: title,
     },

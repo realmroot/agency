@@ -118,7 +118,14 @@ async function generatePythonSdk() {
     ['generate', '--path', '../openapi.json', '--config', 'openapi-python-client.config.yaml', '--meta', 'none', '--output-path', 'ama_sdk', '--overwrite'],
     sdkDir,
   )
+  await normalizePythonWhitespace(path.join(sdkDir, 'ama_sdk/api/agents/delete_agent.py'))
   execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
+}
+
+async function normalizePythonWhitespace(file: string): Promise<void> {
+  const content = await readFile(file, 'utf8')
+  const normalized = content.replace(/^[ \t]+\r?\n/gm, '')
+  if (content !== normalized) await writeFile(file, normalized)
 }
 
 function generateSdkFacades() {
