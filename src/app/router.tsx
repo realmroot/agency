@@ -1,5 +1,4 @@
 import { createBrowserRouter, Navigate, useParams } from 'react-router'
-import { AgentBuilderPage } from '@/features/agents/AgentBuilderPage'
 import { AgentDetailPage } from '@/features/agents/AgentDetailPage'
 import { AgentsPage } from '@/features/agents/AgentsPage'
 import { AuditPage } from '@/features/audit/AuditPage'
@@ -38,7 +37,7 @@ export function createAppRouter() {
       children: [
         { index: true, element: <Navigate to="/agents" replace /> },
         { path: 'agents', element: <AgentsPage /> },
-        { path: 'agents/new', element: <AgentBuilderPage /> },
+        { path: 'agents/new', element: <Navigate to="/agents" replace /> },
         { path: 'agents/:agentId', element: <AgentDetailPage /> },
         { path: 'environments', element: <EnvironmentsPage /> },
         { path: 'environments/:environmentId', element: <EnvironmentDetailPage /> },

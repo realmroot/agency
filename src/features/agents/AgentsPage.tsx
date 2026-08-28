@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Bot, Wand2 } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -51,12 +50,6 @@ export function AgentsPage() {
         description="Create and operate reusable agent profiles. Create sessions from active agents."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline">
-              <Link to="/agents/new">
-                <Wand2 data-icon="inline-start" />
-                Agent builder
-              </Link>
-            </Button>
             <Button type="button" onClick={() => setCreatingAgent(true)}>
               <Bot data-icon="inline-start" />
               Create agent

@@ -588,7 +588,20 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Continue with OIDC provider' })).toBeTruthy()
   })
 
-  it('drives the v1 console from resource creation through runtime events [spec: agents/console-list] [spec: web-console/shell]', async () => {
+  it('redirects the removed agent-builder route to the agent list without loading agent new', async () => {
+    const { fetchMock } = mockConsoleApi()
+    window.history.pushState({}, '', '/agents/new')
+
+    render(<App />)
+
+    expect(await screen.findByText('No agents')).toBeTruthy()
+    expect(window.location.pathname).toBe('/agents')
+    expect(fetchMock.mock.calls.some(([input]) => normalizeMockUrl(input).split('?')[0] === '/api/v1/agents/new')).toBe(
+      false,
+    )
+  })
+
+  it('drives the console from resource creation through runtime events [spec: agents/console-list] [spec: web-console/shell]', async () => {
     mockConsoleApi()
     const { sentCommands, socketUrls } = installMockRuntimeWebSocket()
 
@@ -844,6 +857,7 @@ describe('App', () => {
 
     await screen.findByText('Coding agent')
     fireEvent.click(primaryNav().getByRole('link', { name: 'Sessions' }))
+    await screen.findByText('First run workflow')
     expect(await screen.findByLabelText('error: Runtime crashed')).toBeTruthy()
     expect(screen.queryByText('Runtime crashed')).toBeNull()
     expect(screen.getAllByText('closed').length).toBeGreaterThan(0)

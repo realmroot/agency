@@ -94,21 +94,7 @@ Feature: Agents
     And new sessions cannot be created from it while existing sessions stay readable
     And the archive operation records an audit event
 
-  # ── Web console (web: builder, list, detail in jsdom) ──
-
-  @agents/builder @web
-  Scenario: Configure an agent through the guided builder
-    Given a signed-in user with access to a project
-    When the user builds an agent from a natural-language goal
-    Then the builder drafts name, instructions, model, tool policy, and MCP connectors
-    And required core fields are validated before saving
-    And server validation errors map onto their builder fields and steps
-
-  @agents/builder-examples @web
-  Scenario: Builder shows secret-free API examples on the platform origin
-    Given the builder has created an agent
-    Then the equivalent create-agent API call is shown against this platform origin
-    And examples use AMA control-plane routes and never include raw secrets
+  # ── Web console (web: list and detail in jsdom) ──
 
   @agents/console-list @web
   Scenario: Browse, filter, and create agents from the agents page
