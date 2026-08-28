@@ -18,6 +18,39 @@ export const projects = sqliteTable('projects', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Browser login state and sessions are server-owned. Cookies contain only
+// opaque random values; Realmroot tokens are encrypted before entering D1.
+export const webAuthorizationAttempts = sqliteTable(
+  'web_authorization_attempts',
+  {
+    stateHash: text('state_hash').primaryKey(),
+    clientKey: text('client_key').notNull(),
+    encryptedPayload: text('encrypted_payload').notNull(),
+    returnTo: text('return_to').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_web_authorization_attempts_client_expires').on(table.clientKey, table.expiresAt),
+    index('idx_web_authorization_attempts_expires_at').on(table.expiresAt),
+  ],
+)
+
+export const webAuthSessions = sqliteTable(
+  'web_auth_sessions',
+  {
+    idHash: text('id_hash').primaryKey(),
+    subject: text('subject').notNull(),
+    encryptedAccessToken: text('encrypted_access_token').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_web_auth_sessions_subject').on(table.subject),
+    index('idx_web_auth_sessions_expires_at').on(table.expiresAt),
+  ],
+)
+
 // Global vendor catalog. NOT per-tenant: the platform serves one shared model
 // universe (cloud runs everything through the Workers AI binding + AI Gateway),
 // so a provider is just the model VENDOR (anthropic, openai, moonshotai, …).

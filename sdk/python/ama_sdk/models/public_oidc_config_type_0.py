@@ -28,13 +28,11 @@ class PublicOidcConfigType0:
         Attributes:
             issuer (str):  Example: https://id.example.com/api/auth.
             resource (str):  Example: https://ama.example.com.
-            browser (PublicOidcClientConfig):
             runner (PublicOidcClientConfig | Unset):
      """
 
     issuer: str
     resource: str
-    browser: PublicOidcClientConfig
     runner: PublicOidcClientConfig | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -48,8 +46,6 @@ class PublicOidcConfigType0:
 
         resource = self.resource
 
-        browser = self.browser.to_dict()
-
         runner: dict[str, Any] | Unset = UNSET
         if not isinstance(self.runner, Unset):
             runner = self.runner.to_dict()
@@ -60,7 +56,6 @@ class PublicOidcConfigType0:
         field_dict.update({
             "issuer": issuer,
             "resource": resource,
-            "browser": browser,
         })
         if runner is not UNSET:
             field_dict["runner"] = runner
@@ -77,11 +72,6 @@ class PublicOidcConfigType0:
 
         resource = d.pop("resource")
 
-        browser = PublicOidcClientConfig.from_dict(d.pop("browser"))
-
-
-
-
         _runner = d.pop("runner", UNSET)
         runner: PublicOidcClientConfig | Unset
         if isinstance(_runner,  Unset):
@@ -95,7 +85,6 @@ class PublicOidcConfigType0:
         public_oidc_config_type_0 = cls(
             issuer=issuer,
             resource=resource,
-            browser=browser,
             runner=runner,
         )
 

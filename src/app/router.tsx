@@ -3,7 +3,6 @@ import { AgentDetailPage } from '@/features/agents/AgentDetailPage'
 import { AgentsPage } from '@/features/agents/AgentsPage'
 import { AuditPage } from '@/features/audit/AuditPage'
 import { AuditRecordPage } from '@/features/audit/AuditRecordPage'
-import { AuthCallbackPage } from '@/features/auth/AuthCallbackPage'
 import { ConsoleLayout } from '@/features/console/ConsoleLayout'
 import { EnvironmentDetailPage } from '@/features/environments/EnvironmentDetailPage'
 import { EnvironmentsPage } from '@/features/environments/EnvironmentsPage'
@@ -27,10 +26,6 @@ function LegacyMcpConnectorRedirect() {
 
 export function createAppRouter() {
   return createBrowserRouter([
-    {
-      path: '/auth/callback',
-      element: <AuthCallbackPage />,
-    },
     {
       path: '/',
       element: <ConsoleLayout />,

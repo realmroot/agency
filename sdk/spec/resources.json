@@ -145,6 +145,14 @@
   },
   "facadeExclusions": [
     {
+      "operationId": "createAuthorizationAttempt",
+      "reason": "Browser-only redirect bootstrap for the HttpOnly web session; direct API clients authenticate through Realmroot."
+    },
+    {
+      "operationId": "deleteCurrentAuthSession",
+      "reason": "Browser-only cookie session lifecycle; direct API clients own their Realmroot token lifecycle."
+    },
+    {
       "operationId": "createSessionSocketTicket",
       "reason": "Browser Console-only transport helper; the stable Agent facade uses DPoP, and the runner facade does not expose browser session sockets."
     }

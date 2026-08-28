@@ -11,7 +11,7 @@
 
 - Any Managed Agents is Cloudflare-native: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
-- Realmroot owns authentication, stable Agent identity, users, and organizations. The browser uses authorization-code PKCE; every protected request uses Realmroot-issued, DPoP-bound access tokens and exact AMA scopes.
+- Realmroot owns authentication, stable Agent identity, users, and organizations. The AMA backend completes the browser authorization-code PKCE flow and issues an opaque HttpOnly session; direct protected requests use Realmroot-issued Bearer or DPoP-bound access tokens. Both paths enforce exact AMA scopes through the same authorization context.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
 - AMA owns the control plane: Realmroot-backed tenancy and scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
 - AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.
@@ -19,7 +19,7 @@
 - Command-line automation uses `realmroot toolbox` against the published protected-resource metadata and OpenAPI document. Do not expose raw token or Bearer-token workflows.
 - Agent-facing skills must use Realmroot Agent identity and OpenAPI-described control-plane operations while preserving the Pi runtime boundary.
 - Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators use Realmroot Toolbox or DPoP-aware SDKs against the published OpenAPI document.
-- Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, and secret references only.
+- Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, secret references, and authenticated ciphertext only; browser OAuth tokens must be encrypted before persistence.
 
 ## Workflow: Spec-Traced, Verified At The Cheapest Layer
 

@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	AmaWebSessionScopes          amaWebSessionContextKey          = "amaWebSession.Scopes"
 	RealmrootConsoleBearerScopes realmrootConsoleBearerContextKey = "realmrootConsoleBearer.Scopes"
 	RealmrootDpopScopes          realmrootDpopContextKey          = "realmrootDpop.Scopes"
 	SessionSocketTicketScopes    sessionSocketTicketContextKey    = "sessionSocketTicket.Scopes"
@@ -3275,6 +3276,11 @@ type AuthUser struct {
 	Name  *string `json:"name"`
 }
 
+// AuthorizationAttempt defines model for AuthorizationAttempt.
+type AuthorizationAttempt struct {
+	AuthorizationUrl string `json:"authorizationUrl"`
+}
+
 // BashToolInput defines model for BashToolInput.
 type BashToolInput struct {
 	Command string   `json:"command"`
@@ -4158,7 +4164,6 @@ type PublicOidcClientConfig struct {
 
 // PublicOidcConfig defines model for PublicOidcConfig.
 type PublicOidcConfig struct {
-	Browser  PublicOidcClientConfig  `json:"browser"`
 	Issuer   string                  `json:"issuer"`
 	Resource string                  `json:"resource"`
 	Runner   *PublicOidcClientConfig `json:"runner,omitempty"`
@@ -5710,6 +5715,9 @@ type WriteToolInput struct {
 	Path    string `json:"path"`
 }
 
+// amaWebSessionContextKey is the context key for amaWebSession security scheme
+type amaWebSessionContextKey string
+
 // realmrootConsoleBearerContextKey is the context key for realmrootConsoleBearer security scheme
 type realmrootConsoleBearerContextKey string
 
@@ -5745,6 +5753,11 @@ type ListAuditRecordsParams struct {
 	To           *time.Time `form:"to,omitempty" json:"to,omitempty"`
 	Limit        *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor       *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// CreateAuthorizationAttemptJSONBody defines parameters for CreateAuthorizationAttempt.
+type CreateAuthorizationAttemptJSONBody struct {
+	ReturnTo *string `json:"returnTo,omitempty"`
 }
 
 // ReadAuthConfigParams defines parameters for ReadAuthConfig.
@@ -5991,6 +6004,9 @@ type CreateAgentJSONRequestBody = CreateAgentRequest
 
 // UpdateAgentJSONRequestBody defines body for UpdateAgent for application/json ContentType.
 type UpdateAgentJSONRequestBody = UpdateAgentRequest
+
+// CreateAuthorizationAttemptJSONRequestBody defines body for CreateAuthorizationAttempt for application/json ContentType.
+type CreateAuthorizationAttemptJSONRequestBody CreateAuthorizationAttemptJSONBody
 
 // CreateBudgetJSONRequestBody defines body for CreateBudget for application/json ContentType.
 type CreateBudgetJSONRequestBody = CreateBudgetRequest
@@ -8458,8 +8474,16 @@ type ClientInterface interface {
 	// ReadAuditRecord request
 	ReadAuditRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// CreateAuthorizationAttemptWithBody request with any body
+	CreateAuthorizationAttemptWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateAuthorizationAttempt(ctx context.Context, body CreateAuthorizationAttemptJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadAuthConfig request
 	ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteCurrentAuthSession request
+	DeleteCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadCurrentAuthSession request
 	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8876,8 +8900,44 @@ func (c *APIClient) ReadAuditRecord(ctx context.Context, recordId string, reqEdi
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) CreateAuthorizationAttemptWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAuthorizationAttemptRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) CreateAuthorizationAttempt(ctx context.Context, body CreateAuthorizationAttemptJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAuthorizationAttemptRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadAuthConfig(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadAuthConfigRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) DeleteCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteCurrentAuthSessionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10678,6 +10738,46 @@ func NewReadAuditRecordRequest(server string, recordId string) (*http.Request, e
 	return req, nil
 }
 
+// NewCreateAuthorizationAttemptRequest calls the generic CreateAuthorizationAttempt builder with application/json body
+func NewCreateAuthorizationAttemptRequest(server string, body CreateAuthorizationAttemptJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateAuthorizationAttemptRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateAuthorizationAttemptRequestWithBody generates requests for CreateAuthorizationAttempt with any type of body
+func NewCreateAuthorizationAttemptRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/authorization-attempts")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewReadAuthConfigRequest generates requests for ReadAuthConfig
 func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*http.Request, error) {
 	var err error
@@ -10725,6 +10825,33 @@ func NewReadAuthConfigRequest(server string, params *ReadAuthConfigParams) (*htt
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteCurrentAuthSessionRequest generates requests for DeleteCurrentAuthSession
+func NewDeleteCurrentAuthSessionRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/sessions/current")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -15246,8 +15373,16 @@ type ClientWithResponsesInterface interface {
 	// ReadAuditRecordWithResponse request
 	ReadAuditRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadAuditRecordResponse, error)
 
+	// CreateAuthorizationAttemptWithBodyWithResponse request with any body
+	CreateAuthorizationAttemptWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAuthorizationAttemptResponse, error)
+
+	CreateAuthorizationAttemptWithResponse(ctx context.Context, body CreateAuthorizationAttemptJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAuthorizationAttemptResponse, error)
+
 	// ReadAuthConfigWithResponse request
 	ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error)
+
+	// DeleteCurrentAuthSessionWithResponse request
+	DeleteCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentAuthSessionResponse, error)
 
 	// ReadCurrentAuthSessionWithResponse request
 	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
@@ -15811,6 +15946,38 @@ func (r ReadAuditRecordResponse) ContentType() string {
 	return ""
 }
 
+type CreateAuthorizationAttemptResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *AuthorizationAttempt
+	JSON403      *ErrorResponse
+	JSON429      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateAuthorizationAttemptResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateAuthorizationAttemptResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateAuthorizationAttemptResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ReadAuthConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -15835,6 +16002,36 @@ func (r ReadAuthConfigResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadAuthConfigResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteCurrentAuthSessionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteCurrentAuthSessionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteCurrentAuthSessionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteCurrentAuthSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18605,6 +18802,23 @@ func (c *ClientWithResponses) ReadAuditRecordWithResponse(ctx context.Context, r
 	return ParseReadAuditRecordResponse(rsp)
 }
 
+// CreateAuthorizationAttemptWithBodyWithResponse request with arbitrary body returning *CreateAuthorizationAttemptResponse
+func (c *ClientWithResponses) CreateAuthorizationAttemptWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAuthorizationAttemptResponse, error) {
+	rsp, err := c.CreateAuthorizationAttemptWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAuthorizationAttemptResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateAuthorizationAttemptWithResponse(ctx context.Context, body CreateAuthorizationAttemptJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAuthorizationAttemptResponse, error) {
+	rsp, err := c.CreateAuthorizationAttempt(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAuthorizationAttemptResponse(rsp)
+}
+
 // ReadAuthConfigWithResponse request returning *ReadAuthConfigResponse
 func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, params *ReadAuthConfigParams, reqEditors ...RequestEditorFn) (*ReadAuthConfigResponse, error) {
 	rsp, err := c.ReadAuthConfig(ctx, params, reqEditors...)
@@ -18612,6 +18826,15 @@ func (c *ClientWithResponses) ReadAuthConfigWithResponse(ctx context.Context, pa
 		return nil, err
 	}
 	return ParseReadAuthConfigResponse(rsp)
+}
+
+// DeleteCurrentAuthSessionWithResponse request returning *DeleteCurrentAuthSessionResponse
+func (c *ClientWithResponses) DeleteCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DeleteCurrentAuthSessionResponse, error) {
+	rsp, err := c.DeleteCurrentAuthSession(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteCurrentAuthSessionResponse(rsp)
 }
 
 // ReadCurrentAuthSessionWithResponse request returning *ReadCurrentAuthSessionResponse
@@ -19950,6 +20173,46 @@ func ParseReadAuditRecordResponse(rsp *http.Response) (*ReadAuditRecordResponse,
 	return response, nil
 }
 
+// ParseCreateAuthorizationAttemptResponse parses an HTTP response from a CreateAuthorizationAttemptWithResponse call
+func ParseCreateAuthorizationAttemptResponse(rsp *http.Response) (*CreateAuthorizationAttemptResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateAuthorizationAttemptResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest AuthorizationAttempt
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReadAuthConfigResponse parses an HTTP response from a ReadAuthConfigWithResponse call
 func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -19970,6 +20233,32 @@ func ParseReadAuthConfigResponse(rsp *http.Response) (*ReadAuthConfigResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteCurrentAuthSessionResponse parses an HTTP response from a DeleteCurrentAuthSessionWithResponse call
+func ParseDeleteCurrentAuthSessionResponse(rsp *http.Response) (*DeleteCurrentAuthSessionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteCurrentAuthSessionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 

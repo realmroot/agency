@@ -188,7 +188,7 @@ async function renderLive(sessionState: Session['status']['phase'] = 'idle', cbR
 
 beforeEach(() => {
   lastSocket = null
-  vi.spyOn(oidcModule, 'getStoredAccessToken').mockReturnValue(null)
+  vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({})
   vi.stubGlobal('WebSocket', MockWebSocket)
 })
 

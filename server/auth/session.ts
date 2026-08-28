@@ -15,6 +15,7 @@ import {
   upsertProjectForClaims,
 } from './oidc'
 import { requiredScope } from './scopes'
+import { WebSessionCsrfError, webSessionClaims } from './web-session'
 
 // Routes may or may not carry extra context Variables (e.g. an injected Deps
 // object). Context's Variables are invariant, so a fixed param would reject one
@@ -23,6 +24,7 @@ import { requiredScope } from './scopes'
 type AppContext<E extends HonoEnv = { Bindings: Env }> = Context<E & { Bindings: Env }>
 
 export interface AuthContext {
+  authenticationMethod?: 'cookie' | 'bearer' | 'dpop'
   user: {
     id: string
     email: string
@@ -55,6 +57,7 @@ export interface AuthContext {
 }
 
 export interface AuthIdentity {
+  authenticationMethod: NonNullable<AuthContext['authenticationMethod']>
   user: AuthContext['user']
   organization: AuthContext['organization']
   roles: string[]
@@ -134,9 +137,12 @@ export async function resolveAuthContext<E extends HonoEnv>(
   const requestedProjectId =
     c.req.raw.headers.get('x-ama-project-id') ?? new URL(c.req.url).searchParams.get('x-ama-project-id') ?? undefined
 
-  if (hasAuthCredential(c.req.raw)) {
-    const claims = await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
-    const identity = authIdentityFromClaims(claims)
+  const directMethod = directAuthenticationMethod(c.req.raw)
+  const claims = directMethod
+    ? await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
+    : await webSessionClaims(c)
+  if (claims) {
+    const identity = authIdentityFromClaims(claims, directMethod ?? 'cookie')
     const requiredPermission = missingPermission(c, identity)
     if (requiredPermission) throw new AuthorizationError(requiredPermission)
     const project = await upsertProjectForClaims(db, claims, new Date().toISOString(), requestedProjectId)
@@ -167,6 +173,9 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
+    if (err instanceof WebSessionCsrfError) {
+      return errorResponse(c, 403, 'forbidden', err.message) as never
+    }
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
       c.header(
@@ -196,17 +205,24 @@ export async function resolveProjectForClaims(env: Env, claims: UserInfoClaims, 
 }
 
 export async function resolveAuthIdentity<E extends HonoEnv>(c: AppContext<E>): Promise<AuthIdentity | null> {
-  if (hasAuthCredential(c.req.raw)) {
-    const claims = await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
-    return authIdentityFromClaims(claims)
+  const directMethod = directAuthenticationMethod(c.req.raw)
+  const claims = directMethod
+    ? await requestClaims(c.env, c.req.raw, oidcAudience(c.env, c.req.url))
+    : await webSessionClaims(c)
+  if (claims) {
+    return authIdentityFromClaims(claims, directMethod ?? 'cookie')
   }
 
   return null
 }
 
-function authIdentityFromClaims(claims: UserInfoClaims): AuthIdentity {
+function authIdentityFromClaims(
+  claims: UserInfoClaims,
+  authenticationMethod: NonNullable<AuthIdentity['authenticationMethod']>,
+): AuthIdentity {
   const organizationId = organizationIdForClaims(claims)
   return {
+    authenticationMethod,
     user: {
       id: claims.sub,
       email: claims.email ?? '',
@@ -240,6 +256,9 @@ export async function requireAuthIdentity<E extends HonoEnv>(c: AppContext<E>) {
   try {
     auth = await resolveAuthIdentity(c)
   } catch (err) {
+    if (err instanceof WebSessionCsrfError) {
+      return errorResponse(c, 403, 'forbidden', err.message) as never
+    }
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
       c.header(
@@ -275,6 +294,9 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
+    if (err instanceof WebSessionCsrfError) {
+      return errorResponse(c, 403, 'forbidden', err.message) as never
+    }
     if (err instanceof OidcError || err instanceof DpopError) {
       logAuthenticationFailure(c, err)
       c.header(
@@ -299,8 +321,15 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
   return auth
 }
 
-function hasAuthCredential(request: Request) {
-  return /^(?:Bearer|DPoP)\s+/i.test(request.headers.get('authorization') ?? '') || hasSocketCredential(request)
+function directAuthenticationMethod(request: Request): 'bearer' | 'dpop' | null {
+  const authorization = request.headers.get('authorization')
+  if (authorization !== null) {
+    if (/^Bearer(?:\s|$)/i.test(authorization)) return 'bearer'
+    if (/^DPoP(?:\s|$)/i.test(authorization)) return 'dpop'
+    throw new OidcError('Authorization credential scheme is unsupported')
+  }
+  if (hasSocketCredential(request)) return 'dpop'
+  return null
 }
 
 function requestClaims(env: Env, request: Request, audience: string) {

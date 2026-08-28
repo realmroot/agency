@@ -23,7 +23,6 @@ const PublicOidcConfigSchema = z
   .object({
     issuer: z.string().url().openapi({ example: 'https://id.example.com/api/auth' }),
     resource: z.string().url().openapi({ example: 'https://ama.example.com' }),
-    browser: PublicOidcClientConfigSchema,
     runner: PublicOidcClientConfigSchema.optional(),
   })
   .openapi('PublicOidcConfig')
@@ -75,7 +74,7 @@ export function publicConfig(
   const origin = new URL(requestUrl).origin
   const service = { name: 'Any Managed Agents', origin } as const
   try {
-    const { issuer, clientId } = requireOidcConfig(env as Env)
+    const { issuer } = requireOidcConfig(env as Env)
     const runnerClientId = env.OIDC_RUNNER_CLIENT_ID?.trim()
     const runner = runnerClientId
       ? {
@@ -90,10 +89,6 @@ export function publicConfig(
         oidc: {
           issuer,
           resource: oidcAudience(env, requestUrl),
-          browser: {
-            clientId,
-            scopes: scopes(env.OIDC_BROWSER_SCOPES, 'openid profile email offline_access'),
-          },
           ...(runner ? { runner } : {}),
         },
       },
