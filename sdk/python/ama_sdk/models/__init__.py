@@ -50,7 +50,6 @@ from .auth_organization import AuthOrganization
 from .auth_project import AuthProject
 from .auth_session import AuthSession
 from .auth_user import AuthUser
-from .authorization_attempt import AuthorizationAttempt
 from .bash_tool_input import BashToolInput
 from .budget import Budget
 from .budget_limit_type import BudgetLimitType
@@ -75,7 +74,6 @@ from .connector_trust_level import ConnectorTrustLevel
 from .create_agent_request import CreateAgentRequest
 from .create_agent_request_spec import CreateAgentRequestSpec
 from .create_agent_request_spec_runtime import CreateAgentRequestSpecRuntime
-from .create_authorization_attempt_body import CreateAuthorizationAttemptBody
 from .create_budget_request import CreateBudgetRequest
 from .create_budget_request_limit_type import CreateBudgetRequestLimitType
 from .create_budget_request_metadata import CreateBudgetRequestMetadata
@@ -585,7 +583,6 @@ __all__ = (
     "AuthMethod",
     "AuthMethodType",
     "AuthOrganization",
-    "AuthorizationAttempt",
     "AuthProject",
     "AuthSession",
     "AuthUser",
@@ -613,7 +610,6 @@ __all__ = (
     "CreateAgentRequest",
     "CreateAgentRequestSpec",
     "CreateAgentRequestSpecRuntime",
-    "CreateAuthorizationAttemptBody",
     "CreateBudgetRequest",
     "CreateBudgetRequestLimitType",
     "CreateBudgetRequestMetadata",

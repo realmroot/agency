@@ -1,4 +1,4 @@
-import { and, count, eq, gt, lte } from 'drizzle-orm'
+import { and, eq, gt, lte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import type { Context, Env as HonoEnv } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
@@ -16,9 +16,10 @@ import {
 
 const SESSION_COOKIE = 'ama_session'
 const ATTEMPT_COOKIE = 'ama_login'
+const AUTH_CLIENT_COOKIE = 'ama_auth_client'
 const ATTEMPT_TTL_MS = 10 * 60 * 1000
+const AUTH_CLIENT_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const SESSION_MAX_TTL_MS = 8 * 60 * 60 * 1000
-const MAX_ACTIVE_ATTEMPTS_PER_CLIENT = 32
 const OIDC_METADATA_TTL_MS = 10 * 60 * 1000
 type WebContext<E extends HonoEnv = { Bindings: Env }> = Context<E & { Bindings: Env }>
 const metadataCache = new Map<string, { metadata: OidcMetadata; expiresAt: number }>()
@@ -56,6 +57,12 @@ export class WebAuthorizationRateLimitError extends Error {
 
 export async function createAuthorizationAttempt<E extends HonoEnv>(c: WebContext<E>, returnTo: string) {
   enforceSameOriginForUnsafeRequest(c.req.raw)
+  const { clientKey, addressKey } = await authorizationRateLimitKeys(c)
+  const [clientLimit, addressLimit] = await Promise.all([
+    c.env.AUTH_CLIENT_RATE_LIMITER.limit({ key: clientKey }),
+    c.env.AUTH_IP_RATE_LIMITER.limit({ key: addressKey }),
+  ])
+  if (!clientLimit.success || !addressLimit.success) throw new WebAuthorizationRateLimitError()
   const { clientId } = requireWebOidcConfig(c.env)
   const metadata = await discover(c.env)
   const state = randomOpaqueValue()
@@ -78,36 +85,17 @@ export async function createAuthorizationAttempt<E extends HonoEnv>(c: WebContex
   const db = drizzle(c.env.DB)
   const stateHash = await hashOpaqueValue(state)
   await db.delete(webAuthorizationAttempts).where(lte(webAuthorizationAttempts.expiresAt, now.toISOString()))
-  const clientKey = await authorizationClientKey(c)
-  const activeAttempts = await db
-    .select({ total: count() })
-    .from(webAuthorizationAttempts)
-    .where(
-      and(eq(webAuthorizationAttempts.clientKey, clientKey), gt(webAuthorizationAttempts.expiresAt, now.toISOString())),
-    )
-    .get()
-  if ((activeAttempts?.total ?? 0) >= MAX_ACTIVE_ATTEMPTS_PER_CLIENT) {
-    throw new WebAuthorizationRateLimitError()
-  }
-  try {
-    await db.insert(webAuthorizationAttempts).values({
-      stateHash,
-      clientKey,
-      encryptedPayload: await encryptWebSessionValue(
-        c.env,
-        JSON.stringify({ codeVerifier, nonce } satisfies AttemptPayload),
-        `authorization-attempt:${stateHash}`,
-      ),
-      returnTo: safeReturnTo(returnTo, c.req.url),
-      createdAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + ATTEMPT_TTL_MS).toISOString(),
-    })
-  } catch (error) {
-    if (errorChainIncludes(error, 'web authorization attempt rate limit')) {
-      throw new WebAuthorizationRateLimitError()
-    }
-    throw error
-  }
+  await db.insert(webAuthorizationAttempts).values({
+    stateHash,
+    encryptedPayload: await encryptWebSessionValue(
+      c.env,
+      JSON.stringify({ codeVerifier, nonce } satisfies AttemptPayload),
+      `authorization-attempt:${stateHash}`,
+    ),
+    returnTo: safeReturnTo(returnTo, c.req.url),
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + ATTEMPT_TTL_MS).toISOString(),
+  })
   setCookie(
     c,
     cookieName(c.req.url, ATTEMPT_COOKIE),
@@ -115,17 +103,6 @@ export async function createAuthorizationAttempt<E extends HonoEnv>(c: WebContex
     cookieOptions(c.req.url, new Date(now.getTime() + ATTEMPT_TTL_MS)),
   )
   return authorizationUrl.toString()
-}
-
-function errorChainIncludes(error: unknown, fragment: string) {
-  let current: unknown = error
-  for (let depth = 0; depth < 6 && current !== undefined; depth += 1) {
-    if (typeof current === 'string') return current.includes(fragment)
-    if (!(current instanceof Error)) return false
-    if (current.message.includes(fragment)) return true
-    current = current.cause
-  }
-  return false
 }
 
 export async function completeAuthorizationResponse<E extends HonoEnv>(c: WebContext<E>) {
@@ -311,9 +288,22 @@ async function discover(env: Env): Promise<OidcMetadata> {
   return validated
 }
 
-async function authorizationClientKey<E extends HonoEnv>(c: WebContext<E>) {
+async function authorizationRateLimitKeys<E extends HonoEnv>(c: WebContext<E>) {
+  let clientId = getCookie(c, cookieName(c.req.url, AUTH_CLIENT_COOKIE))
+  if (!clientId || !/^[A-Za-z0-9_-]{43}$/.test(clientId)) {
+    clientId = randomOpaqueValue()
+    setCookie(
+      c,
+      cookieName(c.req.url, AUTH_CLIENT_COOKIE),
+      clientId,
+      cookieOptions(c.req.url, new Date(Date.now() + AUTH_CLIENT_TTL_MS)),
+    )
+  }
   const address = c.req.header('cf-connecting-ip') ?? 'non-cloudflare-client'
-  return hashWebSessionClientAddress(c.env, address)
+  return {
+    clientKey: await hashOpaqueValue(clientId),
+    addressKey: await hashWebSessionClientAddress(c.env, address),
+  }
 }
 
 function browserScopes(env: Env) {

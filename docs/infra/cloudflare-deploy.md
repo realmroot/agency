@@ -72,8 +72,8 @@ reused as a confidential client:
    each Cloudflare environment; do not commit any of these values. Keep the
    runner's existing public-native `OIDC_RUNNER_CLIENT_ID` unchanged.
 3. Run the staging D1 migration command so both
-   `0029_web_auth_sessions.sql`, `0030_web_auth_attempt_rate_limit.sql`, and
-   `0031_agent_identity_provisioning.sql` are applied, deploy staging, and verify
+   `0029_web_auth_sessions.sql` and `0031_agent_identity_provisioning.sql` are
+   applied, deploy staging, and verify
    the callback, Cookie session, Agent creation, direct JWT/DPoP calls, and runner
    login.
 4. Apply the migration and deploy production, then remove the superseded public
@@ -106,12 +106,20 @@ pnpm exec wrangler secret put OIDC_CLIENT_SECRET --env staging
 pnpm exec wrangler secret put AMA_WEB_SESSION_ENCRYPTION_KEY --env staging
 ```
 
-Apply Cloudflare rate-limit rules to
-`POST /api/v1/auth/authorization-attempts` and
-`GET /api/v1/auth/authorization-responses`. The Worker also caps unexpired
-attempts per hashed connecting address, caches discovery metadata for ten
-minutes, and applies five-second discovery/token/JWKS deadlines; the edge rule
-is the first-line volumetric control.
+The `AUTH_CLIENT_RATE_LIMITER` Workers binding limits browser authorization
+attempts by a random, opaque HttpOnly client cookie. A separate, higher-threshold
+`AUTH_IP_RATE_LIMITER` aggregates abuse by hashed connecting address without
+letting a small number of attempts block an entire shared NAT. Their namespaces
+are distinct in production, staging, E2E, and Workerd tests. Cloudflare applies
+these fast, permissive limits per location; use WAF rules as the first-line
+volumetric control for the login and callback paths. The Worker also caches
+discovery metadata for ten minutes and applies five-second discovery/token/JWKS
+deadlines.
+
+Browser authorization-attempt creation, authorization response handling, and
+Cookie Session deletion are internal site protocol routes. They are deliberately
+absent from AMA's OpenAPI document and generated SDKs. The current authenticated
+context remains a public Resource API because Bearer and DPoP clients use it too.
 
 Control-plane settings:
 
