@@ -4,11 +4,8 @@ interface CurrentUser {
     email: string
     name: string | null
     picture?: string
-    org_id?: string
-    org_name?: string
-    organization_id?: string
-    organization_name?: string
   }
+  organization: { id: string; name: string }
 }
 
 export async function getAuthHeaders() {
@@ -32,9 +29,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       sub: session.user.id,
       email: session.user.email,
       name: session.user.name,
-      org_id: session.organization.id,
-      org_name: session.organization.name,
     },
+    organization: session.organization,
   }
 }
 
@@ -64,8 +60,10 @@ function e2eUser(accessToken: string): CurrentUser {
       sub: `user_e2e_${safeRunId}`,
       email: `${safeRunId}@e2e.example.com`,
       name: `E2E User ${safeRunId}`,
-      org_id: `org_e2e_${safeRunId}`,
-      org_name: `org_e2e_${safeRunId}`,
+    },
+    organization: {
+      id: `org_e2e_${safeRunId}`,
+      name: `Organization org_e2e_${safeRunId}`,
     },
   }
 }

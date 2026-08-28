@@ -387,8 +387,7 @@ describe('[CF] /api/v1/environments [spec: environments/api-crud]', () => {
       ...defaultClaims(),
       sub: 'user_456',
       email: 'other@example.com',
-      org_id: 'org_flare_456',
-      org_name: 'Other Org',
+      organizationId: 'org_flare_456',
     })
     const crossReadRes = await jsonFetch(`/api/v1/environments/${environmentId}`, otherAuthorization)
     expect(crossReadRes.status).toBe(404)

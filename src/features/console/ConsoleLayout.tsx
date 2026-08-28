@@ -79,20 +79,6 @@ export function ConsoleLayout() {
   const profile = userQuery.data.profile
   const email = typeof profile.email === 'string' ? profile.email : ''
   const name = typeof profile.name === 'string' ? profile.name : null
-  const organizationId =
-    typeof profile.org_id === 'string'
-      ? profile.org_id
-      : typeof profile.organization_id === 'string'
-        ? profile.organization_id
-        : `user:${profile.sub}`
-  const organizationName =
-    typeof profile.org_name === 'string'
-      ? profile.org_name
-      : typeof profile.organization_name === 'string'
-        ? profile.organization_name
-        : organizationId === `user:${profile.sub}`
-          ? 'Personal workspace'
-          : `Organization ${organizationId}`
   const auth = {
     user: {
       id: profile.sub,
@@ -100,10 +86,7 @@ export function ConsoleLayout() {
       name,
       avatarUrl: typeof profile.picture === 'string' ? profile.picture : null,
     },
-    organization: {
-      id: organizationId,
-      name: organizationName,
-    },
+    organization: userQuery.data.organization,
     project: {
       id: selectedProject.id,
       name: selectedProject.name,

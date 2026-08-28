@@ -231,10 +231,7 @@ function authIdentityFromClaims(
     },
     organization: {
       id: organizationId,
-      name:
-        claims.org_name ??
-        claims.organization_name ??
-        (organizationId === `user:${claims.sub}` ? 'Personal workspace' : `Organization ${organizationId}`),
+      name: organizationId === `user:${claims.sub}` ? 'Personal workspace' : `Organization ${organizationId}`,
     },
     roles: claims.roles,
     permissions: claims.permissions,

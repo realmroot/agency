@@ -44,9 +44,8 @@ describe('server-owned browser authentication', () => {
         sub: 'user_1',
         email: 'owner@example.com',
         name: 'Owner',
-        org_id: 'org_1',
-        org_name: 'Acme',
       },
+      organization: { id: 'org_1', name: 'Acme' },
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/sessions/current', {
       headers: { accept: 'application/json' },

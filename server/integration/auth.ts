@@ -53,8 +53,7 @@ interface TestClaims {
   sub: string
   email: string
   name: string
-  org_id: string
-  org_name: string
+  organizationId: string
   roles: string[]
   permissions: string[]
 }
@@ -66,8 +65,7 @@ export function defaultClaims(): TestClaims {
     sub: 'user_123',
     email: 'user@example.com',
     name: 'Ada Lovelace',
-    org_id: 'org_flare_123',
-    org_name: 'Example Org',
+    organizationId: 'org_flare_123',
     roles: ['owner'],
     permissions: ['agents:write', 'agents:read'],
   }
@@ -116,8 +114,7 @@ export async function signInUser(suffix: string) {
     ...defaultClaims(),
     sub: `user_${suffix}`,
     email: `${suffix}@example.com`,
-    org_id: `org_${suffix}`,
-    org_name: `Org ${suffix}`,
+    organizationId: `org_${suffix}`,
   })
 }
 

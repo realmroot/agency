@@ -15,10 +15,7 @@ export interface UserInfoClaims {
   client_id?: string
   azp?: string
   scope?: string
-  org_id?: string
-  organization_id?: string
-  org_name?: string
-  organization_name?: string
+  organizationId?: string
   roles: string[]
   permissions: string[]
   // Team identifiers asserted by the OIDC provider (top-level `teams` claim
@@ -44,6 +41,7 @@ interface CachedOidcMetadata {
 const OIDC_METADATA_CACHE_MS = 10 * 60 * 1000
 const JWKS_CACHE_MAX_AGE_MS = 10 * 60 * 1000
 const JWKS_COOLDOWN_MS = 30 * 1000
+const REALMROOT_ORGANIZATION_CLAIM = 'urn:realmroot:params:oauth:org'
 const oidcMetadataCache = new Map<string, CachedOidcMetadata>()
 const oidcJwksDataCache = new Map<string, JWKSCacheInput>()
 
@@ -229,7 +227,7 @@ export async function upsertProjectForClaims(
 }
 
 export function organizationIdForClaims(claims: UserInfoClaims) {
-  return claims.org_id ?? claims.organization_id ?? `user:${claims.sub}`
+  return claims.organizationId ?? `user:${claims.sub}`
 }
 
 function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: string }): UserInfoClaims {
@@ -248,10 +246,7 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
     ...optionalClaim('client_id', claims.client_id),
     ...optionalClaim('azp', claims.azp),
     ...optionalClaim('scope', claims.scope),
-    ...optionalClaim('org_id', claims.org_id),
-    ...optionalClaim('organization_id', claims.organization_id ?? claims['urn:realmroot:params:oauth:org']),
-    ...optionalClaim('org_name', claims.org_name),
-    ...optionalClaim('organization_name', claims.organization_name),
+    ...optionalClaim('organizationId', claims[REALMROOT_ORGANIZATION_CLAIM]),
     roles: roles.length ? roles : runnerScoped ? ['runner'] : [],
     permissions,
     teams,
@@ -348,8 +343,7 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPay
     name: `E2E User ${safeRunId}`,
     ...(clientId ? { client_id: clientId, azp: clientId } : {}),
     scope,
-    org_id: `org_e2e_${safeOrgRunId}`,
-    org_name: `E2E Organization ${safeOrgRunId}`,
+    [REALMROOT_ORGANIZATION_CLAIM]: `org_e2e_${safeOrgRunId}`,
     roles: runnerScoped ? ['runner'] : roles.length ? roles : ['owner'],
     permissions: [],
     teams: sanitizeList(directives.get('teams')),

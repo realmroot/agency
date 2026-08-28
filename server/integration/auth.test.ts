@@ -72,8 +72,7 @@ async function installBrowserOidcProvider(options: BrowserOidcProviderOptions = 
         scope,
         email: 'browser@example.com',
         name: 'Browser User',
-        org_id: 'browser_org_1',
-        org_name: 'Browser Org',
+        'urn:realmroot:params:oauth:org': 'browser_org_1',
       })
         .setProtectedHeader({ alg: 'RS256', kid: 'browser-test-key', typ: 'at+jwt' })
         .setIssuer(browserIssuer)
@@ -564,7 +563,12 @@ describe('[CF] auth v1', () => {
     })
     expect(cookieResponse.status).toBe(200)
     expect(bearerResponse.status).toBe(200)
-    expect(await cookieResponse.json()).toEqual(await bearerResponse.json())
+    const cookieBody = await cookieResponse.json()
+    const bearerBody = await bearerResponse.json()
+    expect(cookieBody).toEqual(bearerBody)
+    expect(cookieBody).toMatchObject({
+      organization: { id: 'browser_org_1', name: 'Organization browser_org_1' },
+    })
 
     for (const authorization of ['Bearer', 'Unknown credential']) {
       const invalidDirectCredential = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {

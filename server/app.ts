@@ -127,13 +127,7 @@ export function createApp() {
     'sessionSocketTicket',
     ApiSecuritySchemes.sessionSocketTicket,
   )
-  routes.openAPIRegistry.registerComponent('securitySchemes', 'amaWebSession', ApiSecuritySchemes.amaWebSession)
-  routes.openAPIRegistry.registerComponent(
-    'securitySchemes',
-    'realmrootConsoleBearer',
-    ApiSecuritySchemes.realmrootConsoleBearer,
-  )
-  routes.openAPIRegistry.registerComponent('securitySchemes', 'realmrootDpop', ApiSecuritySchemes.realmrootDpop)
+  routes.openAPIRegistry.registerComponent('securitySchemes', 'oidcAccessToken', ApiSecuritySchemes.oidcAccessToken)
   for (const [name, schema] of Object.entries(RUNNER_PROTOCOL_SCHEMAS)) {
     routes.openAPIRegistry.register(name, schema)
   }
@@ -144,7 +138,7 @@ export function createApp() {
       title: 'Any Managed Agents API',
       version: '1.0.0',
       description:
-        'Realmroot-native control-plane API for Any Managed Agents. Browser operations use an HttpOnly session backed by a Realmroot token, direct clients use Bearer or DPoP, and every protected operation requires an exact resource scope.',
+        'Realmroot-native control-plane API for Any Managed Agents. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted.',
     },
     servers: [{ url: '/' }],
   }

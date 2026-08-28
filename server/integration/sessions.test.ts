@@ -2156,8 +2156,7 @@ describe('[CF] /api/v1/sessions', () => {
       ...defaultClaims(),
       sub: 'user_456',
       email: 'other@example.com',
-      org_id: 'org_flare_456',
-      org_name: 'Other Org',
+      organizationId: 'org_flare_456',
     })
     const crossProjectReads = await Promise.all([
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie),

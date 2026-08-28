@@ -78,10 +78,7 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.openapi).toBe('3.0.0')
     expect(doc.servers).toEqual([{ url: 'https://ama.tftt.cc' }])
     expect(doc.components?.securitySchemes).toMatchObject({
-      realmrootConsoleBearer: {
-        openIdConnectUrl: 'https://identity.alias.test/api/auth/.well-known/openid-configuration',
-      },
-      realmrootDpop: {
+      oidcAccessToken: {
         openIdConnectUrl: 'https://identity.alias.test/api/auth/.well-known/openid-configuration',
       },
     })
@@ -98,6 +95,7 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/authorization-attempts')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/authorization-responses')
     expect(doc.paths).not.toHaveProperty('/api/v1/auth/login-options')
+    expect(doc.paths).not.toHaveProperty('/api/v1/sessions/{sessionId}/socket-tickets')
     expect(doc.paths).not.toHaveProperty('/api/auth/session')
     expect(doc.paths).toHaveProperty('/api/v1/agents')
     expect(doc.paths).toHaveProperty('/api/v1/agents/{agentId}')
@@ -237,61 +235,17 @@ describe('[CF] OpenAPI documentation', () => {
 
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/auth/config'].get.security).toBeUndefined()
-    expect(doc.paths['/api/v1/agents'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['agents:read'] },
-      { realmrootDpop: ['agents:read'] },
-    ])
-    expect(doc.paths['/api/v1/environments'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['environments:read'] },
-      { realmrootDpop: ['environments:read'] },
-    ])
-    expect(doc.paths['/api/v1/sessions'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['sessions:read'] },
-      { realmrootDpop: ['sessions:read'] },
-    ])
-    expect(doc.paths['/api/v1/vaults'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['vaults:read'] },
-      { realmrootDpop: ['vaults:read'] },
-    ])
-    expect(doc.paths['/api/v1/runners'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['runners:read'] },
-      { realmrootDpop: ['runners:read'] },
-    ])
-    expect(doc.paths['/api/v1/memory-stores'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['memory-stores:read'] },
-      { realmrootDpop: ['memory-stores:read'] },
-    ])
-    expect(doc.paths['/api/v1/providers'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['providers:read'] },
-      { realmrootDpop: ['providers:read'] },
-    ])
-    expect(doc.paths['/api/v1/connectors'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['connectors:read'] },
-      { realmrootDpop: ['connectors:read'] },
-    ])
-    expect(doc.paths['/api/v1/usage-records'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['usage-records:read'] },
-      { realmrootDpop: ['usage-records:read'] },
-    ])
-    expect(doc.paths['/api/v1/audit-records'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['audit-records:read'] },
-      { realmrootDpop: ['audit-records:read'] },
-    ])
-    expect(doc.paths['/api/v1/triggers'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['triggers:read'] },
-      { realmrootDpop: ['triggers:read'] },
-    ])
+    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
+    expect(doc.paths['/api/v1/environments'].get.security).toEqual([{ oidcAccessToken: ['environments:read'] }])
+    expect(doc.paths['/api/v1/sessions'].get.security).toEqual([{ oidcAccessToken: ['sessions:read'] }])
+    expect(doc.paths['/api/v1/vaults'].get.security).toEqual([{ oidcAccessToken: ['vaults:read'] }])
+    expect(doc.paths['/api/v1/runners'].get.security).toEqual([{ oidcAccessToken: ['runners:read'] }])
+    expect(doc.paths['/api/v1/memory-stores'].get.security).toEqual([{ oidcAccessToken: ['memory-stores:read'] }])
+    expect(doc.paths['/api/v1/providers'].get.security).toEqual([{ oidcAccessToken: ['providers:read'] }])
+    expect(doc.paths['/api/v1/connectors'].get.security).toEqual([{ oidcAccessToken: ['connectors:read'] }])
+    expect(doc.paths['/api/v1/usage-records'].get.security).toEqual([{ oidcAccessToken: ['usage-records:read'] }])
+    expect(doc.paths['/api/v1/audit-records'].get.security).toEqual([{ oidcAccessToken: ['audit-records:read'] }])
+    expect(doc.paths['/api/v1/triggers'].get.security).toEqual([{ oidcAccessToken: ['triggers:read'] }])
 
     expect(doc.paths['/api/v1/agents'].get.operationId).toBe('listAgents')
     expect(doc.paths['/api/v1/environments'].get.operationId).toBe('listEnvironments')
@@ -329,21 +283,15 @@ describe('[CF] OpenAPI documentation', () => {
 
     expect(doc.components?.securitySchemes).toEqual(
       expect.objectContaining({
-        amaWebSession: expect.objectContaining({ type: 'apiKey', in: 'cookie', name: '__Host-ama_session' }),
-        realmrootConsoleBearer: expect.objectContaining({ type: 'openIdConnect' }),
-        realmrootDpop: expect.objectContaining({ type: 'openIdConnect', 'x-dpop-required': true }),
+        oidcAccessToken: expect.objectContaining({ type: 'openIdConnect', 'x-dpop-supported': true }),
         sessionSocketTicket: expect.objectContaining({ type: 'apiKey', in: 'header', name: 'Sec-WebSocket-Protocol' }),
       }),
     )
-    expect(doc.paths['/api/v1/agents'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['agents:read'] },
-      { realmrootDpop: ['agents:read'] },
-    ])
-    expect(doc.paths['/api/v1/sessions/{sessionId}/socket-tickets'].post.security).toEqual([{ amaWebSession: [] }])
+    expect(Object.keys(doc.components?.securitySchemes ?? {})).toEqual(['sessionSocketTicket', 'oidcAccessToken'])
+    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
     expect(doc.paths['/api/v1/sessions/{sessionId}/socket'].get.security).toEqual([
       { sessionSocketTicket: [] },
-      { realmrootDpop: ['sessions:write'] },
+      { oidcAccessToken: ['sessions:write'] },
     ])
     expect(doc.components?.schemas).toHaveProperty('Project')
     expect(doc.components?.schemas).toHaveProperty('ErrorResponse')
@@ -657,16 +605,10 @@ describe('[CF] OpenAPI documentation', () => {
         const scopeOperation =
           path.endsWith('/socket') || path.endsWith('/channel') ? 'write' : method === 'get' ? 'read' : 'write'
         const exactScope = `${path.split('/')[3]}:${scopeOperation}`
-        if (path.endsWith('/socket-tickets')) {
-          expect(required).toEqual([{ amaWebSession: [] }])
-        } else if (path.endsWith('/socket')) {
-          expect(required).toEqual([{ sessionSocketTicket: [] }, { realmrootDpop: [exactScope] }])
+        if (path.endsWith('/socket')) {
+          expect(required).toEqual([{ sessionSocketTicket: [] }, { oidcAccessToken: [exactScope] }])
         } else {
-          expect(required).toEqual([
-            { amaWebSession: [] },
-            { realmrootConsoleBearer: [exactScope] },
-            { realmrootDpop: [exactScope] },
-          ])
+          expect(required).toEqual([{ oidcAccessToken: [exactScope] }])
         }
         expectJsonErrorResponse(operation, '401')
         expectJsonErrorResponse(operation, '403')
@@ -686,11 +628,7 @@ describe('[CF] OpenAPI documentation', () => {
 
     // Anchor the public/protected split to known endpoints so the security model stays meaningful.
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
-    expect(doc.paths['/api/v1/agents'].get.security).toEqual([
-      { amaWebSession: [] },
-      { realmrootConsoleBearer: ['agents:read'] },
-      { realmrootDpop: ['agents:read'] },
-    ])
+    expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
   })
 
   it('serves interactive API docs', async () => {

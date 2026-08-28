@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import openapi from '../../sdk/openapi.json'
 import resources from '../../sdk/spec/resources.json'
 import type { AmaClient } from '../../sdk/typescript/src/index'
-import { createAmaClient, createAmaRunnerClient, createSessionSocketTicket } from '../../sdk/typescript/src/index'
+import { createAmaClient, createAmaRunnerClient } from '../../sdk/typescript/src/index'
 import { dpopHeaders, seedPlatformProvider, signIn } from './auth'
 
 // The SDK's external operation inventory, derived from the published OpenAPI
@@ -144,7 +144,7 @@ describe('[CF] generated SDK contract', () => {
     vi.unstubAllGlobals()
   })
 
-  it('declares exact scopes and standard auth failures for every Realmroot DPoP operation', () => {
+  it('declares exact scopes and standard auth failures for every Realmroot operation', () => {
     const document = openapi as {
       paths: Record<
         string,
@@ -160,10 +160,10 @@ describe('[CF] generated SDK contract', () => {
     }
     for (const methods of Object.values(document.paths)) {
       for (const operation of Object.values(methods)) {
-        if (!operation.operationId || !operation.security?.some((requirement) => 'realmrootDpop' in requirement))
+        if (!operation.operationId || !operation.security?.some((requirement) => 'oidcAccessToken' in requirement))
           continue
         const scopes = operation.security.flatMap((requirement) =>
-          Array.isArray(requirement.realmrootDpop) ? (requirement.realmrootDpop as string[]) : [],
+          Array.isArray(requirement.oidcAccessToken) ? (requirement.oidcAccessToken as string[]) : [],
         )
         expect(scopes, `${operation.operationId} must require one exact resource scope`).toHaveLength(1)
         expect(scopes[0]).toMatch(/^[a-z-]+:(read|write)$/)
@@ -188,24 +188,13 @@ describe('[CF] generated SDK contract', () => {
     )
   })
 
-  it('keeps only the Console socket ticket operation out of stable authenticated facades', () => {
+  it('omits internal browser-only operations from OpenAPI and stable authenticated facades', () => {
     const exclusions = resources.facadeExclusions
-    expect(exclusions).toEqual([
-      {
-        operationId: 'createSessionSocketTicket',
-        reason: expect.stringContaining('Console-only'),
-      },
-    ])
-    expect(exclusions[0]?.reason).toContain('stable Agent facade')
-    expect(exclusions[0]?.reason).toContain('runner facade does not expose browser session sockets')
+    expect(exclusions).toEqual([])
     expect(new Set(exclusions.map(({ operationId }) => operationId)).size).toBe(exclusions.length)
     expect(operations.map(({ operationId }) => operationId)).not.toContain('createAuthorizationAttempt')
     expect(operations.map(({ operationId }) => operationId)).not.toContain('deleteCurrentAuthSession')
-    expect(operations).toContainEqual({
-      operationId: 'createSessionSocketTicket',
-      path: '/api/v1/sessions/{sessionId}/socket-tickets',
-    })
-    expect(createSessionSocketTicket).toEqual(expect.any(Function))
+    expect(operations.map(({ operationId }) => operationId)).not.toContain('createSessionSocketTicket')
 
     const authorize = vi.fn(async () => ({ accessToken: 'token', dpopProof: 'proof' }))
     const agent = createAmaClient({ baseUrl: 'https://example.com', authorize })

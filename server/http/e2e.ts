@@ -42,7 +42,10 @@ const routes = app
     const accessToken = `e2e:${runId}`
     const claims = await getAccessTokenClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
     const project = await upsertProjectForClaims(drizzle(c.env.DB), claims, new Date().toISOString())
-    return c.json({ accessToken, userId: claims.sub, organizationId: claims.org_id, projectId: project.id }, 201)
+    return c.json(
+      { accessToken, userId: claims.sub, organizationId: claims.organizationId, projectId: project.id },
+      201,
+    )
   })
   .post('/auth/session', async (c) => {
     if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
