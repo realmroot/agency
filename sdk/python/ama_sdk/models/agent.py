@@ -13,6 +13,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.agent_spec import AgentSpec
   from ..models.agent_status import AgentStatus
+  from ..models.realmroot_agent_identity_type_0 import RealmrootAgentIdentityType0
   from ..models.resource_metadata import ResourceMetadata
 
 
@@ -28,11 +29,13 @@ class Agent:
     """ 
         Attributes:
             metadata (ResourceMetadata):
+            identity (None | RealmrootAgentIdentityType0):
             spec (AgentSpec):
             status (AgentStatus):
      """
 
     metadata: ResourceMetadata
+    identity: None | RealmrootAgentIdentityType0
     spec: AgentSpec
     status: AgentStatus
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -44,8 +47,15 @@ class Agent:
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_spec import AgentSpec
         from ..models.agent_status import AgentStatus
+        from ..models.realmroot_agent_identity_type_0 import RealmrootAgentIdentityType0
         from ..models.resource_metadata import ResourceMetadata
         metadata = self.metadata.to_dict()
+
+        identity: dict[str, Any] | None
+        if isinstance(self.identity, RealmrootAgentIdentityType0):
+            identity = self.identity.to_dict()
+        else:
+            identity = self.identity
 
         spec = self.spec.to_dict()
 
@@ -56,6 +66,7 @@ class Agent:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "metadata": metadata,
+            "identity": identity,
             "spec": spec,
             "status": status,
         })
@@ -68,11 +79,30 @@ class Agent:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_spec import AgentSpec
         from ..models.agent_status import AgentStatus
+        from ..models.realmroot_agent_identity_type_0 import RealmrootAgentIdentityType0
         from ..models.resource_metadata import ResourceMetadata
         d = dict(src_dict)
         metadata = ResourceMetadata.from_dict(d.pop("metadata"))
 
 
+
+
+        def _parse_identity(data: object) -> None | RealmrootAgentIdentityType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_realmroot_agent_identity_type_0 = RealmrootAgentIdentityType0.from_dict(data)
+
+
+
+                return componentsschemas_realmroot_agent_identity_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | RealmrootAgentIdentityType0, data)
+
+        identity = _parse_identity(d.pop("identity"))
 
 
         spec = AgentSpec.from_dict(d.pop("spec"))
@@ -87,6 +117,7 @@ class Agent:
 
         agent = cls(
             metadata=metadata,
+            identity=identity,
             spec=spec,
             status=status,
         )

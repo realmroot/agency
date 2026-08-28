@@ -218222,7 +218222,7 @@ function deterministicBridgeTestEvents(request3) {
     `workspaceEnv:${request3.env.AMA_WORKSPACE}`,
     `home:${request3.env.HOME}`,
     `tmpdir:${request3.env.TMPDIR}`,
-    `hasAmaToken:${Object.hasOwn(request3.env, "AMA_TOKEN")}`,
+    `hasRunnerCredential:${Object.hasOwn(request3.env, "AMA_RUNNER_CREDENTIALS")}`,
     `leakedToken:${Object.values(request3.env).includes("raw-secret-value") ? "raw-secret-value" : "none"}`
   ].join("\n");
   return [

@@ -7,6 +7,9 @@ import { setupServer } from 'msw/node'
 // real — never mock @/lib/amarpc. Handlers are backed by a small in-memory store so
 // a create's post-mutation refetch converges instead of flapping on a fixed body.
 export const server = setupServer(
+  http.get('*/api/v1/providers/models', () =>
+    HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
+  ),
   http.post('*/api/v1/sessions/:sessionId/socket-tickets', () =>
     HttpResponse.json(
       {
@@ -88,6 +91,22 @@ export function resourceHandlers<T extends CollectionItem>(
       collection.remove(String(params.id))
       return new HttpResponse(null, { status: 204 })
     }),
+  ]
+}
+
+export function provisionAgentHandlers<T extends CollectionItem>(
+  record: T,
+  onCreate?: (body: Record<string, unknown>) => void,
+) {
+  const id = recordId(record)
+  return [
+    http.post('*/api/v1/agents', async ({ request }) => {
+      onCreate?.((await request.json()) as Record<string, unknown>)
+      return HttpResponse.json(record, { status: 201, headers: { Location: `/api/v1/agents/${id}` } })
+    }),
+    http.get('*/api/v1/agents/:agentId', ({ params }) =>
+      String(params.agentId) === id ? HttpResponse.json(record) : notFound(),
+    ),
   ]
 }
 

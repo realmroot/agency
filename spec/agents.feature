@@ -21,11 +21,24 @@ Feature: Agents
     And sessions created before the change keep the version 1 snapshot
 
   @agents/realmroot-binding @usecase
-  Scenario: Bind an agent to a Realmroot identity without storing credentials in its definition
-    Given an active AMA vault credential contains an enrolled Realmroot Agent state
-    When the user binds an agent to the Realmroot Agent id, origin, and credential reference
-    Then the safe binding is included in each immutable agent version
-    And raw Realmroot state, keys, and access tokens never enter the agent record or API response
+  Scenario: Provision one Realmroot identity as part of Agent creation
+    Given a signed-in User authorized agents:write for the AMA Resource
+    When the caller creates one Agent with an immutable username
+    Then AMA initializes key material in an encrypted managed Vault before calling Realmroot
+    And the same confidential Web Application authenticates with OIDC_CLIENT_ID and OIDC_CLIENT_SECRET to perform a restricted RFC 8693 exchange of the inbound User token
+    And AMA uses the exchanged User-subject Realmroot /api Bearer to create the stable identity through POST /api/agents without approval
+    And the exchanged token contains no Agent actor and is never returned, persisted, or refreshed by AMA
+    And concurrent or interrupted retries reuse the same encrypted Vault checkpoint and exact Realmroot request
+    And POST returns 201 with the ready Agent and its canonical Location without exposing a provisioning resource
+    And only a ready Agent with non-empty issuer and subject enters the directory
+    And raw Realmroot state, keys, and access tokens never enter Agent, Profile, or API records
+
+  @agents/retirement @api
+  Scenario: Permanently retire an Agent
+    Given an execution-ready Agent has active Sessions and encrypted Realmroot state
+    When an authorized caller deletes the Agent
+    Then AMA ends active Sessions, retires the Realmroot identity, destroys its managed Vault, and retains a tombstone
+    And failed retirement stages remain non-schedulable and retry durably
 
   @agents/lifecycle @usecase
   Scenario: Partial updates leave omitted fields and prune null metadata
@@ -39,7 +52,7 @@ Feature: Agents
     When an agent is saved with an unavailable provider, blocked tool, invalid skill, or raw secret material
     Then the request is rejected with field-level validation details
     And secret material is never accepted inside policy, metadata, tools, or connector configuration
-    And an incomplete Realmroot binding or non-AMA credential reference is rejected
+    And an invalid immutable username or unsupported runtime is rejected before provisioning
 
   @agents/tool-contract @domain
   Scenario: Normalize and gate tool attachments

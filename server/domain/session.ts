@@ -1,5 +1,5 @@
 import type { SessionEvent } from '@shared/session-events'
-import type { AgentSubagent, RealmrootAgentBinding } from './agent'
+import type { AgentSubagent, RealmrootAgentIdentity } from './agent'
 import type {
   EnvironmentNetworking,
   EnvironmentPackages,
@@ -12,6 +12,8 @@ import type { EnvFromEntry, Volume, VolumeMount } from './runtime/execution-inpu
 import type { RuntimeName } from './runtime-catalog'
 
 export type { SessionEvent }
+
+export type PublicRealmrootAgentIdentity = Omit<RealmrootAgentIdentity, 'credentialRef'>
 
 // Pure session rules and entities. No drizzle, no env, no hono. The operational state
 // machine, hosting-mode derivation, prompt-delivery decision, approval-state
@@ -109,6 +111,7 @@ export interface SessionAgentSnapshot {
   agentId: string
   projectId: string
   version: number
+  runtime: import('./runtime-catalog').RuntimeName
   systemPrompt: string
   provider: string
   model: string | null
@@ -116,7 +119,7 @@ export interface SessionAgentSnapshot {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
-  realmroot: RealmrootAgentBinding | null
+  identity: PublicRealmrootAgentIdentity | null
   createdAt: string
 }
 

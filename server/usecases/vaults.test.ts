@@ -119,6 +119,7 @@ function fakeDeps(
     listVersions: async () => ({ rows: [], hasMore: false }),
     findVersion: async () => null,
     insertVersionRotation: async (ver) => version({ metadata: { uid: ver.id }, spec: { version: ver.version } }),
+    destroyManagedVault: async () => {},
     ...overrides.vaults,
   }
   const secretStore: Deps['secretStore'] = {

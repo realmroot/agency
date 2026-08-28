@@ -154,6 +154,22 @@ describe('dispatchSessionPrompt [spec: sessions/prompt]', () => {
     })
   })
 
+  it('preserves the caller prompt when resuming a self-hosted runtime', async () => {
+    const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession({ state: 'idle' }))
+
+    const result = await dispatchSessionPrompt(deps, auth, 'sess_1', 'address review feedback', 'req_resume_1')
+
+    expect(result).toEqual({ ok: true, delivery: 'queued', state: 'accepted' })
+    const workItem = queueSessionWorkWhenState.mock.calls[0]?.[4]
+    expect(JSON.parse(workItem?.payload ?? '{}')).toMatchObject({
+      type: 'session.start',
+      requestId: 'req_resume_1',
+      prompt: 'address review feedback',
+      resume: true,
+      resumeToken: 'result-token',
+    })
+  })
+
   it('does not accept an idle prompt when the atomic self-hosted queue transition loses the state race', async () => {
     const { deps, queueSessionWorkWhenState } = depsFor(selfHostedSession({ state: 'idle' }), { queueResult: false })
 

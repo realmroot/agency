@@ -52,15 +52,32 @@ function objectValue(value: unknown) {
 }
 
 function parseAgentSnapshot(value: string | null) {
-  return parseJson<SessionAgentSnapshot>(value)
+  const snapshot = parseJson<
+    SessionAgentSnapshot & {
+      runtime?: RuntimeName
+      identity?: SessionAgentSnapshot['identity']
+      realmroot?: unknown
+    }
+  >(value)
+  if (!snapshot) return null
+  const { realmroot: _legacyRealmroot, identity: internalIdentity, ...publicSnapshot } = snapshot
+  const identity = internalIdentity
+    ? {
+        issuer: internalIdentity.issuer,
+        subject: internalIdentity.subject,
+        username: internalIdentity.username,
+        runtime: internalIdentity.runtime,
+      }
+    : null
+  return {
+    ...publicSnapshot,
+    runtime: snapshot.runtime ?? 'codex',
+    identity,
+  } satisfies SessionAgentSnapshot
 }
 
-function snapshotRuntime(metadata: Record<string, unknown>): RuntimeName {
-  const runtime = metadata.runtime
-  if (typeof runtime !== 'string') {
-    throw new Error('Session runtime metadata is required')
-  }
-  return runtime as RuntimeName
+function snapshotRuntime(metadata: Record<string, unknown>, snapshot: SessionAgentSnapshot): RuntimeName {
+  return typeof metadata.runtime === 'string' ? (metadata.runtime as RuntimeName) : snapshot.runtime
 }
 
 function sessionState(value: string): SessionState {
@@ -120,7 +137,7 @@ function serializeSession(row: SessionRow): Session {
   const metadata = parseJson<Record<string, unknown>>(row.metadata) ?? {}
   const modelConfig = parseJson<Record<string, unknown>>(row.modelConfig) ?? {}
   const hostingMode = hostingModeFromSnapshot(environmentSnapshot?.type)
-  const runtime = snapshotRuntime(metadata)
+  const runtime = snapshotRuntime(metadata, agentSnapshot)
   const provider = row.modelProvider ?? agentSnapshot.provider
   const model = sessionModel(modelConfig, agentSnapshot)
   const placement = runtimePlacement({

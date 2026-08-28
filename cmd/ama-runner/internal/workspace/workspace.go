@@ -37,6 +37,21 @@ type Workspace struct {
 	memoryStores []preparedMemoryStore
 }
 
+// RuntimeEnv maps the managed Realmroot state path to this runner's disposable
+// session workspace. Other environment variables are application input and
+// must not be interpreted as runner paths.
+func (w *Workspace) RuntimeEnv(env map[string]string) map[string]string {
+	resolved := make(map[string]string, len(env))
+	for key, value := range env {
+		if w != nil && key == "REALMROOT_STATE_DIR" && value == "/workspace/.ama/realmroot-state" {
+			resolved[key] = filepath.Join(w.Root, ".ama", "realmroot-state")
+			continue
+		}
+		resolved[key] = value
+	}
+	return resolved
+}
+
 type preparedWorktree struct {
 	cacheDir string
 	path     string
@@ -233,7 +248,7 @@ func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName stri
 	if w == nil || agentSnapshot == nil {
 		return report, nil
 	}
-	if err := prepareRealmrootAgent(w.Root, agentSnapshot); err != nil {
+	if err := prepareLegacyRealmrootAgent(w.Root, agentSnapshot); err != nil {
 		return report, err
 	}
 	for _, skill := range agentSkillRefs(agentSnapshot) {

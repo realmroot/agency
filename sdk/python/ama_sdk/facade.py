@@ -14,6 +14,7 @@ from .api.agents import list_agent_versions as list_agent_versions_api
 from .api.agents import list_agents as list_agents_api
 from .api.agents import read_agent as read_agent_api
 from .api.agents import read_agent_version as read_agent_version_api
+from .api.agents import retire_agent as retire_agent_api
 from .api.agents import update_agent as update_agent_api
 from .api.audit import list_audit_records as list_audit_records_api
 from .api.audit import read_audit_record as read_audit_record_api
@@ -393,14 +394,17 @@ class _AgentsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_agents_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str) -> Any:
+        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body, idempotency_key=idempotency_key))
 
     def get(self, agent_id: str) -> Any:
         return _unwrap(read_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
 
     def update(self, agent_id: str, body: Any) -> Any:
         return _unwrap(update_agent_api.sync_detailed(agent_id=agent_id, client=self._client, body=body))
+
+    def retire(self, agent_id: str) -> Any:
+        return _unwrap(retire_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
 
     def list_versions(self, agent_id: str) -> Any:
         return _unwrap(list_agent_versions_api.sync_detailed(agent_id=agent_id, client=self._client))

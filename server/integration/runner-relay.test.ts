@@ -21,6 +21,7 @@
 import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+import { createIdentitySession, createReadyAgent, type ReadyAgent } from './v2-resources'
 
 const CLAUDE_CODE_RUNTIME = 'claude-code'
 const CLAUDE_CODE_MODEL = 'claude-opus-4-5'
@@ -54,31 +55,18 @@ async function createSelfHostedEnvironment(authorization: string) {
 }
 
 async function createAgent(authorization: string) {
-  const res = await jsonFetch('/api/v1/agents', authorization, {
-    method: 'POST',
-    body: JSON.stringify({
-      metadata: { name: `CLI relay agent ${crypto.randomUUID()}` },
-      spec: {
-        systemPrompt: 'Run via claude-code self-hosted.',
-        skills: [],
-        mcpConnectors: [],
-        provider: 'workers-ai',
-      },
-    }),
+  const agent = await createReadyAgent(authorization, {
+    name: `CLI relay agent ${crypto.randomUUID()}`,
+    runtime: 'claude-code',
+    systemPrompt: 'Run via claude-code self-hosted.',
+    model: CLAUDE_CODE_MODEL,
   })
-  if (res.status !== 201) throw new Error(`Agent creation failed: ${res.status} ${await res.text()}`)
-  const agent = (await res.json()) as { metadata: { uid: string } }
-  return { id: agent.metadata.uid }
+  return { ...agent, id: agent.metadata.uid }
 }
 
-async function createCliRelaySession(authorization: string, agentId: string, environmentId: string) {
-  const res = await jsonFetch('/api/v1/sessions', authorization, {
-    method: 'POST',
-    body: JSON.stringify({
-      spec: { agentId, environmentId, runtime: 'claude-code' },
-      prompt: 'Run relay test',
-    }),
-  })
+async function createCliRelaySession(authorization: string, agent: ReadyAgent, environmentId: string) {
+  void environmentId
+  const res = await createIdentitySession(authorization, agent, { prompt: 'Run relay test' })
   if (res.status !== 201) throw new Error(`Session creation failed: ${res.status} ${await res.text()}`)
   const session = (await res.json()) as { metadata: { uid: string }; status: { phase: string } }
   return { ...session, id: session.metadata.uid, state: session.status.phase }
@@ -258,11 +246,11 @@ describe('[CF] per-runner relay end-to-end', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerRunner(authorization, environment.id)
+    await heartbeatRunner(authorization, runner.id)
 
     // Create session + claim lease to represent a self-hosted runner execution.
-    const session = await createCliRelaySession(authorization, agent.id, environment.id)
+    const session = await createCliRelaySession(authorization, agent, environment.id)
     expect(session.state).toBe('pending')
-    await heartbeatRunner(authorization, runner.id)
     await claimSessionLease(authorization, session.id, runner.id)
 
     // Open the runner channel — RunnerPool is keyed by environmentId.
@@ -306,9 +294,9 @@ describe('[CF] per-runner relay end-to-end', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerRunner(authorization, environment.id)
-
-    const session = await createCliRelaySession(authorization, agent.id, environment.id)
     await heartbeatRunner(authorization, runner.id)
+
+    const session = await createCliRelaySession(authorization, agent, environment.id)
     const lease = await claimSessionLease(authorization, session.id, runner.id)
 
     const runnerCh = await openRunnerChannel(authorization, runner.id)
@@ -375,7 +363,7 @@ describe('[CF] per-runner relay end-to-end', () => {
     const runnerCh = await openRunnerChannel(authorization, runner.id)
     await runnerCh.waitForFrame((f) => f.type === 'runner.channel.accepted', 'runner.channel.accepted')
 
-    const session = await createCliRelaySession(authorization, agent.id, environment.id)
+    const session = await createCliRelaySession(authorization, agent, environment.id)
     const assigned = await runnerCh.waitForFrame((f) => f.type === 'work.assigned', 'work.assigned')
     expect(assigned).toMatchObject({
       type: 'work.assigned',
@@ -412,7 +400,7 @@ describe('[CF] per-runner relay end-to-end', () => {
     const runnerCh = await openRunnerChannel(authorization, runner.id)
     await runnerCh.waitForFrame((f) => f.type === 'runner.channel.accepted', 'runner.channel.accepted')
 
-    const session = await createCliRelaySession(authorization, agent.id, environment.id)
+    const session = await createCliRelaySession(authorization, agent, environment.id)
     const assigned = await runnerCh.waitForFrame(
       (f) => f.type === 'work.assigned' && (f.workItem as { sessionId?: string } | undefined)?.sessionId === session.id,
       'work.assigned for live prompt session',
@@ -488,10 +476,10 @@ describe('[CF] per-runner relay end-to-end', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerRunner(authorization, environment.id)
+    await heartbeatRunner(authorization, runner.id)
 
     // Create session + claim lease so this is a self-hosted runner session.
-    const session = await createCliRelaySession(authorization, agent.id, environment.id)
-    await heartbeatRunner(authorization, runner.id)
+    const session = await createCliRelaySession(authorization, agent, environment.id)
     await claimSessionLease(authorization, session.id, runner.id)
 
     // Open the FIRST runner channel.

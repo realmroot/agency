@@ -2,6 +2,9 @@ import { createAuditPort } from './adapters/gateways/audit'
 import { createCloudTurnQueue } from './adapters/gateways/cloud-turn-queue'
 import { createPolicyPort } from './adapters/gateways/policy'
 import { createProviderCatalogGateway } from './adapters/gateways/provider-catalog'
+import { createRealmrootEnrollmentGateway } from './adapters/gateways/realmroot-enrollment'
+import { createTestRealmrootEnrollmentGateway } from './adapters/gateways/realmroot-enrollment-test'
+import { createRealmrootManagementAuthority } from './adapters/gateways/realmroot-management'
 import { createRunnerChannel } from './adapters/gateways/runner-channel'
 import { createRuntimeSecretGateway } from './adapters/gateways/runtime-secrets'
 import { createSecretStoreGateway } from './adapters/gateways/secret-store'
@@ -28,7 +31,7 @@ import { createVaultRepo } from './adapters/repos/vaults'
 import { createWorkItemRepo } from './adapters/repos/work-items'
 import { createRuntimeExecutionAdapters } from './adapters/runtime/sandbox-runtime-host'
 import { createDb } from './db/client'
-import type { Env } from './env'
+import { type Env, fakeRealmrootEnrollmentEnabled } from './env'
 import type { Deps } from './usecases/deps'
 import { createToolApprovalGate } from './usecases/runtime/approval-gate'
 
@@ -50,8 +53,14 @@ export function createDeps(env: Env): Deps {
     runnerChannel,
     resolveSandboxBackend: (sessionId) => sessions.resolveSandboxBackend(sessionId),
   })
+  const fakeRealmrootEnrollment = fakeRealmrootEnrollmentEnabled(env)
   return {
+    allowLoopbackRealmrootHttp: env.AMA_RUNTIME_MODE === 'test',
     agents: createAgentRepo(db),
+    realmrootEnrollment: fakeRealmrootEnrollment
+      ? createTestRealmrootEnrollmentGateway()
+      : createRealmrootEnrollmentGateway(),
+    realmrootManagementAuthority: createRealmrootManagementAuthority(env),
     environments: createEnvironmentRepo(db),
     providers: createProviderRepo(db),
     providerCatalog: createProviderCatalogGateway(),

@@ -8,11 +8,11 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.agent_spec_runtime import AgentSpecRuntime
 from typing import cast
 
 if TYPE_CHECKING:
   from ..models.agent_subagent import AgentSubagent
-  from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
 
 
 
@@ -26,6 +26,7 @@ T = TypeVar("T", bound="AgentSpec")
 class AgentSpec:
     """ 
         Attributes:
+            runtime (AgentSpecRuntime):
             system_prompt (str):  Example: Answer with citations..
             provider (None | str):  Example: workers-ai.
             model (None | str):  Example: @cf/moonshotai/kimi-k2.6.
@@ -35,9 +36,9 @@ class AgentSpec:
                 'allowedTools': ['read', 'grep'], 'skills': ['ama@code-review'], 'mcpConnectors': ['github']}].
             allowed_tools (list[str]):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str]):  Example: ['github'].
-            realmroot (None | RealmrootAgentBindingType0):
      """
 
+    runtime: AgentSpecRuntime
     system_prompt: str
     provider: None | str
     model: None | str
@@ -45,7 +46,6 @@ class AgentSpec:
     subagents: list[AgentSubagent]
     allowed_tools: list[str]
     mcp_connectors: list[str]
-    realmroot: None | RealmrootAgentBindingType0
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -54,7 +54,8 @@ class AgentSpec:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_subagent import AgentSubagent
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+        runtime = self.runtime.value
+
         system_prompt = self.system_prompt
 
         provider: None | str
@@ -82,16 +83,11 @@ class AgentSpec:
 
 
 
-        realmroot: dict[str, Any] | None
-        if isinstance(self.realmroot, RealmrootAgentBindingType0):
-            realmroot = self.realmroot.to_dict()
-        else:
-            realmroot = self.realmroot
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "runtime": runtime,
             "systemPrompt": system_prompt,
             "provider": provider,
             "model": model,
@@ -99,7 +95,6 @@ class AgentSpec:
             "subagents": subagents,
             "allowedTools": allowed_tools,
             "mcpConnectors": mcp_connectors,
-            "realmroot": realmroot,
         })
 
         return field_dict
@@ -109,8 +104,12 @@ class AgentSpec:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_subagent import AgentSubagent
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
         d = dict(src_dict)
+        runtime = AgentSpecRuntime(d.pop("runtime"))
+
+
+
+
         system_prompt = d.pop("systemPrompt")
 
         def _parse_provider(data: object) -> None | str:
@@ -148,25 +147,8 @@ class AgentSpec:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors"))
 
 
-        def _parse_realmroot(data: object) -> None | RealmrootAgentBindingType0:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_realmroot_agent_binding_type_0 = RealmrootAgentBindingType0.from_dict(data)
-
-
-
-                return componentsschemas_realmroot_agent_binding_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | RealmrootAgentBindingType0, data)
-
-        realmroot = _parse_realmroot(d.pop("realmroot"))
-
-
         agent_spec = cls(
+            runtime=runtime,
             system_prompt=system_prompt,
             provider=provider,
             model=model,
@@ -174,7 +156,6 @@ class AgentSpec:
             subagents=subagents,
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
-            realmroot=realmroot,
         )
 
 

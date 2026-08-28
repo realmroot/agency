@@ -37,6 +37,11 @@ Required settings:
   session is capped to the access-token lifetime.
 - Runner flow: public authorization code with loopback PKCE.
 
+Configure the same confidential Web Application to exchange its AMA Resource
+access token for the Realmroot `/api` audience. Grant only the `agents:write`
+Application Permission, require the signed-in User Context to grant the same
+target scope, and do not enable refresh-token issuance for delegated tokens.
+
 Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require
 `<resource>:write`, and narrowly scoped administration may use
@@ -52,27 +57,45 @@ The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for
 Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the
 permitted credential mode; cross-mode fallback is not accepted.
 
-When the Agent provisioning PR is stacked on this change, add its constrained
-resource token-exchange policy to this same confidential Web Application. Both
-the Application policy and the signed-in User Context must grant each target
-scope. Do not create a third machine Application.
+Add the constrained resource token-exchange policy to this same confidential
+Web Application. Both the Application policy and the signed-in User Context
+must grant each target scope. Do not create a third machine Application.
 
 Roll out the Application migration in this order so the public SPA is never
 reused as a confidential client:
 
 1. Create the Realmroot `confidential_web` Application with the exact production
-   and staging callback URIs above, AMA Resource scopes, and (after the Agent
-   provisioning PR) its constrained token-exchange policies.
+   and staging callback URIs above, AMA Resource scopes, and its constrained
+   token-exchange policies.
 2. Capture its one-time client secret. Set `OIDC_CLIENT_ID`,
    `OIDC_CLIENT_SECRET`, and a new `AMA_WEB_SESSION_ENCRYPTION_KEY` separately in
    each Cloudflare environment; do not commit any of these values. Keep the
    runner's existing public-native `OIDC_RUNNER_CLIENT_ID` unchanged.
-3. Run the staging D1 migration command so `0029_web_auth_sessions.sql` is
-   applied, deploy staging, and verify the callback, Cookie session, direct
-   JWT/DPoP calls, and runner login.
+3. Run the staging D1 migration command so both
+   `0029_web_auth_sessions.sql` and `0031_agent_identity_provisioning.sql` are
+   applied, deploy staging, and verify
+   the callback, Cookie session, Agent creation, direct JWT/DPoP calls, and runner
+   login.
 4. Apply the migration and deploy production, then remove the superseded public
-   SPA Application. Remove the machine Application only after the stacked Agent
-   provisioning change uses this confidential Web Application for exchange.
+   SPA and machine Applications.
+
+`0031_agent_identity_provisioning.sql` is expand-only. It retains the legacy
+`realmroot` columns and excludes empty new identity fields from its partial
+unique indexes, so the old Worker remains usable during a forward deployment.
+The new Worker keeps legacy Agents and Session snapshots readable and executable
+without pretending the old protocol `agentId` is Realmroot's stable
+`identity.subject`. Backfill issuer, subject, username, and credential reference
+only by decrypting and validating each stored `state.json`; quarantine duplicate
+stable identities for operator review. Set the stable identity and clear the
+legacy `realmroot` binding on the Agent and all of its AgentVersions in one
+transaction. The migration's `codex` runtime value is only a non-null schema
+placeholder for legacy rows: until an Agent Profile is backfilled, Session
+creation must keep sending the explicit runtime as required by the old API, and
+AMA records that requested runtime in the new Session snapshot. Pause Agent
+mutations before rolling back to an old Worker because
+the old API can write legacy bindings again. Ship the backfill and the later column
+contraction as separate migrations after all environments report zero legacy
+rows and no legacy active Sessions.
 
 Set the three environment-specific values before step 3 (repeat without
 `--env staging` for production):

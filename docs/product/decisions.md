@@ -60,16 +60,17 @@ These decisions define the intended end state for Any Managed Agents.
 - The Console uses the AMA backend's confidential Web Application. The Worker owns authorization code, PKCE, callback, and client authentication; encrypts the short-lived access token in D1; and gives browser JavaScript only an opaque SameSite cookie. The cookie lifetime never exceeds the Realmroot access-token lifetime.
 - Cookie and direct JWT credentials normalize into the same claims, tenant, ownership, exact-scope, and audit enforcement. Unsafe cookie-authenticated requests require the Worker's exact Origin. OAuth tokens never enter browser storage, URLs, or logs.
 - Console session WebSockets never carry an OAuth credential in their URL or subprotocol. The Console exchanges its cookie session for an opaque 30-second, single-use ticket bound to the exact session and browser origin. Agent SDK WebSockets continue to use DPoP.
+- Agent creation and retirement lazily exchange the current User's AMA access token for a short-lived Realmroot `/api` token. The same confidential Web Application authenticates the exchange; there is no separate Machine Application. Both its token-exchange policy and the User Context must grant `agents:write`.
 - Runner daemon authentication uses Realmroot authorization-code PKCE with an exact loopback callback and explicit Context selection, short-lived Bearer access tokens, rotating refresh credentials, exact audience validation, and least-privilege scopes. Static tokens are unsupported.
 - Access tokens must identify the exact `https://ama.tftt.cc/api` audience. Missing scopes grant no implicit owner authority.
 - The HTTP auth wall maps `GET` and `HEAD` to `<resource>:read` and mutations to `<resource>:write`; the exact scope authorizes the operation. Runner tokens remain limited to their bound runner workflow.
 
 ## Realmroot Agent Identity
 
-- An AMA Agent may bind to one enrolled Realmroot Agent through a safe versioned descriptor containing the Realmroot Agent id, Realmroot origin, and an AMA Vault credential reference.
-- The Realmroot Agent state and private key remain secret material in AMA Vault. Agent rows, version rows, session snapshots, API responses, events, and audit records store only the safe descriptor and secret reference.
+- Creating an AMA Agent automatically creates exactly one Realmroot identity with an immutable username. AMA calls Realmroot's management `POST /api/agents`; Realmroot's existing self-enrollment endpoints and human approval flow remain separate public entrypoints. Both entrypoints use Realmroot's single internal Agent-identity materialization logic.
+- Realmroot state and private keys exist only as AES-GCM encrypted managed Vault credential versions. Synchronous Agent creation keeps its retry checkpoint inside the managed Vault; no provisioning resource is exposed or persisted in D1. Profile versions never contain identity.
 - Session creation automatically attaches only the bound credential. It must not attach the containing vault or any unrelated credential.
-- Cloud and self-hosted runtimes materialize the credential through the existing read-only secret mount, copy it into a session-local private writable state directory required by Realmroot Toolbox, and delete that working copy with the session workspace.
+- Cloud and self-hosted runtimes receive only generic volume/env inputs. A Vault snapshot seeds a Session-local writable ephemeral volume (0600 files, 0700 directories); the source is never updated and the copy is deleted with the workspace.
 - AMA sets the Realmroot runtime identity to `ama` so one AMA Agent remains one stable Realmroot Agent across the concrete `ama`, `codex`, `claude-code`, and `copilot` session runtimes.
 - AMA does not proxy Realmroot business API traffic, issue Realmroot tokens, or inject a controller's OIDC credentials into a runtime. Realmroot Toolbox obtains and refreshes short-lived Agent authority directly.
 

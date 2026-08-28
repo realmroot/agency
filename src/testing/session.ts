@@ -147,6 +147,7 @@ function defaultAgentSnapshot(agentId: string): SessionAgentSnapshot {
     agentId,
     projectId: 'project_1',
     version: 1,
+    runtime: 'codex',
     systemPrompt: 'Do the work',
     provider: 'workers-ai',
     model: '@cf/moonshotai/kimi-k2.6',
@@ -154,6 +155,12 @@ function defaultAgentSnapshot(agentId: string): SessionAgentSnapshot {
     subagents: [],
     allowedTools: ['read', 'write'],
     mcpConnectors: [],
+    identity: {
+      issuer: 'https://realmroot.example/api/auth',
+      subject: 'agent-subject-1',
+      username: 'coding-agent',
+      runtime: 'ama',
+    },
     createdAt: now,
   }
 }

@@ -34,13 +34,13 @@ type realmrootStateMetadata struct {
 	EnrollmentIdempotencyKey string `json:"enrollment_idempotency_key"`
 }
 
-func prepareRealmrootAgent(root string, snapshot map[string]any) error {
+// prepareLegacyRealmrootAgent preserves the old read-only source mount while
+// legacy session snapshots are drained or backfilled. New managed identities
+// arrive directly in the writable session-local state volume and skip this path.
+func prepareLegacyRealmrootAgent(root string, snapshot map[string]any) error {
 	binding, ok, err := realmrootBindingFromSnapshot(snapshot)
-	if err != nil {
+	if err != nil || !ok {
 		return err
-	}
-	if !ok {
-		return nil
 	}
 	if _, err := exec.LookPath("realmroot"); err != nil {
 		return fmt.Errorf("Realmroot Agent is bound but realmroot is not installed on the runner: %w", err)
@@ -50,22 +50,27 @@ func prepareRealmrootAgent(root string, snapshot map[string]any) error {
 	if err != nil {
 		return fmt.Errorf("read mounted Realmroot Agent state: %w", err)
 	}
-	state, err := validateRealmrootState(data, binding)
+	state, err := validateLegacyRealmrootState(data, binding)
 	if err != nil {
 		return err
 	}
-	targetDir := filepath.Join(root, filepath.FromSlash(realmrootStateDirPath), "identities", base64.RawURLEncoding.EncodeToString([]byte(state.Issuer)))
+	targetDir := filepath.Join(
+		root,
+		filepath.FromSlash(realmrootStateDirPath),
+		"identities",
+		base64.RawURLEncoding.EncodeToString([]byte(state.Issuer)),
+	)
 	if err := os.MkdirAll(targetDir, 0o700); err != nil {
 		return fmt.Errorf("create Realmroot Agent state directory: %w", err)
 	}
-	if err := protectRealmrootDirectories(filepath.Join(root, filepath.FromSlash(realmrootStateDirPath)), targetDir); err != nil {
+	if err := protectLegacyRealmrootDirectories(filepath.Join(root, filepath.FromSlash(realmrootStateDirPath)), targetDir); err != nil {
 		return err
 	}
 	runtimeFile := base64.RawURLEncoding.EncodeToString([]byte(state.Runtime)) + ".json"
 	target := filepath.Join(targetDir, runtimeFile)
 	existing, err := os.ReadFile(target)
 	if err == nil {
-		existingState, err := validateRealmrootState(existing, binding)
+		existingState, err := validateLegacyRealmrootState(existing, binding)
 		if err != nil {
 			return fmt.Errorf("validate session Realmroot Agent state: %w", err)
 		}
@@ -83,7 +88,7 @@ func prepareRealmrootAgent(root string, snapshot map[string]any) error {
 	return nil
 }
 
-func validateRealmrootState(data []byte, binding realmrootBinding) (realmrootStateMetadata, error) {
+func validateLegacyRealmrootState(data []byte, binding realmrootBinding) (realmrootStateMetadata, error) {
 	var state realmrootStateMetadata
 	if err := json.Unmarshal(data, &state); err != nil {
 		return state, fmt.Errorf("decode Realmroot Agent state: %w", err)
@@ -95,14 +100,14 @@ func validateRealmrootState(data []byte, binding realmrootBinding) (realmrootSta
 		state.HostID == "" || state.AgentKeyID == "" || state.EnrollmentIdempotencyKey == "" {
 		return state, fmt.Errorf("Realmroot Agent state is missing required identity metadata")
 	}
-	if normalizeRealmrootOrigin(state.Issuer) == "" {
+	if normalizeLegacyRealmrootOrigin(state.Issuer) == "" {
 		return state, fmt.Errorf("Realmroot Agent state issuer must be a safe HTTPS URL")
 	}
 	privateKey, err := base64.RawURLEncoding.DecodeString(state.AgentPrivateKey)
 	if err != nil || len(privateKey) != ed25519.PrivateKeySize {
 		return state, fmt.Errorf("Realmroot Agent state contains an invalid Ed25519 private key")
 	}
-	if state.AgentID != binding.AgentID || normalizeRealmrootOrigin(state.Origin) != normalizeRealmrootOrigin(binding.Origin) {
+	if state.AgentID != binding.AgentID || normalizeLegacyRealmrootOrigin(state.Origin) != normalizeLegacyRealmrootOrigin(binding.Origin) {
 		return state, fmt.Errorf("Realmroot Agent credential does not match the bound Agent id and origin")
 	}
 	if state.Runtime != "ama" {
@@ -128,7 +133,7 @@ func realmrootBindingFromSnapshot(snapshot map[string]any) (realmrootBinding, bo
 	return realmrootBinding{AgentID: agentID, Origin: origin}, true, nil
 }
 
-func normalizeRealmrootOrigin(value string) string {
+func normalizeLegacyRealmrootOrigin(value string) string {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return ""
@@ -137,22 +142,11 @@ func normalizeRealmrootOrigin(value string) string {
 	return parsed.String()
 }
 
-func protectRealmrootDirectories(root string, leaf string) error {
+func protectLegacyRealmrootDirectories(root string, leaf string) error {
 	for _, directory := range []string{root, filepath.Join(root, "identities"), leaf} {
 		if err := os.Chmod(directory, 0o700); err != nil {
-			return fmt.Errorf("protect Realmroot Agent state directory: %w", err)
+			return fmt.Errorf("protect session Realmroot Agent state directory: %w", err)
 		}
 	}
 	return nil
-}
-
-func (w *Workspace) RuntimeEnv(env map[string]string) map[string]string {
-	resolved := make(map[string]string, len(env))
-	for key, value := range env {
-		resolved[key] = value
-	}
-	if w != nil && resolved["REALMROOT_STATE_DIR"] == "/workspace/.ama/realmroot-state" {
-		resolved["REALMROOT_STATE_DIR"] = filepath.Join(w.Root, filepath.FromSlash(realmrootStateDirPath))
-	}
-	return resolved
 }

@@ -311,12 +311,12 @@ func (s AgentsService) List(ctx context.Context, params *ListAgentsParams) (*Age
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
 }
 
-func (s AgentsService) Create(ctx context.Context, body CreateAgentRequest) (*Agent, error) {
-	response, err := s.client.raw.CreateAgentWithResponse(ctx, body)
+func (s AgentsService) Create(ctx context.Context, params *CreateAgentParams, body CreateAgentRequest) (*Agent, error) {
+	response, err := s.client.raw.CreateAgentWithResponse(ctx, params, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409, response.JSON502)
 }
 
 func (s AgentsService) Get(ctx context.Context, agentID string) (*Agent, error) {
@@ -333,6 +333,14 @@ func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAg
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
+func (s AgentsService) Retire(ctx context.Context, agentID string) error {
+	response, err := s.client.raw.RetireAgentWithResponse(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
 }
 
 func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*AgentVersionListResponse, error) {
