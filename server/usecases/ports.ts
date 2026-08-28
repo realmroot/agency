@@ -311,7 +311,12 @@ export interface PolicyPort {
   // honors an explicit admin override request only for admin-role callers.
   evaluateProviderForSession(
     auth: AuthScope,
-    values: { providerId: string; modelId: string | null; adminOverride?: boolean },
+    values: {
+      providerId: string
+      modelId: string | null
+      adminOverride?: boolean
+      allowUnconfiguredProvider?: boolean
+    },
   ): Promise<ProviderPolicySessionDecisionView>
 }
 

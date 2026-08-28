@@ -2,7 +2,7 @@ import type { Agent, AgentSpec, RealmrootAgentIdentity } from '@server/domain/ag
 import { validateAgentUsername } from '@server/domain/agent'
 import { credentialScopedSecretRef } from '@server/domain/vault'
 import type { WorkspaceManifestMount } from '@server/domain/workspace'
-import { validateAgentConfig, validateAgentCreation } from './agents'
+import { normalizeAgentSpec, validateAgentConfig, validateAgentCreation } from './agents'
 import type { Deps } from './deps'
 import type { AuthScope, RealmrootEnrollmentCheckpoint, RealmrootManagementCredential, VaultVisibility } from './ports'
 import { createCredential } from './vaults'
@@ -198,6 +198,7 @@ export async function createManagedAgent(
   request: AgentCreationRequest,
   authorize: () => Promise<RealmrootManagementCredential>,
 ): Promise<Agent> {
+  request = { ...request, spec: normalizeAgentSpec(request.spec) }
   if (!idempotencyKey.trim() || idempotencyKey.length > 200) {
     throw new AgentCreationValidation({ idempotencyKey: 'Idempotency-Key must contain 1 to 200 characters.' })
   }

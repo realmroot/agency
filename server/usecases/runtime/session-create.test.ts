@@ -352,6 +352,42 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_resolved')
   })
 
+  it('[spec: agents/create] evaluates policy for the unpinned Codex host provider as unconfigured', async () => {
+    findAgentVersionMock.mockResolvedValue({
+      id: 'agentver_1',
+      runtime: 'codex',
+      model: null,
+      providerId: null,
+    })
+    createAgentSnapshotMock.mockClear()
+    evaluateProviderPolicyForSessionMock.mockClear()
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_resolved',
+      { runtime: 'codex', prompt: 'Use the platform provider' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(createAgentSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: null }),
+      'openai',
+      expect.anything(),
+      'codex',
+    )
+    expect(evaluateProviderPolicyForSessionMock).toHaveBeenCalledWith(auth, {
+      providerId: 'openai',
+      modelId: null,
+      adminOverride: false,
+      allowUnconfiguredProvider: true,
+    })
+    const inserted = (insertSessionMock.mock.calls as unknown as Array<[{ modelProvider: string }]>)[0]![0]
+    expect(inserted.modelProvider).toBe('openai')
+  })
+
   it.each([
     'ama',
     'claude-code',

@@ -65,9 +65,9 @@ const routes = app
     }
     return c.json({ ok: true, runtimeMode: c.env.AMA_RUNTIME_MODE ?? null })
   })
-  // Seeds the global vendor catalog (a provider + one model) so browser journeys
-  // can pin a provider/model on an agent and create a session. Discovery hits
-  // external feeds, so e2e seeds the catalog directly instead. Idempotent.
+  // Seeds the global vendor catalog (a real vendor + its default model) so
+  // browser journeys can exercise unpinned Agent resolution at Session start.
+  // Discovery hits external feeds, so e2e seeds the catalog directly instead.
   .post('/catalog/seed', async (c) => {
     if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
@@ -78,11 +78,11 @@ const routes = app
     }
     const db = drizzle(c.env.DB)
     const now = new Date().toISOString()
-    const slug = 'workers-ai'
+    const slug = 'moonshotai'
     const modelId = '@cf/moonshotai/kimi-k2.6'
     await db
       .insert(providers)
-      .values({ id: slug, slug, displayName: 'Workers AI', enabled: true, createdAt: now, updatedAt: now })
+      .values({ id: slug, slug, displayName: 'Moonshot AI', enabled: true, createdAt: now, updatedAt: now })
       .onConflictDoNothing()
     await db
       .insert(providerModels)

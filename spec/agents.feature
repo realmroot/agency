@@ -102,6 +102,7 @@ Feature: Agents
     When the user opens the agents page
     Then rows show name, model, tools, status, version, and updated time
     And the page supports search, filters, and navigation to agent detail
+    And the create form starts with no skills and requires an explicit runtime selection
     And creating an agent returns to the list with the new row visible
 
   @agents/console-detail @web

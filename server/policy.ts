@@ -77,6 +77,7 @@ export async function evaluateProviderPolicy(
   values: {
     providerId: string
     modelId: string | null
+    allowUnconfiguredProvider?: boolean
   },
 ): Promise<PolicyDecision> {
   const repo = createPolicyEvalRepo(db)
@@ -90,7 +91,7 @@ export async function evaluateProviderPolicy(
       message: 'Provider is disabled for this project.',
     }
   }
-  if (!provider && values.providerId !== 'workers-ai') {
+  if (!provider && values.providerId !== 'workers-ai' && values.allowUnconfiguredProvider !== true) {
     return {
       allowed: false,
       category: 'provider',
@@ -147,11 +148,13 @@ export async function evaluateProviderPolicyForSession(
     providerId: string
     modelId: string | null
     adminOverride?: boolean
+    allowUnconfiguredProvider?: boolean
   },
 ): Promise<ProviderPolicySessionDecision> {
   const decision = await evaluateProviderPolicy(db, auth, {
     providerId: values.providerId,
     modelId: values.modelId,
+    ...(values.allowUnconfiguredProvider === true ? { allowUnconfiguredProvider: true } : {}),
   })
   if (decision.allowed || values.adminOverride !== true || !canOverrideProviderPolicy(auth)) {
     return { decision, override: null }

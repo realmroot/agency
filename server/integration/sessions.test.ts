@@ -2,6 +2,7 @@ import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { encryptWebSessionValue, hashOpaqueValue, randomOpaqueValue } from '../auth/web-session-crypto'
+import { PLATFORM_DEFAULT_MODEL } from '../domain/runtime/provider'
 import type { Env } from '../env'
 import { runtimeErrorMessage } from '../http/sessions'
 import {
@@ -446,6 +447,180 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
+  it('resolves an unpinned AMA Agent to the cataloged default vendor and model [spec: sessions/create]', async () => {
+    const authorization = await signIn()
+    await seedPlatformProvider({
+      providerId: 'moonshotai',
+      slug: 'moonshotai',
+      displayName: 'Moonshot AI',
+      modelId: PLATFORM_DEFAULT_MODEL,
+    })
+    const environment = await createEnvironment(authorization)
+    const agent = await createReadyAgent(authorization, {
+      runtime: 'ama',
+      provider: null,
+      model: null,
+      skills: [],
+    })
+    const persistedAgent = await env.DB.prepare('SELECT provider_id, model FROM agent_versions WHERE id = ?')
+      .bind(agent.status.currentVersionId)
+      .first<{ provider_id: string | null; model: string | null }>()
+    expect(persistedAgent).toEqual({ provider_id: null, model: null })
+
+    const createRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'ama' },
+        prompt: 'Use the default cloud model',
+      }),
+    })
+
+    expect(createRes.status, await createRes.clone().text()).toBe(201)
+    const created = (await createRes.json()) as {
+      metadata: { uid: string }
+      status: {
+        bindings: { agent: { snapshot: { provider: string; model: string } } }
+        placement: { provider: string; model: string }
+      }
+    }
+    expect(created.status.bindings.agent.snapshot).toMatchObject({
+      provider: 'moonshotai',
+      model: PLATFORM_DEFAULT_MODEL,
+    })
+    expect(created.status.placement).toEqual({
+      hostingMode: 'cloud',
+      provider: 'moonshotai',
+      model: PLATFORM_DEFAULT_MODEL,
+    })
+
+    const stored = await env.DB.prepare(
+      'SELECT agent_snapshot, model_provider, model_config FROM sessions WHERE id = ?',
+    )
+      .bind(created.metadata.uid)
+      .first<{ agent_snapshot: string; model_provider: string; model_config: string }>()
+    expect(stored).toBeTruthy()
+    expect(JSON.parse(stored!.agent_snapshot)).toMatchObject({
+      provider: 'moonshotai',
+      model: PLATFORM_DEFAULT_MODEL,
+    })
+    expect(stored!.model_provider).toBe('moonshotai')
+    expect(JSON.parse(stored!.model_config)).toEqual({
+      provider: 'moonshotai',
+      model: PLATFORM_DEFAULT_MODEL,
+    })
+  })
+
+  it('applies project session budgets to an unpinned self-hosted Codex Agent [spec: sessions/create]', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const agent = await createReadyAgent(authorization, {
+      runtime: 'codex',
+      provider: null,
+      model: null,
+      skills: [],
+    })
+    const openaiProvider = await env.DB.prepare("SELECT id FROM providers WHERE id = 'openai'").first()
+    expect(openaiProvider).toBeNull()
+
+    const budgetRes = await jsonFetch('/api/v1/budgets', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: 'project',
+        limitType: 'sessions',
+        limitValue: 1,
+        window: 'month',
+      }),
+    })
+    expect(budgetRes.status, await budgetRes.clone().text()).toBe(201)
+    await expect(budgetRes.json()).resolves.toMatchObject({
+      providerId: null,
+      modelId: null,
+      limitType: 'sessions',
+      limitValue: 1,
+    })
+
+    const createRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'codex' },
+        prompt: 'Run through the local Codex executor',
+      }),
+    })
+
+    expect(createRes.status, await createRes.clone().text()).toBe(201)
+    const created = (await createRes.json()) as {
+      metadata: { uid: string }
+      status: {
+        phase: string
+        reason: string | null
+        bindings: { agent: { snapshot: { provider: string; model: string | null } } }
+        placement: { hostingMode: string; provider: string; model: string | null }
+      }
+    }
+    expect(created.status).toMatchObject({
+      phase: 'pending',
+      reason: 'waiting-for-runner',
+      bindings: { agent: { snapshot: { provider: 'openai', model: null } } },
+      placement: { hostingMode: 'self_hosted', provider: 'openai', model: null },
+    })
+
+    const stored = await env.DB.prepare(
+      'SELECT agent_snapshot, model_provider, model_config FROM sessions WHERE id = ?',
+    )
+      .bind(created.metadata.uid)
+      .first<{ agent_snapshot: string; model_provider: string; model_config: string }>()
+    expect(JSON.parse(stored!.agent_snapshot)).toMatchObject({ provider: 'openai', model: null })
+    expect(stored!.model_provider).toBe('openai')
+    expect(JSON.parse(stored!.model_config)).toEqual({ provider: 'openai' })
+
+    const queued = await env.DB.prepare('SELECT state, payload FROM work_items WHERE session_id = ?')
+      .bind(created.metadata.uid)
+      .first<{ state: string; payload: string }>()
+    expect(queued?.state).toBe('available')
+    const queuedPayload = JSON.parse(queued!.payload) as Record<string, unknown>
+    expect(queuedPayload).toMatchObject({ provider: 'openai' })
+    expect(queuedPayload).not.toHaveProperty('model')
+
+    const project = await env.DB.prepare(
+      `SELECT projects.id, projects.organization_id
+       FROM projects
+       JOIN agents ON agents.project_id = projects.id
+       WHERE agents.id = ?`,
+    )
+      .bind(agent.metadata.uid)
+      .first<{ id: string; organization_id: string }>()
+    if (!project) throw new Error('Expected the Agent project')
+    await env.DB.prepare(
+      `INSERT INTO usage_records
+       (id, organization_id, project_id, session_id, provider_type, model_id, state, created_at)
+       VALUES (?, ?, ?, ?, 'openai', 'codex-host', 'success', ?)`,
+    )
+      .bind(
+        `usage_${crypto.randomUUID().replaceAll('-', '')}`,
+        project.organization_id,
+        project.id,
+        created.metadata.uid,
+        new Date().toISOString(),
+      )
+      .run()
+
+    const exhaustedRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        spec: { agentId: agent.metadata.uid, environmentId: environment.id, runtime: 'codex' },
+        prompt: 'Budget should block this local Codex session',
+      }),
+    })
+    expect(exhaustedRes.status).toBe(403)
+    await expect(exhaustedRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'policy_denied',
+        message: expect.stringContaining('sessions limit of 1 is spent'),
+        details: { category: 'budget', resourceType: 'budget' },
+      },
+    })
+  })
+
   it('reads old Session snapshots with codex/null defaults without exposing legacy Realmroot binding', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
@@ -627,7 +802,7 @@ describe('[CF] /api/v1/sessions', () => {
               systemPrompt: 'Work through AMA runtime.',
               skills: ['ama@cloud-session'],
               mcpConnectors: [],
-              provider: 'workers-ai',
+              provider: 'moonshotai',
             },
           },
           environment: {
@@ -639,7 +814,7 @@ describe('[CF] /api/v1/sessions', () => {
         },
         placement: {
           hostingMode: 'cloud',
-          provider: 'workers-ai',
+          provider: 'moonshotai',
           model: '@cf/moonshotai/kimi-k2.6',
         },
       },

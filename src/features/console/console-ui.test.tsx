@@ -684,12 +684,36 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     expect(screen.getByRole('button', { name: 'Continue with OIDC provider' })).toBeTruthy()
   })
 
-  it('shows sign-in screen when getCurrentUser throws', async () => {
-    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockRejectedValue(new Error('Auth failed'))
-    server.use(projectsHandler([]))
+  it('shows sign-in screen when the current Session endpoint returns 401', async () => {
+    window.localStorage.removeItem('ama:e2e-access-token')
+    server.use(
+      http.get('*/api/v1/auth/sessions/current', () =>
+        HttpResponse.json(
+          { error: { type: 'authentication_required', message: 'Authentication required' } },
+          { status: 401 },
+        ),
+      ),
+    )
     renderLayout()
     await waitFor(() => expect(screen.getByText('Any Managed Agents')).toBeTruthy())
     expect(screen.getByText(/Sign in through OIDC provider/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Continue with OIDC provider' })).toBeTruthy()
+  })
+
+  it.each([
+    [403, 'Browser session is not authorized for this application.'],
+    [500, 'Failed to read browser session.'],
+  ])('shows console unavailable when the current Session endpoint returns %s', async (status, message) => {
+    window.localStorage.removeItem('ama:e2e-access-token')
+    server.use(
+      http.get('*/api/v1/auth/sessions/current', () =>
+        HttpResponse.json({ error: { type: 'auth_error', message: 'Auth failed' } }, { status }),
+      ),
+    )
+    renderLayout()
+    await waitFor(() => expect(screen.getByText('Console unavailable')).toBeTruthy())
+    expect(screen.getByText(message)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Continue with OIDC provider' })).toBeNull()
   })
 
   it('shows loading state while user query is pending', async () => {

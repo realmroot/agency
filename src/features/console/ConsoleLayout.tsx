@@ -47,11 +47,12 @@ export function ConsoleLayout() {
     return <FullscreenMessage title="Loading console" body="Checking session and project list." />
   }
 
-  if (
-    !userQuery.data ||
-    userQuery.error ||
-    (projectsQuery.error instanceof ApiError && projectsQuery.error.status === 401)
-  ) {
+  if (userQuery.error) {
+    const message = userQuery.error instanceof Error ? userQuery.error.message : 'Unable to read the browser session.'
+    return <FullscreenMessage title="Console unavailable" body={message} />
+  }
+
+  if (!userQuery.data || (projectsQuery.error instanceof ApiError && projectsQuery.error.status === 401)) {
     const returnTo = `${window.location.pathname}${window.location.search}`
     return (
       <FullscreenMessage

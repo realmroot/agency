@@ -25,6 +25,7 @@ import type {
   Volume,
   VolumeMount,
 } from '@server/domain/runtime/execution-inputs'
+import { resolveAgentExecutionProfile } from '@server/domain/runtime/provider'
 import {
   type AgentSnapshot,
   agentSnapshotWithWorkspaceContext,
@@ -82,7 +83,11 @@ function base64Url(value: string) {
 // test mode the inline cloud launch ran synchronously so the row is re-read to
 // surface the started session; in production the launch is fire-and-forget and
 // the pending row is returned as-is.
-export type CreateSessionDeps = CloudTurnDeps & { runnerChannel: RunnerChannel; rereadStartedSession: boolean }
+export type CreateSessionDeps = CloudTurnDeps & {
+  runnerChannel: RunnerChannel
+  rereadStartedSession: boolean
+  defaultCloudModel?: string
+}
 
 type SessionRuntimeError = {
   status: 400 | 403 | 404 | 409 | 500
@@ -641,18 +646,13 @@ export async function createSessionForAgent(
     }
   }
   const runtime = options.runtime ?? agentVersion.runtime
-  if (!agentVersion.providerId) {
-    return {
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Agent must pin a provider before a session can be created',
-        detail: { resourceType: 'provider', resourceId: agentId },
-      },
-    }
-  }
-  const providerId = agentVersion.providerId
+  const executionProfile = resolveAgentExecutionProfile(
+    runtime,
+    agentVersion.providerId,
+    agentVersion.model,
+    deps.defaultCloudModel,
+  )
+  const providerId = executionProfile.provider
   const identity =
     agent.identityIssuer && agent.identitySubject && agent.username && agent.identityCredentialRef
       ? {
@@ -663,7 +663,12 @@ export async function createSessionForAgent(
           credentialRef: agent.identityCredentialRef,
         }
       : null
-  const agentSnapshot = createAgentSnapshot(agentVersion, providerId, identity, runtime)
+  const agentSnapshot = createAgentSnapshot(
+    { ...agentVersion, model: executionProfile.model },
+    providerId,
+    identity,
+    runtime,
+  )
   const realmrootInputs = realmrootRuntimeInputs(
     agentSnapshot,
     options.env ?? {},
@@ -685,8 +690,9 @@ export async function createSessionForAgent(
   const prompt = sessionPrompt(userPrompt)
   const { decision: policyDecision, override: policyOverride } = await policy.evaluateProviderForSession(auth, {
     providerId,
-    modelId: agentVersion.model,
+    modelId: executionProfile.model,
     adminOverride: false,
+    allowUnconfiguredProvider: !executionProfile.policyManaged,
   })
   if (!policyDecision.allowed) {
     await audit.record(auth, {
@@ -695,7 +701,7 @@ export async function createSessionForAgent(
       outcome: 'denied',
       requestId: requestIdFrom(requestId),
       policyCategory: policyDecision.category,
-      metadata: { agentId, providerId, modelId: agentVersion.model, decision: policyDecision },
+      metadata: { agentId, providerId, modelId: executionProfile.model, decision: policyDecision },
     })
     return {
       ok: false,
@@ -715,7 +721,7 @@ export async function createSessionForAgent(
             policyDecision.category === 'budget'
               ? policyDecision.rule
               : policyDecision.category === 'model'
-                ? agentVersion.model
+                ? executionProfile.model
                 : providerId,
           ruleId: policyDecision.rule,
         },
@@ -732,7 +738,7 @@ export async function createSessionForAgent(
       metadata: {
         agentId,
         providerId,
-        modelId: agentVersion.model,
+        modelId: executionProfile.model,
         overriddenDecision: policyOverride,
       },
     })
@@ -742,7 +748,8 @@ export async function createSessionForAgent(
   // active runner can serve this runtime/model. Cloud runtimes have no runner,
   // so they resolve to nothing and must pin an environment explicitly.
   const environmentId =
-    requestedEnvironmentId ?? (await store.resolveEnvironmentForRuntime(auth.project.id, runtime, agentVersion.model))
+    requestedEnvironmentId ??
+    (await store.resolveEnvironmentForRuntime(auth.project.id, runtime, executionProfile.model))
   if (!environmentId) {
     return {
       ok: false,

@@ -37,7 +37,7 @@ describe('[CF] providers', () => {
     const listRes = await jsonFetch('/api/v1/providers', authorization)
     expect(listRes.status).toBe(200)
     const list = (await listRes.json()) as { data: Array<{ id: string; slug: string }> }
-    expect(list.data).toContainEqual(expect.objectContaining({ id: 'workers-ai', slug: 'workers-ai' }))
+    expect(list.data).toContainEqual(expect.objectContaining({ id: 'moonshotai', slug: 'moonshotai' }))
     // The de-tenanted catalog never carries transport/credential fields.
     const serialized = JSON.stringify(list)
     expect(serialized).not.toContain('credentialSecretRef')
@@ -55,12 +55,12 @@ describe('[CF] providers', () => {
 
     // Binding to an enabled vendor + available model succeeds.
     const boundAgent = await createReadyAgent(authorization, {
-      name: 'Workers AI agent',
-      systemPrompt: 'Use the configured Workers AI provider.',
-      provider: 'workers-ai',
+      name: 'Moonshot AI agent',
+      systemPrompt: 'Use the configured Moonshot AI provider.',
+      provider: 'moonshotai',
       model: '@cf/moonshotai/kimi-k2.6',
     })
-    expect(boundAgent).toMatchObject({ spec: { provider: 'workers-ai' } })
+    expect(boundAgent).toMatchObject({ spec: { provider: 'moonshotai' } })
 
     // Binding to a disabled vendor is rejected at agent creation.
     await expect(

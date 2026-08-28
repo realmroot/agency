@@ -5,12 +5,11 @@ import type { Env } from '../env'
 // Providers are a global vendor catalog (no org/project). Tests that pin an
 // agent to a provider/model need the row to exist so the agent.providerId FK
 // and the provider/model availability checks resolve. Provider rows use the
-// vendor slug as their id (id === slug; discovery upserts id: slug). The cloud
-// runtime ('ama') dispatches every model through the Workers AI binding, which
-// only recognizes the 'workers-ai' provider, so this seeds that vendor plus the
-// default model the test agents pin. Call from a beforeEach: isolated storage
-// resets writes between tests.
-export const PLATFORM_PROVIDER_ID = 'workers-ai'
+// vendor slug as their id (id === slug; discovery upserts id: slug). Cloud
+// transport is separate from model ownership, so the default model is cataloged
+// under its real vendor. Call from a beforeEach: isolated storage resets writes
+// between tests.
+export const PLATFORM_PROVIDER_ID = 'moonshotai'
 export const PLATFORM_MODEL_ID = '@cf/moonshotai/kimi-k2.6'
 
 export async function seedPlatformProvider(
@@ -19,7 +18,7 @@ export async function seedPlatformProvider(
   const db = (env as unknown as Env).DB
   const providerId = options.providerId ?? PLATFORM_PROVIDER_ID
   const slug = options.slug ?? PLATFORM_PROVIDER_ID
-  const displayName = options.displayName ?? 'Workers AI'
+  const displayName = options.displayName ?? 'Moonshot AI'
   const modelId = options.modelId ?? PLATFORM_MODEL_ID
   const enabled = options.enabled ?? true
   const timestamp = new Date().toISOString()

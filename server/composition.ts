@@ -31,6 +31,7 @@ import { createVaultRepo } from './adapters/repos/vaults'
 import { createWorkItemRepo } from './adapters/repos/work-items'
 import { createRuntimeExecutionAdapters } from './adapters/runtime/sandbox-runtime-host'
 import { createDb } from './db/client'
+import { PLATFORM_DEFAULT_MODEL } from './domain/runtime/provider'
 import { type Env, fakeRealmrootEnrollmentEnabled } from './env'
 import type { Deps } from './usecases/deps'
 import { createToolApprovalGate } from './usecases/runtime/approval-gate'
@@ -56,6 +57,7 @@ export function createDeps(env: Env): Deps {
   const fakeRealmrootEnrollment = fakeRealmrootEnrollmentEnabled(env)
   return {
     allowLoopbackRealmrootHttp: env.AMA_RUNTIME_MODE === 'test',
+    defaultCloudModel: env.AMA_DEFAULT_MODEL ?? PLATFORM_DEFAULT_MODEL,
     agents: createAgentRepo(db),
     realmrootEnrollment: fakeRealmrootEnrollment
       ? createTestRealmrootEnrollmentGateway()

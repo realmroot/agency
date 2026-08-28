@@ -12,6 +12,10 @@ import { secretRefIdentity } from '@server/domain/vault'
 import type { Deps } from './deps'
 import { AgentArchivedError, AgentValidationError, type AuthScope } from './ports'
 
+export function normalizeAgentSpec(spec: AgentSpec): AgentSpec {
+  return spec.provider === 'workers-ai' ? { ...spec, provider: null } : spec
+}
+
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
 export async function validateAgentConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
@@ -60,8 +64,10 @@ async function realmrootCredentialActive(deps: Deps, auth: AuthScope, reference:
   )
 }
 
-// A null provider defers project-default resolution to session start, so it
-// needs no validation here. The model is NOT checked against the catalog here:
+// A null provider defers project-default resolution to session start. The
+// legacy `workers-ai` transport alias does the same; session creation resolves
+// it to the model's real vendor or the selected host runtime. The model is NOT
+// checked against the catalog here:
 // an agent is environment-agnostic at creation, so the hosting mode is unknown,
 // and a self-hosted agent legitimately pins a runner-native model id (e.g.
 // `opus`) that never appears in the global catalog. Model validity is therefore
@@ -69,7 +75,7 @@ async function realmrootCredentialActive(deps: Deps, auth: AuthScope, reference:
 // catalog (cloud) or the runner's runtime declarations (self-hosted) is authoritative —
 // is known.
 async function validateProviderRef(deps: Deps, projectId: string, provider: string | null) {
-  if (!provider) {
+  if (!provider || provider === 'workers-ai') {
     return null
   }
   if (!(await deps.agents.providerEnabled(projectId, provider))) {
@@ -109,7 +115,8 @@ export async function createAgent(
     spec: AgentSpec
   },
 ): Promise<Agent> {
-  await validateAgentCreation(deps, auth, input)
+  const spec = normalizeAgentSpec(input.spec)
+  await validateAgentCreation(deps, auth, { ...input, spec })
   const createdAt = new Date().toISOString()
   const agent = await deps.agents.insert(
     {
@@ -118,12 +125,12 @@ export async function createAgent(
       username: input.username,
       name: input.name,
       description: input.description,
-      spec: input.spec,
+      spec,
       identity: input.identity,
     },
     createdAt,
   )
-  const version = await deps.agents.insertVersion(agent, input.spec, createdAt)
+  const version = await deps.agents.insertVersion(agent, spec, createdAt)
   await deps.agents.setCurrentVersion(agent.metadata.uid, version.metadata.uid)
   return {
     ...agent,
@@ -213,7 +220,7 @@ export async function updateAgent(
     return { agent, archived: false }
   }
 
-  const next: AgentSpec = {
+  const next = normalizeAgentSpec({
     runtime: fields.runtime ?? agent.spec.runtime,
     systemPrompt: fields.systemPrompt !== undefined ? fields.systemPrompt : agent.spec.systemPrompt,
     provider: fields.provider !== undefined ? fields.provider : agent.spec.provider,
@@ -222,7 +229,7 @@ export async function updateAgent(
     subagents: fields.subagents ?? agent.spec.subagents,
     allowedTools: fields.allowedTools ?? agent.spec.allowedTools,
     mcpConnectors: fields.mcpConnectors ?? agent.spec.mcpConnectors,
-  }
+  })
   await validateAgentConfig(deps, auth, next)
 
   const updatedAt = new Date().toISOString()

@@ -77,8 +77,10 @@ export async function createReadyAgent(api: E2eApi, runId: string, name: string)
       spec: {
         runtime: 'ama',
         systemPrompt: 'E2E view journey',
-        provider: 'workers-ai',
-        model: '@cf/moonshotai/kimi-k2.6',
+        // Keep the Agent unpinned so Session creation resolves the catalog's
+        // real vendor and platform-default model.
+        provider: null,
+        model: null,
       },
     },
   })

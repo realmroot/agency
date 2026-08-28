@@ -27,6 +27,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { isArchived, parseTools } from './format'
 import {
   type AgentFormState,
+  type CreateAgentFormState,
   ENVIRONMENT_PACKAGE_MANAGERS,
   type EnvironmentFormState,
   type EnvironmentPackageManager,
@@ -230,15 +231,17 @@ function PackageManagerFields({
   )
 }
 
-export function AgentForm({
+type AgentFormValues = AgentFormState | CreateAgentFormState
+
+export function AgentForm<T extends AgentFormValues>({
   value,
   setValue,
   onSubmit,
   submitLabel = 'Save agent',
   showIdentity = true,
 }: {
-  value: AgentFormState
-  setValue: (value: AgentFormState) => void
+  value: T
+  setValue: (value: T) => void
   onSubmit: (event: FormEvent) => void
   submitLabel?: string
   showIdentity?: boolean
@@ -256,13 +259,10 @@ export function AgentForm({
         ) : null}
         <TextField label="Name" value={value.name} onChange={(name) => setValue({ ...value, name })} />
         <Field>
-          <FieldLabel>Runtime</FieldLabel>
-          <Select
-            value={value.runtime}
-            onValueChange={(runtime) => setValue({ ...value, runtime: runtime as AgentFormState['runtime'] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
+          <FieldLabel htmlFor="agent-runtime">Runtime</FieldLabel>
+          <Select required value={value.runtime} onValueChange={(runtime) => setValue({ ...value, runtime } as T)}>
+            <SelectTrigger id="agent-runtime" aria-required="true" aria-describedby="agent-runtime-description">
+              <SelectValue placeholder="Select a runtime" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -273,6 +273,9 @@ export function AgentForm({
               </SelectGroup>
             </SelectContent>
           </Select>
+          <FieldDescription id="agent-runtime-description">
+            Required. Select the runtime that will execute this Agent.
+          </FieldDescription>
         </Field>
         <TextField
           label="Description"
@@ -304,7 +307,7 @@ export function AgentForm({
           onChange={(mcpConnectors) => setValue({ ...value, mcpConnectors })}
         />
       </FieldGroup>
-      <Button type="submit">
+      <Button type="submit" disabled={!value.runtime}>
         <Bot data-icon="inline-start" />
         {submitLabel}
       </Button>
@@ -367,12 +370,12 @@ export function AllowedToolsField({
 
 // The model catalog is global. Selecting a model pins both its vendor and id;
 // leaving it empty lets the runtime choose without inventing a model value.
-function AgentProviderModelFields({
+function AgentProviderModelFields<T extends AgentFormValues>({
   value,
   setValue,
 }: {
-  value: AgentFormState
-  setValue: (value: AgentFormState) => void
+  value: T
+  setValue: (value: T) => void
 }) {
   const modelsQuery = useQuery({
     queryKey: queryKeys.providers.models,
@@ -388,7 +391,7 @@ function AgentProviderModelFields({
         value={selectedModelKey || '__none__'}
         onValueChange={(key) => {
           if (key === '__none__') {
-            setValue({ ...value, model: '' })
+            setValue({ ...value, provider: '', model: '' })
             return
           }
           const [provider, ...rest] = key.split('::')

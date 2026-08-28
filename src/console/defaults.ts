@@ -1,5 +1,5 @@
 import { AMA_SANDBOX_TOOL_NAMES } from '@ama/runtime-contracts/agent-tools'
-import type { AgentFormState, EnvironmentFormState, SessionFormState, VaultFormState } from './types'
+import type { CreateAgentFormState, EnvironmentFormState, SessionFormState, VaultFormState } from './types'
 
 const DEFAULT_ALLOWED_TOOLS = AMA_SANDBOX_TOOL_NAMES.join('\n')
 
@@ -18,17 +18,17 @@ export const emptyEnvironment: EnvironmentFormState = {
   variables: 'NODE_ENV=development',
 }
 
-export const emptyAgent: AgentFormState = {
+export const emptyAgent: CreateAgentFormState = {
   username: 'coding-agent',
   name: 'Coding agent',
   description: 'Executes development work in a managed sandbox.',
   systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
-  provider: 'workers-ai',
+  provider: '',
   model: '',
-  skills: 'ama@coding-agent',
+  skills: '',
   allowedTools: DEFAULT_ALLOWED_TOOLS,
   mcpConnectors: '',
-  runtime: 'codex',
+  runtime: '',
 }
 
 export const emptySession: SessionFormState = {

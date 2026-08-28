@@ -20,7 +20,7 @@ import type {
 } from '@server/usecases/ports'
 import { isAmaSandboxToolName } from '@shared/agent-tools'
 import type { AmaEvent } from '@shared/session-events'
-import { canonicalProvider } from '../../domain/runtime/provider'
+import { canonicalProvider, PLATFORM_DEFAULT_MODEL } from '../../domain/runtime/provider'
 import type { Env } from '../../env'
 import {
   isRuntimePolicyDenied,
@@ -425,7 +425,7 @@ function piProviderName(provider: string) {
 }
 
 function runtimeDefaultModel(env: Env) {
-  return env.AMA_DEFAULT_MODEL ?? '@cf/moonshotai/kimi-k2.6'
+  return env.AMA_DEFAULT_MODEL ?? PLATFORM_DEFAULT_MODEL
 }
 
 function resolveRuntimeModel(env: Env, model: string | null) {

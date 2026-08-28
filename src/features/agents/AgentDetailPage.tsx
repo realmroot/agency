@@ -37,8 +37,8 @@ export function AgentDetailPage() {
   })
   const agent = agentQuery.data ?? null
   const updateAgent = useMutation({
-    mutationFn: (input: AgentFormState) =>
-      api.updateAgent(agentId as string, {
+    mutationFn: (input: AgentFormState) => {
+      return api.updateAgent(agentId as string, {
         metadata: {
           name: input.name,
           ...(input.description ? { description: input.description } : { description: null }),
@@ -53,7 +53,8 @@ export function AgentDetailPage() {
           mcpConnectors: parseTools(input.mcpConnectors),
           subagents: agent?.spec.subagents ?? [],
         },
-      }),
+      })
+    },
     onSuccess: () => {
       setEditing(false)
       void queryClient.invalidateQueries({ queryKey: queryKeys.agents.all })

@@ -3,11 +3,43 @@
 // global vendor catalog with no credentials and no baseUrl, so the session path
 // no longer resolves or dispatches any provider connection config.
 
+import type { RuntimeName } from '@shared/runtime-types'
+import { vendorFromModelId } from '../model-catalog'
+
 export function canonicalProvider(provider: string): string {
   return provider === 'workers-ai' ? 'cloudflare-workers-ai' : provider
 }
 
-export const PLATFORM_DEFAULT_PROVIDER = 'workers-ai'
+export const PLATFORM_DEFAULT_MODEL = '@cf/moonshotai/kimi-k2.6'
+
+const SELF_HOSTED_RUNTIME_PROVIDERS: Record<Exclude<RuntimeName, 'ama'>, string> = {
+  'claude-code': 'anthropic',
+  codex: 'openai',
+  copilot: 'github-copilot',
+}
+
+export function resolveAgentExecutionProfile(
+  runtime: RuntimeName,
+  configuredProvider: string | null,
+  configuredModel: string | null,
+  defaultCloudModel = PLATFORM_DEFAULT_MODEL,
+) {
+  const configuredVendor = configuredProvider && configuredProvider !== 'workers-ai' ? configuredProvider : null
+  if (runtime === 'ama') {
+    const model = configuredModel ?? defaultCloudModel
+    return {
+      provider: configuredVendor ?? vendorFromModelId(model),
+      model,
+      policyManaged: true,
+    }
+  }
+
+  return {
+    provider: configuredVendor ?? SELF_HOSTED_RUNTIME_PROVIDERS[runtime],
+    model: configuredModel,
+    policyManaged: configuredVendor !== null,
+  }
+}
 
 // Shapes the agent snapshot a runtime turn runs against: drop the sandboxPolicy
 // (the runtime gates sandbox operations itself, the snapshot must not re-assert

@@ -20,7 +20,9 @@ export interface EnvironmentFormState {
   variables: string
 }
 
-export interface AgentFormState {
+export type AgentRuntime = 'ama' | 'claude-code' | 'codex' | 'copilot'
+
+interface AgentFormFields {
   username: string
   name: string
   description: string
@@ -30,7 +32,14 @@ export interface AgentFormState {
   skills: string
   allowedTools: string
   mcpConnectors: string
-  runtime: 'ama' | 'claude-code' | 'codex' | 'copilot'
+}
+
+export interface AgentFormState extends AgentFormFields {
+  runtime: AgentRuntime
+}
+
+export interface CreateAgentFormState extends AgentFormFields {
+  runtime: AgentRuntime | ''
 }
 
 export interface SessionFormState {

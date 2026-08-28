@@ -197,11 +197,64 @@ describe('[spec: agents/create] createAgent', () => {
     ).rejects.toMatchObject({ fields: { systemPrompt: 'System prompt is required.' } })
   })
 
-  it('rejects a disabled provider reference', async () => {
-    const deps = fakeDeps({ repo: { providerEnabled: async () => false } })
+  it('normalizes the legacy workers-ai transport alias before persisting the Agent and version', async () => {
+    let providerChecks = 0
+    const inserted: AgentSpec[] = []
+    const versioned: AgentSpec[] = []
+    const deps = fakeDeps({
+      repo: {
+        providerEnabled: async () => {
+          providerChecks += 1
+          return false
+        },
+        insert: async (input, createdAt) => {
+          inserted.push(input.spec)
+          return agentRecord({
+            metadata: {
+              uid: 'agent_new',
+              name: input.name,
+              description: input.description,
+              createdAt,
+              updatedAt: createdAt,
+            },
+            spec: input.spec,
+            status: { currentVersionId: null, version: 0 },
+          })
+        },
+        insertVersion: async (agent, value, createdAt) => {
+          versioned.push(value)
+          return agentVersion(agent, value, createdAt)
+        },
+      },
+    })
+    const agent = await createAgent(deps, auth, {
+      name: 'x',
+      description: null,
+      spec: spec({ provider: 'workers-ai' }),
+    })
+
+    expect(providerChecks).toBe(0)
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.provider).toBeNull()
+    expect(versioned).toHaveLength(1)
+    expect(versioned[0]?.provider).toBeNull()
+    expect(agent.spec.provider).toBeNull()
+  })
+
+  it('rejects a real unknown vendor reference', async () => {
+    let providerChecks = 0
+    const deps = fakeDeps({
+      repo: {
+        providerEnabled: async () => {
+          providerChecks += 1
+          return false
+        },
+      },
+    })
     await expect(
-      createAgent(deps, auth, { name: 'x', description: null, spec: spec({ provider: 'provider_x' }) }),
+      createAgent(deps, auth, { name: 'x', description: null, spec: spec({ provider: 'unknown-vendor' }) }),
     ).rejects.toMatchObject({ fields: { provider: expect.any(String) } })
+    expect(providerChecks).toBe(1)
   })
 
   it('accepts a non-catalog model because model validity is resolved at session creation', async () => {
@@ -388,6 +441,30 @@ describe('[spec: agents/update] updateAgent', () => {
     expect(result.agent.spec.provider).toBe('provider_new')
     expect(result.agent.spec.model).toBe('gpt-4')
     expect(result.agent.spec.allowedTools).toEqual(['read'])
+  })
+
+  it('normalizes the legacy workers-ai transport alias before persisting an update and version', async () => {
+    const versioned: AgentSpec[] = []
+    const updated: AgentSpec[] = []
+    const deps = fakeDeps({
+      repo: {
+        insertVersion: async (agent, value, createdAt) => {
+          versioned.push(value)
+          return agentVersion(agent, value, createdAt)
+        },
+        update: async (_projectId, _agentId, value) => {
+          updated.push(value.spec)
+        },
+      },
+    })
+
+    const result = await updateAgent(deps, auth, agentRecord(), { provider: 'workers-ai' })
+
+    expect(versioned).toHaveLength(1)
+    expect(versioned[0]?.provider).toBeNull()
+    expect(updated).toHaveLength(1)
+    expect(updated[0]?.provider).toBeNull()
+    expect(result.agent.spec.provider).toBeNull()
   })
 
   it('archives via { archived: true } and reports the transition', async () => {

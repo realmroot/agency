@@ -40,9 +40,9 @@ describe('[CF] providers v1 [spec: providers/api-catalog]', () => {
     const body = (await res.json()) as { data: Array<Record<string, unknown>> }
     expect(body.data).toContainEqual(
       expect.objectContaining({
-        id: 'workers-ai',
-        slug: 'workers-ai',
-        displayName: 'Workers AI',
+        id: 'moonshotai',
+        slug: 'moonshotai',
+        displayName: 'Moonshot AI',
         enabled: true,
         modelCatalogState: 'ready',
         lastError: null,
@@ -61,9 +61,9 @@ describe('[CF] providers v1 [spec: providers/api-catalog]', () => {
     const authorization = await signInUser('providers_read')
     await seedPlatformProvider()
 
-    const readRes = await jsonFetch('/api/v1/providers/workers-ai', authorization)
+    const readRes = await jsonFetch('/api/v1/providers/moonshotai', authorization)
     expect(readRes.status).toBe(200)
-    await expect(readRes.json()).resolves.toMatchObject({ id: 'workers-ai', slug: 'workers-ai' })
+    await expect(readRes.json()).resolves.toMatchObject({ id: 'moonshotai', slug: 'moonshotai' })
 
     const missingRes = await jsonFetch('/api/v1/providers/provider_missing', authorization)
     expect(missingRes.status).toBe(404)
@@ -78,10 +78,10 @@ describe('[CF] providers v1 [spec: providers/api-catalog]', () => {
     expect(allModelsRes.status).toBe(200)
     const allModels = (await allModelsRes.json()) as { data: Array<{ providerId: string; modelId: string }> }
     expect(allModels.data).toContainEqual(
-      expect.objectContaining({ providerId: 'workers-ai', modelId: '@cf/moonshotai/kimi-k2.6' }),
+      expect.objectContaining({ providerId: 'moonshotai', modelId: '@cf/moonshotai/kimi-k2.6' }),
     )
 
-    const vendorModelsRes = await jsonFetch('/api/v1/providers/workers-ai/models', authorization)
+    const vendorModelsRes = await jsonFetch('/api/v1/providers/moonshotai/models', authorization)
     expect(vendorModelsRes.status).toBe(200)
     const vendorModels = (await vendorModelsRes.json()) as { data: Array<{ modelId: string }> }
     expect(vendorModels.data).toContainEqual(expect.objectContaining({ modelId: '@cf/moonshotai/kimi-k2.6' }))
@@ -159,7 +159,7 @@ describe('[CF] providers v1 [spec: providers/api-catalog]', () => {
     expect(refreshRes.status).toBe(200)
     await expect(refreshRes.json()).resolves.toMatchObject({ outcome: 'failed', discoveredCount: 0 })
 
-    const readRes = await jsonFetch('/api/v1/providers/workers-ai', authorization)
+    const readRes = await jsonFetch('/api/v1/providers/moonshotai', authorization)
     await expect(readRes.json()).resolves.toMatchObject({ modelCatalogState: 'error' })
   })
 })

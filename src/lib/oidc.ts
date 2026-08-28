@@ -19,7 +19,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const response = await fetch('/api/v1/auth/sessions/current', { headers: { accept: 'application/json' } })
   if (response.status === 401) return null
-  if (!response.ok) throw new Error('Failed to read browser session')
+  if (response.status === 403) throw new Error('Browser session is not authorized for this application.')
+  if (!response.ok) throw new Error('Failed to read browser session.')
   const session = (await response.json()) as {
     user: { id: string; email: string; name: string | null }
     organization: { id: string; name: string }

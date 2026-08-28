@@ -6,17 +6,18 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { emptyAgent } from '@/console/defaults'
 import { parseTools, providerPatch } from '@/console/format'
 import { AgentForm } from '@/console/forms'
-import type { AgentFormState } from '@/console/types'
+import type { CreateAgentFormState } from '@/console/types'
 import { api } from '@/lib/amarpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
 export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<AgentFormState>(emptyAgent)
+  const [form, setForm] = useState<CreateAgentFormState>(emptyAgent)
   const createAgent = useMutation({
-    mutationFn: () =>
-      api.createAgent({
+    mutationFn: () => {
+      if (!form.runtime) throw new Error('Select a runtime.')
+      return api.createAgent({
         username: form.username,
         metadata: {
           name: form.name,
@@ -32,7 +33,8 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
           subagents: [],
           mcpConnectors: parseTools(form.mcpConnectors),
         },
-      }),
+      })
+    },
     onSuccess: () => {
       onOpenChange(false)
       setForm(emptyAgent)

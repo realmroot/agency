@@ -51,6 +51,7 @@ type CreateApprovalGate = (values: {
 // by composition.createDeps and handed to routes via Hono context.
 export interface Deps {
   allowLoopbackRealmrootHttp?: boolean
+  defaultCloudModel?: string
   agents: AgentRepo
   realmrootEnrollment?: RealmrootEnrollmentGateway
   realmrootManagementAuthority?: RealmrootManagementAuthority

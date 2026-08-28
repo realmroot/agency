@@ -320,6 +320,16 @@ describe('[spec: agents/create] createManagedAgent', () => {
     ])
   })
 
+  it('normalizes the legacy workers-ai transport alias before the managed Agent commit', async () => {
+    const value = harness()
+
+    const agent = await create(value, { spec: spec({ provider: 'workers-ai' }) })
+
+    expect(agent.spec.provider).toBeNull()
+    expect([...value.agents.values()]).toHaveLength(1)
+    expect([...value.agents.values()][0]?.spec.provider).toBeNull()
+  })
+
   it('validates the key, username, and Agent configuration before provisioning', async () => {
     await expect(create(harness(), {}, ' ')).rejects.toBeInstanceOf(AgentCreationValidation)
     await expect(create(harness(), {}, 'x'.repeat(201))).rejects.toBeInstanceOf(AgentCreationValidation)
