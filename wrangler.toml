@@ -145,6 +145,7 @@ routes = [
 [env.staging.vars]
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
+AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = ""
 OIDC_RESOURCE = "https://ama-staging.tftt.cc/api"
@@ -196,8 +197,8 @@ dead_letter_queue = "ama-trigger-dispatches-staging-dlq"
 
 [[env.staging.d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db-staging"
-database_id = "8a30ad06-ace4-4cf7-a70d-61adc0e3e042"
+database_name = "any-managed-agents-db-staging-v2"
+database_id = "68036380-0b48-4ed4-95c6-a1cc001e4a64"
 migrations_dir = "./migrations"
 
 [[env.staging.r2_buckets]]
@@ -256,8 +257,8 @@ simple = { limit = 100, period = 60 }
 
 [[env.e2e.d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db-staging"
-database_id = "8a30ad06-ace4-4cf7-a70d-61adc0e3e042"
+database_name = "any-managed-agents-db-staging-v2"
+database_id = "68036380-0b48-4ed4-95c6-a1cc001e4a64"
 migrations_dir = "./migrations"
 
 [[env.e2e.r2_buckets]]
