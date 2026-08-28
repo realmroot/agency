@@ -37,7 +37,7 @@ test.describe('console (real browser)', () => {
       sub: 'realmroot-user-context',
       email: 'user-context@example.com',
       name: 'User Context',
-      org_id: 'user:realmroot-user-context',
+      organization: { id: 'user:realmroot-user-context', name: 'Personal workspace' },
     })
 
     await expect(page.getByText('Personal workspace', { exact: true }).first()).toBeVisible()
@@ -48,7 +48,7 @@ test.describe('console (real browser)', () => {
       sub: 'realmroot-organization-user',
       email: 'organization-context@example.com',
       name: 'Organization Context',
-      org_id: 'org_real_context_123',
+      organization: { id: 'org_real_context_123', name: 'Organization org_real_context_123' },
     })
 
     await expect(page.getByText('Organization org_real_context_123', { exact: true }).first()).toBeVisible()
@@ -111,17 +111,14 @@ test.describe('console (real browser)', () => {
 
 async function gotoWithBrowserSession(
   page: Page,
-  profile: { sub: string; email: string; name: string; org_id: string },
+  profile: { sub: string; email: string; name: string; organization: { id: string; name: string } },
 ) {
   await page.route('**/api/v1/auth/sessions/current', (route) =>
     route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
         user: { id: profile.sub, email: profile.email, name: profile.name },
-        organization: {
-          id: profile.org_id,
-          name: profile.org_id === `user:${profile.sub}` ? 'Personal workspace' : `Organization ${profile.org_id}`,
-        },
+        organization: profile.organization,
         project: { id: 'project_oidc_context', name: 'OIDC Context Project' },
       }),
     }),

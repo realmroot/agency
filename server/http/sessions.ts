@@ -524,13 +524,6 @@ const SessionSocketClientMessageSchema = z
   ])
   .openapi('SessionSocketClientMessage')
 
-const SessionSocketTicketSchema = z
-  .object({
-    ticket: z.string().openapi({ description: 'Single-use opaque browser WebSocket ticket.' }),
-    expiresAt: z.string().datetime(),
-  })
-  .openapi('SessionSocketTicket')
-
 // The component schemas above are emitted into the OpenAPI document (and so the
 // generated SDK types) only when registered; connectSessionSocket is a bare
 // upgrade with no body, so register them explicitly.
@@ -1065,34 +1058,13 @@ const updateSessionRoute = createRoute({
   },
 })
 
-const createSessionSocketTicketRoute = createRoute({
-  method: 'post',
-  path: '/{sessionId}/socket-tickets',
-  operationId: 'createSessionSocketTicket',
-  tags: ['Sessions'],
-  summary: 'Create a single-use browser session socket ticket',
-  description:
-    'Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.',
-  security: [{ amaWebSession: [] }],
-  request: { params: ParamsSchema },
-  responses: {
-    201: {
-      description: 'Socket ticket created',
-      content: { 'application/json': { schema: SessionSocketTicketSchema } },
-    },
-    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    403: { description: 'Console client required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    404: { description: 'Session not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-  },
-})
-
 const connectSessionSocketRoute = createRoute({
   method: 'get',
   path: '/{sessionId}/socket',
   operationId: 'connectSessionSocket',
   tags: ['Sessions'],
   summary: 'Open the session browser WebSocket (live events + backfill + input)',
-  security: [{ sessionSocketTicket: [] }, { realmrootDpop: ['sessions:write'] }],
+  security: [{ sessionSocketTicket: [] }, { oidcAccessToken: ['sessions:write'] }],
   request: { params: ParamsSchema },
   responses: {
     101: { description: 'Session browser socket accepted as a WebSocket upgrade' },
@@ -1273,10 +1245,44 @@ const decideSessionApprovalRoute = createRoute({
 // Registration order is load-bearing: requireAuth is the per-route auth wall and
 // static segments register before parameter segments. The assembler in app.ts
 // calls this at the sessions resource's original mount position.
+async function createSessionSocketTicket(c: Context<DepsEnv>) {
+  const sessionId = c.req.param('sessionId')
+  if (!sessionId) return errorResponse(c, 400, 'validation_error', 'Session id is required')
+  const deps = c.get('deps')
+  const auth = await requireAuth(c)
+  if (auth instanceof Response) return auth
+  if (auth.authenticationMethod !== 'cookie' || auth.oidc.clientId !== c.env.OIDC_CLIENT_ID) {
+    return errorResponse(c, 403, 'forbidden', 'Only the Realmroot Console session may create browser socket tickets')
+  }
+  const requestOrigin = new URL(c.req.url).origin
+  const browserOrigin = c.req.header('origin')
+  if (browserOrigin !== requestOrigin) {
+    return errorResponse(c, 403, 'forbidden', 'Browser socket tickets require the same-origin Realmroot Console')
+  }
+  const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
+  if (!session) return errorResponse(c, 404, 'not_found', 'Session not found')
+  const ticket = await issueSessionBrowserSocketTicket(
+    c.env,
+    sessionId,
+    {
+      sessionId,
+      organizationId: auth.organization.id,
+      projectId: session.metadata.pid,
+      userId: auth.user.id,
+      ...(session.status.placement?.hostingMode === 'self_hosted' && session.spec.environmentId
+        ? { runnerEnvironmentId: session.spec.environmentId }
+        : {}),
+    },
+    browserOrigin,
+  )
+  return c.json(ticket, 201)
+}
+
 export function registerSessionRoutes(routes: SessionRoutes) {
   for (const [name, schema] of Object.entries(SESSION_SOCKET_MESSAGE_SCHEMAS)) {
     routes.openAPIRegistry.register(name, schema)
   }
+  routes.post('/:sessionId/socket-tickets', createSessionSocketTicket)
   return routes
     .openapi(createSessionRoute, async (c) => {
       const body = c.req.valid('json')
@@ -1404,42 +1410,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       } catch (error) {
         return sessionValidationOr(c, error)
       }
-    })
-    .openapi(createSessionSocketTicketRoute, async (c) => {
-      const { sessionId } = c.req.valid('param')
-      const deps = c.get('deps')
-      const auth = await requireAuth(c)
-      if (auth instanceof Response) return auth
-      if (auth.authenticationMethod !== 'cookie' || auth.oidc.clientId !== c.env.OIDC_CLIENT_ID) {
-        return errorResponse(
-          c,
-          403,
-          'forbidden',
-          'Only the Realmroot Console session may create browser socket tickets',
-        )
-      }
-      const requestOrigin = new URL(c.req.url).origin
-      const browserOrigin = c.req.header('origin')
-      if (browserOrigin !== requestOrigin) {
-        return errorResponse(c, 403, 'forbidden', 'Browser socket tickets require the same-origin Realmroot Console')
-      }
-      const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
-      if (!session) return errorResponse(c, 404, 'not_found', 'Session not found')
-      const ticket = await issueSessionBrowserSocketTicket(
-        c.env,
-        sessionId,
-        {
-          sessionId,
-          organizationId: auth.organization.id,
-          projectId: session.metadata.pid,
-          userId: auth.user.id,
-          ...(session.status.placement?.hostingMode === 'self_hosted' && session.spec.environmentId
-            ? { runnerEnvironmentId: session.spec.environmentId }
-            : {}),
-        },
-        browserOrigin,
-      )
-      return c.json(ticket, 201)
     })
     .openapi(connectSessionSocketRoute, async (c) => {
       // Console browsers authenticate through a single-use ticket. DPoP-native

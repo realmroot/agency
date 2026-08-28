@@ -37,7 +37,7 @@ describe('Realmroot User token exchange through the confidential AMA application
     getBearerClaimsForAudienceMock.mockResolvedValue({
       sub: 'user-1',
       client_id: 'ama-web',
-      organization_id: 'org-1',
+      organizationId: 'org-1',
       permissions: ['agents:write'],
     })
     vi.stubGlobal(
@@ -95,7 +95,7 @@ describe('Realmroot User token exchange through the confidential AMA application
     getBearerClaimsForAudienceMock.mockResolvedValue({
       sub: 'another-user',
       client_id: 'ama-web',
-      organization_id: 'org-1',
+      organizationId: 'org-1',
       permissions: ['agents:write'],
     })
     await expect(

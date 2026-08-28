@@ -577,8 +577,7 @@ describe('[CF] /api/v1/agents', () => {
       ...defaultClaims(),
       sub: 'user_456',
       email: 'other@example.com',
-      org_id: 'org_flare_456',
-      org_name: 'Other Org',
+      organizationId: 'org_flare_456',
     })
 
     const crossProjectRead = await jsonFetch(`/api/v1/agents/${agentId}`, otherAuthorization)

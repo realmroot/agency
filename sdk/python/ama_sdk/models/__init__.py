@@ -408,7 +408,6 @@ from .session_socket_runner_unavailable_message import SessionSocketRunnerUnavai
 from .session_socket_runner_unavailable_message_type import SessionSocketRunnerUnavailableMessageType
 from .session_socket_steer_message import SessionSocketSteerMessage
 from .session_socket_steer_message_type import SessionSocketSteerMessageType
-from .session_socket_ticket import SessionSocketTicket
 from .session_spec import SessionSpec
 from .session_status import SessionStatus
 from .session_status_phase import SessionStatusPhase
@@ -944,7 +943,6 @@ __all__ = (
     "SessionSocketRunnerUnavailableMessageType",
     "SessionSocketSteerMessage",
     "SessionSocketSteerMessageType",
-    "SessionSocketTicket",
     "SessionSpec",
     "SessionStatus",
     "SessionStatusPhase",

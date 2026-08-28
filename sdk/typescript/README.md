@@ -33,8 +33,9 @@ pnpm --filter @any-managed-agents/sdk run typecheck
 
 ## Usage
 
-Create a client bound to an origin and a request-aware Realmroot DPoP authorizer, then call the
-resource methods. Each method takes the natural arguments (ids, body, query),
+Create a client bound to an origin and a request-aware Realmroot access-token authorizer, then call the
+resource methods. The authorizer presents the token using the Bearer or DPoP mode assigned to its
+registered client. Each method takes the natural arguments (ids, body, query),
 returns the typed result, and throws `AmaApiError` (with `.status`) on non-2xx.
 
 ```ts
@@ -42,7 +43,7 @@ import { createAmaClient, AmaApiError } from '@any-managed-agents/sdk'
 
 const client = createAmaClient({
   baseUrl: process.env.AMA_ORIGIN,
-  authorize: realmrootDpopAuthorizer,
+  authorize: oidcAccessTokenAuthorizer,
   projectId,          // sent as x-ama-project-id (optional)
 })
 

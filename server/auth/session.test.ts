@@ -71,8 +71,7 @@ app.get('/provisioning-token/:method', async (c) => {
 const baseClaims = {
   sub: 'user_1',
   email: 'user@example.com',
-  org_id: 'org_1',
-  org_name: 'Org',
+  organizationId: 'org_1',
   roles: [],
   teams: [],
 }
@@ -240,7 +239,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
 
   it('labels only the exact synthetic User organization as Personal workspace', async () => {
     const response = await request('/auth-identity', {
-      claims: { org_id: 'user:user_1', org_name: undefined, organization_name: undefined },
+      claims: { organizationId: 'user:user_1' },
     })
 
     expect(response.status).toBe(200)
@@ -251,7 +250,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
 
   it('labels an unnamed real Organization with its canonical id', async () => {
     const response = await request('/auth-identity', {
-      claims: { org_id: 'org_1', org_name: undefined, organization_name: undefined },
+      claims: { organizationId: 'org_1' },
     })
 
     expect(response.status).toBe(200)

@@ -1554,13 +1554,6 @@ export type SessionUpdateMetadata = {
         [key: string]: string;
     };
 };
-export type SessionSocketTicket = {
-    /**
-     * Single-use opaque browser WebSocket ticket.
-     */
-    ticket: string;
-    expiresAt: string;
-};
 export type SessionMessageListResponse = {
     data: Array<SessionMessage>;
     pagination: ListPagination;
@@ -3819,36 +3812,6 @@ export type UpdateSessionResponses = {
     200: Session;
 };
 export type UpdateSessionResponse = UpdateSessionResponses[keyof UpdateSessionResponses];
-export type CreateSessionSocketTicketData = {
-    body?: never;
-    path: {
-        sessionId: string;
-    };
-    query?: never;
-    url: '/api/v1/sessions/{sessionId}/socket-tickets';
-};
-export type CreateSessionSocketTicketErrors = {
-    /**
-     * Authentication required
-     */
-    401: ErrorResponse;
-    /**
-     * Console client required
-     */
-    403: ErrorResponse;
-    /**
-     * Session not found
-     */
-    404: ErrorResponse;
-};
-export type CreateSessionSocketTicketError = CreateSessionSocketTicketErrors[keyof CreateSessionSocketTicketErrors];
-export type CreateSessionSocketTicketResponses = {
-    /**
-     * Socket ticket created
-     */
-    201: SessionSocketTicket;
-};
-export type CreateSessionSocketTicketResponse = CreateSessionSocketTicketResponses[keyof CreateSessionSocketTicketResponses];
 export type ConnectSessionSocketData = {
     body?: never;
     path: {
