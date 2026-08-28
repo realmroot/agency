@@ -8,7 +8,6 @@ function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
     agentId: 'agent_1',
     projectId: 'project_1',
     version: 1,
-    runtime: 'codex',
     systemPrompt: 'Base instructions.',
     provider: 'workers-ai',
     model: '@cf/test/model',
@@ -16,13 +15,7 @@ function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
-    identity: {
-      issuer: 'https://realmroot.example.com/api/auth',
-      subject: 'agt_worker',
-      username: 'worker',
-      runtime: 'ama',
-      credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
-    },
+    realmroot: null,
     createdAt: '2026-06-25T00:00:00.000Z',
     ...overrides,
   }
@@ -108,11 +101,9 @@ describe('[spec: sessions/realmroot-identity] Realmroot workspace context', () =
   it('announces the Realmroot toolbox without exposing credential material', () => {
     const augmented = agentSnapshotWithWorkspaceContext(
       agentSnapshot({
-        identity: {
-          issuer: 'https://realmroot.example.com/api/auth',
-          subject: 'agt_worker',
-          username: 'worker',
-          runtime: 'ama',
+        realmroot: {
+          agentId: 'rr_agent_1',
+          origin: 'https://realmroot.example.com',
           credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
         },
       }),

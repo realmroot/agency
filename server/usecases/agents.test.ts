@@ -1,7 +1,7 @@
 import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
-import { createAgent as createReadyAgent, updateAgent } from './agents'
+import { createAgent, updateAgent } from './agents'
 import type { Deps } from './deps'
 import { AgentArchivedError, type AuditEntry, type AuthScope } from './ports'
 
@@ -15,7 +15,6 @@ const auth: AuthScope = {
 
 function spec(overrides: Partial<AgentSpec> = {}): AgentSpec {
   return {
-    runtime: 'codex',
     systemPrompt: 'Do the work.',
     provider: null,
     model: null,
@@ -23,6 +22,7 @@ function spec(overrides: Partial<AgentSpec> = {}): AgentSpec {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
+    realmroot: null,
     ...overrides,
   }
 }
@@ -43,10 +43,8 @@ function withRealmrootVault(
 }
 
 const realmroot = {
-  issuer: 'https://realmroot.example.com/api/auth',
-  subject: 'agt_worker',
-  username: 'worker',
-  runtime: 'ama' as const,
+  agentId: 'rr_agent_1',
+  origin: 'https://realmroot.example.com',
   credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
 }
 
@@ -69,16 +67,8 @@ function agentRecord(
       }),
       ...overrides.metadata,
     },
-    identity: realmroot,
     spec: { ...spec(), ...overrides.spec },
-    status: {
-      phase: 'active',
-      ready: true,
-      retirementStage: null,
-      currentVersionId: 'agentver_1',
-      version: 1,
-      ...overrides.status,
-    },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, ...overrides.status },
   }
 }
 
@@ -119,13 +109,9 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
         spec: input.spec,
         status: { currentVersionId: null, version: 0 },
       }),
-    createWithInitialVersion: async () => agentRecord(),
     setCurrentVersion: async () => {},
     update: async () => {},
     unarchive: async () => {},
-    delete: async () => {},
-    markRetirement: async () => {},
-    retiring: async () => [],
     providerEnabled: async () => true,
     connectorAvailable: async () => true,
     ...overrides.repo,
@@ -135,7 +121,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     environments: undefined as unknown as Deps['environments'],
     providers: undefined as unknown as Deps['providers'],
     providerCatalog: undefined as unknown as Deps['providerCatalog'],
-    vaults: withRealmrootVault({} as Deps).vaults,
+    vaults: undefined as unknown as Deps['vaults'],
     secretStore: undefined as unknown as Deps['secretStore'],
     connectors: undefined as unknown as Deps['connectors'],
     policies: undefined as unknown as Deps['policies'],
@@ -163,20 +149,6 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     audit: { record: async (_auth, entry) => void auditLog.push(entry) },
     policy: undefined as unknown as Deps['policy'],
   }
-}
-
-function createAgent(
-  deps: Deps,
-  scope: AuthScope,
-  input: { name: string; description: string | null; spec: AgentSpec; identity?: typeof realmroot },
-) {
-  return createReadyAgent(deps, scope, {
-    username: input.identity?.username ?? realmroot.username,
-    identity: input.identity ?? realmroot,
-    name: input.name,
-    description: input.description,
-    spec: input.spec,
-  })
 }
 
 describe('[spec: agents/create] createAgent', () => {
@@ -292,15 +264,14 @@ describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
     const created = await createAgent(withRealmrootVault(fakeDeps()), auth, {
       name: 'Realmroot agent',
       description: null,
-      identity: realmroot,
-      spec: spec(),
+      spec: spec({ realmroot }),
     })
 
-    expect(created.identity).toEqual(realmroot)
+    expect(created.spec.realmroot).toEqual(realmroot)
   })
 
   it.each([
-    [{ ...realmroot, issuer: 'http://realmroot.example.com' }, 'HTTPS'],
+    [{ ...realmroot, origin: 'http://realmroot.example.com' }, 'HTTPS'],
     [{ ...realmroot, credentialRef: 'external://secret' }, 'AMA Vault'],
     [{ ...realmroot, credentialRef: 'ama://vaults/vault_1' }, 'active credential'],
     [{ ...realmroot, credentialRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1' }, 'active credential'],
@@ -309,10 +280,9 @@ describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
       createAgent(withRealmrootVault(fakeDeps()), auth, {
         name: 'Realmroot agent',
         description: null,
-        identity: binding,
-        spec: spec(),
+        spec: spec({ realmroot: binding }),
       }),
-    ).rejects.toMatchObject({ fields: { identity: expect.stringContaining(message) } })
+    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining(message) } })
   })
 
   it.each([
@@ -324,16 +294,27 @@ describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
       createAgent(withRealmrootVault(fakeDeps(), values as never), auth, {
         name: 'Realmroot agent',
         description: null,
-        identity: realmroot,
-        spec: spec(),
+        spec: spec({ realmroot }),
       }),
-    ).rejects.toMatchObject({ fields: { identity: expect.stringContaining('active credential') } })
+    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining('active credential') } })
   })
 
-  it('keeps the stable identity immutable across profile updates', async () => {
-    const before = agentRecord()
-    const result = await updateAgent(withRealmrootVault(fakeDeps()), auth, before, { name: 'Renamed' })
-    expect(result.agent.identity).toEqual(before.identity)
+  it('creates a new immutable Agent version when the binding changes', async () => {
+    const inserted: AgentSpec[] = []
+    const deps = withRealmrootVault(
+      fakeDeps({
+        repo: {
+          insertVersion: async (agent, value, createdAt) => {
+            inserted.push(value)
+            return agentVersion(agent, value, createdAt)
+          },
+        },
+      }),
+    )
+
+    await updateAgent(deps, auth, agentRecord(), { realmroot })
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]?.realmroot).toEqual(realmroot)
   })
 })
 

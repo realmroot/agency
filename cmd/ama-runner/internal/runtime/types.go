@@ -10,17 +10,17 @@ import (
 type JSON = runtimebridge.JSON
 
 type Request struct {
-	SessionID          string
-	Runtime            string
-	RuntimeConfig      map[string]any
-	Env                map[string]string
-	Provider           string
-	Model              string
-	AgentSnapshot      map[string]any
-	Prompt             string
-	Resume             bool
-	ResumeToken        string
-	WorkDir            string
+	SessionID     string
+	Runtime       string
+	RuntimeConfig map[string]any
+	Env           map[string]string
+	Provider      string
+	Model         string
+	AgentSnapshot map[string]any
+	Prompt        string
+	Resume        bool
+	ResumeToken   string
+	WorkDir       string
 	// OnResumeToken is invoked as soon as the runtime learns (or rotates) its
 	// resume token, so the runner can persist it before the run completes.
 	OnResumeToken func(resumeToken string) error

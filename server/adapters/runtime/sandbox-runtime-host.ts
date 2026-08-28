@@ -1,6 +1,7 @@
 import { parseAmaSandboxToolInput } from '@ama/runtime-contracts/tool-contracts'
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import { getModel, type Model } from '@earendil-works/pi-ai'
+import type { RealmrootAgentBinding } from '@server/domain/agent'
 import { gitRepositoryMountPath } from '@server/domain/git-repository'
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
 import {
@@ -10,6 +11,7 @@ import {
   volumeMountPath,
   volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
+import { parseRealmrootAgentState } from '@server/domain/vault'
 import type { WorkspaceGitCredential, WorkspaceManifest, WorkspaceManifestMount } from '@server/domain/workspace'
 import type {
   AmaTurnExecutor,
@@ -203,6 +205,7 @@ async function prepareCloudWorkspace(
   values: {
     manifest: WorkspaceManifest
     env: Record<string, string>
+    realmroot: RealmrootAgentBinding | null
   },
 ) {
   const homeDir = values.env.HOME || '/root'
@@ -300,6 +303,59 @@ async function prepareCloudWorkspace(
       await execOrThrow(sandbox, `chmod -R a-w ${shellQuote(mountPath)}`)
     }
   }
+  if (values.realmroot) {
+    await prepareCloudRealmrootState(sandbox, values.manifest, values.realmroot)
+  }
+}
+
+async function prepareCloudRealmrootState(
+  sandbox: CloudWorkspaceSandbox,
+  manifest: WorkspaceManifest,
+  binding: RealmrootAgentBinding,
+) {
+  const source = manifest.mounts.find((mount) => mount.type === 'secret' && mount.name === 'realmroot-agent-state')
+  const stateFile = source?.type === 'secret' ? source.files.find((file) => file.path === 'state.json') : null
+  if (!stateFile) throw new Error('Realmroot Agent credential has no state.json data key')
+  const state = matchingRealmrootState(stateFile.content, binding)
+  const targetDir = `/workspace/.ama/realmroot-state/identities/${base64Url(state.issuer)}`
+  await execOrThrow(
+    sandbox,
+    `mkdir -p ${shellQuote(targetDir)} && chmod 700 ${shellQuote('/workspace/.ama/realmroot-state')} ${shellQuote('/workspace/.ama/realmroot-state/identities')} ${shellQuote(targetDir)}`,
+  )
+  const target = `${targetDir}/${base64Url(state.runtime)}.json`
+  const existing = await sandbox.exec(`cat ${shellQuote(target)}`)
+  if (existing.exitCode === 0 || existing.success === true) {
+    const existingState = matchingRealmrootState(existing.stdout ?? '', binding)
+    if (existingState.issuer !== state.issuer) {
+      throw new Error('Session Realmroot Agent state issuer does not match the bound credential')
+    }
+  } else {
+    await sandbox.writeFile(target, stateFile.content, { encoding: 'utf-8' })
+  }
+  await execOrThrow(sandbox, `chmod 600 ${shellQuote(target)} && command -v realmroot >/dev/null`)
+}
+
+function matchingRealmrootState(content: string, binding: RealmrootAgentBinding) {
+  const state = parseRealmrootAgentState(content)
+  if (state.agentId !== binding.agentId || normalizedOrigin(state.origin) !== normalizedOrigin(binding.origin)) {
+    throw new Error('Realmroot Agent credential does not match the bound Agent id and origin')
+  }
+  return state
+}
+
+function normalizedOrigin(value: string) {
+  const parsed = new URL(value)
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('Realmroot Agent state origin must be a safe HTTPS URL')
+  }
+  return `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}`
+}
+
+function base64Url(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
 export async function startSessionRuntime(
@@ -317,6 +373,10 @@ export async function startSessionRuntime(
     await prepareCloudWorkspace(sandbox, {
       manifest: input.workspaceManifest ?? { root: '/workspace', mounts: [] },
       env: sessionEnv,
+      realmroot:
+        input.agentSnapshot.realmroot && typeof input.agentSnapshot.realmroot === 'object'
+          ? (input.agentSnapshot.realmroot as RealmrootAgentBinding)
+          : null,
     })
   }
 

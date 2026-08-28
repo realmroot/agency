@@ -75,7 +75,7 @@ def sync_detailed(
     client: AuthenticatedClient,
 
 ) -> Response[AuthSession | ErrorResponse]:
-    """ Read the Realmroot-authenticated request context
+    """ Read the authenticated session context
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -101,7 +101,7 @@ def sync(
     client: AuthenticatedClient,
 
 ) -> AuthSession | ErrorResponse | None:
-    """ Read the Realmroot-authenticated request context
+    """ Read the authenticated session context
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -122,7 +122,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
 
 ) -> Response[AuthSession | ErrorResponse]:
-    """ Read the Realmroot-authenticated request context
+    """ Read the authenticated session context
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -148,7 +148,7 @@ async def asyncio(
     client: AuthenticatedClient,
 
 ) -> AuthSession | ErrorResponse | None:
-    """ Read the Realmroot-authenticated request context
+    """ Read the authenticated session context
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

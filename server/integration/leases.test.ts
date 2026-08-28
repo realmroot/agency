@@ -2,7 +2,6 @@ import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
-import { createIdentitySession, createReadyAgent, type ReadyAgent } from './v2-resources'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -47,24 +46,66 @@ async function createSelfHostedEnvironment(authorization: string) {
   return { id: environment.metadata.uid }
 }
 
-async function createAgent(authorization: string, runtime: 'ama' | 'claude-code' | 'codex' | 'copilot' = 'ama') {
-  const agent = await createReadyAgent(authorization, {
-    name: `Runner-backed agent ${crypto.randomUUID()}`,
-    runtime,
-    systemPrompt: 'Use AMA-owned self-hosted runner work.',
+async function createAgent(authorization: string) {
+  const res = await jsonFetch('/api/v1/agents', authorization, {
+    method: 'POST',
+    body: JSON.stringify(
+      createResourceBody(
+        {
+          name: `Runner-backed agent ${crypto.randomUUID()}`,
+        },
+        {
+          systemPrompt: 'Use AMA-owned self-hosted runner work.',
+          allowedTools: ['bash'],
+          provider: 'workers-ai',
+          model: '@cf/moonshotai/kimi-k2.6',
+        },
+      ),
+    ),
   })
-  return { ...agent, id: agent.metadata.uid }
+  expect(res.status).toBe(201)
+  const agent = (await res.json()) as { metadata: { uid: string } }
+  return { id: agent.metadata.uid }
+}
+
+async function createSessionEnvFrom(authorization: string) {
+  const vaultRes = await jsonFetch('/api/v1/vaults', authorization, {
+    method: 'POST',
+    body: JSON.stringify(createResourceBody({ name: `Runner runtime secrets ${crypto.randomUUID()}` })),
+  })
+  expect(vaultRes.status).toBe(201)
+  const vault = (await vaultRes.json()) as { metadata: { uid: string } }
+  const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'AK agent session key',
+      type: 'opaque',
+      secret: { stringData: { value: 'raw-ak-agent-key' } },
+    }),
+  })
+  expect(credentialRes.status).toBe(201)
+  const credential = (await credentialRes.json()) as { status: { activeVersion: { spec: { secretRef: string } } } }
+  return [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
 }
 
 async function createSelfHostedSession(
   authorization: string,
-  agent: ReadyAgent,
+  agentId: string,
   environmentId: string,
   executionOverrides: Record<string, unknown> = {},
 ) {
-  void environmentId
-  void executionOverrides
-  const res = await createIdentitySession(authorization, agent, { prompt: 'Run the first queued self-hosted task.' })
+  const res = await jsonFetch('/api/v1/sessions', authorization, {
+    method: 'POST',
+    body: JSON.stringify({
+      prompt: 'Run the first queued self-hosted task.',
+      spec: {
+        agentId,
+        environmentId,
+        runtime: 'ama',
+        ...executionOverrides,
+      },
+    }),
+  })
   const body = await res.clone().text()
   expect(res.status, body).toBe(201)
   const session = (await res.json()) as { metadata: { uid: string }; status: { phase: string; reason: string | null } }
@@ -134,8 +175,10 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id, {
+    const envFrom = await createSessionEnvFrom(authorization)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
       env: { AK_API_URL: 'https://ak.example.test' },
+      envFrom,
     })
 
     const workItem = await availableWorkItem(authorization, session.id)
@@ -184,8 +227,8 @@ describe('[CF] /api/v1/leases', () => {
     expect(leasedWork).toMatchObject({ state: 'leased', attempts: 1, leaseId, runnerId: runner.id })
     // Console reads retain persisted secret references even while a runner
     // holds the active lease; only the bound runner identity may materialize.
-    expect(leasedWork.payload.env).toMatchObject({ REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state' })
-    expect(leasedWork.payload.envFrom).toEqual([])
+    expect(leasedWork.payload.env).toEqual({ AK_API_URL: 'https://ak.example.test' })
+    expect(leasedWork.payload.envFrom).toEqual(envFrom)
     expect(JSON.stringify(leasedWork)).not.toContain('raw-ak-agent-key')
 
     // The same item cannot be claimed twice.
@@ -252,7 +295,7 @@ describe('[CF] /api/v1/leases', () => {
     })
     expect(memoryRes.status).toBe(201)
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id, {
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
       volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
       volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
     })
@@ -301,7 +344,7 @@ describe('[CF] /api/v1/leases', () => {
     const memoryStore = (await memoryStoreRes.json()) as { metadata: { uid: string } }
     const memoryStoreId = memoryStore.metadata.uid
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id, {
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
       volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
       volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
     })
@@ -340,7 +383,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
     const workItem = await availableWorkItem(authorization, session.id)
 
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -379,8 +422,7 @@ describe('[CF] /api/v1/leases', () => {
       }),
     })
     const offlineRunner = (await offlineRunnerRes.json()) as { id: string }
-    await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
     const workItem = await availableWorkItem(authorization, session.id)
 
     const inactiveClaimRes = await claimLease(authorization, workItem.id, offlineRunner.id)
@@ -399,7 +441,7 @@ describe('[CF] /api/v1/leases', () => {
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
 
-    const secondSession = await createSelfHostedSession(authorization, agent, environment.id)
+    const secondSession = await createSelfHostedSession(authorization, agent.id, environment.id)
     const secondWorkItem = await availableWorkItem(authorization, secondSession.id)
     const capacityClaimRes = await claimLease(authorization, secondWorkItem.id, runner.id)
     expect(capacityClaimRes.status).toBe(409)
@@ -412,10 +454,10 @@ describe('[CF] /api/v1/leases', () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
-    const eligible = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    // Queue the work before any runner exists so session creation does not gate
+    // on runner eligibility; the capability mismatch is enforced at claim time.
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
     const runner = await registerActiveRunner(authorization, environment.id, { runtimeNames: ['node'] })
-    await env.DB.prepare("UPDATE runners SET state = 'offline' WHERE id = ?").bind(eligible.id).run()
     const workItem = await availableWorkItem(authorization, session.id)
 
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -428,11 +470,11 @@ describe('[CF] /api/v1/leases', () => {
   it('requeues interrupted work with the bound target runtime session id [spec: runners/lease-recovery]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
-    const agent = await createAgent(authorization, 'claude-code')
+    const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
       runtimeNames: ['claude-code'],
     })
-    const session = await createSelfHostedSession(authorization, agent, environment.id, { runtime: 'claude-code' })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'claude-code' })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
@@ -513,11 +555,11 @@ describe('[CF] /api/v1/leases', () => {
   it('rejects caller-assigned runtimes when their target session id differs from the AMA session [spec: runners/session-runtime-binding]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
-    const agent = await createAgent(authorization, 'claude-code')
+    const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
       runtimeNames: ['claude-code'],
     })
-    const session = await createSelfHostedSession(authorization, agent, environment.id, { runtime: 'claude-code' })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'claude-code' })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
@@ -558,11 +600,11 @@ describe('[CF] /api/v1/leases', () => {
   it('locks provider-assigned runtime session ids on the AMA session [spec: runners/session-runtime-binding]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
-    const agent = await createAgent(authorization, 'codex')
+    const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id, {
       runtimeNames: ['codex'],
     })
-    const session = await createSelfHostedSession(authorization, agent, environment.id, { runtime: 'codex' })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'codex' })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
@@ -598,7 +640,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
@@ -637,7 +679,7 @@ describe('[CF] /api/v1/leases', () => {
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const runner = await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
     expect(claimRes.status).toBe(201)
@@ -671,13 +713,13 @@ describe('[CF] /api/v1/leases', () => {
     const runner = await registerActiveRunner(authorization, environment.id)
     const otherRunner = await registerActiveRunner(authorization, environment.id)
 
-    const firstSession = await createSelfHostedSession(authorization, agent, environment.id)
+    const firstSession = await createSelfHostedSession(authorization, agent.id, environment.id)
     const firstWorkItem = await availableWorkItem(authorization, firstSession.id)
     const firstClaim = await claimLease(authorization, firstWorkItem.id, runner.id)
     expect(firstClaim.status).toBe(201)
     const firstLease = (await firstClaim.json()) as { id: string }
 
-    const secondSession = await createSelfHostedSession(authorization, agent, environment.id)
+    const secondSession = await createSelfHostedSession(authorization, agent.id, environment.id)
     const secondWorkItem = await availableWorkItem(authorization, secondSession.id)
     const secondClaim = await claimLease(authorization, secondWorkItem.id, otherRunner.id)
     expect(secondClaim.status).toBe(201)

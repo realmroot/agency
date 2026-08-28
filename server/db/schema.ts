@@ -108,9 +108,7 @@ export const agents = sqliteTable(
       .notNull()
       .references(() => projects.id),
     name: text('name').notNull(),
-    username: text('username').notNull(),
     description: text('description'),
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
     systemPrompt: text('system_prompt').notNull(),
     // null = resolve the project default provider at session start.
     providerId: text('provider_id').references(() => providers.id),
@@ -122,14 +120,7 @@ export const agents = sqliteTable(
     // JSON array of connector slugs. Resolved against the platform MCP catalog
     // at session start, not FK'd (slugs are stable connector ids).
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
-    // Expand-only compatibility column. A later migration may remove it after
-    // every legacy credential has been decoded and backfilled by application code.
     realmroot: text('realmroot'),
-    identityIssuer: text('identity_issuer').notNull(),
-    identitySubject: text('identity_subject').notNull(),
-    identityCredentialRef: text('identity_credential_ref'),
-    retirementState: text('retirement_state', { enum: ['stopping', 'identity_retired', 'retired'] }),
-    retiredAt: text('retired_at'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
@@ -139,13 +130,7 @@ export const agents = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [
-    index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id),
-    uniqueIndex('idx_agents_identity')
-      .on(table.identityIssuer, table.identitySubject)
-      .where(sql`${table.identityIssuer} <> '' and ${table.identitySubject} <> ''`),
-    uniqueIndex('idx_agents_username_project').on(table.projectId, table.username).where(sql`${table.username} <> ''`),
-  ],
+  (table) => [index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id)],
 )
 
 // Immutable per-version snapshot of agent config. JSON columns are intentional
@@ -162,7 +147,6 @@ export const agentVersions = sqliteTable(
       .notNull()
       .references(() => projects.id),
     version: integer('version').notNull(),
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
     systemPrompt: text('system_prompt').notNull(),
     // Snapshot value, intentionally NOT FK'd to providers: a version must survive
     // a hard provider delete (providers support DELETE). Resolved live only when

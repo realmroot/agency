@@ -1,4 +1,4 @@
-import { createReadyAgent, expect, gotoAuthed, test } from './fixtures'
+import { expect, gotoAuthed, test } from './fixtures'
 
 // Real browser happy-path: a seeded session renders in the console list and its
 // routed detail page opens (session create drives the runtime + auto-selects the
@@ -11,7 +11,18 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
 }) => {
   // Agents must pin a provider+model from the global catalog; seed it first.
   await api.post('/api/v1/e2e/catalog/seed', { data: {} })
-  const agent = await createReadyAgent(api, runId, `s-agent-${runId}`)
+  const agentRes = await api.post('/api/v1/agents', {
+    data: {
+      metadata: { name: `s-agent-${runId}` },
+      spec: {
+        systemPrompt: 'x',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+      },
+    },
+  })
+  expect(agentRes.status(), 'seed session agent').toBe(201)
+  const agent = (await agentRes.json()) as { metadata: { uid: string } }
   const environmentRes = await api.post('/api/v1/environments', {
     data: { metadata: { name: `s-env-${runId}` }, spec: {} },
   })
@@ -20,12 +31,13 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
   const title = `ui-session-${runId}`
   const res = await api.post('/api/v1/sessions', {
     data: {
+      prompt: `Open seeded session ${runId}`,
+      metadata: { name: title },
       spec: {
         agentId: agent.metadata.uid,
         environmentId: environment.metadata.uid,
         runtime: 'ama',
       },
-      prompt: title,
     },
   })
   expect(res.status(), 'seed session').toBe(201)

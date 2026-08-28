@@ -1,7 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
-import { createIdentitySession, createReadyAgent } from './v2-resources'
 
 interface OpenApiOperation {
   operationId?: string
@@ -101,17 +100,29 @@ describe('[CF] Realmroot toolbox/OpenAPI control-plane path [spec: api-contracts
     }
     const environmentId = environment.metadata.uid
 
-    const agent = await createReadyAgent(authorization, {
-      name: 'Restish e2e agent',
-      systemPrompt: 'Run e2e checks through documented control-plane operations.',
-      provider: 'workers-ai',
-      model: '@cf/moonshotai/kimi-k2.6',
+    const agentRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(
+        createResourceBody(
+          { name: 'Restish e2e agent' },
+          {
+            systemPrompt: 'Run e2e checks through documented control-plane operations.',
+            provider: 'workers-ai',
+            model: '@cf/moonshotai/kimi-k2.6',
+          },
+        ),
+      ),
     })
+    expect(agentRes.status).toBe(201)
+    const agent = (await agentRes.json()) as { metadata: { uid: string }; status: { currentVersionId: string } }
     const agentId = agent.metadata.uid
 
-    const sessionRes = await createIdentitySession(authorization, agent, {
-      prompt: 'Run restish contract test',
-      task: 'https://ama.example/tasks/restish-contract',
+    const sessionRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: 'Run restish contract test',
+        spec: { agentId, environmentId, runtime: 'ama' },
+      }),
     })
     expect(sessionRes.status).toBe(201)
     const session = (await sessionRes.json()) as {

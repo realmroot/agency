@@ -13,6 +13,11 @@ import {
 import { errorResponse } from '../errors'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
+// Mounted at /api/v1/auth (docs/api-v1-design.md §2 Auth). The auth resource's
+// http layer; it delegates to server/auth/ (the authentication module that owns
+// its own tables and raw-request handling, spanning layers by design — see the
+// hono-cf-clean-arch skill auth note).
+
 type AuthRoutes = OpenAPIHono<DepsEnv>
 
 const AuthMethodSchema = z
@@ -23,7 +28,11 @@ const AuthMethodSchema = z
   })
   .openapi('AuthMethod')
 
-const AuthConfigSchema = z.object({ methods: z.array(AuthMethodSchema) }).openapi('AuthConfig')
+const AuthConfigSchema = z
+  .object({
+    methods: z.array(AuthMethodSchema),
+  })
+  .openapi('AuthConfig')
 
 const AuthConfigQuerySchema = z.object({
   organization: z
@@ -84,10 +93,10 @@ const readCurrentAuthSessionRoute = createRoute({
   path: '/sessions/current',
   operationId: 'readCurrentAuthSession',
   tags: ['Auth'],
-  summary: 'Read the Realmroot-authenticated request context',
+  summary: 'Read the authenticated session context',
   ...AuthenticatedOperation,
   responses: {
-    200: { description: 'Current request context', content: { 'application/json': { schema: AuthSessionSchema } } },
+    200: { description: 'Current session context', content: { 'application/json': { schema: AuthSessionSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
@@ -156,12 +165,25 @@ export function registerAuthRoutes(routes: AuthRoutes) {
     .openapi(readCurrentAuthSessionRoute, async (c) => {
       c.header('Cache-Control', 'no-store')
       const auth = await requireAuth(c)
-      if (auth instanceof Response) return auth
+      if (auth instanceof Response) {
+        return auth
+      }
+
       return c.json(
         {
-          user: { id: auth.user.id, email: auth.user.email, name: auth.user.name },
-          organization: { id: auth.organization.id, name: auth.organization.name },
-          project: { id: auth.project.id, name: auth.project.name },
+          user: {
+            id: auth.user.id,
+            email: auth.user.email,
+            name: auth.user.name,
+          },
+          organization: {
+            id: auth.organization.id,
+            name: auth.organization.name,
+          },
+          project: {
+            id: auth.project.id,
+            name: auth.project.name,
+          },
         },
         200,
       )

@@ -84,7 +84,7 @@ export function ConsoleLayout() {
       id: profile.sub,
       email,
       name,
-      avatarUrl: null,
+      avatarUrl: typeof profile.picture === 'string' ? profile.picture : null,
     },
     organization: userQuery.data.organization,
     project: {

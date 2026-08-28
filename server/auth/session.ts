@@ -15,7 +15,7 @@ import {
   upsertProjectForClaims,
 } from './oidc'
 import { requiredScope } from './scopes'
-import { WebSessionCsrfError, webSessionAccessToken, webSessionClaims } from './web-session'
+import { WebSessionCsrfError, webSessionClaims } from './web-session'
 
 // Routes may or may not carry extra context Variables (e.g. an injected Deps
 // object). Context's Variables are invariant, so a fixed param would reject one
@@ -65,18 +65,6 @@ export interface AuthIdentity {
   teams?: string[]
   agentActor?: AuthContext['agentActor']
   oidc: AuthContext['oidc']
-}
-
-export async function authenticatedAccessToken<E extends HonoEnv>(c: AppContext<E>, auth: AuthContext) {
-  if (auth.authenticationMethod === 'cookie') {
-    const accessToken = await webSessionAccessToken(c)
-    if (!accessToken) throw new OidcError('Authenticated Cookie access token is unavailable')
-    return accessToken
-  }
-  const scheme = auth.authenticationMethod === 'dpop' ? 'DPoP' : 'Bearer'
-  const match = new RegExp(`^${scheme}\\s+(\\S+)$`, 'i').exec(c.req.header('Authorization')?.trim() ?? '')
-  if (!match?.[1]) throw new OidcError(`Authenticated ${scheme} access token is unavailable`)
-  return match[1]
 }
 
 export function isRunnerOidcAuth(env: Env, auth: Pick<AuthContext, 'oidc'>) {
@@ -167,7 +155,6 @@ export async function resolveAuthContext<E extends HonoEnv>(
         id: project.organizationId ?? identity.organization.id,
       },
       project,
-      oidc: identity.oidc,
     }
   }
 

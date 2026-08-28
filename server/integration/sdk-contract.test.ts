@@ -35,6 +35,9 @@ const STANDARD_RESOURCE_FIELDS = new Set(['metadata', 'spec', 'status'])
 function externalRefs(runId: string) {
   return { product: 'agent-kanban', boardId: `board_${runId}`, taskId: `task_${runId}` }
 }
+function externalMetadata(refs: ReturnType<typeof externalRefs>): Json {
+  return { annotations: { externalProduct: refs.product, externalBoardId: refs.boardId, externalTaskId: refs.taskId } }
+}
 function obj(value: unknown): Json {
   expect(value && typeof value === 'object' && !Array.isArray(value)).toBe(true)
   return value as Json
@@ -63,22 +66,14 @@ async function newSdk() {
 }
 
 async function createAgentThroughSdk(ama: AmaClient, runId: string) {
-  return (await ama.agents.create(
-    {
-      username: `external-${runId}`
-        .toLowerCase()
-        .replaceAll(/[^a-z0-9_.-]/g, '-')
-        .slice(0, 64),
-      metadata: { name: `${runId} external agent` },
-      spec: {
-        runtime: 'ama',
-        systemPrompt: 'Work items arrive from an external product over the AMA SDK.',
-        provider: 'workers-ai',
-        model: '@cf/moonshotai/kimi-k2.6',
-      },
+  return (await ama.agents.create({
+    metadata: { name: `${runId} external agent` },
+    spec: {
+      systemPrompt: 'Work items arrive from an external product over the AMA SDK.',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
     },
-    { 'Idempotency-Key': `sdk-agent-${runId}` },
-  )) as unknown as Json
+  })) as Json
 }
 async function createEnvironmentThroughSdk(ama: AmaClient, runId: string) {
   return (await ama.environments.create({
@@ -102,20 +97,20 @@ async function createSessionThroughSdk(
   environment: Json,
   extra: Json,
 ) {
-  const { prompt, volumes: _volumes, volumeMounts: _volumeMounts, env: _env, envFrom: _envFrom, ...unexpected } = extra
+  const { prompt, volumes, volumeMounts, env, envFrom, ...unexpected } = extra
   if (Object.keys(unexpected).length > 0) {
     throw new Error(`Unexpected SDK session options: ${Object.keys(unexpected).join(', ')}`)
   }
-  void refs
   const created = (await ama.sessions.create({
+    metadata: { name: `${runId} external session`, ...externalMetadata(refs) },
     spec: {
-      agentId: String(obj(agent.metadata).uid),
-      environmentId: String(obj(environment.metadata).uid),
-      runtime: String(obj(agent.spec).runtime) as 'ama' | 'claude-code' | 'codex' | 'copilot',
-      ...(Array.isArray(_volumes) ? { volumes: _volumes as never } : {}),
-      ...(Array.isArray(_volumeMounts) ? { volumeMounts: _volumeMounts as never } : {}),
-      ...(_env && typeof _env === 'object' && !Array.isArray(_env) ? { env: _env as Record<string, string> } : {}),
-      ...(Array.isArray(_envFrom) ? { envFrom: _envFrom as never } : {}),
+      agentId: resourceUid(agent),
+      environmentId: resourceUid(environment),
+      runtime: 'ama',
+      ...(Array.isArray(volumes) ? { volumes } : {}),
+      ...(Array.isArray(volumeMounts) ? { volumeMounts } : {}),
+      ...(env && typeof env === 'object' ? { env } : {}),
+      ...(Array.isArray(envFrom) ? { envFrom } : {}),
     },
     prompt: typeof prompt === 'string' ? prompt : `${runId} external work`,
   })) as Json
@@ -270,7 +265,7 @@ describe('[CF] generated SDK contract', () => {
     // reusable Agent or Environment specs.
     const agent = (await ama.agents.get(resourceUid(updatedAgent))) as Json
     for (const key of Object.keys(agent)) {
-      expect(STANDARD_RESOURCE_FIELDS.has(key) || key === 'identity', `agent field "${key}" is not standard`).toBe(true)
+      expect(STANDARD_RESOURCE_FIELDS.has(key), `agent field "${key}" is not standard`).toBe(true)
     }
     const environment = (await ama.environments.get(createdEnvId)) as Json
     for (const key of Object.keys(environment)) {

@@ -2,11 +2,12 @@ import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   ResourceCreateMetadataSchema,
   ResourceMetadataSchema,
+  ResourcePhaseSchema,
   ResourceUpdateMetadataSchema,
   serializeResource,
 } from '@server/contracts/resource-contracts'
 import { type Agent, type AgentSpec, type AgentVersion, defaultAllowedTools } from '@server/domain/agent'
-import { authenticatedAccessToken, requireAuth } from '../auth/session'
+import { requireAuth } from '../auth/session'
 import {
   AuthenticatedOperation,
   type DepsEnv,
@@ -16,14 +17,7 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import {
-  AgentCreationConflict,
-  AgentCreationUpstreamError,
-  AgentCreationValidation,
-  createManagedAgent,
-} from '../usecases/agent-creation'
-import { retireAgent } from '../usecases/agent-retirement'
-import { type UpdateAgentPatch, updateAgent } from '../usecases/agents'
+import { createAgent, type UpdateAgentPatch, updateAgent } from '../usecases/agents'
 import { AgentArchivedError, AgentValidationError } from '../usecases/ports'
 import { requestId } from './request-context'
 
@@ -75,19 +69,19 @@ const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
   example: ['read', 'bash', 'edit'],
 })
 
-const RealmrootAgentIdentitySchema = z
+const RealmrootAgentBindingSchema = z
   .object({
-    issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
-    subject: z.string().min(1).openapi({ example: 'agt_backend_worker_1' }),
-    username: z.string().min(3).max(64).openapi({ example: 'backend-worker' }),
-    runtime: z.literal('ama'),
+    agentId: z.string().min(1).max(160).openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    origin: z.string().url().openapi({ example: 'https://id.realmroot.dev' }),
+    credentialRef: z.string().min(1).openapi({
+      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+    }),
   })
   .strict()
-  .openapi('RealmrootAgentIdentity')
+  .openapi('RealmrootAgentBinding')
 
 const AgentSpecSchema = z
   .object({
-    runtime: z.enum(['ama', 'claude-code', 'codex', 'copilot']),
     systemPrompt: z.string().openapi({ example: 'Answer with citations.' }),
     provider: z.string().nullable().openapi({ example: 'workers-ai' }),
     model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
@@ -107,14 +101,13 @@ const AgentSpecSchema = z
     }),
     allowedTools: AllowedToolsSchema,
     mcpConnectors: z.array(z.string()).openapi({ example: ['github'] }),
+    realmroot: RealmrootAgentBindingSchema.nullable(),
   })
   .openapi('AgentSpec')
 
 const AgentStatusSchema = z
   .object({
-    phase: z.enum(['active', 'archived', 'retiring', 'retired']),
-    ready: z.boolean(),
-    retirementStage: z.enum(['stopping', 'identity_retired', 'retired']).nullable(),
+    phase: ResourcePhaseSchema,
     currentVersionId: z.string().nullable().openapi({ example: 'agentver_abc123' }),
     version: z.number().int().openapi({ example: 1 }),
   })
@@ -123,7 +116,6 @@ const AgentStatusSchema = z
 const AgentSchema = z
   .object({
     metadata: ResourceMetadataSchema,
-    identity: RealmrootAgentIdentitySchema.nullable(),
     spec: AgentSpecSchema,
     status: AgentStatusSchema,
   })
@@ -144,14 +136,9 @@ const AgentVersionSchema = z
 
 const AgentPayloadSchema = z
   .object({
-    username: z
-      .string()
-      .regex(/^[a-z0-9_.-]{3,64}$/)
-      .openapi({ example: 'research-assistant' }),
     metadata: ResourceCreateMetadataSchema.openapi({ example: { name: 'Research assistant' } }),
     spec: z
       .object({
-        runtime: z.enum(['ama', 'claude-code', 'codex', 'copilot']),
         systemPrompt: z.string().trim().min(1).max(8000).openapi({ example: 'Answer with citations.' }),
         provider: z.string().min(1).nullable().optional().openapi({ example: 'workers-ai' }),
         model: z.string().min(1).nullable().optional().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
@@ -180,6 +167,7 @@ const AgentPayloadSchema = z
           .max(50)
           .optional()
           .openapi({ example: ['github'] }),
+        realmroot: RealmrootAgentBindingSchema.nullable().optional(),
       })
       .strict(),
   })
@@ -219,10 +207,7 @@ const AgentVersionParamsSchema = AgentParamsSchema.extend({
     }),
 })
 
-const ListQuerySchema = listQuerySchema().extend({
-  identityIssuer: z.string().url().optional(),
-  identitySubject: z.string().min(1).max(200).optional(),
-})
+const ListQuerySchema = listQuerySchema()
 const AgentListResponseSchema = listResponseSchema('AgentListResponse', AgentSchema)
 const AgentVersionListResponseSchema = listResponseSchema('AgentVersionListResponse', AgentVersionSchema)
 
@@ -242,10 +227,6 @@ const listAgentsRoute = createRoute({
     200: { description: 'Agent list', content: { 'application/json': { schema: AgentListResponseSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    403: {
-      description: 'Realmroot management authority required',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
   },
 })
 
@@ -256,29 +237,11 @@ const createAgentRoute = createRoute({
   tags: ['Agents'],
   summary: 'Create an agent',
   ...AuthenticatedOperation,
-  request: {
-    headers: z.object({
-      'Idempotency-Key': z.string().min(1).max(200),
-    }),
-    body: { required: true, content: { 'application/json': { schema: CreateAgentSchema } } },
-  },
+  request: { body: { required: true, content: { 'application/json': { schema: CreateAgentSchema } } } },
   responses: {
-    201: {
-      description: 'Created Agent',
-      headers: { Location: { schema: { type: 'string' } } },
-      content: { 'application/json': { schema: AgentSchema } },
-    },
+    201: { description: 'Created agent', content: { 'application/json': { schema: AgentSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    403: {
-      description: 'Realmroot management authority required',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    409: { description: 'Idempotency conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    502: {
-      description: 'Realmroot provisioning failed',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
   },
 })
 
@@ -316,33 +279,6 @@ const updateAgentRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Archived agent', content: { 'application/json': { schema: ErrorResponseSchema } } },
-  },
-})
-
-const deleteAgentRoute = createRoute({
-  method: 'delete',
-  path: '/{agentId}',
-  operationId: 'retireAgent',
-  tags: ['Agents'],
-  summary: 'Permanently retire an Agent identity and destroy its managed Vault',
-  ...AuthenticatedOperation,
-  request: { params: AgentParamsSchema },
-  responses: {
-    204: { description: 'Agent retired' },
-    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    403: {
-      description: 'Realmroot management authority required',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: {
-      description: 'Legacy Agent identity requires backfill',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
-    502: {
-      description: 'Retirement failed before the identity was retired',
-      content: { 'application/json': { schema: ErrorResponseSchema } },
-    },
   },
 })
 
@@ -393,16 +329,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const {
-        archived,
-        search,
-        createdFrom,
-        createdTo,
-        identityIssuer,
-        identitySubject,
-        limit = 50,
-        cursor,
-      } = c.req.valid('query')
+      const { archived, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -415,8 +342,6 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
-        ...(identityIssuer ? { identityIssuer } : {}),
-        ...(identitySubject ? { identitySubject } : {}),
         limit,
         cursor: parsedCursor,
       })
@@ -438,41 +363,14 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      if (auth.agentActor) {
-        return c.json({ error: { type: 'forbidden', message: 'Only a Realmroot User can create managed Agents' } }, 403)
-      }
       try {
-        if (!deps.realmrootManagementAuthority) {
-          throw new AgentCreationUpstreamError('Realmroot Agent management authority is unavailable')
-        }
-        const subjectAccessToken = await authenticatedAccessToken(c, auth)
-        const agent = await createManagedAgent(
-          deps,
-          auth,
-          c.req.valid('header')['Idempotency-Key'],
-          {
-            username: body.username,
-            name: body.metadata.name,
-            description: body.metadata.description ?? null,
-            spec: specFromPayload(body),
-          },
-          () => deps.realmrootManagementAuthority!.forAgentAdministration(auth, subjectAccessToken),
-        )
-        c.header('Location', `/api/v1/agents/${encodeURIComponent(agent.metadata.uid)}`)
+        const agent = await createAgent(deps, auth, {
+          name: body.metadata.name,
+          description: body.metadata.description ?? null,
+          spec: specFromPayload(body),
+        })
         return c.json(serializeAgent(agent), 201)
       } catch (error) {
-        if (error instanceof AgentCreationValidation) {
-          return c.json(domainValidation(error.message, error.fields), 400)
-        }
-        if (error instanceof AgentCreationConflict) {
-          return c.json({ error: { type: 'conflict', message: error.message } }, 409)
-        }
-        if (error instanceof AgentCreationUpstreamError) {
-          if (/authority|403|permission|scope/i.test(error.message)) {
-            return c.json({ error: { type: 'forbidden', message: error.message } }, 403)
-          }
-          return c.json({ error: { type: 'agent_creation_failed', message: error.message } }, 502)
-        }
         return validationOr(c, error)
       }
     })
@@ -534,46 +432,6 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         return validationOr(c, error)
       }
     })
-    .openapi(deleteAgentRoute, async (c) => {
-      const auth = await requireAuth(c)
-      if (auth instanceof Response) return auth
-      if (auth.agentActor) {
-        return c.json({ error: { type: 'forbidden', message: 'Only a Realmroot User can retire managed Agents' } }, 403)
-      }
-      const { agentId } = c.req.valid('param')
-      const deps = c.get('deps')
-      const agent = await deps.agents.find(auth.project.id, agentId)
-      if (!agent) return notFound(c)
-      if (!agent.identity) {
-        return c.json(
-          { error: { type: 'conflict', message: 'Legacy Agent identity must be backfilled before retirement' } },
-          409,
-        )
-      }
-      try {
-        const authority = await deps.realmrootManagementAuthority?.forAgentAdministration(
-          auth,
-          await authenticatedAccessToken(c, auth),
-        )
-        if (!authority) throw new Error('Realmroot Agent management authority is unavailable')
-        await retireAgent(deps, auth, agent, authority)
-        await deps.audit.record(auth, {
-          action: 'agent.retire',
-          resourceType: 'agent',
-          resourceId: agentId,
-          outcome: 'success',
-          requestId: requestId(c),
-          metadata: { issuer: agent.identity.issuer, subject: agent.identity.subject },
-        })
-        return c.body(null, 204)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Agent retirement failed'
-        if (/authority|403|permission|scope/i.test(message)) {
-          return c.json({ error: { type: 'forbidden', message } }, 403)
-        }
-        return c.json({ error: { type: 'agent_retirement_failed', message } }, 502)
-      }
-    })
     .openapi(listAgentVersionsRoute, async (c) => {
       const { agentId } = c.req.valid('param')
       const deps = c.get('deps')
@@ -622,7 +480,6 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
   return {
     ...(body.metadata?.name !== undefined ? { name: body.metadata.name } : {}),
     ...(body.metadata?.description !== undefined ? { description: body.metadata.description } : {}),
-    ...(spec?.runtime !== undefined ? { runtime: spec.runtime } : {}),
     ...(spec?.systemPrompt !== undefined ? { systemPrompt: spec.systemPrompt } : {}),
     ...(spec?.provider !== undefined ? { provider: spec.provider } : {}),
     ...(spec?.model !== undefined ? { model: spec.model } : {}),
@@ -630,6 +487,7 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
     ...(spec?.subagents !== undefined ? { subagents: normalizeSubagents(spec.subagents) } : {}),
     ...(spec?.allowedTools !== undefined ? { allowedTools: spec.allowedTools } : {}),
     ...(spec?.mcpConnectors !== undefined ? { mcpConnectors: spec.mcpConnectors } : {}),
+    ...(spec?.realmroot !== undefined ? { realmroot: spec.realmroot } : {}),
     ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
@@ -637,7 +495,6 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
 function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): AgentSpec {
   const spec = body.spec
   return {
-    runtime: spec.runtime,
     systemPrompt: spec.systemPrompt,
     provider: spec.provider ?? null,
     model: spec.model ?? null,
@@ -645,6 +502,7 @@ function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): AgentSpec {
     subagents: normalizeSubagents(spec.subagents ?? []),
     allowedTools: spec.allowedTools ?? defaultAllowedTools(),
     mcpConnectors: spec.mcpConnectors ?? [],
+    realmroot: spec.realmroot ?? null,
   }
 }
 
@@ -661,17 +519,7 @@ function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): A
 }
 
 function serializeAgent(agent: Agent) {
-  return serializeResource({
-    ...agent,
-    identity: agent.identity
-      ? {
-          issuer: agent.identity.issuer,
-          subject: agent.identity.subject,
-          username: agent.identity.username,
-          runtime: agent.identity.runtime,
-        }
-      : null,
-  })
+  return serializeResource(agent)
 }
 
 function serializeAgentVersion(version: AgentVersion) {

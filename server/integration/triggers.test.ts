@@ -8,7 +8,6 @@ import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from '@server/usecases/dispatch-triggers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
-import { createReadyAgent } from './v2-resources'
 
 const AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -50,10 +49,23 @@ async function createEnvironment(authorization: string, type: 'cloud' | 'self_ho
 }
 
 async function createAgent(authorization: string) {
-  const agent = await createReadyAgent(authorization, {
-    name: `Trigger agent ${crypto.randomUUID()}`,
-    systemPrompt: 'Run scheduled work.',
+  const res = await jsonFetch('/api/v1/agents', authorization, {
+    method: 'POST',
+    body: JSON.stringify(
+      createResourceBody(
+        {
+          name: `Trigger agent ${crypto.randomUUID()}`,
+        },
+        {
+          systemPrompt: 'Run scheduled work.',
+          provider: 'workers-ai',
+          model: '@cf/moonshotai/kimi-k2.6',
+        },
+      ),
+    ),
   })
+  expect(res.status).toBe(201)
+  const agent = (await res.json()) as { metadata: { uid: string } }
   return { id: agent.metadata.uid }
 }
 
@@ -1388,10 +1400,10 @@ describe('[CF] /api/v1/triggers', () => {
     await expect(sessionRes.json()).resolves.toMatchObject({ spec: { environmentId: environment.id } })
   })
 
-  it('uses a cloud environment for an unpinned ama trigger when no runner is active [spec: triggers/dispatch]', async () => {
+  it('fails an unpinned trigger run when no runner environment is available [spec: triggers/dispatch]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
-    // Cloud AMA execution does not require a self-hosted runner.
+    // An environment exists but has no active runner, so it is not a candidate.
     await createEnvironment(authorization)
     const dueAt = '2026-05-26T12:00:00.000Z'
 
@@ -1432,12 +1444,14 @@ describe('[CF] /api/v1/triggers', () => {
       failed: number
       runs: Array<{ status: string; errorMessage: string | null }>
     }
-    expect(dispatch).toMatchObject({ claimed: 1, dispatched: 1, failed: 0 })
-    expect(dispatch.runs[0]?.errorMessage).toBeNull()
+    expect(dispatch).toMatchObject({ claimed: 1, dispatched: 0, failed: 1 })
+    // createSession (not the dispatcher) now owns resolution, so the run fails
+    // with its "no runner environment" message.
+    expect(dispatch.runs[0]?.errorMessage).toContain('No environment has an active runner')
 
     const runsRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization)
     await expect(runsRes.json()).resolves.toMatchObject({
-      data: [expect.objectContaining({ status: expect.objectContaining({ phase: 'dispatched' }) })],
+      data: [expect.objectContaining({ status: expect.objectContaining({ phase: 'failed' }) })],
     })
   })
 

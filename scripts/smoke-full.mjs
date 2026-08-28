@@ -16,7 +16,6 @@ import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
-import WebSocket from 'ws'
 
 const ROOT = process.cwd()
 const RUNTIME = 'codex'
@@ -186,10 +185,12 @@ async function waitForReady(origin) {
 
 async function api(origin, token, path, options = {}) {
   const method = options.method ?? (options.body === undefined ? 'GET' : 'POST')
+  const proofTarget = new URL(path, origin)
+  proofTarget.search = ''
   const headers = {
-    authorization: `Bearer ${token.accessToken}`,
+    authorization: `DPoP ${token.accessToken}`,
+    dpop: `e2e-proof:${method}:${proofTarget.toString()}`,
     'x-ama-project-id': token.projectId,
-    ...(method === 'POST' ? { 'idempotency-key': crypto.randomUUID() } : {}),
     ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...(options.headers ?? {}),
   }
@@ -269,42 +270,14 @@ function socketURL(origin, sessionId) {
   return url.toString()
 }
 
-async function browserSessionCookie(origin, token) {
-  const response = await fetch(`${origin}/api/v1/e2e/auth/session`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ accessToken: token.accessToken }),
-  })
-  if (response.status !== 204) {
-    throw new Error(`POST /api/v1/e2e/auth/session returned ${response.status}: ${await response.text()}`)
-  }
-  const cookie = response.headers.get('set-cookie')?.split(';')[0]
-  if (!cookie) {
-    throw new Error('POST /api/v1/e2e/auth/session omitted its session cookie')
-  }
-  return cookie
-}
-
-async function browserSocketTicket(origin, sessionId, cookie) {
-  const path = `/api/v1/sessions/${sessionId}/socket-tickets`
-  const response = await fetch(`${origin}${path}`, {
-    method: 'POST',
-    headers: { cookie, origin },
-  })
-  const text = await response.text()
-  if (response.status !== 201) {
-    throw new Error(`POST ${path} returned ${response.status}: ${text}`)
-  }
-  const body = text ? JSON.parse(text) : null
-  if (!body?.ticket) {
-    throw new Error(`POST ${path} omitted its socket ticket`)
-  }
-  return body.ticket
-}
-
-function openSocket(url, ticket, origin) {
+function openSocket(url, token) {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(url, ['ama-ticket', `ama-ticket.${ticket}`], { headers: { origin } })
+    const proofTarget = url.replace(/^ws/, 'http')
+    const socket = new WebSocket(url, [
+      'ama-dpop',
+      `ama-access.${Buffer.from(token.accessToken).toString('base64url')}`,
+      `ama-proof.${Buffer.from(`e2e-proof:GET:${proofTarget}`).toString('base64url')}`,
+    ])
     const timer = setTimeout(() => {
       socket.close()
       reject(new Error(`socket open timed out: ${url}`))
@@ -540,7 +513,6 @@ async function main() {
   let socket = null
   let secondSocket = null
   let token = null
-  let browserCookie = null
   let sessionId = null
   let failure = null
 
@@ -562,8 +534,9 @@ async function main() {
           {
             accountId: runId,
             apiServer: origin,
-            accessToken: token.accessToken.replace(/^e2e:/, 'e2e-runner:'),
-            tokenType: 'Bearer',
+            accessToken: token.accessToken,
+            tokenType: 'DPoP',
+            dpopPrivateKey: 'e2e-only',
           },
         ],
       }),
@@ -590,13 +563,8 @@ async function main() {
     const agent = await api(origin, token, '/api/v1/agents', {
       method: 'POST',
       body: {
-        username: `full-smoke-${runId}`
-          .toLowerCase()
-          .replaceAll(/[^a-z0-9_.-]/g, '-')
-          .slice(0, 64),
         metadata: { name: `full-smoke-agent-${runId}` },
         spec: {
-          runtime: RUNTIME,
           systemPrompt: [
             'You are running the AMA full-chain smoke test.',
             'Before using any file or shell tool, you MUST call the spawn_agent collaboration tool exactly once with the arithmetic-checker agent and ask it to reply only 4 for 2+2.',
@@ -645,14 +613,7 @@ async function main() {
     sessionId = session.metadata.uid
     info(`created session ${sessionId}`)
 
-    browserCookie = await browserSessionCookie(origin, token)
-    socket = watchSocket(
-      await openSocket(
-        socketURL(origin, sessionId),
-        await browserSocketTicket(origin, sessionId, browserCookie),
-        origin,
-      ),
-    )
+    socket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
     runner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
     await socket.waitFor(
@@ -691,13 +652,7 @@ async function main() {
     restartedRunner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
 
-    secondSocket = watchSocket(
-      await openSocket(
-        socketURL(origin, sessionId),
-        await browserSocketTicket(origin, sessionId, browserCookie),
-        origin,
-      ),
-    )
+    secondSocket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
     const reconnectBackfill = await secondSocket.waitFor(
       (frame) => frame.type === 'backfill',
       'automatic backfill after runner reconnect',

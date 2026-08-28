@@ -100,28 +100,15 @@ export async function getAccessTokenClaims(
   return normalizeClaims(env, await verifyAccessToken(env, accessToken, oidcAudience(env, expectedAudience)))
 }
 
-export async function getBearerClaimsForAudience(env: Env, accessToken: string, audience: string) {
-  const exactAudience = oidcAudience(
-    {
-      OIDC_RESOURCE: audience,
-      ...(env.AMA_RUNTIME_MODE !== undefined ? { AMA_RUNTIME_MODE: env.AMA_RUNTIME_MODE } : {}),
-      ...(env.AMA_E2E_TEST_AUTH !== undefined ? { AMA_E2E_TEST_AUTH: env.AMA_E2E_TEST_AUTH } : {}),
-    },
-    audience,
-  )
-  return normalizeClaims(env, await verifyAccessToken(env, accessToken, exactAudience, 'management'))
-}
-
 async function verifyAccessToken(
   env: Env,
   accessToken: string,
   audience: string,
-  credentialMode?: 'bearer' | 'dpop' | 'management',
+  credentialMode?: 'bearer' | 'dpop',
 ): Promise<JWTPayload & { sub: string }> {
   const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
-    const payload = e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID, audience)
-    validateExactAudience(payload, audience)
+    const payload = e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
     validateRealmrootClient(env, payload, credentialMode)
     return payload
   }
@@ -129,8 +116,7 @@ async function verifyAccessToken(
     if (!env.OIDC_RUNNER_CLIENT_ID) {
       throw new OidcError('OIDC_RUNNER_CLIENT_ID is required for runner e2e tokens')
     }
-    const payload = e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID, audience)
-    validateExactAudience(payload, audience)
+    const payload = e2eClaims(env, accessToken.slice('e2e-runner:'.length), env.OIDC_RUNNER_CLIENT_ID)
     validateRealmrootClient(env, payload, credentialMode)
     return payload
   }
@@ -160,17 +146,10 @@ async function verifyAccessToken(
     if (!payload.sub) {
       throw new OidcError('Realmroot access token did not include required subject')
     }
-    validateExactAudience(payload, audience)
     validateRealmrootClient(env, payload, credentialMode)
     return { ...payload, sub: payload.sub }
   } catch (err) {
     throw toOidcError(err)
-  }
-}
-
-function validateExactAudience(payload: JWTPayload, audience: string): void {
-  if (payload.aud !== audience) {
-    throw new OidcError('Realmroot access token must target exactly one AMA audience')
   }
 }
 
@@ -200,12 +179,6 @@ async function oidcMetadata(env: Env): Promise<CachedOidcMetadata> {
 
 function oidcFetch(url: string, init: RequestInit) {
   return fetch(url, init)
-}
-
-async function defaultProjectId(organizationId: string) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(organizationId))
-  const value = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-  return `project_${value.slice(0, 32)}`
 }
 
 export async function upsertProjectForClaims(
@@ -242,13 +215,13 @@ export async function upsertProjectForClaims(
     .get()
   if (!project) {
     project = {
-      id: await defaultProjectId(organizationId),
+      id: newId('project'),
       organizationId,
       name: projectName,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
-    await db.insert(projects).values(project).onConflictDoNothing()
+    await db.insert(projects).values(project)
   }
   return { id: project.id, name: project.name, organizationId: project.organizationId }
 }
@@ -281,17 +254,8 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
   }
 }
 
-function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop' | 'management') {
+function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop') {
   const clientId = stringClaim(claims.client_id)
-  if (credentialMode === 'management') {
-    if (!clientId || clientId !== env.OIDC_CLIENT_ID) {
-      throw new OidcError('Realmroot management token client is not allowed')
-    }
-    if (claims.cnf !== undefined || claims.act !== undefined) {
-      throw new OidcError('Realmroot management token must be an unbound User delegation')
-    }
-    return
-  }
   const allowedClients = new Set([
     env.OIDC_CLIENT_ID,
     env.OIDC_RUNNER_CLIENT_ID,
@@ -307,9 +271,6 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   }
   if (credentialMode === 'dpop' && clientId !== 'realmroot-cli') {
     throw new OidcError('Realmroot Console and runner clients require Bearer authentication')
-  }
-  if (clientId !== 'realmroot-cli' && claims.act !== undefined) {
-    throw new OidcError('Only Realmroot Agent tokens may carry an Agent actor')
   }
   if (clientId !== 'realmroot-cli') return
   const actor = objectClaim(claims.act)
@@ -345,12 +306,7 @@ function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoCl
 // `org` joins the synthesized user into another run's organization, and
 // `teams`/`roles` populate the corresponding OIDC claims so team-scoped
 // policy and role-gated overrides are testable without a real IdP.
-function e2eClaims(
-  env: Env,
-  spec: string,
-  clientId: string | undefined,
-  audience: string,
-): JWTPayload & { sub: string } {
+function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPayload & { sub: string } {
   const [rawRunId = '', ...directiveParts] = spec.split(';')
   const directives = new Map<string, string>()
   for (const part of directiveParts) {
@@ -382,8 +338,6 @@ function e2eClaims(
     : AMA_SCOPES
   const scope = ['openid', 'profile', 'email', 'offline_access', ...resourceScopes].join(' ')
   return {
-    ...(env.OIDC_ISSUER ? { iss: env.OIDC_ISSUER } : {}),
-    aud: audience,
     sub: `user_e2e_${safeRunId}`,
     email: `${safeRunId}@e2e.example.com`,
     name: `E2E User ${safeRunId}`,

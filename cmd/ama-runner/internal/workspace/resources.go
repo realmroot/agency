@@ -143,7 +143,7 @@ func materializeSecretMount(sessionRoot string, volume protocol.WorkspaceMount) 
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0o700); err != nil {
 			return "", err
 		}
-		if err := os.WriteFile(fullPath, []byte(file.Content), 0o600); err != nil {
+		if err := os.WriteFile(fullPath, []byte(file.Content), 0o400); err != nil {
 			return "", err
 		}
 	}

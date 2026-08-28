@@ -19,7 +19,6 @@ export const emptyEnvironment: EnvironmentFormState = {
 }
 
 export const emptyAgent: AgentFormState = {
-  username: 'coding-agent',
   name: 'Coding agent',
   description: 'Executes development work in a managed sandbox.',
   systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
@@ -28,7 +27,6 @@ export const emptyAgent: AgentFormState = {
   skills: 'ama@coding-agent',
   allowedTools: DEFAULT_ALLOWED_TOOLS,
   mcpConnectors: '',
-  runtime: 'codex',
 }
 
 export const emptySession: SessionFormState = {

@@ -15,7 +15,7 @@ not_found_handling = "single-page-application"
 run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 
 [vars]
-AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev,https://agent-kanban.dev,https://ak.tftt.cc"
+AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
@@ -225,14 +225,11 @@ max_instances = 20
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 OIDC_ISSUER = "https://oidc.test/api/auth"
 OIDC_CLIENT_ID = "ama-e2e"
-OIDC_RESOURCE = "http://localhost:5173/api"
-OIDC_BROWSER_SCOPES = "openid profile email offline_access agents:read agents:write"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = ""
 OIDC_RUNNER_CLIENT_ID = "ama-runner-e2e"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
 AMA_ALLOWED_ORIGINS = "http://localhost:5173"
 AMA_E2E_TEST_AUTH = "true"
-AMA_E2E_FAKE_REALMROOT_ENROLLMENT = "true"
 AMA_RUNTIME_MODE = "test"
 AMA_VAULT_ENCRYPTION_KEY = "e2e-local-vault-encryption-key-not-for-production"
 AMA_WEB_SESSION_ENCRYPTION_KEY = "e2e-local-web-session-key-not-for-production"

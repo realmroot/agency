@@ -23,75 +23,6 @@ const (
 	SessionSocketTicketScopes sessionSocketTicketContextKey = "sessionSocketTicket.Scopes"
 )
 
-// Defines values for AgentSpecRuntime.
-const (
-	AgentSpecRuntimeAma        AgentSpecRuntime = "ama"
-	AgentSpecRuntimeClaudeCode AgentSpecRuntime = "claude-code"
-	AgentSpecRuntimeCodex      AgentSpecRuntime = "codex"
-	AgentSpecRuntimeCopilot    AgentSpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the AgentSpecRuntime enum.
-func (e AgentSpecRuntime) Valid() bool {
-	switch e {
-	case AgentSpecRuntimeAma:
-		return true
-	case AgentSpecRuntimeClaudeCode:
-		return true
-	case AgentSpecRuntimeCodex:
-		return true
-	case AgentSpecRuntimeCopilot:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AgentStatusPhase.
-const (
-	AgentStatusPhaseActive   AgentStatusPhase = "active"
-	AgentStatusPhaseArchived AgentStatusPhase = "archived"
-	AgentStatusPhaseRetired  AgentStatusPhase = "retired"
-	AgentStatusPhaseRetiring AgentStatusPhase = "retiring"
-)
-
-// Valid indicates whether the value is a known member of the AgentStatusPhase enum.
-func (e AgentStatusPhase) Valid() bool {
-	switch e {
-	case AgentStatusPhaseActive:
-		return true
-	case AgentStatusPhaseArchived:
-		return true
-	case AgentStatusPhaseRetired:
-		return true
-	case AgentStatusPhaseRetiring:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AgentStatusRetirementStage.
-const (
-	AgentStatusRetirementStageIdentityRetired AgentStatusRetirementStage = "identity_retired"
-	AgentStatusRetirementStageRetired         AgentStatusRetirementStage = "retired"
-	AgentStatusRetirementStageStopping        AgentStatusRetirementStage = "stopping"
-)
-
-// Valid indicates whether the value is a known member of the AgentStatusRetirementStage enum.
-func (e AgentStatusRetirementStage) Valid() bool {
-	switch e {
-	case AgentStatusRetirementStageIdentityRetired:
-		return true
-	case AgentStatusRetirementStageRetired:
-		return true
-	case AgentStatusRetirementStageStopping:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AmaEvent0Type.
 const (
 	AmaEvent0TypeRuntimeStarted AmaEvent0Type = "runtime.started"
@@ -524,30 +455,6 @@ func (e ConnectorToolApprovalMode) Valid() bool {
 	case PerCall:
 		return true
 	case ProjectPolicy:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateAgentRequestSpecRuntime.
-const (
-	CreateAgentRequestSpecRuntimeAma        CreateAgentRequestSpecRuntime = "ama"
-	CreateAgentRequestSpecRuntimeClaudeCode CreateAgentRequestSpecRuntime = "claude-code"
-	CreateAgentRequestSpecRuntimeCodex      CreateAgentRequestSpecRuntime = "codex"
-	CreateAgentRequestSpecRuntimeCopilot    CreateAgentRequestSpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the CreateAgentRequestSpecRuntime enum.
-func (e CreateAgentRequestSpecRuntime) Valid() bool {
-	switch e {
-	case CreateAgentRequestSpecRuntimeAma:
-		return true
-	case CreateAgentRequestSpecRuntimeClaudeCode:
-		return true
-	case CreateAgentRequestSpecRuntimeCodex:
-		return true
-	case CreateAgentRequestSpecRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -1241,21 +1148,6 @@ func (e PutRunnerHeartbeatRequestState) Valid() bool {
 	case PutRunnerHeartbeatRequestStateDraining:
 		return true
 	case PutRunnerHeartbeatRequestStateOffline:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RealmrootAgentIdentityRuntime.
-const (
-	RealmrootAgentIdentityRuntimeAma RealmrootAgentIdentityRuntime = "ama"
-)
-
-// Valid indicates whether the value is a known member of the RealmrootAgentIdentityRuntime enum.
-func (e RealmrootAgentIdentityRuntime) Valid() bool {
-	switch e {
-	case RealmrootAgentIdentityRuntimeAma:
 		return true
 	default:
 		return false
@@ -2042,21 +1934,6 @@ func (e SessionMessageType) Valid() bool {
 	}
 }
 
-// Defines values for SessionRealmrootIdentityRuntime.
-const (
-	SessionRealmrootIdentityRuntimeAma SessionRealmrootIdentityRuntime = "ama"
-)
-
-// Valid indicates whether the value is a known member of the SessionRealmrootIdentityRuntime enum.
-func (e SessionRealmrootIdentityRuntime) Valid() bool {
-	switch e {
-	case SessionRealmrootIdentityRuntimeAma:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SessionSocketAbortMessageType.
 const (
 	Abort SessionSocketAbortMessageType = "abort"
@@ -2330,30 +2207,6 @@ const (
 func (e TriggerSource1Type) Valid() bool {
 	switch e {
 	case TriggerSource1TypeHttp:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpdateAgentRequestSpecRuntime.
-const (
-	UpdateAgentRequestSpecRuntimeAma        UpdateAgentRequestSpecRuntime = "ama"
-	UpdateAgentRequestSpecRuntimeClaudeCode UpdateAgentRequestSpecRuntime = "claude-code"
-	UpdateAgentRequestSpecRuntimeCodex      UpdateAgentRequestSpecRuntime = "codex"
-	UpdateAgentRequestSpecRuntimeCopilot    UpdateAgentRequestSpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the UpdateAgentRequestSpecRuntime enum.
-func (e UpdateAgentRequestSpecRuntime) Valid() bool {
-	switch e {
-	case UpdateAgentRequestSpecRuntimeAma:
-		return true
-	case UpdateAgentRequestSpecRuntimeClaudeCode:
-		return true
-	case UpdateAgentRequestSpecRuntimeCodex:
-		return true
-	case UpdateAgentRequestSpecRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2662,13 +2515,13 @@ func (e VaultCredentialStatusPhase) Valid() bool {
 
 // Defines values for VaultCredentialVersionSpecProvider.
 const (
-	VaultCredentialVersionSpecProviderAma VaultCredentialVersionSpecProvider = "ama"
+	Ama VaultCredentialVersionSpecProvider = "ama"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialVersionSpecProvider enum.
 func (e VaultCredentialVersionSpecProvider) Valid() bool {
 	switch e {
-	case VaultCredentialVersionSpecProviderAma:
+	case Ama:
 		return true
 	default:
 		return false
@@ -3163,10 +3016,9 @@ func (e ListWorkItemsParamsState) Valid() bool {
 
 // Agent defines model for Agent.
 type Agent struct {
-	Identity *RealmrootAgentIdentity `json:"identity"`
-	Metadata ResourceMetadata        `json:"metadata"`
-	Spec     AgentSpec               `json:"spec"`
-	Status   AgentStatus             `json:"status"`
+	Metadata ResourceMetadata `json:"metadata"`
+	Spec     AgentSpec        `json:"spec"`
+	Status   AgentStatus      `json:"status"`
 }
 
 // AgentListResponse defines model for AgentListResponse.
@@ -3177,33 +3029,22 @@ type AgentListResponse struct {
 
 // AgentSpec defines model for AgentSpec.
 type AgentSpec struct {
-	AllowedTools  []string         `json:"allowedTools"`
-	McpConnectors []string         `json:"mcpConnectors"`
-	Model         *string          `json:"model"`
-	Provider      *string          `json:"provider"`
-	Runtime       AgentSpecRuntime `json:"runtime"`
-	Skills        []string         `json:"skills"`
-	Subagents     []AgentSubagent  `json:"subagents"`
-	SystemPrompt  string           `json:"systemPrompt"`
+	AllowedTools  []string               `json:"allowedTools"`
+	McpConnectors []string               `json:"mcpConnectors"`
+	Model         *string                `json:"model"`
+	Provider      *string                `json:"provider"`
+	Realmroot     *RealmrootAgentBinding `json:"realmroot"`
+	Skills        []string               `json:"skills"`
+	Subagents     []AgentSubagent        `json:"subagents"`
+	SystemPrompt  string                 `json:"systemPrompt"`
 }
-
-// AgentSpecRuntime defines model for AgentSpec.Runtime.
-type AgentSpecRuntime string
 
 // AgentStatus defines model for AgentStatus.
 type AgentStatus struct {
-	CurrentVersionId *string                     `json:"currentVersionId"`
-	Phase            AgentStatusPhase            `json:"phase"`
-	Ready            bool                        `json:"ready"`
-	RetirementStage  *AgentStatusRetirementStage `json:"retirementStage"`
-	Version          int                         `json:"version"`
+	CurrentVersionId *string       `json:"currentVersionId"`
+	Phase            ResourcePhase `json:"phase"`
+	Version          int           `json:"version"`
 }
-
-// AgentStatusPhase defines model for AgentStatus.Phase.
-type AgentStatusPhase string
-
-// AgentStatusRetirementStage defines model for AgentStatus.RetirementStage.
-type AgentStatusRetirementStage string
 
 // AgentSubagent defines model for AgentSubagent.
 type AgentSubagent struct {
@@ -3534,20 +3375,16 @@ type ConnectorToolApprovalMode string
 type CreateAgentRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		AllowedTools  *[]string                     `json:"allowedTools,omitempty"`
-		McpConnectors *[]string                     `json:"mcpConnectors,omitempty"`
-		Model         *string                       `json:"model,omitempty"`
-		Provider      *string                       `json:"provider,omitempty"`
-		Runtime       CreateAgentRequestSpecRuntime `json:"runtime"`
-		Skills        *[]string                     `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput         `json:"subagents,omitempty"`
-		SystemPrompt  string                        `json:"systemPrompt"`
+		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
+		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
+		Model         *string                `json:"model,omitempty"`
+		Provider      *string                `json:"provider,omitempty"`
+		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
+		Skills        *[]string              `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
+		SystemPrompt  string                 `json:"systemPrompt"`
 	} `json:"spec"`
-	Username string `json:"username"`
 }
-
-// CreateAgentRequestSpecRuntime defines model for CreateAgentRequest.Spec.Runtime.
-type CreateAgentRequestSpecRuntime string
 
 // CreateBudgetRequest defines model for CreateBudgetRequest.
 type CreateBudgetRequest struct {
@@ -3639,17 +3476,6 @@ type CreateSessionEventsRequest struct {
 	Events []AmaEvent `json:"events"`
 }
 
-// CreateSessionExecutionSpec defines model for CreateSessionExecutionSpec.
-type CreateSessionExecutionSpec struct {
-	AgentId       string          `json:"agentId"`
-	Env           *ExecutionEnv   `json:"env,omitempty"`
-	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
-	EnvironmentId *string         `json:"environmentId,omitempty"`
-	Runtime       *RuntimeName    `json:"runtime,omitempty"`
-	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
-	Volumes       *[]Volume       `json:"volumes,omitempty"`
-}
-
 // CreateSessionMessageRequest defines model for CreateSessionMessageRequest.
 type CreateSessionMessageRequest struct {
 	Content   string                          `json:"content"`
@@ -3662,9 +3488,9 @@ type CreateSessionMessageRequestType string
 
 // CreateSessionRequest defines model for CreateSessionRequest.
 type CreateSessionRequest struct {
-	Metadata *SessionCreateMetadata     `json:"metadata,omitempty"`
-	Prompt   string                     `json:"prompt"`
-	Spec     CreateSessionExecutionSpec `json:"spec"`
+	Metadata *SessionCreateMetadata `json:"metadata,omitempty"`
+	Prompt   string                 `json:"prompt"`
+	Spec     ExecutionSpecInput     `json:"spec"`
 }
 
 // CreateTriggerRequest defines model for CreateTriggerRequest.
@@ -3989,6 +3815,17 @@ type EventToolCall8Name string
 
 // ExecutionEnv defines model for ExecutionEnv.
 type ExecutionEnv map[string]string
+
+// ExecutionSpecInput defines model for ExecutionSpecInput.
+type ExecutionSpecInput struct {
+	AgentId       string          `json:"agentId"`
+	Env           *ExecutionEnv   `json:"env,omitempty"`
+	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
+	EnvironmentId *string         `json:"environmentId,omitempty"`
+	Runtime       RuntimeName     `json:"runtime"`
+	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
+	Volumes       *[]Volume       `json:"volumes,omitempty"`
+}
 
 // ExternalToolCall defines model for ExternalToolCall.
 type ExternalToolCall struct {
@@ -4352,16 +4189,12 @@ type ReadToolInput struct {
 	Path   string `json:"path"`
 }
 
-// RealmrootAgentIdentity defines model for RealmrootAgentIdentity.
-type RealmrootAgentIdentity struct {
-	Issuer   string                        `json:"issuer"`
-	Runtime  RealmrootAgentIdentityRuntime `json:"runtime"`
-	Subject  string                        `json:"subject"`
-	Username string                        `json:"username"`
+// RealmrootAgentBinding defines model for RealmrootAgentBinding.
+type RealmrootAgentBinding struct {
+	AgentId       string `json:"agentId"`
+	CredentialRef string `json:"credentialRef"`
+	Origin        string `json:"origin"`
 }
-
-// RealmrootAgentIdentityRuntime defines model for RealmrootAgentIdentity.Runtime.
-type RealmrootAgentIdentityRuntime string
 
 // ReasoningContentBlock defines model for ReasoningContentBlock.
 type ReasoningContentBlock struct {
@@ -4778,20 +4611,19 @@ type Session struct {
 
 // SessionAgentSnapshot defines model for SessionAgentSnapshot.
 type SessionAgentSnapshot struct {
-	AgentId       string                    `json:"agentId"`
-	AllowedTools  []string                  `json:"allowedTools"`
-	CreatedAt     time.Time                 `json:"createdAt"`
-	Id            string                    `json:"id"`
-	Identity      *SessionRealmrootIdentity `json:"identity"`
-	McpConnectors []string                  `json:"mcpConnectors"`
-	Model         *string                   `json:"model"`
-	ProjectId     string                    `json:"projectId"`
-	Provider      string                    `json:"provider"`
-	Runtime       RuntimeName               `json:"runtime"`
-	Skills        []string                  `json:"skills"`
-	Subagents     []SessionSubagent         `json:"subagents"`
-	SystemPrompt  string                    `json:"systemPrompt"`
-	Version       int                       `json:"version"`
+	AgentId       string                   `json:"agentId"`
+	AllowedTools  []string                 `json:"allowedTools"`
+	CreatedAt     time.Time                `json:"createdAt"`
+	Id            string                   `json:"id"`
+	McpConnectors []string                 `json:"mcpConnectors"`
+	Model         *string                  `json:"model"`
+	ProjectId     string                   `json:"projectId"`
+	Provider      string                   `json:"provider"`
+	Realmroot     *SessionRealmrootBinding `json:"realmroot,omitempty"`
+	Skills        []string                 `json:"skills"`
+	Subagents     []SessionSubagent        `json:"subagents"`
+	SystemPrompt  string                   `json:"systemPrompt"`
+	Version       int                      `json:"version"`
 }
 
 // SessionApproval defines model for SessionApproval.
@@ -5114,16 +4946,12 @@ type SessionPlacement struct {
 	Provider    string                 `json:"provider"`
 }
 
-// SessionRealmrootIdentity defines model for SessionRealmrootIdentity.
-type SessionRealmrootIdentity struct {
-	Issuer   string                          `json:"issuer"`
-	Runtime  SessionRealmrootIdentityRuntime `json:"runtime"`
-	Subject  string                          `json:"subject"`
-	Username string                          `json:"username"`
+// SessionRealmrootBinding defines model for SessionRealmrootBinding.
+type SessionRealmrootBinding struct {
+	AgentId       string `json:"agentId"`
+	CredentialRef string `json:"credentialRef"`
+	Origin        string `json:"origin"`
 }
-
-// SessionRealmrootIdentityRuntime defines model for SessionRealmrootIdentity.Runtime.
-type SessionRealmrootIdentityRuntime string
 
 // SessionSocketAbortMessage defines model for SessionSocketAbortMessage.
 type SessionSocketAbortMessage struct {
@@ -5451,19 +5279,16 @@ type UpdateAgentRequest struct {
 	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
-		AllowedTools  *[]string                      `json:"allowedTools,omitempty"`
-		McpConnectors *[]string                      `json:"mcpConnectors,omitempty"`
-		Model         *string                        `json:"model,omitempty"`
-		Provider      *string                        `json:"provider,omitempty"`
-		Runtime       *UpdateAgentRequestSpecRuntime `json:"runtime,omitempty"`
-		Skills        *[]string                      `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput          `json:"subagents,omitempty"`
-		SystemPrompt  *string                        `json:"systemPrompt,omitempty"`
+		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
+		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
+		Model         *string                `json:"model,omitempty"`
+		Provider      *string                `json:"provider,omitempty"`
+		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
+		Skills        *[]string              `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
+		SystemPrompt  *string                `json:"systemPrompt,omitempty"`
 	} `json:"spec,omitempty"`
 }
-
-// UpdateAgentRequestSpecRuntime defines model for UpdateAgentRequest.Spec.Runtime.
-type UpdateAgentRequestSpecRuntime string
 
 // UpdateBudgetRequest defines model for UpdateBudgetRequest.
 type UpdateBudgetRequest struct {
@@ -5884,23 +5709,16 @@ type sessionSocketTicketContextKey string
 // ListAgentsParams defines parameters for ListAgents.
 type ListAgentsParams struct {
 	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived        *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search          *string                   `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom     *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo       *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit           *int                      `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor          *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
-	IdentityIssuer  *string                   `form:"identityIssuer,omitempty" json:"identityIssuer,omitempty"`
-	IdentitySubject *string                   `form:"identitySubject,omitempty" json:"identitySubject,omitempty"`
+	Archived    *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
+	Search      *string                   `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
 type ListAgentsParamsArchived string
-
-// CreateAgentParams defines parameters for CreateAgent.
-type CreateAgentParams struct {
-	IdempotencyKey string `json:"Idempotency-Key"`
-}
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
 type ListAuditRecordsParams struct {
@@ -8603,12 +8421,9 @@ type ClientInterface interface {
 	ListAgents(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAgentWithBody request with any body
-	CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RetireAgent request
-	RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8937,8 +8752,8 @@ func (c *APIClient) ListAgents(ctx context.Context, params *ListAgentsParams, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequestWithBody(c.Server, params, contentType, body)
+func (c *APIClient) CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8949,20 +8764,8 @@ func (c *APIClient) CreateAgentWithBody(ctx context.Context, params *CreateAgent
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) RetireAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRetireAgentRequest(c.Server, agentId)
+func (c *APIClient) CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10441,30 +10244,6 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 
 		}
 
-		if params.IdentityIssuer != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identityIssuer", *params.IdentityIssuer, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uri"}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.IdentitySubject != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identitySubject", *params.IdentitySubject, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -10480,18 +10259,18 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 }
 
 // NewCreateAgentRequest calls the generic CreateAgent builder with application/json body
-func NewCreateAgentRequest(server string, params *CreateAgentParams, body CreateAgentJSONRequestBody) (*http.Request, error) {
+func NewCreateAgentRequest(server string, body CreateAgentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateAgentRequestWithBody(server, params, "application/json", bodyReader)
+	return NewCreateAgentRequestWithBody(server, "application/json", bodyReader)
 }
 
 // NewCreateAgentRequestWithBody generates requests for CreateAgent with any type of body
-func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateAgentRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -10515,53 +10294,6 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 	}
 
 	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		var headerParam0 string
-
-		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Set("Idempotency-Key", headerParam0)
-
-	}
-
-	return req, nil
-}
-
-// NewRetireAgentRequest generates requests for RetireAgent
-func NewRetireAgentRequest(server string, agentId string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "agentId", agentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/agents/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
 	return req, nil
 }
@@ -15428,12 +15160,9 @@ type ClientWithResponsesInterface interface {
 	ListAgentsWithResponse(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*ListAgentsResponse, error)
 
 	// CreateAgentWithBodyWithResponse request with any body
-	CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+	CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
-	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
-
-	// RetireAgentWithResponse request
-	RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error)
+	CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
@@ -15790,8 +15519,6 @@ type CreateAgentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -15812,40 +15539,6 @@ func (r CreateAgentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateAgentResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type RetireAgentResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON401      *ErrorResponse
-	JSON403      *ErrorResponse
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON502      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r RetireAgentResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RetireAgentResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r RetireAgentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18736,29 +18429,20 @@ func (c *ClientWithResponses) ListAgentsWithResponse(ctx context.Context, params
 }
 
 // CreateAgentWithBodyWithResponse request with arbitrary body returning *CreateAgentResponse
-func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgentWithBody(ctx, params, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgentWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateAgentResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgent(ctx, params, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgent(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateAgentResponse(rsp)
-}
-
-// RetireAgentWithResponse request returning *RetireAgentResponse
-func (c *ClientWithResponses) RetireAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*RetireAgentResponse, error) {
-	rsp, err := c.RetireAgent(ctx, agentId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRetireAgentResponse(rsp)
 }
 
 // ReadAgentWithResponse request returning *ReadAgentResponse
@@ -19847,74 +19531,6 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRetireAgentResponse parses an HTTP response from a RetireAgentWithResponse call
-func ParseRetireAgentResponse(rsp *http.Response) (*RetireAgentResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RetireAgentResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
 
 	}
 

@@ -33,7 +33,7 @@ export const rpc = hc<AppType>('/', {
     Object.entries(auth).forEach(([key, value]) => {
       headers.set(key, value)
     })
-    return fetch(input, { ...init, headers, credentials: 'same-origin' })
+    return fetch(input, { ...init, headers })
   },
 })
 

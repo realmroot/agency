@@ -25,7 +25,6 @@ function fakeDeps(repo: Partial<Deps['projects']> = {}): Deps {
   const projects: Deps['projects'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
-    tenant: async () => null,
     insert: async (_org, name, timestamp) => projectRecord({ name, createdAt: timestamp, updatedAt: timestamp }),
     ...repo,
   }

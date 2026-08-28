@@ -338,17 +338,6 @@ describe('[spec: agents/realmroot-binding] strict Realmroot v0.4.2 state parsing
         'issuer must be a safe HTTPS URL',
       )
     }
-    for (const origin of ['http://localhost:8787', 'http://127.0.0.1:8787', 'http://[::1]:8787']) {
-      const state = realmrootState({ origin, issuer: `${origin}/api/auth` })
-      expect(() => parseRealmrootAgentState(JSON.stringify(state))).toThrow('safe HTTPS URL')
-      expect(() => parseRealmrootAgentState(JSON.stringify(state), { allowLoopbackRealmrootHttp: true })).not.toThrow()
-    }
-    expect(() =>
-      parseRealmrootAgentState(
-        JSON.stringify(realmrootState({ origin: 'http://realmroot.test', issuer: 'http://realmroot.test/api/auth' })),
-        { allowLoopbackRealmrootHttp: true },
-      ),
-    ).toThrow('safe HTTPS URL')
     for (const agent_private_key of [7, 'bad+', 'A', DPOP_PRIVATE_KEY]) {
       expect(() => parseRealmrootAgentState(JSON.stringify(realmrootState({ agent_private_key })))).toThrow(
         'invalid Ed25519 private key',

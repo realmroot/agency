@@ -26,12 +26,10 @@ T = TypeVar("T", bound="CreateAgentRequest")
 class CreateAgentRequest:
     """ 
         Attributes:
-            username (str):  Example: research-assistant.
             metadata (ResourceCreateMetadata):  Example: {'name': 'Research assistant'}.
             spec (CreateAgentRequestSpec):
      """
 
-    username: str
     metadata: ResourceCreateMetadata
     spec: CreateAgentRequestSpec
 
@@ -42,8 +40,6 @@ class CreateAgentRequest:
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_agent_request_spec import CreateAgentRequestSpec
         from ..models.resource_create_metadata import ResourceCreateMetadata
-        username = self.username
-
         metadata = self.metadata.to_dict()
 
         spec = self.spec.to_dict()
@@ -52,7 +48,6 @@ class CreateAgentRequest:
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
-            "username": username,
             "metadata": metadata,
             "spec": spec,
         })
@@ -66,8 +61,6 @@ class CreateAgentRequest:
         from ..models.create_agent_request_spec import CreateAgentRequestSpec
         from ..models.resource_create_metadata import ResourceCreateMetadata
         d = dict(src_dict)
-        username = d.pop("username")
-
         metadata = ResourceCreateMetadata.from_dict(d.pop("metadata"))
 
 
@@ -79,7 +72,6 @@ class CreateAgentRequest:
 
 
         create_agent_request = cls(
-            username=username,
             metadata=metadata,
             spec=spec,
         )
