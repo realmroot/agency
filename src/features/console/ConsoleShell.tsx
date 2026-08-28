@@ -143,7 +143,6 @@ function ProjectSwitcher({
 function DesktopNav() {
   return (
     <nav className="mt-8 flex-1 space-y-1">
-      <NavButton icon={<Code2 size={17} />} to="/quickstart" label="Quickstart" />
       <NavButton icon={<Bot size={17} />} to="/agents" label="Agents" />
       <NavButton icon={<Server size={17} />} to="/environments" label="Environments" />
       <NavButton icon={<MessageSquare size={17} />} to="/sessions" label="Sessions" />
@@ -204,7 +203,6 @@ function UserMenu({ placement }: { placement: 'sidebar' | 'mobile' }) {
 function MobileNav() {
   return (
     <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Primary">
-      <MobileNavButton icon={<Code2 size={16} />} to="/quickstart" label="Quickstart" />
       <MobileNavButton icon={<Bot size={16} />} to="/agents" label="Agents" />
       <MobileNavButton icon={<Server size={16} />} to="/environments" label="Environments" />
       <MobileNavButton icon={<MessageSquare size={16} />} to="/sessions" label="Sessions" />
