@@ -3,7 +3,7 @@ import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
 import { createAgent as createReadyAgent, updateAgent } from './agents'
 import type { Deps } from './deps'
-import { AgentArchivedError, type AuditEntry, type AuthScope } from './ports'
+import { AgentArchivedError, AgentInUseError, type AuditEntry, type AuthScope } from './ports'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -292,6 +292,55 @@ describe('[spec: agents/create] createAgent', () => {
     expect(agent.spec.model).toBe('opus')
   })
 
+  it('rejects model and sub-agent model vendors unsupported by the immutable runtime', async () => {
+    await expect(
+      createAgent(fakeDeps(), auth, {
+        name: 'x',
+        description: null,
+        identity: { ...realmroot, runtime: 'codex' },
+        spec: spec({ runtime: 'codex', provider: 'openai', model: 'anthropic/claude-opus' }),
+      }),
+    ).rejects.toMatchObject({ fields: { model: expect.any(String) } })
+
+    await expect(
+      createAgent(fakeDeps(), auth, {
+        name: 'x',
+        description: null,
+        identity: { ...realmroot, runtime: 'codex' },
+        spec: spec({ runtime: 'codex', provider: null, model: 'anthropic/claude-opus' }),
+      }),
+    ).rejects.toMatchObject({ fields: { model: expect.any(String) } })
+
+    await expect(
+      createAgent(fakeDeps(), auth, {
+        name: 'x',
+        description: null,
+        identity: { ...realmroot, runtime: 'codex' },
+        spec: spec({
+          runtime: 'codex',
+          subagents: [
+            {
+              name: 'reviewer',
+              description: 'Reviews the work.',
+              systemPrompt: 'Review the work.',
+              model: 'anthropic/claude-opus',
+              allowedTools: ['read'],
+              skills: [],
+              mcpConnectors: [],
+            },
+          ],
+        }),
+      }),
+    ).rejects.toMatchObject({ fields: { subagents: expect.any(String) } })
+  })
+
+  it('exposes the deletion conflict error used by the HTTP boundary', () => {
+    expect(new AgentInUseError()).toMatchObject({
+      name: 'AgentInUseError',
+      message: 'Agent cannot be deleted while Sessions or Triggers reference it',
+    })
+  })
+
   it('rejects a disconnected MCP connector', async () => {
     const deps = fakeDeps({ repo: { connectorAvailable: async () => false } })
     await expect(
@@ -376,6 +425,17 @@ describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
     })
 
     expect(created.identity).toEqual(realmroot)
+  })
+
+  it('rejects a Realmroot identity whose runtime differs from the Agent runtime', async () => {
+    await expect(
+      createAgent(withRealmrootVault(fakeDeps()), auth, {
+        name: 'Realmroot agent',
+        description: null,
+        identity: { ...realmroot, runtime: 'claude-code' },
+        spec: spec({ runtime: 'codex' }),
+      }),
+    ).rejects.toMatchObject({ fields: { identity: expect.stringContaining('runtime') } })
   })
 
   it.each([

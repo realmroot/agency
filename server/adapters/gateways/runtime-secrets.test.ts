@@ -398,4 +398,69 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
       gateway.resolveEnv(scope, [{ type: 'secret', name: 'TOKEN', secretRef: 'secret-ref' }]),
     ).rejects.toThrow('must specify a data key')
   })
+
+  it('rejects missing and duplicate projected items plus unsafe whole-vault credential names', async () => {
+    const gateway = createRuntimeSecretGateway(env, fakeDb)
+    secretVersionForResolutionMock.mockResolvedValueOnce({
+      state: 'active',
+      metadata: JSON.stringify({ encryptedSecretData: { token: 'cipher' } }),
+      secretRef: 'secret-ref',
+    })
+    decryptSecretValueMock.mockResolvedValueOnce('secret')
+    await expect(
+      gateway.resolveWorkspaceManifest(
+        scope,
+        [
+          {
+            name: 'secret',
+            type: 'secret',
+            secretRef: 'secret-ref',
+            items: [{ key: 'missing', path: 'token' }],
+          },
+        ],
+        [],
+      ),
+    ).rejects.toThrow('has no data key missing')
+
+    secretVersionForResolutionMock.mockResolvedValueOnce({
+      state: 'active',
+      metadata: JSON.stringify({ encryptedSecretData: { one: '1', two: '2' } }),
+      secretRef: 'secret-ref',
+    })
+    decryptSecretValueMock.mockResolvedValueOnce('one').mockResolvedValueOnce('two')
+    await expect(
+      gateway.resolveWorkspaceManifest(
+        scope,
+        [
+          {
+            name: 'secret',
+            type: 'secret',
+            secretRef: 'secret-ref',
+            items: [
+              { key: 'one', path: 'same' },
+              { key: 'two', path: 'same' },
+            ],
+          },
+        ],
+        [],
+      ),
+    ).rejects.toThrow('duplicate item path same')
+
+    vaultVersionsForResolutionMock.mockResolvedValueOnce([
+      {
+        name: '../unsafe',
+        state: 'active',
+        metadata: JSON.stringify({ encryptedSecretData: { value: 'cipher' } }),
+        secretRef: 'secret-ref',
+      },
+    ])
+    decryptSecretValueMock.mockResolvedValueOnce('secret')
+    await expect(
+      gateway.resolveWorkspaceManifest(
+        scope,
+        [{ name: 'secret', type: 'secret', secretRef: 'ama://vaults/vault_1' }],
+        [],
+      ),
+    ).rejects.toThrow('cannot be mounted as a file')
+  })
 })

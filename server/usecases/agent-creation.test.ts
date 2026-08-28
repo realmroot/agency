@@ -566,4 +566,105 @@ describe('[spec: agents/create] createManagedAgent', () => {
     }
     await expect(create(failed)).rejects.toThrow('database down')
   })
+
+  it('validates resumable credential state before continuing enrollment', async () => {
+    const value = harness()
+    if (!value.deps.realmrootEnrollment) throw new Error('missing test gateway')
+    const prepare = value.deps.realmrootEnrollment.prepare
+    value.deps.realmrootEnrollment.prepare = async () => {
+      throw new Error('interrupt after initialization')
+    }
+    await expect(create(value)).rejects.toBeInstanceOf(AgentCreationUpstreamError)
+    value.deps.realmrootEnrollment.prepare = prepare
+    value.versions.clear()
+
+    await expect(create(value)).rejects.toMatchObject({ message: 'Managed Agent identity state is unavailable' })
+  })
+
+  it('recovers concurrent credential writes and distinguishes conflicts from upstream failures', async () => {
+    const recovered = harness()
+    const recoveredInsert = recovered.deps.vaults.insertCredentialWithVersion
+    recovered.deps.vaults.insertCredentialWithVersion = async (...args) => {
+      const result = await recoveredInsert(...args)
+      throw Object.assign(new Error('concurrent credential'), { result })
+    }
+    await expect(create(recovered)).resolves.toMatchObject({ status: { ready: true } })
+
+    const conflict = harness()
+    const conflictInsert = conflict.deps.vaults.insertCredentialWithVersion
+    conflict.deps.vaults.insertCredentialWithVersion = async (...args) => {
+      const result = await conflictInsert(...args)
+      result.credential.metadata.name = 'unexpected'
+      throw new Error('concurrent credential')
+    }
+    await expect(create(conflict)).rejects.toBeInstanceOf(AgentCreationConflict)
+
+    const failed = harness()
+    failed.deps.vaults.insertCredentialWithVersion = async () => {
+      throw new Error('credential store down')
+    }
+    await expect(create(failed)).rejects.toMatchObject({ message: 'Could not persist managed Agent identity state' })
+  })
+
+  it('reuses matching state credentials and rejects conflicting repeated checkpoints', async () => {
+    const reused = harness()
+    if (!reused.deps.realmrootEnrollment) throw new Error('missing test gateway')
+    const reusedPrepare = reused.deps.realmrootEnrollment.prepare
+    reused.deps.realmrootEnrollment.prepare = async (input) =>
+      await reusedPrepare({
+        ...input,
+        onCheckpoint: async (checkpoint) => {
+          await input.onCheckpoint(checkpoint)
+          await input.onCheckpoint(checkpoint)
+        },
+      })
+    await expect(create(reused)).resolves.toMatchObject({ status: { ready: true } })
+
+    const conflict = harness()
+    if (!conflict.deps.realmrootEnrollment) throw new Error('missing test gateway')
+    const conflictPrepare = conflict.deps.realmrootEnrollment.prepare
+    conflict.deps.realmrootEnrollment.prepare = async (input) =>
+      await conflictPrepare({
+        ...input,
+        onCheckpoint: async (checkpoint) => {
+          await input.onCheckpoint(checkpoint)
+          const state = [...conflict.credentials.values()].find(
+            (credential) => credential.spec.type === 'ama.dev/realmroot-agent-state',
+          )
+          if (!state) throw new Error('missing state credential')
+          state.metadata.name = 'unexpected'
+          await input.onCheckpoint(checkpoint)
+        },
+      })
+    await expect(create(conflict)).rejects.toBeInstanceOf(AgentCreationConflict)
+  })
+
+  it('rejects checkpoint origins and completed identities that do not match the request', async () => {
+    const origin = harness()
+    if (!origin.deps.realmrootEnrollment) throw new Error('missing test gateway')
+    origin.deps.realmrootEnrollment.initialize = async () => ({
+      stage: 'initialized',
+      state: { ...realmrootState(false, 'codex'), origin: 'https://other.example.com' },
+    })
+    await expect(create(origin)).rejects.toMatchObject({
+      message: 'Managed Agent checkpoint origin does not match the authenticated Realmroot',
+    })
+
+    const identity = harness()
+    if (!identity.deps.realmrootEnrollment) throw new Error('missing test gateway')
+    identity.deps.realmrootEnrollment.complete = async () => ({
+      identity: {
+        id: 'identity_1',
+        issuer: 'https://realmroot.example.com/api/auth',
+        subject: 'rr_agent_1',
+        username: 'different',
+        name: 'Worker',
+        runtime: 'codex',
+      },
+      state: realmrootState(true, 'codex'),
+    })
+    await expect(create(identity)).rejects.toMatchObject({
+      message: 'Realmroot Agent identity does not match the creation request',
+    })
+  })
 })
