@@ -25,6 +25,6 @@ export default defineConfig({
     command: 'pnpm e2e:server',
     url: `${baseURL}/api/v1/e2e/ready`,
     timeout: 180_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 })

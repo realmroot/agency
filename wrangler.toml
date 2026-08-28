@@ -138,10 +138,12 @@ enabled = true
 head_sampling_rate = 0.05
 
 [env.staging]
+routes = []
 
 [env.staging.vars]
 AMA_RUNTIME_MODE = "live"
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
+AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = ""
 OIDC_RESOURCE = "https://any-managed-agents-staging.saltbo.workers.dev/api"
@@ -223,6 +225,7 @@ max_instances = 20
 
 [env.e2e.vars]
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
+AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://oidc.test/api/auth"
 OIDC_CLIENT_ID = "ama-e2e"
 OIDC_RESOURCE = "http://localhost:5173/api"

@@ -500,9 +500,48 @@ function listTree(root, limit = 120) {
   return rows.length > 0 ? rows.join('\n') : `${root} is empty`
 }
 
-function assertWorkspace(workDir, sessionId) {
+function assertRealmrootIdentity(workspace, identity) {
+  if (!identity?.issuer || !identity?.subject || !identity?.username || identity.runtime !== 'ama') {
+    fail('created Agent is missing its Realmroot identity', JSON.stringify(identity, null, 2))
+  }
+  const stateFile = join(
+    workspace,
+    '.ama',
+    'realmroot-state',
+    'identities',
+    Buffer.from(identity.issuer).toString('base64url'),
+    `${Buffer.from(identity.runtime).toString('base64url')}.json`,
+  )
+  const state = JSON.parse(readFileSync(stateFile, 'utf8'))
+  if (
+    state.issuer !== identity.issuer ||
+    state.runtime !== identity.runtime ||
+    state.identity?.subject !== identity.subject ||
+    state.identity?.username !== identity.username
+  ) {
+    fail(
+      'mounted Realmroot state does not match the created Agent identity',
+      JSON.stringify(
+        {
+          identity,
+          mountedIdentity: {
+            issuer: state.issuer,
+            runtime: state.runtime,
+            subject: state.identity?.subject,
+            username: state.identity?.username,
+          },
+        },
+        null,
+        2,
+      ),
+    )
+  }
+}
+
+function assertWorkspace(workDir, sessionId, agentIdentity) {
   const paths = workspacePaths(workDir, sessionId)
   statSync(paths.workspace)
+  assertRealmrootIdentity(paths.workspace, agentIdentity)
   const result = readFileSync(paths.resultFile, 'utf8')
   if (result !== `${RESULT_MARKER}\n`) {
     fail('runtime did not write the expected workspace result file', `${paths.resultFile}: ${JSON.stringify(result)}`)
@@ -542,6 +581,7 @@ async function main() {
   let token = null
   let browserCookie = null
   let sessionId = null
+  let agentIdentity = null
   let failure = null
 
   try {
@@ -619,6 +659,10 @@ async function main() {
         },
       },
     })
+    agentIdentity = agent.identity
+    if (!agentIdentity?.issuer || !agentIdentity?.subject || agentIdentity.runtime !== 'ama') {
+      fail('Agent creation did not return a complete Realmroot identity', JSON.stringify(agent, null, 2))
+    }
 
     const session = await api(origin, token, '/api/v1/sessions', {
       method: 'POST',
@@ -674,7 +718,7 @@ async function main() {
       fail('session did not complete cleanly', JSON.stringify(completedSession.status, null, 2))
     }
 
-    assertWorkspace(workDir, sessionId)
+    assertWorkspace(workDir, sessionId, agentIdentity)
     socket.requestBackfill()
     const firstBackfill = await socket.waitFor(
       (frame) => frame.type === 'backfill' && frame.requestId === BACKFILL_REQUEST_ID,
