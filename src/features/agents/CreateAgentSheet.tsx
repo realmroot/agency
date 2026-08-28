@@ -17,13 +17,11 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
   const createAgent = useMutation({
     mutationFn: () =>
       api.createAgent({
-        username: form.username,
         metadata: {
           name: form.name,
           ...(form.description ? { description: form.description } : {}),
         },
         spec: {
-          runtime: form.runtime,
           systemPrompt: form.systemPrompt,
           ...providerPatch(form.provider),
           model: /* v8 ignore start */ form.model || /* v8 ignore stop */ null,

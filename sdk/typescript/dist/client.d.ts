@@ -52,10 +52,9 @@ export declare function createAmaClient(config: AmaClientConfig): {
     };
     agents: {
         list: (query?: types.ListAgentsData["query"]) => Promise<types.AgentListResponse>;
-        create: (body: types.CreateAgentRequest, headers: types.CreateAgentData["headers"]) => Promise<types.Agent>;
+        create: (body: types.CreateAgentRequest) => Promise<types.Agent>;
         get: (agentId: string) => Promise<types.Agent>;
         update: (agentId: string, body: types.UpdateAgentRequest) => Promise<types.Agent>;
-        retire: (agentId: string) => Promise<void>;
         listVersions: (agentId: string) => Promise<types.AgentVersionListResponse>;
         getVersion: (agentId: string, version: number) => Promise<types.AgentVersion>;
     };

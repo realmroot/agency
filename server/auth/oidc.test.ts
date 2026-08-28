@@ -5,7 +5,6 @@ import type { Env } from '../env'
 import {
   getAccessTokenClaims,
   getBearerClaims,
-  getBearerClaimsForAudience,
   getDpopClaims,
   OidcError,
   oidcAudience,
@@ -41,6 +40,7 @@ function envFor(issuer: string, overrides: Partial<Env> = {}) {
   return {
     OIDC_ISSUER: issuer,
     OIDC_CLIENT_ID: 'ama',
+    OIDC_CLIENT_SECRET: 'secret',
     OIDC_RESOURCE: 'https://ama.example.com',
     OIDC_USE_SERVICE_BINDING: 'false',
     ...overrides,
@@ -56,7 +56,7 @@ async function signedToken({
   issuer: string
   subject?: string | null
   claims?: Record<string, unknown>
-  audience?: string | string[] | null
+  audience?: string | null
 }) {
   const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true })
   const jwk = await exportJWK(publicKey)
@@ -287,98 +287,6 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
   })
 })
 
-describe('[spec: auth/management-token-boundary] confidential AMA management token isolation', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('accepts an unbound User token from the confidential AMA client for the management audience', async () => {
-    const issuer = 'https://id-management-token.test/api/auth'
-    const audience = 'https://realmroot.example.com/api'
-    const { token, jwks } = await signedToken({
-      issuer,
-      audience,
-      claims: {
-        client_id: 'ama',
-        cnf: undefined,
-        act: undefined,
-      },
-    })
-    stubJwks(jwks)
-
-    await expect(getBearerClaimsForAudience(envFor(issuer), token, audience)).resolves.toMatchObject({
-      sub: 'user_real',
-      client_id: 'ama',
-    })
-  })
-
-  it.each([
-    ['wrong client', { client_id: 'other-client', cnf: undefined, act: undefined }],
-    ['sender constraint', { client_id: 'ama', cnf: { jkt: 'bound-key' }, act: undefined }],
-    [
-      'actor delegation',
-      {
-        client_id: 'ama',
-        cnf: undefined,
-        act: { iss: 'https://id-management-token.test/api/auth', sub: 'agent_1' },
-      },
-    ],
-  ])('rejects a management token with %s', async (_case, claims) => {
-    const issuer = 'https://id-management-token.test/api/auth'
-    const audience = 'https://realmroot.example.com/api'
-    const { token, jwks } = await signedToken({ issuer, audience, claims })
-    stubJwks(jwks)
-
-    await expect(getBearerClaimsForAudience(envFor(issuer), token, audience)).rejects.toBeInstanceOf(OidcError)
-  })
-
-  it('accepts the confidential AMA client inbound and gates additional Web clients explicitly', async () => {
-    const issuer = 'https://id-inbound-exchange-client.test/api/auth'
-    const { token, jwks } = await signedToken({
-      issuer,
-      claims: {
-        client_id: 'ama',
-        cnf: undefined,
-        act: undefined,
-      },
-    })
-    stubJwks(jwks)
-    const request = () =>
-      new Request('https://ama.example.com/api/v1/agents', {
-        headers: { authorization: `Bearer ${token}` },
-      })
-
-    await expect(getBearerClaims(envFor(issuer), request())).resolves.toMatchObject({
-      sub: 'user_real',
-      client_id: 'ama',
-    })
-
-    const additionalIssuer = 'https://id-additional-web.test/api/auth'
-    const additional = await signedToken({
-      issuer: additionalIssuer,
-      claims: { client_id: 'ama-additional-web', cnf: undefined, act: undefined },
-    })
-    stubJwks(additional.jwks)
-    const additionalRequest = () =>
-      new Request('https://ama.example.com/api/v1/agents', {
-        headers: { authorization: `Bearer ${additional.token}` },
-      })
-    await expect(getBearerClaims(envFor(additionalIssuer), additionalRequest())).rejects.toMatchObject({
-      name: 'OidcError',
-      message: 'Realmroot access token client is not allowed',
-    })
-
-    await expect(
-      getBearerClaims(
-        envFor(additionalIssuer, {
-          OIDC_TRUSTED_BEARER_CLIENT_IDS: 'ama-additional-web',
-        }),
-        additionalRequest(),
-      ),
-    ).resolves.toMatchObject({ sub: 'user_real', client_id: 'ama-additional-web' })
-  })
-})
-
 describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -551,51 +459,6 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     expect(claims.sub).toBe('user_real')
     expect(claims.roles).toEqual([])
     expect(claims.permissions).toEqual(['agents:read'])
-  })
-
-  it.each([
-    'human',
-    'management',
-    'runner',
-  ] as const)('requires one exact audience for the %s Bearer path', async (credentialMode) => {
-    const expectedAudience =
-      credentialMode === 'management' ? 'https://realmroot.example.com/api' : 'https://ama.example.com'
-    const claims = {
-      client_id: credentialMode === 'management' ? 'ama' : credentialMode === 'runner' ? 'ama-runner' : 'ama',
-      cnf: undefined,
-      act: undefined,
-    }
-    const verify = (issuer: string, token: string) => {
-      const env = envFor(issuer, {
-        OIDC_RUNNER_CLIENT_ID: 'ama-runner',
-      })
-      if (credentialMode === 'management') {
-        return getBearerClaimsForAudience(env, token, expectedAudience)
-      }
-      return getBearerClaims(
-        env,
-        new Request('https://ama.example.com/api/v1/agents', {
-          headers: { authorization: `Bearer ${token}` },
-        }),
-      )
-    }
-
-    const exactIssuer = `https://id-exact-audience-${credentialMode}.test/api/auth`
-    const exact = await signedToken({ issuer: exactIssuer, audience: expectedAudience, claims })
-    stubJwks(exact.jwks)
-    await expect(verify(exactIssuer, exact.token)).resolves.toMatchObject({ client_id: claims.client_id })
-
-    const multipleIssuer = `https://id-multiple-audience-${credentialMode}.test/api/auth`
-    const multiple = await signedToken({
-      issuer: multipleIssuer,
-      audience: [expectedAudience, 'https://other-resource.example.com/api'],
-      claims,
-    })
-    stubJwks(multiple.jwks)
-    await expect(verify(multipleIssuer, multiple.token)).rejects.toMatchObject({
-      name: 'OidcError',
-      message: 'Realmroot access token must target exactly one AMA audience',
-    })
   })
 
   it.each([

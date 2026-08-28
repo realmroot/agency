@@ -2,9 +2,9 @@ import {
   type Agent,
   type AgentSpec,
   type AgentSubagent,
-  type RealmrootAgentIdentity,
+  type RealmrootAgentBinding,
   validateAllowedTools,
-  validateRealmrootIdentity,
+  validateRealmrootBinding,
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
@@ -14,7 +14,7 @@ import { AgentArchivedError, AgentValidationError, type AuthScope } from './port
 
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
-export async function validateAgentConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
+async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
   if (!config.systemPrompt.trim()) {
     throw new AgentValidationError('Invalid agent configuration', { systemPrompt: 'System prompt is required.' })
   }
@@ -41,6 +41,15 @@ export async function validateAgentConfig(deps: Deps, auth: AuthScope, config: A
   const subagentConnectorError = await validateSubagentMcpConnectors(deps, auth.project.id, config.subagents)
   if (subagentConnectorError) {
     throw new AgentValidationError('Invalid agent configuration', subagentConnectorError)
+  }
+  const realmrootError = validateRealmrootBinding(config.realmroot)
+  if (realmrootError) {
+    throw new AgentValidationError('Invalid agent configuration', realmrootError)
+  }
+  if (config.realmroot && !(await realmrootCredentialActive(deps, auth, config.realmroot.credentialRef))) {
+    throw new AgentValidationError('Invalid agent configuration', {
+      realmroot: 'Realmroot credential must reference an active credential in a visible AMA Vault.',
+    })
   }
 }
 
@@ -100,27 +109,12 @@ async function validateSubagentMcpConnectors(deps: Deps, projectId: string, suba
 export async function createAgent(
   deps: Deps,
   auth: AuthScope,
-  input: {
-    id?: string
-    username: string
-    name: string
-    description: string | null
-    identity: RealmrootAgentIdentity
-    spec: AgentSpec
-  },
+  input: { name: string; description: string | null; spec: AgentSpec },
 ): Promise<Agent> {
-  await validateAgentCreation(deps, auth, input)
+  await validateConfig(deps, auth, input.spec)
   const createdAt = new Date().toISOString()
   const agent = await deps.agents.insert(
-    {
-      projectId: auth.project.id,
-      ...(input.id ? { id: input.id } : {}),
-      username: input.username,
-      name: input.name,
-      description: input.description,
-      spec: input.spec,
-      identity: input.identity,
-    },
+    { projectId: auth.project.id, name: input.name, description: input.description, spec: input.spec },
     createdAt,
   )
   const version = await deps.agents.insertVersion(agent, input.spec, createdAt)
@@ -131,27 +125,9 @@ export async function createAgent(
   }
 }
 
-export async function validateAgentCreation(
-  deps: Deps,
-  auth: AuthScope,
-  input: { identity: RealmrootAgentIdentity; spec: AgentSpec },
-) {
-  await validateAgentConfig(deps, auth, input.spec)
-  const identityError = validateRealmrootIdentity(input.identity, {
-    allowLoopbackRealmrootHttp: deps.allowLoopbackRealmrootHttp === true,
-  })
-  if (identityError) throw new AgentValidationError('Invalid agent identity', identityError)
-  if (!(await realmrootCredentialActive(deps, auth, input.identity.credentialRef))) {
-    throw new AgentValidationError('Invalid agent identity', {
-      identity: 'Realmroot state must reference an active credential in a visible AMA Vault.',
-    })
-  }
-}
-
 // The runtime config fields whose presence in a PATCH body forces a new version
 // snapshot. (name/description are not runtime config — they never version.)
 const RUNTIME_CONFIG_FIELDS = [
-  'runtime',
   'systemPrompt',
   'provider',
   'model',
@@ -159,10 +135,10 @@ const RUNTIME_CONFIG_FIELDS = [
   'subagents',
   'allowedTools',
   'mcpConnectors',
+  'realmroot',
 ] as const
 
 export interface UpdateAgentPatch {
-  runtime?: AgentSpec['runtime']
   name?: string
   description?: string | null
   systemPrompt?: string
@@ -172,6 +148,7 @@ export interface UpdateAgentPatch {
   subagents?: AgentSubagent[]
   allowedTools?: string[]
   mcpConnectors?: string[]
+  realmroot?: RealmrootAgentBinding | null
   archived?: boolean
 }
 
@@ -214,7 +191,6 @@ export async function updateAgent(
   }
 
   const next: AgentSpec = {
-    runtime: fields.runtime ?? agent.spec.runtime,
     systemPrompt: fields.systemPrompt !== undefined ? fields.systemPrompt : agent.spec.systemPrompt,
     provider: fields.provider !== undefined ? fields.provider : agent.spec.provider,
     model: fields.model !== undefined ? fields.model : agent.spec.model,
@@ -222,8 +198,9 @@ export async function updateAgent(
     subagents: fields.subagents ?? agent.spec.subagents,
     allowedTools: fields.allowedTools ?? agent.spec.allowedTools,
     mcpConnectors: fields.mcpConnectors ?? agent.spec.mcpConnectors,
+    realmroot: fields.realmroot !== undefined ? fields.realmroot : agent.spec.realmroot,
   }
-  await validateAgentConfig(deps, auth, next)
+  await validateConfig(deps, auth, next)
 
   const updatedAt = new Date().toISOString()
   const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => fields[field] !== undefined)
@@ -238,13 +215,7 @@ export async function updateAgent(
   await deps.agents.update(
     auth.project.id,
     agent.metadata.uid,
-    {
-      name,
-      description,
-      spec: next,
-      archivedAt,
-      currentVersionId,
-    },
+    { name, description, spec: next, archivedAt, currentVersionId },
     updatedAt,
   )
 

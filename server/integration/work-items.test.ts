@@ -1,7 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
-import { createIdentitySession, createReadyAgent, type ReadyAgent } from './v2-resources'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
@@ -45,22 +44,65 @@ async function createSelfHostedEnvironment(authorization: string) {
 }
 
 async function createAgent(authorization: string) {
-  const agent = await createReadyAgent(authorization, {
-    name: `Runner-backed agent ${crypto.randomUUID()}`,
-    systemPrompt: 'Use AMA-owned self-hosted runner work.',
+  const res = await jsonFetch('/api/v1/agents', authorization, {
+    method: 'POST',
+    body: JSON.stringify(
+      createResourceBody(
+        {
+          name: `Runner-backed agent ${crypto.randomUUID()}`,
+        },
+        {
+          systemPrompt: 'Use AMA-owned self-hosted runner work.',
+          allowedTools: ['bash'],
+          provider: 'workers-ai',
+          model: '@cf/moonshotai/kimi-k2.6',
+        },
+      ),
+    ),
   })
-  return { ...agent, id: agent.metadata.uid }
+  expect(res.status).toBe(201)
+  const agent = (await res.json()) as { metadata: { uid: string } }
+  return { id: agent.metadata.uid }
+}
+
+async function createSessionEnvFrom(authorization: string) {
+  const vaultRes = await jsonFetch('/api/v1/vaults', authorization, {
+    method: 'POST',
+    body: JSON.stringify(createResourceBody({ name: `Runner runtime secrets ${crypto.randomUUID()}` })),
+  })
+  expect(vaultRes.status).toBe(201)
+  const vault = (await vaultRes.json()) as { metadata: { uid: string } }
+  const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'AK agent session key',
+      type: 'opaque',
+      secret: { stringData: { value: 'raw-ak-agent-key' } },
+    }),
+  })
+  expect(credentialRes.status).toBe(201)
+  const credential = (await credentialRes.json()) as { status: { activeVersion: { spec: { secretRef: string } } } }
+  return [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
 }
 
 async function createSelfHostedSession(
   authorization: string,
-  agent: ReadyAgent,
+  agentId: string,
   environmentId: string,
   executionOverrides: Record<string, unknown> = {},
 ) {
-  void environmentId
-  void executionOverrides
-  const res = await createIdentitySession(authorization, agent, { prompt: 'Run the first queued self-hosted task.' })
+  const res = await jsonFetch('/api/v1/sessions', authorization, {
+    method: 'POST',
+    body: JSON.stringify({
+      prompt: 'Run the first queued self-hosted task.',
+      spec: {
+        agentId,
+        environmentId,
+        runtime: 'ama',
+        ...executionOverrides,
+      },
+    }),
+  })
   if (res.status !== 201) {
     throw new Error(`Session creation failed: ${res.status} ${await res.text()}`)
   }
@@ -106,8 +148,11 @@ describe('[CF] /api/v1/work-items', () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
-    await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const envFrom = await createSessionEnvFrom(authorization)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
+      env: { AK_API_URL: 'https://ak.example.test' },
+      envFrom,
+    })
     expect(session).toMatchObject({ state: 'pending', stateReason: 'waiting-for-runner' })
 
     const listRes = await jsonFetch(`/api/v1/work-items?sessionId=${session.id}`, authorization)
@@ -128,8 +173,7 @@ describe('[CF] /api/v1/work-items', () => {
           type: 'session.start',
           sessionId: session.id,
           runtimeRequirement: { runtime: DEFAULT_AMA_RUNNER_CAPABILITY },
-          envFrom: [],
-          env: expect.objectContaining({ REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state' }),
+          envFrom,
         }),
       }),
     ])
@@ -154,8 +198,7 @@ describe('[CF] /api/v1/work-items', () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
-    await registerActiveRunner(authorization, environment.id)
-    const session = await createSelfHostedSession(authorization, agent, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id)
 
     const listRes = await jsonFetch(`/api/v1/work-items?sessionId=${session.id}`, authorization)
     const list = (await listRes.json()) as { data: Array<{ id: string }> }
@@ -182,9 +225,16 @@ describe('[CF] /api/v1/work-items', () => {
     const environment = await createSelfHostedEnvironment(operatorAuthorization)
     const agent = await createAgent(operatorAuthorization)
 
-    await registerActiveRunner(runnerAuthorization, environment.id)
+    const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Queue-reading runner',
+        environmentId: environment.id,
+      }),
+    })
+    expect(runnerRes.status).toBe(201)
 
-    const session = await createSelfHostedSession(operatorAuthorization, agent, environment.id)
+    const session = await createSelfHostedSession(operatorAuthorization, agent.id, environment.id)
     const listRes = await jsonFetch(`/api/v1/work-items?state=available&sessionId=${session.id}`, runnerAuthorization)
     expect(listRes.status).toBe(200)
     const list = (await listRes.json()) as { data: Array<{ id: string; state: string }> }
@@ -196,8 +246,12 @@ describe('[CF] /api/v1/work-items', () => {
     const runnerAuthorization = asRunnerAuthorization(operatorAuthorization)
     const environment = await createSelfHostedEnvironment(operatorAuthorization)
     const agent = await createAgent(operatorAuthorization)
+    const envFrom = await createSessionEnvFrom(operatorAuthorization)
     const runner = await registerActiveRunner(runnerAuthorization, environment.id)
-    const session = await createSelfHostedSession(operatorAuthorization, agent, environment.id)
+    const session = await createSelfHostedSession(operatorAuthorization, agent.id, environment.id, {
+      env: { PUBLIC_VALUE: 'visible' },
+      envFrom,
+    })
     const listRes = await jsonFetch(`/api/v1/work-items?sessionId=${session.id}`, runnerAuthorization)
     const list = (await listRes.json()) as { data: Array<{ id: string }> }
     const workItemId = list.data[0]!.id
@@ -211,10 +265,7 @@ describe('[CF] /api/v1/work-items', () => {
     const consoleRead = await jsonFetch(`/api/v1/work-items/${workItemId}`, operatorAuthorization)
     expect(consoleRead.status).toBe(200)
     const consoleWork = (await consoleRead.json()) as { payload: Record<string, unknown> }
-    expect(consoleWork.payload).toMatchObject({
-      envFrom: [],
-      env: { REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state' },
-    })
+    expect(consoleWork.payload).toMatchObject({ envFrom, env: { PUBLIC_VALUE: 'visible' } })
     expect(JSON.stringify(consoleWork)).not.toContain('raw-ak-agent-key')
 
     const runnerRead = await jsonFetch(`/api/v1/work-items/${workItemId}`, runnerAuthorization)
@@ -222,10 +273,7 @@ describe('[CF] /api/v1/work-items', () => {
     const runnerWork = (await runnerRead.json()) as { payload: Record<string, unknown> }
     expect(runnerWork.payload).not.toHaveProperty('envFrom')
     expect(runnerWork.payload).toMatchObject({
-      env: { REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state' },
-      workspaceManifest: {
-        mounts: [expect.objectContaining({ name: 'realmroot-agent-state', type: 'secret', readOnly: false })],
-      },
+      env: { PUBLIC_VALUE: 'visible', AK_AGENT_KEY: 'raw-ak-agent-key' },
     })
   })
 })

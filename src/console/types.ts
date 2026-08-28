@@ -21,7 +21,6 @@ export interface EnvironmentFormState {
 }
 
 export interface AgentFormState {
-  username: string
   name: string
   description: string
   systemPrompt: string
@@ -30,7 +29,6 @@ export interface AgentFormState {
   skills: string
   allowedTools: string
   mcpConnectors: string
-  runtime: 'ama' | 'claude-code' | 'codex' | 'copilot'
 }
 
 export interface SessionFormState {

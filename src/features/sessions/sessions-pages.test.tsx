@@ -23,15 +23,6 @@ import { buildTestSession, type TestSessionOverrides } from '@/testing/session'
 import { CreateSessionSheet, formatCreateSessionError } from './CreateSessionSheet'
 import { SessionDetailPage } from './SessionDetailPage'
 import { SessionDetailView } from './SessionDetailView'
-
-const TEST_AGENT_IDENTITY = {
-  issuer: 'https://realmroot.example/api/auth',
-  subject: 'agent-subject-1',
-  username: 'coding-agent',
-  runtime: 'ama' as const,
-  credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
-}
-
 import { SessionRuntimePanel } from './SessionRuntimePanel'
 import { SessionsPage } from './SessionsPage'
 import { SessionsView } from './SessionsView'
@@ -460,7 +451,6 @@ describe('SessionsView', () => {
         agentId: 'agent_1',
         projectId: 'project_1',
         version: 1,
-        runtime: 'codex',
         systemPrompt: 'Do work',
         provider: 'workers-ai',
         model: null,
@@ -468,7 +458,6 @@ describe('SessionsView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
-        identity: TEST_AGENT_IDENTITY,
 
         createdAt: now,
       },
@@ -496,7 +485,6 @@ describe('SessionsView', () => {
         agentId: 'agent_fallback_id',
         projectId: 'project_1',
         version: 1,
-        runtime: 'codex',
         systemPrompt: 'Do the work.',
         provider: 'workers-ai',
         model: '@cf/meta/llama',
@@ -504,7 +492,6 @@ describe('SessionsView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
-        identity: TEST_AGENT_IDENTITY,
 
         createdAt: now,
       },
@@ -581,7 +568,6 @@ describe('SessionDetailView', () => {
         agentId: 'agent_no_name',
         projectId: 'project_1',
         version: 1,
-        runtime: 'codex',
         systemPrompt: 'Do the work.',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
@@ -589,7 +575,6 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
-        identity: TEST_AGENT_IDENTITY,
 
         createdAt: now,
       },
@@ -948,7 +933,6 @@ describe('SessionDetailView', () => {
         agentId: 'agent_1',
         projectId: 'project_1',
         version: 1,
-        runtime: 'codex',
         systemPrompt: 'Do the work',
         provider: 'workers-ai',
         model: null,
@@ -956,7 +940,6 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
-        identity: TEST_AGENT_IDENTITY,
 
         createdAt: now,
       },
@@ -977,7 +960,6 @@ describe('SessionDetailView', () => {
         agentId: 'agent_1',
         projectId: 'project_1',
         version: 1,
-        runtime: 'codex',
         systemPrompt: 'Do the work',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
@@ -985,7 +967,6 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read'],
         mcpConnectors: [],
-        identity: TEST_AGENT_IDENTITY,
 
         createdAt: now,
       },

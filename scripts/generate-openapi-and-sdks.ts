@@ -13,8 +13,7 @@
 // PATH) to be installed.
 
 import { execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createApp } from '../server/app'
 import { AMA_CANONICAL_RESOURCE } from '../server/auth/scopes'
@@ -40,7 +39,7 @@ type OpenApiDocument = {
 
 type JSONSchema = {
   properties?: Record<string, JSONSchema>
-  enum?: Array<string | null>
+  enum?: string[]
   $ref?: string
   [key: string]: unknown
 }
@@ -49,50 +48,22 @@ const ROOT = path.join(import.meta.dirname, '..')
 
 async function main() {
   const check = process.argv.includes('--check')
-  const before = check ? await sdkDigest(path.join(ROOT, 'sdk')) : null
 
   // 1. Emit the canonical OpenAPI snapshot from the live Hono routes.
   const document = await routeGeneratedOpenApi()
-  removeNullEnumMembers(document)
   stabilizeSdkSchemaNames(document)
   await writeFile(path.join(ROOT, 'sdk/openapi.json'), `${JSON.stringify(document, null, 2)}\n`)
 
   // 2. Drive each language's generator from that snapshot.
   generateTypeScriptSdk()
   generateGoSdk()
-  await generatePythonSdk()
+  generatePythonSdk()
   generateSdkFacades()
 
-  // 3. In check mode, fail when regeneration changes the checked working tree.
-  // Comparing content snapshots supports both clean CI checkouts and local
-  // feature work whose generated artifacts are intentionally not committed yet.
-  if (before && before !== (await sdkDigest(path.join(ROOT, 'sdk'))))
-    throw new Error('Generated SDK artifacts are stale. Run pnpm openapi:generate and commit the result.')
-}
-
-async function sdkDigest(directory: string): Promise<string> {
-  const hash = createHash('sha256')
-  async function visit(current: string) {
-    const entries = await readdir(current, { withFileTypes: true })
-    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-      if (entry.name === 'node_modules' || entry.name === '__pycache__' || entry.name.endsWith('.pyc')) continue
-      const absolute = path.join(current, entry.name)
-      if (entry.isDirectory()) await visit(absolute)
-      else if (entry.isFile()) {
-        hash.update(path.relative(directory, absolute))
-        hash.update(await readFile(absolute))
-      }
-    }
+  // 3. In check mode, fail if regeneration changed any committed artifact.
+  if (check) {
+    run('git', ['diff', '--exit-code', '--', 'sdk'], ROOT)
   }
-  await visit(directory)
-  return hash.digest('hex')
-}
-
-function removeNullEnumMembers(value: unknown): void {
-  if (!value || typeof value !== 'object') return
-  const schema = value as JSONSchema
-  if (schema.enum?.includes(null)) schema.enum = schema.enum.filter((member): member is string => member !== null)
-  for (const child of Object.values(schema)) removeNullEnumMembers(child)
 }
 
 function run(command: string, args: string[], cwd: string) {
@@ -107,7 +78,7 @@ function generateGoSdk() {
   run('oapi-codegen', ['-config', 'oapi-codegen.config.yaml', '../openapi.json'], path.join(ROOT, 'sdk/go'))
 }
 
-async function generatePythonSdk() {
+function generatePythonSdk() {
   // openapi-python-client refuses to overwrite a package it did not create, so
   // remove the previous output first; `--meta none` keeps the hand-maintained
   // pyproject.toml. py.typed is re-added because `--meta none` omits it.
@@ -119,9 +90,6 @@ async function generatePythonSdk() {
     sdkDir,
   )
   execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
-  const retiredAgentApi = path.join(sdkDir, 'ama_sdk/api/agents/retire_agent.py')
-  const source = await readFile(retiredAgentApi, 'utf8')
-  await writeFile(retiredAgentApi, source.replace(/[ \t]+$/gm, ''))
 }
 
 function generateSdkFacades() {

@@ -32,7 +32,6 @@ const {
   resolveEnvironmentForRuntimeMock,
   assignWorkMock,
   secretVersionForResolutionMock,
-  insertWorkItemMock,
 } = vi.hoisted(() => ({
   enqueueCloudTurnMock: vi.fn(),
   cloudTurnsRunInlineMock: vi.fn(() => false),
@@ -48,15 +47,9 @@ const {
   resolveSessionProviderIdMock: vi.fn(async () => 'anthropic'),
   validateRuntimeProviderModelMock: vi.fn(async () => true),
   resolveSessionProviderConfigMock: vi.fn(async () => ({ ok: true, config: null })),
-  createAgentSnapshotMock: vi.fn((_version, _provider, identity, runtime) => ({
-    id: 'agentver_1',
-    providerId: 'anthropic',
-    model: '@cf/x',
-    identity,
-    runtime,
-  })),
+  createAgentSnapshotMock: vi.fn(() => ({ id: 'agentver_1', providerId: 'anthropic', model: '@cf/x' })),
   createEnvironmentSnapshotMock: vi.fn(() => ({ id: 'envver_1', hostingMode: 'cloud', runtimeConfig: {} })),
-  insertSessionMock: vi.fn(async (_session: unknown) => undefined),
+  insertSessionMock: vi.fn(async () => undefined),
   updateSessionWhenStateMock: vi.fn<
     (projectId: string, sessionId: string, expected: string | string[], fields: Record<string, unknown>) => boolean
   >(() => true),
@@ -67,7 +60,6 @@ const {
   resolveEnvironmentForRuntimeMock: vi.fn(),
   assignWorkMock: vi.fn(async () => true),
   secretVersionForResolutionMock: vi.fn(),
-  insertWorkItemMock: vi.fn(async (_row: { payload: string }) => undefined),
 }))
 
 // Provider/runtime resolution + provider-config read live in the deps-first
@@ -104,8 +96,6 @@ const store = {
   insertSession: insertSessionMock,
   updateSessionWhenState: updateSessionWhenStateMock,
   secretVersionForResolution: secretVersionForResolutionMock,
-  insertWorkItem: insertWorkItemMock,
-  vaultVersionsForResolution: async () => null,
 }
 
 // enqueue is env-bound at the gateway; the usecase drives it through
@@ -155,17 +145,6 @@ const auth: AuthScope = {
   permissions: ['*'],
 }
 
-const readyAgentRow = {
-  id: 'agent_1',
-  currentVersionId: 'agentver_1',
-  archivedAt: null,
-  retirementState: null,
-  identityIssuer: 'https://realmroot.example/api/auth',
-  identitySubject: 'agent-subject-1',
-  username: 'coding-agent',
-  identityCredentialRef: 'ama://vaults/vault_1/credentials/credential_1',
-}
-
 describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
   beforeEach(() => {
     enqueueCloudTurnMock.mockReset()
@@ -175,17 +154,15 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     insertSessionMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
-    findAgentMock.mockResolvedValue(readyAgentRow)
-    findAgentVersionMock.mockResolvedValue({
-      id: 'agentver_1',
-      runtime: 'ama',
-      model: '@cf/x',
-      providerId: 'anthropic',
+    findAgentMock.mockResolvedValue({
+      id: 'agent_1',
+      currentVersionId: 'agentver_1',
+      archivedAt: null,
     })
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: '@cf/x', providerId: 'anthropic' })
     findEnvironmentMock.mockResolvedValue({ id: 'env_1', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
-    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active' })
     assignWorkMock.mockClear()
   })
 
@@ -197,10 +174,7 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       auth,
       'agent_1',
       'env_1',
-      {
-        runtime: 'ama',
-        prompt: 'Start cloud session',
-      },
+      { runtime: 'ama', prompt: 'Start cloud session' },
       null,
     )
 
@@ -233,10 +207,7 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       auth,
       'agent_1',
       'env_1',
-      {
-        runtime: 'ama',
-        prompt: 'Start cloud session',
-      },
+      { runtime: 'ama', prompt: 'Start cloud session' },
       'req_create_1',
     )
 
@@ -244,43 +215,12 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     expect(insertSessionMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Start cloud session' }))
     expect(enqueueCloudTurnMock).toHaveBeenCalledTimes(1)
     expect(enqueueCloudTurnMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'session.start',
-        requestId: 'req_create_1',
-        prompt: 'Start cloud session',
-      }),
+      expect.objectContaining({ type: 'session.start', requestId: 'req_create_1' }),
     )
     const reconcile = updateSessionWhenStateMock.mock.calls.find(
       (call) => (call[3] as { state?: string }).state === 'error',
     )
     expect(reconcile).toBeUndefined()
-  })
-
-  it('passes the prompt unchanged to inline cloud startup', async () => {
-    cloudTurnsRunInlineMock.mockReturnValue(true)
-    startSessionRuntimeForRowMock.mockReset()
-    startSessionRuntimeForRowMock.mockResolvedValue(undefined)
-
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_1',
-      {
-        runtime: 'ama',
-        prompt: 'Start inline session',
-      },
-      'req_inline_1',
-    )
-
-    expect(result.ok).toBe(true)
-    expect(startSessionRuntimeForRowMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({
-        prompt: 'Start inline session',
-      }),
-    )
   })
 
   it('rejects sessions without a prompt before creating any rows', async () => {
@@ -320,18 +260,16 @@ describe('createSessionForAgent — environment resolution', () => {
     insertSessionMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
-    findAgentMock.mockResolvedValue(readyAgentRow)
-    findAgentVersionMock.mockResolvedValue({
-      id: 'agentver_1',
-      runtime: 'codex',
-      model: '@cf/x',
-      providerId: 'anthropic',
+    findAgentMock.mockResolvedValue({
+      id: 'agent_1',
+      currentVersionId: 'agentver_1',
+      archivedAt: null,
     })
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: '@cf/x', providerId: 'anthropic' })
     findEnvironmentMock.mockReset()
     findEnvironmentMock.mockResolvedValue({ id: 'env_resolved', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
-    secretVersionForResolutionMock.mockResolvedValue({ id: 'version_1', state: 'active' })
   })
 
   it('resolves an environment for the runtime/model when none is pinned', async () => {
@@ -350,123 +288,6 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', '@cf/x')
     // The resolved id is what gets looked up and used.
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_resolved')
-  })
-
-  it.each([
-    'ama',
-    'claude-code',
-    'copilot',
-  ] as const)('accepts explicit %s for a legacy Agent with a codex migration placeholder', async (runtime) => {
-    findAgentMock.mockResolvedValue({
-      ...readyAgentRow,
-      username: '',
-      identityIssuer: '',
-      identitySubject: '',
-      identityCredentialRef: null,
-    })
-    resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
-
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      null,
-      { runtime, prompt: `Run legacy ${runtime}` },
-      null,
-    )
-
-    expect(result.ok).toBe(true)
-    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', runtime, '@cf/x')
-    expect(createAgentSnapshotMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runtime: 'codex' }),
-      'anthropic',
-      null,
-      runtime,
-    )
-    const inserted = (
-      insertSessionMock.mock.calls as unknown as Array<[{ metadata: string; agentSnapshot: string }]>
-    )[0]![0]
-    expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime })
-    expect(JSON.parse(inserted.agentSnapshot)).toMatchObject({ runtime, identity: null })
-  })
-
-  it('requires legacy Agents with a placeholder runtime to choose an explicit runtime', async () => {
-    findAgentMock.mockResolvedValue({
-      ...readyAgentRow,
-      username: '',
-      identityIssuer: '',
-      identitySubject: '',
-      identityCredentialRef: null,
-    })
-
-    const result = await createSessionForAgent(deps, auth, 'agent_1', null, { prompt: 'Run legacy profile' }, null)
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Legacy Agents require an explicit runtime until their Agent Profile is backfilled',
-      },
-    })
-    expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
-    expect(insertSessionMock).not.toHaveBeenCalled()
-  })
-
-  it('infers a missing Session runtime from the selected Agent Profile', async () => {
-    resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
-
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      null,
-      { prompt: 'Run the selected profile' },
-      null,
-    )
-
-    expect(result.ok).toBe(true)
-    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', '@cf/x')
-    const inserted = (insertSessionMock.mock.calls as unknown as Array<[{ metadata: string }]>)[0]![0]
-    expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime: 'codex' })
-  })
-
-  it('accepts an explicit Session runtime matching the selected Agent Profile', async () => {
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_pinned',
-      { runtime: 'codex', prompt: 'Run Codex' },
-      null,
-    )
-
-    expect(result.ok).toBe(true)
-    const inserted = (insertSessionMock.mock.calls as unknown as Array<[{ metadata: string }]>)[0]![0]
-    expect(JSON.parse(inserted.metadata)).toMatchObject({ runtime: 'codex' })
-  })
-
-  it('still rejects an explicit runtime that differs from a modern Agent Profile', async () => {
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_pinned',
-      { runtime: 'claude-code', prompt: 'Run Claude Code' },
-      null,
-    )
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Requested runtime does not match the selected Agent Profile',
-        detail: { requestedRuntime: 'claude-code', agentRuntime: 'codex' },
-      },
-    })
-    expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
-    expect(insertSessionMock).not.toHaveBeenCalled()
   })
 
   it('does not resolve when an environment is pinned', async () => {
@@ -501,7 +322,7 @@ describe('createSessionForAgent — environment resolution', () => {
       error: {
         status: 409,
         code: 'conflict',
-        message: 'No execution environment is available for runtime "codex"',
+        message: 'No environment has an active runner for runtime "codex"; specify environmentId',
       },
     })
     expect(findEnvironmentMock).not.toHaveBeenCalled()
@@ -511,10 +332,8 @@ describe('createSessionForAgent — environment resolution', () => {
 
 describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', () => {
   const binding = {
-    issuer: 'https://realmroot.example.com/api/auth',
-    subject: 'rr_agent_1',
-    username: 'coding-agent',
-    runtime: 'ama' as const,
+    agentId: 'rr_agent_1',
+    origin: 'https://realmroot.example.com',
     credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
   }
 
@@ -526,20 +345,15 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     insertSessionMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
-    findAgentMock.mockResolvedValue(readyAgentRow)
-    findAgentVersionMock.mockResolvedValue({
-      id: 'agentver_1',
-      runtime: 'ama',
-      model: '@cf/x',
-      providerId: 'anthropic',
-    })
+    findAgentMock.mockResolvedValue({ id: 'agent_1', currentVersionId: 'agentver_1', archivedAt: null })
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: '@cf/x', providerId: 'anthropic' })
     findEnvironmentMock.mockResolvedValue({ id: 'env_1', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     createAgentSnapshotMock.mockReturnValue({
       id: 'agentver_1',
       providerId: 'anthropic',
       model: '@cf/x',
-      identity: binding,
+      realmroot: binding,
     } as never)
     secretVersionForResolutionMock.mockReset()
     secretVersionForResolutionMock.mockResolvedValue({
@@ -566,7 +380,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     )[0]![0]
     expect(JSON.parse(inserted.env)).toEqual({
       AGENT: 'ama',
-      REALMROOT_ORIGIN: 'https://realmroot.example.com',
+      REALMROOT_ORIGIN: binding.origin,
       REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
     })
     expect(JSON.parse(inserted.volumes)).toEqual([
@@ -574,66 +388,16 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
         name: 'realmroot-agent-state',
         type: 'secret',
         secretRef: binding.credentialRef,
-        items: [
-          {
-            key: 'state.json',
-            path: 'identities/aHR0cHM6Ly9yZWFsbXJvb3QuZXhhbXBsZS5jb20vYXBpL2F1dGg/YW1h.json',
-          },
-        ],
+        items: [{ key: 'state.json', path: 'state.json' }],
       },
     ])
     expect(JSON.parse(inserted.volumeMounts)).toEqual([
       {
         name: 'realmroot-agent-state',
-        mountPath: '/workspace/.ama/realmroot-state',
-        readOnly: false,
+        mountPath: '/workspace/.ama/realmroot-source',
+        readOnly: true,
       },
     ])
-    expect(secretVersionForResolutionMock).toHaveBeenCalledWith('org_1', 'proj_1', binding.credentialRef)
-  })
-
-  it('prefers stable identity state when a snapshot also carries a legacy binding', async () => {
-    createAgentSnapshotMock.mockReturnValue({
-      id: 'agentver_1',
-      providerId: 'anthropic',
-      model: '@cf/x',
-      identity: binding,
-      realmroot: {
-        agentId: 'legacy_agent',
-        origin: 'https://legacy.realmroot.example',
-        credentialRef: 'ama://vaults/legacy/credentials/legacy',
-      },
-    } as never)
-
-    const result = await createSessionForAgent(
-      deps,
-      auth,
-      'agent_1',
-      'env_1',
-      { runtime: 'ama', prompt: 'Use stable identity' },
-      null,
-    )
-
-    expect(result.ok).toBe(true)
-    const inserted = (
-      insertSessionMock.mock.calls as unknown as Array<[{ env: string; volumes: string; volumeMounts: string }]>
-    )[0]![0]
-    expect(JSON.parse(inserted.env)).toMatchObject({ REALMROOT_ORIGIN: 'https://realmroot.example.com' })
-    expect(JSON.parse(inserted.volumes)).toEqual([
-      expect.objectContaining({
-        secretRef: binding.credentialRef,
-        items: [
-          {
-            key: 'state.json',
-            path: 'identities/aHR0cHM6Ly9yZWFsbXJvb3QuZXhhbXBsZS5jb20vYXBpL2F1dGg/YW1h.json',
-          },
-        ],
-      }),
-    ])
-    expect(JSON.parse(inserted.volumeMounts)).toEqual([
-      { name: 'realmroot-agent-state', mountPath: '/workspace/.ama/realmroot-state', readOnly: false },
-    ])
-    expect(secretVersionForResolutionMock).toHaveBeenCalledTimes(1)
     expect(secretVersionForResolutionMock).toHaveBeenCalledWith('org_1', 'proj_1', binding.credentialRef)
   })
 

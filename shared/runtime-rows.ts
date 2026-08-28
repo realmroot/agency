@@ -82,14 +82,11 @@ export interface SessionInsert {
 
 export type SessionUpdate = Partial<SessionInsert>
 
-import type { RuntimeName } from './runtime-types'
-
 export interface AgentRow {
   id: string
   projectId: string
   name: string
   description: string | null
-  runtime: RuntimeName
   systemPrompt: string
   providerId: string | null
   model: string | null
@@ -98,12 +95,6 @@ export interface AgentRow {
   allowedTools: string
   mcpConnectors: string
   realmroot: string | null
-  username: string
-  identityIssuer: string
-  identitySubject: string
-  identityCredentialRef: string | null
-  retirementState: 'stopping' | 'identity_retired' | 'retired' | null
-  retiredAt: string | null
   archivedAt: string | null
   currentVersionId: string | null
   createdAt: string
@@ -115,7 +106,6 @@ export interface AgentVersionRow {
   agentId: string
   projectId: string
   version: number
-  runtime: RuntimeName
   systemPrompt: string
   providerId: string | null
   model: string | null

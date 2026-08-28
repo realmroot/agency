@@ -38,16 +38,13 @@ export async function createCredential(
   deps: Deps,
   vault: Vault,
   input: CreateCredentialInputDto,
-  identity?: { credentialId: string; versionId: string },
 ): Promise<CreateCredentialResult> {
   const timestamp = new Date().toISOString()
-  const credentialId = identity?.credentialId ?? newId('vaultcred')
-  const versionId = identity?.versionId ?? newId('vaultver')
+  const credentialId = newId('vaultcred')
+  const versionId = newId('vaultver')
   let reference: ReturnType<typeof secretReference>
   try {
-    reference = secretReference({ vaultId: vault.metadata.uid, credentialId, versionId }, 1, input.type, input.secret, {
-      allowLoopbackRealmrootHttp: deps.allowLoopbackRealmrootHttp === true,
-    })
+    reference = secretReference({ vaultId: vault.metadata.uid, credentialId, versionId }, 1, input.type, input.secret)
   } catch (error) {
     throw secretError(error)
   }
@@ -99,7 +96,6 @@ export async function rotateCredential(
       nextVersion,
       credential.spec.type,
       secret,
-      { allowLoopbackRealmrootHttp: deps.allowLoopbackRealmrootHttp === true },
     )
     stored = await deps.secretStore.store(reference, secret)
   } catch (error) {

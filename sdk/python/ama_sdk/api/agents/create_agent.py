@@ -18,12 +18,9 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateAgentRequest,
-    idempotency_key: str,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    headers["Idempotency-Key"] = idempotency_key
-
 
 
     
@@ -73,20 +70,6 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
-    if response.status_code == 409:
-        response_409 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_409
-
-    if response.status_code == 502:
-        response_502 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_502
-
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -106,13 +89,11 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateAgentRequest,
-    idempotency_key: str,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
-        idempotency_key (str):
         body (CreateAgentRequest):
 
     Raises:
@@ -126,7 +107,6 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-idempotency_key=idempotency_key,
 
     )
 
@@ -140,13 +120,11 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateAgentRequest,
-    idempotency_key: str,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
-        idempotency_key (str):
         body (CreateAgentRequest):
 
     Raises:
@@ -161,7 +139,6 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
-idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -169,13 +146,11 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateAgentRequest,
-    idempotency_key: str,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
-        idempotency_key (str):
         body (CreateAgentRequest):
 
     Raises:
@@ -189,7 +164,6 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-idempotency_key=idempotency_key,
 
     )
 
@@ -203,13 +177,11 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateAgentRequest,
-    idempotency_key: str,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
-        idempotency_key (str):
         body (CreateAgentRequest):
 
     Raises:
@@ -224,6 +196,5 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
-idempotency_key=idempotency_key,
 
     )).parsed

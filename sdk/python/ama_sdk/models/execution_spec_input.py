@@ -24,17 +24,17 @@ if TYPE_CHECKING:
 
 
 
-T = TypeVar("T", bound="CreateSessionExecutionSpec")
+T = TypeVar("T", bound="ExecutionSpecInput")
 
 
 
 @_attrs_define
-class CreateSessionExecutionSpec:
+class ExecutionSpecInput:
     """ 
         Attributes:
             agent_id (str):  Example: agent_abc123.
+            runtime (RuntimeName):  Example: codex.
             environment_id (None | str | Unset):  Example: env_abc123.
-            runtime (RuntimeName | Unset):  Example: codex.
             env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
             env_from (list[EnvFromEntry] | Unset):
             volumes (list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset):
@@ -42,8 +42,8 @@ class CreateSessionExecutionSpec:
      """
 
     agent_id: str
+    runtime: RuntimeName
     environment_id: None | str | Unset = UNSET
-    runtime: RuntimeName | Unset = UNSET
     env: ExecutionEnv | Unset = UNSET
     env_from: list[EnvFromEntry] | Unset = UNSET
     volumes: list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
@@ -62,16 +62,13 @@ class CreateSessionExecutionSpec:
         from ..models.volume_mount import VolumeMount
         agent_id = self.agent_id
 
+        runtime = self.runtime.value
+
         environment_id: None | str | Unset
         if isinstance(self.environment_id, Unset):
             environment_id = UNSET
         else:
             environment_id = self.environment_id
-
-        runtime: str | Unset = UNSET
-        if not isinstance(self.runtime, Unset):
-            runtime = self.runtime.value
-
 
         env: dict[str, Any] | Unset = UNSET
         if not isinstance(self.env, Unset):
@@ -116,11 +113,10 @@ class CreateSessionExecutionSpec:
 
         field_dict.update({
             "agentId": agent_id,
+            "runtime": runtime,
         })
         if environment_id is not UNSET:
             field_dict["environmentId"] = environment_id
-        if runtime is not UNSET:
-            field_dict["runtime"] = runtime
         if env is not UNSET:
             field_dict["env"] = env
         if env_from is not UNSET:
@@ -145,6 +141,11 @@ class CreateSessionExecutionSpec:
         d = dict(src_dict)
         agent_id = d.pop("agentId")
 
+        runtime = RuntimeName(d.pop("runtime"))
+
+
+
+
         def _parse_environment_id(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -153,16 +154,6 @@ class CreateSessionExecutionSpec:
             return cast(None | str | Unset, data)
 
         environment_id = _parse_environment_id(d.pop("environmentId", UNSET))
-
-
-        _runtime = d.pop("runtime", UNSET)
-        runtime: RuntimeName | Unset
-        if isinstance(_runtime,  Unset):
-            runtime = UNSET
-        else:
-            runtime = RuntimeName(_runtime)
-
-
 
 
         _env = d.pop("env", UNSET)
@@ -238,15 +229,15 @@ class CreateSessionExecutionSpec:
                 volume_mounts.append(volume_mounts_item)
 
 
-        create_session_execution_spec = cls(
+        execution_spec_input = cls(
             agent_id=agent_id,
-            environment_id=environment_id,
             runtime=runtime,
+            environment_id=environment_id,
             env=env,
             env_from=env_from,
             volumes=volumes,
             volume_mounts=volume_mounts,
         )
 
-        return create_session_execution_spec
+        return execution_spec_input
 

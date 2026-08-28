@@ -171,7 +171,7 @@ export function createVaultRepo(db: Db): VaultRepo {
 
     async insert(input: CreateVaultInput, createdAt): Promise<Vault> {
       const row = {
-        id: input.id ?? newId('vault'),
+        id: newId('vault'),
         organizationId: input.organizationId,
         projectId: input.projectId,
         name: input.name,
@@ -402,19 +402,6 @@ export function createVaultRepo(db: Db): VaultRepo {
           .where(eq(vaultCredentials.id, version.credentialId)),
       ])
       return versionRecordFrom(versionRow)
-    },
-    async destroyManagedVault(vaultId, credentialId) {
-      const owned = await db
-        .select({ id: vaultCredentials.id })
-        .from(vaultCredentials)
-        .where(and(eq(vaultCredentials.vaultId, vaultId), eq(vaultCredentials.id, credentialId)))
-        .get()
-      if (!owned) throw new Error('Managed Agent credential does not belong to the Vault')
-      await db.batch([
-        db.delete(vaultCredentialVersions).where(eq(vaultCredentialVersions.vaultId, vaultId)),
-        db.delete(vaultCredentials).where(eq(vaultCredentials.vaultId, vaultId)),
-        db.delete(vaults).where(eq(vaults.id, vaultId)),
-      ])
     },
   }
 }

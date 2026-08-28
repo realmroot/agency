@@ -25,8 +25,6 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -56,10 +54,6 @@ def _get_kwargs(
     params["limit"] = limit
 
     params["cursor"] = cursor
-
-    params["identityIssuer"] = identity_issuer
-
-    params["identitySubject"] = identity_subject
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -129,8 +123,6 @@ def sync_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -144,8 +136,6 @@ def sync_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -163,8 +153,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
 
     )
 
@@ -183,8 +171,6 @@ def sync(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -198,8 +184,6 @@ def sync(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -218,8 +202,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
 
     ).parsed
 
@@ -232,8 +214,6 @@ async def asyncio_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -247,8 +227,6 @@ async def asyncio_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -266,8 +244,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
 
     )
 
@@ -286,8 +262,6 @@ async def asyncio(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    identity_issuer: str | Unset = UNSET,
-    identity_subject: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -301,8 +275,6 @@ async def asyncio(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
-        identity_issuer (str | Unset):
-        identity_subject (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -321,7 +293,5 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-identity_issuer=identity_issuer,
-identity_subject=identity_subject,
 
     )).parsed

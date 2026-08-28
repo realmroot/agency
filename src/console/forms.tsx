@@ -235,45 +235,16 @@ export function AgentForm({
   setValue,
   onSubmit,
   submitLabel = 'Save agent',
-  showIdentity = true,
 }: {
   value: AgentFormState
   setValue: (value: AgentFormState) => void
   onSubmit: (event: FormEvent) => void
   submitLabel?: string
-  showIdentity?: boolean
 }) {
   return (
     <form className="flex flex-col gap-4" onSubmit={onSubmit}>
       <FieldGroup>
-        {showIdentity ? (
-          <TextField
-            label="Username"
-            description="Immutable Realmroot username for this Agent identity."
-            value={value.username}
-            onChange={(username) => setValue({ ...value, username })}
-          />
-        ) : null}
         <TextField label="Name" value={value.name} onChange={(name) => setValue({ ...value, name })} />
-        <Field>
-          <FieldLabel>Runtime</FieldLabel>
-          <Select
-            value={value.runtime}
-            onValueChange={(runtime) => setValue({ ...value, runtime: runtime as AgentFormState['runtime'] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="codex">Codex</SelectItem>
-                <SelectItem value="claude-code">Claude Code</SelectItem>
-                <SelectItem value="copilot">Copilot</SelectItem>
-                <SelectItem value="ama">AMA</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
         <TextField
           label="Description"
           value={value.description}

@@ -7,7 +7,6 @@
   "exclude": [
     "integration/**/*.test.ts",
     "integration/apply-migrations.ts",
-    "integration/auth.ts",
-    "integration/v2-resources.ts"
+    "integration/auth.ts"
   ]
 }
