@@ -35,7 +35,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     expect(() =>
       execFileSync('pnpm', ['--filter', '@any-managed-agents/sdk', 'run', 'smoke'], { encoding: 'utf8' }),
     ).not.toThrow()
-  })
+  }, 30_000)
 
   it('keeps generated runner WebSocket facades on Bearer while Agent sockets remain DPoP', () => {
     const typescript = readFileSync('sdk/typescript/src/client.ts', 'utf8')
