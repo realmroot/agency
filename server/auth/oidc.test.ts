@@ -287,44 +287,38 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
   })
 })
 
-describe('[spec: auth/management-token-boundary] Realmroot management token isolation', () => {
+describe('[spec: auth/management-token-boundary] confidential AMA management token isolation', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('accepts an unbound User token from the dedicated exchange client for the management audience', async () => {
+  it('accepts an unbound User token from the confidential AMA client for the management audience', async () => {
     const issuer = 'https://id-management-token.test/api/auth'
     const audience = 'https://realmroot.example.com/api'
     const { token, jwks } = await signedToken({
       issuer,
       audience,
       claims: {
-        client_id: 'ama-token-exchange',
+        client_id: 'ama',
         cnf: undefined,
         act: undefined,
       },
     })
     stubJwks(jwks)
 
-    await expect(
-      getBearerClaimsForAudience(
-        envFor(issuer, { REALMROOT_TOKEN_EXCHANGE_CLIENT_ID: 'ama-token-exchange' }),
-        token,
-        audience,
-      ),
-    ).resolves.toMatchObject({
+    await expect(getBearerClaimsForAudience(envFor(issuer), token, audience)).resolves.toMatchObject({
       sub: 'user_real',
-      client_id: 'ama-token-exchange',
+      client_id: 'ama',
     })
   })
 
   it.each([
     ['wrong client', { client_id: 'other-client', cnf: undefined, act: undefined }],
-    ['sender constraint', { client_id: 'ama-token-exchange', cnf: { jkt: 'bound-key' }, act: undefined }],
+    ['sender constraint', { client_id: 'ama', cnf: { jkt: 'bound-key' }, act: undefined }],
     [
       'actor delegation',
       {
-        client_id: 'ama-token-exchange',
+        client_id: 'ama',
         cnf: undefined,
         act: { iss: 'https://id-management-token.test/api/auth', sub: 'agent_1' },
       },
@@ -335,21 +329,15 @@ describe('[spec: auth/management-token-boundary] Realmroot management token isol
     const { token, jwks } = await signedToken({ issuer, audience, claims })
     stubJwks(jwks)
 
-    await expect(
-      getBearerClaimsForAudience(
-        envFor(issuer, { REALMROOT_TOKEN_EXCHANGE_CLIENT_ID: 'ama-token-exchange' }),
-        token,
-        audience,
-      ),
-    ).rejects.toBeInstanceOf(OidcError)
+    await expect(getBearerClaimsForAudience(envFor(issuer), token, audience)).rejects.toBeInstanceOf(OidcError)
   })
 
-  it('does not trust the exchange client at the inbound AMA Bearer boundary unless explicitly configured', async () => {
+  it('accepts the confidential AMA client inbound and gates additional Web clients explicitly', async () => {
     const issuer = 'https://id-inbound-exchange-client.test/api/auth'
     const { token, jwks } = await signedToken({
       issuer,
       claims: {
-        client_id: 'ama-token-exchange',
+        client_id: 'ama',
         cnf: undefined,
         act: undefined,
       },
@@ -360,22 +348,34 @@ describe('[spec: auth/management-token-boundary] Realmroot management token isol
         headers: { authorization: `Bearer ${token}` },
       })
 
-    await expect(
-      getBearerClaims(envFor(issuer, { REALMROOT_TOKEN_EXCHANGE_CLIENT_ID: 'ama-token-exchange' }), request()),
-    ).rejects.toMatchObject({
+    await expect(getBearerClaims(envFor(issuer), request())).resolves.toMatchObject({
+      sub: 'user_real',
+      client_id: 'ama',
+    })
+
+    const additionalIssuer = 'https://id-additional-web.test/api/auth'
+    const additional = await signedToken({
+      issuer: additionalIssuer,
+      claims: { client_id: 'ama-additional-web', cnf: undefined, act: undefined },
+    })
+    stubJwks(additional.jwks)
+    const additionalRequest = () =>
+      new Request('https://ama.example.com/api/v1/agents', {
+        headers: { authorization: `Bearer ${additional.token}` },
+      })
+    await expect(getBearerClaims(envFor(additionalIssuer), additionalRequest())).rejects.toMatchObject({
       name: 'OidcError',
       message: 'Realmroot access token client is not allowed',
     })
 
     await expect(
       getBearerClaims(
-        envFor(issuer, {
-          REALMROOT_TOKEN_EXCHANGE_CLIENT_ID: 'ama-token-exchange',
-          OIDC_TRUSTED_BEARER_CLIENT_IDS: 'ama-token-exchange',
+        envFor(additionalIssuer, {
+          OIDC_TRUSTED_BEARER_CLIENT_IDS: 'ama-additional-web',
         }),
-        request(),
+        additionalRequest(),
       ),
-    ).resolves.toMatchObject({ sub: 'user_real', client_id: 'ama-token-exchange' })
+    ).resolves.toMatchObject({ sub: 'user_real', client_id: 'ama-additional-web' })
   })
 })
 
@@ -526,15 +526,13 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     const expectedAudience =
       credentialMode === 'management' ? 'https://realmroot.example.com/api' : 'https://ama.example.com'
     const claims = {
-      client_id:
-        credentialMode === 'management' ? 'ama-token-exchange' : credentialMode === 'runner' ? 'ama-runner' : 'ama',
+      client_id: credentialMode === 'management' ? 'ama' : credentialMode === 'runner' ? 'ama-runner' : 'ama',
       cnf: undefined,
       act: undefined,
     }
     const verify = (issuer: string, token: string) => {
       const env = envFor(issuer, {
         OIDC_RUNNER_CLIENT_ID: 'ama-runner',
-        REALMROOT_TOKEN_EXCHANGE_CLIENT_ID: 'ama-token-exchange',
       })
       if (credentialMode === 'management') {
         return getBearerClaimsForAudience(env, token, expectedAudience)

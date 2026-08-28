@@ -1,6 +1,152 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
+import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { hashOpaqueValue } from '../auth/web-session-crypto'
+import type { Env } from '../env'
+import { registerAuthRoutes } from '../http/auth'
+import { createDepsApiRouter } from '../openapi'
 import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInRunner, signInUser } from './auth'
+
+const browserIssuer = 'https://identity.alias.test/api/auth'
+const browserClientId = 'ama-test'
+const browserResource = 'https://ama.tftt.cc/api'
+const browserSigningKeys = generateKeyPair('RS256', { extractable: true })
+
+function cookieValue(response: Response, name: string) {
+  const setCookie = response.headers.get('set-cookie') ?? ''
+  const match = new RegExp(`(?:^|,\\s*)${name}=([^;,]*)`).exec(setCookie)
+  return match ? `${name}=${match[1]}` : null
+}
+
+type BrowserOidcProviderOptions = {
+  scope?: string
+  subject?: string
+  accessTokenSubject?: string
+  accessTokenAudience?: string
+  idTokenSubject?: string
+  idTokenAudience?: string
+  idTokenNonce?: string
+  tamperIdTokenSignature?: boolean
+}
+
+async function installBrowserOidcProvider(options: BrowserOidcProviderOptions = {}) {
+  const { privateKey, publicKey } = await browserSigningKeys
+  const jwk = await exportJWK(publicKey)
+  Object.assign(jwk, { kid: 'browser-test-key', alg: 'RS256', use: 'sig' })
+  let expectedNonce = ''
+  const tokenRequests: URLSearchParams[] = []
+  const tokenRequestHeaders: Headers[] = []
+  const accessTokens: string[] = []
+
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : new Request(input, init)
+    const url = new URL(request.url)
+    if (url.pathname.includes('/.well-known/openid-configuration')) {
+      return Response.json({
+        issuer: browserIssuer,
+        authorization_endpoint: 'https://identity.alias.test/authorize',
+        token_endpoint: 'https://identity.alias.test/token',
+        jwks_uri: 'https://identity.alias.test/jwks',
+        response_types_supported: ['code'],
+        subject_types_supported: ['public'],
+        id_token_signing_alg_values_supported: ['RS256'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['client_secret_basic'],
+      })
+    }
+    if (url.pathname === '/jwks') return Response.json({ keys: [jwk] })
+    if (url.pathname === '/token') {
+      const form =
+        init?.body instanceof URLSearchParams
+          ? new URLSearchParams(init.body)
+          : new URLSearchParams(new TextDecoder().decode(await request.arrayBuffer()))
+      tokenRequests.push(form)
+      tokenRequestHeaders.push(request.headers)
+      const now = Math.floor(Date.now() / 1000)
+      const subject = options.subject ?? 'browser_user_1'
+      const scope = options.scope ?? 'openid profile email auth:read projects:read projects:write'
+      const accessToken = await new SignJWT({
+        client_id: browserClientId,
+        scope,
+        email: 'browser@example.com',
+        name: 'Browser User',
+        org_id: 'browser_org_1',
+        org_name: 'Browser Org',
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'browser-test-key', typ: 'at+jwt' })
+        .setIssuer(browserIssuer)
+        .setAudience(options.accessTokenAudience ?? browserResource)
+        .setSubject(options.accessTokenSubject ?? subject)
+        .setIssuedAt(now)
+        .setExpirationTime(now + 3600)
+        .sign(privateKey)
+      let idToken = await new SignJWT({ nonce: options.idTokenNonce ?? expectedNonce })
+        .setProtectedHeader({ alg: 'RS256', kid: 'browser-test-key', typ: 'JWT' })
+        .setIssuer(browserIssuer)
+        .setAudience(options.idTokenAudience ?? browserClientId)
+        .setSubject(options.idTokenSubject ?? subject)
+        .setIssuedAt(now)
+        .setExpirationTime(now + 3600)
+        .sign(privateKey)
+      if (options.tamperIdTokenSignature) {
+        const [header, payload, signature] = idToken.split('.') as [string, string, string]
+        idToken = `${header}.${payload}.${signature.startsWith('A') ? 'B' : 'A'}${signature.slice(1)}`
+      }
+      accessTokens.push(accessToken)
+      return Response.json({
+        access_token: accessToken,
+        id_token: idToken,
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope,
+      })
+    }
+    return new Response('not found', { status: 404 })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  return {
+    fetchMock,
+    tokenRequests,
+    tokenRequestHeaders,
+    accessTokens,
+    setExpectedNonce(value: string) {
+      expectedNonce = value
+    },
+  }
+}
+
+async function beginBrowserSignIn(returnTo = '/agents') {
+  const response = await SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: 'https://example.com' },
+    body: JSON.stringify({ returnTo }),
+  })
+  expect(response.status).toBe(201)
+  const body = (await response.json()) as { authorizationUrl: string }
+  const loginCookie = cookieValue(response, '__Host-ama_login')
+  expect(loginCookie).toBeTruthy()
+  return { response, authorizationUrl: new URL(body.authorizationUrl), loginCookie: loginCookie! }
+}
+
+async function completeBrowserSignIn(authorizationUrl: URL, loginCookie: string) {
+  const callback = new URL('https://example.com/api/v1/auth/authorization-responses')
+  callback.searchParams.set('code', 'browser-code')
+  callback.searchParams.set('state', authorizationUrl.searchParams.get('state')!)
+  return SELF.fetch(callback, { headers: { cookie: loginCookie }, redirect: 'manual' })
+}
+
+async function establishBrowserSession() {
+  const provider = await installBrowserOidcProvider()
+  const { authorizationUrl, loginCookie } = await beginBrowserSignIn()
+  provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+  const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+  expect(callback.status).toBe(302)
+  const sessionCookie = cookieValue(callback, '__Host-ama_session')
+  expect(sessionCookie).toBeTruthy()
+  return sessionCookie!
+}
 
 async function jsonFetch(path: string, authorization?: string, init?: { method?: string; body?: unknown }) {
   const method = init?.method ?? (init?.body !== undefined ? 'POST' : 'GET')
@@ -29,6 +175,26 @@ describe('[CF] auth v1', () => {
     await expect(res.json()).resolves.toEqual({
       methods: [{ type: 'oidc', issuer: 'https://identity.alias.test/api/auth', clientId: 'ama-test' }],
     })
+  })
+
+  it.each([
+    ['a missing client secret', { OIDC_CLIENT_SECRET: undefined }],
+    ['a missing session encryption key', { AMA_WEB_SESSION_ENCRYPTION_KEY: undefined }],
+    ['a short session encryption key', { AMA_WEB_SESSION_ENCRYPTION_KEY: 'too-short' }],
+  ])('does not advertise browser OIDC with %s', async (_case, override) => {
+    const routes = registerAuthRoutes(createDepsApiRouter())
+    const bindings = {
+      OIDC_ISSUER: browserIssuer,
+      OIDC_CLIENT_ID: browserClientId,
+      OIDC_CLIENT_SECRET: 'test-confidential-client-secret',
+      AMA_WEB_SESSION_ENCRYPTION_KEY: 'test-web-session-encryption-key-with-32-characters',
+      ...override,
+    } as unknown as Env
+
+    const response = await routes.request('/config', {}, bindings)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ methods: [] })
   })
 
   it('publishes RFC 9728 Realmroot resource metadata with the exact AMA scope catalog [spec: api-contracts/resource-discovery]', async () => {
@@ -107,10 +273,6 @@ describe('[CF] auth v1', () => {
         oidc: {
           issuer: 'https://identity.alias.test/api/auth',
           resource: 'https://ama.tftt.cc/api',
-          browser: {
-            clientId: 'ama-test',
-            scopes: ['openid', 'profile', 'email', 'offline_access'],
-          },
           runner: {
             clientId: 'ama-runner-test',
             scopes: ['openid', 'profile', 'email', 'offline_access'],
@@ -177,6 +339,352 @@ describe('[CF] auth v1', () => {
   it('advertises both credential schemes when authentication is missing', async () => {
     const res = await jsonFetch('/api/v1/auth/sessions/current')
     expect(res.headers.get('www-authenticate')).toBe('Bearer, DPoP algs="ES256"')
+  })
+
+  it('creates a browser-bound authorization attempt with state, nonce, and S256 PKCE [spec: auth/web-redirect]', async () => {
+    await installBrowserOidcProvider()
+
+    const { response, authorizationUrl, loginCookie } = await beginBrowserSignIn('/agents?status=active')
+
+    expect(authorizationUrl.origin).toBe('https://identity.alias.test')
+    expect(authorizationUrl.pathname).toBe('/authorize')
+    expect(authorizationUrl.searchParams.get('client_id')).toBe(browserClientId)
+    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(
+      'https://example.com/api/v1/auth/authorization-responses',
+    )
+    expect(authorizationUrl.searchParams.get('response_type')).toBe('code')
+    expect(authorizationUrl.searchParams.get('resource')).toBe(browserResource)
+    expect(authorizationUrl.searchParams.get('scope')).toContain('openid')
+    expect(authorizationUrl.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(authorizationUrl.searchParams.get('nonce')).toBeTruthy()
+    expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
+    expect(loginCookie).toBe(`__Host-ama_login=${authorizationUrl.searchParams.get('state')}`)
+    expect(response.headers.get('set-cookie')).toContain('HttpOnly')
+    expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
+    expect(response.headers.get('set-cookie')).toContain('Secure')
+
+    const rows = await (env as unknown as Env).DB.prepare(
+      'SELECT state_hash, encrypted_payload, return_to FROM web_authorization_attempts',
+    ).all<{ state_hash: string; encrypted_payload: string; return_to: string }>()
+    expect(rows.results).toHaveLength(1)
+    expect(rows.results[0]).toMatchObject({ return_to: '/agents?status=active' })
+    expect(rows.results[0]?.state_hash).not.toBe(authorizationUrl.searchParams.get('state'))
+    expect(rows.results[0]?.encrypted_payload).not.toContain(authorizationUrl.searchParams.get('nonce')!)
+  })
+
+  it.each([
+    ['a backslash authority', '/\\evil.com'],
+    ['a NUL control character', '/\u0000evil'],
+    ['an ASCII newline', '/\nevil'],
+  ])('falls back to the root return path for %s', async (_case, returnTo) => {
+    await installBrowserOidcProvider()
+
+    const { authorizationUrl } = await beginBrowserSignIn(returnTo)
+    const stateHash = await hashOpaqueValue(authorizationUrl.searchParams.get('state')!)
+    const attempt = await (env as unknown as Env).DB.prepare(
+      'SELECT return_to FROM web_authorization_attempts WHERE state_hash = ?',
+    )
+      .bind(stateHash)
+      .first<{ return_to: string }>()
+
+    expect(attempt?.return_to).toBe('/')
+  })
+
+  it('rate-limits the thirty-third active authorization attempt from one client', async () => {
+    await installBrowserOidcProvider()
+    const createAttempt = () =>
+      SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: 'https://example.com',
+          'cf-connecting-ip': '192.0.2.10',
+        },
+        body: JSON.stringify({ returnTo: '/agents' }),
+      })
+
+    for (let attempt = 0; attempt < 32; attempt += 1) {
+      expect((await createAttempt()).status, `authorization attempt ${attempt + 1}`).toBe(201)
+    }
+    const limited = await createAttempt()
+
+    expect(limited.status).toBe(429)
+    expect(limited.headers.get('retry-after')).toBe('600')
+    await expect(limited.json()).resolves.toMatchObject({ error: { type: 'rate_limited' } })
+  })
+
+  it('atomically caps a burst of authorization attempts from one client', async () => {
+    await installBrowserOidcProvider()
+    const responses = await Promise.all(
+      Array.from({ length: 40 }, () =>
+        SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            origin: 'https://example.com',
+            'cf-connecting-ip': '192.0.2.20',
+          },
+          body: JSON.stringify({ returnTo: '/agents' }),
+        }),
+      ),
+    )
+    const statuses = responses.map((response) => response.status)
+
+    expect(statuses.filter((status) => status === 201)).toHaveLength(32)
+    expect(statuses.filter((status) => status === 429)).toHaveLength(8)
+  })
+
+  it.each(['missing', 'another browser'])('rejects authorization state bound to %s login cookie', async (binding) => {
+    const provider = await installBrowserOidcProvider()
+    const { authorizationUrl } = await beginBrowserSignIn()
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+    const loginCookie = binding === 'missing' ? '' : (await beginBrowserSignIn('/projects')).loginCookie
+
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+
+    expect(callback.status).toBe(400)
+    await expect(callback.json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
+    expect(provider.tokenRequests).toHaveLength(0)
+    const sessions = await (env as unknown as Env).DB.prepare('SELECT COUNT(*) AS count FROM web_auth_sessions').first<{
+      count: number
+    }>()
+    expect(sessions?.count).toBe(0)
+  })
+
+  it.each([
+    ['an incorrect nonce', { idTokenNonce: 'incorrect-nonce' }],
+    ['a tampered ID token signature', { tamperIdTokenSignature: true }],
+    ['different access and ID token subjects', { accessTokenSubject: 'access_subject', idTokenSubject: 'id_subject' }],
+    ['an incorrect access token audience', { accessTokenAudience: 'https://wrong-resource.example/api' }],
+    ['an incorrect ID token audience', { idTokenAudience: 'wrong-browser-client' }],
+  ] satisfies Array<
+    [string, BrowserOidcProviderOptions]
+  >)('rejects a token response with %s', async (_case, options) => {
+    const provider = await installBrowserOidcProvider(options)
+    const { authorizationUrl, loginCookie } = await beginBrowserSignIn()
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+
+    expect(callback.status).toBe(400)
+    await expect(callback.json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
+    expect(cookieValue(callback, '__Host-ama_session')).toBeNull()
+    const sessions = await (env as unknown as Env).DB.prepare('SELECT COUNT(*) AS count FROM web_auth_sessions').first<{
+      count: number
+    }>()
+    expect(sessions?.count).toBe(0)
+  })
+
+  it('consumes the callback once, sets an opaque HttpOnly session, and applies the same scopes as Bearer [spec: auth/callback] [spec: auth/session-current]', async () => {
+    const initialAttempts = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_authorization_attempts',
+    ).first<{ count: number }>()
+    const provider = await installBrowserOidcProvider()
+    const { authorizationUrl, loginCookie } = await beginBrowserSignIn('/agents')
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+
+    expect(callback.status).toBe(302)
+    expect(callback.headers.get('location')).toBe('https://example.com/agents')
+    expect(callback.headers.get('set-cookie')).toContain('__Host-ama_login=')
+    expect(callback.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(callback.headers.get('set-cookie')).toContain('HttpOnly')
+    expect(callback.headers.get('set-cookie')).not.toContain(provider.accessTokens[0]!)
+    const sessionCookie = cookieValue(callback, '__Host-ama_session')
+    expect(sessionCookie).toBeTruthy()
+    expect(provider.tokenRequests).toHaveLength(1)
+    expect(provider.tokenRequests[0]?.get('grant_type')).toBe('authorization_code')
+    expect(provider.tokenRequests[0]?.get('code')).toBe('browser-code')
+    expect(provider.tokenRequests[0]?.get('code_verifier')).toBeTruthy()
+    expect(provider.tokenRequests[0]?.has('client_id')).toBe(false)
+    expect(provider.tokenRequests[0]?.has('client_secret')).toBe(false)
+    expect(provider.tokenRequestHeaders[0]!.get('authorization')).toMatch(/^Basic /)
+    const clientCredentials = atob(provider.tokenRequestHeaders[0]!.get('authorization')!.slice('Basic '.length))
+      .split(':')
+      .map(decodeURIComponent)
+    expect(clientCredentials).toEqual([browserClientId, 'test-confidential-client-secret'])
+
+    const cookieResponse = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: { cookie: sessionCookie! },
+    })
+    const bearerResponse = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: { authorization: `Bearer ${provider.accessTokens[0]}` },
+    })
+    expect(cookieResponse.status).toBe(200)
+    expect(bearerResponse.status).toBe(200)
+    expect(await cookieResponse.json()).toEqual(await bearerResponse.json())
+
+    for (const authorization of ['Bearer', 'Unknown credential']) {
+      const invalidDirectCredential = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+        headers: { cookie: sessionCookie!, authorization },
+      })
+      expect(invalidDirectCredential.status, authorization).toBe(401)
+      expect(invalidDirectCredential.headers.get('www-authenticate'), authorization).toBeTruthy()
+      expectAuthRequired(await invalidDirectCredential.json())
+    }
+
+    const replay = await completeBrowserSignIn(authorizationUrl, loginCookie)
+    expect(replay.status).toBe(400)
+    await expect(replay.clone().json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
+    expect(cookieValue(replay, '__Host-ama_session')).toBeNull()
+    expect(provider.tokenRequests).toHaveLength(1)
+    const attempts = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_authorization_attempts',
+    ).first<{ count: number }>()
+    expect(attempts?.count).toBe(initialAttempts?.count ?? 0)
+  })
+
+  it('rejects an expired authorization attempt before exchanging its code', async () => {
+    const provider = await installBrowserOidcProvider()
+    const { authorizationUrl, loginCookie } = await beginBrowserSignIn()
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+    await (env as unknown as Env).DB.prepare('UPDATE web_authorization_attempts SET expires_at = ?')
+      .bind('2000-01-01T00:00:00.000Z')
+      .run()
+
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+
+    expect(callback.status).toBe(400)
+    await expect(callback.clone().json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
+    expect(cookieValue(callback, '__Host-ama_session')).toBeNull()
+    expect(provider.tokenRequests).toHaveLength(0)
+  })
+
+  it('invalidates a browser session whose encrypted token is tampered', async () => {
+    const sessionCookie = await establishBrowserSession()
+    const sessionIdHash = await hashOpaqueValue(sessionCookie.split('=')[1]!)
+    const row = await (env as unknown as Env).DB.prepare(
+      'SELECT encrypted_access_token FROM web_auth_sessions WHERE id_hash = ?',
+    )
+      .bind(sessionIdHash)
+      .first<{ encrypted_access_token: string }>()
+    const encrypted = JSON.parse(row!.encrypted_access_token) as { ciphertext: string }
+    encrypted.ciphertext = `${encrypted.ciphertext.startsWith('A') ? 'B' : 'A'}${encrypted.ciphertext.slice(1)}`
+    await (env as unknown as Env).DB.prepare(
+      'UPDATE web_auth_sessions SET encrypted_access_token = ? WHERE id_hash = ?',
+    )
+      .bind(JSON.stringify(encrypted), sessionIdHash)
+      .run()
+
+    const response = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      headers: { cookie: sessionCookie },
+    })
+
+    expect(response.status).toBe(401)
+    expect(response.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
+    const remaining = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_auth_sessions WHERE id_hash = ?',
+    )
+      .bind(sessionIdHash)
+      .first<{ count: number }>()
+    expect(remaining?.count).toBe(0)
+  })
+
+  it('invalidates browser sessions when encrypted tokens are swapped across row AAD contexts', async () => {
+    const firstCookie = await establishBrowserSession()
+    const secondCookie = await establishBrowserSession()
+    const firstHash = await hashOpaqueValue(firstCookie.split('=')[1]!)
+    const secondHash = await hashOpaqueValue(secondCookie.split('=')[1]!)
+    const first = await (env as unknown as Env).DB.prepare(
+      'SELECT encrypted_access_token FROM web_auth_sessions WHERE id_hash = ?',
+    )
+      .bind(firstHash)
+      .first<{ encrypted_access_token: string }>()
+    const second = await (env as unknown as Env).DB.prepare(
+      'SELECT encrypted_access_token FROM web_auth_sessions WHERE id_hash = ?',
+    )
+      .bind(secondHash)
+      .first<{ encrypted_access_token: string }>()
+    await (env as unknown as Env).DB.batch([
+      (env as unknown as Env).DB.prepare(
+        'UPDATE web_auth_sessions SET encrypted_access_token = ? WHERE id_hash = ?',
+      ).bind(second!.encrypted_access_token, firstHash),
+      (env as unknown as Env).DB.prepare(
+        'UPDATE web_auth_sessions SET encrypted_access_token = ? WHERE id_hash = ?',
+      ).bind(first!.encrypted_access_token, secondHash),
+    ])
+
+    for (const sessionCookie of [firstCookie, secondCookie]) {
+      const response = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+        headers: { cookie: sessionCookie },
+      })
+      expect(response.status).toBe(401)
+      expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
+    }
+    const remaining = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_auth_sessions WHERE id_hash IN (?, ?)',
+    )
+      .bind(firstHash, secondHash)
+      .first<{ count: number }>()
+    expect(remaining?.count).toBe(0)
+  })
+
+  it('enforces same-origin CSRF for unsafe cookie requests without applying it to Bearer callers', async () => {
+    const provider = await installBrowserOidcProvider()
+    const { authorizationUrl, loginCookie } = await beginBrowserSignIn('/projects')
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+    const sessionCookie = cookieValue(callback, '__Host-ama_session')!
+    const body = JSON.stringify({ name: 'Browser project' })
+
+    const rejectedCookie = await SELF.fetch('https://example.com/api/v1/projects', {
+      method: 'POST',
+      headers: { cookie: sessionCookie, 'content-type': 'application/json', origin: 'https://attacker.example' },
+      body,
+    })
+    expect(rejectedCookie.status).toBe(403)
+
+    const acceptedCookie = await SELF.fetch('https://example.com/api/v1/projects', {
+      method: 'POST',
+      headers: { cookie: sessionCookie, 'content-type': 'application/json', origin: 'https://example.com' },
+      body,
+    })
+    expect(acceptedCookie.status).toBe(201)
+
+    const acceptedBearer = await SELF.fetch('https://example.com/api/v1/projects', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${provider.accessTokens[0]}`,
+        'content-type': 'application/json',
+        origin: 'https://attacker.example',
+      },
+      body: JSON.stringify({ name: 'Bearer project' }),
+    })
+    expect(acceptedBearer.status).toBe(201)
+  })
+
+  it('deletes the D1 browser session and expires its cookie on same-origin logout', async () => {
+    const initialSessionRows = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_auth_sessions',
+    ).first<{ count: number }>()
+    const provider = await installBrowserOidcProvider()
+    const { authorizationUrl, loginCookie } = await beginBrowserSignIn()
+    provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
+    const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
+    const sessionCookie = cookieValue(callback, '__Host-ama_session')!
+
+    const logout = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+      method: 'DELETE',
+      headers: { cookie: sessionCookie, origin: 'https://example.com' },
+    })
+
+    expect(logout.status).toBe(204)
+    expect(logout.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(logout.headers.get('set-cookie')).toContain('Max-Age=0')
+    const sessionRows = await (env as unknown as Env).DB.prepare(
+      'SELECT COUNT(*) AS count FROM web_auth_sessions',
+    ).first<{ count: number }>()
+    expect(sessionRows?.count).toBe(initialSessionRows?.count ?? 0)
+    expect(
+      (
+        await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
+          headers: { cookie: sessionCookie },
+        })
+      ).status,
+    ).toBe(401)
   })
 })
 

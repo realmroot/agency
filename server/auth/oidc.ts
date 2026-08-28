@@ -289,7 +289,7 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
 function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop' | 'management') {
   const clientId = stringClaim(claims.client_id)
   if (credentialMode === 'management') {
-    if (!clientId || clientId !== env.REALMROOT_TOKEN_EXCHANGE_CLIENT_ID) {
+    if (!clientId || clientId !== env.OIDC_CLIENT_ID) {
       throw new OidcError('Realmroot management token client is not allowed')
     }
     if (claims.cnf !== undefined || claims.act !== undefined) {

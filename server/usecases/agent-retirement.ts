@@ -5,7 +5,9 @@ import type { Deps } from './deps'
 import type { AuthScope, RealmrootManagementCredential } from './ports'
 import { closeSession } from './runtime/session-lifecycle'
 
-async function identityRecordId(deps: Deps, auth: AuthScope, agent: Agent) {
+type ManagedIdentityAgent = Agent & { identity: NonNullable<Agent['identity']> }
+
+async function identityRecordId(deps: Deps, auth: AuthScope, agent: ManagedIdentityAgent) {
   const reference = secretRefIdentity(agent.identity.credentialRef)
   if (!reference?.credentialId) throw new Error('Agent identity Vault reference is unavailable')
   const manifest = await deps.runtimeSecrets.resolveWorkspaceManifest(
@@ -31,7 +33,7 @@ async function identityRecordId(deps: Deps, auth: AuthScope, agent: Agent) {
   return { identityId: state.identity.id, vaultId: reference.vaultId, credentialId: reference.credentialId }
 }
 
-async function cleanup(deps: Deps, agent: Agent) {
+async function cleanup(deps: Deps, agent: ManagedIdentityAgent) {
   const reference = secretRefIdentity(agent.identity.credentialRef)
   if (!reference?.credentialId) throw new Error('Agent identity Vault reference is unavailable')
   await deps.vaults.destroyManagedVault(reference.vaultId, reference.credentialId)
@@ -44,6 +46,8 @@ export async function retireAgent(
   agent: Agent,
   authority?: RealmrootManagementCredential,
 ) {
+  if (!agent.identity) throw new Error('Legacy Agent identity must be backfilled before retirement')
+  const managedAgent: ManagedIdentityAgent = { ...agent, identity: agent.identity }
   if (agent.status.phase === 'retired') return
   if (agent.status.phase !== 'retiring') {
     await deps.agents.markRetirement(auth.project.id, agent.metadata.uid, 'stopping', new Date().toISOString())
@@ -54,21 +58,22 @@ export async function retireAgent(
     if (!result.ok) throw new Error(`Session ${session.id} could not be ended: ${result.error.message}`)
   }
   if (agent.status.retirementStage !== 'identity_retired') {
-    const identity = await identityRecordId(deps, auth, agent)
+    const identity = await identityRecordId(deps, auth, managedAgent)
     if (!authority || !deps.realmrootEnrollment) throw new Error('Realmroot Agent retirement authority is unavailable')
     await deps.realmrootEnrollment.retire({
-      issuer: agent.identity.issuer,
+      issuer: managedAgent.identity.issuer,
       identityId: identity.identityId,
       managementCredential: authority,
     })
     await deps.agents.markRetirement(auth.project.id, agent.metadata.uid, 'identity_retired', new Date().toISOString())
   }
-  await cleanup(deps, agent)
+  await cleanup(deps, managedAgent)
 }
 
 export async function reconcileRetiredAgentCleanup(deps: Deps) {
   for (const agent of await deps.agents.retiring(25)) {
     if (agent.status.retirementStage !== 'identity_retired') continue
+    if (!agent.identity) continue
     const project = agent.metadata.pid ? await deps.projects.tenant(agent.metadata.pid) : null
     if (!project) continue
     await retireAgent(

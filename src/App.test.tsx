@@ -855,7 +855,7 @@ describe('App', () => {
 
     render(<App />)
 
-    await screen.findByText('Coding agent')
+    await screen.findByRole('navigation', { name: 'Primary' })
     fireEvent.click(primaryNav().getByRole('link', { name: 'Sessions' }))
     await screen.findByText('First run workflow')
     expect(await screen.findByLabelText('error: Runtime crashed')).toBeTruthy()

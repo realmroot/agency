@@ -67,7 +67,7 @@ async function requestFingerprint(request: AgentCreationRequest, auth: AuthScope
 
 function sameRequest(agent: Agent, request: AgentCreationRequest) {
   return (
-    agent.identity.username === request.username &&
+    agent.identity?.username === request.username &&
     agent.metadata.name === request.name &&
     agent.metadata.description === request.description &&
     JSON.stringify(agent.spec) === JSON.stringify(request.spec)

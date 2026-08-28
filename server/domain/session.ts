@@ -13,6 +13,8 @@ import type { RuntimeName } from './runtime-catalog'
 
 export type { SessionEvent }
 
+export type PublicRealmrootAgentIdentity = Omit<RealmrootAgentIdentity, 'credentialRef'>
+
 // Pure session rules and entities. No drizzle, no env, no hono. The operational state
 // machine, hosting-mode derivation, prompt-delivery decision, approval-state
 // purity, and the pure parts of snapshot construction live here so the usecase
@@ -117,7 +119,7 @@ export interface SessionAgentSnapshot {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
-  identity: RealmrootAgentIdentity
+  identity: PublicRealmrootAgentIdentity | null
   createdAt: string
 }
 

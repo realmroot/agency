@@ -7,6 +7,12 @@ import type { Env } from './env'
 import type { Deps } from './usecases/deps'
 
 export const ApiSecuritySchemes = {
+  amaWebSession: {
+    type: 'apiKey',
+    in: 'cookie',
+    name: '__Host-ama_session',
+    description: 'Internal browser-only HttpOnly session backed by a verified Realmroot access token.',
+  },
   sessionSocketTicket: {
     type: 'apiKey',
     in: 'header',
@@ -29,7 +35,7 @@ export const ApiSecuritySchemes = {
 } as const
 
 export const AuthenticatedOperation = {
-  security: [{ realmrootConsoleBearer: [] }, { realmrootDpop: [] }],
+  security: [{ amaWebSession: [] }, { realmrootConsoleBearer: [] }, { realmrootDpop: [] }],
 }
 
 type OpenApiOperation = {
@@ -75,7 +81,11 @@ export function finalizeOpenApiDocument<T extends { paths: object }>(document: T
       )
       operation.security = sessionSocketTicket
         ? [{ sessionSocketTicket: [] }, { realmrootDpop: scope ? [scope] : [] }]
-        : [{ realmrootConsoleBearer: scope ? [scope] : [] }, { realmrootDpop: scope ? [scope] : [] }]
+        : [
+            { amaWebSession: [] },
+            { realmrootConsoleBearer: scope ? [scope] : [] },
+            { realmrootDpop: scope ? [scope] : [] },
+          ]
       operation.responses ??= {}
       operation.responses['401'] ??= {
         description: 'A valid Realmroot credential in the client-specific authentication mode is required',

@@ -13,32 +13,105 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 
 ## Realmroot Applications and Resource Server
 
-Create public Realmroot applications for the browser SPA and runner loopback PKCE flow. Register AMA as the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728 discovery document and OpenAPI document are live.
-Create a separate Machine Application for AMA's restricted User token exchange.
+Create one confidential Realmroot Web Application for the AMA backend and one
+public native Application for the runner loopback PKCE flow. Register AMA as
+the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728
+discovery document and OpenAPI document are live.
 
 Required settings:
 
 - Issuer: `OIDC_ISSUER`
-- Client id: `OIDC_CLIENT_ID`
-- No client secret: both clients are public and use authorization-code PKCE.
+- AMA backend client id: `OIDC_CLIENT_ID`
+- AMA backend client secret: store `OIDC_CLIENT_SECRET` as a Wrangler secret.
+- Browser session encryption: store `AMA_WEB_SESSION_ENCRYPTION_KEY` as a
+  distinct Wrangler secret generated from at least 32 random bytes (for example,
+  `openssl rand -base64 32`). The Worker derives separate encryption and
+  rate-limit HMAC keys with HKDF.
 - Resource audience: the exact protected Resource URL, including `/api`.
-- Console redirect URI: configure in the OIDC provider as `https://<worker-host>/auth/callback`.
+- AMA backend redirect URI: configure exactly as
+  `https://<worker-host>/api/v1/auth/authorization-responses`.
 - Runner redirect URI: configure exactly `http://127.0.0.1:49174/oauth/callback`; do not register wildcard ports.
 - Scopes: `openid email profile`
-- Flow: authorization code with PKCE
+- AMA backend flow: server-side authorization code with PKCE and
+  `client_secret_basic` authentication. Do not request `offline_access`; the web
+  session is capped to the access-token lifetime.
+- Runner flow: public authorization code with loopback PKCE.
 
-The Machine Application uses `REALMROOT_TOKEN_EXCHANGE_CLIENT_ID` and the
-`REALMROOT_TOKEN_EXCHANGE_CLIENT_SECRET` Worker secret. Configure the AMA
-Resource Server as its token-exchange source, grant only the Realmroot `/api`
-`agents:write` Application Permission, and do not enable refresh-token issuance
-for delegated tokens.
+Configure the same confidential Web Application to exchange its AMA Resource
+access token for the Realmroot `/api` audience. Grant only the `agents:write`
+Application Permission, require the signed-in User Context to grant the same
+target scope, and do not enable refresh-token issuance for delegated tokens.
 
 Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require
 `<resource>:write`, and narrowly scoped administration may use
 `<resource>:*`. A missing permission claim is denied.
 
-The browser uses `oidc-client-ts` for authorization-code PKCE and sends the registered Console client's access token as Bearer authentication. The native runner uses authorization-code PKCE with an exact loopback callback so the operator selects the same Realmroot personal or organization Context as the AMA project, then sends Realmroot Bearer access tokens. The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the permitted credential mode; cross-mode fallback and legacy identity service bindings are not accepted.
+The Worker completes browser authorization, stores the Realmroot access token
+encrypted in D1, and gives the browser only an opaque HttpOnly, SameSite=Lax
+cookie. Cookie sessions and direct Realmroot Bearer/DPoP credentials normalize
+to the same claims and exact-scope authorization path. Unsafe cookie requests
+must carry the Worker's exact Origin. The native runner keeps its separate
+authorization-code PKCE Application and sends Realmroot Bearer access tokens.
+The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for
+Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the
+permitted credential mode; cross-mode fallback is not accepted.
+
+Add the constrained resource token-exchange policy to this same confidential
+Web Application. Both the Application policy and the signed-in User Context
+must grant each target scope. Do not create a third machine Application.
+
+Roll out the Application migration in this order so the public SPA is never
+reused as a confidential client:
+
+1. Create the Realmroot `confidential_web` Application with the exact production
+   and staging callback URIs above, AMA Resource scopes, and its constrained
+   token-exchange policies.
+2. Capture its one-time client secret. Set `OIDC_CLIENT_ID`,
+   `OIDC_CLIENT_SECRET`, and a new `AMA_WEB_SESSION_ENCRYPTION_KEY` separately in
+   each Cloudflare environment; do not commit any of these values. Keep the
+   runner's existing public-native `OIDC_RUNNER_CLIENT_ID` unchanged.
+3. Run the staging D1 migration command so both
+   `0029_web_auth_sessions.sql`, `0030_web_auth_attempt_rate_limit.sql`, and
+   `0031_agent_identity_provisioning.sql` are applied, deploy staging, and verify
+   the callback, Cookie session, Agent creation, direct JWT/DPoP calls, and runner
+   login.
+4. Apply the migration and deploy production, then remove the superseded public
+   SPA and machine Applications.
+
+`0031_agent_identity_provisioning.sql` is expand-only. It retains the legacy
+`realmroot` columns and excludes empty new identity fields from its partial
+unique indexes, so the old Worker remains usable during a forward deployment.
+The new Worker keeps legacy Agents and Session snapshots readable and executable
+without pretending the old protocol `agentId` is Realmroot's stable
+`identity.subject`. Backfill issuer, subject, username, and credential reference
+only by decrypting and validating each stored `state.json`; quarantine duplicate
+stable identities for operator review. Set the stable identity and clear the
+legacy `realmroot` binding on the Agent and all of its AgentVersions in one
+transaction. The migration's `codex` runtime value is only a non-null schema
+placeholder for legacy rows: until an Agent Profile is backfilled, Session
+creation must keep sending the explicit runtime as required by the old API, and
+AMA records that requested runtime in the new Session snapshot. Pause Agent
+mutations before rolling back to an old Worker because
+the old API can write legacy bindings again. Ship the backfill and the later column
+contraction as separate migrations after all environments report zero legacy
+rows and no legacy active Sessions.
+
+Set the three environment-specific values before step 3 (repeat without
+`--env staging` for production):
+
+```bash
+pnpm exec wrangler secret put OIDC_CLIENT_ID --env staging
+pnpm exec wrangler secret put OIDC_CLIENT_SECRET --env staging
+pnpm exec wrangler secret put AMA_WEB_SESSION_ENCRYPTION_KEY --env staging
+```
+
+Apply Cloudflare rate-limit rules to
+`POST /api/v1/auth/authorization-attempts` and
+`GET /api/v1/auth/authorization-responses`. The Worker also caps unexpired
+attempts per hashed connecting address, caches discovery metadata for ten
+minutes, and applies five-second discovery/token/JWKS deadlines; the edge rule
+is the first-line volumetric control.
 
 Control-plane settings:
 
@@ -80,8 +153,9 @@ Optional settings:
 - `AMA_AI_GATEWAY_ID`: Cloudflare AI Gateway id for third-party gateway-routed
   models. Native `@cf/` Workers AI models do not need a gateway id.
 
-Do not store raw provider credentials in D1, session events, UI state, or logs.
-The database may store metadata and secret references only.
+Do not store raw provider credentials or OAuth tokens in D1, session events, UI
+state, or logs. D1 may store metadata, secret references, and authenticated
+ciphertext only.
 
 ## Vault credential encryption
 

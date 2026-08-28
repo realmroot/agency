@@ -3,7 +3,7 @@
   "info": {
     "title": "Any Managed Agents API",
     "version": "1.0.0",
-    "description": "Realmroot-native control-plane API for Any Managed Agents. Console and runner operations use Bearer tokens while Agent operations require DPoP; every protected operation requires an exact resource scope."
+    "description": "Realmroot-native control-plane API for Any Managed Agents. Browser operations use an HttpOnly session backed by a Realmroot token, direct clients use Bearer or DPoP, and every protected operation requires an exact resource scope."
   },
   "servers": [
     {
@@ -17,6 +17,12 @@
         "in": "header",
         "name": "Sec-WebSocket-Protocol",
         "description": "Single-use opaque ticket created by POST /sessions/{sessionId}/socket-tickets."
+      },
+      "amaWebSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-ama_session",
+        "description": "Internal browser-only HttpOnly session backed by a verified Realmroot access token."
       },
       "realmrootConsoleBearer": {
         "type": "openIdConnect",
@@ -2423,17 +2429,13 @@
             "format": "uri",
             "example": "https://ama.example.com"
           },
-          "browser": {
-            "$ref": "#/components/schemas/PublicOidcClientConfig"
-          },
           "runner": {
             "$ref": "#/components/schemas/PublicOidcClientConfig"
           }
         },
         "required": [
           "issuer",
-          "resource",
-          "browser"
+          "resource"
         ]
       },
       "PublicOidcClientConfig": {
@@ -2498,6 +2500,55 @@
           "type",
           "issuer",
           "clientId"
+        ]
+      },
+      "AuthorizationAttempt": {
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "authorizationUrl"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "validation_error"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "type",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "AuthSession": {
@@ -2574,43 +2625,6 @@
         "required": [
           "id",
           "name"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "example": "validation_error"
-              },
-              "message": {
-                "type": "string",
-                "example": "Invalid request"
-              },
-              "issues": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "type",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "ProjectListResponse": {
@@ -2802,6 +2816,7 @@
       },
       "RealmrootAgentIdentity": {
         "type": "object",
+        "nullable": true,
         "properties": {
           "issuer": {
             "type": "string",
@@ -6905,6 +6920,7 @@
       },
       "SessionRealmrootIdentity": {
         "type": "object",
+        "nullable": true,
         "properties": {
           "issuer": {
             "type": "string",
@@ -6921,17 +6937,13 @@
             "enum": [
               "ama"
             ]
-          },
-          "credentialRef": {
-            "type": "string"
           }
         },
         "required": [
           "issuer",
           "subject",
           "username",
-          "runtime",
-          "credentialRef"
+          "runtime"
         ],
         "additionalProperties": false
       },
@@ -8573,6 +8585,64 @@
         }
       }
     },
+    "/api/v1/auth/authorization-attempts": {
+      "post": {
+        "operationId": "createAuthorizationAttempt",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Begin a server-owned Realmroot browser sign-in",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "returnTo": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "default": "/"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Authorization attempt created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationAttempt"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid browser origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many active attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/sessions/current": {
       "get": {
         "operationId": "readCurrentAuthSession",
@@ -8581,6 +8651,9 @@
         ],
         "summary": "Read the Realmroot-authenticated request context",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "auth:read"
@@ -8624,6 +8697,28 @@
             }
           }
         }
+      },
+      "delete": {
+        "operationId": "deleteCurrentAuthSession",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Delete the current browser session",
+        "responses": {
+          "204": {
+            "description": "Browser session deleted"
+          },
+          "403": {
+            "description": "Invalid browser origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/projects": {
@@ -8634,6 +8729,9 @@
         ],
         "summary": "List projects in the current organization",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "projects:read"
@@ -8720,6 +8818,9 @@
         "summary": "Create a project in the current organization",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "projects:write"
             ]
@@ -8782,6 +8883,9 @@
         ],
         "summary": "Read a single project",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "projects:read"
@@ -8856,6 +8960,9 @@
         ],
         "summary": "List agents",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "agents:read"
@@ -9007,6 +9114,9 @@
         "summary": "Create an agent",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "agents:write"
             ]
@@ -9119,6 +9229,9 @@
         "summary": "Read an agent",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "agents:read"
             ]
@@ -9191,6 +9304,9 @@
         "summary": "Update an agent",
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "agents:write"
@@ -9294,6 +9410,9 @@
         "summary": "Permanently retire an Agent identity and destroy its managed Vault",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "agents:write"
             ]
@@ -9349,6 +9468,16 @@
               }
             }
           },
+          "409": {
+            "description": "Legacy Agent identity requires backfill",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "502": {
             "description": "Retirement failed before the identity was retired",
             "content": {
@@ -9370,6 +9499,9 @@
         ],
         "summary": "List agent versions",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "agents:read"
@@ -9444,6 +9576,9 @@
         ],
         "summary": "Read an agent version",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "agents:read"
@@ -9538,6 +9673,9 @@
         ],
         "summary": "List environments",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "environments:read"
@@ -9670,6 +9808,9 @@
         "summary": "Create an environment",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "environments:write"
             ]
@@ -9743,6 +9884,9 @@
         "summary": "Read an environment",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "environments:read"
             ]
@@ -9815,6 +9959,9 @@
         "summary": "Update an environment",
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "environments:write"
@@ -9920,6 +10067,9 @@
         "summary": "List environment versions",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "environments:read"
             ]
@@ -9993,6 +10143,9 @@
         ],
         "summary": "Read an environment version",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "environments:read"
@@ -10088,6 +10241,9 @@
         "summary": "List model vendors",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "providers:read"
             ]
@@ -10140,6 +10296,9 @@
         ],
         "summary": "List all catalog models",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "providers:read"
@@ -10195,6 +10354,9 @@
         "description": "Triggers a discovery refresh of the global model catalog (also runs hourly on a schedule).",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "providers:write"
             ]
@@ -10247,6 +10409,9 @@
         ],
         "summary": "Read a model vendor",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "providers:read"
@@ -10322,6 +10487,9 @@
         "summary": "List a vendor's models",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "providers:read"
             ]
@@ -10395,6 +10563,9 @@
         ],
         "summary": "Register a self-hosted runner",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "runners:write"
@@ -10476,6 +10647,9 @@
         ],
         "summary": "List self-hosted runners",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "runners:read"
@@ -10634,6 +10808,9 @@
         "summary": "Read a self-hosted runner",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "runners:read"
             ]
@@ -10705,6 +10882,9 @@
         ],
         "summary": "Update or archive a self-hosted runner",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "runners:write"
@@ -10810,6 +10990,9 @@
         "summary": "Read the current runner heartbeat state",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "runners:read"
             ]
@@ -10881,6 +11064,9 @@
         ],
         "summary": "Replace the current runner heartbeat state",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "runners:write"
@@ -10986,6 +11172,9 @@
         "summary": "Open the runner relay WebSocket channel",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "runners:write"
             ]
@@ -11072,6 +11261,9 @@
         ],
         "summary": "List queued self-hosted work items",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "work-items:read"
@@ -11224,6 +11416,9 @@
         "summary": "Read a queued self-hosted work item",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "work-items:read"
             ]
@@ -11307,6 +11502,9 @@
         ],
         "summary": "Claim a specific available work item for a runner",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "leases:write"
@@ -11398,6 +11596,9 @@
         ],
         "summary": "List work leases",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "leases:read"
@@ -11510,6 +11711,9 @@
         "summary": "Read a work lease",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "leases:read"
             ]
@@ -11581,6 +11785,9 @@
         ],
         "summary": "Renew or finish a work lease",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "leases:write"
@@ -11686,6 +11893,9 @@
         "summary": "List budgets",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "budgets:read"
             ]
@@ -11736,6 +11946,9 @@
         ],
         "summary": "Create a budget",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "budgets:write"
@@ -11810,6 +12023,9 @@
         "summary": "Read a budget",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "budgets:read"
             ]
@@ -11881,6 +12097,9 @@
         ],
         "summary": "Update a budget",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "budgets:write"
@@ -11974,6 +12193,9 @@
         "summary": "Delete a budget",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "budgets:write"
             ]
@@ -12040,6 +12262,9 @@
         ],
         "summary": "List connectors",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "connectors:read"
@@ -12178,6 +12403,9 @@
         "summary": "Read connector",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "connectors:read"
             ]
@@ -12252,6 +12480,9 @@
         "summary": "List usage records",
         "description": "Lists usage records for the project. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "usage-records:read"
@@ -12399,6 +12630,9 @@
         "summary": "Read a usage record",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "usage-records:read"
             ]
@@ -12473,6 +12707,9 @@
         "summary": "Read aggregated usage",
         "description": "Read-only aggregation of usage records grouped by provider, model, or agent.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "usage-summary:read"
@@ -12573,6 +12810,9 @@
         "summary": "List audit records",
         "description": "Lists audit records for the organization. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "audit-records:read"
@@ -12732,6 +12972,9 @@
         "summary": "Read an audit record",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "audit-records:read"
             ]
@@ -12805,6 +13048,9 @@
         ],
         "summary": "Create a trigger",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "triggers:write"
@@ -12896,6 +13142,9 @@
         ],
         "summary": "List triggers",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "triggers:read"
@@ -13045,6 +13294,9 @@
         "summary": "Read a trigger",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "triggers:read"
             ]
@@ -13117,6 +13369,9 @@
         "summary": "Update, pause, or archive a trigger",
         "description": "Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "triggers:write"
@@ -13221,6 +13476,9 @@
         "description": "Permanently deletes the trigger and its run history.",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "triggers:write"
             ]
@@ -13287,6 +13545,9 @@
         ],
         "summary": "List trigger runs",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "triggers:read"
@@ -13440,6 +13701,9 @@
         "description": "Creates a run for an HTTP trigger using the JSON body, query string, and allowed request headers as prompt template variables.",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "triggers:write"
             ]
@@ -13544,6 +13808,9 @@
         "summary": "Read a trigger run",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "triggers:read"
             ]
@@ -13626,6 +13893,9 @@
         ],
         "summary": "Create a session",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:write"
@@ -13717,6 +13987,9 @@
         ],
         "summary": "List sessions",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:read"
@@ -13878,6 +14151,9 @@
         "summary": "Read a session",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "sessions:read"
             ]
@@ -13950,6 +14226,9 @@
         "summary": "Update a session",
         "description": "Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and lifecycle archiving (archived: true|false).",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:write"
@@ -14056,9 +14335,7 @@
         "description": "Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
+            "amaWebSession": []
           }
         ],
         "parameters": [
@@ -14200,6 +14477,9 @@
         "summary": "List session messages",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "sessions:read"
             ]
@@ -14302,6 +14582,9 @@
         ],
         "summary": "Send a prompt message to a session",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:write"
@@ -14417,6 +14700,9 @@
         "summary": "Read a session message delivery state",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "sessions:read"
             ]
@@ -14500,6 +14786,9 @@
         "summary": "List session events",
         "description": "Content negotiation: application/json returns a paginated list, text/csv exports the filtered events, text/event-stream streams new events as SSE.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:read"
@@ -14672,6 +14961,9 @@
         "description": "Event ingest for runners and clients. Runner OIDC tokens are accepted only while the runner holds an active lease attached to the session.",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "sessions:write"
             ]
@@ -14766,6 +15058,9 @@
         "summary": "List tool approvals for a session",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "sessions:read"
             ]
@@ -14839,6 +15134,9 @@
         ],
         "summary": "Read a tool approval",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:read"
@@ -14922,6 +15220,9 @@
         "summary": "Approve or deny a pending tool call",
         "description": "Records the human decision for a paused tool call. Approval resumes the runtime and executes the tool (or records the provided custom result); denial resumes the runtime with the denial.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "sessions:write"
@@ -15026,6 +15327,9 @@
         ],
         "summary": "List memory stores",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "memory-stores:read"
@@ -15158,6 +15462,9 @@
         "summary": "Create a memory store",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "memory-stores:write"
             ]
@@ -15231,6 +15538,9 @@
         "summary": "Read a memory store",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "memory-stores:read"
             ]
@@ -15302,6 +15612,9 @@
         ],
         "summary": "Update or archive a memory store",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "memory-stores:write"
@@ -15396,6 +15709,9 @@
         ],
         "summary": "List memories in a memory store",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "memory-stores:read"
@@ -15501,6 +15817,9 @@
         "summary": "Create a memory in a memory store",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "memory-stores:write"
             ]
@@ -15604,6 +15923,9 @@
         ],
         "summary": "Update a memory",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "memory-stores:write"
@@ -15716,6 +16038,9 @@
         "summary": "Delete a memory",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "memory-stores:write"
             ]
@@ -15791,6 +16116,9 @@
         ],
         "summary": "List vaults",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:read"
@@ -15923,6 +16251,9 @@
         "summary": "Create a vault",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "vaults:write"
             ]
@@ -15996,6 +16327,9 @@
         "summary": "Read a vault",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "vaults:read"
             ]
@@ -16068,6 +16402,9 @@
         "summary": "Update or archive a vault",
         "description": "Partial update. Archive with `archived: true`; restore with `archived: false`.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:write"
@@ -16172,6 +16509,9 @@
         ],
         "summary": "List vault credential metadata",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:read"
@@ -16321,6 +16661,9 @@
         "summary": "Create vault credential metadata",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "vaults:write"
             ]
@@ -16425,6 +16768,9 @@
         "summary": "Read vault credential metadata",
         "security": [
           {
+            "amaWebSession": []
+          },
+          {
             "realmrootConsoleBearer": [
               "vaults:read"
             ]
@@ -16506,6 +16852,9 @@
         "summary": "Update or revoke vault credential metadata",
         "description": "Revoke with `state: 'revoked'` and an optional `revokeReason`.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:write"
@@ -16608,6 +16957,9 @@
         "summary": "Update a vault credential secret",
         "description": "Updates credential secret material. AMA records version snapshots internally for auditability.",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:write"
@@ -16721,6 +17073,9 @@
         ],
         "summary": "List vault credential versions",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:read"
@@ -16870,6 +17225,9 @@
         ],
         "summary": "Read a vault credential version",
         "security": [
+          {
+            "amaWebSession": []
+          },
           {
             "realmrootConsoleBearer": [
               "vaults:read"

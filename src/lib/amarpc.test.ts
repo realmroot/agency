@@ -431,6 +431,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     })
 
     it('createAgent posts JSON', async () => {
+      if (!agentFixture.identity) throw new Error('Expected the managed Agent fixture identity')
       const operation = {
         id: 'agentop_1',
         status: 'succeeded',

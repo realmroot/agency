@@ -61,24 +61,33 @@ func TestWorkspaceSafety(t *testing.T) {
 func TestRuntimeEnvMapsWorkspacePathsWithoutMutatingInput(t *testing.T) {
 	workspace := &Workspace{Root: filepath.Join(t.TempDir(), "workspace")}
 	input := map[string]string{
-		"REALMROOT_STATE_DIR": "/workspace/realmroot",
+		"REALMROOT_STATE_DIR": "/workspace/.ama/realmroot-state",
 		"CONFIG_PATH":         "/workspace/config/settings.json",
+		"TRAVERSAL_PATH":      "/workspace/../private",
 		"EXTERNAL_PATH":       "/var/run/service",
 	}
 
 	resolved := workspace.RuntimeEnv(input)
 
-	if got, want := resolved["REALMROOT_STATE_DIR"], filepath.Join(workspace.Root, "realmroot"); got != want {
+	if got, want := resolved["REALMROOT_STATE_DIR"], filepath.Join(workspace.Root, ".ama", "realmroot-state"); got != want {
 		t.Fatalf("expected mapped state path %q, got %q", want, got)
 	}
-	if got, want := resolved["CONFIG_PATH"], filepath.Join(workspace.Root, "config", "settings.json"); got != want {
-		t.Fatalf("expected mapped config path %q, got %q", want, got)
+	for _, key := range []string{"CONFIG_PATH", "TRAVERSAL_PATH", "EXTERNAL_PATH"} {
+		if resolved[key] != input[key] {
+			t.Fatalf("expected unrelated %s to remain %q, got %q", key, input[key], resolved[key])
+		}
 	}
-	if resolved["EXTERNAL_PATH"] != input["EXTERNAL_PATH"] {
-		t.Fatalf("expected external path to remain unchanged, got %q", resolved["EXTERNAL_PATH"])
-	}
-	if input["REALMROOT_STATE_DIR"] != "/workspace/realmroot" {
+	if input["REALMROOT_STATE_DIR"] != "/workspace/.ama/realmroot-state" {
 		t.Fatal("RuntimeEnv mutated the caller environment")
+	}
+	for _, value := range []string{
+		"/workspace/realmroot",
+		"/workspace/.ama/realmroot-state/../escape",
+		"/workspace/.ama/realmroot-state/",
+	} {
+		if got := workspace.RuntimeEnv(map[string]string{"REALMROOT_STATE_DIR": value})["REALMROOT_STATE_DIR"]; got != value {
+			t.Fatalf("expected non-canonical Realmroot state path %q to remain unchanged, got %q", value, got)
+		}
 	}
 
 	var absent *Workspace

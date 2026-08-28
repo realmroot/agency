@@ -138,7 +138,7 @@ export function AgentDetailPage() {
 
 function agentToForm(agent: Agent): AgentFormState {
   return {
-    username: agent.identity.username,
+    username: agent.identity?.username ?? '',
     name: agent.metadata.name,
     description: agent.metadata.description ?? '',
     systemPrompt: agent.spec.systemPrompt,

@@ -21,6 +21,12 @@ export interface RealmrootAgentIdentity {
   credentialRef: string
 }
 
+export interface LegacyRealmrootAgentBinding {
+  agentId: string
+  origin: string
+  credentialRef: string
+}
+
 export const REALMROOT_AGENT_USERNAME = /^[a-z0-9_.-]{3,64}$/
 
 export function validateAgentUsername(username: string): FieldErrors | null {
@@ -77,7 +83,7 @@ export interface AgentSubagent {
 
 export interface Agent {
   metadata: ResourceMetadata
-  identity: RealmrootAgentIdentity
+  identity: RealmrootAgentIdentity | null
   spec: AgentSpec
   status: AgentStatus
 }

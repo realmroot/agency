@@ -8,31 +8,31 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.realmroot_agent_identity_runtime import RealmrootAgentIdentityRuntime
+from ..models.session_realmroot_identity_type_0_runtime import SessionRealmrootIdentityType0Runtime
 
 
 
 
 
 
-T = TypeVar("T", bound="RealmrootAgentIdentity")
+T = TypeVar("T", bound="SessionRealmrootIdentityType0")
 
 
 
 @_attrs_define
-class RealmrootAgentIdentity:
+class SessionRealmrootIdentityType0:
     """ 
         Attributes:
-            issuer (str):  Example: https://id.realmroot.dev/api/auth.
-            subject (str):  Example: agt_backend_worker_1.
-            username (str):  Example: backend-worker.
-            runtime (RealmrootAgentIdentityRuntime):
+            issuer (str):
+            subject (str):
+            username (str):
+            runtime (SessionRealmrootIdentityType0Runtime):
      """
 
     issuer: str
     subject: str
     username: str
-    runtime: RealmrootAgentIdentityRuntime
+    runtime: SessionRealmrootIdentityType0Runtime
 
 
 
@@ -70,17 +70,17 @@ class RealmrootAgentIdentity:
 
         username = d.pop("username")
 
-        runtime = RealmrootAgentIdentityRuntime(d.pop("runtime"))
+        runtime = SessionRealmrootIdentityType0Runtime(d.pop("runtime"))
 
 
 
 
-        realmroot_agent_identity = cls(
+        session_realmroot_identity_type_0 = cls(
             issuer=issuer,
             subject=subject,
             username=username,
             runtime=runtime,
         )
 
-        return realmroot_agent_identity
+        return session_realmroot_identity_type_0
 

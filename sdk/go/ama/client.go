@@ -340,7 +340,7 @@ func (s AgentsService) Retire(ctx context.Context, agentID string) error {
 	if err != nil {
 		return err
 	}
-	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON502)
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
 }
 
 func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*AgentVersionListResponse, error) {

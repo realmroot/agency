@@ -13,7 +13,7 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.session_realmroot_identity import SessionRealmrootIdentity
+  from ..models.session_realmroot_identity_type_0 import SessionRealmrootIdentityType0
   from ..models.session_subagent import SessionSubagent
 
 
@@ -40,7 +40,7 @@ class SessionAgentSnapshot:
             subagents (list[SessionSubagent]):
             allowed_tools (list[str]):
             mcp_connectors (list[str]):
-            identity (SessionRealmrootIdentity):
+            identity (None | SessionRealmrootIdentityType0):
             created_at (datetime.datetime):
      """
 
@@ -56,7 +56,7 @@ class SessionAgentSnapshot:
     subagents: list[SessionSubagent]
     allowed_tools: list[str]
     mcp_connectors: list[str]
-    identity: SessionRealmrootIdentity
+    identity: None | SessionRealmrootIdentityType0
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -65,7 +65,7 @@ class SessionAgentSnapshot:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.session_realmroot_identity import SessionRealmrootIdentity
+        from ..models.session_realmroot_identity_type_0 import SessionRealmrootIdentityType0
         from ..models.session_subagent import SessionSubagent
         id = self.id
 
@@ -103,7 +103,11 @@ class SessionAgentSnapshot:
 
 
 
-        identity = self.identity.to_dict()
+        identity: dict[str, Any] | None
+        if isinstance(self.identity, SessionRealmrootIdentityType0):
+            identity = self.identity.to_dict()
+        else:
+            identity = self.identity
 
         created_at = self.created_at.isoformat()
 
@@ -133,7 +137,7 @@ class SessionAgentSnapshot:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.session_realmroot_identity import SessionRealmrootIdentity
+        from ..models.session_realmroot_identity_type_0 import SessionRealmrootIdentityType0
         from ..models.session_subagent import SessionSubagent
         d = dict(src_dict)
         id = d.pop("id")
@@ -180,9 +184,22 @@ class SessionAgentSnapshot:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors"))
 
 
-        identity = SessionRealmrootIdentity.from_dict(d.pop("identity"))
+        def _parse_identity(data: object) -> None | SessionRealmrootIdentityType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_session_realmroot_identity_type_0 = SessionRealmrootIdentityType0.from_dict(data)
 
 
+
+                return componentsschemas_session_realmroot_identity_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SessionRealmrootIdentityType0, data)
+
+        identity = _parse_identity(d.pop("identity"))
 
 
         created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))

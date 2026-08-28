@@ -1,5 +1,7 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Env } from '../env'
 import { defaultClaims, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
@@ -36,6 +38,24 @@ function agentBody(name: string, spec: Record<string, unknown> = {}, metadata: R
       ...spec,
     },
   }
+}
+
+async function seedLegacyAgent(authorization: string) {
+  const bindings = env as unknown as Env
+  const create = await jsonFetch('/api/v1/agents', authorization, {
+    method: 'POST',
+    body: JSON.stringify(agentBody('Legacy Agent', { runtime: 'codex', systemPrompt: 'Legacy prompt' })),
+  })
+  if (create.status !== 201) throw new Error(`Expected Agent creation, got ${create.status}: ${await create.text()}`)
+  const agentId = ((await create.json()) as { metadata: { uid: string } }).metadata.uid
+  await bindings.DB.prepare(
+    `UPDATE agents SET
+      username = '', identity_issuer = '', identity_subject = '', identity_credential_ref = NULL, realmroot = NULL
+     WHERE id = ?`,
+  )
+    .bind(agentId)
+    .run()
+  return agentId
 }
 
 describe('[CF] /api/v1/agents', () => {
@@ -80,6 +100,27 @@ describe('[CF] /api/v1/agents', () => {
         message: 'Authentication required',
       },
     })
+  })
+
+  it('lists and reads legacy Agents as ready without inventing a public identity', async () => {
+    const authorization = await signIn()
+    const agentId = await seedLegacyAgent(authorization)
+
+    const read = await jsonFetch(`/api/v1/agents/${agentId}`, authorization)
+    expect(read.status).toBe(200)
+    await expect(read.json()).resolves.toMatchObject({
+      metadata: { uid: agentId },
+      identity: null,
+      spec: { runtime: 'codex', systemPrompt: 'Legacy prompt' },
+      status: { ready: true, currentVersionId: expect.any(String), version: 1 },
+    })
+
+    const list = await jsonFetch('/api/v1/agents', authorization)
+    expect(list.status).toBe(200)
+    const body = (await list.json()) as { data: Array<Record<string, unknown>> }
+    expect(body.data).toContainEqual(
+      expect.objectContaining({ metadata: expect.objectContaining({ uid: agentId }), identity: null }),
+    )
   })
 
   it('rejects removed legacy fields (instructions, providerId, status, role, handoff, tools)', async () => {

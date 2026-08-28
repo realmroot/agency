@@ -55,7 +55,7 @@ function specColumns(spec: AgentSpec) {
 }
 
 function committedAgent() {
-  return and(isNotNull(agents.currentVersionId), isNotNull(agents.identityCredentialRef))!
+  return isNotNull(agents.currentVersionId)
 }
 
 async function versionNumberOf(db: Db, agentId: string, versionId: string | null) {
@@ -81,13 +81,16 @@ function agentRecordFrom(row: AgentRow, version: number): Agent {
       updatedAt: row.updatedAt,
       archivedAt: row.archivedAt,
     }),
-    identity: {
-      issuer: row.identityIssuer,
-      subject: row.identitySubject,
-      username: row.username,
-      runtime: 'ama',
-      credentialRef: row.identityCredentialRef ?? '',
-    },
+    identity:
+      row.identityIssuer && row.identitySubject && row.username && row.identityCredentialRef
+        ? {
+            issuer: row.identityIssuer,
+            subject: row.identitySubject,
+            username: row.username,
+            runtime: 'ama',
+            credentialRef: row.identityCredentialRef,
+          }
+        : null,
     spec: specFromRow(row),
     status: {
       phase:
@@ -96,7 +99,7 @@ function agentRecordFrom(row: AgentRow, version: number): Agent {
           : row.retirementState
             ? 'retiring'
             : resourcePhase(row.archivedAt),
-      ready: !row.archivedAt && !row.retirementState && Boolean(row.currentVersionId && row.identityCredentialRef),
+      ready: !row.archivedAt && !row.retirementState && Boolean(row.currentVersionId),
       retirementStage: row.retirementState,
       currentVersionId: row.currentVersionId,
       version,
@@ -198,12 +201,18 @@ export function createAgentRepo(db: Db): AgentRepo {
 
     async insertVersion(agent, spec, createdAt): Promise<AgentVersion> {
       const latest = await this.latestVersionNumber(agent.metadata.uid)
+      const persistedAgent = await db
+        .select({ realmroot: agents.realmroot })
+        .from(agents)
+        .where(eq(agents.id, agent.metadata.uid))
+        .get()
       const row = {
         id: newId('agentver'),
         agentId: agent.metadata.uid,
         projectId: agent.metadata.pid ?? '',
         version: (latest ?? 0) + 1,
         createdAt,
+        realmroot: persistedAgent?.realmroot ?? null,
         ...specColumns(spec),
       }
       await db.insert(agentVersions).values(row)
@@ -250,6 +259,7 @@ export function createAgentRepo(db: Db): AgentRepo {
         identityIssuer: input.identity.issuer,
         identitySubject: input.identity.subject,
         identityCredentialRef: input.identity.credentialRef,
+        realmroot: null,
         ...specColumns(input.spec),
       }
       await db.insert(agents).values(row)

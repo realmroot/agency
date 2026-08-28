@@ -252,40 +252,70 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
     db.close()
   })
 
-  it('upgrades multiple legacy Agents without blank identity or username collisions', () => {
+  it('expands legacy Agents without guessing identity or colliding duplicate bindings', () => {
     const db = new DatabaseSync(':memory:')
     applyThrough(db, '0028_audit_actor_chain.sql')
     db.exec(`
       INSERT INTO projects (id,organization_id,name,created_at,updated_at)
         VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
       INSERT INTO agents (id,project_id,name,system_prompt,realmroot,created_at,updated_at) VALUES
-        ('agent_bound','project_1','Bound','Work',
+        ('agent_bound_1','project_1','Bound one','Work',
+          '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
+          '2026-01-01','2026-01-01'),
+        ('agent_bound_2','project_1','Bound two','Work',
           '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
           '2026-01-01','2026-01-01'),
         ('agent_unbound','project_1','Unbound','Work',null,'2026-01-01','2026-01-01');
+      INSERT INTO agent_versions (
+        id,agent_id,project_id,version,system_prompt,provider_id,model,skills,subagents,allowed_tools,mcp_connectors,
+        realmroot,created_at
+      ) VALUES (
+        'version_bound','agent_bound_1','project_1',1,'Work',null,null,'[]','[]','[]','[]',
+        '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
+        '2026-01-01'
+      );
     `)
 
-    expect(() => apply(db, '0030_agent_identity_provisioning.sql')).not.toThrow()
+    expect(() => apply(db, '0031_agent_identity_provisioning.sql')).not.toThrow()
     expect(
       db
-        .prepare('SELECT id,username,identity_issuer,identity_subject,identity_credential_ref FROM agents ORDER BY id')
+        .prepare(
+          'SELECT id,username,identity_issuer,identity_subject,identity_credential_ref,realmroot FROM agents ORDER BY id',
+        )
         .all(),
     ).toEqual([
       {
-        id: 'agent_bound',
-        username: 'legacy-agent-bound',
-        identity_issuer: 'https://id.realmroot.dev/api/auth',
-        identity_subject: 'rr_agent_1',
-        identity_credential_ref: 'ama://vaults/v1/credentials/c1',
+        id: 'agent_bound_1',
+        username: '',
+        identity_issuer: '',
+        identity_subject: '',
+        identity_credential_ref: null,
+        realmroot:
+          '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
+      },
+      {
+        id: 'agent_bound_2',
+        username: '',
+        identity_issuer: '',
+        identity_subject: '',
+        identity_credential_ref: null,
+        realmroot:
+          '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
       },
       {
         id: 'agent_unbound',
-        username: 'legacy-agent-unbound',
-        identity_issuer: 'urn:ama:legacy:unbound',
-        identity_subject: 'agent_unbound',
+        username: '',
+        identity_issuer: '',
+        identity_subject: '',
         identity_credential_ref: null,
+        realmroot: null,
       },
     ])
+    expect(db.prepare('SELECT runtime,realmroot FROM agent_versions WHERE id = ?').get('version_bound')).toEqual({
+      runtime: 'codex',
+      realmroot:
+        '{"agentId":"rr_agent_1","origin":"https://id.realmroot.dev","credentialRef":"ama://vaults/v1/credentials/c1"}',
+    })
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
     db.close()
   })

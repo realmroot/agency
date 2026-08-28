@@ -6,7 +6,7 @@ import {
   serializeResource,
 } from '@server/contracts/resource-contracts'
 import { type Agent, type AgentSpec, type AgentVersion, defaultAllowedTools } from '@server/domain/agent'
-import { requireAuth } from '../auth/session'
+import { authenticatedAccessToken, requireAuth } from '../auth/session'
 import {
   AuthenticatedOperation,
   type DepsEnv,
@@ -123,7 +123,7 @@ const AgentStatusSchema = z
 const AgentSchema = z
   .object({
     metadata: ResourceMetadataSchema,
-    identity: RealmrootAgentIdentitySchema,
+    identity: RealmrootAgentIdentitySchema.nullable(),
     spec: AgentSpecSchema,
     status: AgentStatusSchema,
   })
@@ -335,6 +335,10 @@ const deleteAgentRoute = createRoute({
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Legacy Agent identity requires backfill',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
     502: {
       description: 'Retirement failed before the identity was retired',
       content: { 'application/json': { schema: ErrorResponseSchema } },
@@ -441,6 +445,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         if (!deps.realmrootManagementAuthority) {
           throw new AgentCreationUpstreamError('Realmroot Agent management authority is unavailable')
         }
+        const subjectAccessToken = await authenticatedAccessToken(c, auth)
         const agent = await createManagedAgent(
           deps,
           auth,
@@ -451,7 +456,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
             description: body.metadata.description ?? null,
             spec: specFromPayload(body),
           },
-          () => deps.realmrootManagementAuthority!.forAgentAdministration(auth, c.req.header('Authorization') ?? null),
+          () => deps.realmrootManagementAuthority!.forAgentAdministration(auth, subjectAccessToken),
         )
         c.header('Location', `/api/v1/agents/${encodeURIComponent(agent.metadata.uid)}`)
         return c.json(serializeAgent(agent), 201)
@@ -539,10 +544,16 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       const deps = c.get('deps')
       const agent = await deps.agents.find(auth.project.id, agentId)
       if (!agent) return notFound(c)
+      if (!agent.identity) {
+        return c.json(
+          { error: { type: 'conflict', message: 'Legacy Agent identity must be backfilled before retirement' } },
+          409,
+        )
+      }
       try {
         const authority = await deps.realmrootManagementAuthority?.forAgentAdministration(
           auth,
-          c.req.header('Authorization') ?? null,
+          await authenticatedAccessToken(c, auth),
         )
         if (!authority) throw new Error('Realmroot Agent management authority is unavailable')
         await retireAgent(deps, auth, agent, authority)
@@ -652,12 +663,14 @@ function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): A
 function serializeAgent(agent: Agent) {
   return serializeResource({
     ...agent,
-    identity: {
-      issuer: agent.identity.issuer,
-      subject: agent.identity.subject,
-      username: agent.identity.username,
-      runtime: agent.identity.runtime,
-    },
+    identity: agent.identity
+      ? {
+          issuer: agent.identity.issuer,
+          subject: agent.identity.subject,
+          username: agent.identity.username,
+          runtime: agent.identity.runtime,
+        }
+      : null,
   })
 }
 

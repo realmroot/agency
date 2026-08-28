@@ -25,7 +25,7 @@ Feature: Agents
     Given a signed-in User authorized agents:write for the AMA Resource
     When the caller creates one Agent with an immutable username
     Then AMA initializes key material in an encrypted managed Vault before calling Realmroot
-    And AMA authenticates its Machine Application and performs a restricted RFC 8693 exchange of the inbound User token
+    And the same confidential Web Application authenticates with OIDC_CLIENT_ID and OIDC_CLIENT_SECRET to perform a restricted RFC 8693 exchange of the inbound User token
     And AMA uses the exchanged User-subject Realmroot /api Bearer to create the stable identity through POST /api/agents without approval
     And the exchanged token contains no Agent actor and is never returned, persisted, or refreshed by AMA
     And concurrent or interrupted retries reuse the same encrypted Vault checkpoint and exact Realmroot request

@@ -18,6 +18,39 @@ export const projects = sqliteTable('projects', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Browser login state and sessions are server-owned. Cookies contain only
+// opaque random values; Realmroot tokens are encrypted before entering D1.
+export const webAuthorizationAttempts = sqliteTable(
+  'web_authorization_attempts',
+  {
+    stateHash: text('state_hash').primaryKey(),
+    clientKey: text('client_key').notNull(),
+    encryptedPayload: text('encrypted_payload').notNull(),
+    returnTo: text('return_to').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_web_authorization_attempts_client_expires').on(table.clientKey, table.expiresAt),
+    index('idx_web_authorization_attempts_expires_at').on(table.expiresAt),
+  ],
+)
+
+export const webAuthSessions = sqliteTable(
+  'web_auth_sessions',
+  {
+    idHash: text('id_hash').primaryKey(),
+    subject: text('subject').notNull(),
+    encryptedAccessToken: text('encrypted_access_token').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_web_auth_sessions_subject').on(table.subject),
+    index('idx_web_auth_sessions_expires_at').on(table.expiresAt),
+  ],
+)
+
 // Global vendor catalog. NOT per-tenant: the platform serves one shared model
 // universe (cloud runs everything through the Workers AI binding + AI Gateway),
 // so a provider is just the model VENDOR (anthropic, openai, moonshotai, …).
@@ -93,6 +126,9 @@ export const agents = sqliteTable(
     // JSON array of connector slugs. Resolved against the platform MCP catalog
     // at session start, not FK'd (slugs are stable connector ids).
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
+    // Expand-only compatibility column. A later migration may remove it after
+    // every legacy credential has been decoded and backfilled by application code.
+    realmroot: text('realmroot'),
     identityIssuer: text('identity_issuer').notNull(),
     identitySubject: text('identity_subject').notNull(),
     identityCredentialRef: text('identity_credential_ref'),
@@ -109,8 +145,10 @@ export const agents = sqliteTable(
   },
   (table) => [
     index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id),
-    uniqueIndex('idx_agents_identity').on(table.identityIssuer, table.identitySubject),
-    uniqueIndex('idx_agents_username_project').on(table.projectId, table.username),
+    uniqueIndex('idx_agents_identity')
+      .on(table.identityIssuer, table.identitySubject)
+      .where(sql`${table.identityIssuer} <> '' and ${table.identitySubject} <> ''`),
+    uniqueIndex('idx_agents_username_project').on(table.projectId, table.username).where(sql`${table.username} <> ''`),
   ],
 )
 
@@ -140,6 +178,7 @@ export const agentVersions = sqliteTable(
     subagents: text('subagents').notNull().default('[]'),
     allowedTools: text('allowed_tools').notNull().default('[]'),
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
+    realmroot: text('realmroot'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

@@ -340,14 +340,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select()
           .from(agents)
-          .where(
-            and(
-              eq(agents.id, agentId),
-              eq(agents.projectId, projectId),
-              isNotNull(agents.currentVersionId),
-              isNotNull(agents.identityCredentialRef),
-            ),
-          )
+          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNotNull(agents.currentVersionId)))
           .get()) ?? null
       )
     },

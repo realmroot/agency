@@ -100,13 +100,13 @@ docs/infra/        Cloudflare deployment and infrastructure notes
 
 Control-plane API behavior must stay aligned across route handlers, validation schemas, tests, and generated OpenAPI output. Stable error envelopes matter. Do not replace structured API errors with ad hoc strings.
 
-OpenAPI is the public contract for Realmroot Toolbox and generated SDKs. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls.
+OpenAPI is the public contract for Realmroot Toolbox and generated SDKs. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls. The server-owned browser login bootstrap, callback, current-session read, and logout are the narrow auth-boundary exception.
 
 ## Authentication
 
 AMA is a native Realmroot Resource Server:
 
-- `oidc-client-ts` in the browser for authorization-code PKCE redirect handling.
+- `oauth4webapi` in the Worker for authorization-code PKCE, callback, and confidential client handling.
 - `jose` in the Worker for Realmroot JWT/JWKS and RFC 9449 DPoP verification.
 
 Do not hand-roll token parsing, token validation, callback validation, or OIDC discovery logic.
@@ -115,7 +115,9 @@ Expected configuration names use generic OIDC terminology, for example:
 
 - `OIDC_ISSUER`
 - `OIDC_CLIENT_ID`
+- `OIDC_CLIENT_SECRET`
 - `OIDC_RESOURCE`
+- `AMA_WEB_SESSION_ENCRYPTION_KEY`
 - `OIDC_BROWSER_SCOPES`
 - `AMA_VAULT_ENCRYPTION_KEY`
 

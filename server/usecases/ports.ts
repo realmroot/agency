@@ -206,7 +206,7 @@ export interface RealmrootManagementCredential {
 }
 
 export interface RealmrootManagementAuthority {
-  forAgentAdministration(auth: AuthScope, authorization: string | null): Promise<RealmrootManagementCredential>
+  forAgentAdministration(auth: AuthScope, subjectAccessToken: string): Promise<RealmrootManagementCredential>
 }
 
 export interface AuditEntry {

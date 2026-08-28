@@ -24,8 +24,8 @@ Feature: Auth
   @auth/credential-mode @api
   Scenario: Select the credential mode from the verified Realmroot client
     Given Realmroot issued an at+jwt access token for the exact AMA resource
-    When the Console client sends Bearer authentication
-    Then the request is accepted without a proof-of-possession requirement
+    When a direct Console client sends Bearer authentication or the browser sends its opaque AMA session cookie
+    Then both credentials resolve through the same exact-scope authorization context without a proof-of-possession requirement
     And an explicitly trusted Web application may present its own Bearer token for the exact AMA resource
     And the runner client also uses Bearer authentication while the Realmroot CLI client requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
@@ -37,12 +37,12 @@ Feature: Auth
     Then authentication fails closed with a DPoP challenge
     And a fresh proof whose key matches cnf.jkt is accepted once
 
-  @auth/resource-token @api
-  Scenario: Authenticate every API request with one Realmroot Resource token
-    Given the browser completed authorization code with PKCE for the exact AMA resource
-    When it calls a protected AMA operation
-    Then AMA accepts only the Realmroot token in the standard Authorization header
-    And AMA has no opaque Web Session, CSRF authentication mode, or secondary authorization header
+  @auth/session-current @api
+  Scenario: Read the Realmroot-authenticated context
+    Given an authenticated user
+    When the user reads the current session context
+    Then the context returns user, organization, and project without the organization id
+    And a browser login is represented only by an opaque HttpOnly cookie backed by an encrypted Realmroot token
 
   @auth/guard @api
   Scenario: Guard protected resources against unauthenticated access
@@ -61,7 +61,17 @@ Feature: Auth
   Scenario: Discover an organization's sign-in methods
     Given the public AMA configuration
     When the user requests the discovery config
-    Then the Realmroot issuer, browser client, runner client, exact resource, and required scopes are returned
+    Then the confidential AMA backend sign-in method is returned only when its client secret and session encryption key are configured
+    And public configuration returns the Realmroot issuer, runner client, exact resource, and runner scopes without exposing browser credentials
+
+  @auth/callback @api
+  Scenario: Complete a server-owned browser authorization response
+    Given the browser created a state, nonce, and PKCE-bound authorization attempt
+    When Realmroot returns a valid authorization code to the AMA backend
+    Then AMA consumes the attempt once and authenticates the confidential client with client_secret_basic
+    And AMA stores the access token as authenticated ciphertext in D1
+    And the browser receives only an opaque HttpOnly SameSite cookie
+    And invalid, expired, replayed, or cross-browser responses fail without creating a session
 
   @auth/delegated-bootstrap @api
   Scenario: Delegate first-admin bootstrap to the OIDC provider
@@ -81,13 +91,12 @@ Feature: Auth
     When an unauthenticated user opens a protected page
     Then the app redirects to login and returns to the original page after sign-in
 
-  # ── Cross-stack sign-in (e2e: real SPA + Worker + D1 + OIDC) ──
-  # Native Playwright e2e specs execute this scenario for real through `pnpm run e2e`.
+  # ── Browser sign-in handoff (e2e: real SPA browser wiring) ──
+  # Protocol completion, D1 persistence, and scope continuity live at the
+  # assembled Worker integration layer in auth/callback.
 
   @auth/e2e-sign-in @e2e
-  Scenario: Complete sign in
-    When a user completes the Realmroot public-SPA PKCE callback
-    Then the browser stores the AMA Resource token in session storage
-    And ordinary login and reads do not mint or consume a Realmroot management access token
-    And API requests resolve user, organization, and project context
-    And invalid Realmroot callbacks return the standard OIDC error envelope
+  Scenario: Start browser sign in
+    When an unauthenticated browser chooses Realmroot sign in
+    Then the SPA creates a server-owned authorization attempt and navigates to Realmroot
+    And no OAuth token is exposed to browser JavaScript or browser storage

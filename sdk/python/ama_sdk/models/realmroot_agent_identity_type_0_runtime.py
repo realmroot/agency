@@ -1,6 +1,6 @@
 from enum import Enum
 
-class RealmrootAgentIdentityRuntime(str, Enum):
+class RealmrootAgentIdentityType0Runtime(str, Enum):
     AMA = "ama"
 
     def __str__(self) -> str:

@@ -630,7 +630,6 @@ export type PublicAuthConfig = {
 export type PublicOidcConfig = {
     issuer: string;
     resource: string;
-    browser: PublicOidcClientConfig;
     runner?: PublicOidcClientConfig;
 } | null;
 
@@ -647,6 +646,21 @@ export type AuthMethod = {
     type: 'oidc';
     issuer: string;
     clientId: string;
+};
+
+export type AuthorizationAttempt = {
+    authorizationUrl: string;
+};
+
+export type ErrorResponse = {
+    error: {
+        type: string;
+        message: string;
+        issues?: Array<unknown>;
+        details?: {
+            [key: string]: unknown;
+        };
+    };
 };
 
 export type AuthSession = {
@@ -669,17 +683,6 @@ export type AuthOrganization = {
 export type AuthProject = {
     id: string;
     name: string;
-};
-
-export type ErrorResponse = {
-    error: {
-        type: string;
-        message: string;
-        issues?: Array<unknown>;
-        details?: {
-            [key: string]: unknown;
-        };
-    };
 };
 
 export type ProjectListResponse = {
@@ -738,7 +741,7 @@ export type RealmrootAgentIdentity = {
     subject: string;
     username: string;
     runtime: 'ama';
-};
+} | null;
 
 export type AgentSpec = {
     runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
@@ -1671,8 +1674,7 @@ export type SessionRealmrootIdentity = {
     subject: string;
     username: string;
     runtime: 'ama';
-    credentialRef: string;
-};
+} | null;
 
 export type SessionEnvironmentSnapshot = {
     id: string;
@@ -2108,6 +2110,62 @@ export type ReadAuthConfigResponses = {
 
 export type ReadAuthConfigResponse = ReadAuthConfigResponses[keyof ReadAuthConfigResponses];
 
+export type CreateAuthorizationAttemptData = {
+    body: {
+        returnTo?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/authorization-attempts';
+};
+
+export type CreateAuthorizationAttemptErrors = {
+    /**
+     * Invalid browser origin
+     */
+    403: ErrorResponse;
+    /**
+     * Too many active attempts
+     */
+    429: ErrorResponse;
+};
+
+export type CreateAuthorizationAttemptError = CreateAuthorizationAttemptErrors[keyof CreateAuthorizationAttemptErrors];
+
+export type CreateAuthorizationAttemptResponses = {
+    /**
+     * Authorization attempt created
+     */
+    201: AuthorizationAttempt;
+};
+
+export type CreateAuthorizationAttemptResponse = CreateAuthorizationAttemptResponses[keyof CreateAuthorizationAttemptResponses];
+
+export type DeleteCurrentAuthSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/sessions/current';
+};
+
+export type DeleteCurrentAuthSessionErrors = {
+    /**
+     * Invalid browser origin
+     */
+    403: ErrorResponse;
+};
+
+export type DeleteCurrentAuthSessionError = DeleteCurrentAuthSessionErrors[keyof DeleteCurrentAuthSessionErrors];
+
+export type DeleteCurrentAuthSessionResponses = {
+    /**
+     * Browser session deleted
+     */
+    204: void;
+};
+
+export type DeleteCurrentAuthSessionResponse = DeleteCurrentAuthSessionResponses[keyof DeleteCurrentAuthSessionResponses];
+
 export type ReadCurrentAuthSessionData = {
     body?: never;
     path?: never;
@@ -2348,6 +2406,10 @@ export type RetireAgentErrors = {
      * Agent not found
      */
     404: ErrorResponse;
+    /**
+     * Legacy Agent identity requires backfill
+     */
+    409: ErrorResponse;
     /**
      * Retirement failed before the identity was retired
      */

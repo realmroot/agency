@@ -9,6 +9,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { getAccessTokenClaims, oidcAudience, upsertProjectForClaims } from '../auth/oidc'
 import { requireAuth } from '../auth/session'
+import { createE2eWebSession } from '../auth/web-session'
 import { providerModels, providers, vaultCredentialVersions } from '../db/schema'
 import type { Env } from '../env'
 import { errorResponse } from '../errors'
@@ -42,6 +43,18 @@ const routes = app
     const claims = await getAccessTokenClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
     const project = await upsertProjectForClaims(drizzle(c.env.DB), claims, new Date().toISOString())
     return c.json({ accessToken, userId: claims.sub, organizationId: claims.org_id, projectId: project.id }, 201)
+  })
+  .post('/auth/session', async (c) => {
+    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+      return errorResponse(c, 404, 'not_found', 'Not found')
+    }
+    const body = await c.req.json<{ accessToken?: string }>().catch(() => ({}) as { accessToken?: string })
+    if (!body.accessToken?.startsWith('e2e:')) {
+      return errorResponse(c, 400, 'validation_error', 'An E2E access token is required')
+    }
+    await createE2eWebSession(c, body.accessToken)
+    c.header('Cache-Control', 'no-store')
+    return c.body(null, 204)
   })
   .get('/ready', (c) => {
     if (c.env.AMA_E2E_TEST_AUTH !== 'true') {

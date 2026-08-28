@@ -97,6 +97,7 @@ export interface AgentRow {
   subagents: string
   allowedTools: string
   mcpConnectors: string
+  realmroot: string | null
   username: string
   identityIssuer: string
   identitySubject: string
@@ -122,6 +123,7 @@ export interface AgentVersionRow {
   subagents: string
   allowedTools: string
   mcpConnectors: string
+  realmroot: string | null
   createdAt: string
 }
 

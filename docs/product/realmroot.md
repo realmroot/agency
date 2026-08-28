@@ -28,20 +28,21 @@ so concurrent or interrupted requests replay the same Realmroot request. No
 provisioning operation or polling API is exposed. Only ready Agents with non-empty
 issuer and subject appear in the schedulable directory.
 
-The human caller is authorized and audited by AMA using one AMA-audience Bearer
-in the standard `Authorization` header. For Agent creation or retirement, AMA
-authenticates its Machine Application and performs a restricted RFC 8693 exchange
-of that inbound token for the Realmroot management audience. AMA verifies the
+The human caller is authorized and audited by AMA using one AMA-audience access
+token, held inside the encrypted browser session or supplied by a direct Bearer
+client. For Agent creation or retirement, AMA authenticates the same confidential
+Web Application and performs a restricted RFC 8693 exchange of that token for
+the Realmroot management audience. AMA verifies the
 exchanged token's exact `/api` audience, `agents:write` scope, original User
-subject, and Machine Application `client_id`. It accepts no Agent actor or refresh
+subject, and confidential Web Application `client_id`. It accepts no Agent actor or refresh
 token and never persists or returns the exchanged token. DPoP remains limited to
 the created Agent's own token and Resource calls.
 
 Other Resource Servers may call AMA with their own Machine Application token.
 Deployments list those client IDs in `OIDC_TRUSTED_BEARER_CLIENT_IDS`; AMA still
-requires the exact AMA audience and operation scopes. Browser integrations use
-their own AMA-audience token directly and do not pass a second credential or a
-custom authorization header through the upstream Resource Server.
+requires the exact AMA audience and operation scopes. Browser JavaScript receives
+only the opaque AMA session cookie and never reads or forwards the underlying
+Realmroot token.
 
 ## Storage and Session behavior
 

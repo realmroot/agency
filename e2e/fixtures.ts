@@ -90,17 +90,18 @@ export async function createReadyAgent(api: E2eApi, runId: string, name: string)
   }
 }
 
-// Sign the browser in the way the SPA expects: seed the e2e access token + project
-// id into localStorage (the oidc client's e2e fast-path reads them) before the app
-// boots, then navigate. This is the real sign-in seam for browser journeys.
+// Sign the browser in through the gated test endpoint so browser journeys use
+// the same opaque HttpOnly session cookie as production OIDC callbacks.
 export async function gotoAuthed(page: Page, token: E2eToken, path: string) {
-  await page.addInitScript(
-    ([accessToken, projectId]) => {
-      window.localStorage.setItem('ama:e2e-access-token', accessToken)
-      window.localStorage.setItem('ama:selected-project-id', projectId)
-    },
-    [token.accessToken, token.projectId] as [string, string],
-  )
+  const response = await page.request.post(`${BASE}/api/v1/e2e/auth/session`, {
+    data: { accessToken: token.accessToken },
+  })
+  if (response.status() !== 204) {
+    throw new Error(`POST /api/v1/e2e/auth/session returned ${response.status()}: ${await response.text()}`)
+  }
+  await page.addInitScript((projectId) => {
+    window.localStorage.setItem('ama:selected-project-id', projectId)
+  }, token.projectId)
   await page.goto(path)
 }
 

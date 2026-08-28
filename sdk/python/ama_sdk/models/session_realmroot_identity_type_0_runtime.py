@@ -1,6 +1,6 @@
 from enum import Enum
 
-class SessionRealmrootIdentityRuntime(str, Enum):
+class SessionRealmrootIdentityType0Runtime(str, Enum):
     AMA = "ama"
 
     def __str__(self) -> str:

@@ -8,42 +8,46 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
+from ...models.authorization_attempt import AuthorizationAttempt
+from ...models.create_authorization_attempt_body import CreateAuthorizationAttemptBody
 from ...models.error_response import ErrorResponse
 from typing import cast
 
 
 
 def _get_kwargs(
-    agent_id: str,
+    *,
+    body: CreateAuthorizationAttemptBody,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
 
 
+    
 
-
-
+    
 
     _kwargs: dict[str, Any] = {
-        "method": "delete",
-        "url": "/api/v1/agents/{agent_id}".format(agent_id=quote(str(agent_id), safe=""),),
+        "method": "post",
+        "url": "/api/v1/auth/authorization-attempts",
     }
 
+    _kwargs["json"] = body.to_dict()
 
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | ErrorResponse | None:
-    if response.status_code == 204:
-        response_204 = cast(Any, None)
-        return response_204
-
-    if response.status_code == 401:
-        response_401 = ErrorResponse.from_dict(response.json())
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> AuthorizationAttempt | ErrorResponse | None:
+    if response.status_code == 201:
+        response_201 = AuthorizationAttempt.from_dict(response.json())
 
 
 
-        return response_401
+        return response_201
 
     if response.status_code == 403:
         response_403 = ErrorResponse.from_dict(response.json())
@@ -52,26 +56,12 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
-    if response.status_code == 404:
-        response_404 = ErrorResponse.from_dict(response.json())
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
 
 
 
-        return response_404
-
-    if response.status_code == 409:
-        response_409 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_409
-
-    if response.status_code == 502:
-        response_502 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_502
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -79,7 +69,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | ErrorResponse]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[AuthorizationAttempt | ErrorResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -89,27 +79,27 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
 def sync_detailed(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
+    body: CreateAuthorizationAttemptBody,
 
-) -> Response[Any | ErrorResponse]:
-    """ Permanently retire an Agent identity and destroy its managed Vault
+) -> Response[AuthorizationAttempt | ErrorResponse]:
+    """ Begin a server-owned Realmroot browser sign-in
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        body (CreateAuthorizationAttemptBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | ErrorResponse]
+        Response[AuthorizationAttempt | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
+        body=body,
 
     )
 
@@ -120,53 +110,53 @@ def sync_detailed(
     return _build_response(client=client, response=response)
 
 def sync(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
+    body: CreateAuthorizationAttemptBody,
 
-) -> Any | ErrorResponse | None:
-    """ Permanently retire an Agent identity and destroy its managed Vault
+) -> AuthorizationAttempt | ErrorResponse | None:
+    """ Begin a server-owned Realmroot browser sign-in
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        body (CreateAuthorizationAttemptBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | ErrorResponse
+        AuthorizationAttempt | ErrorResponse
      """
 
 
     return sync_detailed(
-        agent_id=agent_id,
-client=client,
+        client=client,
+body=body,
 
     ).parsed
 
 async def asyncio_detailed(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
+    body: CreateAuthorizationAttemptBody,
 
-) -> Response[Any | ErrorResponse]:
-    """ Permanently retire an Agent identity and destroy its managed Vault
+) -> Response[AuthorizationAttempt | ErrorResponse]:
+    """ Begin a server-owned Realmroot browser sign-in
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        body (CreateAuthorizationAttemptBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | ErrorResponse]
+        Response[AuthorizationAttempt | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
+        body=body,
 
     )
 
@@ -177,27 +167,27 @@ async def asyncio_detailed(
     return _build_response(client=client, response=response)
 
 async def asyncio(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
+    body: CreateAuthorizationAttemptBody,
 
-) -> Any | ErrorResponse | None:
-    """ Permanently retire an Agent identity and destroy its managed Vault
+) -> AuthorizationAttempt | ErrorResponse | None:
+    """ Begin a server-owned Realmroot browser sign-in
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        body (CreateAuthorizationAttemptBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | ErrorResponse
+        AuthorizationAttempt | ErrorResponse
      """
 
 
     return (await asyncio_detailed(
-        agent_id=agent_id,
-client=client,
+        client=client,
+body=body,
 
     )).parsed

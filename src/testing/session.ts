@@ -160,7 +160,6 @@ function defaultAgentSnapshot(agentId: string): SessionAgentSnapshot {
       subject: 'agent-subject-1',
       username: 'coding-agent',
       runtime: 'ama',
-      credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
     },
     createdAt: now,
   }

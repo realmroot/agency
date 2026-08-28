@@ -59,6 +59,7 @@ const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
 const REALMROOT_SOURCE_VOLUME = 'realmroot-agent-state'
+const REALMROOT_SOURCE_MOUNT = '/workspace/.ama/realmroot-source'
 const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
 const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
 
@@ -313,7 +314,7 @@ function sessionTitleFromPrompt(prompt: string) {
 }
 
 function realmrootRuntimeInputs(
-  identity: AgentSnapshot['identity'],
+  snapshot: Pick<AgentSnapshot, 'identity' | 'realmroot'>,
   env: Record<string, string>,
   envFrom: EnvFromEntry[],
   volumes: Volume[],
@@ -321,6 +322,8 @@ function realmrootRuntimeInputs(
 ):
   | { env: Record<string, string>; volumes: Volume[]; volumeMounts: VolumeMount[] }
   | { fields: Record<string, string> } {
+  const { identity, realmroot } = snapshot
+  if (!identity && !realmroot) return { env, volumes, volumeMounts }
   const reserved = Object.keys(env).find((name) => REALMROOT_RESERVED_ENV.has(name))
   if (reserved) {
     return { fields: { [`env.${reserved}`]: `${reserved} is managed by the Realmroot Agent identity.` } }
@@ -345,14 +348,48 @@ function realmrootRuntimeInputs(
   if (volumes.some((volume) => volume.name === REALMROOT_SOURCE_VOLUME)) {
     return { fields: { volumes: `Volume name ${REALMROOT_SOURCE_VOLUME} is reserved for Realmroot Agent state.` } }
   }
-  if (volumeMounts.some((mount) => pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR))) {
+  if (
+    volumeMounts.some(
+      (mount) =>
+        pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR) || pathsOverlap(mount.mountPath, REALMROOT_SOURCE_MOUNT),
+    )
+  ) {
     return { fields: { volumeMounts: 'Realmroot Agent state mount paths are reserved.' } }
   }
+  if (identity) {
+    return {
+      env: {
+        ...env,
+        AGENT: 'ama',
+        REALMROOT_ORIGIN: new URL(identity.issuer).origin,
+        REALMROOT_STATE_DIR,
+      },
+      volumes: [
+        ...volumes,
+        {
+          name: REALMROOT_SOURCE_VOLUME,
+          type: 'secret',
+          secretRef: identity.credentialRef,
+          items: [
+            {
+              key: 'state.json',
+              path: `identities/${base64Url(identity.issuer)}/${base64Url(identity.runtime)}.json`,
+            },
+          ],
+        },
+      ],
+      volumeMounts: [
+        ...volumeMounts,
+        { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_STATE_DIR, readOnly: false },
+      ],
+    }
+  }
+  if (!realmroot) throw new Error('Realmroot identity resolution is inconsistent')
   return {
     env: {
       ...env,
       AGENT: 'ama',
-      REALMROOT_ORIGIN: new URL(identity.issuer).origin,
+      REALMROOT_ORIGIN: realmroot.origin,
       REALMROOT_STATE_DIR,
     },
     volumes: [
@@ -360,16 +397,14 @@ function realmrootRuntimeInputs(
       {
         name: REALMROOT_SOURCE_VOLUME,
         type: 'secret',
-        secretRef: identity.credentialRef,
-        items: [
-          {
-            key: 'state.json',
-            path: `identities/${base64Url(identity.issuer)}/${base64Url(identity.runtime)}.json`,
-          },
-        ],
+        secretRef: realmroot.credentialRef,
+        items: [{ key: 'state.json', path: 'state.json' }],
       },
     ],
-    volumeMounts: [...volumeMounts, { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_STATE_DIR, readOnly: false }],
+    volumeMounts: [
+      ...volumeMounts,
+      { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_SOURCE_MOUNT, readOnly: true },
+    ],
   }
 }
 
@@ -575,7 +610,7 @@ export async function createSessionForAgent(
   if (agent.archivedAt) {
     return { ok: false, error: { status: 409, code: 'conflict', message: 'Archived agents cannot create sessions' } }
   }
-  if (agent.retirementState || !agent.identityCredentialRef) {
+  if (agent.retirementState) {
     return { ok: false, error: { status: 409, code: 'conflict', message: 'Agent is not execution-ready' } }
   }
 
@@ -583,7 +618,18 @@ export async function createSessionForAgent(
   if (!agentVersion) {
     throw new Error('Agent current version is required')
   }
-  if (options.runtime && options.runtime !== agentVersion.runtime) {
+  const legacyAgent = !agent.username && !agent.identityIssuer && !agent.identitySubject
+  if (legacyAgent && !options.runtime) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Legacy Agents require an explicit runtime until their Agent Profile is backfilled',
+      },
+    }
+  }
+  if (!legacyAgent && options.runtime && options.runtime !== agentVersion.runtime) {
     return {
       ok: false,
       error: {
@@ -607,15 +653,19 @@ export async function createSessionForAgent(
     }
   }
   const providerId = agentVersion.providerId
-  const agentSnapshot = createAgentSnapshot(agentVersion, providerId, {
-    issuer: agent.identityIssuer,
-    subject: agent.identitySubject,
-    username: agent.username,
-    runtime: 'ama',
-    credentialRef: agent.identityCredentialRef,
-  })
+  const identity =
+    agent.identityIssuer && agent.identitySubject && agent.username && agent.identityCredentialRef
+      ? {
+          issuer: agent.identityIssuer,
+          subject: agent.identitySubject,
+          username: agent.username,
+          runtime: 'ama' as const,
+          credentialRef: agent.identityCredentialRef,
+        }
+      : null
+  const agentSnapshot = createAgentSnapshot(agentVersion, providerId, identity, runtime)
   const realmrootInputs = realmrootRuntimeInputs(
-    agentSnapshot.identity,
+    agentSnapshot,
     options.env ?? {},
     options.envFrom ?? [],
     normalizedWorkspaceVolumes.volumes,

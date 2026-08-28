@@ -14,18 +14,17 @@ from typing import cast
 
 
 def _get_kwargs(
-    agent_id: str,
-
+    
 ) -> dict[str, Any]:
+    
 
+    
 
-
-
-
+    
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
-        "url": "/api/v1/agents/{agent_id}".format(agent_id=quote(str(agent_id), safe=""),),
+        "url": "/api/v1/auth/sessions/current",
     }
 
 
@@ -38,40 +37,12 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         response_204 = cast(Any, None)
         return response_204
 
-    if response.status_code == 401:
-        response_401 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_401
-
     if response.status_code == 403:
         response_403 = ErrorResponse.from_dict(response.json())
 
 
 
         return response_403
-
-    if response.status_code == 404:
-        response_404 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_404
-
-    if response.status_code == 409:
-        response_409 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_409
-
-    if response.status_code == 502:
-        response_502 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_502
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -89,15 +60,11 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
 def sync_detailed(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[Any | ErrorResponse]:
-    """ Permanently retire an Agent identity and destroy its managed Vault
-
-    Args:
-        agent_id (str):  Example: agent_abc123.
+    """ Delete the current browser session
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -109,8 +76,7 @@ def sync_detailed(
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
-
+        
     )
 
     response = client.get_httpx_client().request(
@@ -120,15 +86,11 @@ def sync_detailed(
     return _build_response(client=client, response=response)
 
 def sync(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Any | ErrorResponse | None:
-    """ Permanently retire an Agent identity and destroy its managed Vault
-
-    Args:
-        agent_id (str):  Example: agent_abc123.
+    """ Delete the current browser session
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -140,21 +102,16 @@ def sync(
 
 
     return sync_detailed(
-        agent_id=agent_id,
-client=client,
+        client=client,
 
     ).parsed
 
 async def asyncio_detailed(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[Any | ErrorResponse]:
-    """ Permanently retire an Agent identity and destroy its managed Vault
-
-    Args:
-        agent_id (str):  Example: agent_abc123.
+    """ Delete the current browser session
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,8 +123,7 @@ async def asyncio_detailed(
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
-
+        
     )
 
     response = await client.get_async_httpx_client().request(
@@ -177,15 +133,11 @@ async def asyncio_detailed(
     return _build_response(client=client, response=response)
 
 async def asyncio(
-    agent_id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Any | ErrorResponse | None:
-    """ Permanently retire an Agent identity and destroy its managed Vault
-
-    Args:
-        agent_id (str):  Example: agent_abc123.
+    """ Delete the current browser session
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -197,7 +149,6 @@ async def asyncio(
 
 
     return (await asyncio_detailed(
-        agent_id=agent_id,
-client=client,
+        client=client,
 
     )).parsed

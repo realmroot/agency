@@ -8,33 +8,31 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.session_realmroot_identity_runtime import SessionRealmrootIdentityRuntime
+from ..models.realmroot_agent_identity_type_0_runtime import RealmrootAgentIdentityType0Runtime
 
 
 
 
 
 
-T = TypeVar("T", bound="SessionRealmrootIdentity")
+T = TypeVar("T", bound="RealmrootAgentIdentityType0")
 
 
 
 @_attrs_define
-class SessionRealmrootIdentity:
+class RealmrootAgentIdentityType0:
     """ 
         Attributes:
-            issuer (str):
-            subject (str):
-            username (str):
-            runtime (SessionRealmrootIdentityRuntime):
-            credential_ref (str):
+            issuer (str):  Example: https://id.realmroot.dev/api/auth.
+            subject (str):  Example: agt_backend_worker_1.
+            username (str):  Example: backend-worker.
+            runtime (RealmrootAgentIdentityType0Runtime):
      """
 
     issuer: str
     subject: str
     username: str
-    runtime: SessionRealmrootIdentityRuntime
-    credential_ref: str
+    runtime: RealmrootAgentIdentityType0Runtime
 
 
 
@@ -49,8 +47,6 @@ class SessionRealmrootIdentity:
 
         runtime = self.runtime.value
 
-        credential_ref = self.credential_ref
-
 
         field_dict: dict[str, Any] = {}
 
@@ -59,7 +55,6 @@ class SessionRealmrootIdentity:
             "subject": subject,
             "username": username,
             "runtime": runtime,
-            "credentialRef": credential_ref,
         })
 
         return field_dict
@@ -75,20 +70,17 @@ class SessionRealmrootIdentity:
 
         username = d.pop("username")
 
-        runtime = SessionRealmrootIdentityRuntime(d.pop("runtime"))
+        runtime = RealmrootAgentIdentityType0Runtime(d.pop("runtime"))
 
 
 
 
-        credential_ref = d.pop("credentialRef")
-
-        session_realmroot_identity = cls(
+        realmroot_agent_identity_type_0 = cls(
             issuer=issuer,
             subject=subject,
             username=username,
             runtime=runtime,
-            credential_ref=credential_ref,
         )
 
-        return session_realmroot_identity
+        return realmroot_agent_identity_type_0
 

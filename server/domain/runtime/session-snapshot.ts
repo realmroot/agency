@@ -1,11 +1,12 @@
 import type { AgentVersionRow, EnvironmentVersionRow } from '@shared/runtime-rows'
-import type { AgentSubagent, RealmrootAgentIdentity } from '../agent'
+import type { AgentSubagent, LegacyRealmrootAgentBinding, RealmrootAgentIdentity } from '../agent'
 import {
   defaultEnvironmentPackages,
   type EnvironmentNetworking,
   type EnvironmentPackages,
   type EnvironmentVariable,
 } from '../environment'
+import type { RuntimeName } from '../runtime-catalog'
 import { workspaceSystemPromptBlock } from '../workspace'
 import type { Volume, VolumeMount } from './execution-inputs'
 
@@ -25,13 +26,22 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-export function createAgentSnapshot(row: AgentVersionRow, providerId: string, identity: RealmrootAgentIdentity) {
+function legacyRealmrootBinding(value: string | null): LegacyRealmrootAgentBinding | null {
+  return value ? (JSON.parse(value) as LegacyRealmrootAgentBinding) : null
+}
+
+export function createAgentSnapshot(
+  row: AgentVersionRow,
+  providerId: string,
+  identity: RealmrootAgentIdentity | null,
+  runtime: RuntimeName = row.runtime,
+) {
   return {
     id: row.id,
     agentId: row.agentId,
     projectId: row.projectId,
     version: row.version,
-    runtime: row.runtime,
+    runtime,
     systemPrompt: row.systemPrompt,
     provider: providerId,
     model: row.model,
@@ -40,14 +50,24 @@ export function createAgentSnapshot(row: AgentVersionRow, providerId: string, id
     allowedTools: JSON.parse(row.allowedTools) as string[],
     mcpConnectors: JSON.parse(row.mcpConnectors) as string[],
     identity,
+    realmroot: legacyRealmrootBinding(row.realmroot),
     createdAt: row.createdAt,
   }
 }
 
-export type AgentSnapshot = ReturnType<typeof createAgentSnapshot>
+export type AgentSnapshot = Omit<ReturnType<typeof createAgentSnapshot>, 'realmroot'> & {
+  realmroot?: LegacyRealmrootAgentBinding | null
+}
 
 export function parseAgentSnapshot(value: string | null) {
-  return parseJson<AgentSnapshot>(value)
+  const snapshot = parseJson<AgentSnapshot & { runtime?: RuntimeName; identity?: RealmrootAgentIdentity | null }>(value)
+  if (!snapshot) return null
+  return {
+    ...snapshot,
+    runtime: snapshot.runtime ?? 'codex',
+    identity: snapshot.identity ?? null,
+    realmroot: snapshot.realmroot ?? null,
+  } satisfies AgentSnapshot
 }
 
 export function agentSnapshotWithWorkspaceContext(
@@ -56,9 +76,10 @@ export function agentSnapshotWithWorkspaceContext(
   volumeMounts: VolumeMount[],
 ): AgentSnapshot {
   const block = workspaceSystemPromptBlock({ volumes, volumeMounts })
-  const realmrootBlock = agentSnapshot.identity
-    ? 'Private Resources are available through the Realmroot Toolbox. Use `realmroot toolbox` to discover services and request only the authority required for the current task.'
-    : null
+  const realmrootBlock =
+    agentSnapshot.identity || agentSnapshot.realmroot
+      ? 'Private Resources are available through the Realmroot Toolbox. Use `realmroot toolbox` to discover services and request only the authority required for the current task.'
+      : null
   const context = [block, realmrootBlock].filter((value): value is string => Boolean(value)).join('\n\n')
   if (!context) {
     return agentSnapshot

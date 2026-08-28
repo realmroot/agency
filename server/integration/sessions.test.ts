@@ -1,6 +1,8 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { encryptWebSessionValue, hashOpaqueValue, randomOpaqueValue } from '../auth/web-session-crypto'
+import type { Env } from '../env'
 import { runtimeErrorMessage } from '../http/sessions'
 import {
   asRunnerAuthorization,
@@ -28,10 +30,32 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
   })
 }
 
-async function issueBrowserSocketTicket(sessionId: string, authorization: string) {
-  const response = await jsonFetch(`/api/v1/sessions/${sessionId}/socket-tickets`, authorization, {
+async function createBrowserSessionCookie(authorization: string) {
+  const accessToken = authorization.replace(/^Bearer /, '')
+  const subject = `user_e2e_${accessToken.replace(/^e2e:/, '').split(';')[0]!}`
+  const sessionId = randomOpaqueValue()
+  const idHash = await hashOpaqueValue(sessionId)
+  const bindings = env as unknown as Env
+  const now = new Date()
+  await bindings.DB.prepare(
+    `INSERT INTO web_auth_sessions (id_hash, subject, encrypted_access_token, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      idHash,
+      subject,
+      await encryptWebSessionValue(bindings, accessToken, `web-session:${idHash}`),
+      new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+      now.toISOString(),
+    )
+    .run()
+  return `__Host-ama_session=${sessionId}`
+}
+
+async function issueBrowserSocketTicket(sessionId: string, cookie: string) {
+  const response = await SELF.fetch(`https://example.com/api/v1/sessions/${sessionId}/socket-tickets`, {
     method: 'POST',
-    headers: { Origin: 'https://example.com' },
+    headers: { cookie, Origin: 'https://example.com' },
   })
   expect(response.status).toBe(201)
   const body = (await response.json()) as { ticket: string; expiresAt: string }
@@ -196,6 +220,28 @@ async function createAgent(authorization: string, data: Record<string, unknown> 
   return { id: agent.metadata.uid, currentVersionId: agent.status.currentVersionId, skills: agent.spec.skills }
 }
 
+async function makeLegacyAgent(agentId: string, bound: boolean) {
+  const row = await env.DB.prepare('SELECT identity_subject, identity_credential_ref FROM agents WHERE id = ?')
+    .bind(agentId)
+    .first<{ identity_subject: string; identity_credential_ref: string }>()
+  if (!row) throw new Error(`Expected Agent ${agentId}`)
+  const realmroot = bound
+    ? JSON.stringify({
+        agentId: row.identity_subject,
+        origin: 'https://identity.alias.test',
+        credentialRef: row.identity_credential_ref,
+      })
+    : null
+  await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE agents SET
+        username = '', identity_issuer = '', identity_subject = '', identity_credential_ref = NULL, realmroot = ?
+       WHERE id = ?`,
+    ).bind(realmroot, agentId),
+    env.DB.prepare('UPDATE agent_versions SET realmroot = ? WHERE agent_id = ?').bind(realmroot, agentId),
+  ])
+}
+
 // Providers are a global vendor catalog now; seed an external vendor + model row
 // directly (discovery owns these in production). Returns the row id callers pin.
 async function createProviderModel(_authorization: string, model: string) {
@@ -354,6 +400,95 @@ describe('[CF] /api/v1/sessions', () => {
     vi.unstubAllGlobals()
   })
 
+  it('creates Sessions for unbound and legacy-bound Agents without inventing identity', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const unbound = await createAgent(authorization, { runtime: 'codex' })
+    const bound = await createAgent(authorization, { runtime: 'codex' })
+    await makeLegacyAgent(unbound.id, false)
+    await makeLegacyAgent(bound.id, true)
+
+    const create = async (agentId: string) => {
+      const response = await jsonFetch('/api/v1/sessions', authorization, {
+        method: 'POST',
+        body: JSON.stringify({
+          spec: { agentId, environmentId: environment.id, runtime: 'codex' },
+          prompt: 'Run a legacy Agent',
+        }),
+      })
+      expect(response.status, await response.clone().text()).toBe(201)
+      return (await response.json()) as {
+        spec: { env: Record<string, string>; volumes: Array<Record<string, unknown>>; volumeMounts: unknown[] }
+        status: { bindings: { agent: { snapshot: Record<string, unknown> } } }
+      }
+    }
+
+    const unboundSession = await create(unbound.id)
+    expect(unboundSession.status.bindings.agent.snapshot).toMatchObject({ identity: null, runtime: 'codex' })
+    expect(unboundSession.spec.env).not.toHaveProperty('REALMROOT_STATE_DIR')
+    expect(unboundSession.spec.volumes).not.toContainEqual(expect.objectContaining({ name: 'realmroot-agent-state' }))
+
+    const boundSession = await create(bound.id)
+    expect(boundSession.status.bindings.agent.snapshot).toMatchObject({ identity: null, runtime: 'codex' })
+    expect(boundSession.status.bindings.agent.snapshot).not.toHaveProperty('realmroot')
+    expect(boundSession.spec.env).toMatchObject({
+      AGENT: 'ama',
+      REALMROOT_ORIGIN: 'https://identity.alias.test',
+      REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
+    })
+    expect(boundSession.spec.volumes).toContainEqual(
+      expect.objectContaining({ name: 'realmroot-agent-state', type: 'secret' }),
+    )
+    expect(boundSession.spec.volumeMounts).toContainEqual({
+      name: 'realmroot-agent-state',
+      mountPath: '/workspace/.ama/realmroot-source',
+      readOnly: true,
+    })
+  })
+
+  it('reads old Session snapshots with codex/null defaults without exposing legacy Realmroot binding', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const agent = await createAgent(authorization, { runtime: 'codex' })
+    const create = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        spec: { agentId: agent.id, environmentId: environment.id, runtime: 'codex' },
+        prompt: 'Read an old snapshot',
+      }),
+    })
+    expect(create.status, await create.clone().text()).toBe(201)
+    const created = (await create.json()) as { metadata: { uid: string } }
+    const row = await env.DB.prepare('SELECT agent_snapshot, metadata FROM sessions WHERE id = ?')
+      .bind(created.metadata.uid)
+      .first<{ agent_snapshot: string; metadata: string }>()
+    if (!row) throw new Error('Expected persisted Session snapshot')
+    const snapshot = JSON.parse(row.agent_snapshot) as Record<string, unknown>
+    delete snapshot.runtime
+    delete snapshot.identity
+    snapshot.realmroot = {
+      agentId: 'legacy_internal_agent',
+      origin: 'https://legacy.realmroot.test',
+      credentialRef: 'ama://vaults/private/credentials/legacy',
+    }
+    const metadata = JSON.parse(row.metadata) as Record<string, unknown>
+    delete metadata.runtime
+    await env.DB.prepare('UPDATE sessions SET agent_snapshot = ?, metadata = ? WHERE id = ?')
+      .bind(JSON.stringify(snapshot), JSON.stringify(metadata), created.metadata.uid)
+      .run()
+
+    const read = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization)
+    expect(read.status).toBe(200)
+    const body = (await read.json()) as {
+      spec: { runtime: string }
+      status: { bindings: { agent: { snapshot: Record<string, unknown> } } }
+    }
+    expect(body.spec.runtime).toBe('codex')
+    expect(body.status.bindings.agent.snapshot).toMatchObject({ runtime: 'codex', identity: null })
+    expect(body.status.bindings.agent.snapshot).not.toHaveProperty('realmroot')
+    expect(JSON.stringify(body)).not.toContain('ama://vaults/private/credentials/legacy')
+  })
+
   it('resolves a runner-capable environment when none is pinned [spec: sessions/create]', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, {
@@ -442,7 +577,13 @@ describe('[CF] /api/v1/sessions', () => {
         bindings: {
           agent: {
             versionId: string
-            snapshot: { systemPrompt: string; skills: string[]; mcpConnectors: string[]; provider: string }
+            snapshot: {
+              systemPrompt: string
+              skills: string[]
+              mcpConnectors: string[]
+              provider: string
+              identity: Record<string, unknown> | null
+            }
           }
           environment: {
             versionId: string | null
@@ -512,6 +653,13 @@ describe('[CF] /api/v1/sessions', () => {
     expect(serialized).not.toContain('resumeToken')
     expect(created.status.bindings.environment.versionId).toMatch(/^envver_/)
     expect(created.status.startedAt).toEqual(expect.any(String))
+    expect(created.status.bindings.agent.snapshot.identity).toMatchObject({
+      issuer: expect.any(String),
+      subject: expect.any(String),
+      username: expect.any(String),
+      runtime: 'ama',
+    })
+    expect(created.status.bindings.agent.snapshot.identity).not.toHaveProperty('credentialRef')
 
     const listRes = await jsonFetch('/api/v1/sessions', authorization)
     expect(listRes.status).toBe(200)
@@ -1585,7 +1733,8 @@ describe('[CF] /api/v1/sessions', () => {
     })
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
-    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const browserCookie = await createBrowserSessionCookie(authorization)
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(ticket),
     })
@@ -1670,7 +1819,8 @@ describe('[CF] /api/v1/sessions', () => {
     const created = JSON.parse(createdText) as { metadata: { uid: string } }
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
-    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const browserCookie = await createBrowserSessionCookie(authorization)
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(ticket),
     })
@@ -1684,7 +1834,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(consoleBypass.status).toBe(403)
 
-    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const wrongOrigin = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(wrongOriginTicket, 'https://evil.example.com'),
     })
@@ -1700,15 +1850,48 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(replayAfterAccepted.status).toBe(401)
 
-    const missingOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
-      method: 'POST',
-    })
+    const missingOrigin = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: { cookie: browserCookie },
+      },
+    )
     expect(missingOrigin.status).toBe(403)
-    const crossOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+    const crossOrigin = await SELF.fetch(`https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`, {
       method: 'POST',
-      headers: { Origin: 'https://evil.example.com' },
+      headers: { cookie: browserCookie, Origin: 'https://evil.example.com' },
     })
     expect(crossOrigin.status).toBe(403)
+
+    const bearerTicket = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+      method: 'POST',
+      headers: { Origin: 'https://example.com' },
+    })
+    expect(bearerTicket.status).toBe(403)
+
+    const bearerOverridesCookie = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: { cookie: browserCookie, authorization, Origin: 'https://example.com' },
+      },
+    )
+    expect(bearerOverridesCookie.status).toBe(403)
+
+    const dpopAuthorization = authorization.replace(/^Bearer /, 'DPoP ')
+    const dpopOverridesCookie = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: browserCookie,
+          Origin: 'https://example.com',
+          ...dpopHeaders(dpopAuthorization, 'POST', `/api/v1/sessions/${created.metadata.uid}/socket-tickets`),
+        },
+      },
+    )
+    expect(dpopOverridesCookie.status).toBe(401)
 
     const malformed = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: {
@@ -1724,7 +1907,7 @@ describe('[CF] /api/v1/sessions', () => {
       method: 'POST',
       headers: { Origin: 'https://example.com' },
     })
-    expect(otherTicket.status).toBe(404)
+    expect(otherTicket.status).toBe(403)
 
     const runnerTicket = await jsonFetch(
       `/api/v1/sessions/${created.metadata.uid}/socket-tickets`,

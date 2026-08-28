@@ -37,15 +37,14 @@ type Workspace struct {
 	memoryStores []preparedMemoryStore
 }
 
-// RuntimeEnv maps control-plane workspace paths to this runner's disposable
-// session workspace. The runner does not interpret the contents of seeded
-// volumes or select an identity; it only translates the standard workspace
-// root used by the runtime contract.
+// RuntimeEnv maps the managed Realmroot state path to this runner's disposable
+// session workspace. Other environment variables are application input and
+// must not be interpreted as runner paths.
 func (w *Workspace) RuntimeEnv(env map[string]string) map[string]string {
 	resolved := make(map[string]string, len(env))
 	for key, value := range env {
-		if w != nil && strings.HasPrefix(value, "/workspace/") {
-			resolved[key] = filepath.Join(w.Root, filepath.FromSlash(strings.TrimPrefix(value, "/workspace/")))
+		if w != nil && key == "REALMROOT_STATE_DIR" && value == "/workspace/.ama/realmroot-state" {
+			resolved[key] = filepath.Join(w.Root, ".ama", "realmroot-state")
 			continue
 		}
 		resolved[key] = value
@@ -248,6 +247,9 @@ func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName stri
 	report := AgentPrepareReport{}
 	if w == nil || agentSnapshot == nil {
 		return report, nil
+	}
+	if err := prepareLegacyRealmrootAgent(w.Root, agentSnapshot); err != nil {
+		return report, err
 	}
 	for _, skill := range agentSkillRefs(agentSnapshot) {
 		change, err := refreshAgentSkill(ctx, w.Cwd, runtimeName, skill)

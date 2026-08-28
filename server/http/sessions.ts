@@ -72,7 +72,6 @@ const SessionRealmrootIdentitySchema = z
     subject: z.string(),
     username: z.string(),
     runtime: z.literal('ama'),
-    credentialRef: z.string(),
   })
   .strict()
   .openapi('SessionRealmrootIdentity')
@@ -91,7 +90,7 @@ const AgentVersionSnapshotSchema = z
     subagents: z.array(SessionSubagentSchema),
     allowedTools: z.array(z.string()),
     mcpConnectors: z.array(z.string()),
-    identity: SessionRealmrootIdentitySchema,
+    identity: SessionRealmrootIdentitySchema.nullable(),
     createdAt: z.string().datetime(),
   })
   .openapi('SessionAgentSnapshot')
@@ -1074,7 +1073,7 @@ const createSessionSocketTicketRoute = createRoute({
   summary: 'Create a single-use browser session socket ticket',
   description:
     'Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.',
-  security: [{ realmrootConsoleBearer: ['sessions:write'] }],
+  security: [{ amaWebSession: [] }],
   request: { params: ParamsSchema },
   responses: {
     201: {
@@ -1411,8 +1410,13 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       const deps = c.get('deps')
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
-      if (auth.oidc.clientId !== c.env.OIDC_CLIENT_ID) {
-        return errorResponse(c, 403, 'forbidden', 'Only the Realmroot Console client may create browser socket tickets')
+      if (auth.authenticationMethod !== 'cookie' || auth.oidc.clientId !== c.env.OIDC_CLIENT_ID) {
+        return errorResponse(
+          c,
+          403,
+          'forbidden',
+          'Only the Realmroot Console session may create browser socket tickets',
+        )
       }
       const requestOrigin = new URL(c.req.url).origin
       const browserOrigin = c.req.header('origin')
@@ -1455,7 +1459,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
           c,
           403,
           'forbidden',
-          'Realmroot Console clients must exchange Bearer authentication for a browser socket ticket',
+          'Realmroot Console sessions must exchange cookie authentication for a browser socket ticket',
         )
       }
       const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)

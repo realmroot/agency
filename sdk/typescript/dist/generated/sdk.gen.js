@@ -9,6 +9,21 @@ export const readConfigz = (options) => (options?.client ?? client).get({ url: '
  */
 export const readAuthConfig = (options) => (options?.client ?? client).get({ url: '/api/v1/auth/config', ...options });
 /**
+ * Begin a server-owned Realmroot browser sign-in
+ */
+export const createAuthorizationAttempt = (options) => (options.client ?? client).post({
+    url: '/api/v1/auth/authorization-attempts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Delete the current browser session
+ */
+export const deleteCurrentAuthSession = (options) => (options?.client ?? client).delete({ url: '/api/v1/auth/sessions/current', ...options });
+/**
  * Read the Realmroot-authenticated request context
  */
 export const readCurrentAuthSession = (options) => (options?.client ?? client).get({

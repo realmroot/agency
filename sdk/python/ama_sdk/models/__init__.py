@@ -50,6 +50,7 @@ from .auth_organization import AuthOrganization
 from .auth_project import AuthProject
 from .auth_session import AuthSession
 from .auth_user import AuthUser
+from .authorization_attempt import AuthorizationAttempt
 from .bash_tool_input import BashToolInput
 from .budget import Budget
 from .budget_limit_type import BudgetLimitType
@@ -74,6 +75,7 @@ from .connector_trust_level import ConnectorTrustLevel
 from .create_agent_request import CreateAgentRequest
 from .create_agent_request_spec import CreateAgentRequestSpec
 from .create_agent_request_spec_runtime import CreateAgentRequestSpecRuntime
+from .create_authorization_attempt_body import CreateAuthorizationAttemptBody
 from .create_budget_request import CreateBudgetRequest
 from .create_budget_request_limit_type import CreateBudgetRequestLimitType
 from .create_budget_request_metadata import CreateBudgetRequestMetadata
@@ -251,8 +253,8 @@ from .put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMeta
 from .put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
 from .read_tool_input import ReadToolInput
 from .read_usage_summary_group_by import ReadUsageSummaryGroupBy
-from .realmroot_agent_identity import RealmrootAgentIdentity
-from .realmroot_agent_identity_runtime import RealmrootAgentIdentityRuntime
+from .realmroot_agent_identity_type_0 import RealmrootAgentIdentityType0
+from .realmroot_agent_identity_type_0_runtime import RealmrootAgentIdentityType0Runtime
 from .reasoning_content_block import ReasoningContentBlock
 from .reasoning_content_block_type import ReasoningContentBlockType
 from .resource_create_metadata import ResourceCreateMetadata
@@ -388,8 +390,8 @@ from .session_metadata import SessionMetadata
 from .session_metadata_annotations import SessionMetadataAnnotations
 from .session_metadata_labels import SessionMetadataLabels
 from .session_placement_type_0 import SessionPlacementType0
-from .session_realmroot_identity import SessionRealmrootIdentity
-from .session_realmroot_identity_runtime import SessionRealmrootIdentityRuntime
+from .session_realmroot_identity_type_0 import SessionRealmrootIdentityType0
+from .session_realmroot_identity_type_0_runtime import SessionRealmrootIdentityType0Runtime
 from .session_socket_abort_message import SessionSocketAbortMessage
 from .session_socket_abort_message_type import SessionSocketAbortMessageType
 from .session_socket_ack_message import SessionSocketAckMessage
@@ -583,6 +585,7 @@ __all__ = (
     "AuthMethod",
     "AuthMethodType",
     "AuthOrganization",
+    "AuthorizationAttempt",
     "AuthProject",
     "AuthSession",
     "AuthUser",
@@ -610,6 +613,7 @@ __all__ = (
     "CreateAgentRequest",
     "CreateAgentRequestSpec",
     "CreateAgentRequestSpecRuntime",
+    "CreateAuthorizationAttemptBody",
     "CreateBudgetRequest",
     "CreateBudgetRequestLimitType",
     "CreateBudgetRequestMetadata",
@@ -787,8 +791,8 @@ __all__ = (
     "PutRunnerHeartbeatRequestState",
     "ReadToolInput",
     "ReadUsageSummaryGroupBy",
-    "RealmrootAgentIdentity",
-    "RealmrootAgentIdentityRuntime",
+    "RealmrootAgentIdentityType0",
+    "RealmrootAgentIdentityType0Runtime",
     "ReasoningContentBlock",
     "ReasoningContentBlockType",
     "ResourceCreateMetadata",
@@ -924,8 +928,8 @@ __all__ = (
     "SessionMetadataAnnotations",
     "SessionMetadataLabels",
     "SessionPlacementType0",
-    "SessionRealmrootIdentity",
-    "SessionRealmrootIdentityRuntime",
+    "SessionRealmrootIdentityType0",
+    "SessionRealmrootIdentityType0Runtime",
     "SessionSocketAbortMessage",
     "SessionSocketAbortMessageType",
     "SessionSocketAckMessage",

@@ -217,7 +217,6 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
               subject: 'agt_worker',
               username: 'worker',
               runtime: 'ama',
-              credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
             },
             createdAt: '2026-01-01T00:00:00.000Z',
           },

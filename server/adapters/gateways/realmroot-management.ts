@@ -26,20 +26,14 @@ function managementResource(env: Env) {
   return env.REALMROOT_MANAGEMENT_RESOURCE?.trim() || `${new URL(issuer).origin}/api`
 }
 
-function subjectAccessToken(authorization: string | null) {
-  const match = /^Bearer\s+(\S+)$/i.exec(authorization?.trim() ?? '')
-  if (!match?.[1]) throw new Error('Realmroot Agent management authority requires the AMA User Bearer token')
-  return match[1]
-}
-
 function basicComponent(value: string) {
   return encodeURIComponent(value).replaceAll('%20', '+')
 }
 
-async function exchangeUserToken(env: Env, authorization: string | null) {
+async function exchangeUserToken(env: Env, subjectAccessToken: string) {
   const issuer = required(env.OIDC_ISSUER, 'OIDC_ISSUER').replace(/\/$/, '')
-  const clientId = required(env.REALMROOT_TOKEN_EXCHANGE_CLIENT_ID, 'REALMROOT_TOKEN_EXCHANGE_CLIENT_ID')
-  const clientSecret = required(env.REALMROOT_TOKEN_EXCHANGE_CLIENT_SECRET, 'REALMROOT_TOKEN_EXCHANGE_CLIENT_SECRET')
+  const clientId = required(env.OIDC_CLIENT_ID, 'OIDC_CLIENT_ID')
+  const clientSecret = required(env.OIDC_CLIENT_SECRET, 'OIDC_CLIENT_SECRET')
   const response = await fetch(`${issuer}/oauth2/token`, {
     method: 'POST',
     headers: {
@@ -49,7 +43,7 @@ async function exchangeUserToken(env: Env, authorization: string | null) {
     },
     body: new URLSearchParams({
       grant_type: tokenExchangeGrant,
-      subject_token: subjectAccessToken(authorization),
+      subject_token: required(subjectAccessToken, 'Realmroot AMA User access token'),
       subject_token_type: accessTokenType,
       requested_token_type: accessTokenType,
       audience: managementResource(env),
@@ -77,10 +71,10 @@ async function exchangeUserToken(env: Env, authorization: string | null) {
 
 export function createRealmrootManagementAuthority(env: Env): RealmrootManagementAuthority {
   return {
-    async forAgentAdministration(auth, authorization) {
+    async forAgentAdministration(auth, subjectAccessToken) {
       if (auth.agentActor) throw new Error('Only a Realmroot User can administer managed Agent identities')
       if (fakeRealmrootEnrollmentEnabled(env)) return bearerCredential(`ama-e2e-fixture:${auth.user.id}`)
-      const exchanged = await exchangeUserToken(env, authorization)
+      const exchanged = await exchangeUserToken(env, subjectAccessToken)
       const claims = await getBearerClaimsForAudience(env, exchanged.accessToken, managementResource(env))
       if (
         claims.sub !== auth.user.id ||

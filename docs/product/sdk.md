@@ -64,7 +64,7 @@ realmroot toolbox sync any-managed-agents
 realmroot toolbox get any-managed-agents/api/v1/configz
 ```
 
-Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and generated Agent SDK usage require a Realmroot-issued DPoP-bound token and a fresh proof for every request. The registered browser Console and native runner clients use Bearer access tokens; the Console exchanges its token for a single-use session socket ticket, while the runner authenticates its own control-plane channel directly.
+Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and generated Agent SDK usage require a Realmroot-issued DPoP-bound token and a fresh proof for every request. The browser Console uses an HttpOnly AMA session and exchanges it for a single-use session socket ticket; the native runner authenticates its control-plane channel with its own Realmroot Bearer access token.
 
 This repository includes:
 
