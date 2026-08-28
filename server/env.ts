@@ -2,6 +2,8 @@ import type { Sandbox } from '@cloudflare/sandbox'
 
 export interface Env {
   DB: D1Database
+  AUTH_CLIENT_RATE_LIMITER: RateLimit
+  AUTH_IP_RATE_LIMITER: RateLimit
   AI: Ai
   ASSETS: Fetcher
   SANDBOX: DurableObjectNamespace<Sandbox>

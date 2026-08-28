@@ -24,16 +24,12 @@ export const webAuthorizationAttempts = sqliteTable(
   'web_authorization_attempts',
   {
     stateHash: text('state_hash').primaryKey(),
-    clientKey: text('client_key').notNull(),
     encryptedPayload: text('encrypted_payload').notNull(),
     returnTo: text('return_to').notNull(),
     expiresAt: text('expires_at').notNull(),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [
-    index('idx_web_authorization_attempts_client_expires').on(table.clientKey, table.expiresAt),
-    index('idx_web_authorization_attempts_expires_at').on(table.expiresAt),
-  ],
+  (table) => [index('idx_web_authorization_attempts_expires_at').on(table.expiresAt)],
 )
 
 export const webAuthSessions = sqliteTable(

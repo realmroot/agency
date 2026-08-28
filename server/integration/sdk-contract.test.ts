@@ -188,35 +188,19 @@ describe('[CF] generated SDK contract', () => {
     )
   })
 
-  it('keeps browser-only auth and Console-only socket ticket operations out of stable authenticated facades', () => {
+  it('keeps only the Console socket ticket operation out of stable authenticated facades', () => {
     const exclusions = resources.facadeExclusions
     expect(exclusions).toEqual([
-      {
-        operationId: 'createAuthorizationAttempt',
-        reason: expect.stringContaining('Browser-only redirect bootstrap for the HttpOnly web session'),
-      },
-      {
-        operationId: 'deleteCurrentAuthSession',
-        reason: expect.stringContaining('Browser-only cookie session lifecycle'),
-      },
       {
         operationId: 'createSessionSocketTicket',
         reason: expect.stringContaining('Console-only'),
       },
     ])
-    expect(exclusions[0]?.reason).toContain('direct API clients authenticate through Realmroot')
-    expect(exclusions[1]?.reason).toContain('direct API clients own their Realmroot token lifecycle')
-    expect(exclusions[2]?.reason).toContain('stable Agent facade')
-    expect(exclusions[2]?.reason).toContain('runner facade does not expose browser session sockets')
+    expect(exclusions[0]?.reason).toContain('stable Agent facade')
+    expect(exclusions[0]?.reason).toContain('runner facade does not expose browser session sockets')
     expect(new Set(exclusions.map(({ operationId }) => operationId)).size).toBe(exclusions.length)
-    expect(operations).toContainEqual({
-      operationId: 'createAuthorizationAttempt',
-      path: '/api/v1/auth/authorization-attempts',
-    })
-    expect(operations).toContainEqual({
-      operationId: 'deleteCurrentAuthSession',
-      path: '/api/v1/auth/sessions/current',
-    })
+    expect(operations.map(({ operationId }) => operationId)).not.toContain('createAuthorizationAttempt')
+    expect(operations.map(({ operationId }) => operationId)).not.toContain('deleteCurrentAuthSession')
     expect(operations).toContainEqual({
       operationId: 'createSessionSocketTicket',
       path: '/api/v1/sessions/{sessionId}/socket-tickets',

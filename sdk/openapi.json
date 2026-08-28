@@ -2502,55 +2502,6 @@
           "clientId"
         ]
       },
-      "AuthorizationAttempt": {
-        "type": "object",
-        "properties": {
-          "authorizationUrl": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "required": [
-          "authorizationUrl"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "example": "validation_error"
-              },
-              "message": {
-                "type": "string",
-                "example": "Invalid request"
-              },
-              "issues": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "type",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "error"
-        ]
-      },
       "AuthSession": {
         "type": "object",
         "properties": {
@@ -2625,6 +2576,43 @@
         "required": [
           "id",
           "name"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "validation_error"
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "type",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "ProjectListResponse": {
@@ -8518,64 +8506,6 @@
         }
       }
     },
-    "/api/v1/auth/authorization-attempts": {
-      "post": {
-        "operationId": "createAuthorizationAttempt",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Begin a server-owned Realmroot browser sign-in",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "returnTo": {
-                    "type": "string",
-                    "maxLength": 2048,
-                    "default": "/"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Authorization attempt created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthorizationAttempt"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Invalid browser origin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many active attempts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/sessions/current": {
       "get": {
         "operationId": "readCurrentAuthSession",
@@ -8621,28 +8551,6 @@
           },
           "403": {
             "description": "The Realmroot token lacks the scope required for this resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "deleteCurrentAuthSession",
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Delete the current browser session",
-        "responses": {
-          "204": {
-            "description": "Browser session deleted"
-          },
-          "403": {
-            "description": "Invalid browser origin",
             "content": {
               "application/json": {
                 "schema": {

@@ -12,6 +12,7 @@ const browserIssuer = 'https://identity.alias.test/api/auth'
 const browserClientId = 'ama-test'
 const browserResource = 'https://ama.tftt.cc/api'
 const browserSigningKeys = generateKeyPair('RS256', { extractable: true })
+let browserClientSequence = 0
 
 function cookieValue(response: Response, name: string) {
   const setCookie = response.headers.get('set-cookie') ?? ''
@@ -118,9 +119,14 @@ async function installBrowserOidcProvider(options: BrowserOidcProviderOptions = 
 }
 
 async function beginBrowserSignIn(returnTo = '/agents') {
+  browserClientSequence += 1
   const response = await SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', origin: 'https://example.com' },
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://example.com',
+      'cf-connecting-ip': `198.51.100.${browserClientSequence}`,
+    },
     body: JSON.stringify({ returnTo }),
   })
   expect(response.status).toBe(201)
@@ -391,10 +397,26 @@ describe('[CF] auth v1', () => {
     expect(attempt?.return_to).toBe('/')
   })
 
-  it('rate-limits the thirty-third active authorization attempt from one client', async () => {
+  it.each([
+    ['client', false, true],
+    ['IP address', true, false],
+  ] as const)('returns 429 when the %s authorization limiter rejects the request', async (_case, client, address) => {
     await installBrowserOidcProvider()
-    const createAttempt = () =>
-      SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
+    const clientLimit = vi.fn<(input: { key: string }) => Promise<{ success: boolean }>>(async () => ({
+      success: client,
+    }))
+    const addressLimit = vi.fn<(input: { key: string }) => Promise<{ success: boolean }>>(async () => ({
+      success: address,
+    }))
+    const routes = registerAuthRoutes(createDepsApiRouter())
+    const bindings = {
+      ...(env as unknown as Env),
+      AUTH_CLIENT_RATE_LIMITER: { limit: clientLimit },
+      AUTH_IP_RATE_LIMITER: { limit: addressLimit },
+    } as unknown as Env
+    const limited = await routes.request(
+      'https://example.com/authorization-attempts',
+      {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -402,37 +424,65 @@ describe('[CF] auth v1', () => {
           'cf-connecting-ip': '192.0.2.10',
         },
         body: JSON.stringify({ returnTo: '/agents' }),
-      })
-
-    for (let attempt = 0; attempt < 32; attempt += 1) {
-      expect((await createAttempt()).status, `authorization attempt ${attempt + 1}`).toBe(201)
-    }
-    const limited = await createAttempt()
+      },
+      bindings,
+    )
 
     expect(limited.status).toBe(429)
-    expect(limited.headers.get('retry-after')).toBe('600')
+    expect(limited.headers.get('retry-after')).toBe('60')
     await expect(limited.json()).resolves.toMatchObject({ error: { type: 'rate_limited' } })
+    expect(clientLimit).toHaveBeenCalledOnce()
+    expect(addressLimit).toHaveBeenCalledOnce()
   })
 
-  it('atomically caps a burst of authorization attempts from one client', async () => {
+  it('uses a stable anonymous client cookie independently from the IP address limiter', async () => {
     await installBrowserOidcProvider()
-    const responses = await Promise.all(
-      Array.from({ length: 40 }, () =>
-        SELF.fetch('https://example.com/api/v1/auth/authorization-attempts', {
+    const clientLimit = vi.fn<(input: { key: string }) => Promise<{ success: boolean }>>(async () => ({
+      success: true,
+    }))
+    const addressLimit = vi.fn<(input: { key: string }) => Promise<{ success: boolean }>>(async () => ({
+      success: true,
+    }))
+    const routes = registerAuthRoutes(createDepsApiRouter())
+    const bindings = {
+      ...(env as unknown as Env),
+      AUTH_CLIENT_RATE_LIMITER: { limit: clientLimit },
+      AUTH_IP_RATE_LIMITER: { limit: addressLimit },
+    } as unknown as Env
+    const request = (cookie?: string) =>
+      routes.request(
+        'https://example.com/authorization-attempts',
+        {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
             origin: 'https://example.com',
             'cf-connecting-ip': '192.0.2.20',
+            ...(cookie ? { cookie } : {}),
           },
           body: JSON.stringify({ returnTo: '/agents' }),
-        }),
-      ),
-    )
-    const statuses = responses.map((response) => response.status)
+        },
+        bindings,
+      )
 
-    expect(statuses.filter((status) => status === 201)).toHaveLength(32)
-    expect(statuses.filter((status) => status === 429)).toHaveLength(8)
+    const first = await request()
+    expect(first.status).toBe(201)
+    expect(first.headers.get('retry-after')).toBeNull()
+    await expect(first.clone().json()).resolves.toMatchObject({ authorizationUrl: expect.any(String) })
+    const clientCookie = cookieValue(first, '__Host-ama_auth_client')
+    expect(clientCookie).toMatch(/^__Host-ama_auth_client=[A-Za-z0-9_-]{43}$/)
+    expect(first.headers.get('set-cookie')).toContain('HttpOnly')
+    expect(first.headers.get('set-cookie')).toContain('SameSite=Lax')
+    expect(first.headers.get('set-cookie')).toContain('Secure')
+
+    expect((await request(clientCookie!)).status).toBe(201)
+    expect((await request(`__Host-ama_auth_client=${'A'.repeat(43)}`)).status).toBe(201)
+
+    const clientKeys = clientLimit.mock.calls.map(([input]) => input.key)
+    const addressKeys = addressLimit.mock.calls.map(([input]) => input.key)
+    expect(clientKeys[1]).toBe(clientKeys[0])
+    expect(clientKeys[2]).not.toBe(clientKeys[0])
+    expect(new Set(addressKeys).size).toBe(1)
   })
 
   it.each(['missing', 'another browser'])('rejects authorization state bound to %s login cookie', async (binding) => {

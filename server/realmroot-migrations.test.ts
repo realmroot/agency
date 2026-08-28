@@ -28,6 +28,20 @@ function applyThrough(db: DatabaseSync, lastMigration: string) {
 }
 
 describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
+  it('keeps browser authorization attempts free of D1 client-key rate-limit state', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0029_web_auth_sessions.sql')
+
+    const columns = db.prepare('PRAGMA table_info(web_authorization_attempts)').all() as Array<{ name: string }>
+    expect(columns.map(({ name }) => name)).not.toContain('client_key')
+    expect(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'web_authorization_attempts'")
+        .all(),
+    ).toEqual([])
+    db.close()
+  })
+
   it('upgrades an old database and preserves credential versions while admitting the dedicated type', () => {
     const db = new DatabaseSync(':memory:')
     db.exec(`
