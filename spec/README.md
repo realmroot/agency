@@ -95,7 +95,7 @@ exist but whose breadcrumbs are still being fanned out.
 
 | capability | status   | source `specs/product/*.feature` (merged in) |
 | ---------- | -------- | -------------------------------------------- |
-| agents     | migrated | agents-api, agents-control-plane, agents-ui, agents-update, agent-builder, agent-detail, agent-roles-memory |
+| agents     | migrated | agents-api, agents-control-plane, agents-ui, agents-update, agent-detail, agent-roles-memory |
 | sessions   | migrated | sessions-api, sessions-events, session-detail-tool-tracing, session-stop, sessions-list-bulk-archive, sessions-ui |
 | auth       | migrated | auth, auth-flow, auth-guard, auth-tenancy, login, login-page, sso-discovery, user-initial-password, web-auth-redirect |
 | providers  | migrated | providers, providers-models, provider-access |
@@ -110,5 +110,4 @@ exist but whose breadcrumbs are still being fanned out.
 | triggers   | migrated | scheduled-triggers |
 | api-contracts | migrated | api-contracts, cli-openapi-contract, control-plane, list-route-pagination, list-date-range-filters, storage-cloudflare-d1, destructive-ops, external-product-integration, events-api |
 | web-console | migrated | web-ui, layout, web-api-client-consolidation |
-| quickstart | migrated | quickstart |
 | projects   | migrated | external-product-integration |

@@ -64,14 +64,13 @@ function renderAgentsPage() {
 }
 
 describe('[spec: agents/console-list] AgentsPage', () => {
-  it('renders page header and agent builder link', () => {
+  it('renders the page header and create-agent action', () => {
     server.use(
       http.get('*/api/v1/agents', () => HttpResponse.json(emptyList)),
       http.get('*/api/v1/environments', () => HttpResponse.json(emptyList)),
     )
     renderAgentsPage()
     expect(screen.getByText('Agents')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Agent builder/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Create agent/ })).toBeInTheDocument()
   })
 

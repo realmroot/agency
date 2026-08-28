@@ -588,31 +588,31 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Continue with OIDC provider' })).toBeTruthy()
   })
 
-  it('drives the v1 console from resource creation through runtime events [spec: agents/console-list] [spec: web-console/shell] [spec: quickstart/first-run]', async () => {
+  it('redirects the removed agent-builder route to the agent list without loading agent new', async () => {
+    const { fetchMock } = mockConsoleApi()
+    window.history.pushState({}, '', '/agents/new')
+
+    render(<App />)
+
+    expect(await screen.findByText('No agents')).toBeTruthy()
+    expect(window.location.pathname).toBe('/agents')
+    expect(fetchMock.mock.calls.some(([input]) => normalizeMockUrl(input).split('?')[0] === '/api/v1/agents/new')).toBe(
+      false,
+    )
+  })
+
+  it('drives the console from resource creation through runtime events [spec: agents/console-list] [spec: web-console/shell]', async () => {
     mockConsoleApi()
     const { sentCommands, socketUrls } = installMockRuntimeWebSocket()
 
     render(<App />)
 
-    expect(await screen.findByText('First run workflow')).toBeTruthy()
-    expect(screen.getByText('GET /api/v1/providers')).toBeTruthy()
-    expect(screen.getByText('1. Provider')).toBeTruthy()
-    expect(screen.getByText('2. Environment')).toBeTruthy()
-    expect(screen.getByText('3. Agent')).toBeTruthy()
-    expect(screen.getByText('4. Session')).toBeTruthy()
-    expect(screen.getByText('5. Integration')).toBeTruthy()
-    // With no resources yet the guided flow opens on the environment step.
-    expect(screen.getByText('GET /api/v1/openapi.json')).toBeTruthy()
-    expect(screen.getAllByText('pending').length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: 'Create environment' })).toBeTruthy()
-    fireEvent.click(primaryNav().getByRole('link', { name: 'Agents' }))
     expect(await screen.findByText('No agents')).toBeTruthy()
     expect(screen.queryByText('Acceptance Path')).toBeNull()
     expect(document.querySelector('[data-slot="button"]')).toBeTruthy()
     expect(document.querySelector('[data-slot="card"]')).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Create Environment' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Create Agent' })).toBeNull()
-    expect(primaryNav().getByRole('link', { name: 'Quickstart' })).toBeTruthy()
     expect(primaryNav().getByRole('link', { name: 'Agents' })).toBeTruthy()
     expect(primaryNav().getByRole('link', { name: 'Environments' })).toBeTruthy()
     expect(primaryNav().getByRole('link', { name: 'Sessions' })).toBeTruthy()
@@ -630,7 +630,7 @@ describe('App', () => {
     expect(screen.getByText('No environments')).toBeTruthy()
     fireEvent.click(primaryNav().getByRole('link', { name: 'Sessions' }))
     expect(window.location.pathname).toBe('/sessions')
-    expect(screen.getByText('No sessions')).toBeTruthy()
+    expect(await screen.findByText('No sessions')).toBeTruthy()
     fireEvent.click(primaryNav().getByRole('link', { name: 'Environments' }))
     expect(window.location.pathname).toBe('/environments')
 
@@ -854,8 +854,9 @@ describe('App', () => {
 
     render(<App />)
 
-    await screen.findByText('First run workflow')
+    await screen.findByRole('navigation', { name: 'Primary' })
     fireEvent.click(primaryNav().getByRole('link', { name: 'Sessions' }))
+    await screen.findByText('First run workflow')
     expect(await screen.findByLabelText('error: Runtime crashed')).toBeTruthy()
     expect(screen.queryByText('Runtime crashed')).toBeNull()
     expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
