@@ -3,7 +3,7 @@
   "info": {
     "title": "Any Managed Agents API",
     "version": "1.0.0",
-    "description": "Realmroot-native control-plane API for Any Managed Agents. Console and runner operations use Bearer tokens while Agent operations require DPoP; every protected operation requires an exact resource scope."
+    "description": "Realmroot-native control-plane API for Any Managed Agents. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted."
   },
   "servers": [
     {
@@ -18,18 +18,11 @@
         "name": "Sec-WebSocket-Protocol",
         "description": "Single-use opaque ticket created by POST /sessions/{sessionId}/socket-tickets."
       },
-      "realmrootConsoleBearer": {
+      "oidcAccessToken": {
         "type": "openIdConnect",
         "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
-        "description": "Realmroot-issued at+jwt Bearer token for registered AMA Console and runner clients.",
-        "x-realmroot-client-mode": "console-or-runner"
-      },
-      "realmrootDpop": {
-        "type": "openIdConnect",
-        "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
-        "description": "Realmroot-issued, DPoP-bound at+jwt access token for Realmroot Agent clients.",
-        "x-dpop-required": true,
-        "x-realmroot-client-mode": "agent"
+        "description": "Realmroot-issued RFC 9068 access token. Use the Bearer or DPoP presentation mode assigned to the registered client.",
+        "x-dpop-supported": true
       }
     },
     "schemas": {
@@ -2423,17 +2416,13 @@
             "format": "uri",
             "example": "https://ama.example.com"
           },
-          "browser": {
-            "$ref": "#/components/schemas/PublicOidcClientConfig"
-          },
           "runner": {
             "$ref": "#/components/schemas/PublicOidcClientConfig"
           }
         },
         "required": [
           "issuer",
-          "resource",
-          "browser"
+          "resource"
         ]
       },
       "PublicOidcClientConfig": {
@@ -7119,23 +7108,6 @@
         },
         "additionalProperties": false
       },
-      "SessionSocketTicket": {
-        "type": "object",
-        "properties": {
-          "ticket": {
-            "type": "string",
-            "description": "Single-use opaque browser WebSocket ticket."
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "ticket",
-          "expiresAt"
-        ]
-      },
       "SessionMessageListResponse": {
         "type": "object",
         "properties": {
@@ -8513,12 +8485,7 @@
         "summary": "Read the authenticated session context",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "auth:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "auth:read"
             ]
           }
@@ -8566,12 +8533,7 @@
         "summary": "List projects in the current organization",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "projects:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "projects:read"
             ]
           }
@@ -8651,12 +8613,7 @@
         "summary": "Create a project in the current organization",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "projects:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "projects:write"
             ]
           }
@@ -8714,12 +8671,7 @@
         "summary": "Read a single project",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "projects:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "projects:read"
             ]
           }
@@ -8788,12 +8740,7 @@
         "summary": "List agents",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:read"
             ]
           }
@@ -8919,12 +8866,7 @@
         "summary": "Create an agent",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:write"
             ]
           }
@@ -8992,12 +8934,7 @@
         "summary": "Read an agent",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:read"
             ]
           }
@@ -9065,12 +9002,7 @@
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:write"
             ]
           }
@@ -9169,12 +9101,7 @@
         "summary": "List agent versions",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:read"
             ]
           }
@@ -9243,12 +9170,7 @@
         "summary": "Read an agent version",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "agents:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "agents:read"
             ]
           }
@@ -9337,12 +9259,7 @@
         "summary": "List environments",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:read"
             ]
           }
@@ -9468,12 +9385,7 @@
         "summary": "Create an environment",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:write"
             ]
           }
@@ -9541,12 +9453,7 @@
         "summary": "Read an environment",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:read"
             ]
           }
@@ -9614,12 +9521,7 @@
         "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:write"
             ]
           }
@@ -9718,12 +9620,7 @@
         "summary": "List environment versions",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:read"
             ]
           }
@@ -9792,12 +9689,7 @@
         "summary": "Read an environment version",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "environments:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "environments:read"
             ]
           }
@@ -9886,12 +9778,7 @@
         "summary": "List model vendors",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "providers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "providers:read"
             ]
           }
@@ -9939,12 +9826,7 @@
         "summary": "List all catalog models",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "providers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "providers:read"
             ]
           }
@@ -9993,12 +9875,7 @@
         "description": "Triggers a discovery refresh of the global model catalog (also runs hourly on a schedule).",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "providers:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "providers:write"
             ]
           }
@@ -10046,12 +9923,7 @@
         "summary": "Read a model vendor",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "providers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "providers:read"
             ]
           }
@@ -10120,12 +9992,7 @@
         "summary": "List a vendor's models",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "providers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "providers:read"
             ]
           }
@@ -10194,12 +10061,7 @@
         "summary": "Register a self-hosted runner",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:write"
             ]
           }
@@ -10275,12 +10137,7 @@
         "summary": "List self-hosted runners",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:read"
             ]
           }
@@ -10432,12 +10289,7 @@
         "summary": "Read a self-hosted runner",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:read"
             ]
           }
@@ -10504,12 +10356,7 @@
         "summary": "Update or archive a self-hosted runner",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:write"
             ]
           }
@@ -10608,12 +10455,7 @@
         "summary": "Read the current runner heartbeat state",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:read"
             ]
           }
@@ -10680,12 +10522,7 @@
         "summary": "Replace the current runner heartbeat state",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:write"
             ]
           }
@@ -10784,12 +10621,7 @@
         "summary": "Open the runner relay WebSocket channel",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "runners:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "runners:write"
             ]
           }
@@ -10871,12 +10703,7 @@
         "summary": "List queued self-hosted work items",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "work-items:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "work-items:read"
             ]
           }
@@ -11022,12 +10849,7 @@
         "summary": "Read a queued self-hosted work item",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "work-items:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "work-items:read"
             ]
           }
@@ -11106,12 +10928,7 @@
         "summary": "Claim a specific available work item for a runner",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "leases:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "leases:write"
             ]
           }
@@ -11197,12 +11014,7 @@
         "summary": "List work leases",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "leases:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "leases:read"
             ]
           }
@@ -11308,12 +11120,7 @@
         "summary": "Read a work lease",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "leases:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "leases:read"
             ]
           }
@@ -11380,12 +11187,7 @@
         "summary": "Renew or finish a work lease",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "leases:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "leases:write"
             ]
           }
@@ -11484,12 +11286,7 @@
         "summary": "List budgets",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "budgets:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "budgets:read"
             ]
           }
@@ -11535,12 +11332,7 @@
         "summary": "Create a budget",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "budgets:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "budgets:write"
             ]
           }
@@ -11608,12 +11400,7 @@
         "summary": "Read a budget",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "budgets:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "budgets:read"
             ]
           }
@@ -11680,12 +11467,7 @@
         "summary": "Update a budget",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "budgets:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "budgets:write"
             ]
           }
@@ -11772,12 +11554,7 @@
         "summary": "Delete a budget",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "budgets:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "budgets:write"
             ]
           }
@@ -11839,12 +11616,7 @@
         "summary": "List connectors",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "connectors:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "connectors:read"
             ]
           }
@@ -11976,12 +11748,7 @@
         "summary": "Read connector",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "connectors:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "connectors:read"
             ]
           }
@@ -12051,12 +11818,7 @@
         "description": "Lists usage records for the project. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "usage-records:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "usage-records:read"
             ]
           }
@@ -12197,12 +11959,7 @@
         "summary": "Read a usage record",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "usage-records:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "usage-records:read"
             ]
           }
@@ -12272,12 +12029,7 @@
         "description": "Read-only aggregation of usage records grouped by provider, model, or agent.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "usage-summary:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "usage-summary:read"
             ]
           }
@@ -12372,12 +12124,7 @@
         "description": "Lists audit records for the organization. Send Accept: text/csv to export the filtered records as CSV.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "audit-records:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "audit-records:read"
             ]
           }
@@ -12530,12 +12277,7 @@
         "summary": "Read an audit record",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "audit-records:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "audit-records:read"
             ]
           }
@@ -12604,12 +12346,7 @@
         "summary": "Create a trigger",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:write"
             ]
           }
@@ -12695,12 +12432,7 @@
         "summary": "List triggers",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:read"
             ]
           }
@@ -12843,12 +12575,7 @@
         "summary": "Read a trigger",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:read"
             ]
           }
@@ -12916,12 +12643,7 @@
         "description": "Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:write"
             ]
           }
@@ -13019,12 +12741,7 @@
         "description": "Permanently deletes the trigger and its run history.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:write"
             ]
           }
@@ -13086,12 +12803,7 @@
         "summary": "List trigger runs",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:read"
             ]
           }
@@ -13238,12 +12950,7 @@
         "description": "Creates a run for an HTTP trigger using the JSON body, query string, and allowed request headers as prompt template variables.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:write"
             ]
           }
@@ -13342,12 +13049,7 @@
         "summary": "Read a trigger run",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "triggers:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "triggers:read"
             ]
           }
@@ -13425,12 +13127,7 @@
         "summary": "Create a session",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -13516,12 +13213,7 @@
         "summary": "List sessions",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -13676,12 +13368,7 @@
         "summary": "Read a session",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -13749,12 +13436,7 @@
         "description": "Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and lifecycle archiving (archived: true|false).",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -13844,76 +13526,6 @@
         }
       }
     },
-    "/api/v1/sessions/{sessionId}/socket-tickets": {
-      "post": {
-        "operationId": "createSessionSocketTicket",
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "Create a single-use browser session socket ticket",
-        "description": "Exchanges an authenticated Realmroot Console request for an opaque ticket valid for one WebSocket upgrade.",
-        "security": [
-          {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "session_abc123"
-            },
-            "required": true,
-            "name": "sessionId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Socket ticket created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionSocketTicket"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Console client required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Session not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/sessions/{sessionId}/socket": {
       "get": {
         "operationId": "connectSessionSocket",
@@ -13926,7 +13538,7 @@
             "sessionSocketTicket": []
           },
           {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -13998,12 +13610,7 @@
         "summary": "List session messages",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -14101,12 +13708,7 @@
         "summary": "Send a prompt message to a session",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -14215,12 +13817,7 @@
         "summary": "Read a session message delivery state",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -14299,12 +13896,7 @@
         "description": "Content negotiation: application/json returns a paginated list, text/csv exports the filtered events, text/event-stream streams new events as SSE.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -14470,12 +14062,7 @@
         "description": "Event ingest for runners and clients. Runner OIDC tokens are accepted only while the runner holds an active lease attached to the session.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -14564,12 +14151,7 @@
         "summary": "List tool approvals for a session",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -14638,12 +14220,7 @@
         "summary": "Read a tool approval",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:read"
             ]
           }
@@ -14721,12 +14298,7 @@
         "description": "Records the human decision for a paused tool call. Approval resumes the runtime and executes the tool (or records the provided custom result); denial resumes the runtime with the denial.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "sessions:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "sessions:write"
             ]
           }
@@ -14825,12 +14397,7 @@
         "summary": "List memory stores",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:read"
             ]
           }
@@ -14956,12 +14523,7 @@
         "summary": "Create a memory store",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:write"
             ]
           }
@@ -15029,12 +14591,7 @@
         "summary": "Read a memory store",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:read"
             ]
           }
@@ -15101,12 +14658,7 @@
         "summary": "Update or archive a memory store",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:write"
             ]
           }
@@ -15195,12 +14747,7 @@
         "summary": "List memories in a memory store",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:read"
             ]
           }
@@ -15299,12 +14846,7 @@
         "summary": "Create a memory in a memory store",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:write"
             ]
           }
@@ -15403,12 +14945,7 @@
         "summary": "Update a memory",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:write"
             ]
           }
@@ -15514,12 +15051,7 @@
         "summary": "Delete a memory",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "memory-stores:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "memory-stores:write"
             ]
           }
@@ -15590,12 +15122,7 @@
         "summary": "List vaults",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }
@@ -15721,12 +15248,7 @@
         "summary": "Create a vault",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:write"
             ]
           }
@@ -15794,12 +15316,7 @@
         "summary": "Read a vault",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }
@@ -15867,12 +15384,7 @@
         "description": "Partial update. Archive with `archived: true`; restore with `archived: false`.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:write"
             ]
           }
@@ -15971,12 +15483,7 @@
         "summary": "List vault credential metadata",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }
@@ -16119,12 +15626,7 @@
         "summary": "Create vault credential metadata",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:write"
             ]
           }
@@ -16223,12 +15725,7 @@
         "summary": "Read vault credential metadata",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }
@@ -16305,12 +15802,7 @@
         "description": "Revoke with `state: 'revoked'` and an optional `revokeReason`.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:write"
             ]
           }
@@ -16407,12 +15899,7 @@
         "description": "Updates credential secret material. AMA records version snapshots internally for auditability.",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:write"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:write"
             ]
           }
@@ -16520,12 +16007,7 @@
         "summary": "List vault credential versions",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }
@@ -16669,12 +16151,7 @@
         "summary": "Read a vault credential version",
         "security": [
           {
-            "realmrootConsoleBearer": [
-              "vaults:read"
-            ]
-          },
-          {
-            "realmrootDpop": [
+            "oidcAccessToken": [
               "vaults:read"
             ]
           }

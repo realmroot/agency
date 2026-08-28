@@ -200,9 +200,17 @@ async function openRunnerChannel(authorization: string, runnerId: string) {
 // per-session Session DO; RunnerPool writes relayed runner events into it.
 async function openBrowserSocket(authorization: string, sessionId: string) {
   const path = `/api/v1/sessions/${sessionId}/socket`
-  const ticketResponse = await jsonFetch(`/api/v1/sessions/${sessionId}/socket-tickets`, authorization, {
+  const sessionResponse = await SELF.fetch('https://example.com/api/v1/e2e/auth/session', {
     method: 'POST',
-    headers: { Origin: 'https://example.com' },
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ accessToken: authorization.replace(/^Bearer /, '') }),
+  })
+  if (sessionResponse.status !== 204) throw new Error(`Browser session creation failed: ${sessionResponse.status}`)
+  const sessionCookie = sessionResponse.headers.get('set-cookie')?.split(';')[0]
+  if (!sessionCookie) throw new Error('Browser session creation omitted its cookie')
+  const ticketResponse = await SELF.fetch(`https://example.com/api/v1/sessions/${sessionId}/socket-tickets`, {
+    method: 'POST',
+    headers: { cookie: sessionCookie, Origin: 'https://example.com' },
   })
   if (ticketResponse.status !== 201) throw new Error(`Browser ticket issuance failed: ${ticketResponse.status}`)
   const { ticket } = (await ticketResponse.json()) as { ticket: string }

@@ -12,6 +12,7 @@ export type ErrorType =
   | 'provider_error'
   | 'mcp_error'
   | 'oidc_error'
+  | 'rate_limited'
   | 'internal_error'
 
 export function errorResponse<S extends ContentfulStatusCode>(

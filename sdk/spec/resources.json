@@ -143,10 +143,5 @@
       ]
     }
   },
-  "facadeExclusions": [
-    {
-      "operationId": "createSessionSocketTicket",
-      "reason": "Browser Console-only transport helper; the stable Agent facade uses DPoP, and the runner facade does not expose browser session sockets."
-    }
-  ]
+  "facadeExclusions": []
 }

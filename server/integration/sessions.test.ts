@@ -1,6 +1,8 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { encryptWebSessionValue, hashOpaqueValue, randomOpaqueValue } from '../auth/web-session-crypto'
+import type { Env } from '../env'
 import { runtimeErrorMessage } from '../http/sessions'
 import {
   asRunnerAuthorization,
@@ -27,10 +29,32 @@ async function jsonFetch(path: string, authorization: string, init: RequestInit 
   })
 }
 
-async function issueBrowserSocketTicket(sessionId: string, authorization: string) {
-  const response = await jsonFetch(`/api/v1/sessions/${sessionId}/socket-tickets`, authorization, {
+async function createBrowserSessionCookie(authorization: string) {
+  const accessToken = authorization.replace(/^Bearer /, '')
+  const subject = `user_e2e_${accessToken.replace(/^e2e:/, '').split(';')[0]!}`
+  const sessionId = randomOpaqueValue()
+  const idHash = await hashOpaqueValue(sessionId)
+  const bindings = env as unknown as Env
+  const now = new Date()
+  await bindings.DB.prepare(
+    `INSERT INTO web_auth_sessions (id_hash, subject, encrypted_access_token, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      idHash,
+      subject,
+      await encryptWebSessionValue(bindings, accessToken, `web-session:${idHash}`),
+      new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+      now.toISOString(),
+    )
+    .run()
+  return `__Host-ama_session=${sessionId}`
+}
+
+async function issueBrowserSocketTicket(sessionId: string, cookie: string) {
+  const response = await SELF.fetch(`https://example.com/api/v1/sessions/${sessionId}/socket-tickets`, {
     method: 'POST',
-    headers: { Origin: 'https://example.com' },
+    headers: { cookie, Origin: 'https://example.com' },
   })
   expect(response.status).toBe(201)
   const body = (await response.json()) as { ticket: string; expiresAt: string }
@@ -1595,7 +1619,8 @@ describe('[CF] /api/v1/sessions', () => {
     })
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
-    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const browserCookie = await createBrowserSessionCookie(authorization)
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(ticket),
     })
@@ -1680,7 +1705,8 @@ describe('[CF] /api/v1/sessions', () => {
     const created = JSON.parse(createdText) as { metadata: { uid: string } }
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
-    const ticket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const browserCookie = await createBrowserSessionCookie(authorization)
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(ticket),
     })
@@ -1694,7 +1720,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(consoleBypass.status).toBe(403)
 
-    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, authorization)
+    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
     const wrongOrigin = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(wrongOriginTicket, 'https://evil.example.com'),
     })
@@ -1710,15 +1736,48 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(replayAfterAccepted.status).toBe(401)
 
-    const missingOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
-      method: 'POST',
-    })
+    const missingOrigin = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: { cookie: browserCookie },
+      },
+    )
     expect(missingOrigin.status).toBe(403)
-    const crossOrigin = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+    const crossOrigin = await SELF.fetch(`https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`, {
       method: 'POST',
-      headers: { Origin: 'https://evil.example.com' },
+      headers: { cookie: browserCookie, Origin: 'https://evil.example.com' },
     })
     expect(crossOrigin.status).toBe(403)
+
+    const bearerTicket = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, authorization, {
+      method: 'POST',
+      headers: { Origin: 'https://example.com' },
+    })
+    expect(bearerTicket.status).toBe(403)
+
+    const bearerOverridesCookie = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: { cookie: browserCookie, authorization, Origin: 'https://example.com' },
+      },
+    )
+    expect(bearerOverridesCookie.status).toBe(403)
+
+    const dpopAuthorization = authorization.replace(/^Bearer /, 'DPoP ')
+    const dpopOverridesCookie = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: browserCookie,
+          Origin: 'https://example.com',
+          ...dpopHeaders(dpopAuthorization, 'POST', `/api/v1/sessions/${created.metadata.uid}/socket-tickets`),
+        },
+      },
+    )
+    expect(dpopOverridesCookie.status).toBe(401)
 
     const malformed = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: {
@@ -1734,7 +1793,7 @@ describe('[CF] /api/v1/sessions', () => {
       method: 'POST',
       headers: { Origin: 'https://example.com' },
     })
-    expect(otherTicket.status).toBe(404)
+    expect(otherTicket.status).toBe(403)
 
     const runnerTicket = await jsonFetch(
       `/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
@@ -2097,8 +2156,7 @@ describe('[CF] /api/v1/sessions', () => {
       ...defaultClaims(),
       sub: 'user_456',
       email: 'other@example.com',
-      org_id: 'org_flare_456',
-      org_name: 'Other Org',
+      organizationId: 'org_flare_456',
     })
     const crossProjectReads = await Promise.all([
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie),

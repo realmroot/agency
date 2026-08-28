@@ -1,6 +1,16 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { requireOidcConfig } from '../auth/oidc'
 import { requireAuth } from '../auth/session'
+import {
+  completeAuthorizationResponse,
+  createAuthorizationAttempt,
+  deleteWebSession,
+  requireWebOidcConfig,
+  WebAuthorizationError,
+  WebAuthorizationRateLimitError,
+  WebSessionCsrfError,
+} from '../auth/web-session'
+import { errorResponse } from '../errors'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
 // Mounted at /api/v1/auth (docs/api-v1-design.md §2 Auth). The auth resource's
@@ -91,16 +101,61 @@ const readCurrentAuthSessionRoute = createRoute({
   },
 })
 
+const AuthorizationAttemptInputSchema = z.object({ returnTo: z.string().max(2048).default('/') })
+
 // Registration order is load-bearing: static segments (/config, /sessions)
 // register before parameter segments and the auth wall guards
 // /sessions/current. The assembler in app.ts calls this at the auth resource's
 // original mount position.
 export function registerAuthRoutes(routes: AuthRoutes) {
+  // Browser Cookie Session endpoints are an internal site protocol. They stay
+  // on the runtime router but are intentionally absent from OpenAPI and SDKs.
+  routes.post('/authorization-attempts', async (c) => {
+    c.header('Cache-Control', 'no-store')
+    const parsed = AuthorizationAttemptInputSchema.safeParse(await c.req.json().catch(() => undefined))
+    if (!parsed.success) return errorResponse(c, 400, 'validation_error', 'Invalid authorization attempt')
+    try {
+      return c.json({ authorizationUrl: await createAuthorizationAttempt(c, parsed.data.returnTo) }, 201)
+    } catch (error) {
+      if (error instanceof WebSessionCsrfError) return errorResponse(c, 403, 'forbidden', error.message)
+      if (error instanceof WebAuthorizationRateLimitError) {
+        c.header('Retry-After', '60')
+        return errorResponse(c, 429, 'rate_limited', error.message)
+      }
+      throw error
+    }
+  })
+
+  routes.get('/authorization-responses', async (c) => {
+    c.header('Cache-Control', 'no-store')
+    try {
+      const returnTo = await completeAuthorizationResponse(c)
+      return c.redirect(new URL(returnTo, c.req.url).toString(), 302)
+    } catch (error) {
+      if (error instanceof WebAuthorizationError) {
+        return errorResponse(c, 400, 'oidc_error', error.message)
+      }
+      throw error
+    }
+  })
+
+  routes.delete('/sessions/current', async (c) => {
+    c.header('Cache-Control', 'no-store')
+    try {
+      await deleteWebSession(c)
+      return c.body(null, 204)
+    } catch (error) {
+      if (error instanceof WebSessionCsrfError) return errorResponse(c, 403, 'forbidden', error.message)
+      throw error
+    }
+  })
+
   return routes
     .openapi(readAuthConfigRoute, (c) => {
       let methods: Array<{ type: 'oidc'; issuer: string; clientId: string }> = []
       try {
-        const { issuer, clientId } = requireOidcConfig(c.env)
+        const { clientId } = requireWebOidcConfig(c.env)
+        const { issuer } = requireOidcConfig(c.env)
         methods = [{ type: 'oidc' as const, issuer, clientId }]
       } catch {
         methods = []
@@ -108,6 +163,7 @@ export function registerAuthRoutes(routes: AuthRoutes) {
       return c.json({ methods }, 200)
     })
     .openapi(readCurrentAuthSessionRoute, async (c) => {
+      c.header('Cache-Control', 'no-store')
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
         return auth

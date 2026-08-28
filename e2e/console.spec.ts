@@ -1,124 +1,31 @@
 import type { Page } from '@playwright/test'
 import { expect, gotoAuthed, test } from './fixtures'
 
-test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: auth/e2e-sign-in]', async ({
+test('starts server-owned browser sign-in without exposing an OAuth token [spec: auth/e2e-sign-in]', async ({
   page,
 }) => {
-  let authorizationNonce = ''
-  const callbackAccessToken = [
-    Buffer.from(JSON.stringify({ alg: 'none', typ: 'at+jwt' })).toString('base64url'),
-    Buffer.from(JSON.stringify({ sub: 'realmroot-e2e-user', exp: Math.floor(Date.now() / 1000) + 3600 })).toString(
-      'base64url',
-    ),
-    'e2e-signature',
-  ].join('.')
-  await page.route('**/.well-known/openid-configuration*', (route) =>
-    route.fulfill({
+  const authorizationUrl = 'https://oidc.test/authorize?state=server-owned-attempt'
+  let attemptBody: unknown
+  await page.route('**/api/v1/auth/authorization-attempts', async (route) => {
+    attemptBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
       contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify({
-        issuer: 'https://oidc.test/api/auth',
-        authorization_endpoint: 'https://oidc.test/authorize',
-        token_endpoint: 'https://oidc.test/token',
-        jwks_uri: 'https://oidc.test/jwks',
-        end_session_endpoint: 'https://oidc.test/logout',
-        response_types_supported: ['code'],
-        subject_types_supported: ['public'],
-        id_token_signing_alg_values_supported: ['ES256'],
-        code_challenge_methods_supported: ['S256'],
-      }),
-    }),
-  )
-  await page.route('https://oidc.test/authorize*', (route) => {
-    const authorizationUrl = new URL(route.request().url())
-    authorizationNonce = authorizationUrl.searchParams.get('nonce') ?? ''
-    const callbackUrl = new URL(authorizationUrl.searchParams.get('redirect_uri')!)
-    callbackUrl.searchParams.set('code', 'realmroot-e2e-code')
-    callbackUrl.searchParams.set('state', authorizationUrl.searchParams.get('state')!)
-    return route.fulfill({ status: 302, headers: { location: callbackUrl.toString() } })
-  })
-  await page.route('https://oidc.test/token', (route) => {
-    if (route.request().method() === 'OPTIONS') {
-      return route.fulfill({
-        status: 204,
-        headers: {
-          'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'POST',
-          'access-control-allow-headers': 'content-type',
-        },
-      })
-    }
-    return route.fulfill({
-      contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify({
-        access_token: callbackAccessToken,
-        id_token: [
-          Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url'),
-          Buffer.from(
-            JSON.stringify({
-              iss: 'https://oidc.test/api/auth',
-              aud: 'ama-e2e',
-              sub: 'realmroot-e2e-user',
-              nonce: authorizationNonce,
-              iat: Math.floor(Date.now() / 1000),
-              exp: Math.floor(Date.now() / 1000) + 3600,
-            }),
-          ).toString('base64url'),
-          'e2e-signature',
-        ].join('.'),
-        token_type: 'Bearer',
-        expires_in: 3600,
-        scope: 'openid profile email offline_access',
-      }),
+      body: JSON.stringify({ authorizationUrl }),
     })
   })
+  await page.route('https://oidc.test/authorize*', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Realmroot authorization</h1>' }),
+  )
 
   await page.goto('/agents')
-  const amaResource = await page.evaluate(async () => {
-    const response = await fetch('/api/v1/configz')
-    const config = (await response.json()) as { auth: { oidc: { resource: string } } }
-    return config.auth.oidc.resource
-  })
-  const authorizationRequestPromise = page.waitForRequest('https://oidc.test/authorize*')
-  const tokenRequestPromise = page.waitForRequest(
-    (request) => request.method() === 'POST' && request.url() === 'https://oidc.test/token',
-  )
   await page.getByRole('button', { name: 'Continue with OIDC provider' }).click()
-  const authorizationUrl = new URL((await authorizationRequestPromise).url())
 
-  expect(authorizationUrl.searchParams.get('response_type')).toBe('code')
-  expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
-  expect(authorizationUrl.searchParams.get('code_challenge')).toBeTruthy()
-  expect(authorizationUrl.searchParams.has('dpop_jkt')).toBe(false)
-  expect(authorizationUrl.searchParams.get('resource')).toBe(amaResource)
-  expect(authorizationUrl.searchParams.get('state')).toBeTruthy()
-
-  const tokenRequest = await tokenRequestPromise
-  expect(tokenRequest.headers().dpop).toBeUndefined()
-  expect(tokenRequest.postData() ?? '').toContain('code=realmroot-e2e-code')
-  expect(tokenRequest.postData() ?? '').toMatch(/code_verifier=[^&]+/)
-  await expect(page).toHaveURL(/\/agents$/)
-  await expect
-    .poll(() =>
-      page.evaluate(() => {
-        let sessionUser: { access_token?: string; token_type?: string } | null = null
-        for (let index = 0; index < window.sessionStorage.length; index += 1) {
-          const key = window.sessionStorage.key(index)
-          if (!key?.startsWith('oidc.user:')) continue
-          const value = window.sessionStorage.getItem(key)
-          if (value) sessionUser = JSON.parse(value) as { access_token?: string; token_type?: string }
-        }
-        const localOidcKeys = Array.from({ length: window.localStorage.length }, (_, index) =>
-          window.localStorage.key(index),
-        ).filter((key): key is string => Boolean(key?.startsWith('oidc.user:')))
-        return { sessionUser, localOidcKeys }
-      }),
-    )
-    .toMatchObject({
-      sessionUser: { access_token: callbackAccessToken, token_type: 'Bearer' },
-      localOidcKeys: [],
-    })
+  await expect(page).toHaveURL(authorizationUrl)
+  expect(attemptBody).toEqual({ returnTo: '/agents' })
+  expect(
+    await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage) })),
+  ).toEqual({ local: [], session: [] })
 })
 
 // The browser dimension of the e2e crown: drives the real SPA + Worker + D1 + auth
@@ -126,22 +33,22 @@ test('completes Realmroot authorization code and PKCE without Agent DPoP [spec: 
 // CRUD that only writes D1) per the skill — a handful, not one-per-feature.
 test.describe('console (real browser)', () => {
   test('labels only the User Context sentinel as a personal workspace [spec: web-console/shell]', async ({ page }) => {
-    await gotoWithOidcProfile(page, {
+    await gotoWithBrowserSession(page, {
       sub: 'realmroot-user-context',
       email: 'user-context@example.com',
       name: 'User Context',
-      org_id: 'user:realmroot-user-context',
+      organization: { id: 'user:realmroot-user-context', name: 'Personal workspace' },
     })
 
     await expect(page.getByText('Personal workspace', { exact: true }).first()).toBeVisible()
   })
 
   test('labels an unnamed Organization Context with its id [spec: web-console/shell]', async ({ page }) => {
-    await gotoWithOidcProfile(page, {
+    await gotoWithBrowserSession(page, {
       sub: 'realmroot-organization-user',
       email: 'organization-context@example.com',
       name: 'Organization Context',
-      org_id: 'org_real_context_123',
+      organization: { id: 'org_real_context_123', name: 'Organization org_real_context_123' },
     })
 
     await expect(page.getByText('Organization org_real_context_123', { exact: true }).first()).toBeVisible()
@@ -158,7 +65,7 @@ test.describe('console (real browser)', () => {
     })
     await gotoAuthed(page, token, '/agents')
 
-    // The authenticated shell rendered (the e2e identity resolved client-side).
+    // The authenticated shell rendered through the server-owned browser session.
     await expect(page.getByText('Any Managed Agents').first()).toBeVisible()
 
     // Navigate to Environments through the primary nav — real client-side routing.
@@ -173,7 +80,7 @@ test.describe('console (real browser)', () => {
     expect(protectedRpcRequests.length).toBeGreaterThan(0)
     for (const request of protectedRpcRequests) {
       const headers = request.headers()
-      expect(headers.authorization).toBe(`Bearer ${token.accessToken}`)
+      expect(headers.authorization).toBeUndefined()
       expect(headers.dpop).toBeUndefined()
     }
     expect(
@@ -202,20 +109,20 @@ test.describe('console (real browser)', () => {
   })
 })
 
-async function gotoWithOidcProfile(page: Page, profile: { sub: string; email: string; name: string; org_id: string }) {
-  const configResponse = await page.request.get('/api/v1/configz')
-  expect(configResponse.status(), await configResponse.text()).toBe(200)
-  const config = (await configResponse.json()) as {
-    auth: { oidc: { issuer: string; browser: { clientId: string; scopes: string[] } } }
-  }
-  const oidc = config.auth.oidc
-  const now = Math.floor(Date.now() / 1000)
-  const accessToken = [
-    Buffer.from(JSON.stringify({ alg: 'none', typ: 'at+jwt' })).toString('base64url'),
-    Buffer.from(JSON.stringify({ ...profile, iat: now, exp: now + 3600 })).toString('base64url'),
-    'e2e-signature',
-  ].join('.')
-
+async function gotoWithBrowserSession(
+  page: Page,
+  profile: { sub: string; email: string; name: string; organization: { id: string; name: string } },
+) {
+  await page.route('**/api/v1/auth/sessions/current', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: { id: profile.sub, email: profile.email, name: profile.name },
+        organization: profile.organization,
+        project: { id: 'project_oidc_context', name: 'OIDC Context Project' },
+      }),
+    }),
+  )
   await page.route('**/api/v1/projects*', (route) =>
     route.fulfill({
       contentType: 'application/json',
@@ -231,28 +138,6 @@ async function gotoWithOidcProfile(page: Page, profile: { sub: string; email: st
         pagination: { limit: 50, hasMore: false, nextCursor: null },
       }),
     }),
-  )
-  await page.addInitScript(
-    ({ issuer, clientId, scopes, userProfile, token, expiresAt }) => {
-      window.sessionStorage.setItem(
-        `oidc.user:${issuer}:${clientId}`,
-        JSON.stringify({
-          access_token: token,
-          token_type: 'Bearer',
-          scope: scopes.join(' '),
-          profile: userProfile,
-          expires_at: expiresAt,
-        }),
-      )
-    },
-    {
-      issuer: oidc.issuer,
-      clientId: oidc.browser.clientId,
-      scopes: oidc.browser.scopes,
-      userProfile: profile,
-      token: accessToken,
-      expiresAt: now + 3600,
-    },
   )
   await page.goto('/agents')
 }

@@ -18,8 +18,7 @@ async function signInUser(suffix: string) {
     ...defaultClaims(),
     sub: `user_connectors_${suffix}`,
     email: `connectors-${suffix}@example.com`,
-    org_id: `org_flare_connectors_${suffix}`,
-    org_name: `Connectors ${suffix} Org`,
+    organizationId: `org_flare_connectors_${suffix}`,
   })
 }
 

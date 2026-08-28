@@ -56,7 +56,7 @@ Standard resource responses for agents, environments, vaults, memory stores, tri
 Generated SDKs are generated from or mechanically aligned with `/api/openapi.json`. They should keep control-plane calls thin:
 
 ```ts
-const client = createAmaClient({ baseUrl, projectId, authorize: realmrootDpopAuthorizer })
+const client = createAmaClient({ baseUrl, projectId, authorize: oidcAccessTokenAuthorizer })
 
 const environment = await client.environments.create({
   name: 'Node workspace',

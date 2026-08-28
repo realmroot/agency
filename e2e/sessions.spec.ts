@@ -3,7 +3,7 @@ import { expect, gotoAuthed, test } from './fixtures'
 // Real browser happy-path: a seeded session renders in the console list and its
 // routed detail page opens (session create drives the runtime + auto-selects the
 // active agent/env — that flow is covered by web component tests + integration).
-test('exchanges a Bearer credential for an opaque session socket ticket [spec: web-console/routed-pages] [spec: sessions/connection]', async ({
+test('exchanges an HttpOnly browser session for an opaque session socket ticket [spec: web-console/routed-pages] [spec: sessions/connection]', async ({
   page,
   token,
   api,
@@ -80,7 +80,7 @@ test('exchanges a Bearer credential for an opaque session socket ticket [spec: w
   await page.goto(`/sessions/${session.metadata.uid}`)
   await expect(page).toHaveURL(new RegExp(`/sessions/${session.metadata.uid}$`))
   const socketTicketRequest = await socketTicketRequestPromise
-  expect(socketTicketRequest.headers().authorization).toBe(`Bearer ${token.accessToken}`)
+  expect(socketTicketRequest.headers().authorization).toBeUndefined()
   expect(socketTicketRequest.headers().dpop).toBeUndefined()
   await expect
     .poll(() =>

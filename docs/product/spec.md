@@ -145,7 +145,7 @@ inspect persisted session events, and stop the session.
 
 Release verification must include:
 
-- Realmroot PKCE login through `oidc-client-ts`, with Bearer tokens kept in tab-scoped session storage.
+- Server-owned Realmroot authorization-code login with PKCE, an encrypted D1 token, and an opaque HttpOnly browser session cookie.
 - Realmroot access-token validation at the Worker boundary for every client; Agent credentials additionally require DPoP validation including `cnf.jkt`, `ath`, method, URI, freshness, and replay checks.
 - Agent, environment, and session CRUD covered by Cloudflare integration tests.
 - OpenAPI generated from Hono route schemas for auth, agents, environments, and
@@ -156,4 +156,5 @@ Release verification must include:
   and `pnpm run build`.
 
 Secrets must remain in Cloudflare Secrets or external vaults. D1 may store
-metadata, policy, snapshots, and secret references, but not raw secret values.
+metadata, policy, snapshots, secret references, and authenticated ciphertext,
+but not raw secret values.

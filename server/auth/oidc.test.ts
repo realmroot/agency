@@ -341,6 +341,41 @@ describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () 
     expect(requestedPaths(fetchMock)).not.toContain('/api/auth/oauth2/userinfo')
   })
 
+  it('normalizes only the canonical Realmroot organization claim', async () => {
+    const issuer = 'https://id-canonical-org.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'ama',
+        'urn:realmroot:params:oauth:org': 'org_canonical',
+      },
+    })
+    stubJwks(jwks)
+
+    const claims = await getAccessTokenClaims(envFor(issuer), token)
+
+    expect(claims.organizationId).toBe('org_canonical')
+    expect(organizationIdForClaims(claims)).toBe('org_canonical')
+  })
+
+  it('does not treat legacy organization aliases as organization context', async () => {
+    const issuer = 'https://id-legacy-org.test/api/auth'
+    const { token, jwks } = await signedToken({
+      issuer,
+      claims: {
+        client_id: 'ama',
+        org_id: 'org_legacy',
+        organization_id: 'org_legacy_fallback',
+      },
+    })
+    stubJwks(jwks)
+
+    const claims = await getAccessTokenClaims(envFor(issuer), token)
+
+    expect(claims).not.toHaveProperty('organizationId')
+    expect(organizationIdForClaims(claims)).toBe('user:user_real')
+  })
+
   it('binds a runner token from signed JWT client_id without calling userinfo or introspection', async () => {
     const issuer = 'https://id-runner.test/api/auth'
     const { token, jwks } = await signedToken({

@@ -705,74 +705,33 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     resolveUser(null)
   })
 
-  it('uses org_id from profile as organization id when present', async () => {
+  it('uses the explicit current-user organization', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'user_1', email: 'u@example.com', name: 'Alice', picture: null, org_id: 'org_explicit' },
-    } as never)
-    server.use(projectsHandler([buildProject()]))
-    renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
-  })
-
-  it('falls back to organization_id when org_id is absent', async () => {
-    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'user_1', email: 'u@example.com', name: 'Alice', picture: null, organization_id: 'org_fb' },
-    } as never)
-    server.use(projectsHandler([buildProject()]))
-    renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
-  })
-
-  it('falls back to user:sub when neither org_id nor organization_id present', async () => {
-    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'user_1', email: 'u@example.com', name: 'Alice', picture: null },
-    } as never)
-    server.use(projectsHandler([buildProject()]))
-    renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
-  })
-
-  it('uses org_name from profile as organization name when present', async () => {
-    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'u1', email: 'u@x.com', name: 'A', picture: null, org_name: 'My Org' },
-    } as never)
+      profile: { sub: 'u1', email: 'u@x.com', name: 'A' },
+      organization: { id: 'org_explicit', name: 'My Org' },
+    })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
     expect(screen.getAllByText('My Org').length).toBeGreaterThan(0)
   })
 
-  it('falls back to organization_name when org_name is absent', async () => {
-    vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'u1', email: 'u@x.com', name: 'A', picture: null, organization_name: 'Fallback Org' },
-    } as never)
-    server.use(projectsHandler([buildProject()]))
-    renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
-    expect(screen.getAllByText('Fallback Org').length).toBeGreaterThan(0)
-  })
-
   it('shows Personal workspace only for the user Context sentinel', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'u1', email: 'u@x.com', name: null, picture: null, org_id: 'user:u1' },
-    } as never)
+      profile: { sub: 'u1', email: 'u@x.com', name: null },
+      organization: { id: 'user:u1', name: 'Personal workspace' },
+    })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
     expect(screen.getAllByText('Personal workspace').length).toBeGreaterThan(0)
   })
 
-  it('labels an unnamed Organization claim with its id instead of Personal workspace', async () => {
+  it('shows the explicit Organization label instead of Personal workspace', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
-      profile: { sub: 'u1', email: 'u@x.com', name: null, picture: null, org_id: 'org-123' },
-    } as never)
+      profile: { sub: 'u1', email: 'u@x.com', name: null },
+      organization: { id: 'org-123', name: 'Organization org-123' },
+    })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Organization org-123').length).toBeGreaterThan(0))
@@ -781,9 +740,9 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
 
   it('uses picture from profile as avatarUrl when present', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
       profile: { sub: 'u1', email: 'u@x.com', name: 'A', picture: 'https://img.example.com/pic.jpg' },
-    } as never)
+      organization: { id: 'org-123', name: 'Organization org-123' },
+    })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
@@ -801,8 +760,8 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
 
   it('falls back to empty string email when profile.email is not a string', async () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockResolvedValue({
-      expired: false,
       profile: { sub: 'u1', email: 42, name: 'User', picture: null },
+      organization: { id: 'org-123', name: 'Organization org-123' },
     } as never)
     server.use(projectsHandler([buildProject()]))
     renderLayout()
