@@ -66,14 +66,15 @@ const SessionSubagentSchema = z
   .strict()
   .openapi('SessionSubagent')
 
-const SessionRealmrootBindingSchema = z
+const SessionRealmrootIdentitySchema = z
   .object({
-    agentId: z.string(),
-    origin: z.string().url(),
-    credentialRef: z.string(),
+    issuer: z.string().url(),
+    subject: z.string(),
+    username: z.string(),
+    runtime: z.literal('ama'),
   })
   .strict()
-  .openapi('SessionRealmrootBinding')
+  .openapi('SessionRealmrootIdentity')
 
 const AgentVersionSnapshotSchema = z
   .object({
@@ -81,6 +82,7 @@ const AgentVersionSnapshotSchema = z
     agentId: z.string(),
     projectId: z.string(),
     version: z.number().int(),
+    runtime: RuntimeSchema,
     systemPrompt: z.string(),
     provider: z.string().openapi({ example: 'workers-ai' }),
     model: z.string().nullable(),
@@ -88,9 +90,7 @@ const AgentVersionSnapshotSchema = z
     subagents: z.array(SessionSubagentSchema),
     allowedTools: z.array(z.string()),
     mcpConnectors: z.array(z.string()),
-    // Historical snapshots predate Realmroot bindings, so absence remains a
-    // valid persisted representation while newly created snapshots write null.
-    realmroot: SessionRealmrootBindingSchema.nullable().optional(),
+    identity: SessionRealmrootIdentitySchema.nullable(),
     createdAt: z.string().datetime(),
   })
   .openapi('SessionAgentSnapshot')
@@ -541,10 +541,18 @@ const SESSION_SOCKET_MESSAGE_SCHEMAS = {
   SessionSocketClientMessage: SessionSocketClientMessageSchema,
 } as const
 
+const CreateSessionExecutionSpecSchema = z
+  .object({
+    ...ExecutionSpecInputSchema.shape,
+    runtime: RuntimeSchema.optional(),
+  })
+  .strict()
+  .openapi('CreateSessionExecutionSpec')
+
 const CreateSessionSchema = z
   .object({
     metadata: SessionCreateMetadataSchema.optional(),
-    spec: ExecutionSpecInputSchema,
+    spec: CreateSessionExecutionSpecSchema,
     prompt: z
       .string()
       .trim()
@@ -1283,10 +1291,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      // Create is a single forward to the runtime boundary (snapshot,
-      // provider/policy/runtime checks, session-row build, sandbox boot or
-      // self-hosted work-item enqueue all live behind the runtime usecase), so
-      // the route calls the runtime usecase with deps directly.
       const metadata = body.metadata ?? {}
       const spec = body.spec
       const outcome = await createRuntimeSession(deps, auth, {
@@ -1295,7 +1299,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         options: {
           ...(metadata.name !== undefined ? { name: metadata.name } : {}),
           metadata: { labels: metadata.labels ?? {}, annotations: metadata.annotations ?? {} },
-          runtime: spec.runtime,
+          ...(spec.runtime !== undefined ? { runtime: spec.runtime } : {}),
           runtimeConfig: {},
           ...(spec.env !== undefined ? { env: spec.env } : {}),
           ...(spec.envFrom !== undefined ? { envFrom: spec.envFrom } : {}),

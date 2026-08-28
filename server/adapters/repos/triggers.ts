@@ -252,7 +252,14 @@ export function createTriggerRepo(db: Db): TriggerRepo {
       const agent = await db
         .select({ archivedAt: agents.archivedAt })
         .from(agents)
-        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+        .where(
+          and(
+            eq(agents.id, agentId),
+            eq(agents.projectId, projectId),
+            isNotNull(agents.currentVersionId),
+            isNotNull(agents.identityCredentialRef),
+          ),
+        )
         .get()
       if (!agent) {
         return { status: 404, message: 'Agent not found' }

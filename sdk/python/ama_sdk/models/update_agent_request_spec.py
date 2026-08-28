@@ -8,12 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.update_agent_request_spec_runtime import UpdateAgentRequestSpecRuntime
 from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
   from ..models.agent_subagent_input import AgentSubagentInput
-  from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
 
 
 
@@ -27,6 +27,7 @@ T = TypeVar("T", bound="UpdateAgentRequestSpec")
 class UpdateAgentRequestSpec:
     """ 
         Attributes:
+            runtime (UpdateAgentRequestSpecRuntime | Unset):
             system_prompt (str | Unset):  Example: Answer with citations..
             provider (None | str | Unset):  Example: workers-ai.
             model (None | str | Unset):  Example: @cf/moonshotai/kimi-k2.6.
@@ -36,9 +37,9 @@ class UpdateAgentRequestSpec:
                 'allowedTools': ['read', 'grep']}].
             allowed_tools (list[str] | Unset):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str] | Unset):  Example: ['github'].
-            realmroot (None | RealmrootAgentBindingType0 | Unset):
      """
 
+    runtime: UpdateAgentRequestSpecRuntime | Unset = UNSET
     system_prompt: str | Unset = UNSET
     provider: None | str | Unset = UNSET
     model: None | str | Unset = UNSET
@@ -46,7 +47,6 @@ class UpdateAgentRequestSpec:
     subagents: list[AgentSubagentInput] | Unset = UNSET
     allowed_tools: list[str] | Unset = UNSET
     mcp_connectors: list[str] | Unset = UNSET
-    realmroot: None | RealmrootAgentBindingType0 | Unset = UNSET
 
 
 
@@ -54,7 +54,11 @@ class UpdateAgentRequestSpec:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_subagent_input import AgentSubagentInput
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+        runtime: str | Unset = UNSET
+        if not isinstance(self.runtime, Unset):
+            runtime = self.runtime.value
+
+
         system_prompt = self.system_prompt
 
         provider: None | str | Unset
@@ -96,19 +100,13 @@ class UpdateAgentRequestSpec:
 
 
 
-        realmroot: dict[str, Any] | None | Unset
-        if isinstance(self.realmroot, Unset):
-            realmroot = UNSET
-        elif isinstance(self.realmroot, RealmrootAgentBindingType0):
-            realmroot = self.realmroot.to_dict()
-        else:
-            realmroot = self.realmroot
-
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
         })
+        if runtime is not UNSET:
+            field_dict["runtime"] = runtime
         if system_prompt is not UNSET:
             field_dict["systemPrompt"] = system_prompt
         if provider is not UNSET:
@@ -123,8 +121,6 @@ class UpdateAgentRequestSpec:
             field_dict["allowedTools"] = allowed_tools
         if mcp_connectors is not UNSET:
             field_dict["mcpConnectors"] = mcp_connectors
-        if realmroot is not UNSET:
-            field_dict["realmroot"] = realmroot
 
         return field_dict
 
@@ -133,8 +129,17 @@ class UpdateAgentRequestSpec:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_subagent_input import AgentSubagentInput
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
         d = dict(src_dict)
+        _runtime = d.pop("runtime", UNSET)
+        runtime: UpdateAgentRequestSpecRuntime | Unset
+        if isinstance(_runtime,  Unset):
+            runtime = UNSET
+        else:
+            runtime = UpdateAgentRequestSpecRuntime(_runtime)
+
+
+
+
         system_prompt = d.pop("systemPrompt", UNSET)
 
         def _parse_provider(data: object) -> None | str | Unset:
@@ -178,27 +183,8 @@ class UpdateAgentRequestSpec:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors", UNSET))
 
 
-        def _parse_realmroot(data: object) -> None | RealmrootAgentBindingType0 | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_realmroot_agent_binding_type_0 = RealmrootAgentBindingType0.from_dict(data)
-
-
-
-                return componentsschemas_realmroot_agent_binding_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | RealmrootAgentBindingType0 | Unset, data)
-
-        realmroot = _parse_realmroot(d.pop("realmroot", UNSET))
-
-
         update_agent_request_spec = cls(
+            runtime=runtime,
             system_prompt=system_prompt,
             provider=provider,
             model=model,
@@ -206,7 +192,6 @@ class UpdateAgentRequestSpec:
             subagents=subagents,
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
-            realmroot=realmroot,
         )
 
         return update_agent_request_spec

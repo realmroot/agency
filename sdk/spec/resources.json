@@ -20,6 +20,7 @@
           { "name": "create", "operationId": "createAgent" },
           { "name": "get", "operationId": "readAgent" },
           { "name": "update", "operationId": "updateAgent" },
+          { "name": "retire", "operationId": "retireAgent" },
           { "name": "listVersions", "operationId": "listAgentVersions" },
           { "name": "getVersion", "operationId": "readAgentVersion" }
         ] },

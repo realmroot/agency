@@ -629,6 +629,7 @@ describe('[CF] OpenAPI documentation', () => {
     // Anchor the public/protected split to known endpoints so the security model stays meaningful.
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
+    expect(doc.paths['/api/v1/agents/{agentId}'].delete.responses).toHaveProperty('409')
   })
 
   it('serves interactive API docs', async () => {

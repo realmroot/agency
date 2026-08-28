@@ -57,7 +57,8 @@ export function createApp() {
         return allowedOrigins.split(',').includes(origin) ? origin : null
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID'],
+      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID', 'Idempotency-Key'],
+      exposeHeaders: ['Request-Id', 'ETag', 'Location'],
     }),
   )
 

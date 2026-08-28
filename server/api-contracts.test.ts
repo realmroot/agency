@@ -48,9 +48,9 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
     const createFields = schemaFields(doc, 'CreateAgentRequest')
     const updateFields = schemaFields(doc, 'UpdateAgentRequest')
 
-    expect(createFields).toEqual(['metadata', 'spec'])
-    // Update is the create payload plus the lifecycle archive transition (§1.3).
-    expect(updateFields).toEqual(sortedUnique([...createFields, 'archived']))
+    expect(createFields).toEqual(['metadata', 'spec', 'username'])
+    // Username is immutable; update only changes the profile and availability.
+    expect(updateFields).toEqual(['archived', 'metadata', 'spec'])
   })
 
   it('keeps environment write fields aligned across handlers and OpenAPI schemas', async () => {

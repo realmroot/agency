@@ -633,6 +633,7 @@ export type AgentListResponse = {
 };
 export type Agent = {
     metadata: ResourceMetadata;
+    identity: RealmrootAgentIdentity;
     spec: AgentSpec;
     status: AgentStatus;
 };
@@ -652,7 +653,14 @@ export type ResourceMetadata = {
     updatedAt: string;
     archivedAt: string | null;
 };
+export type RealmrootAgentIdentity = {
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: 'ama';
+} | null;
 export type AgentSpec = {
+    runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
     systemPrompt: string;
     provider: string | null;
     model: string | null;
@@ -660,7 +668,6 @@ export type AgentSpec = {
     subagents: Array<AgentSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot: RealmrootAgentBinding;
 };
 export type AgentSubagent = {
     name: string;
@@ -671,20 +678,18 @@ export type AgentSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
-export type RealmrootAgentBinding = {
-    agentId: string;
-    origin: string;
-    credentialRef: string;
-} | null;
 export type AgentStatus = {
-    phase: ResourcePhase;
+    phase: 'active' | 'archived' | 'retiring' | 'retired';
+    ready: boolean;
+    retirementStage: 'stopping' | 'identity_retired' | 'retired';
     currentVersionId: string | null;
     version: number;
 };
-export type ResourcePhase = 'active' | 'archived';
 export type CreateAgentRequest = {
+    username: string;
     metadata: ResourceCreateMetadata;
     spec: {
+        runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
         systemPrompt: string;
         provider?: string | null;
         model?: string | null;
@@ -692,7 +697,6 @@ export type CreateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
     };
 };
 export type ResourceCreateMetadata = {
@@ -711,6 +715,7 @@ export type AgentSubagentInput = {
 export type UpdateAgentRequest = {
     metadata?: ResourceUpdateMetadata;
     spec?: {
+        runtime?: 'ama' | 'claude-code' | 'codex' | 'copilot';
         systemPrompt?: string;
         provider?: string | null;
         model?: string | null;
@@ -718,7 +723,6 @@ export type UpdateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
     };
     /**
      * Lifecycle transition: true archives the agent, false unarchives it.
@@ -785,6 +789,7 @@ export type EnvironmentStatus = {
     currentVersionId: string | null;
     version: number;
 };
+export type ResourcePhase = 'active' | 'archived';
 export type CreateEnvironmentRequest = {
     metadata: ResourceCreateMetadata & unknown;
     spec: {
@@ -1461,6 +1466,7 @@ export type SessionAgentSnapshot = {
     agentId: string;
     projectId: string;
     version: number;
+    runtime: RuntimeName;
     systemPrompt: string;
     provider: string;
     model: string | null;
@@ -1468,7 +1474,7 @@ export type SessionAgentSnapshot = {
     subagents: Array<SessionSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot?: SessionRealmrootBinding;
+    identity: SessionRealmrootIdentity;
     createdAt: string;
 };
 export type SessionSubagent = {
@@ -1480,10 +1486,11 @@ export type SessionSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
-export type SessionRealmrootBinding = {
-    agentId: string;
-    origin: string;
-    credentialRef: string;
+export type SessionRealmrootIdentity = {
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: 'ama';
 } | null;
 export type SessionEnvironmentSnapshot = {
     id: string;
@@ -1508,7 +1515,7 @@ export type SessionPlacement = {
 export type EnvironmentHostingMode = 'cloud' | 'self_hosted';
 export type CreateSessionRequest = {
     metadata?: SessionCreateMetadata;
-    spec: ExecutionSpecInput;
+    spec: CreateSessionExecutionSpec;
     prompt: string;
 };
 export type SessionCreateMetadata = {
@@ -1520,10 +1527,10 @@ export type SessionCreateMetadata = {
         [key: string]: string;
     };
 };
-export type ExecutionSpecInput = {
+export type CreateSessionExecutionSpec = {
     agentId: string;
     environmentId?: string | null;
-    runtime: RuntimeName;
+    runtime?: RuntimeName;
     env?: ExecutionEnv;
     envFrom?: Array<EnvFromEntry>;
     volumes?: Array<Volume>;
@@ -1874,7 +1881,7 @@ export type ReadCurrentAuthSessionErrors = {
 export type ReadCurrentAuthSessionError = ReadCurrentAuthSessionErrors[keyof ReadCurrentAuthSessionErrors];
 export type ReadCurrentAuthSessionResponses = {
     /**
-     * Current session context
+     * Current request context
      */
     200: AuthSession;
 };
@@ -1977,6 +1984,8 @@ export type ListAgentsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
+        identityIssuer?: string;
+        identitySubject?: string;
     };
     url: '/api/v1/agents';
 };
@@ -1990,7 +1999,7 @@ export type ListAgentsErrors = {
      */
     401: ErrorResponse;
     /**
-     * The Realmroot token lacks the scope required for this resource
+     * Realmroot management authority required
      */
     403: ErrorResponse;
 };
@@ -2004,6 +2013,9 @@ export type ListAgentsResponses = {
 export type ListAgentsResponse = ListAgentsResponses[keyof ListAgentsResponses];
 export type CreateAgentData = {
     body: CreateAgentRequest;
+    headers: {
+        'Idempotency-Key': string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/agents';
@@ -2018,18 +2030,64 @@ export type CreateAgentErrors = {
      */
     401: ErrorResponse;
     /**
-     * The Realmroot token lacks the scope required for this resource
+     * Realmroot management authority required
      */
     403: ErrorResponse;
+    /**
+     * Idempotency conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Realmroot provisioning failed
+     */
+    502: ErrorResponse;
 };
 export type CreateAgentError = CreateAgentErrors[keyof CreateAgentErrors];
 export type CreateAgentResponses = {
     /**
-     * Created agent
+     * Created Agent
      */
     201: Agent;
 };
 export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponses];
+export type RetireAgentData = {
+    body?: never;
+    path: {
+        agentId: string;
+    };
+    query?: never;
+    url: '/api/v1/agents/{agentId}';
+};
+export type RetireAgentErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * Realmroot management authority required
+     */
+    403: ErrorResponse;
+    /**
+     * Agent not found
+     */
+    404: ErrorResponse;
+    /**
+     * Legacy Agent identity requires backfill
+     */
+    409: ErrorResponse;
+    /**
+     * Retirement failed before the identity was retired
+     */
+    502: ErrorResponse;
+};
+export type RetireAgentError = RetireAgentErrors[keyof RetireAgentErrors];
+export type RetireAgentResponses = {
+    /**
+     * Agent retired
+     */
+    204: void;
+};
+export type RetireAgentResponse = RetireAgentResponses[keyof RetireAgentResponses];
 export type ReadAgentData = {
     body?: never;
     path: {

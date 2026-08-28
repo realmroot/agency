@@ -21,12 +21,14 @@ Feature: Sessions
   # ── API contract (api: assembled server, real D1, runtime, OpenAPI) ──
 
 	  @sessions/create @api
-	  Scenario: Create a session from an active agent and environment
-	    Given a project has an active agent and an active environment
-	    When the user creates a session with the agent and environment
+	  Scenario: Create a session from an active Agent
+	    Given a project has an execution-ready Agent and an active environment
+	    When a caller creates a Session with the AMA agentId and ordinary runtime inputs
 	    Then the response includes metadata uid, spec, status, connection, and runtime metadata
 	    And the session stores immutable agent and environment snapshots
 	    And internal placement and tenancy fields never leave the API
+	    And AMA resolves the Realmroot identity and encrypted Vault state internally from the Agent
+	    And callers may use the existing env and volume inputs without introducing scheduler-specific resources
 
 	  @sessions/create-explicit-inputs @api
 	  Scenario: Create a session with explicit runtime and secret references
@@ -45,11 +47,11 @@ Feature: Sessions
     And volume items project selected secret keys to the runtime-facing names
 
   @sessions/realmroot-identity @usecase
-  Scenario: Materialize a bound Realmroot Agent identity for one session
-    Given the selected agent version references an active Realmroot Agent credential
+  Scenario: Materialize an Agent-owned Realmroot identity for one session
+    Given the selected Agent owns an active Realmroot credential outside its Profile version
     When AMA launches the session in a cloud or self-hosted runtime
     Then the credential is mounted through the existing secret-volume boundary
-    And an ephemeral private Realmroot state directory is prepared for the runtime
+    And the Vault snapshot seeds a Session-isolated writable ephemeral volume deleted with the workspace
     And the Realmroot origin and stable AMA runtime identity are supplied without exposing the credential
     And a revoked or missing credential fails session creation before runtime allocation
 

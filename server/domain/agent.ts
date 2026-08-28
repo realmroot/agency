@@ -1,7 +1,9 @@
 import { AMA_SANDBOX_TOOL_NAMES, isAmaSandboxToolName } from '@shared/agent-tools'
-import type { ResourceMetadata, ResourcePhase } from './resource'
+import type { ResourceMetadata } from './resource'
+import type { RuntimeName } from './runtime-catalog'
 
 export interface AgentSpec {
+  runtime: RuntimeName
   systemPrompt: string
   provider: string | null
   model: string | null
@@ -9,31 +11,62 @@ export interface AgentSpec {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
-  realmroot: RealmrootAgentBinding | null
 }
 
-export interface RealmrootAgentBinding {
+export interface RealmrootAgentIdentity {
+  issuer: string
+  subject: string
+  username: string
+  runtime: 'ama'
+  credentialRef: string
+}
+
+export interface LegacyRealmrootAgentBinding {
   agentId: string
   origin: string
   credentialRef: string
 }
 
-export function validateRealmrootBinding(binding: RealmrootAgentBinding | null): FieldErrors | null {
-  if (!binding) return null
-  if (!binding.agentId.trim() || binding.agentId.length > 160) {
-    return { realmroot: 'Realmroot Agent id is required.' }
+export const REALMROOT_AGENT_USERNAME = /^[a-z0-9_.-]{3,64}$/
+
+export function validateAgentUsername(username: string): FieldErrors | null {
+  if (!REALMROOT_AGENT_USERNAME.test(username)) {
+    return { username: 'Username must contain 3 to 64 lowercase letters, numbers, underscores, periods, or hyphens.' }
   }
-  let origin: URL
+  return null
+}
+
+function loopbackHttpIssuer(url: URL) {
+  const hostname = url.hostname.toLowerCase()
+  return url.protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]')
+}
+
+export function validateRealmrootIdentity(
+  identity: RealmrootAgentIdentity,
+  options: { allowLoopbackRealmrootHttp?: boolean } = {},
+): FieldErrors | null {
+  if (!identity.subject.trim() || identity.subject.length > 200) {
+    return { identity: 'Realmroot Agent subject is required.' }
+  }
+  if (validateAgentUsername(identity.username)) {
+    return { identity: 'Realmroot Agent username is invalid.' }
+  }
+  let issuer: URL
   try {
-    origin = new URL(binding.origin)
+    issuer = new URL(identity.issuer)
   } catch {
-    return { realmroot: 'Realmroot origin must be an absolute HTTPS URL.' }
+    return { identity: 'Realmroot issuer must be an absolute HTTPS URL.' }
   }
-  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.search || origin.hash) {
-    return { realmroot: 'Realmroot origin must be an absolute HTTPS URL without credentials, query, or fragment.' }
+  const allowedProtocol =
+    issuer.protocol === 'https:' || (options.allowLoopbackRealmrootHttp === true && loopbackHttpIssuer(issuer))
+  if (!allowedProtocol || issuer.username || issuer.password || issuer.search || issuer.hash) {
+    return { identity: 'Realmroot issuer must be an absolute HTTPS URL without credentials, query, or fragment.' }
   }
-  if (!binding.credentialRef.startsWith('ama://vaults/')) {
-    return { realmroot: 'Realmroot credential must use an AMA Vault credential reference.' }
+  if (identity.runtime !== 'ama') {
+    return { identity: 'Realmroot identity runtime must be ama.' }
+  }
+  if (!identity.credentialRef.startsWith('ama://vaults/')) {
+    return { identity: 'Realmroot state must use an AMA Vault credential reference.' }
   }
   return null
 }
@@ -50,12 +83,15 @@ export interface AgentSubagent {
 
 export interface Agent {
   metadata: ResourceMetadata
+  identity: RealmrootAgentIdentity | null
   spec: AgentSpec
   status: AgentStatus
 }
 
 export interface AgentStatus {
-  phase: ResourcePhase
+  phase: 'active' | 'archived' | 'retiring' | 'retired'
+  ready: boolean
+  retirementStage: 'stopping' | 'identity_retired' | 'retired' | null
   currentVersionId: string | null
   version: number
 }

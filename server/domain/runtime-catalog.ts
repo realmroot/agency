@@ -1,6 +1,6 @@
-export type RuntimeHostingMode = 'cloud' | 'self_hosted'
-export type RuntimeName = 'ama' | 'claude-code' | 'codex' | 'copilot'
-export type RunnerRuntimeState = 'ready' | 'missing' | 'unauthenticated' | 'unauthorized' | 'limited' | 'unhealthy'
+export type { RunnerRuntimeState, RuntimeHostingMode, RuntimeName } from '@shared/runtime-types'
+
+import type { RunnerRuntimeState, RuntimeHostingMode, RuntimeName } from '@shared/runtime-types'
 
 export type RuntimeRequirement = {
   runtime: RuntimeName

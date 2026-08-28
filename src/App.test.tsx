@@ -473,7 +473,7 @@ function mockConsoleApi(seed?: {
     if (path === '/api/v1/agents' && method === 'POST') {
       const created = agent({ id: 'agent_created' })
       state.agents = [created]
-      return jsonResponse(created)
+      return jsonResponse(created, 201)
     }
     if (path.startsWith('/api/v1/agents/') && path.endsWith('/versions') && method === 'GET') {
       const found = state.agents.find((item) => path === `/api/v1/agents/${item.metadata.uid}/versions`)
@@ -608,6 +608,7 @@ describe('App', () => {
     render(<App />)
 
     expect(await screen.findByText('No agents')).toBeTruthy()
+    fireEvent.click(primaryNav().getByRole('link', { name: 'Agents' }))
     expect(screen.queryByText('Acceptance Path')).toBeNull()
     expect(document.querySelector('[data-slot="button"]')).toBeTruthy()
     expect(document.querySelector('[data-slot="card"]')).toBeTruthy()

@@ -4,9 +4,38 @@ import {
   hasSecretMaterial,
   nextVersionNumber,
   validateAllowedTools,
+  validateRealmrootIdentity,
   validateSkills,
   validateSubagents,
 } from './agent'
+
+const realmrootIdentity = {
+  issuer: 'https://realmroot.example/api/auth',
+  subject: 'agt_worker',
+  username: 'worker',
+  runtime: 'ama' as const,
+  credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
+}
+
+describe('[spec: agents/realmroot-binding] validateRealmrootIdentity', () => {
+  it.each([
+    'http://localhost:8787/api/auth',
+    'http://127.0.0.1:8787/api/auth',
+    'http://[::1]:8787/api/auth',
+  ])('allows test-mode loopback issuer %s only with the explicit option', (issuer) => {
+    expect(validateRealmrootIdentity({ ...realmrootIdentity, issuer })).toMatchObject({ identity: expect.any(String) })
+    expect(validateRealmrootIdentity({ ...realmrootIdentity, issuer }, { allowLoopbackRealmrootHttp: true })).toBeNull()
+  })
+
+  it.each([
+    'http://realmroot.example/api/auth',
+    'http://192.168.1.10:8787/api/auth',
+  ])('keeps non-loopback HTTP issuer fail-closed: %s', (issuer) => {
+    expect(
+      validateRealmrootIdentity({ ...realmrootIdentity, issuer }, { allowLoopbackRealmrootHttp: true }),
+    ).toMatchObject({ identity: expect.stringContaining('HTTPS') })
+  })
+})
 
 describe('[spec: agents/tool-contract] validateAllowedTools', () => {
   it('defaults to the complete AMA runtime tool set', () => {

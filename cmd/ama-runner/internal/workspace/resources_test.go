@@ -44,6 +44,24 @@ func TestMaterializeSecretMountWritableAndRejectsUnsafePaths(t *testing.T) {
 	if data, err := os.ReadFile(filepath.Join(path, "TOKEN")); err != nil || string(data) != "value" {
 		t.Fatalf("expected secret file, got %q err=%v", data, err)
 	}
+	secretPath := filepath.Join(path, "TOKEN")
+	if info, err := os.Stat(secretPath); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o600) {
+		t.Fatalf("expected writable seeded secret mode 0600, info=%v err=%v", info, err)
+	}
+	if err := os.WriteFile(secretPath, []byte("session-update"), 0o600); err != nil {
+		t.Fatalf("seeded secret must be writable inside the session: %v", err)
+	}
+	otherRoot := t.TempDir()
+	otherPath, err := materializeSecretMount(otherRoot, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets", ReadOnly: false,
+		Files: []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize isolated secret: %v", err)
+	}
+	if data, err := os.ReadFile(filepath.Join(otherPath, "TOKEN")); err != nil || string(data) != "value" {
+		t.Fatalf("session mutation leaked into another seed: %q err=%v", data, err)
+	}
 	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets", Files: []protocol.WorkspaceFile{{Path: "../TOKEN"}}}); err == nil {
 		t.Fatal("expected unsafe secret file path error")
 	}
@@ -92,6 +110,64 @@ func TestMaterializeSecretMountReadOnly(t *testing.T) {
 	}
 	if dirInfo.Mode().Perm()&0o222 != 0 {
 		t.Fatalf("secret directory remains writable: %o", dirInfo.Mode().Perm())
+	}
+}
+
+func TestMaterializeSecretMountReportsFilesystemConflicts(t *testing.T) {
+	root := t.TempDir()
+	conflict := filepath.Join(root, "secrets")
+	if err := os.WriteFile(conflict, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets"}); err == nil {
+		t.Fatal("expected secret mount directory conflict")
+	}
+
+	root = t.TempDir()
+	conflict = filepath.Join(root, "secrets", "nested")
+	if err := os.MkdirAll(filepath.Dir(conflict), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(conflict, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		Files:     []protocol.WorkspaceFile{{Path: "nested/TOKEN", Content: "value"}},
+	}); err == nil {
+		t.Fatal("expected secret parent directory conflict")
+	}
+
+	root = t.TempDir()
+	secretPath := filepath.Join(root, "secrets", "TOKEN")
+	if err := os.MkdirAll(secretPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		Files:     []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+	}); err == nil {
+		t.Fatal("expected secret file conflict")
+	}
+
+	if runtime.GOOS != "windows" {
+		root = t.TempDir()
+		mountPath := filepath.Join(root, "secrets")
+		if err := os.MkdirAll(mountPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_ = os.Chmod(mountPath, 0o700)
+		})
+		if err := os.Symlink(filepath.Join(root, "missing"), filepath.Join(mountPath, "TOKEN")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := materializeSecretMount(root, protocol.WorkspaceMount{
+			MountPath: "/workspace/secrets",
+			ReadOnly:  true,
+		}); err == nil {
+			t.Fatal("expected read-only secret permission error")
+		}
 	}
 }
 

@@ -2,11 +2,14 @@ import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Env } from '../env'
 
-const { getBearerClaimsMock, getDpopClaimsMock, upsertProjectForClaimsMock } = vi.hoisted(() => ({
-  getBearerClaimsMock: vi.fn(),
-  getDpopClaimsMock: vi.fn(),
-  upsertProjectForClaimsMock: vi.fn(),
-}))
+const { getBearerClaimsMock, getDpopClaimsMock, upsertProjectForClaimsMock, webSessionAccessTokenMock } = vi.hoisted(
+  () => ({
+    getBearerClaimsMock: vi.fn(),
+    getDpopClaimsMock: vi.fn(),
+    upsertProjectForClaimsMock: vi.fn(),
+    webSessionAccessTokenMock: vi.fn(),
+  }),
+)
 
 vi.mock('./oidc', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./oidc')>()),
@@ -15,9 +18,15 @@ vi.mock('./oidc', async (importOriginal) => ({
   upsertProjectForClaims: upsertProjectForClaimsMock,
 }))
 
+vi.mock('./web-session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./web-session')>()),
+  webSessionAccessToken: webSessionAccessTokenMock,
+}))
+
 import { DpopError } from './dpop'
 import { OidcError } from './oidc'
-import { requireAuth, requireAuthIdentity, requireSessionEventsAuth } from './session'
+import type { AuthContext } from './session'
+import { authenticatedAccessToken, requireAuth, requireAuthIdentity, requireSessionEventsAuth } from './session'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -37,6 +46,10 @@ app.get('/auth-identity', async (c) => {
   const auth = await requireAuthIdentity(c)
   return auth instanceof Response ? auth : c.json(auth)
 })
+app.post('/auth-context', async (c) => {
+  const auth = await requireAuth(c)
+  return auth instanceof Response ? auth : c.json(auth)
+})
 app.post('/api/v1/sessions/:id/events', async (c) => {
   const auth = await requireSessionEventsAuth(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
@@ -48,6 +61,11 @@ app.get('/api/v1/sessions/:id/socket', async (c) => {
 app.get('/api/v1/work-items/:id', async (c) => {
   const auth = await requireAuth(c)
   return auth instanceof Response ? auth : c.json({ authorized: true })
+})
+app.get('/provisioning-token/:method', async (c) => {
+  const authenticationMethod = c.req.param('method') as AuthContext['authenticationMethod']
+  const accessToken = await authenticatedAccessToken(c, { authenticationMethod } as AuthContext)
+  return c.json({ accessToken })
 })
 
 const baseClaims = {
@@ -100,6 +118,8 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     getBearerClaimsMock.mockReset()
     getDpopClaimsMock.mockReset()
     upsertProjectForClaimsMock.mockReset()
+    webSessionAccessTokenMock.mockReset()
+    webSessionAccessTokenMock.mockResolvedValue('cookie-session-token')
     upsertProjectForClaimsMock.mockResolvedValue({ id: 'project_1', name: 'Project', organizationId: 'org_1' })
   })
 
@@ -176,6 +196,18 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
 
   it.each([['agents:read']])('allows GET with exact scope %s', async (...permissions) => {
     expect((await request('/api/v1/agents/agent_1', { permissions })).status).toBe(200)
+  })
+
+  it.each([
+    ['cookie', {}, 'cookie-session-token'],
+    ['bearer', { authorization: 'Bearer direct-bearer-token' }, 'direct-bearer-token'],
+    ['dpop', { authorization: 'DPoP direct-dpop-token', dpop: 'proof' }, 'direct-dpop-token'],
+  ])('preserves the %s authenticated token source for Agent provisioning', async (method, headers, expected) => {
+    const response = await app.request(`https://ama.example.com/provisioning-token/${method}`, { headers })
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ accessToken: expected })
+    expect(webSessionAccessTokenMock).toHaveBeenCalledTimes(method === 'cookie' ? 1 : 0)
   })
 
   it.each([['*'], ['agents:*']])('rejects wildcard scope %s', async (...permissions) => {

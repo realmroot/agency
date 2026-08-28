@@ -431,9 +431,38 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     })
 
     it('createAgent posts JSON', async () => {
-      const fetchMock = makeJsonFetch(agentFixture)
+      if (!agentFixture.identity) throw new Error('Expected the managed Agent fixture identity')
+      const operation = {
+        id: 'agentop_1',
+        status: 'succeeded',
+        stage: 'committed',
+        result: {
+          agent: '/api/v1/agents/agent_1',
+          issuer: agentFixture.identity.issuer,
+          subject: agentFixture.identity.subject,
+          ready: true,
+        },
+        problem: null,
+        createdAt: '2026-05-23T00:00:00.000Z',
+        updatedAt: '2026-05-23T00:00:00.000Z',
+      }
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(operation), { status: 202, headers: { 'content-type': 'application/json' } }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(operation), { status: 200, headers: { 'content-type': 'application/json' } }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(agentFixture), { status: 200, headers: { 'content-type': 'application/json' } }),
+        )
       vi.stubGlobal('fetch', fetchMock)
-      await api.createAgent({ metadata: { name: 'Test Agent' }, spec: { systemPrompt: 'Do the work.' } })
+      await api.createAgent({
+        username: 'test-agent',
+        metadata: { name: 'Test Agent' },
+        spec: { runtime: 'codex', systemPrompt: 'Do the work.' },
+      })
       const [, init] = fetchMock.mock.calls[0]!
       expect(init?.method).toBe('POST')
     })

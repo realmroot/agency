@@ -12,7 +12,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.execution_spec_input import ExecutionSpecInput
+  from ..models.create_session_execution_spec import CreateSessionExecutionSpec
   from ..models.session_create_metadata import SessionCreateMetadata
 
 
@@ -27,12 +27,12 @@ T = TypeVar("T", bound="CreateSessionRequest")
 class CreateSessionRequest:
     """ 
         Attributes:
-            spec (ExecutionSpecInput):
+            spec (CreateSessionExecutionSpec):
             prompt (str):  Example: Research Canadian banking bonus offers and summarize current opportunities..
             metadata (SessionCreateMetadata | Unset):
      """
 
-    spec: ExecutionSpecInput
+    spec: CreateSessionExecutionSpec
     prompt: str
     metadata: SessionCreateMetadata | Unset = UNSET
 
@@ -41,7 +41,7 @@ class CreateSessionRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.execution_spec_input import ExecutionSpecInput
+        from ..models.create_session_execution_spec import CreateSessionExecutionSpec
         from ..models.session_create_metadata import SessionCreateMetadata
         spec = self.spec.to_dict()
 
@@ -67,10 +67,10 @@ class CreateSessionRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.execution_spec_input import ExecutionSpecInput
+        from ..models.create_session_execution_spec import CreateSessionExecutionSpec
         from ..models.session_create_metadata import SessionCreateMetadata
         d = dict(src_dict)
-        spec = ExecutionSpecInput.from_dict(d.pop("spec"))
+        spec = CreateSessionExecutionSpec.from_dict(d.pop("spec"))
 
 
 
