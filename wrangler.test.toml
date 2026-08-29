@@ -9,7 +9,7 @@ required = []
 [assets]
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/runtime/*"]
+run_worker_first = ["/api/*", "/runtime/*", "/healthz", "/readyz"]
 
 [vars]
 AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"

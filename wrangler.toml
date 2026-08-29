@@ -12,7 +12,7 @@ routes = [
 binding = "ASSETS"
 directory = "./dist/client"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
+run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*", "/healthz", "/readyz"]
 
 [vars]
 AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
