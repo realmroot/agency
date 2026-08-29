@@ -317,6 +317,47 @@ func TestLifecycleFormattingAndDefaultRegistry(t *testing.T) {
 	if err := printStatuses(nil, "yaml", nil); err == nil {
 		t.Fatal("unsupported output format must fail")
 	}
+	if err := printStatuses(failingWriter{}, "table", []managed.Status{{ID: "runner_1"}}); err == nil {
+		t.Fatal("table output failures must be returned")
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write failed")
+}
+
+func TestLifecycleCommandsReturnRegistryAndConfigurationFailures(t *testing.T) {
+	registryPath := filepath.Join(t.TempDir(), "registry-file")
+	if err := os.WriteFile(registryPath, []byte("not a directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"--registry-dir", registryPath}
+	for _, args := range [][]string{
+		{"list"},
+		{"status", "runner_missing"},
+		{"stop", "runner_missing"},
+		{"restart", "runner_missing"},
+		{"logs", "runner_missing"},
+		{"configure", "runner_missing", "--max-concurrent", "2"},
+		{"remove", "runner_missing"},
+		{"service-run", "runner_missing"},
+	} {
+		if err := execute(context.Background(), append(append([]string{}, base...), args...), testBuild(), nil, nil); err == nil {
+			t.Fatalf("%v must return the registry failure", args)
+		}
+	}
+
+	if err := execute(
+		context.Background(),
+		[]string{"--registry-dir", t.TempDir(), "start", "--api-server", "://invalid"},
+		testBuild(),
+		nil,
+		nil,
+	); err == nil {
+		t.Fatal("start must return configuration loading failures")
+	}
 }
 
 func TestWriterOrDiscard(t *testing.T) {
