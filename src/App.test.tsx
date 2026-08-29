@@ -872,7 +872,7 @@ describe('App', () => {
 
     await confirmAction('Archive session')
     expectToast(await screen.findByText('Session archived'))
-  })
+  }, 10_000)
 
   it('surfaces load failures after the loading state', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {

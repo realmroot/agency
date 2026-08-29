@@ -444,10 +444,19 @@ async function prepareCloudEnvironmentPackages(
     }
     const installerPath = `${CLOUD_ENVIRONMENT_HOME}/webi-${crypto.randomUUID()}.sh`
     const installerUrl = `https://webi.sh/${encodeURIComponent(declaration)}`
+    const expectedPackageDeclaration = `export WEBI_PKG='${declaration}'`
     await installEnvironmentPackage(
       sandbox,
       `webi-install:${declaration}`,
-      `curl -fsS --proto '=https' --tlsv1.2 ${shellQuote(installerUrl)} -o ${shellQuote(installerPath)} && HOME=${shellQuote(CLOUD_ENVIRONMENT_HOME)} sh ${shellQuote(installerPath)} && rm -f ${shellQuote(installerPath)}`,
+      [
+        'set -eu',
+        `installer_path=${shellQuote(installerPath)}`,
+        'cleanup_webi_installer() { rm -f "$installer_path"; }',
+        'trap cleanup_webi_installer EXIT HUP INT TERM',
+        `curl -fsS --proto '=https' --tlsv1.2 --max-filesize 1048576 ${shellQuote(installerUrl)} -o "$installer_path"`,
+        `if ! grep -Fqx ${shellQuote(expectedPackageDeclaration)} "$installer_path"; then printf '%s\\n' 'Webi did not return an installer for the requested package' >&2; exit 1; fi`,
+        `HOME=${shellQuote(CLOUD_ENVIRONMENT_HOME)} sh "$installer_path"`,
+      ].join('; '),
     )
   }
   return [CLOUD_ENVIRONMENT_BIN, CLOUD_WEBI_BIN].join(':')
