@@ -6,6 +6,14 @@ Feature: Runners
   expired leases. AMA stays the control plane and canonical event store;
   runner-local runtime endpoints are never exposed.
 
+  @runners/api-server-storage @unit
+  Scenario: Isolate default runner storage by API Server
+    Given an operator does not configure runner state or work directories
+    When runners connect to different AMA API Servers
+    Then each API Server receives a stable isolated state directory
+    And each work directory is nested under its API Server state directory
+    And explicit state and work directory overrides remain unchanged
+
   # ── Eligibility and registration (domain + usecase: matching, binding) ──
 
   @runners/eligibility @domain

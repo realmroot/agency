@@ -103,8 +103,60 @@ func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
 	if got := DefaultStateDir(); got != filepath.Join(stateRoot, appDirectoryName) {
 		t.Fatalf("state directory = %q", got)
 	}
-	if got := DefaultWorkDir(); got != filepath.Join(stateRoot, appDirectoryName, "work") {
+	if got := DefaultWorkDirForStateDir(DefaultStateDir()); got != filepath.Join(stateRoot, appDirectoryName, "work") {
 		t.Fatalf("work directory = %q", got)
+	}
+}
+
+// [spec: runners/api-server-storage]
+func TestDefaultServerPathsAreStableAndIsolated(t *testing.T) {
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+
+	first, err := DefaultStateDirForAPIServer("https://AMA.example.test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized, err := DefaultStateDirForAPIServer("https://ama.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := DefaultStateDirForAPIServer("https://ama-staging.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != normalized {
+		t.Fatalf("equivalent API Servers must share a directory: %q != %q", first, normalized)
+	}
+	if first == second {
+		t.Fatalf("different API Servers must not share a directory: %q", first)
+	}
+	variants := []string{
+		"http://localhost:8787",
+		"https://localhost:8787",
+		"https://localhost:9443/base",
+	}
+	variantPaths := map[string]struct{}{}
+	for _, apiServer := range variants {
+		path, err := DefaultStateDirForAPIServer(apiServer)
+		if err != nil {
+			t.Fatal(err)
+		}
+		variantPaths[path] = struct{}{}
+	}
+	if len(variantPaths) != len(variants) {
+		t.Fatalf("scheme, port, or base path collided: %#v", variantPaths)
+	}
+	serversRoot := filepath.Join(stateRoot, appDirectoryName, "servers")
+	if filepath.Dir(first) != serversRoot || filepath.Dir(second) != serversRoot {
+		t.Fatalf("server directories must live under %q: %q %q", serversRoot, first, second)
+	}
+	if got := DefaultWorkDirForStateDir(first); got != filepath.Join(first, "work") {
+		t.Fatalf("work directory = %q", got)
+	}
+	if _, err := DefaultStateDirForAPIServer("://invalid"); err == nil {
+		t.Fatal("invalid API Server must not produce a storage directory")
 	}
 }
 

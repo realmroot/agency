@@ -51,6 +51,15 @@ On Windows, Go's native user directories are used instead:
 - `%APPDATA%\ama-runner\credentials.json`
 - `%LOCALAPPDATA%\ama-runner` for state, workspaces, and session logs
 
+When `stateDir` and `workDir` are omitted, the runner derives both from the selected AMA API Server. Each normalized API Server receives a stable directory below the native state root:
+
+```text
+<native-state-root>/ama-runner/servers/<api-server-key>/
+<native-state-root>/ama-runner/servers/<api-server-key>/work/
+```
+
+The readable key includes the API Server hostname plus a short digest of the complete normalized URL, so different schemes, ports, or base paths cannot collide. Restarting a runner against the same API Server reuses its runner identity, process lock, workspaces, and session event logs without requiring path flags.
+
 The config directory is created with `0700` permissions and the credential file is written with `0600` permissions where the host filesystem supports POSIX modes. Treat the credential file as local operator credential material.
 The credential file is shared across runner config files by default. Saved profiles are keyed by AMA API server and OIDC account, and refresh writes are serialized with a local credential lock so multiple runner daemons can reuse one login safely.
 
@@ -66,7 +75,7 @@ export AMA_RUNNER_ALLOW_UNSAFE_PROCESS="true"
 export AMA_RUNNER_WORKDIR="/var/lib/ama-runner/workspace"
 ```
 
-When running multiple daemons on one host, give each daemon a distinct `stateDir` and `workDir`. `stateDir` owns the process lock and runner identity; sharing it intentionally prevents two daemons from starting with the same local runner state.
+Runners connected to different API Servers are isolated automatically and may run concurrently with no directory flags. Multiple concurrent daemons connected to the same API Server still require explicit distinct `stateDir` values; an omitted `workDir` is then derived as `<stateDir>/work`. `stateDir` owns the process lock and runner identity, so sharing the same effective state directory intentionally prevents duplicate processes.
 
 Useful flags:
 

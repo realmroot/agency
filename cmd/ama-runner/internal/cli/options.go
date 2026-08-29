@@ -26,8 +26,8 @@ var runConfigOptions = []runConfigOption{
 	{Key: "projectId", Flag: "project-id", Env: "AMA_PROJECT_ID", Usage: "AMA project id"},
 	{Key: "environmentId", Flag: "environment-id", Env: "AMA_ENVIRONMENT_ID", Usage: "AMA environment id"},
 	{Key: "allowUnsafeProcess", Flag: "allow-unsafe-process", Env: "AMA_RUNNER_ALLOW_UNSAFE_PROCESS", Default: false, Usage: "acknowledge unsafe process adapter"},
-	{Key: "stateDir", Flag: "state-dir", Env: "AMA_RUNNER_STATE_DIR", Usage: "runner local state directory"},
-	{Key: "workDir", Flag: "work-dir", Env: "AMA_RUNNER_WORKDIR", Usage: "local work directory"},
+	{Key: "stateDir", Flag: "state-dir", Env: "AMA_RUNNER_STATE_DIR", Usage: "override runner state directory (default: isolated by API server)"},
+	{Key: "workDir", Flag: "work-dir", Env: "AMA_RUNNER_WORKDIR", Usage: "override local work directory (default: state directory/work)"},
 	{Key: "maxConcurrent", Flag: "max-concurrent", Env: "AMA_RUNNER_MAX_CONCURRENT", Default: 5, Usage: "max concurrent leases"},
 	{Key: "heartbeatInterval", Env: "AMA_RUNNER_HEARTBEAT_INTERVAL", Default: 20 * time.Second},
 	{Key: "leaseDurationSeconds", Env: "AMA_RUNNER_LEASE_SECONDS", Default: 60},
@@ -83,6 +83,9 @@ func LoadRunConfig(command *cobra.Command) (runnerconfig.Config, error) {
 	if err := applySavedLogin(&config); err != nil {
 		return runnerconfig.Config{}, err
 	}
+	if err := applyDefaultStoragePaths(&config); err != nil {
+		return runnerconfig.Config{}, err
+	}
 	if err := config.Validate(); err != nil {
 		return runnerconfig.Config{}, err
 	}
@@ -107,13 +110,25 @@ func newRunConfigViper(command *cobra.Command) (*viper.Viper, error) {
 
 func defaultRunValue(option runConfigOption) any {
 	switch option.Key {
-	case "stateDir":
-		return runnerconfig.DefaultStateDir()
-	case "workDir":
-		return runnerconfig.DefaultWorkDir()
+	case "stateDir", "workDir":
+		return ""
 	default:
 		return option.Default
 	}
+}
+
+func applyDefaultStoragePaths(config *runnerconfig.Config) error {
+	if strings.TrimSpace(config.StateDir) == "" {
+		stateDir, err := runnerconfig.DefaultStateDirForAPIServer(config.APIServer)
+		if err != nil {
+			return err
+		}
+		config.StateDir = stateDir
+	}
+	if strings.TrimSpace(config.WorkDir) == "" {
+		config.WorkDir = runnerconfig.DefaultWorkDirForStateDir(config.StateDir)
+	}
+	return nil
 }
 
 func defaultStringFlagValue(option runConfigOption) string {

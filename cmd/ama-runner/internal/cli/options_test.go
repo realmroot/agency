@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,6 +88,88 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	}
 	if config.ConfigPath != configPath || config.MaxConcurrent != 3 {
 		t.Fatalf("unexpected config %#v", config)
+	}
+}
+
+func TestLoadRunConfigScopesDefaultStorageByAPIServer(t *testing.T) {
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	configRoot := filepath.Join(t.TempDir(), "config")
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("APPDATA", configRoot)
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	for index, apiServer := range []string{"https://ama.example.test", "https://ama-staging.example.test"} {
+		if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+			AccountID:   fmt.Sprintf("acct_%d", index),
+			APIServer:   apiServer,
+			AccessToken: "saved-token",
+			TokenType:   "Bearer",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	load := func(apiServer string) runnerconfig.Config {
+		command := runConfigTestCommand(t,
+			"--api-server", apiServer,
+			"--environment-id", "env_1",
+			"--allow-unsafe-process",
+		)
+		config, err := LoadRunConfig(command)
+		if err != nil {
+			t.Fatalf("load %s config: %v", apiServer, err)
+		}
+		return config
+	}
+	production := load("https://ama.example.test")
+	staging := load("https://ama-staging.example.test")
+	if production.StateDir == staging.StateDir || production.WorkDir == staging.WorkDir {
+		t.Fatalf("API Servers share storage: production=%#v staging=%#v", production, staging)
+	}
+	if production.WorkDir != filepath.Join(production.StateDir, "work") || staging.WorkDir != filepath.Join(staging.StateDir, "work") {
+		t.Fatalf("work directories must be nested under state directories: production=%#v staging=%#v", production, staging)
+	}
+	activeCommand := runConfigTestCommand(t,
+		"--environment-id", "env_1",
+		"--allow-unsafe-process",
+	)
+	active, err := LoadRunConfig(activeCommand)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active.APIServer != "https://ama-staging.example.test" || active.StateDir != staging.StateDir || active.WorkDir != staging.WorkDir {
+		t.Fatalf("saved active API Server did not select its storage: active=%#v staging=%#v", active, staging)
+	}
+}
+
+func TestLoadRunConfigPreservesExplicitStorageOverrides(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	configRoot := filepath.Join(t.TempDir(), "config")
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("APPDATA", configRoot)
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stateDir := filepath.Join(t.TempDir(), "custom-state")
+	workDir := filepath.Join(t.TempDir(), "custom-work")
+	command := runConfigTestCommand(t,
+		"--api-server", "https://ama.example.test",
+		"--environment-id", "env_1",
+		"--allow-unsafe-process",
+		"--state-dir", stateDir,
+		"--work-dir", workDir,
+	)
+	config, err := LoadRunConfig(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.StateDir != stateDir || config.WorkDir != workDir {
+		t.Fatalf("explicit storage overrides changed: %#v", config)
 	}
 }
 
