@@ -34,7 +34,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	}
 	nodePath, err := resolveNodeExecutable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s runtime requires Node.js to run the embedded runtime bridge", request.Runtime)
+		return nil, fmt.Errorf("%s runtime requires Node.js with a working executable: %w", request.Runtime, err)
 	}
 	bridgePath, err := runtimebridge.Materialize()
 	if err != nil {
@@ -191,7 +191,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	}
 	nodePath, err := resolveNodeExecutable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("node is required to run the runtime bridge")
+		return nil, fmt.Errorf("node is required to run the runtime bridge and must be working: %w", err)
 	}
 	commandCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -242,15 +242,18 @@ func resolveNodeExecutable(ctx context.Context) (string, error) {
 	probe.Env = os.Environ()
 	output, err := probe.Output()
 	if err != nil {
-		return nodePath, nil
+		return "", fmt.Errorf("resolve node executable: %w", err)
 	}
 	resolved := strings.TrimSpace(string(output))
 	if !filepath.IsAbs(resolved) {
-		return nodePath, nil
+		return "", fmt.Errorf("node returned a non-absolute executable path %q", resolved)
 	}
 	info, err := os.Stat(resolved)
-	if err != nil || info.IsDir() {
-		return nodePath, nil
+	if err != nil {
+		return "", fmt.Errorf("inspect resolved node executable: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("resolved node executable %q is a directory", resolved)
 	}
 	return resolved, nil
 }
