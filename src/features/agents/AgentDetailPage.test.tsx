@@ -6,7 +6,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { Agent, AgentVersion, Session } from '@/lib/amarpc'
 import { createCollection, HttpResponse, http, server } from '@/test/msw'
 import { type AgentOverrides, agent as resourceAgent } from '@/test/resource-fixtures'
@@ -28,6 +28,13 @@ const emptyList = { data: [], pagination: { limit: 50, hasMore: false, nextCurso
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
 }
+
+beforeEach(() => {
+  server.use(
+    http.get('*/api/v1/identities', () => HttpResponse.json(emptyList)),
+    http.get('*/api/v1/providers/models', () => HttpResponse.json(emptyList)),
+  )
+})
 
 /** Registers MSW handlers for a single agent detail + versions + sessions. */
 function setupAgentHandlers(agent: Agent, versions: AgentVersion[] = [], sessions: Session[] = []) {

@@ -18,7 +18,7 @@ import {
   parseListCursor,
 } from '../openapi'
 import { createAgent, type UpdateAgentPatch, updateAgent } from '../usecases/agents'
-import { AgentArchivedError, AgentValidationError } from '../usecases/ports'
+import { AgentArchivedError, AgentValidationError, IdentityAlreadyBoundError } from '../usecases/ports'
 import { requestId } from './request-context'
 
 type AgentRoutes = OpenAPIHono<DepsEnv>
@@ -69,16 +69,17 @@ const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
   example: ['read', 'bash', 'edit'],
 })
 
-const RealmrootAgentBindingSchema = z
+const IdentityDescriptorSchema = z
   .object({
+    identityId: z.string().openapi({ example: 'identity_abc123' }),
     agentId: z.string().min(1).max(160).openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
-    origin: z.string().url().openapi({ example: 'https://id.realmroot.dev' }),
-    credentialRef: z.string().min(1).openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
-    }),
+    issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
+    subject: z.string().openapi({ example: 'agent:019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    username: z.string().openapi({ example: 'researcher' }),
+    runtime: z.enum(['ama', 'codex', 'claude-code', 'copilot']),
   })
   .strict()
-  .openapi('RealmrootAgentBinding')
+  .openapi('IdentityDescriptor')
 
 const AgentSpecSchema = z
   .object({
@@ -101,7 +102,7 @@ const AgentSpecSchema = z
     }),
     allowedTools: AllowedToolsSchema,
     mcpConnectors: z.array(z.string()).openapi({ example: ['github'] }),
-    realmroot: RealmrootAgentBindingSchema.nullable(),
+    identity: IdentityDescriptorSchema.nullable(),
   })
   .openapi('AgentSpec')
 
@@ -167,7 +168,7 @@ const AgentPayloadSchema = z
           .max(50)
           .optional()
           .openapi({ example: ['github'] }),
-        realmroot: RealmrootAgentBindingSchema.nullable().optional(),
+        identityRef: z.string().min(1).nullable().optional().openapi({ example: 'identity_abc123' }),
       })
       .strict(),
   })
@@ -242,6 +243,7 @@ const createAgentRoute = createRoute({
     201: { description: 'Created agent', content: { 'application/json': { schema: AgentSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Identity already bound', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -368,6 +370,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
           name: body.metadata.name,
           description: body.metadata.description ?? null,
           spec: specFromPayload(body),
+          identityRef: body.spec.identityRef ?? null,
         })
         return c.json(serializeAgent(agent), 201)
       } catch (error) {
@@ -487,12 +490,12 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
     ...(spec?.subagents !== undefined ? { subagents: normalizeSubagents(spec.subagents) } : {}),
     ...(spec?.allowedTools !== undefined ? { allowedTools: spec.allowedTools } : {}),
     ...(spec?.mcpConnectors !== undefined ? { mcpConnectors: spec.mcpConnectors } : {}),
-    ...(spec?.realmroot !== undefined ? { realmroot: spec.realmroot } : {}),
+    ...(spec?.identityRef !== undefined ? { identityRef: spec.identityRef } : {}),
     ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
 
-function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): AgentSpec {
+function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): Omit<AgentSpec, 'identity'> {
   const spec = body.spec
   return {
     systemPrompt: spec.systemPrompt,
@@ -502,7 +505,6 @@ function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): AgentSpec {
     subagents: normalizeSubagents(spec.subagents ?? []),
     allowedTools: spec.allowedTools ?? defaultAllowedTools(),
     mcpConnectors: spec.mcpConnectors ?? [],
-    realmroot: spec.realmroot ?? null,
   }
 }
 
@@ -519,11 +521,19 @@ function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): A
 }
 
 function serializeAgent(agent: Agent) {
-  return serializeResource(agent)
+  const resource = serializeResource(agent)
+  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
 }
 
 function serializeAgentVersion(version: AgentVersion) {
-  return serializeResource(version)
+  const resource = serializeResource(version)
+  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
+}
+
+function publicIdentity(identity: Agent['spec']['identity']) {
+  if (!identity) return null
+  const { credentialRef: _credentialRef, ...safe } = identity
+  return safe
 }
 
 function notFound(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0]) {
@@ -533,6 +543,9 @@ function notFound(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0]) {
 function validationOr(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0], error: unknown) {
   if (error instanceof AgentValidationError) {
     return c.json(domainValidation(error.message, error.fields), 400)
+  }
+  if (error instanceof IdentityAlreadyBoundError) {
+    return c.json({ error: { type: error.code, message: error.message } }, 409)
   }
   throw error
 }

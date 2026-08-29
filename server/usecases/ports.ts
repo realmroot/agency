@@ -1,13 +1,14 @@
 import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import type { ConnectorAvailability, ConnectorCatalogEntry, ConnectorCatalogTool } from '@server/domain/connector'
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
+import type { Identity, IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
 import type { Memory, MemoryStore } from '@server/domain/memory-store'
 import type { CatalogModel } from '@server/domain/model-catalog'
 import type { ModelAvailability, ModelCatalogState } from '@server/domain/provider'
 import type { ResourceMetadata } from '@server/domain/resource'
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
 import type { EnvFromEntry, MemoryVolume, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
-import type { RunnerRuntimeState } from '@server/domain/runtime-catalog'
+import type { RunnerRuntimeState, RuntimeName } from '@server/domain/runtime-catalog'
 import type {
   MessageDelivery,
   MessageState,
@@ -61,9 +62,18 @@ export class AgentArchivedError extends Error {
   }
 }
 
+export class IdentityAlreadyBoundError extends Error {
+  readonly code = 'identity_already_bound'
+  constructor() {
+    super('Identity is already bound to another Agent.')
+    this.name = 'IdentityAlreadyBoundError'
+  }
+}
+
 // Identity claims the audit + policy ports need. Mirrors the http auth context
 // without dragging the http auth module into usecases.
 export interface AuthScope {
+  authenticationMethod?: 'cookie' | 'bearer' | 'dpop'
   organization: { id: string; name: string }
   project: { id: string; name: string; organizationId?: string }
   user: { id: string }
@@ -71,6 +81,7 @@ export interface AuthScope {
   permissions: string[]
   teams?: string[]
   agentActor?: { issuer: string; subject: string }
+  oidc?: { issuer: string | null; runnerId: string | null }
 }
 
 // Organization-level identity: the AuthScope subset that org-scoped usecases
@@ -117,19 +128,106 @@ export interface AgentRepo {
   // Live (non-archived) agents in the project, newest first.
   liveAgents(projectId: string): Promise<Agent[]>
 
-  latestVersionNumber(agentId: string): Promise<number | null>
-  insertVersion(agent: Agent, spec: AgentSpec, createdAt: string): Promise<AgentVersion>
   listVersions(projectId: string, agentId: string): Promise<AgentVersion[]>
   findVersion(projectId: string, agentId: string, version: number): Promise<AgentVersion | null>
 
-  insert(input: CreateAgentInput, createdAt: string): Promise<Agent>
-  setCurrentVersion(agentId: string, versionId: string): Promise<void>
+  insertWithVersion(input: CreateAgentInput, createdAt: string): Promise<{ agent: Agent; version: AgentVersion }>
+  updateWithVersion(
+    projectId: string,
+    agent: Agent,
+    fields: Omit<UpdateAgentFields, 'currentVersionId'>,
+    updatedAt: string,
+  ): Promise<AgentVersion>
   update(projectId: string, agentId: string, fields: UpdateAgentFields, updatedAt: string): Promise<void>
   unarchive(projectId: string, agentId: string, updatedAt: string): Promise<void>
 
   // Reference validation against sibling resources.
   providerEnabled(projectId: string, providerId: string): Promise<boolean>
   connectorAvailable(connectorId: string): Promise<boolean>
+}
+
+export interface IdentityListQuery {
+  projectId: string
+  archived: boolean
+  search?: string
+  limit: number
+  cursor: { createdAt: string; id: string } | null
+}
+
+export interface IdentityListPage {
+  rows: Identity[]
+  hasMore: boolean
+}
+
+export interface CreateIdentityRecordInput {
+  id: string
+  projectId: string
+  organizationId: string
+  name: string
+  description: string | null
+  username: string
+  runtime: RuntimeName
+  vaultId: string
+  idempotencyKeyHash: string
+  requestFingerprint: string
+}
+
+export interface IdentityProvisioningClaim {
+  identity: Identity
+  acquired: boolean
+  requestFingerprint: string
+}
+
+export interface IdentityRepo {
+  list(query: IdentityListQuery): Promise<IdentityListPage>
+  find(projectId: string, identityId: string): Promise<Identity | null>
+  provisioning(
+    identityId: string,
+  ): Promise<{ vaultId: string; credentialId: string | null; requestFingerprint: string } | null>
+  claim(
+    input: CreateIdentityRecordInput,
+    owner: string,
+    timestamp: string,
+    leaseExpiresAt: string,
+  ): Promise<IdentityProvisioningClaim>
+  setCredential(identityId: string, owner: string, credentialId: string, timestamp: string): Promise<void>
+  activate(
+    identityId: string,
+    owner: string,
+    credentialId: string,
+    descriptor: IdentityDescriptor,
+    timestamp: string,
+  ): Promise<Identity>
+  fail(identityId: string, owner: string, failureCode: string, timestamp: string): Promise<void>
+  archive(projectId: string, identityId: string, timestamp: string): Promise<boolean>
+}
+
+export interface RealmrootManagementCredential {
+  headers(method: string, url: string): Promise<Record<string, string>>
+}
+
+export interface RealmrootEnrollmentGateway {
+  initialize(input: {
+    origin: string
+    username: string
+    name: string
+    runtime: RuntimeName
+    idempotencyKey: string
+  }): Promise<IdentityCheckpoint>
+  provision(input: {
+    origin: string
+    username: string
+    name: string
+    runtime: RuntimeName
+    idempotencyKey: string
+    checkpoint: IdentityCheckpoint
+    managementCredential: RealmrootManagementCredential
+    onCheckpoint: (checkpoint: IdentityCheckpoint) => Promise<void>
+  }): Promise<{ checkpoint: IdentityCheckpoint; descriptor: Omit<IdentityDescriptor, 'identityId' | 'credentialRef'> }>
+}
+
+export interface RealmrootManagementAuthority {
+  exchange(input: { subjectToken: string; subject: string }): Promise<RealmrootManagementCredential>
 }
 
 export interface AuditEntry {
@@ -513,11 +611,13 @@ export interface VaultVisibility {
 }
 
 export interface CreateVaultInput {
+  id?: string
   organizationId: string
   projectId: string | null
   name: string
   description: string | null
   scope: VaultScope
+  managedBy?: 'identity' | null
 }
 
 export interface UpdateVaultFields {
@@ -554,6 +654,7 @@ export interface InsertVersionInput {
 export interface VaultRepo {
   list(query: VaultListQuery): Promise<ListPageResult<Vault>>
   find(vaultId: string, visibility: VaultVisibility): Promise<Vault | null>
+  findIdentityManaged?(vaultId: string, visibility: VaultVisibility): Promise<Vault | null>
   insert(input: CreateVaultInput, createdAt: string): Promise<Vault>
   update(vaultId: string, fields: UpdateVaultFields, updatedAt: string): Promise<void>
   hasCredentials(vaultId: string): Promise<boolean>
@@ -892,8 +993,6 @@ export interface AuditReadRepo {
 
 // --- triggers ---
 
-import type { RuntimeName } from '@server/contracts/environment-contracts'
-
 // Field-keyed validation error for trigger orchestration (secret-material
 // rejection). The http layer maps it to a 400.
 export class TriggerValidationError extends Error {
@@ -910,7 +1009,11 @@ export class TriggerValidationError extends Error {
 // http mapping (404 missing, 409 conflict).
 export class TriggerConflictError extends Error {
   readonly status: 404 | 409
-  constructor(message: string, status: 404 | 409 = 409) {
+  constructor(
+    message: string,
+    status: 404 | 409 = 409,
+    readonly code = status === 404 ? 'not_found' : 'conflict',
+  ) {
     super(message)
     this.name = 'TriggerConflictError'
     this.status = status
@@ -1996,7 +2099,7 @@ export interface SessionCreateOptions {
   metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>
   volumes?: Volume[]
   volumeMounts?: VolumeMount[]
-  runtime: RuntimeName
+  runtime?: RuntimeName
   runtimeConfig?: Record<string, unknown>
   env?: Record<string, string>
   envFrom?: EnvFromEntry[]

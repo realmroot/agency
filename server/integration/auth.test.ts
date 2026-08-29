@@ -221,6 +221,8 @@ describe('[CF] auth v1', () => {
         'connectors:write',
         'environments:read',
         'environments:write',
+        'identities:read',
+        'identities:write',
         'leases:read',
         'leases:write',
         'memory-stores:read',

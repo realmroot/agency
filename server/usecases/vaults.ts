@@ -20,6 +20,8 @@ function versionMetadata(
 }
 
 export interface CreateCredentialInputDto {
+  credentialId?: string
+  versionId?: string
   name: string
   type: CredentialType
   metadata: Record<string, unknown>
@@ -40,8 +42,8 @@ export async function createCredential(
   input: CreateCredentialInputDto,
 ): Promise<CreateCredentialResult> {
   const timestamp = new Date().toISOString()
-  const credentialId = newId('vaultcred')
-  const versionId = newId('vaultver')
+  const credentialId = input.credentialId ?? newId('vaultcred')
+  const versionId = input.versionId ?? newId('vaultver')
   let reference: ReturnType<typeof secretReference>
   try {
     reference = secretReference({ vaultId: vault.metadata.uid, credentialId, versionId }, 1, input.type, input.secret)

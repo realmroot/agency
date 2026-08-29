@@ -5,6 +5,7 @@ export * from './connectors'
 export type { ListOptions, ListPagination, ListResponse } from './core'
 export { ApiError } from './core'
 export * from './environments'
+export * from './identities'
 export * from './memory-stores'
 export * from './projects'
 export * from './providers'
@@ -19,6 +20,7 @@ import { auditApi } from './audit'
 import { authApi } from './auth'
 import { connectorsApi } from './connectors'
 import { environmentsApi } from './environments'
+import { identitiesApi } from './identities'
 import { memoryStoresApi } from './memory-stores'
 import { projectsApi } from './projects'
 import { providersApi } from './providers'
@@ -33,6 +35,7 @@ export const api = {
   ...projectsApi,
   ...agentsApi,
   ...environmentsApi,
+  ...identitiesApi,
   ...triggersApi,
   ...sessionsApi,
   ...providersApi,

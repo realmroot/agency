@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { type Agent, api, type Environment, type MemoryStore, type Vault } from '@/lib/amarpc'
+import { type Agent, api, type Environment, type Identity, type MemoryStore, type Vault } from '@/lib/amarpc'
 import { queryKeys } from '@/lib/query-keys'
 import { isArchived, parseTools } from './format'
 import {
@@ -234,11 +234,15 @@ export function AgentForm({
   value,
   setValue,
   onSubmit,
+  identities = [],
+  agentId,
   submitLabel = 'Save agent',
 }: {
   value: AgentFormState
   setValue: (value: AgentFormState) => void
   onSubmit: (event: FormEvent) => void
+  identities?: Identity[]
+  agentId?: string
   submitLabel?: string
 }) {
   return (
@@ -257,6 +261,37 @@ export function AgentForm({
           onChange={(systemPrompt) => setValue({ ...value, systemPrompt })}
         />
         <AgentProviderModelFields value={value} setValue={setValue} />
+        <Field>
+          <FieldLabel>Identity</FieldLabel>
+          <Select
+            value={value.identityRef || '__none__'}
+            onValueChange={(identityRef) =>
+              setValue({ ...value, identityRef: identityRef === '__none__' ? '' : identityRef })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="No Identity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="__none__">No Identity</SelectItem>
+                {identities
+                  .filter(
+                    (identity) =>
+                      !identity.metadata.archivedAt &&
+                      identity.status.state === 'active' &&
+                      (!identity.status.boundAgentId || identity.status.boundAgentId === agentId),
+                  )
+                  .map((identity) => (
+                    <SelectItem key={identity.metadata.uid} value={identity.metadata.uid}>
+                      {identity.metadata.name} · {identity.spec.runtime}
+                    </SelectItem>
+                  ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FieldDescription>Binding an Identity fixes this Agent's session and trigger Runtime.</FieldDescription>
+        </Field>
         <AllowedToolsField
           label="Allowed tools"
           value={value.allowedTools}
@@ -420,7 +455,14 @@ export function SessionForm({
       <FieldGroup>
         <Field>
           <FieldLabel>Agent</FieldLabel>
-          <Select value={value.agentId} onValueChange={(agentId) => setValue({ ...value, agentId })}>
+          <Select
+            value={value.agentId}
+            onValueChange={(agentId) => {
+              const identityRuntime = activeAgents.find((agent) => agent.metadata.uid === agentId)?.spec.identity
+                ?.runtime
+              setValue({ ...value, agentId, ...(identityRuntime ? { runtime: identityRuntime } : {}) })
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select an agent" />
             </SelectTrigger>
@@ -466,6 +508,7 @@ export function SessionForm({
           <FieldLabel>Runtime</FieldLabel>
           <Select
             value={value.runtime}
+            disabled={Boolean(selectedAgent?.spec.identity)}
             onValueChange={(runtime) => setValue({ ...value, runtime: runtime as SessionFormState['runtime'] })}
           >
             <SelectTrigger>
@@ -480,7 +523,11 @@ export function SessionForm({
               </SelectGroup>
             </SelectContent>
           </Select>
-          <FieldDescription>Runtime is selected per session.</FieldDescription>
+          <FieldDescription>
+            {selectedAgent?.spec.identity
+              ? `Locked by ${selectedAgent.spec.identity.username}'s Identity.`
+              : 'Runtime is selected per session.'}
+          </FieldDescription>
         </Field>
         <TextAreaField
           label="Prompt"

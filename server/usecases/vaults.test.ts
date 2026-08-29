@@ -101,6 +101,7 @@ function fakeDeps(
   const vaults: Deps['vaults'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
+    findIdentityManaged: async () => null,
     insert: async () => vault(),
     update: async () => {},
     hasCredentials: async () => false,

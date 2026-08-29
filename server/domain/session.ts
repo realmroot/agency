@@ -1,5 +1,5 @@
 import type { SessionEvent } from '@shared/session-events'
-import type { AgentSubagent, RealmrootAgentBinding } from './agent'
+import type { AgentSubagent } from './agent'
 import type {
   EnvironmentNetworking,
   EnvironmentPackages,
@@ -7,6 +7,7 @@ import type {
   EnvironmentType,
   EnvironmentVariable,
 } from './environment'
+import type { IdentityDescriptor } from './identity'
 import type { ResourceMetadata } from './resource'
 import type { EnvFromEntry, Volume, VolumeMount } from './runtime/execution-inputs'
 import type { RuntimeName } from './runtime-catalog'
@@ -116,7 +117,7 @@ export interface SessionAgentSnapshot {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
-  realmroot: RealmrootAgentBinding | null
+  identity: IdentityDescriptor | null
   createdAt: string
 }
 

@@ -29,6 +29,7 @@ export interface AgentFormState {
   skills: string
   allowedTools: string
   mcpConnectors: string
+  identityRef: string
 }
 
 export interface SessionFormState {

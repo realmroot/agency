@@ -26,6 +26,9 @@ export interface Env {
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
   OIDC_CLIENT_SECRET?: string
+  // Realmroot management Resource used when exchanging the current User's AMA
+  // grant for the agents:write audience.
+  REALMROOT_MANAGEMENT_RESOURCE?: string
   // Additional confidential/public Web applications allowed to present
   // Realmroot Bearer tokens for the exact AMA Resource.
   OIDC_TRUSTED_BEARER_CLIENT_IDS?: string
@@ -38,4 +41,5 @@ export interface Env {
   OIDC_RUNNER_SCOPES?: string
   AMA_ALLOWED_ORIGINS?: string
   AMA_E2E_TEST_AUTH?: string
+  AMA_E2E_FAKE_REALMROOT_ENROLLMENT?: string
 }

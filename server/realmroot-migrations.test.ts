@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
+import { secretRefIdentity } from '@server/domain/vault'
 import { describe, expect, it } from 'vitest'
 
 function migration(name: string) {
@@ -25,6 +26,21 @@ function applyThrough(db: DatabaseSync, lastMigration: string) {
     .filter((name) => name.endsWith('.sql') && name.localeCompare(lastMigration) <= 0)
     .sort()
   for (const name of names) apply(db, name)
+}
+
+function expectResolvableIdentitySnapshot(
+  db: DatabaseSync,
+  snapshot: { credentialRef?: unknown },
+  expected: { vaultId: string; credentialId: string },
+) {
+  expect(snapshot.credentialRef).toBe(`ama://vaults/${expected.vaultId}/credentials/${expected.credentialId}`)
+  const identity = secretRefIdentity(String(snapshot.credentialRef))
+  expect(identity).toEqual(expected)
+  expect(
+    db
+      .prepare('SELECT id FROM vault_credentials WHERE id = ? AND vault_id = ?')
+      .get(expected.credentialId, expected.vaultId),
+  ).toEqual({ id: expected.credentialId })
 }
 
 describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
@@ -263,6 +279,362 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
     expect(
       db.prepare('SELECT actor_type,actor_user_id,controller_user_id FROM audit_records WHERE id = ?').get('audit_1'),
     ).toEqual({ actor_type: 'agent', actor_user_id: 'agent_1', controller_user_id: null })
+    db.close()
+  })
+})
+
+function seedIdentityMigrationAgent(
+  db: DatabaseSync,
+  values: { id?: string; remoteAgentId?: string; credentialId?: string; origin?: string } = {},
+) {
+  const id = values.id ?? 'agent_1'
+  const descriptor = JSON.stringify({
+    agentId: values.remoteAgentId ?? 'rr_agent_1',
+    origin: values.origin ?? 'https://realmroot.example',
+    username: 'reviewer',
+    credentialRef: `ama://vaults/vault_old/credentials/${values.credentialId ?? 'cred_realmroot'}`,
+  })
+  db.prepare(`INSERT INTO agents (
+    id,project_id,name,description,system_prompt,skills,subagents,allowed_tools,mcp_connectors,archived_at,current_version_id,created_at,updated_at,realmroot
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    id,
+    'project_1',
+    `Agent ${id}`,
+    null,
+    'Work.',
+    '[]',
+    '[]',
+    '[]',
+    '[]',
+    null,
+    `agentver_${id}`,
+    '2026-01-01',
+    '2026-01-02',
+    descriptor,
+  )
+  db.prepare(`INSERT INTO agent_versions (
+    id,agent_id,project_id,version,system_prompt,skills,subagents,allowed_tools,mcp_connectors,created_at,realmroot
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+    `agentver_${id}`,
+    id,
+    'project_1',
+    1,
+    'Work.',
+    '[]',
+    '[]',
+    '[]',
+    '[]',
+    '2026-01-01',
+    descriptor,
+  )
+  return descriptor
+}
+
+describe('[spec: identities/migration] Identity resource migration', () => {
+  it('moves the Realmroot credential and snapshots into the new one-way model', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0029_web_auth_sessions.sql')
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at) VALUES ('project_1','org_1','Project','2026-01-01','2026-01-02');
+      INSERT INTO vaults (id,organization_id,project_id,name,scope,created_at,updated_at) VALUES ('vault_old','org_1','project_1','Old','project','2026-01-01','2026-01-02');
+      INSERT INTO vault_credentials (id,vault_id,organization_id,project_id,name,type,state,created_at,updated_at)
+        VALUES ('cred_realmroot','vault_old','org_1','project_1','State','ama.dev/realmroot-agent-state','active','2026-01-01','2026-01-02');
+      INSERT INTO vault_credential_versions (id,credential_id,vault_id,organization_id,project_id,version,provider,secret_ref,reference_name,state,has_secret,created_at)
+        VALUES ('ver_realmroot','cred_realmroot','vault_old','org_1','project_1',1,'ama','ama://vaults/vault_old/credentials/cred_realmroot/versions/ver_realmroot','STATE','active',1,'2026-01-01');
+    `)
+    const descriptor = seedIdentityMigrationAgent(db)
+    db.prepare(`INSERT INTO sessions (
+      id,agent_id,organization_id,agent_version_id,agent_snapshot,project_id,durable_object_name,state,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+      'session_1',
+      'agent_1',
+      'org_1',
+      'agentver_agent_1',
+      JSON.stringify({ id: 'agentver_agent_1', realmroot: JSON.parse(descriptor) }),
+      'project_1',
+      'do_1',
+      'stopped',
+      '2026-01-01',
+      '2026-01-02',
+    )
+
+    apply(db, '0030_identity_resources.sql')
+
+    expect(
+      db.prepare('SELECT runtime,state,remote_agent_id,bound_agent_id,vault_id,credential_id FROM identities').get(),
+    ).toEqual({
+      runtime: 'ama',
+      state: 'active',
+      remote_agent_id: 'rr_agent_1',
+      bound_agent_id: 'agent_1',
+      vault_id: 'vault_identity_migrated_agent_agent_1',
+      credential_id: 'cred_realmroot',
+    })
+    expect(db.prepare('SELECT identity_id FROM agents WHERE id = ?').get('agent_1')).toEqual({
+      identity_id: 'identity_migrated_agent_agent_1',
+    })
+    expect(db.prepare('SELECT identity_id FROM agent_versions WHERE id = ?').get('agentver_agent_1')).toEqual({
+      identity_id: 'identity_migrated_agent_agent_1',
+    })
+    expect(db.prepare('SELECT vault_id FROM vault_credentials WHERE id = ?').get('cred_realmroot')).toEqual({
+      vault_id: 'vault_identity_migrated_agent_agent_1',
+    })
+    expect(db.prepare('SELECT vault_id FROM vault_credential_versions WHERE id = ?').get('ver_realmroot')).toEqual({
+      vault_id: 'vault_identity_migrated_agent_agent_1',
+    })
+    const snapshot = JSON.parse(
+      (db.prepare('SELECT agent_snapshot FROM sessions WHERE id = ?').get('session_1') as { agent_snapshot: string })
+        .agent_snapshot,
+    )
+    expect(snapshot.realmroot).toBeUndefined()
+    expect(snapshot.identity).toMatchObject({
+      identityId: 'identity_migrated_agent_agent_1',
+      runtime: 'ama',
+      agentId: 'rr_agent_1',
+    })
+    const expectedSecret = {
+      vaultId: 'vault_identity_migrated_agent_agent_1',
+      credentialId: 'cred_realmroot',
+    }
+    const agentSnapshot = JSON.parse(
+      (db.prepare('SELECT identity_snapshot FROM agents WHERE id = ?').get('agent_1') as { identity_snapshot: string })
+        .identity_snapshot,
+    )
+    const versionSnapshot = JSON.parse(
+      (
+        db.prepare('SELECT identity_snapshot FROM agent_versions WHERE id = ?').get('agentver_agent_1') as {
+          identity_snapshot: string
+        }
+      ).identity_snapshot,
+    )
+    expectResolvableIdentitySnapshot(db, agentSnapshot, expectedSecret)
+    expectResolvableIdentitySnapshot(db, versionSnapshot, expectedSecret)
+    expectResolvableIdentitySnapshot(db, snapshot.identity, expectedSecret)
+    const agentColumns = db.prepare('PRAGMA table_info(agents)').all() as Array<{ name: string }>
+    const versionColumns = db.prepare('PRAGMA table_info(agent_versions)').all() as Array<{ name: string }>
+    expect(agentColumns.map(({ name }) => name)).not.toContain('realmroot')
+    expect(versionColumns.map(({ name }) => name)).not.toContain('realmroot')
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    db.close()
+  })
+
+  it('preserves distinct current and historical descriptors for one Agent', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0029_web_auth_sessions.sql')
+    const current = {
+      agentId: 'rr_current',
+      origin: 'https://realmroot.example',
+      username: 'current',
+      credentialRef: 'ama://vaults/vault_old/credentials/cred_current',
+    }
+    const historical = {
+      agentId: 'rr_historical',
+      origin: 'https://realmroot.example',
+      username: 'historical',
+      credentialRef: 'ama://vaults/vault_old/credentials/cred_historical',
+    }
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at) VALUES ('project_1','org_1','Project','2026-01-01','2026-01-03');
+      INSERT INTO vaults (id,organization_id,project_id,name,scope,created_at,updated_at) VALUES ('vault_old','org_1','project_1','Old','project','2026-01-01','2026-01-03');
+      INSERT INTO vault_credentials (id,vault_id,organization_id,project_id,name,type,state,created_at,updated_at) VALUES
+        ('cred_current','vault_old','org_1','project_1','Current','ama.dev/realmroot-agent-state','active','2026-01-02','2026-01-03'),
+        ('cred_historical','vault_old','org_1','project_1','Historical','ama.dev/realmroot-agent-state','active','2026-01-01','2026-01-02');
+      INSERT INTO vault_credential_versions (id,credential_id,vault_id,organization_id,project_id,version,provider,secret_ref,reference_name,state,has_secret,created_at) VALUES
+        ('ver_current','cred_current','vault_old','org_1','project_1',1,'ama','ama://vaults/vault_old/credentials/cred_current/versions/ver_current','CURRENT','active',1,'2026-01-02'),
+        ('ver_historical','cred_historical','vault_old','org_1','project_1',1,'ama','ama://vaults/vault_old/credentials/cred_historical/versions/ver_historical','HISTORICAL','active',1,'2026-01-01');
+    `)
+    db.prepare(`INSERT INTO agents (
+      id,project_id,name,system_prompt,skills,subagents,allowed_tools,mcp_connectors,current_version_id,created_at,updated_at,realmroot
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      'agent_1',
+      'project_1',
+      'Agent',
+      'Work.',
+      '[]',
+      '[]',
+      '[]',
+      '[]',
+      'agentver_current',
+      '2026-01-01',
+      '2026-01-03',
+      JSON.stringify(current),
+    )
+    const insertVersion = db.prepare(`INSERT INTO agent_versions (
+      id,agent_id,project_id,version,system_prompt,skills,subagents,allowed_tools,mcp_connectors,created_at,realmroot
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+    insertVersion.run(
+      'agentver_historical',
+      'agent_1',
+      'project_1',
+      1,
+      'Work.',
+      '[]',
+      '[]',
+      '[]',
+      '[]',
+      '2026-01-01',
+      JSON.stringify(historical),
+    )
+    insertVersion.run(
+      'agentver_current',
+      'agent_1',
+      'project_1',
+      2,
+      'Work.',
+      '[]',
+      '[]',
+      '[]',
+      '[]',
+      '2026-01-02',
+      JSON.stringify(current),
+    )
+    db.prepare(`INSERT INTO sessions (
+      id,agent_id,organization_id,agent_version_id,agent_snapshot,project_id,durable_object_name,state,metadata,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+      'session_historical',
+      'agent_1',
+      'org_1',
+      'agentver_historical',
+      JSON.stringify({ id: 'agentver_historical', realmroot: historical }),
+      'project_1',
+      'do_history',
+      'stopped',
+      JSON.stringify({ runtime: 'codex' }),
+      '2026-01-01',
+      '2026-01-02',
+    )
+
+    apply(db, '0030_identity_resources.sql')
+
+    expect(
+      db.prepare('SELECT id,remote_agent_id,vault_id,credential_id,bound_agent_id FROM identities ORDER BY id').all(),
+    ).toEqual([
+      {
+        id: 'identity_migrated_agent_agent_1',
+        remote_agent_id: 'rr_current',
+        vault_id: 'vault_identity_migrated_agent_agent_1',
+        credential_id: 'cred_current',
+        bound_agent_id: 'agent_1',
+      },
+      {
+        id: 'identity_migrated_version_agentver_historical',
+        remote_agent_id: 'rr_historical',
+        vault_id: 'vault_identity_migrated_version_agentver_historical',
+        credential_id: 'cred_historical',
+        bound_agent_id: 'agent_1',
+      },
+    ])
+    expect(db.prepare('SELECT id,managed_by FROM vaults WHERE managed_by = ? ORDER BY id').all('identity')).toEqual([
+      { id: 'vault_identity_migrated_agent_agent_1', managed_by: 'identity' },
+      { id: 'vault_identity_migrated_version_agentver_historical', managed_by: 'identity' },
+    ])
+    expect(db.prepare('SELECT id,vault_id FROM vault_credentials ORDER BY id').all()).toEqual([
+      { id: 'cred_current', vault_id: 'vault_identity_migrated_agent_agent_1' },
+      { id: 'cred_historical', vault_id: 'vault_identity_migrated_version_agentver_historical' },
+    ])
+    expect(db.prepare('SELECT id,identity_id FROM agent_versions ORDER BY version').all()).toEqual([
+      { id: 'agentver_historical', identity_id: 'identity_migrated_version_agentver_historical' },
+      { id: 'agentver_current', identity_id: 'identity_migrated_agent_agent_1' },
+    ])
+    const currentAgentSnapshot = JSON.parse(
+      (db.prepare('SELECT identity_snapshot FROM agents WHERE id = ?').get('agent_1') as { identity_snapshot: string })
+        .identity_snapshot,
+    )
+    const versionSnapshots = db
+      .prepare('SELECT id,identity_snapshot FROM agent_versions ORDER BY version')
+      .all() as Array<{
+      id: string
+      identity_snapshot: string
+    }>
+    expectResolvableIdentitySnapshot(db, currentAgentSnapshot, {
+      vaultId: 'vault_identity_migrated_agent_agent_1',
+      credentialId: 'cred_current',
+    })
+    expectResolvableIdentitySnapshot(db, JSON.parse(versionSnapshots[0]!.identity_snapshot), {
+      vaultId: 'vault_identity_migrated_version_agentver_historical',
+      credentialId: 'cred_historical',
+    })
+    expectResolvableIdentitySnapshot(db, JSON.parse(versionSnapshots[1]!.identity_snapshot), {
+      vaultId: 'vault_identity_migrated_agent_agent_1',
+      credentialId: 'cred_current',
+    })
+    const session = db
+      .prepare('SELECT agent_snapshot,metadata FROM sessions WHERE id = ?')
+      .get('session_historical') as {
+      agent_snapshot: string
+      metadata: string
+    }
+    expect(JSON.parse(session.agent_snapshot)).toMatchObject({
+      identity: {
+        identityId: 'identity_migrated_version_agentver_historical',
+        agentId: 'rr_historical',
+        runtime: 'ama',
+      },
+    })
+    expectResolvableIdentitySnapshot(db, JSON.parse(session.agent_snapshot).identity, {
+      vaultId: 'vault_identity_migrated_version_agentver_historical',
+      credentialId: 'cred_historical',
+    })
+    expect(JSON.parse(session.agent_snapshot)).not.toHaveProperty('realmroot')
+    expect(JSON.parse(session.metadata)).toEqual({ runtime: 'codex' })
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    db.close()
+  })
+
+  it.each([
+    {
+      name: 'Remote Agent',
+      first: { remoteAgentId: 'rr_shared', credentialId: 'cred_agent_1' },
+      second: { remoteAgentId: 'rr_shared', credentialId: 'cred_agent_2' },
+    },
+    {
+      name: 'credential',
+      first: { remoteAgentId: 'rr_agent_1', credentialId: 'cred_shared' },
+      second: { remoteAgentId: 'rr_agent_2', credentialId: 'cred_shared' },
+    },
+  ])('fails before writes when one $name is shared across Agents', ({ first, second }) => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0029_web_auth_sessions.sql')
+    db.exec(
+      "INSERT INTO projects (id,organization_id,name,created_at,updated_at) VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01')",
+    )
+    seedIdentityMigrationAgent(db, { id: 'agent_1', ...first })
+    seedIdentityMigrationAgent(db, { id: 'agent_2', ...second })
+
+    expect(() => apply(db, '0030_identity_resources.sql')).toThrow(/CHECK constraint failed/)
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='identities'").get()).toBeUndefined()
+    db.close()
+  })
+
+  it('fails before writes when an active Trigger conflicts with migrated runtime=ama', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0029_web_auth_sessions.sql')
+    db.exec(
+      "INSERT INTO projects (id,organization_id,name,created_at,updated_at) VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01')",
+    )
+    seedIdentityMigrationAgent(db)
+    db.prepare(`INSERT INTO triggers (
+      id,organization_id,project_id,agent_id,environment_id,trigger_type,runtime,name,prompt_template,interval_seconds,window_seconds,enabled,next_due_at,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      'trigger_1',
+      'org_1',
+      'project_1',
+      'agent_1',
+      null,
+      'scheduled',
+      'codex',
+      'Conflict',
+      'Work',
+      3600,
+      0,
+      1,
+      '2026-01-02',
+      '2026-01-01',
+      '2026-01-01',
+    )
+
+    expect(() => apply(db, '0030_identity_resources.sql')).toThrow()
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='identities'").get()).toBeUndefined()
     db.close()
   })
 })

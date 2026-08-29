@@ -13,6 +13,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.empty_dir_volume import EmptyDirVolume
   from ..models.env_from_entry import EnvFromEntry
   from ..models.execution_env import ExecutionEnv
   from ..models.git_repository_volume import GitRepositoryVolume
@@ -30,14 +31,14 @@ T = TypeVar("T", bound="UpdateTriggerRequestSpecTemplateSpec")
 
 @_attrs_define
 class UpdateTriggerRequestSpecTemplateSpec:
-    """ 
+    """
         Attributes:
             agent_id (str | Unset):  Example: agent_abc123.
             environment_id (None | str | Unset):  Example: env_abc123.
             runtime (RuntimeName | Unset):  Example: codex.
             env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
             env_from (list[EnvFromEntry] | Unset):
-            volumes (list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset):
+            volumes (list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset):
             volume_mounts (list[VolumeMount] | Unset):
             prompt_template (str | Unset):  Example: Research current Canadian banking bonus offers..
      """
@@ -47,7 +48,7 @@ class UpdateTriggerRequestSpecTemplateSpec:
     runtime: RuntimeName | Unset = UNSET
     env: ExecutionEnv | Unset = UNSET
     env_from: list[EnvFromEntry] | Unset = UNSET
-    volumes: list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
+    volumes: list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
     volume_mounts: list[VolumeMount] | Unset = UNSET
     prompt_template: str | Unset = UNSET
 
@@ -56,6 +57,7 @@ class UpdateTriggerRequestSpecTemplateSpec:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.empty_dir_volume import EmptyDirVolume
         from ..models.env_from_entry import EnvFromEntry
         from ..models.execution_env import ExecutionEnv
         from ..models.git_repository_volume import GitRepositoryVolume
@@ -96,6 +98,8 @@ class UpdateTriggerRequestSpecTemplateSpec:
                 if isinstance(volumes_item_data, SecretVolume):
                     volumes_item = volumes_item_data.to_dict()
                 elif isinstance(volumes_item_data, GitRepositoryVolume):
+                    volumes_item = volumes_item_data.to_dict()
+                elif isinstance(volumes_item_data, MemoryVolume):
                     volumes_item = volumes_item_data.to_dict()
                 else:
                     volumes_item = volumes_item_data.to_dict()
@@ -143,6 +147,7 @@ class UpdateTriggerRequestSpecTemplateSpec:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.empty_dir_volume import EmptyDirVolume
         from ..models.env_from_entry import EnvFromEntry
         from ..models.execution_env import ExecutionEnv
         from ..models.git_repository_volume import GitRepositoryVolume
@@ -195,11 +200,11 @@ class UpdateTriggerRequestSpecTemplateSpec:
 
 
         _volumes = d.pop("volumes", UNSET)
-        volumes: list[GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
+        volumes: list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset = UNSET
         if _volumes is not UNSET:
             volumes = []
             for volumes_item_data in _volumes:
-                def _parse_volumes_item(data: object) -> GitRepositoryVolume | MemoryVolume | SecretVolume:
+                def _parse_volumes_item(data: object) -> EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume:
                     try:
                         if not isinstance(data, dict):
                             raise TypeError()
@@ -220,13 +225,23 @@ class UpdateTriggerRequestSpecTemplateSpec:
                         return componentsschemas_volume_type_1
                     except (TypeError, ValueError, AttributeError, KeyError):
                         pass
+                    try:
+                        if not isinstance(data, dict):
+                            raise TypeError()
+                        componentsschemas_volume_type_2 = MemoryVolume.from_dict(data)
+
+
+
+                        return componentsschemas_volume_type_2
+                    except (TypeError, ValueError, AttributeError, KeyError):
+                        pass
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_volume_type_2 = MemoryVolume.from_dict(data)
+                    componentsschemas_volume_type_3 = EmptyDirVolume.from_dict(data)
 
 
 
-                    return componentsschemas_volume_type_2
+                    return componentsschemas_volume_type_3
 
                 volumes_item = _parse_volumes_item(volumes_item_data)
 
@@ -259,4 +274,3 @@ class UpdateTriggerRequestSpecTemplateSpec:
         )
 
         return update_trigger_request_spec_template_spec
-

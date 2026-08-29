@@ -1,0 +1,319 @@
+import type { Identity, IdentityCheckpoint } from '@server/domain/identity'
+import type { RuntimeName } from '@server/domain/runtime-catalog'
+import type { Deps } from './deps'
+import type { AuthScope, RealmrootManagementCredential } from './ports'
+import { createCredential } from './vaults'
+
+function identityDeps(deps: Deps) {
+  if (!deps.identities || !deps.realmrootEnrollment || !deps.realmrootManagement)
+    throw new Error('Identity dependencies are not configured')
+  return { identities: deps.identities, enrollment: deps.realmrootEnrollment, management: deps.realmrootManagement }
+}
+
+export class IdentityConflictError extends Error {
+  constructor(
+    readonly code:
+      | 'idempotency_conflict'
+      | 'identity_in_use'
+      | 'identity_provisioning_in_progress'
+      | 'organization_identity_not_supported',
+    message: string,
+  ) {
+    super(message)
+    this.name = 'IdentityConflictError'
+  }
+}
+
+export class IdentityProvisioningError extends Error {
+  constructor(
+    readonly code: string,
+    message = 'Identity provisioning failed. Retry with the same Idempotency-Key after renewing authorization.',
+  ) {
+    super(message)
+    this.name = 'IdentityProvisioningError'
+  }
+}
+
+async function digest(value: string) {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function newId() {
+  return `identity_${crypto.randomUUID().replaceAll('-', '')}`
+}
+
+function realmrootOrigin(issuer: string) {
+  if (!issuer) throw new Error('Realmroot issuer is unavailable')
+  return new URL(issuer).origin
+}
+
+async function checkpointFromVault(deps: Deps, auth: AuthScope, identityId: string) {
+  const provisioning = await identityDeps(deps).identities.provisioning(identityId)
+  if (!provisioning?.credentialId) return null
+  const manifest = await deps.runtimeSecrets.resolveWorkspaceManifest(
+    { organizationId: auth.organization.id, projectId: auth.project.id },
+    [
+      {
+        name: 'identity-checkpoint',
+        type: 'secret',
+        secretRef: `ama://vaults/${provisioning.vaultId}/credentials/${provisioning.credentialId}`,
+        items: [{ key: 'state.json', path: 'state.json' }],
+      },
+    ],
+    [{ name: 'identity-checkpoint', mountPath: '/identity', readOnly: true }],
+  )
+  const mount = manifest.mounts[0]
+  const content = mount?.type === 'secret' ? mount.files[0]?.content : null
+  if (!content) throw new Error('Identity checkpoint is unavailable')
+  return JSON.parse(content) as IdentityCheckpoint
+}
+
+async function saveCheckpoint(
+  deps: Deps,
+  auth: AuthScope,
+  owner: string,
+  identityId: string,
+  checkpoint: IdentityCheckpoint,
+) {
+  const provisioning = await identityDeps(deps).identities.provisioning(identityId)
+  if (!provisioning?.credentialId) throw new Error('Identity checkpoint credential is unavailable')
+  if (!deps.vaults.findIdentityManaged) throw new Error('Identity managed Vault access is unavailable')
+  const vault = await deps.vaults.findIdentityManaged(provisioning.vaultId, {
+    organizationId: auth.organization.id,
+    projectId: auth.project.id,
+  })
+  if (!vault) throw new Error('Identity managed Vault is unavailable')
+  const enrolledCredentialId = `vaultcred_enrolled_${identityId}`
+  const existing = await deps.vaults.findCredential(provisioning.vaultId, enrolledCredentialId)
+  const credential =
+    existing ??
+    (
+      await createCredential(deps, vault, {
+        credentialId: enrolledCredentialId,
+        versionId: `vaultver_enrolled_${identityId}`,
+        name: 'Identity enrolled checkpoint',
+        type: 'opaque',
+        metadata: { managedBy: 'identity', identityId, purpose: 'enrolled-checkpoint' },
+        secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
+      })
+    ).credential
+  await identityDeps(deps).identities.setCredential(
+    identityId,
+    owner,
+    credential.metadata.uid,
+    new Date().toISOString(),
+  )
+}
+
+export async function createIdentity(
+  deps: Deps,
+  auth: AuthScope,
+  input: {
+    name: string
+    description: string | null
+    username: string
+    runtime: RuntimeName
+    idempotencyKey: string
+    subjectToken: string
+  },
+): Promise<Identity> {
+  if (auth.organization.id !== `user:${auth.user.id}`) {
+    throw new IdentityConflictError(
+      'organization_identity_not_supported',
+      'Organization-owned Identities are not supported.',
+    )
+  }
+  if (auth.agentActor || auth.oidc?.runnerId)
+    throw new IdentityProvisioningError('user_principal_required', 'Only a Realmroot User can create an Identity.')
+  const keyHash = await digest(input.idempotencyKey)
+  const fingerprint = await digest(
+    JSON.stringify({
+      name: input.name,
+      description: input.description,
+      username: input.username,
+      runtime: input.runtime,
+    }),
+  )
+  const configured = identityDeps(deps)
+  const identityId = newId()
+  const timestamp = new Date()
+  const owner = `provisioning_${crypto.randomUUID().replaceAll('-', '')}`
+  const claim = await configured.identities.claim(
+    {
+      id: identityId,
+      projectId: auth.project.id,
+      organizationId: auth.organization.id,
+      name: input.name,
+      description: input.description,
+      username: input.username,
+      runtime: input.runtime,
+      vaultId: `vault_${identityId}`,
+      idempotencyKeyHash: keyHash,
+      requestFingerprint: fingerprint,
+    },
+    owner,
+    timestamp.toISOString(),
+    new Date(timestamp.getTime() + 5 * 60_000).toISOString(),
+  )
+  if (claim.requestFingerprint !== fingerprint) {
+    throw new IdentityConflictError(
+      'idempotency_conflict',
+      'Idempotency-Key was already used for a different Identity request.',
+    )
+  }
+  const identity = claim.identity
+  if (identity.status.state === 'active') return identity
+  if (!claim.acquired) {
+    throw new IdentityConflictError(
+      'identity_provisioning_in_progress',
+      'Identity provisioning is already in progress for this Idempotency-Key.',
+    )
+  }
+
+  let checkpoint: IdentityCheckpoint | null = null
+  const visibility = { organizationId: auth.organization.id, projectId: auth.project.id }
+  try {
+    const location = await configured.identities.provisioning(identity.metadata.uid)
+    if (!location || !deps.vaults.findIdentityManaged) throw new Error('Identity managed Vault is unavailable')
+    let vault = await deps.vaults.findIdentityManaged(location.vaultId, visibility)
+    if (!vault) {
+      vault = await deps.vaults.insert(
+        {
+          id: location.vaultId,
+          organizationId: auth.organization.id,
+          projectId: auth.project.id,
+          name: `Identity · ${input.name}`,
+          description: 'AMA-managed Realmroot Agent installation state.',
+          scope: 'project',
+          managedBy: 'identity',
+        },
+        timestamp.toISOString(),
+      )
+    }
+    const checkpointCredentialId = `vaultcred_checkpoint_${identity.metadata.uid}`
+    if (!location.credentialId) {
+      const recovered = await deps.vaults.findCredential(location.vaultId, checkpointCredentialId)
+      if (recovered) {
+        await configured.identities.setCredential(
+          identity.metadata.uid,
+          owner,
+          recovered.metadata.uid,
+          new Date().toISOString(),
+        )
+      }
+    }
+    checkpoint = await checkpointFromVault(deps, auth, identity.metadata.uid)
+    if (!checkpoint) {
+      checkpoint = await configured.enrollment.initialize({
+        origin: realmrootOrigin(auth.oidc?.issuer ?? ''),
+        username: input.username,
+        name: input.name,
+        runtime: input.runtime,
+        idempotencyKey: input.idempotencyKey,
+      })
+      const created = await createCredential(deps, vault, {
+        credentialId: checkpointCredentialId,
+        versionId: `vaultver_checkpoint_${identity.metadata.uid}`,
+        name: 'Identity provisioning checkpoint',
+        type: 'opaque',
+        metadata: { managedBy: 'identity', identityId: identity.metadata.uid, purpose: 'provisioning-checkpoint' },
+        secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
+      })
+      await configured.identities.setCredential(
+        identity.metadata.uid,
+        owner,
+        created.credential.metadata.uid,
+        new Date().toISOString(),
+      )
+    }
+  } catch {
+    await configured.identities.fail(
+      identity.metadata.uid,
+      owner,
+      'identity_initialization_failed',
+      new Date().toISOString(),
+    )
+    throw new IdentityProvisioningError('identity_initialization_failed')
+  }
+
+  if (!checkpoint) throw new IdentityProvisioningError('identity_checkpoint_missing')
+  let managementCredential: RealmrootManagementCredential
+  try {
+    managementCredential = await configured.management.exchange({
+      subjectToken: input.subjectToken,
+      subject: auth.user.id,
+    })
+  } catch {
+    await configured.identities.fail(
+      identity.metadata.uid,
+      owner,
+      'realmroot_authorization_failed',
+      new Date().toISOString(),
+    )
+    throw new IdentityProvisioningError('realmroot_authorization_failed')
+  }
+  try {
+    const origin = realmrootOrigin(auth.oidc?.issuer ?? '')
+    const provisioned = await configured.enrollment.provision({
+      origin,
+      username: input.username,
+      name: input.name,
+      runtime: input.runtime,
+      idempotencyKey: input.idempotencyKey,
+      checkpoint,
+      managementCredential,
+      onCheckpoint: (next) => saveCheckpoint(deps, auth, owner, identity.metadata.uid, next),
+    })
+    const location = await configured.identities.provisioning(identity.metadata.uid)
+    if (!location?.credentialId) throw new Error('Identity checkpoint credential is unavailable')
+    if (!deps.vaults.findIdentityManaged) throw new Error('Identity managed Vault access is unavailable')
+    const vault = await deps.vaults.findIdentityManaged(location.vaultId, {
+      organizationId: auth.organization.id,
+      projectId: auth.project.id,
+    })
+    if (!vault) throw new Error('Identity managed Vault is unavailable')
+    const finalCredentialId = `vaultcred_state_${identity.metadata.uid}`
+    const existingFinalState = await deps.vaults.findCredential(location.vaultId, finalCredentialId)
+    const finalStateCredential =
+      existingFinalState ??
+      (
+        await createCredential(deps, vault, {
+          credentialId: finalCredentialId,
+          versionId: `vaultver_state_${identity.metadata.uid}`,
+          name: 'Realmroot Agent state',
+          type: 'ama.dev/realmroot-agent-state',
+          metadata: { managedBy: 'identity', identityId: identity.metadata.uid },
+          secret: { stringData: { 'state.json': JSON.stringify(provisioned.checkpoint.state) } },
+        })
+      ).credential
+    return await configured.identities.activate(
+      identity.metadata.uid,
+      owner,
+      finalStateCredential.metadata.uid,
+      {
+        ...provisioned.descriptor,
+        identityId: identity.metadata.uid,
+        credentialRef: `ama://vaults/${location.vaultId}/credentials/${finalStateCredential.metadata.uid}`,
+      },
+      new Date().toISOString(),
+    )
+  } catch {
+    await configured.identities.fail(
+      identity.metadata.uid,
+      owner,
+      'realmroot_provisioning_failed',
+      new Date().toISOString(),
+    )
+    throw new IdentityProvisioningError('realmroot_provisioning_failed')
+  }
+}
+
+export async function archiveIdentity(deps: Deps, auth: AuthScope, identity: Identity) {
+  const archived = await identityDeps(deps).identities.archive(
+    auth.project.id,
+    identity.metadata.uid,
+    new Date().toISOString(),
+  )
+  if (!archived) throw new IdentityConflictError('identity_in_use', 'Identity is currently selected by its Agent.')
+}

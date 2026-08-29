@@ -330,10 +330,14 @@ describe('createSessionForAgent — environment resolution', () => {
   })
 })
 
-describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', () => {
+describe('[spec: sessions/identity-materialization] Identity runtime inputs', () => {
   const binding = {
+    identityId: 'identity_1',
     agentId: 'rr_agent_1',
-    origin: 'https://realmroot.example.com',
+    issuer: 'https://realmroot.example.com/api/auth',
+    subject: 'rr_agent_1',
+    username: 'runner',
+    runtime: 'ama' as const,
     credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
   }
 
@@ -353,7 +357,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       id: 'agentver_1',
       providerId: 'anthropic',
       model: '@cf/x',
-      realmroot: binding,
+      identity: binding,
     } as never)
     secretVersionForResolutionMock.mockReset()
     secretVersionForResolutionMock.mockResolvedValue({
@@ -364,13 +368,24 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     })
   })
 
-  it('injects reserved env and only the bound credential as a read-only source mount', async () => {
+  it.each([
+    'ama',
+    'codex',
+    'claude-code',
+    'copilot',
+  ] as const)('[spec: identities/runtime-constraint] inherits %s and declaratively seeds the bound credential into a writable emptyDir', async (runtime) => {
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: { ...binding, runtime },
+    } as never)
     const result = await createSessionForAgent(
       deps,
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Use private resources' },
+      { prompt: 'Use private resources' },
       null,
     )
 
@@ -379,26 +394,58 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       insertSessionMock.mock.calls as unknown as Array<[{ env: string; volumes: string; volumeMounts: string }]>
     )[0]![0]
     expect(JSON.parse(inserted.env)).toEqual({
-      AGENT: 'ama',
-      REALMROOT_ORIGIN: binding.origin,
+      AGENT: runtime,
+      REALMROOT_ORIGIN: new URL(binding.issuer).origin,
       REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
     })
     expect(JSON.parse(inserted.volumes)).toEqual([
       {
         name: 'realmroot-agent-state',
-        type: 'secret',
-        secretRef: binding.credentialRef,
-        items: [{ key: 'state.json', path: 'state.json' }],
+        type: 'empty_dir',
+        seedFrom: [
+          {
+            type: 'secret',
+            secretRef: binding.credentialRef,
+            items: [
+              {
+                key: 'state.json',
+                path: `identities/${Buffer.from(binding.issuer).toString('base64url')}/${Buffer.from(runtime).toString('base64url')}.json`,
+              },
+            ],
+          },
+        ],
       },
     ])
     expect(JSON.parse(inserted.volumeMounts)).toEqual([
       {
         name: 'realmroot-agent-state',
-        mountPath: '/workspace/.ama/realmroot-source',
-        readOnly: true,
+        mountPath: '/workspace/.ama/realmroot-state',
+        readOnly: false,
       },
     ])
     expect(secretVersionForResolutionMock).toHaveBeenCalledWith('org_1', 'proj_1', binding.credentialRef)
+  })
+
+  it('[spec: identities/runtime-constraint] rejects an explicit runtime conflicting with the Identity', async () => {
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: { ...binding, runtime: 'codex' },
+    } as never)
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Start' },
+      null,
+    )
+    expect(result).toMatchObject({
+      ok: false,
+      error: { status: 409, code: 'identity_runtime_mismatch' },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -504,6 +551,49 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     expect(insertSessionMock).not.toHaveBeenCalled()
   })
 
+  it('rejects duplicate emptyDir paths across seed projections', async () => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      {
+        runtime: 'ama',
+        prompt: 'Start',
+        volumes: [
+          {
+            name: 'state',
+            type: 'empty_dir',
+            seedFrom: [
+              {
+                type: 'secret',
+                secretRef: 'ama://vaults/v/credentials/a',
+                items: [{ key: 'a', path: 'shared.json' }],
+              },
+              {
+                type: 'secret',
+                secretRef: 'ama://vaults/v/credentials/b',
+                items: [{ key: 'b', path: 'shared.json' }],
+              },
+            ],
+          },
+        ],
+        volumeMounts: [{ name: 'state', mountPath: '/workspace/.ama/state', readOnly: false }],
+      },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        fields: {
+          'volumes.0.seedFrom.1.items.0.path': expect.stringContaining('unique across projections'),
+        },
+      },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+
   it('fails a new Session after the bound credential is revoked', async () => {
     secretVersionForResolutionMock.mockResolvedValue({ state: 'revoked', metadata: '{}', secretRef: 'ref' })
     const result = await createSessionForAgent(
@@ -517,7 +607,10 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
 
     expect(result).toMatchObject({
       ok: false,
-      error: { code: 'validation_error', fields: { 'volumes.0.secretRef': expect.stringContaining('active') } },
+      error: {
+        code: 'validation_error',
+        fields: { 'volumes.0.seedFrom.0.secretRef': expect.stringContaining('active') },
+      },
     })
     expect(insertSessionMock).not.toHaveBeenCalled()
   })

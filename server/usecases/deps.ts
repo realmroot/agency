@@ -11,6 +11,7 @@ import type {
   ConnectorRepo,
   EnvironmentRepo,
   EventStore,
+  IdentityRepo,
   LeaseRepo,
   MemoryStoreRepo,
   PolicyPort,
@@ -18,6 +19,8 @@ import type {
   ProjectRepo,
   ProviderCatalogGateway,
   ProviderRepo,
+  RealmrootEnrollmentGateway,
+  RealmrootManagementAuthority,
   RunnerChannel,
   RunnerRepo,
   RuntimeSecretGateway,
@@ -49,8 +52,11 @@ type CreateApprovalGate = (values: {
 // by composition.createDeps and handed to routes via Hono context.
 export interface Deps {
   agents: AgentRepo
+  identities?: IdentityRepo
   environments: EnvironmentRepo
   providers: ProviderRepo
+  realmrootEnrollment?: RealmrootEnrollmentGateway
+  realmrootManagement?: RealmrootManagementAuthority
   providerCatalog: ProviderCatalogGateway
   vaults: VaultRepo
   secretStore: SecretStoreGateway

@@ -2,6 +2,8 @@ import { createAuditPort } from './adapters/gateways/audit'
 import { createCloudTurnQueue } from './adapters/gateways/cloud-turn-queue'
 import { createPolicyPort } from './adapters/gateways/policy'
 import { createProviderCatalogGateway } from './adapters/gateways/provider-catalog'
+import { createRealmrootEnrollmentGateway } from './adapters/gateways/realmroot-enrollment'
+import { createRealmrootManagementAuthority } from './adapters/gateways/realmroot-management'
 import { createRunnerChannel } from './adapters/gateways/runner-channel'
 import { createRuntimeSecretGateway } from './adapters/gateways/runtime-secrets'
 import { createSecretStoreGateway } from './adapters/gateways/secret-store'
@@ -13,6 +15,7 @@ import { createAuditReadRepo } from './adapters/repos/audit-records'
 import { createBudgetRepo } from './adapters/repos/budgets'
 import { createConnectorRepo } from './adapters/repos/connectors'
 import { createEnvironmentRepo } from './adapters/repos/environments'
+import { createIdentityRepo } from './adapters/repos/identities'
 import { createLeaseRepo } from './adapters/repos/leases'
 import { createMemoryStoreRepo } from './adapters/repos/memory-stores'
 import { createPolicyRepo } from './adapters/repos/policies'
@@ -52,8 +55,11 @@ export function createDeps(env: Env): Deps {
   })
   return {
     agents: createAgentRepo(db),
+    identities: createIdentityRepo(db),
     environments: createEnvironmentRepo(db),
     providers: createProviderRepo(db),
+    realmrootEnrollment: createRealmrootEnrollmentGateway(env),
+    realmrootManagement: createRealmrootManagementAuthority(env),
     providerCatalog: createProviderCatalogGateway(),
     vaults: createVaultRepo(db),
     secretStore: createSecretStoreGateway(env),

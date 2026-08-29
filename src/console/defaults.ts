@@ -27,6 +27,7 @@ export const emptyAgent: AgentFormState = {
   skills: 'ama@coding-agent',
   allowedTools: DEFAULT_ALLOWED_TOOLS,
   mcpConnectors: '',
+  identityRef: '',
 }
 
 export const emptySession: SessionFormState = {

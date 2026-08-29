@@ -84,7 +84,8 @@ func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
 	gitVolumes := gitRepositoryMounts(manifest.Mounts)
 	memoryVolumeList := memoryMounts(manifest.Mounts)
 	secretVolumeList := secretMounts(manifest.Mounts)
-	mounted := make([]mountedVolume, 0, len(gitVolumes)+len(memoryVolumeList)+len(secretVolumeList))
+	emptyDirVolumeList := emptyDirMounts(manifest.Mounts)
+	mounted := make([]mountedVolume, 0, len(gitVolumes)+len(memoryVolumeList)+len(secretVolumeList)+len(emptyDirVolumeList))
 	worktrees := make([]preparedWorktree, 0, len(gitVolumes))
 	memoryStores := make([]preparedMemoryStore, 0, len(memoryVolumeList))
 	credentialLines := gitCredentialLines(gitVolumes)
@@ -152,6 +153,23 @@ func Prepare(ctx context.Context, request PrepareRequest) (*Workspace, error) {
 		}
 		mounted = append(mounted, mountedVolume{
 			Type:      "secret",
+			Name:      volume.Name,
+			MountPath: volume.MountPath,
+			LocalPath: localPath,
+			Files:     fileManifestEntries(volume.Files),
+			Status:    "mounted",
+		})
+	}
+	for _, volume := range emptyDirVolumeList {
+		localPath, err := materializeEmptyDirMount(workspace.Root, volume)
+		if err != nil {
+			workspace.worktrees = worktrees
+			workspace.memoryStores = memoryStores
+			_ = workspace.Cleanup(context.Background())
+			return nil, err
+		}
+		mounted = append(mounted, mountedVolume{
+			Type:      "empty_dir",
 			Name:      volume.Name,
 			MountPath: volume.MountPath,
 			LocalPath: localPath,
@@ -233,9 +251,6 @@ func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName stri
 	if w == nil || agentSnapshot == nil {
 		return report, nil
 	}
-	if err := prepareRealmrootAgent(w.Root, agentSnapshot); err != nil {
-		return report, err
-	}
 	for _, skill := range agentSkillRefs(agentSnapshot) {
 		change, err := refreshAgentSkill(ctx, w.Cwd, runtimeName, skill)
 		if err != nil {
@@ -249,6 +264,22 @@ func (w *Workspace) PrepareAgentWithReport(ctx context.Context, runtimeName stri
 		return report, err
 	}
 	return report, nil
+}
+
+func (w *Workspace) RuntimeEnv(env map[string]string) map[string]string {
+	resolved := make(map[string]string, len(env))
+	for key, value := range env {
+		if w != nil {
+			switch {
+			case value == "/workspace":
+				value = w.Root
+			case strings.HasPrefix(value, "/workspace/"):
+				value = filepath.Join(w.Root, filepath.FromSlash(strings.TrimPrefix(value, "/workspace/")))
+			}
+		}
+		resolved[key] = value
+	}
+	return resolved
 }
 
 func (w *Workspace) AgentSystemPrompt(agentSnapshot map[string]any) string {

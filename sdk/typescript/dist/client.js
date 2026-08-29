@@ -226,6 +226,12 @@ export function createAmaClient(config) {
             listVersions: (agentId) => unwrap(ops.listAgentVersions({ client, path: { agentId } })),
             getVersion: (agentId, version) => unwrap(ops.readAgentVersion({ client, path: { agentId, version } })),
         },
+        identities: {
+            list: (query) => unwrap(ops.listIdentities({ client, query })),
+            create: (body, idempotencyKey) => unwrap(ops.createIdentity({ client, body, headers: { "idempotency-key": idempotencyKey } })),
+            get: (identityId) => unwrap(ops.readIdentity({ client, path: { identityId } })),
+            archive: (identityId, body) => unwrap(ops.updateIdentity({ client, path: { identityId }, body })),
+        },
         environments: {
             list: (query) => unwrap(ops.listEnvironments({ client, query })),
             create: (body) => unwrap(ops.createEnvironment({ client, body })),

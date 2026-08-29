@@ -23,7 +23,7 @@ export const RunnerGitCredentialSchema = z
 export const RunnerWorkspaceMountSchema = z
   .object({
     name: z.string().openapi({ example: 'source' }),
-    type: z.enum(['git_repository', 'memory', 'secret']).openapi({ example: 'git_repository' }),
+    type: z.enum(['git_repository', 'memory', 'secret', 'empty_dir']).openapi({ example: 'git_repository' }),
     mountPath: z.string().openapi({ example: '/workspace/repos/saltbo/any-managed-agents' }),
     url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
@@ -47,7 +47,7 @@ export const RunnerWorkspaceManifestSchema = z
 export const RunnerVolumeSchema = z
   .object({
     name: z.string().openapi({ example: 'source' }),
-    type: z.enum(['secret', 'git_repository', 'memory']).openapi({ example: 'git_repository' }),
+    type: z.enum(['secret', 'git_repository', 'memory', 'empty_dir']).openapi({ example: 'git_repository' }),
     secretRef: z.string().optional(),
     url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),

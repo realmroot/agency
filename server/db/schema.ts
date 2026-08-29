@@ -100,6 +100,49 @@ export const providerModels = sqliteTable(
   (table) => [uniqueIndex('idx_provider_models_unique_model').on(table.providerId, table.modelId)],
 )
 
+// Identity owns its independent provisioning lifecycle. vault_id,
+// credential_id, and bound_agent_id are deliberately soft pointers: identities
+// are declared before agents/vaults and all three write paths are transactional.
+export const identities = sqliteTable(
+  'identities',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    organizationId: text('organization_id').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    username: text('username').notNull(),
+    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
+    state: text('state', { enum: ['provisioning', 'active', 'error'] })
+      .notNull()
+      .default('provisioning'),
+    failureCode: text('failure_code'),
+    vaultId: text('vault_id').notNull(),
+    credentialId: text('credential_id'),
+    remoteAgentId: text('remote_agent_id'),
+    issuer: text('issuer'),
+    subject: text('subject'),
+    boundAgentId: text('bound_agent_id'),
+    idempotencyKeyHash: text('idempotency_key_hash').notNull(),
+    requestFingerprint: text('request_fingerprint').notNull(),
+    provisioningOwner: text('provisioning_owner'),
+    provisioningLeaseExpiresAt: text('provisioning_lease_expires_at'),
+    archivedAt: text('archived_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_identities_project_created').on(table.projectId, table.createdAt, table.id),
+    uniqueIndex('idx_identities_project_idempotency').on(table.projectId, table.idempotencyKeyHash),
+    uniqueIndex('idx_identities_remote_agent').on(table.remoteAgentId),
+    index('idx_identities_bound_agent').on(table.boundAgentId),
+    check('ck_identities_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
+    check('ck_identities_state', sql`${table.state} in ('provisioning','active','error')`),
+  ],
+)
+
 export const agents = sqliteTable(
   'agents',
   {
@@ -120,7 +163,8 @@ export const agents = sqliteTable(
     // JSON array of connector slugs. Resolved against the platform MCP catalog
     // at session start, not FK'd (slugs are stable connector ids).
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
-    realmroot: text('realmroot'),
+    identityId: text('identity_id').references(() => identities.id),
+    identitySnapshot: text('identity_snapshot'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
@@ -158,7 +202,8 @@ export const agentVersions = sqliteTable(
     subagents: text('subagents').notNull().default('[]'),
     allowedTools: text('allowed_tools').notNull().default('[]'),
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
-    realmroot: text('realmroot'),
+    identityId: text('identity_id').references(() => identities.id),
+    identitySnapshot: text('identity_snapshot'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [
@@ -288,6 +333,7 @@ export const vaults = sqliteTable(
     scope: text('scope', { enum: ['project', 'organization'] })
       .notNull()
       .default('project'),
+    managedBy: text('managed_by', { enum: ['identity'] }),
     archivedAt: text('archived_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

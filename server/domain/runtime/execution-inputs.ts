@@ -14,7 +14,7 @@ export interface SecretItem {
   path: string
 }
 
-export type Volume = SecretVolume | GitRepositoryVolume | MemoryVolume
+export type Volume = SecretVolume | GitRepositoryVolume | MemoryVolume | EmptyDirVolume
 
 export interface SecretVolume {
   name: string
@@ -36,6 +36,18 @@ export interface MemoryVolume {
   name: string
   type: 'memory'
   memoryRef: string
+}
+
+export interface SecretVolumeProjection {
+  type: 'secret'
+  secretRef: string
+  items?: SecretItem[] | undefined
+}
+
+export interface EmptyDirVolume {
+  name: string
+  type: 'empty_dir'
+  seedFrom?: SecretVolumeProjection[] | undefined
 }
 
 export interface VolumeMount {
@@ -63,6 +75,10 @@ export function isMemoryVolume(volume: Volume): volume is MemoryVolume {
   return volume.type === 'memory'
 }
 
+export function isEmptyDirVolume(volume: Volume): volume is EmptyDirVolume {
+  return volume.type === 'empty_dir'
+}
+
 export function declaredVolumes(volumes: Volume[]): Volume[] {
   return volumes.map((volume) => {
     if (isMemoryVolume(volume)) {
@@ -80,6 +96,13 @@ export function declaredVolumes(volumes: Volume[]): Volume[] {
         ...(volume.ref ? { ref: volume.ref } : {}),
         ...(volume.secretRef ? { secretRef: volume.secretRef } : {}),
         ...(volume.items ? { items: volume.items } : {}),
+      }
+    }
+    if (isEmptyDirVolume(volume)) {
+      return {
+        name: volume.name,
+        type: 'empty_dir',
+        ...(volume.seedFrom ? { seedFrom: volume.seedFrom } : {}),
       }
     }
     return {

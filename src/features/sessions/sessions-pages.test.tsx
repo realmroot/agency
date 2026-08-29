@@ -458,6 +458,7 @@ describe('SessionsView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
+        identity: null,
 
         createdAt: now,
       },
@@ -492,6 +493,7 @@ describe('SessionsView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
+        identity: null,
 
         createdAt: now,
       },
@@ -575,6 +577,7 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
+        identity: null,
 
         createdAt: now,
       },
@@ -940,6 +943,7 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read', 'bash'],
         mcpConnectors: [],
+        identity: null,
 
         createdAt: now,
       },
@@ -967,6 +971,7 @@ describe('SessionDetailView', () => {
         subagents: [],
         allowedTools: ['read'],
         mcpConnectors: [],
+        identity: null,
 
         createdAt: now,
       },
@@ -1542,6 +1547,49 @@ describe('CreateSessionSheet — formatCreateSessionError', () => {
     await waitFor(() => expect(screen.getByText(/workers-ai \/ @cf\/moonshotai\/kimi-k2\.6/)).toBeTruthy(), {
       timeout: 5000,
     })
+  })
+
+  it('[spec: sessions/identity-materialization] locks and submits the Identity Runtime', async () => {
+    const identityAgent = buildAgent({
+      identity: {
+        identityId: 'identity_codex',
+        agentId: 'realmroot_agent_1',
+        issuer: 'https://id.realmroot.dev/api/auth',
+        subject: 'agent:realmroot_agent_1',
+        username: 'codex-operator',
+        runtime: 'codex',
+      },
+    })
+    let postedBody: Record<string, unknown> | null = null
+    server.use(
+      agentsList([identityAgent]),
+      environmentsList([buildEnvironment()]),
+      memoryStoresList(),
+      http.get('*/api/v1/vaults', () => HttpResponse.json(listOf([]))),
+      http.post('*/api/v1/sessions', async ({ request }) => {
+        postedBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(buildSession({ id: 'session_identity', spec: { runtime: 'codex' } }), { status: 201 })
+      }),
+    )
+
+    const queryClient = makeQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CreateSessionSheet open onOpenChange={vi.fn()} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByText("Locked by codex-operator's Identity.")).toBeTruthy()
+    const runtimeSelect = screen.getAllByRole('combobox')[2] as HTMLButtonElement
+    expect(runtimeSelect.disabled).toBe(true)
+    expect(runtimeSelect.textContent).toContain('Codex')
+    fireEvent.change(screen.getByLabelText('Prompt'), { target: { value: 'Run as the Realmroot identity' } })
+    fireEvent.submit(screen.getByRole('button', { name: 'Create session' }).closest('form') as HTMLFormElement)
+
+    await waitFor(() => expect(postedBody).not.toBeNull())
+    expect(postedBody).toMatchObject({ spec: { agentId: 'agent_1', runtime: 'codex' } })
   })
 })
 

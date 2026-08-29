@@ -20,12 +20,12 @@ Feature: Agents
     Then a new immutable version is snapshotted and becomes current
     And sessions created before the change keep the version 1 snapshot
 
-  @agents/realmroot-binding @usecase
-  Scenario: Bind an agent to a Realmroot identity without storing credentials in its definition
-    Given an active AMA vault credential contains an enrolled Realmroot Agent state
-    When the user binds an agent to the Realmroot Agent id, origin, and credential reference
-    Then the safe binding is included in each immutable agent version
-    And raw Realmroot state, keys, and access tokens never enter the agent record or API response
+  @agents/identity-binding @usecase
+  Scenario: Snapshot an optional Identity binding
+    Given an agent selects an active Identity from the same project
+    When the agent is created or updated
+    Then a new Agent Version stores only the safe Identity descriptor and immutable runtime
+    And changing or removing Identity creates another Agent Version
 
   @agents/lifecycle @usecase
   Scenario: Partial updates leave omitted fields and prune null metadata
@@ -39,7 +39,7 @@ Feature: Agents
     When an agent is saved with an unavailable provider, blocked tool, invalid skill, or raw secret material
     Then the request is rejected with field-level validation details
     And secret material is never accepted inside policy, metadata, tools, or connector configuration
-    And an incomplete Realmroot binding or non-AMA credential reference is rejected
+    And an unavailable or foreign-project Identity is rejected
 
   @agents/tool-contract @domain
   Scenario: Normalize and gate tool attachments

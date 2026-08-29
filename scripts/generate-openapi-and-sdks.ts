@@ -13,7 +13,7 @@
 // PATH) to be installed.
 
 import { execFileSync } from 'node:child_process'
-import { writeFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createApp } from '../server/app'
 import { AMA_CANONICAL_RESOURCE } from '../server/auth/scopes'
@@ -57,7 +57,7 @@ async function main() {
   // 2. Drive each language's generator from that snapshot.
   generateTypeScriptSdk()
   generateGoSdk()
-  generatePythonSdk()
+  await generatePythonSdk()
   generateSdkFacades()
 
   // 3. In check mode, fail if regeneration changed any committed artifact.
@@ -78,7 +78,7 @@ function generateGoSdk() {
   run('oapi-codegen', ['-config', 'oapi-codegen.config.yaml', '../openapi.json'], path.join(ROOT, 'sdk/go'))
 }
 
-function generatePythonSdk() {
+async function generatePythonSdk() {
   // openapi-python-client refuses to overwrite a package it did not create, so
   // remove the previous output first; `--meta none` keeps the hand-maintained
   // pyproject.toml. py.typed is re-added because `--meta none` omits it.
@@ -90,6 +90,33 @@ function generatePythonSdk() {
     sdkDir,
   )
   execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
+  await normalizeGeneratedPython(path.join(sdkDir, 'ama_sdk'))
+}
+
+async function normalizeGeneratedPython(directory: string) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name)
+    if (entry.isDirectory()) {
+      await normalizeGeneratedPython(entryPath)
+      continue
+    }
+    if (!entry.name.endsWith('.py')) continue
+    const content = await readFile(entryPath, 'utf8')
+    const relativePath = path.relative(ROOT, entryPath).split(path.sep).join('/')
+    let committedContent: string | null = null
+    try {
+      committedContent = execFileSync('git', ['show', `HEAD:${relativePath}`], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+    } catch {
+      // New generated files have no committed counterpart to preserve.
+    }
+    if (content === committedContent) continue
+    const normalized = content.replace(/[ \t]+\n/g, '\n').replace(/\n*$/, '\n')
+    if (normalized !== content) await writeFile(entryPath, normalized)
+  }
 }
 
 function generateSdkFacades() {

@@ -521,6 +521,30 @@ func (e CreateBudgetRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for CreateIdentityRequestSpecRuntime.
+const (
+	CreateIdentityRequestSpecRuntimeAma        CreateIdentityRequestSpecRuntime = "ama"
+	CreateIdentityRequestSpecRuntimeClaudeCode CreateIdentityRequestSpecRuntime = "claude-code"
+	CreateIdentityRequestSpecRuntimeCodex      CreateIdentityRequestSpecRuntime = "codex"
+	CreateIdentityRequestSpecRuntimeCopilot    CreateIdentityRequestSpecRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the CreateIdentityRequestSpecRuntime enum.
+func (e CreateIdentityRequestSpecRuntime) Valid() bool {
+	switch e {
+	case CreateIdentityRequestSpecRuntimeAma:
+		return true
+	case CreateIdentityRequestSpecRuntimeClaudeCode:
+		return true
+	case CreateIdentityRequestSpecRuntimeCodex:
+		return true
+	case CreateIdentityRequestSpecRuntimeCopilot:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRunnerRequestAuthMode.
 const (
 	CreateRunnerRequestAuthModeRealmroot CreateRunnerRequestAuthMode = "realmroot"
@@ -641,6 +665,21 @@ func (e CreateVaultRequestSpecScope) Valid() bool {
 	case CreateVaultRequestSpecScopeOrganization:
 		return true
 	case CreateVaultRequestSpecScopeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmptyDirVolumeType.
+const (
+	EmptyDirVolumeTypeEmptyDir EmptyDirVolumeType = "empty_dir"
+)
+
+// Valid indicates whether the value is a known member of the EmptyDirVolumeType enum.
+func (e EmptyDirVolumeType) Valid() bool {
+	switch e {
+	case EmptyDirVolumeTypeEmptyDir:
 		return true
 	default:
 		return false
@@ -928,13 +967,13 @@ func (e FileContentBlockType) Valid() bool {
 
 // Defines values for GitRepositoryVolumeType.
 const (
-	GitRepositoryVolumeTypeGitRepository GitRepositoryVolumeType = "git_repository"
+	GitRepository GitRepositoryVolumeType = "git_repository"
 )
 
 // Valid indicates whether the value is a known member of the GitRepositoryVolumeType enum.
 func (e GitRepositoryVolumeType) Valid() bool {
 	switch e {
-	case GitRepositoryVolumeTypeGitRepository:
+	case GitRepository:
 		return true
 	default:
 		return false
@@ -953,6 +992,75 @@ func (e HttpTriggerConcurrencyMode) Valid() bool {
 	case Parallel:
 		return true
 	case Serial:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IdentitySpecRuntime.
+const (
+	IdentitySpecRuntimeAma        IdentitySpecRuntime = "ama"
+	IdentitySpecRuntimeClaudeCode IdentitySpecRuntime = "claude-code"
+	IdentitySpecRuntimeCodex      IdentitySpecRuntime = "codex"
+	IdentitySpecRuntimeCopilot    IdentitySpecRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the IdentitySpecRuntime enum.
+func (e IdentitySpecRuntime) Valid() bool {
+	switch e {
+	case IdentitySpecRuntimeAma:
+		return true
+	case IdentitySpecRuntimeClaudeCode:
+		return true
+	case IdentitySpecRuntimeCodex:
+		return true
+	case IdentitySpecRuntimeCopilot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IdentityStatusState.
+const (
+	IdentityStatusStateActive       IdentityStatusState = "active"
+	IdentityStatusStateError        IdentityStatusState = "error"
+	IdentityStatusStateProvisioning IdentityStatusState = "provisioning"
+)
+
+// Valid indicates whether the value is a known member of the IdentityStatusState enum.
+func (e IdentityStatusState) Valid() bool {
+	switch e {
+	case IdentityStatusStateActive:
+		return true
+	case IdentityStatusStateError:
+		return true
+	case IdentityStatusStateProvisioning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IdentityDescriptorRuntime.
+const (
+	IdentityDescriptorRuntimeAma        IdentityDescriptorRuntime = "ama"
+	IdentityDescriptorRuntimeClaudeCode IdentityDescriptorRuntime = "claude-code"
+	IdentityDescriptorRuntimeCodex      IdentityDescriptorRuntime = "codex"
+	IdentityDescriptorRuntimeCopilot    IdentityDescriptorRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the IdentityDescriptorRuntime enum.
+func (e IdentityDescriptorRuntime) Valid() bool {
+	switch e {
+	case IdentityDescriptorRuntimeAma:
+		return true
+	case IdentityDescriptorRuntimeClaudeCode:
+		return true
+	case IdentityDescriptorRuntimeCodex:
+		return true
+	case IdentityDescriptorRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -1507,6 +1615,7 @@ func (e RunnerSandboxRequestType) Valid() bool {
 
 // Defines values for RunnerVolumeType.
 const (
+	RunnerVolumeTypeEmptyDir      RunnerVolumeType = "empty_dir"
 	RunnerVolumeTypeGitRepository RunnerVolumeType = "git_repository"
 	RunnerVolumeTypeMemory        RunnerVolumeType = "memory"
 	RunnerVolumeTypeSecret        RunnerVolumeType = "secret"
@@ -1515,6 +1624,8 @@ const (
 // Valid indicates whether the value is a known member of the RunnerVolumeType enum.
 func (e RunnerVolumeType) Valid() bool {
 	switch e {
+	case RunnerVolumeTypeEmptyDir:
+		return true
 	case RunnerVolumeTypeGitRepository:
 		return true
 	case RunnerVolumeTypeMemory:
@@ -1558,6 +1669,7 @@ func (e RunnerWorkspaceManifestRoot) Valid() bool {
 
 // Defines values for RunnerWorkspaceMountType.
 const (
+	RunnerWorkspaceMountTypeEmptyDir      RunnerWorkspaceMountType = "empty_dir"
 	RunnerWorkspaceMountTypeGitRepository RunnerWorkspaceMountType = "git_repository"
 	RunnerWorkspaceMountTypeMemory        RunnerWorkspaceMountType = "memory"
 	RunnerWorkspaceMountTypeSecret        RunnerWorkspaceMountType = "secret"
@@ -1566,6 +1678,8 @@ const (
 // Valid indicates whether the value is a known member of the RunnerWorkspaceMountType enum.
 func (e RunnerWorkspaceMountType) Valid() bool {
 	switch e {
+	case RunnerWorkspaceMountTypeEmptyDir:
+		return true
 	case RunnerWorkspaceMountTypeGitRepository:
 		return true
 	case RunnerWorkspaceMountTypeMemory:
@@ -1603,13 +1717,28 @@ func (e RuntimeName) Valid() bool {
 
 // Defines values for SecretVolumeType.
 const (
-	Secret SecretVolumeType = "secret"
+	SecretVolumeTypeSecret SecretVolumeType = "secret"
 )
 
 // Valid indicates whether the value is a known member of the SecretVolumeType enum.
 func (e SecretVolumeType) Valid() bool {
 	switch e {
-	case Secret:
+	case SecretVolumeTypeSecret:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SecretVolumeProjectionType.
+const (
+	SecretVolumeProjectionTypeSecret SecretVolumeProjectionType = "secret"
+)
+
+// Valid indicates whether the value is a known member of the SecretVolumeProjectionType enum.
+func (e SecretVolumeProjectionType) Valid() bool {
+	switch e {
+	case SecretVolumeProjectionTypeSecret:
 		return true
 	default:
 		return false
@@ -2231,6 +2360,21 @@ func (e UpdateBudgetRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for UpdateIdentityRequestArchived.
+const (
+	UpdateIdentityRequestArchivedTrue UpdateIdentityRequestArchived = true
+)
+
+// Valid indicates whether the value is a known member of the UpdateIdentityRequestArchived enum.
+func (e UpdateIdentityRequestArchived) Valid() bool {
+	switch e {
+	case UpdateIdentityRequestArchivedTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateLeaseRequestState.
 const (
 	UpdateLeaseRequestStateActive      UpdateLeaseRequestState = "active"
@@ -2407,16 +2551,16 @@ func (e UsageRecordProviderType) Valid() bool {
 
 // Defines values for UsageRecordState.
 const (
-	Error   UsageRecordState = "error"
-	Success UsageRecordState = "success"
+	UsageRecordStateError   UsageRecordState = "error"
+	UsageRecordStateSuccess UsageRecordState = "success"
 )
 
 // Valid indicates whether the value is a known member of the UsageRecordState enum.
 func (e UsageRecordState) Valid() bool {
 	switch e {
-	case Error:
+	case UsageRecordStateError:
 		return true
-	case Success:
+	case UsageRecordStateSuccess:
 		return true
 	default:
 		return false
@@ -2515,13 +2659,13 @@ func (e VaultCredentialStatusPhase) Valid() bool {
 
 // Defines values for VaultCredentialVersionSpecProvider.
 const (
-	Ama VaultCredentialVersionSpecProvider = "ama"
+	VaultCredentialVersionSpecProviderAma VaultCredentialVersionSpecProvider = "ama"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialVersionSpecProvider enum.
 func (e VaultCredentialVersionSpecProvider) Valid() bool {
 	switch e {
-	case Ama:
+	case VaultCredentialVersionSpecProviderAma:
 		return true
 	default:
 		return false
@@ -2642,6 +2786,24 @@ func (e ListEnvironmentsParamsArchived) Valid() bool {
 	case ListEnvironmentsParamsArchivedFalse:
 		return true
 	case ListEnvironmentsParamsArchivedTrue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListIdentitiesParamsArchived.
+const (
+	ListIdentitiesParamsArchivedFalse ListIdentitiesParamsArchived = "false"
+	ListIdentitiesParamsArchivedTrue  ListIdentitiesParamsArchived = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListIdentitiesParamsArchived enum.
+func (e ListIdentitiesParamsArchived) Valid() bool {
+	switch e {
+	case ListIdentitiesParamsArchivedFalse:
+		return true
+	case ListIdentitiesParamsArchivedTrue:
 		return true
 	default:
 		return false
@@ -3029,14 +3191,14 @@ type AgentListResponse struct {
 
 // AgentSpec defines model for AgentSpec.
 type AgentSpec struct {
-	AllowedTools  []string               `json:"allowedTools"`
-	McpConnectors []string               `json:"mcpConnectors"`
-	Model         *string                `json:"model"`
-	Provider      *string                `json:"provider"`
-	Realmroot     *RealmrootAgentBinding `json:"realmroot"`
-	Skills        []string               `json:"skills"`
-	Subagents     []AgentSubagent        `json:"subagents"`
-	SystemPrompt  string                 `json:"systemPrompt"`
+	AllowedTools  []string            `json:"allowedTools"`
+	Identity      *IdentityDescriptor `json:"identity"`
+	McpConnectors []string            `json:"mcpConnectors"`
+	Model         *string             `json:"model"`
+	Provider      *string             `json:"provider"`
+	Skills        []string            `json:"skills"`
+	Subagents     []AgentSubagent     `json:"subagents"`
+	SystemPrompt  string              `json:"systemPrompt"`
 }
 
 // AgentStatus defines model for AgentStatus.
@@ -3375,14 +3537,14 @@ type ConnectorToolApprovalMode string
 type CreateAgentRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
-		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
-		Model         *string                `json:"model,omitempty"`
-		Provider      *string                `json:"provider,omitempty"`
-		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
-		Skills        *[]string              `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
-		SystemPrompt  string                 `json:"systemPrompt"`
+		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
+		IdentityRef   *string               `json:"identityRef,omitempty"`
+		McpConnectors *[]string             `json:"mcpConnectors,omitempty"`
+		Model         *string               `json:"model,omitempty"`
+		Provider      *string               `json:"provider,omitempty"`
+		Skills        *[]string             `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput `json:"subagents,omitempty"`
+		SystemPrompt  string                `json:"systemPrompt"`
 	} `json:"spec"`
 }
 
@@ -3428,6 +3590,18 @@ type CreateEnvironmentRequest struct {
 
 // CreateHttpTriggerRunRequest defines model for CreateHttpTriggerRunRequest.
 type CreateHttpTriggerRunRequest map[string]interface{}
+
+// CreateIdentityRequest defines model for CreateIdentityRequest.
+type CreateIdentityRequest struct {
+	Metadata ResourceCreateMetadata `json:"metadata"`
+	Spec     struct {
+		Runtime  CreateIdentityRequestSpecRuntime `json:"runtime"`
+		Username string                           `json:"username"`
+	} `json:"spec"`
+}
+
+// CreateIdentityRequestSpecRuntime defines model for CreateIdentityRequest.Spec.Runtime.
+type CreateIdentityRequestSpecRuntime string
 
 // CreateLeaseRequest defines model for CreateLeaseRequest.
 type CreateLeaseRequest struct {
@@ -3511,7 +3685,7 @@ type CreateTriggerRequest struct {
 				EnvFrom        *[]EnvFromEntry `json:"envFrom,omitempty"`
 				EnvironmentId  *string         `json:"environmentId,omitempty"`
 				PromptTemplate string          `json:"promptTemplate"`
-				Runtime        RuntimeName     `json:"runtime"`
+				Runtime        *RuntimeName    `json:"runtime,omitempty"`
 				VolumeMounts   *[]VolumeMount  `json:"volumeMounts,omitempty"`
 				Volumes        *[]Volume       `json:"volumes,omitempty"`
 			} `json:"spec"`
@@ -3587,6 +3761,16 @@ type EditToolInput struct {
 	} `json:"edits"`
 	Path string `json:"path"`
 }
+
+// EmptyDirVolume defines model for EmptyDirVolume.
+type EmptyDirVolume struct {
+	Name     string                    `json:"name"`
+	SeedFrom *[]SecretVolumeProjection `json:"seedFrom,omitempty"`
+	Type     EmptyDirVolumeType        `json:"type"`
+}
+
+// EmptyDirVolumeType defines model for EmptyDirVolume.Type.
+type EmptyDirVolumeType string
 
 // EnvFromEntry defines model for EnvFromEntry.
 type EnvFromEntry struct {
@@ -3822,7 +4006,7 @@ type ExecutionSpecInput struct {
 	Env           *ExecutionEnv   `json:"env,omitempty"`
 	EnvFrom       *[]EnvFromEntry `json:"envFrom,omitempty"`
 	EnvironmentId *string         `json:"environmentId,omitempty"`
-	Runtime       RuntimeName     `json:"runtime"`
+	Runtime       *RuntimeName    `json:"runtime,omitempty"`
 	VolumeMounts  *[]VolumeMount  `json:"volumeMounts,omitempty"`
 	Volumes       *[]Volume       `json:"volumes,omitempty"`
 }
@@ -3890,6 +4074,47 @@ type HttpTriggerConcurrency struct {
 
 // HttpTriggerConcurrencyMode defines model for HttpTriggerConcurrency.Mode.
 type HttpTriggerConcurrencyMode string
+
+// Identity defines model for Identity.
+type Identity struct {
+	Metadata ResourceMetadata `json:"metadata"`
+	Spec     struct {
+		Runtime  IdentitySpecRuntime `json:"runtime"`
+		Username string              `json:"username"`
+	} `json:"spec"`
+	Status struct {
+		BoundAgentId *string             `json:"boundAgentId"`
+		Descriptor   *IdentityDescriptor `json:"descriptor"`
+		FailureCode  *string             `json:"failureCode"`
+		Phase        ResourcePhase       `json:"phase"`
+		State        IdentityStatusState `json:"state"`
+	} `json:"status"`
+}
+
+// IdentitySpecRuntime defines model for Identity.Spec.Runtime.
+type IdentitySpecRuntime string
+
+// IdentityStatusState defines model for Identity.Status.State.
+type IdentityStatusState string
+
+// IdentityDescriptor defines model for IdentityDescriptor.
+type IdentityDescriptor struct {
+	AgentId    string                    `json:"agentId"`
+	IdentityId string                    `json:"identityId"`
+	Issuer     string                    `json:"issuer"`
+	Runtime    IdentityDescriptorRuntime `json:"runtime"`
+	Subject    string                    `json:"subject"`
+	Username   string                    `json:"username"`
+}
+
+// IdentityDescriptorRuntime defines model for IdentityDescriptor.Runtime.
+type IdentityDescriptorRuntime string
+
+// IdentityListResponse defines model for IdentityListResponse.
+type IdentityListResponse struct {
+	Data       []Identity     `json:"data"`
+	Pagination ListPagination `json:"pagination"`
+}
 
 // ImageContentBlock defines model for ImageContentBlock.
 type ImageContentBlock struct {
@@ -4187,13 +4412,6 @@ type ReadToolInput struct {
 	Limit  *int   `json:"limit,omitempty"`
 	Offset *int   `json:"offset,omitempty"`
 	Path   string `json:"path"`
-}
-
-// RealmrootAgentBinding defines model for RealmrootAgentBinding.
-type RealmrootAgentBinding struct {
-	AgentId       string `json:"agentId"`
-	CredentialRef string `json:"credentialRef"`
-	Origin        string `json:"origin"`
 }
 
 // ReasoningContentBlock defines model for ReasoningContentBlock.
@@ -4602,6 +4820,16 @@ type SecretVolume struct {
 // SecretVolumeType defines model for SecretVolume.Type.
 type SecretVolumeType string
 
+// SecretVolumeProjection defines model for SecretVolumeProjection.
+type SecretVolumeProjection struct {
+	Items     *[]SecretItem              `json:"items,omitempty"`
+	SecretRef string                     `json:"secretRef"`
+	Type      SecretVolumeProjectionType `json:"type"`
+}
+
+// SecretVolumeProjectionType defines model for SecretVolumeProjection.Type.
+type SecretVolumeProjectionType string
+
 // Session defines model for Session.
 type Session struct {
 	Metadata SessionMetadata `json:"metadata"`
@@ -4611,19 +4839,19 @@ type Session struct {
 
 // SessionAgentSnapshot defines model for SessionAgentSnapshot.
 type SessionAgentSnapshot struct {
-	AgentId       string                   `json:"agentId"`
-	AllowedTools  []string                 `json:"allowedTools"`
-	CreatedAt     time.Time                `json:"createdAt"`
-	Id            string                   `json:"id"`
-	McpConnectors []string                 `json:"mcpConnectors"`
-	Model         *string                  `json:"model"`
-	ProjectId     string                   `json:"projectId"`
-	Provider      string                   `json:"provider"`
-	Realmroot     *SessionRealmrootBinding `json:"realmroot,omitempty"`
-	Skills        []string                 `json:"skills"`
-	Subagents     []SessionSubagent        `json:"subagents"`
-	SystemPrompt  string                   `json:"systemPrompt"`
-	Version       int                      `json:"version"`
+	AgentId       string                     `json:"agentId"`
+	AllowedTools  []string                   `json:"allowedTools"`
+	CreatedAt     time.Time                  `json:"createdAt"`
+	Id            string                     `json:"id"`
+	Identity      *SessionIdentityDescriptor `json:"identity"`
+	McpConnectors []string                   `json:"mcpConnectors"`
+	Model         *string                    `json:"model"`
+	ProjectId     string                     `json:"projectId"`
+	Provider      string                     `json:"provider"`
+	Skills        []string                   `json:"skills"`
+	Subagents     []SessionSubagent          `json:"subagents"`
+	SystemPrompt  string                     `json:"systemPrompt"`
+	Version       int                        `json:"version"`
 }
 
 // SessionApproval defines model for SessionApproval.
@@ -4891,6 +5119,16 @@ type SessionEventsAccepted struct {
 	Accepted int `json:"accepted"`
 }
 
+// SessionIdentityDescriptor defines model for SessionIdentityDescriptor.
+type SessionIdentityDescriptor struct {
+	AgentId    string      `json:"agentId"`
+	IdentityId string      `json:"identityId"`
+	Issuer     string      `json:"issuer"`
+	Runtime    RuntimeName `json:"runtime"`
+	Subject    string      `json:"subject"`
+	Username   string      `json:"username"`
+}
+
 // SessionListResponse defines model for SessionListResponse.
 type SessionListResponse struct {
 	Data       []Session      `json:"data"`
@@ -4944,13 +5182,6 @@ type SessionPlacement struct {
 	HostingMode EnvironmentHostingMode `json:"hostingMode"`
 	Model       *string                `json:"model"`
 	Provider    string                 `json:"provider"`
-}
-
-// SessionRealmrootBinding defines model for SessionRealmrootBinding.
-type SessionRealmrootBinding struct {
-	AgentId       string `json:"agentId"`
-	CredentialRef string `json:"credentialRef"`
-	Origin        string `json:"origin"`
 }
 
 // SessionSocketAbortMessage defines model for SessionSocketAbortMessage.
@@ -5279,14 +5510,14 @@ type UpdateAgentRequest struct {
 	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
-		AllowedTools  *[]string              `json:"allowedTools,omitempty"`
-		McpConnectors *[]string              `json:"mcpConnectors,omitempty"`
-		Model         *string                `json:"model,omitempty"`
-		Provider      *string                `json:"provider,omitempty"`
-		Realmroot     *RealmrootAgentBinding `json:"realmroot,omitempty"`
-		Skills        *[]string              `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput  `json:"subagents,omitempty"`
-		SystemPrompt  *string                `json:"systemPrompt,omitempty"`
+		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
+		IdentityRef   *string               `json:"identityRef,omitempty"`
+		McpConnectors *[]string             `json:"mcpConnectors,omitempty"`
+		Model         *string               `json:"model,omitempty"`
+		Provider      *string               `json:"provider,omitempty"`
+		Skills        *[]string             `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentInput `json:"subagents,omitempty"`
+		SystemPrompt  *string               `json:"systemPrompt,omitempty"`
 	} `json:"spec,omitempty"`
 }
 
@@ -5317,6 +5548,14 @@ type UpdateEnvironmentRequest struct {
 		} `json:"variables,omitempty"`
 	} `json:"spec,omitempty"`
 }
+
+// UpdateIdentityRequest defines model for UpdateIdentityRequest.
+type UpdateIdentityRequest struct {
+	Archived UpdateIdentityRequestArchived `json:"archived"`
+}
+
+// UpdateIdentityRequestArchived defines model for UpdateIdentityRequest.Archived.
+type UpdateIdentityRequestArchived bool
 
 // UpdateLeaseRequest defines model for UpdateLeaseRequest.
 type UpdateLeaseRequest struct {
@@ -5767,6 +6006,25 @@ type ListEnvironmentsParams struct {
 // ListEnvironmentsParamsArchived defines parameters for ListEnvironments.
 type ListEnvironmentsParamsArchived string
 
+// ListIdentitiesParams defines parameters for ListIdentities.
+type ListIdentitiesParams struct {
+	// Archived Filter by lifecycle. Defaults to false (live resources only).
+	Archived    *ListIdentitiesParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
+	Search      *string                       `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time                    `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int                          `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string                       `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListIdentitiesParamsArchived defines parameters for ListIdentities.
+type ListIdentitiesParamsArchived string
+
+// CreateIdentityParams defines parameters for CreateIdentity.
+type CreateIdentityParams struct {
+	IdempotencyKey string `json:"idempotency-key"`
+}
+
 // ListLeasesParams defines parameters for ListLeases.
 type ListLeasesParams struct {
 	RunnerId *string                `form:"runnerId,omitempty" json:"runnerId,omitempty"`
@@ -5990,6 +6248,15 @@ type CreateEnvironmentJSONRequestBody = CreateEnvironmentRequest
 
 // UpdateEnvironmentJSONRequestBody defines body for UpdateEnvironment for application/json ContentType.
 type UpdateEnvironmentJSONRequestBody = UpdateEnvironmentRequest
+
+// CreateIdentityJSONRequestBody defines body for CreateIdentity for application/json ContentType.
+type CreateIdentityJSONRequestBody = CreateIdentityRequest
+
+// UpdateIdentityJSONRequestBody defines body for UpdateIdentity for application/json ContentType.
+type UpdateIdentityJSONRequestBody = UpdateIdentityRequest
+
+// UpdateIdentityApplicationMergePatchPlusJSONRequestBody defines body for UpdateIdentity for application/merge-patch+json ContentType.
+type UpdateIdentityApplicationMergePatchPlusJSONRequestBody = UpdateIdentityRequest
 
 // CreateLeaseJSONRequestBody defines body for CreateLease for application/json ContentType.
 type CreateLeaseJSONRequestBody = CreateLeaseRequest
@@ -8309,6 +8576,34 @@ func (t *Volume) MergeMemoryVolume(v MemoryVolume) error {
 	return err
 }
 
+// AsEmptyDirVolume returns the union data inside the Volume as a EmptyDirVolume
+func (t Volume) AsEmptyDirVolume() (EmptyDirVolume, error) {
+	var body EmptyDirVolume
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEmptyDirVolume overwrites any union data inside the Volume as the provided EmptyDirVolume
+func (t *Volume) FromEmptyDirVolume(v EmptyDirVolume) error {
+	v.Type = "empty_dir"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEmptyDirVolume performs a merge with any union data inside the Volume, using the provided EmptyDirVolume
+func (t *Volume) MergeEmptyDirVolume(v EmptyDirVolume) error {
+	v.Type = "empty_dir"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t Volume) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"type"`
@@ -8323,6 +8618,8 @@ func (t Volume) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "empty_dir":
+		return t.AsEmptyDirVolume()
 	case "git_repository":
 		return t.AsGitRepositoryVolume()
 	case "memory":
@@ -8500,6 +8797,24 @@ type ClientInterface interface {
 
 	// ReadEnvironmentVersion request
 	ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListIdentities request
+	ListIdentities(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateIdentityWithBody request with any body
+	CreateIdentityWithBody(ctx context.Context, params *CreateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateIdentity(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReadIdentity request
+	ReadIdentity(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateIdentityWithBody request with any body
+	UpdateIdentityWithBody(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateIdentity(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListLeases request
 	ListLeases(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9090,6 +9405,90 @@ func (c *APIClient) ListEnvironmentVersions(ctx context.Context, environmentId s
 
 func (c *APIClient) ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadEnvironmentVersionRequest(c.Server, environmentId, version)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) ListIdentities(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListIdentitiesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) CreateIdentityWithBody(ctx context.Context, params *CreateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateIdentityRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) CreateIdentity(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateIdentityRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) ReadIdentity(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadIdentityRequest(c.Server, identityId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateIdentityWithBody(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequestWithBody(c.Server, identityId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequest(c.Server, identityId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(c.Server, identityId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11406,6 +11805,265 @@ func NewReadEnvironmentVersionRequest(server string, environmentId string, versi
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewListIdentitiesRequest generates requests for ListIdentities
+func NewListIdentitiesRequest(server string, params *ListIdentitiesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/identities")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Archived != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CreatedFrom != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "createdFrom", *params.CreatedFrom, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date-time"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CreatedTo != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "createdTo", *params.CreatedTo, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date-time"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateIdentityRequest calls the generic CreateIdentity builder with application/json body
+func NewCreateIdentityRequest(server string, params *CreateIdentityParams, body CreateIdentityJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateIdentityRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewCreateIdentityRequestWithBody generates requests for CreateIdentity with any type of body
+func NewCreateIdentityRequestWithBody(server string, params *CreateIdentityParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/identities")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("idempotency-key", headerParam0)
+
+	}
+
+	return req, nil
+}
+
+// NewReadIdentityRequest generates requests for ReadIdentity
+func NewReadIdentityRequest(server string, identityId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "identityId", identityId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/identities/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateIdentityRequest calls the generic UpdateIdentity builder with application/json body
+func NewUpdateIdentityRequest(server string, identityId string, body UpdateIdentityJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateIdentityRequestWithBody(server, identityId, "application/json", bodyReader)
+}
+
+// NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody calls the generic UpdateIdentity builder with application/merge-patch+json body
+func NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(server string, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateIdentityRequestWithBody(server, identityId, "application/merge-patch+json", bodyReader)
+}
+
+// NewUpdateIdentityRequestWithBody generates requests for UpdateIdentity with any type of body
+func NewUpdateIdentityRequestWithBody(server string, identityId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "identityId", identityId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/identities/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -15240,6 +15898,24 @@ type ClientWithResponsesInterface interface {
 	// ReadEnvironmentVersionWithResponse request
 	ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error)
 
+	// ListIdentitiesWithResponse request
+	ListIdentitiesWithResponse(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*ListIdentitiesResponse, error)
+
+	// CreateIdentityWithBodyWithResponse request with any body
+	CreateIdentityWithBodyWithResponse(ctx context.Context, params *CreateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error)
+
+	CreateIdentityWithResponse(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error)
+
+	// ReadIdentityWithResponse request
+	ReadIdentityWithResponse(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error)
+
+	// UpdateIdentityWithBodyWithResponse request with any body
+	UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+
+	UpdateIdentityWithResponse(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+
+	UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+
 	// ListLeasesWithResponse request
 	ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error)
 
@@ -15519,6 +16195,7 @@ type CreateAgentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -16263,6 +16940,141 @@ func (r ReadEnvironmentVersionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadEnvironmentVersionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListIdentitiesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *IdentityListResponse
+	JSON400      *ErrorResponse
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListIdentitiesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListIdentitiesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListIdentitiesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *Identity
+	JSON400      *ErrorResponse
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON409      *ErrorResponse
+	JSON502      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateIdentityResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ReadIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Identity
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ReadIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReadIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReadIdentityResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Identity
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateIdentityResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18683,6 +19495,66 @@ func (c *ClientWithResponses) ReadEnvironmentVersionWithResponse(ctx context.Con
 	return ParseReadEnvironmentVersionResponse(rsp)
 }
 
+// ListIdentitiesWithResponse request returning *ListIdentitiesResponse
+func (c *ClientWithResponses) ListIdentitiesWithResponse(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*ListIdentitiesResponse, error) {
+	rsp, err := c.ListIdentities(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListIdentitiesResponse(rsp)
+}
+
+// CreateIdentityWithBodyWithResponse request with arbitrary body returning *CreateIdentityResponse
+func (c *ClientWithResponses) CreateIdentityWithBodyWithResponse(ctx context.Context, params *CreateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error) {
+	rsp, err := c.CreateIdentityWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateIdentityResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateIdentityWithResponse(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error) {
+	rsp, err := c.CreateIdentity(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateIdentityResponse(rsp)
+}
+
+// ReadIdentityWithResponse request returning *ReadIdentityResponse
+func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error) {
+	rsp, err := c.ReadIdentity(ctx, identityId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReadIdentityResponse(rsp)
+}
+
+// UpdateIdentityWithBodyWithResponse request with arbitrary body returning *UpdateIdentityResponse
+func (c *ClientWithResponses) UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentityWithBody(ctx, identityId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateIdentityResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateIdentityWithResponse(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentity(ctx, identityId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateIdentityResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx, identityId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateIdentityResponse(rsp)
+}
+
 // ListLeasesWithResponse request returning *ListLeasesResponse
 func (c *ClientWithResponses) ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error) {
 	rsp, err := c.ListLeases(ctx, params, reqEditors...)
@@ -19531,6 +20403,13 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -20554,6 +21433,215 @@ func ParseReadEnvironmentVersionResponse(rsp *http.Response) (*ReadEnvironmentVe
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListIdentitiesResponse parses an HTTP response from a ListIdentitiesWithResponse call
+func ParseListIdentitiesResponse(rsp *http.Response) (*ListIdentitiesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListIdentitiesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IdentityListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateIdentityResponse parses an HTTP response from a CreateIdentityWithResponse call
+func ParseCreateIdentityResponse(rsp *http.Response) (*CreateIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest Identity
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseReadIdentityResponse parses an HTTP response from a ReadIdentityWithResponse call
+func ParseReadIdentityResponse(rsp *http.Response) (*ReadIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReadIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Identity
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateIdentityResponse parses an HTTP response from a UpdateIdentityWithResponse call
+func ParseUpdateIdentityResponse(rsp *http.Response) (*UpdateIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Identity
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

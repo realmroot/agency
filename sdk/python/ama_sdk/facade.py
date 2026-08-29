@@ -33,6 +33,10 @@ from .api.governance import delete_budget as delete_budget_api
 from .api.governance import list_budgets as list_budgets_api
 from .api.governance import read_budget as read_budget_api
 from .api.governance import update_budget as update_budget_api
+from .api.identities import create_identity as create_identity_api
+from .api.identities import list_identities as list_identities_api
+from .api.identities import read_identity as read_identity_api
+from .api.identities import update_identity as update_identity_api
 from .api.leases import create_lease as create_lease_api
 from .api.leases import list_leases as list_leases_api
 from .api.leases import read_lease as read_lease_api
@@ -253,6 +257,7 @@ class AmaClient:
         self.auth = _AuthResource(self._core)
         self.projects = _ProjectsResource(self._core)
         self.agents = _AgentsResource(self._core)
+        self.identities = _IdentitiesResource(self._core)
         self.environments = _EnvironmentsResource(self._core)
         self.providers = _ProvidersResource(self._core)
         self.runners = _RunnersResource(self._core)
@@ -407,6 +412,23 @@ class _AgentsResource:
 
     def get_version(self, agent_id: str, version: int) -> Any:
         return _unwrap(read_agent_version_api.sync_detailed(agent_id=agent_id, version=version, client=self._client))
+
+class _IdentitiesResource:
+    def __init__(self, owner: _ClientCore) -> None:
+        self._owner = owner
+        self._client = owner.raw
+
+    def list(self, **query: Any) -> Any:
+        return _unwrap(list_identities_api.sync_detailed(client=self._client, **query))
+
+    def create(self, body: Any, idempotency_key: str) -> Any:
+        return _unwrap(create_identity_api.sync_detailed(client=self._client, body=body, idempotency_key=idempotency_key))
+
+    def get(self, identity_id: str) -> Any:
+        return _unwrap(read_identity_api.sync_detailed(identity_id=identity_id, client=self._client))
+
+    def archive(self, identity_id: str, body: Any) -> Any:
+        return _unwrap(update_identity_api.sync_detailed(identity_id=identity_id, client=self._client, body=body))
 
 class _EnvironmentsResource:
     def __init__(self, owner: _ClientCore) -> None:

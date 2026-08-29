@@ -8,6 +8,7 @@ import {
   Clock,
   Code2,
   DatabaseZap,
+  Fingerprint,
   LogOut,
   MessageSquare,
   Plus,
@@ -144,6 +145,7 @@ function DesktopNav() {
   return (
     <nav className="mt-8 flex-1 space-y-1">
       <NavButton icon={<Bot size={17} />} to="/agents" label="Agents" />
+      <NavButton icon={<Fingerprint size={17} />} to="/identities" label="Identities" />
       <NavButton icon={<Server size={17} />} to="/environments" label="Environments" />
       <NavButton icon={<MessageSquare size={17} />} to="/sessions" label="Sessions" />
       <NavButton icon={<Clock size={17} />} to="/triggers" label="Triggers" />
@@ -204,6 +206,7 @@ function MobileNav() {
   return (
     <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Primary">
       <MobileNavButton icon={<Bot size={16} />} to="/agents" label="Agents" />
+      <MobileNavButton icon={<Fingerprint size={16} />} to="/identities" label="Identities" />
       <MobileNavButton icon={<Server size={16} />} to="/environments" label="Environments" />
       <MobileNavButton icon={<MessageSquare size={16} />} to="/sessions" label="Sessions" />
       <MobileNavButton icon={<Clock size={16} />} to="/triggers" label="Triggers" />

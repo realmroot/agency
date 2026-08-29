@@ -1,4 +1,10 @@
 import {
+  IdentityRuntimeMismatchError,
+  IdentityRuntimeRequiredError,
+  resolveIdentityRuntime,
+} from '@server/domain/identity'
+import type { RuntimeName } from '@server/domain/runtime-catalog'
+import {
   hasSecretMaterial,
   nextDueFromInterval,
   type Trigger,
@@ -55,7 +61,12 @@ async function assertReferencesUsable(deps: Deps, projectId: string, agentId: st
 }
 
 export interface CreateTriggerInputDto {
-  config: Omit<TriggerConfig, 'nextDueAt'> & { nextDueAt: string | null }
+  config: Omit<TriggerConfig, 'nextDueAt' | 'template'> & {
+    nextDueAt: string | null
+    template: Omit<TriggerSessionTemplate, 'spec'> & {
+      spec: Omit<TriggerSessionTemplate['spec'], 'runtime'> & { runtime?: TriggerSessionTemplate['spec']['runtime'] }
+    }
+  }
 }
 
 function normalizeScheduleConfig(config: CreateTriggerInputDto['config']) {
@@ -80,7 +91,7 @@ function normalizeScheduleConfig(config: CreateTriggerInputDto['config']) {
 
 export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTriggerInputDto): Promise<Trigger> {
   rejectSecretMaterial({
-    template: input.config.template,
+    templateMetadata: input.config.template.metadata,
     volumes: input.config.template.spec.volumes,
     env: input.config.template.spec.env,
   })
@@ -90,6 +101,17 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     input.config.template.spec.agentId,
     input.config.template.spec.environmentId,
   )
+  const agent = await deps.agents.find(auth.project.id, input.config.template.spec.agentId)
+  if (!agent) throw new TriggerConflictError('Agent not found', 404)
+  let runtime: RuntimeName
+  try {
+    runtime = resolveIdentityRuntime(input.config.template.spec.runtime, agent.spec.identity)
+  } catch (error) {
+    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+      throw new TriggerConflictError(error.message, 409, error.code)
+    }
+    throw error
+  }
 
   const timestamp = new Date().toISOString()
   const timing = normalizeScheduleConfig(input.config)
@@ -97,7 +119,7 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     name: input.config.name,
     source: timing.source,
     suspend: input.config.suspend,
-    template: input.config.template,
+    template: { ...input.config.template, spec: { ...input.config.template.spec, runtime } },
     nextDueAt: timing.nextDueAt,
   }
   return deps.triggers.insert(
@@ -209,7 +231,7 @@ export async function updateTrigger(
   if (trigger.metadata.archivedAt !== null && patch.archived !== false) {
     throw new TriggerConflictError('Archived triggers cannot be updated')
   }
-  const template = mergeTemplate(trigger, patch)
+  let template = mergeTemplate(trigger, patch)
   rejectSecretMaterial({
     templateMetadata: patch.template?.metadata,
     volumes: patch.template?.spec?.volumes,
@@ -221,6 +243,25 @@ export async function updateTrigger(
   const environmentId = template.spec.environmentId
   if (patch.template?.spec?.agentId !== undefined || patch.template?.spec?.environmentId !== undefined) {
     await assertReferencesUsable(deps, auth.project.id, agentId, environmentId)
+  }
+  const agent = await deps.agents.find(auth.project.id, agentId)
+  if (!agent) throw new TriggerConflictError('Agent not found', 404)
+  try {
+    const requestedRuntime =
+      patch.template?.spec?.runtime !== undefined
+        ? patch.template.spec.runtime
+        : agent.spec.identity
+          ? undefined
+          : template.spec.runtime
+    template = {
+      ...template,
+      spec: { ...template.spec, runtime: resolveIdentityRuntime(requestedRuntime, agent.spec.identity) },
+    }
+  } catch (error) {
+    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+      throw new TriggerConflictError(error.message, 409, error.code)
+    }
+    throw error
   }
 
   const timestamp = new Date().toISOString()

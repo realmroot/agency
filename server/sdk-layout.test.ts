@@ -49,6 +49,19 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     expect(python).toContain('def _dpop_websocket_headers')
   })
 
+  it('requires and forwards the Identity idempotency key in every language facade', () => {
+    const typescript = readFileSync('sdk/typescript/src/client.ts', 'utf8')
+    const go = readFileSync('sdk/go/ama/client.go', 'utf8')
+    const python = readFileSync('sdk/python/ama_sdk/facade.py', 'utf8')
+
+    expect(typescript).toContain('create: (body: types.CreateIdentityRequest, idempotencyKey: string)')
+    expect(typescript).toContain('headers: { "idempotency-key": idempotencyKey }')
+    expect(go).toContain('Create(ctx context.Context, params *CreateIdentityParams, body CreateIdentityRequest)')
+    expect(go).toContain('CreateIdentityWithResponse(ctx, params, body)')
+    expect(python).toContain('def create(self, body: Any, idempotency_key: str)')
+    expect(python).toContain('body=body, idempotency_key=idempotency_key')
+  })
+
   it('keeps the web console on the shared Hono RPC client', () => {
     const apiClient = readFileSync('src/lib/amarpc/core.ts', 'utf8')
 

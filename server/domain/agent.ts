@@ -1,4 +1,5 @@
 import { AMA_SANDBOX_TOOL_NAMES, isAmaSandboxToolName } from '@shared/agent-tools'
+import type { IdentityDescriptor } from './identity'
 import type { ResourceMetadata, ResourcePhase } from './resource'
 
 export interface AgentSpec {
@@ -9,33 +10,7 @@ export interface AgentSpec {
   subagents: AgentSubagent[]
   allowedTools: string[]
   mcpConnectors: string[]
-  realmroot: RealmrootAgentBinding | null
-}
-
-export interface RealmrootAgentBinding {
-  agentId: string
-  origin: string
-  credentialRef: string
-}
-
-export function validateRealmrootBinding(binding: RealmrootAgentBinding | null): FieldErrors | null {
-  if (!binding) return null
-  if (!binding.agentId.trim() || binding.agentId.length > 160) {
-    return { realmroot: 'Realmroot Agent id is required.' }
-  }
-  let origin: URL
-  try {
-    origin = new URL(binding.origin)
-  } catch {
-    return { realmroot: 'Realmroot origin must be an absolute HTTPS URL.' }
-  }
-  if (origin.protocol !== 'https:' || origin.username || origin.password || origin.search || origin.hash) {
-    return { realmroot: 'Realmroot origin must be an absolute HTTPS URL without credentials, query, or fragment.' }
-  }
-  if (!binding.credentialRef.startsWith('ama://vaults/')) {
-    return { realmroot: 'Realmroot credential must use an AMA Vault credential reference.' }
-  }
-  return null
+  identity: IdentityDescriptor | null
 }
 
 export interface AgentSubagent {

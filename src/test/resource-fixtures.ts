@@ -62,7 +62,7 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       subagents: overrides.subagents ?? [],
       allowedTools: overrides.allowedTools ?? ['read', 'write'],
       mcpConnectors: overrides.mcpConnectors ?? [],
-      realmroot: overrides.realmroot ?? null,
+      identity: overrides.identity ?? null,
     },
     status: {
       phase: overrides.archivedAt ? 'archived' : 'active',

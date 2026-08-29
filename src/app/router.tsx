@@ -6,6 +6,8 @@ import { AuditRecordPage } from '@/features/audit/AuditRecordPage'
 import { ConsoleLayout } from '@/features/console/ConsoleLayout'
 import { EnvironmentDetailPage } from '@/features/environments/EnvironmentDetailPage'
 import { EnvironmentsPage } from '@/features/environments/EnvironmentsPage'
+import { IdentitiesPage } from '@/features/identities/IdentitiesPage'
+import { IdentityDetailPage } from '@/features/identities/IdentityDetailPage'
 import { McpConnectorPage } from '@/features/mcp/McpConnectorPage'
 import { McpPage } from '@/features/mcp/McpPage'
 import { MemoryStoreDetailPage } from '@/features/memory-stores/MemoryStoreDetailPage'
@@ -34,6 +36,8 @@ export function createAppRouter() {
         { path: 'agents', element: <AgentsPage /> },
         { path: 'agents/new', element: <Navigate to="/agents" replace /> },
         { path: 'agents/:agentId', element: <AgentDetailPage /> },
+        { path: 'identities', element: <IdentitiesPage /> },
+        { path: 'identities/:identityId', element: <IdentityDetailPage /> },
         { path: 'environments', element: <EnvironmentsPage /> },
         { path: 'environments/:environmentId', element: <EnvironmentDetailPage /> },
         { path: 'sessions', element: <SessionsPage /> },

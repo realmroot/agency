@@ -145,6 +145,42 @@ export const readEnvironmentVersion = (options) => (options.client ?? client).ge
     ...options
 });
 /**
+ * List identities
+ */
+export const listIdentities = (options) => (options?.client ?? client).get({
+    url: '/api/v1/identities',
+    ...options
+});
+/**
+ * Create an identity
+ */
+export const createIdentity = (options) => (options.client ?? client).post({
+    url: '/api/v1/identities',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
+ * Read an identity
+ */
+export const readIdentity = (options) => (options.client ?? client).get({
+    url: '/api/v1/identities/{identityId}',
+    ...options
+});
+/**
+ * Archive an identity
+ */
+export const updateIdentity = (options) => (options.client ?? client).patch({
+    url: '/api/v1/identities/{identityId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/merge-patch+json',
+        ...options.headers
+    }
+});
+/**
  * List model vendors
  */
 export const listProviders = (options) => (options?.client ?? client).get({

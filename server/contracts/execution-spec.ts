@@ -81,8 +81,28 @@ export const SecretVolumeSchema = z
   .strict()
   .openapi('SecretVolume')
 
+export const SecretVolumeProjectionSchema = z
+  .object({
+    type: z.literal('secret'),
+    secretRef: SecretRefSchema.openapi({
+      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+    }),
+    items: z.array(SecretItemSchema).max(50).optional(),
+  })
+  .strict()
+  .openapi('SecretVolumeProjection')
+
+export const EmptyDirVolumeSchema = z
+  .object({
+    name: VolumeNameSchema.openapi({ example: 'runtime-state' }),
+    type: z.literal('empty_dir'),
+    seedFrom: z.array(SecretVolumeProjectionSchema).max(50).optional(),
+  })
+  .strict()
+  .openapi('EmptyDirVolume')
+
 export const VolumeSchema = z
-  .discriminatedUnion('type', [SecretVolumeSchema, GitRepositoryVolumeSchema, MemoryVolumeSchema])
+  .discriminatedUnion('type', [SecretVolumeSchema, GitRepositoryVolumeSchema, MemoryVolumeSchema, EmptyDirVolumeSchema])
   .openapi('Volume')
 
 export const VolumeMountSchema = z
@@ -129,6 +149,7 @@ export const ExecutionSpecInputSchema = ExecutionSpecSchema.extend({
   envFrom: z.array(EnvFromEntrySchema).max(50).optional(),
   volumes: z.array(VolumeSchema).max(50).optional(),
   volumeMounts: z.array(VolumeMountSchema).max(50).optional(),
+  runtime: RuntimeSchema.optional().openapi({ example: 'codex' }),
 })
   .strict()
   .openapi('ExecutionSpecInput')

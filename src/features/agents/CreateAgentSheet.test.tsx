@@ -5,8 +5,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import type { Agent } from '@/lib/amarpc'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Agent, Identity } from '@/lib/amarpc'
 import { createCollection, HttpResponse, http, server } from '@/test/msw'
 import { type AgentOverrides, agent as resourceAgent } from '@/test/resource-fixtures'
 import { CreateAgentSheet } from './CreateAgentSheet'
@@ -20,6 +20,47 @@ function buildAgent(overrides: AgentOverrides = {}): Agent {
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
 }
+
+const identity: Identity = {
+  metadata: {
+    uid: 'identity_codex',
+    projectId: 'project_1',
+    name: 'Codex operator',
+    description: null,
+    labels: {},
+    annotations: {},
+    createdBy: 'user_1',
+    createdAt: now,
+    updatedAt: now,
+    archivedAt: null,
+  },
+  spec: { username: 'codex-operator', runtime: 'codex' },
+  status: {
+    phase: 'active',
+    state: 'active',
+    failureCode: null,
+    boundAgentId: null,
+    descriptor: {
+      identityId: 'identity_codex',
+      agentId: 'realmroot_agent_1',
+      issuer: 'https://id.realmroot.dev/api/auth',
+      subject: 'agent:realmroot_agent_1',
+      username: 'codex-operator',
+      runtime: 'codex',
+    },
+  },
+}
+
+beforeEach(() => {
+  server.use(
+    http.get('*/api/v1/identities', () =>
+      HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
+    ),
+    http.get('*/api/v1/providers/models', () =>
+      HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
+    ),
+  )
+})
 
 describe('CreateAgentSheet', () => {
   it('does not render content when closed', () => {
@@ -92,6 +133,45 @@ describe('CreateAgentSheet', () => {
     const body = postedBody as unknown as Record<string, unknown>
     expect(body).toMatchObject({ metadata: { name: 'Coding agent' } })
     expect(body.metadata).not.toHaveProperty('description')
+  })
+
+  it('[spec: agents/identity-binding] sends the selected Runtime-specific Identity reference', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+      value: vi.fn(() => false),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { value: vi.fn(), configurable: true })
+    Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', { value: vi.fn(), configurable: true })
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { value: vi.fn(), configurable: true })
+
+    let postedBody: Record<string, unknown> | null = null
+    server.use(
+      http.get('*/api/v1/identities', () =>
+        HttpResponse.json({ data: [identity], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
+      ),
+      http.post('*/api/v1/agents', async ({ request }) => {
+        postedBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(buildAgent({ id: 'agent_identity' }), { status: 201 })
+      }),
+    )
+    const queryClient = makeQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <CreateAgentSheet open onOpenChange={() => {}} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect((await screen.findAllByText('No Identity')).length).toBeGreaterThan(0)
+    const identitySelect = screen.getAllByRole('combobox')[1] as HTMLElement
+    fireEvent.pointerDown(identitySelect, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.mouseDown(identitySelect)
+    fireEvent.click(await screen.findByRole('option', { name: 'Codex operator · codex' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save agent' }))
+
+    await waitFor(() => expect(postedBody).not.toBeNull())
+    expect(postedBody).toMatchObject({ spec: { identityRef: 'identity_codex' } })
   })
 
   it('shows creating agent label while mutation is pending', async () => {

@@ -71,6 +71,15 @@ Feature: Environments
     And the session stays pending with a waiting-for-runner reason
     And no Cloudflare Sandbox id is assigned before a runner lease
 
+  @environments/cloud-go-packages @usecase
+  Scenario: Install declared Go packages in a cloud environment
+    Given a cloud environment snapshot declares versioned Go package modules
+    When AMA prepares the Cloudflare Sandbox for a session
+    Then each module is installed into a session environment bin directory before the runtime starts
+    And that directory is prepended to the runtime PATH
+    And a package installation failure stops startup with a safe generic error
+    And process-unsafe self-hosted runners do not install environment packages
+
   # ── Web console (web: list, create, detail in jsdom) ──
 
   @environments/console-list @web

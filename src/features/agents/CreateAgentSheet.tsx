@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -14,6 +14,11 @@ import { queryKeys } from '@/lib/query-keys'
 export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<AgentFormState>(emptyAgent)
+  const identitiesQuery = useQuery({
+    queryKey: queryKeys.identities.list(false),
+    queryFn: () => api.listIdentities(),
+    enabled: open,
+  })
   const createAgent = useMutation({
     mutationFn: () =>
       api.createAgent({
@@ -29,6 +34,7 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
           allowedTools: parseTools(form.allowedTools),
           subagents: [],
           mcpConnectors: parseTools(form.mcpConnectors),
+          identityRef: form.identityRef || null,
         },
       }),
     onSuccess: () => {
@@ -59,6 +65,7 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
             setValue={setForm}
             submitLabel={createAgent.isPending ? 'Creating agent' : 'Save agent'}
             onSubmit={submit}
+            identities={identitiesQuery.data?.data ?? []}
           />
         </div>
       </SheetContent>

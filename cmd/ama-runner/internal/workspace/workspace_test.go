@@ -58,6 +58,103 @@ func TestWorkspaceSafety(t *testing.T) {
 	}
 }
 
+func TestPrepareWorkspaceSeedsWritableEmptyDirOnce(t *testing.T) {
+	workDir := t.TempDir()
+	mount := protocol.WorkspaceMount{
+		Type:      "empty_dir",
+		Name:      "runtime-state",
+		MountPath: "/workspace/.ama/runtime-state",
+		ReadOnly:  false,
+		Files: []protocol.WorkspaceFile{{
+			Path:    "identities/issuer/runtime.json",
+			Content: "initial",
+		}},
+	}
+	prepared, err := Prepare(context.Background(), PrepareRequest{
+		WorkDir: workDir, SessionID: "session_1", Manifest: workspaceManifest(mount),
+	})
+	if err != nil {
+		t.Fatalf("prepare empty directory: %v", err)
+	}
+	statePath := filepath.Join(prepared.Root, ".ama", "runtime-state", "identities", "issuer", "runtime.json")
+	if err := os.WriteFile(statePath, []byte("runtime-mutated"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Prepare(context.Background(), PrepareRequest{
+		WorkDir: workDir, SessionID: "session_1", Manifest: workspaceManifest(mount),
+	}); err != nil {
+		t.Fatalf("prepare existing empty directory: %v", err)
+	}
+	content, err := os.ReadFile(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "runtime-mutated" {
+		t.Fatalf("expected runtime state to survive repeated preparation, got %q", content)
+	}
+	if err := os.Chmod(statePath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Prepare(context.Background(), PrepareRequest{
+		WorkDir: workDir, SessionID: "session_1", Manifest: workspaceManifest(mount),
+	}); err != nil {
+		t.Fatalf("prepare existing empty directory after runtime permission change: %v", err)
+	}
+	info, err := os.Stat(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o700 {
+		t.Fatalf("expected runtime-owned mode 0700 to survive repeated preparation, got %o", mode)
+	}
+}
+
+func TestPrepareWorkspaceRejectsEmptyDirSymlinkOnReuse(t *testing.T) {
+	workDir := t.TempDir()
+	workspace, err := Open(workDir, "session_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	mountPath := filepath.Join(workspace.Root, ".ama", "runtime-state")
+	if err := os.MkdirAll(filepath.Dir(mountPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, mountPath); err != nil {
+		t.Fatal(err)
+	}
+	_, err = Prepare(context.Background(), PrepareRequest{
+		WorkDir:   workDir,
+		SessionID: "session_1",
+		Manifest: workspaceManifest(protocol.WorkspaceMount{
+			Type: "empty_dir", Name: "runtime-state", MountPath: "/workspace/.ama/runtime-state",
+			Files: []protocol.WorkspaceFile{{Path: "state.json", Content: "secret"}},
+		}),
+	})
+	if err == nil || !strings.Contains(err.Error(), "symbolic links") {
+		t.Fatalf("expected symbolic link rejection, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outside, "state.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected no secret outside the workspace, got %v", err)
+	}
+}
+
+func TestWorkspaceRuntimeEnvMapsVirtualWorkspacePaths(t *testing.T) {
+	workspace := &Workspace{Root: filepath.Join(t.TempDir(), "workspace")}
+	input := map[string]string{
+		"STATE_DIR": "/workspace/.ama/runtime-state",
+		"UNCHANGED": "value",
+	}
+	resolved := workspace.RuntimeEnv(input)
+	expected := filepath.Join(workspace.Root, ".ama", "runtime-state")
+	if resolved["STATE_DIR"] != expected {
+		t.Fatalf("expected mapped workspace path %q, got %q", expected, resolved["STATE_DIR"])
+	}
+	if resolved["UNCHANGED"] != "value" || input["STATE_DIR"] != "/workspace/.ama/runtime-state" {
+		t.Fatalf("expected input to remain immutable, input=%#v resolved=%#v", input, resolved)
+	}
+}
+
 func TestOpenRejectsSessionSymlinkEscape(t *testing.T) {
 	workDir := t.TempDir()
 	outside := t.TempDir()

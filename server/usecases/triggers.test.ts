@@ -1,3 +1,4 @@
+import type { Agent } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
 import type { Trigger } from '@server/domain/trigger'
 import { describe, expect, it } from 'vitest'
@@ -111,7 +112,64 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
     environmentUsable: async () => null,
     ...repo,
   }
-  return { triggers } as unknown as Deps
+  const agent: Agent = {
+    metadata: resourceMetadata({
+      uid: 'agent_1',
+      pid: 'project_1',
+      name: 'Agent',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }),
+    spec: {
+      systemPrompt: 'Work.',
+      provider: null,
+      model: null,
+      skills: [],
+      subagents: [],
+      allowedTools: [],
+      mcpConnectors: [],
+      identity: null,
+    },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1 },
+  }
+  return { triggers, agents: { find: async () => agent } } as unknown as Deps
+}
+
+function identityAgent(runtime: 'ama' | 'codex' | 'claude-code' | 'copilot'): Agent {
+  return {
+    metadata: resourceMetadata({
+      uid: 'agent_1',
+      pid: 'project_1',
+      name: 'Agent',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }),
+    spec: {
+      systemPrompt: 'Work.',
+      provider: null,
+      model: null,
+      skills: [],
+      subagents: [],
+      allowedTools: [],
+      mcpConnectors: [],
+      identity: {
+        identityId: 'identity_1',
+        agentId: 'rr_agent_1',
+        issuer: 'https://realmroot.example/api/auth',
+        subject: 'rr_agent_1',
+        username: 'runner',
+        runtime,
+        credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+      },
+    },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1 },
+  }
+}
+
+function depsWithAgent(agent: Agent, repo: Partial<Deps['triggers']> = {}) {
+  const deps = fakeDeps(repo)
+  deps.agents = { ...deps.agents, find: async () => agent }
+  return deps
 }
 
 describe('[spec: triggers/create] createTrigger', () => {
@@ -121,6 +179,63 @@ describe('[spec: triggers/create] createTrigger', () => {
     })
     expect(trigger.spec.template.spec.agentId).toBe('agent_1')
     expect(trigger.status.nextDueAt).toBe('2026-05-26T12:00:00.000Z')
+  })
+
+  it.each([
+    'ama',
+    'codex',
+    'claude-code',
+    'copilot',
+  ] as const)('[spec: identities/runtime-constraint] inherits %s from the selected Identity', async (runtime) => {
+    const config = baseConfig()
+    delete (config.template.spec as { runtime?: string }).runtime
+    const trigger = await createTrigger(depsWithAgent(identityAgent(runtime)), auth, { config })
+    expect(trigger.spec.template.spec.runtime).toBe(runtime)
+  })
+
+  it('[spec: identities/runtime-constraint] rejects a create runtime that conflicts with the Identity', async () => {
+    await expect(
+      createTrigger(depsWithAgent(identityAgent('codex')), auth, { config: baseConfig() }),
+    ).rejects.toMatchObject({
+      name: 'TriggerConflictError',
+      status: 409,
+      code: 'identity_runtime_mismatch',
+    })
+  })
+
+  it('propagates unexpected Identity runtime resolution failures on create', async () => {
+    const agent = identityAgent('codex')
+    Object.defineProperty(agent.spec.identity, 'runtime', {
+      get() {
+        throw new Error('corrupt identity descriptor')
+      },
+    })
+    await expect(createTrigger(depsWithAgent(agent), auth, { config: baseConfig() })).rejects.toThrow(
+      'corrupt identity descriptor',
+    )
+  })
+
+  it('maps an Agent missing after reference validation to a 404', async () => {
+    const deps = fakeDeps()
+    deps.agents = { ...deps.agents, find: async () => null }
+    await expect(createTrigger(deps, auth, { config: baseConfig() })).rejects.toMatchObject({
+      name: 'TriggerConflictError',
+      status: 404,
+    })
+  })
+
+  it('skips environment validation for an unpinned environment', async () => {
+    let checkedEnvironment = false
+    const deps = fakeDeps({
+      environmentUsable: async () => {
+        checkedEnvironment = true
+        return null
+      },
+    })
+    const config = baseConfig()
+    config.template.spec.environmentId = null
+    await createTrigger(deps, auth, { config })
+    expect(checkedEnvironment).toBe(false)
   })
 
   it('creates an HTTP trigger without schedule timing [spec: triggers/http-create]', async () => {
@@ -265,6 +380,42 @@ describe('[spec: triggers/lifecycle] updateTrigger', () => {
     expect(result.trigger.metadata.name).toBe('Renamed')
     expect(result.trigger.spec.source).toMatchObject({ type: 'schedule', schedule: { intervalSeconds: 1800 } })
     expect(result.archived).toBe(false)
+  })
+
+  it('[spec: identities/runtime-constraint] re-materializes runtime when the Agent changes', async () => {
+    const result = await updateTrigger(depsWithAgent(identityAgent('copilot')), auth, triggerRecord(), {
+      template: { spec: { agentId: 'agent_identity' } },
+    })
+    expect(result.trigger.spec.template.spec.runtime).toBe('copilot')
+  })
+
+  it('[spec: identities/runtime-constraint] rejects a conflicting explicit runtime update', async () => {
+    await expect(
+      updateTrigger(depsWithAgent(identityAgent('claude-code')), auth, triggerRecord(), {
+        template: { spec: { runtime: 'codex' } },
+      }),
+    ).rejects.toMatchObject({ name: 'TriggerConflictError', status: 409, code: 'identity_runtime_mismatch' })
+  })
+
+  it('propagates unexpected Identity runtime resolution failures on update', async () => {
+    const agent = identityAgent('codex')
+    Object.defineProperty(agent.spec.identity, 'runtime', {
+      get() {
+        throw new Error('corrupt identity descriptor')
+      },
+    })
+    await expect(updateTrigger(depsWithAgent(agent), auth, triggerRecord(), {})).rejects.toThrow(
+      'corrupt identity descriptor',
+    )
+  })
+
+  it('maps an Agent missing during an update to a 404', async () => {
+    const deps = fakeDeps()
+    deps.agents = { ...deps.agents, find: async () => null }
+    await expect(updateTrigger(deps, auth, triggerRecord(), {})).rejects.toMatchObject({
+      name: 'TriggerConflictError',
+      status: 404,
+    })
   })
 
   it('archives and reports the transition', async () => {

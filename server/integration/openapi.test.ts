@@ -528,8 +528,9 @@ describe('[CF] OpenAPI documentation', () => {
     })
     // environmentId is optional: an unpinned trigger resolves an environment per
     // dispatch, so it must NOT be in the template spec required set.
-    expect(templateSpec?.required).toEqual(expect.arrayContaining(['agentId', 'runtime', 'promptTemplate']))
+    expect(templateSpec?.required).toEqual(expect.arrayContaining(['agentId', 'promptTemplate']))
     expect(templateSpec?.required).not.toContain('environmentId')
+    expect(templateSpec?.required).not.toContain('runtime')
 
     const triggerRunProperties = (
       doc.components?.schemas?.TriggerRun as {

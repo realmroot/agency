@@ -263,3 +263,31 @@ func TestClientFacadeReturnsAPIError(t *testing.T) {
 		t.Fatalf("expected status helper to expose 409, got %d %v", status, ok)
 	}
 }
+
+func TestIdentityFacadeForwardsRequiredIdempotencyKey(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/identities" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("idempotency-key"); got != "identity-idempotency-1" {
+			t.Fatalf("expected Identity idempotency key, got %q", got)
+		}
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":{"type":"fixture_stop","message":"header captured"}}`))
+	}))
+	defer server.Close()
+
+	client, err := New(ClientConfig{BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("expected client, got %v", err)
+	}
+	_, err = client.Identities.Create(
+		context.Background(),
+		&CreateIdentityParams{IdempotencyKey: "identity-idempotency-1"},
+		CreateIdentityRequest{},
+	)
+	if err == nil {
+		t.Fatal("expected fixture response to stop after header capture")
+	}
+}

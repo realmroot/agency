@@ -43,6 +43,7 @@ type Client struct {
 	Auth         AuthService
 	Projects     ProjectsService
 	Agents       AgentsService
+	Identities   IdentitiesService
 	Environments EnvironmentsService
 	Providers    ProvidersService
 	Runners      RunnersService
@@ -75,6 +76,7 @@ func New(config ClientConfig) (*Client, error) {
 	client.Auth = AuthService{client: core}
 	client.Projects = ProjectsService{client: core}
 	client.Agents = AgentsService{client: core}
+	client.Identities = IdentitiesService{client: core}
 	client.Environments = EnvironmentsService{client: core}
 	client.Providers = ProvidersService{client: core}
 	client.Runners = RunnersService{client: core}
@@ -316,7 +318,7 @@ func (s AgentsService) Create(ctx context.Context, body CreateAgentRequest) (*Ag
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
 }
 
 func (s AgentsService) Get(ctx context.Context, agentID string) (*Agent, error) {
@@ -349,6 +351,42 @@ func (s AgentsService) GetVersion(ctx context.Context, agentID string, version i
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+}
+
+type IdentitiesService struct {
+	client *clientCore
+}
+
+func (s IdentitiesService) List(ctx context.Context, params *ListIdentitiesParams) (*IdentityListResponse, error) {
+	response, err := s.client.raw.ListIdentitiesWithResponse(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+}
+
+func (s IdentitiesService) Create(ctx context.Context, params *CreateIdentityParams, body CreateIdentityRequest) (*Identity, error) {
+	response, err := s.client.raw.CreateIdentityWithResponse(ctx, params, body)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409, response.JSON502)
+}
+
+func (s IdentitiesService) Get(ctx context.Context, identityID string) (*Identity, error) {
+	response, err := s.client.raw.ReadIdentityWithResponse(ctx, identityID)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
+}
+
+func (s IdentitiesService) Archive(ctx context.Context, identityID string, body UpdateIdentityRequest) (*Identity, error) {
+	response, err := s.client.raw.UpdateIdentityWithResponse(ctx, identityID, body)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 type EnvironmentsService struct {

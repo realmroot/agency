@@ -18,6 +18,7 @@ const ENFORCED_CAPABILITIES = new Set([
   'auth',
   'environments',
   'governance',
+  'identities',
   'mcp',
   'projects',
   'providers',
