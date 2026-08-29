@@ -73,6 +73,14 @@ Feature: Runners
     And quota-governed runtimes whose usage probe is unavailable are reported as limited before work can be assigned
     And disabled runners cannot heartbeat themselves active and every runner endpoint requires authentication
 
+  @runners/stale-heartbeat @api
+  Scenario: Treat runners that stop heartbeating as offline
+    Given an active self-hosted runner stops sending heartbeats beyond the control-plane grace window
+    When operators read or filter runners and AMA evaluates runtime scheduling or lease claims
+    Then the runner is reported as offline and excluded from active runner results
+    And it cannot satisfy runtime availability or claim new work while its heartbeat is stale
+    And a fresh heartbeat makes the same runner active again without re-registration
+
   # ── Work queue and leases (api: assembled server, channel, lifecycle) ──
 
   @runners/queue-work @api

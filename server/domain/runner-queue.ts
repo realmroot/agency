@@ -1,5 +1,25 @@
 import type { RuntimeRequirement, RuntimeSupport } from '@server/domain/runtime-catalog'
 
+export const RUNNER_HEARTBEAT_GRACE_MS = 5 * 60 * 1000
+
+export type RunnerOperationalState = 'active' | 'draining' | 'disabled' | 'offline'
+
+export function runnerHeartbeatStaleBefore(now = new Date()): string {
+  return new Date(now.getTime() - RUNNER_HEARTBEAT_GRACE_MS).toISOString()
+}
+
+export function effectiveRunnerState(
+  state: RunnerOperationalState,
+  lastHeartbeatAt: string | null,
+  now = new Date(),
+): RunnerOperationalState {
+  if (state !== 'active') {
+    return state
+  }
+  const heartbeatAt = lastHeartbeatAt ? Date.parse(lastHeartbeatAt) : Number.NaN
+  return Number.isFinite(heartbeatAt) && heartbeatAt >= now.getTime() - RUNNER_HEARTBEAT_GRACE_MS ? state : 'offline'
+}
+
 function secretKey(key: string) {
   return /secret|token|password|api[_-]?key/i.test(key)
 }

@@ -1,4 +1,5 @@
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
+import { effectiveRunnerState, runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
 import type {
   CreateRunnerInput,
   ListPageResult,
@@ -68,7 +69,7 @@ async function secretRefFromColumns(db: Db, row: RunnerRow) {
   return credential ? credentialScopedSecretRef({ vaultId: credential.vaultId, credentialId: row.credentialId }) : null
 }
 
-async function recordFrom(db: Db, row: RunnerRow): Promise<RunnerAuthRecord> {
+async function recordFrom(db: Db, row: RunnerRow, now = new Date()): Promise<RunnerAuthRecord> {
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -78,7 +79,7 @@ async function recordFrom(db: Db, row: RunnerRow): Promise<RunnerAuthRecord> {
     secretRef: await secretRefFromColumns(db, row),
     // DB text column constrained to the auth-mode set by every write path.
     authMode: row.authMode as RunnerAuthMode,
-    state: row.state,
+    state: effectiveRunnerState(row.state, row.lastHeartbeatAt, now),
     currentLoad: row.currentLoad,
     maxConcurrent: row.maxConcurrent,
     runtimeUsage: parseRawJson<RuntimeUsage[]>(row.runtimeUsage) ?? [],
@@ -91,6 +92,19 @@ async function recordFrom(db: Db, row: RunnerRow): Promise<RunnerAuthRecord> {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
+}
+
+function stateFilter(state: RunnerStateColumn, staleBefore: string) {
+  if (state === 'active') {
+    return and(eq(runners.state, state), gte(runners.lastHeartbeatAt, staleBefore))
+  }
+  if (state === 'offline') {
+    return or(
+      eq(runners.state, 'offline'),
+      and(eq(runners.state, 'active'), or(isNull(runners.lastHeartbeatAt), lt(runners.lastHeartbeatAt, staleBefore))),
+    )
+  }
+  return eq(runners.state, state)
 }
 
 function columnsFromInput(input: CreateRunnerInput) {
@@ -123,13 +137,15 @@ async function findRow(db: Db, projectId: string, runnerId: string): Promise<Run
 export function createRunnerRepo(db: Db): RunnerRepo {
   return {
     async list(query: RunnerListQuery): Promise<ListPageResult<RunnerAuthRecord>> {
+      const now = new Date()
+      const staleBefore = runnerHeartbeatStaleBefore(now)
       const filters = [
         eq(runners.projectId, query.projectId),
         query.runnerId ? eq(runners.id, query.runnerId) : undefined,
         query.oidcSubject ? eq(runners.oidcSubject, query.oidcSubject) : undefined,
         query.oidcClientId ? eq(runners.oidcClientId, query.oidcClientId) : undefined,
         query.archived ? isNotNull(runners.archivedAt) : isNull(runners.archivedAt),
-        query.state ? eq(runners.state, query.state as RunnerStateColumn) : undefined,
+        query.state ? stateFilter(query.state as RunnerStateColumn, staleBefore) : undefined,
         query.environmentId ? eq(runners.environmentId, query.environmentId) : undefined,
         query.search ? like(runners.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(runners.createdAt, query.createdFrom) : undefined,
@@ -148,7 +164,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         .orderBy(desc(runners.createdAt), desc(runners.id))
         .limit(query.limit + 1)
       const hasMore = rows.length > query.limit
-      return { rows: await Promise.all(rows.slice(0, query.limit).map((row) => recordFrom(db, row))), hasMore }
+      return { rows: await Promise.all(rows.slice(0, query.limit).map((row) => recordFrom(db, row, now))), hasMore }
     },
 
     async find(projectId, runnerId) {

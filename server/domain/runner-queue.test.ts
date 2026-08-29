@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  effectiveRunnerState,
   environmentIdForRegistration,
   hasSecretMaterial,
   type RunnerOidcContext,
   runnerAuthModeForRegistration,
+  runnerHeartbeatStaleBefore,
   runnerMachineId,
   runnerOidcBindingFields,
   runnerSupportsWork,
@@ -31,6 +33,36 @@ describe('[spec: runners/eligibility] runnerSupportsWork', () => {
 
   it('rejects session starts that declare no runtime requirement', () => {
     expect(runnerSupportsWork([], { type: 'session.start' })).toBe(false)
+  })
+})
+
+describe('[spec: runners/stale-heartbeat] runner liveness', () => {
+  const now = new Date('2026-08-29T23:40:00.000Z')
+
+  afterEach(() => vi.useRealTimers())
+
+  it('derives the cutoff from an explicit or current clock', () => {
+    expect(runnerHeartbeatStaleBefore(now)).toBe('2026-08-29T23:35:00.000Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    expect(runnerHeartbeatStaleBefore()).toBe('2026-08-29T23:35:00.000Z')
+  })
+
+  it('reports active runners offline after the heartbeat grace window', () => {
+    expect(effectiveRunnerState('active', '2026-08-29T23:34:59.999Z', now)).toBe('offline')
+    expect(effectiveRunnerState('active', 'not-a-timestamp', now)).toBe('offline')
+    expect(effectiveRunnerState('active', null, now)).toBe('offline')
+  })
+
+  it('preserves fresh and operator-controlled runner states', () => {
+    expect(effectiveRunnerState('active', '2026-08-29T23:35:00.000Z', now)).toBe('active')
+    expect(effectiveRunnerState('draining', null, now)).toBe('draining')
+    expect(effectiveRunnerState('offline', '2026-08-29T23:39:59.000Z', now)).toBe('offline')
+    expect(effectiveRunnerState('disabled', null, now)).toBe('disabled')
+
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    expect(effectiveRunnerState('active', '2026-08-29T23:35:00.000Z')).toBe('active')
   })
 })
 
