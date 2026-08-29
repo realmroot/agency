@@ -78,6 +78,7 @@ Feature: Environments
     Then each package is installed into the isolated session environment before the runtime starts
     And its bin directories are prepended to the runtime PATH
     And a package installation failure records a stable code, failed step, safe diagnostic, and RuntimeReady condition
+    And the safe startup failure remains inspectable as a Session runtime error event
     And process-unsafe self-hosted runners do not install environment packages
 
   # ── Web console (web: list, create, detail in jsdom) ──
