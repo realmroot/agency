@@ -26,6 +26,7 @@ export interface EnvironmentPackages {
   go: string[]
   npm: string[]
   pip: string[]
+  webi: string[]
 }
 
 export interface EnvironmentVariable {
@@ -103,5 +104,5 @@ export function stringArray(value: unknown): string[] {
 // The free-form JSON config fields that must never carry raw secret material —
 // secrets belong in a vault secret reference, not inline configuration.
 export function defaultEnvironmentPackages(): EnvironmentPackages {
-  return { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] }
+  return { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] }
 }

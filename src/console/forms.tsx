@@ -41,6 +41,7 @@ const PACKAGE_MANAGER_LABELS: Record<(typeof ENVIRONMENT_PACKAGE_MANAGERS)[numbe
   go: 'Go',
   npm: 'NPM',
   pip: 'Pip',
+  webi: 'Webi',
 }
 
 export function EnvironmentForm({

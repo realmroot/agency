@@ -169,6 +169,7 @@ async function createEnvironment(authorization: string, data: Record<string, unk
               )
             : ['@earendil-works/pi-agent-core@prebuilt'],
           pip: [],
+          webi: [],
         }
   const networking =
     networkPolicy && typeof networkPolicy === 'object' && (networkPolicy as { mode?: unknown }).mode === 'offline'
@@ -436,6 +437,64 @@ describe('[CF] /api/v1/sessions', () => {
     expect(createRes.status).toBe(409)
     await expect(createRes.json()).resolves.toMatchObject({
       error: { type: 'conflict', message: expect.stringContaining('No environment has an active runner') },
+    })
+  })
+
+  it('publishes a RuntimeReady condition for Environment package installation failures', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const agent = await createAgent(authorization, { mcpConnectors: [] })
+    const createRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: agent.id,
+        environmentId: environment.id,
+        runtime: 'ama',
+        name: 'Package failure condition',
+        prompt: 'Start after a Runner becomes available.',
+      }),
+    })
+    const createText = await createRes.text()
+    expect(createRes.status, createText).toBe(201)
+    const created = JSON.parse(createText) as { metadata: { uid: string } }
+    const bindings = env as unknown as Env
+    const row = await bindings.DB.prepare('SELECT metadata FROM sessions WHERE id = ?')
+      .bind(created.metadata.uid)
+      .first<{ metadata: string }>()
+    const metadata = JSON.parse(row?.metadata ?? '{}') as Record<string, unknown>
+    metadata.error = {
+      type: 'runtime_error',
+      code: 'environment_package_installation_failed',
+      message: 'Environment package installation failed at webi-install:realmroot@0.4.2',
+      detail: { step: 'webi-install:realmroot@0.4.2', stderr: 'release not found' },
+    }
+    const updatedAt = new Date().toISOString()
+    await bindings.DB.prepare(
+      "UPDATE sessions SET state = 'error', state_reason = ?, metadata = ?, updated_at = ? WHERE id = ?",
+    )
+      .bind(
+        'Environment package installation failed at webi-install:realmroot@0.4.2',
+        JSON.stringify(metadata),
+        updatedAt,
+        created.metadata.uid,
+      )
+      .run()
+
+    const readRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization)
+    expect(readRes.status).toBe(200)
+    await expect(readRes.json()).resolves.toMatchObject({
+      status: {
+        phase: 'error',
+        conditions: [
+          {
+            type: 'RuntimeReady',
+            status: 'False',
+            reason: 'EnvironmentPackageInstallationFailed',
+            message: 'Environment package installation failed at webi-install:realmroot@0.4.2',
+            lastTransitionAt: updatedAt,
+          },
+        ],
+      },
     })
   })
 
@@ -2316,7 +2375,7 @@ describe('[CF] /api/v1/sessions', () => {
     await jsonFetch(`/api/v1/environments/${environment.id}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({
-        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite'], pip: [] },
+        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite'], pip: [], webi: [] },
       }),
     })
     await jsonFetch(`/api/v1/agents/${agent.id}`, authorization, {

@@ -1,12 +1,12 @@
 # Integration Snippets
 
-These examples use the current AMA deployment origin and the published `/api/openapi.json` document. Set `AMA_ORIGIN` to the console origin, for example `https://ama.example.com`. Do not point AMA control-plane examples at model-provider API hosts.
+These examples use the current AMA deployment origin and the published `/api/v1/openapi.json` document. Set `AMA_ORIGIN` to the console origin, for example `https://ama.example.com`. Do not point AMA control-plane examples at model-provider API hosts.
 
 ## OpenAPI
 
 ```bash
 export AMA_ORIGIN="https://ama.example.com"
-curl -fsS "$AMA_ORIGIN/api/openapi.json"
+curl -fsS "$AMA_ORIGIN/api/v1/openapi.json"
 ```
 
 The document contains `/api/v1` paths for config discovery, agents, environments, sessions, providers, vaults, budgets, usage, audit, connectors, and auth. It is the source of truth for request fields, response fields, auth, and machine-readable output.
@@ -53,7 +53,7 @@ Standard resource responses for agents, environments, vaults, memory stores, tri
 
 ## Generated SDK Shape
 
-Generated SDKs are generated from or mechanically aligned with `/api/openapi.json`. They should keep control-plane calls thin:
+Generated SDKs are generated from or mechanically aligned with `/api/v1/openapi.json`. They should keep control-plane calls thin:
 
 ```ts
 const client = createAmaClient({ baseUrl, projectId, authorize: oidcAccessTokenAuthorizer })

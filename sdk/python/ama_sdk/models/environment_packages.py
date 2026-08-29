@@ -22,7 +22,7 @@ T = TypeVar("T", bound="EnvironmentPackages")
 
 @_attrs_define
 class EnvironmentPackages:
-    """ 
+    """
         Attributes:
             type_ (EnvironmentPackagesType):
             apt (list[str]):
@@ -31,6 +31,7 @@ class EnvironmentPackages:
             go (list[str]):
             npm (list[str]):
             pip (list[str]):
+            webi (list[str]):
      """
 
     type_: EnvironmentPackagesType
@@ -40,6 +41,7 @@ class EnvironmentPackages:
     go: list[str]
     npm: list[str]
     pip: list[str]
+    webi: list[str]
 
 
 
@@ -72,6 +74,10 @@ class EnvironmentPackages:
 
 
 
+        webi = self.webi
+
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -83,6 +89,7 @@ class EnvironmentPackages:
             "go": go,
             "npm": npm,
             "pip": pip,
+            "webi": webi,
         })
 
         return field_dict
@@ -115,6 +122,9 @@ class EnvironmentPackages:
         pip = cast(list[str], d.pop("pip"))
 
 
+        webi = cast(list[str], d.pop("webi"))
+
+
         environment_packages = cls(
             type_=type_,
             apt=apt,
@@ -123,7 +133,7 @@ class EnvironmentPackages:
             go=go,
             npm=npm,
             pip=pip,
+            webi=webi,
         )
 
         return environment_packages
-

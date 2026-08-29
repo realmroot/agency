@@ -30,6 +30,7 @@ import {
   type Session,
   type SessionAgentSnapshot,
   type SessionApproval,
+  type SessionCondition,
   type SessionEnvironmentSnapshot,
   type SessionEvent,
   type SessionMessage,
@@ -40,6 +41,28 @@ type Db = ReturnType<typeof drizzle>
 type SessionRow = typeof sessions.$inferSelect
 type SessionEventRow = typeof sessionEvents.$inferSelect
 type SessionMessageRow = typeof sessionMessages.$inferSelect
+
+function sessionConditions(row: SessionRow, metadata: Record<string, unknown>): SessionCondition[] {
+  const runtimeError = metadata.error
+  if (
+    row.state !== 'error' ||
+    !runtimeError ||
+    typeof runtimeError !== 'object' ||
+    Array.isArray(runtimeError) ||
+    (runtimeError as Record<string, unknown>).code !== 'environment_package_installation_failed'
+  ) {
+    return []
+  }
+  return [
+    {
+      type: 'RuntimeReady',
+      status: 'False',
+      reason: 'EnvironmentPackageInstallationFailed',
+      message: row.stateReason,
+      lastTransitionAt: row.updatedAt,
+    },
+  ]
+}
 type SessionApprovalRow = typeof sessionApprovals.$inferSelect
 type EventOrder = 'asc' | 'desc'
 
@@ -156,7 +179,7 @@ function serializeSession(row: SessionRow): Session {
     status: {
       phase: sessionState(row.state),
       reason: row.stateReason,
-      conditions: [],
+      conditions: sessionConditions(row, metadata),
       bindings: {
         agent: {
           versionId: row.agentVersionId ?? '',

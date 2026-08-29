@@ -201,7 +201,7 @@ function sessionEnvironmentSnapshot(overrides: Partial<SessionEnvironmentSnapsho
     scope: 'project',
     type: 'cloud',
     networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true },
-    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] },
     variables: {},
     createdAt: now,
     ...overrides,

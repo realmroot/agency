@@ -7,6 +7,18 @@ export const RuntimeSchema = z.enum(['ama', 'claude-code', 'codex', 'copilot']).
 export const EnvironmentScopeSchema = z.enum(['project', 'organization']).openapi('EnvironmentScope')
 export const EnvironmentTypeSchema = z.enum(['cloud', 'self_hosted']).openapi('EnvironmentType')
 export const EnvironmentPackageListSchema = z.array(z.string().min(1).max(160)).max(200)
+export const EnvironmentWebiPackageListSchema = z
+  .array(
+    z
+      .string()
+      .min(3)
+      .max(160)
+      .regex(
+        /^[a-z0-9][a-z0-9._-]*@v?[0-9][a-zA-Z0-9._-]*$/,
+        'Webi packages must use a pinned name@version declaration.',
+      ),
+  )
+  .max(200)
 export const EnvironmentPackagesSchema = z
   .object({
     type: z.literal('packages'),
@@ -16,6 +28,7 @@ export const EnvironmentPackagesSchema = z
     go: EnvironmentPackageListSchema,
     npm: EnvironmentPackageListSchema,
     pip: EnvironmentPackageListSchema,
+    webi: EnvironmentWebiPackageListSchema,
   })
   .strict()
   .openapi('EnvironmentPackages')

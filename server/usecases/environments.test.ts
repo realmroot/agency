@@ -18,7 +18,7 @@ function config(overrides: Partial<EnvironmentConfig> = {}): EnvironmentConfig {
     scope: 'project',
     type: 'cloud',
     networking: { type: 'open', allowMcpServers: false, allowPackageManagers: true },
-    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] },
     variables: {},
     ...overrides,
   }
@@ -181,7 +181,7 @@ describe('[spec: environments/update] updateEnvironment', () => {
       },
     })
     const result = await updateEnvironment(deps, auth, environmentRecord(), {
-      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite'], pip: [] },
+      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite'], pip: [], webi: [] },
     })
     expect(inserted).toHaveLength(1)
     expect(result.environment.status.version).toBe(2)
@@ -217,7 +217,7 @@ describe('[spec: environments/update] updateEnvironment', () => {
         auth,
         environmentRecord({ metadata: { archivedAt: '2026-01-02T00:00:00.000Z' }, status: { phase: 'archived' } }),
         {
-          packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['x'], pip: [] },
+          packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['x'], pip: [], webi: [] },
         },
       ),
     ).rejects.toBeInstanceOf(EnvironmentArchivedError)

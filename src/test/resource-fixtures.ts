@@ -107,7 +107,7 @@ export type EnvironmentOverrides = ResourceMetadataOverrides &
 
 function normalizeEnvironmentPackages(value: EnvironmentOverrides['packages']): EnvironmentSpec['packages'] {
   if (!value) {
-    return { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] }
+    return { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] }
   }
   if (Array.isArray(value)) {
     return {
@@ -118,6 +118,7 @@ function normalizeEnvironmentPackages(value: EnvironmentOverrides['packages']): 
       go: [],
       npm: value.map((item) => `${item.name}${item.version ? `@${item.version}` : ''}`),
       pip: [],
+      webi: [],
     }
   }
   return value

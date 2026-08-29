@@ -38,7 +38,7 @@ function buildAgent(overrides: AgentOverrides = {}): Agent {
 
 function buildEnvironment(overrides: EnvironmentOverrides = {}): Environment {
   return resourceEnvironment({
-    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['tsx@latest'], pip: [] },
+    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['tsx@latest'], pip: [], webi: [] },
     networking: {
       type: 'limited',
       allowMcpServers: false,

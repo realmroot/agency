@@ -110,12 +110,11 @@ AMA cloud-side code owns the session loop and dispatches concrete tool execution
 requests to the sandbox. The sandbox runs commands and file operations in
 `/workspace`; it does not run the primary Pi/PyAgent process for the session.
 
-The container image must be built from this repository's `Dockerfile`. Runtime
-packages required for tool execution must be baked into the container image. The
-runtime must not install Node packages during session start; session startup
-should only create workspace metadata and initialize the executor backend.
-The image pins and checksum-verifies the Realmroot CLI used by Realmroot-bound
-Agents.
+The container image must be built from this repository's `Dockerfile`. Cloud
+sessions install Environment-declared pinned Webi packages and versioned Go
+modules into a session-isolated home before runtime launch, then prepend its bin
+directories to `PATH`. Other package manager declarations remain descriptive
+until their installers are implemented.
 
 Required Worker bindings and variables:
 
@@ -169,9 +168,10 @@ work item payloads, lease state, safe result/error metadata, and secret
 references only. Do not expose runner host ports, runner-local preview URLs, or
 runner-local filesystem paths as product endpoints.
 
-Runners that accept Realmroot-bound Agents must have a compatible `realmroot`
-CLI on `PATH`. A bound Session fails before runtime launch when the CLI or the
-bound state is unavailable; an unbound Session has no Realmroot dependency.
+Process-unsafe self-hosted Runners do not install Environment packages and do
+not special-case the `realmroot` executable. Identity state is materialized
+through the generic volume/mount contract; an Agent that invokes a missing tool
+observes the ordinary command failure.
 
 ## Local E2E And Smoke
 

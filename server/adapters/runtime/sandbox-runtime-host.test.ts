@@ -607,7 +607,7 @@ describe('session-runtime', () => {
     )
   })
 
-  it('[spec: environments/cloud-go-packages] installs declared Go packages before cloud workspace preparation', async () => {
+  it('[spec: environments/cloud-packages] installs declared Go packages before cloud workspace preparation', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) => ({
       exitCode: 0,
       stdout: command === 'printf %s "$PATH"' ? '/usr/local/go/bin:/usr/bin' : '',
@@ -631,12 +631,36 @@ describe('session-runtime', () => {
       { timeout: 120_000 },
     )
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
-      PATH: '/workspace/.ama/environment/bin:/usr/local/go/bin:/usr/bin',
+      PATH: '/workspace/.ama/environment/bin:/workspace/.ama/environment/.local/bin:/usr/local/go/bin:/usr/bin',
     })
     const installOrder = mockSandbox.exec.mock.invocationCallOrder.find((_, index) =>
       String(mockSandbox.exec.mock.calls[index]?.[0]).includes(' go install '),
     )
     expect(installOrder).toBeLessThan(mockSandbox.setEnvVars.mock.invocationCallOrder[0]!)
+  })
+
+  it('installs pinned Webi packages into the isolated environment home', async () => {
+    mockSandbox.exec.mockImplementation(async (command: string) => ({
+      exitCode: 0,
+      stdout: command === 'printf %s "$PATH"' ? '/usr/bin' : '',
+      stderr: '',
+    }))
+
+    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      sessionId: 'session_webi',
+      sandboxId: 'sandbox_webi',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: {},
+      environmentSnapshot: { packages: { webi: ['realmroot@0.4.2'] } },
+    })
+
+    expect(mockSandbox.exec).toHaveBeenCalledWith(expect.stringContaining('https://webi.sh/realmroot%400.4.2'), {
+      timeout: 120_000,
+    })
+    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
+      PATH: '/workspace/.ama/environment/bin:/workspace/.ama/environment/.local/bin:/usr/bin',
+    })
   })
 
   it('fails cloud startup with a generic package installation error', async () => {

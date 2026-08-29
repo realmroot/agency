@@ -48,4 +48,16 @@ describe('audit write actor attribution', () => {
       expect.objectContaining({ actorType: 'user', actorUserId: 'controller_1', controllerUserId: null }),
     )
   })
+
+  it('records the cloud-turn principal as a system actor', async () => {
+    const { db, values } = fakeDb()
+    await createAuditWriteRepo(db).record(auth({ user: { id: 'system:cloud-turn' }, roles: ['system'] }), {
+      action: 'session.prompt',
+      resourceType: 'session',
+      outcome: 'success',
+    })
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({ actorType: 'system', actorUserId: null, controllerUserId: null }),
+    )
+  })
 })

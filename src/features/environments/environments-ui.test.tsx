@@ -25,7 +25,7 @@ import { useEnvironmentActions } from './use-environment-actions'
 function environment(overrides: EnvironmentOverrides = {}): Environment {
   return resourceEnvironment({
     description: 'Node 22 toolchain',
-    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite@7'], pip: [] },
+    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['vite@7'], pip: [], webi: [] },
     variables: { NODE_ENV: { description: 'environment' } },
     type: 'self_hosted',
     networking: {
@@ -208,7 +208,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
 
   it('shows "None" when environment has no packages', () => {
     const environments = [
-      environment({ packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } }),
+      environment({ packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] } }),
     ]
     render(
       <MemoryRouter>
@@ -222,7 +222,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
   it('renders package without version without the @ suffix', () => {
     const environments = [
       environment({
-        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['typescript'], pip: [] },
+        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['typescript'], pip: [], webi: [] },
       }),
     ]
     render(
@@ -341,7 +341,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
 
   it('shows "None" for packages and variables when both are empty', () => {
     const env = environment({
-      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] },
       variables: {},
     })
     render(
@@ -577,6 +577,7 @@ describe('[spec: environments/create-sheet] CreateEnvironmentSheet', () => {
       go: ['golang.org/x/tools@latest'],
       npm: ['tsx@latest', 'typescript@latest'],
       pip: ['pandas'],
+      webi: [],
     })
   })
 
@@ -1056,7 +1057,7 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
   it('pre-fills edit form from env with null description, no-version package, and value-type variable', async () => {
     const complexEnv = environment({
       description: null,
-      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['typescript'], pip: [] },
+      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['typescript'], pip: [], webi: [] },
       variables: { SECRET: { value: 'hidden', description: 'secret val' } as unknown as { description?: string } },
       networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true },
     })

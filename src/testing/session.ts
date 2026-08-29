@@ -173,7 +173,7 @@ function defaultEnvironmentSnapshot(environmentId: string): SessionEnvironmentSn
       allowPackageManagers: true,
       allowedHosts: ['registry.npmjs.org'],
     },
-    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['tsx@latest'], pip: [] },
+    packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['tsx@latest'], pip: [], webi: [] },
     variables: {},
     createdAt: now,
   }
