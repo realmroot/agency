@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -25,14 +26,15 @@ type Bridge struct {
 const runtimesTimeout = 30 * time.Second
 const runtimeBridgeReadyFailureGrace = 2 * time.Second
 const runtimeBridgePipeWaitDelay = 500 * time.Millisecond
+const nodeExecutableProbeTimeout = 500 * time.Millisecond
 
 func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JSON, error) {
 	if request.Runtime == "" {
 		return nil, fmt.Errorf("runtime is required")
 	}
-	nodePath, err := exec.LookPath("node")
+	nodePath, err := resolveNodeExecutable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s runtime requires Node.js to run the embedded runtime bridge", request.Runtime)
+		return nil, fmt.Errorf("%s runtime requires Node.js with a working executable: %w", request.Runtime, err)
 	}
 	bridgePath, err := runtimebridge.Materialize()
 	if err != nil {
@@ -187,9 +189,9 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	if err != nil {
 		return nil, err
 	}
-	nodePath, err := exec.LookPath("node")
+	nodePath, err := resolveNodeExecutable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("node is required to run the runtime bridge")
+		return nil, fmt.Errorf("node is required to run the runtime bridge and must be working: %w", err)
 	}
 	commandCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -226,6 +228,34 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	}
 	noop := func(JSON) error { return nil }
 	return protocol.readResult(reader, requestID, noop, nil, nil)
+}
+
+func resolveNodeExecutable(ctx context.Context) (string, error) {
+	nodePath, err := exec.LookPath("node")
+	if err != nil {
+		return "", err
+	}
+
+	probeCtx, cancel := context.WithTimeout(ctx, nodeExecutableProbeTimeout)
+	defer cancel()
+	probe := exec.CommandContext(probeCtx, nodePath, "-p", "process.execPath")
+	probe.Env = os.Environ()
+	output, err := probe.Output()
+	if err != nil {
+		return "", fmt.Errorf("resolve node executable: %w", err)
+	}
+	resolved := strings.TrimSpace(string(output))
+	if !filepath.IsAbs(resolved) {
+		return "", fmt.Errorf("node returned a non-absolute executable path %q", resolved)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return "", fmt.Errorf("inspect resolved node executable: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("resolved node executable %q is a directory", resolved)
+	}
+	return resolved, nil
 }
 
 func commandEnvironment(request Request) ([]string, error) {
