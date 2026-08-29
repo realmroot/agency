@@ -104,7 +104,7 @@ func TestPrepareWorkspaceSeedsWritableEmptyDirOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mode := info.Mode().Perm(); mode != 0o700 {
+	if mode := info.Mode().Perm(); os.PathSeparator != '\\' && mode != 0o700 {
 		t.Fatalf("expected runtime-owned mode 0700 to survive repeated preparation, got %o", mode)
 	}
 }
@@ -143,12 +143,16 @@ func TestWorkspaceRuntimeEnvMapsVirtualWorkspacePaths(t *testing.T) {
 	workspace := &Workspace{Root: filepath.Join(t.TempDir(), "workspace")}
 	input := map[string]string{
 		"STATE_DIR": "/workspace/.ama/runtime-state",
+		"WORKSPACE": "/workspace",
 		"UNCHANGED": "value",
 	}
 	resolved := workspace.RuntimeEnv(input)
 	expected := filepath.Join(workspace.Root, ".ama", "runtime-state")
 	if resolved["STATE_DIR"] != expected {
 		t.Fatalf("expected mapped workspace path %q, got %q", expected, resolved["STATE_DIR"])
+	}
+	if resolved["WORKSPACE"] != workspace.Root {
+		t.Fatalf("expected workspace root %q, got %q", workspace.Root, resolved["WORKSPACE"])
 	}
 	if resolved["UNCHANGED"] != "value" || input["STATE_DIR"] != "/workspace/.ama/runtime-state" {
 		t.Fatalf("expected input to remain immutable, input=%#v resolved=%#v", input, resolved)

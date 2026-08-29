@@ -175,13 +175,10 @@ func materializeEmptyDirMount(sessionRoot string, volume protocol.WorkspaceMount
 	if err := rejectWorkspaceSymlinkComponents(sessionRoot, mountPath); err != nil {
 		return "", err
 	}
-	if info, err := os.Lstat(mountPath); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return "", fmt.Errorf("empty directory mount path must be a directory without symbolic links")
-		}
-		return mountPath, nil
-	} else if !os.IsNotExist(err) {
+	if reusable, err := reusableEmptyDirMount(mountPath); err != nil {
 		return "", err
+	} else if reusable {
+		return mountPath, nil
 	}
 	parent := filepath.Dir(mountPath)
 	if err := os.MkdirAll(parent, 0o700); err != nil {
@@ -212,23 +209,44 @@ func materializeEmptyDirMount(sessionRoot string, volume protocol.WorkspaceMount
 			return "", err
 		}
 	}
-	if info, err := os.Lstat(mountPath); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return "", fmt.Errorf("empty directory mount path must be a directory without symbolic links")
-		}
+	if reusable, err := reusableEmptyDirMount(mountPath); err != nil {
+		return "", err
+	} else if reusable {
 		return mountPath, nil
-	} else if !os.IsNotExist(err) {
+	}
+	published, err := publishEmptyDirMount(stagingPath, mountPath)
+	if err != nil {
 		return "", err
 	}
+	if published {
+		stagingPath = ""
+	}
+	return mountPath, nil
+}
+
+func reusableEmptyDirMount(mountPath string) (bool, error) {
+	info, err := os.Lstat(mountPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return false, fmt.Errorf("empty directory mount path must be a directory without symbolic links")
+	}
+	return true, nil
+}
+
+func publishEmptyDirMount(stagingPath string, mountPath string) (bool, error) {
 	if err := os.Rename(stagingPath, mountPath); err != nil {
 		info, statErr := os.Lstat(mountPath)
 		if statErr != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return "", err
+			return false, err
 		}
-		return mountPath, nil
+		return false, nil
 	}
-	stagingPath = ""
-	return mountPath, nil
+	return true, nil
 }
 
 func rejectWorkspaceSymlinkComponents(sessionRoot string, target string) error {
