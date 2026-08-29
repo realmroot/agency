@@ -1581,7 +1581,7 @@ describe('CreateSessionSheet — formatCreateSessionError', () => {
       </QueryClientProvider>,
     )
 
-    expect(await screen.findByText("Locked by codex-operator's Identity.")).toBeTruthy()
+    expect(await screen.findByText('Set by the selected identity.')).toBeTruthy()
     const runtimeSelect = screen.getAllByRole('combobox')[2] as HTMLButtonElement
     expect(runtimeSelect.disabled).toBe(true)
     expect(runtimeSelect.textContent).toContain('Codex')

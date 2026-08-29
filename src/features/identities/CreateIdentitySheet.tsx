@@ -50,7 +50,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
         <SheetHeader>
           <SheetTitle>Create Identity</SheetTitle>
           <SheetDescription>
-            Provision a Realmroot Agent and store its private installation state in an AMA-managed Vault.
+            Create a reusable identity for an agent. Credentials are generated and stored securely.
           </SheetDescription>
         </SheetHeader>
         <form className="px-4 pb-4" onSubmit={submit}>
@@ -73,7 +73,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="identity-username">Realmroot username</FieldLabel>
+              <FieldLabel htmlFor="identity-username">Handle</FieldLabel>
               <Input
                 id="identity-username"
                 required
@@ -81,7 +81,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
                 value={form.username}
                 onChange={(event) => updateForm({ ...form, username: event.target.value })}
               />
-              <FieldDescription>Lowercase letters, numbers, and hyphens.</FieldDescription>
+              <FieldDescription>A unique identifier using lowercase letters, numbers, and hyphens.</FieldDescription>
             </Field>
             <Field>
               <FieldLabel>Runtime</FieldLabel>
@@ -102,7 +102,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
                 </SelectContent>
               </Select>
               <FieldDescription>
-                Runtime is immutable. Agents and sessions using this Identity inherit it.
+                The runtime cannot be changed later. Agents using this identity inherit it.
               </FieldDescription>
             </Field>
             <Button type="submit" disabled={create.isPending || !form.name.trim() || !form.username.trim()}>

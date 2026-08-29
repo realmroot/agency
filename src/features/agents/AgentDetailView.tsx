@@ -109,7 +109,7 @@ function AgentDetailContent({
                 <Meta label="Provider" value={currentSpec.provider ?? 'None'} />
                 <Meta label="Model" value={currentSpec.model ?? 'None'} />
                 <Meta label="Identity" value={currentSpec.identity?.username ?? 'None'} />
-                <Meta label="Identity runtime" value={currentSpec.identity?.runtime ?? 'Session selected'} />
+                <Meta label="Session runtime" value={currentSpec.identity?.runtime ?? 'Selected per session'} />
               </MetaGrid>
               <ReadOnlyTextField label="System prompt" value={currentSpec.systemPrompt || 'None'} />
               <MetaGrid>

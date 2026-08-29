@@ -17,7 +17,7 @@ test('creates a vault through the UI and sees it listed [spec: web-console/resou
   await expect(page.getByText(name)).toBeVisible()
 })
 
-test('stores Realmroot Agent state from the credential sheet [spec: agents/realmroot-binding]', async ({
+test('hides system-managed Identity credentials and stores a normal credential [spec: vaults/add-credential-sheet]', async ({
   page,
   token,
   api,
@@ -25,7 +25,7 @@ test('stores Realmroot Agent state from the credential sheet [spec: agents/realm
 }) => {
   const vaultResponse = await api.post('/api/v1/vaults', {
     data: {
-      metadata: { name: `realmroot-vault-${runId}` },
+      metadata: { name: `credential-vault-${runId}` },
       spec: { scope: 'project' },
     },
   })
@@ -37,25 +37,12 @@ test('stores Realmroot Agent state from the credential sheet [spec: agents/realm
   await expect(page.getByRole('heading', { name: 'Add credential' })).toBeVisible()
 
   await page.getByLabel('Type').click()
-  await page.getByRole('option', { name: 'Realmroot Agent state' }).click()
-  await expect(page.getByLabel('Realmroot Agent state JSON')).toBeVisible()
-  await expect(
-    page.getByText('Paste the complete YW1h.json enrolled with AGENT=ama. AMA stores it as state.json.'),
-  ).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Realmroot Agent state' })).toHaveCount(0)
+  await expect(page.getByRole('option', { name: 'Opaque' })).toBeVisible()
+  await page.getByRole('option', { name: 'Opaque' }).click()
 
-  const state = JSON.stringify({
-    version: 18,
-    agent_id: `agent-${runId}`,
-    origin: 'https://realmroot.example',
-    issuer: 'https://realmroot.example',
-    runtime: 'ama',
-    host_id: `host-${runId}`,
-    agent_key_id: `key-${runId}`,
-    enrollment_idempotency_key: `enrollment-${runId}`,
-    agent_private_key: 'A'.repeat(86),
-  })
-  await page.getByLabel('Name').fill('Realmroot identity')
-  await page.getByLabel('Realmroot Agent state JSON').fill(state)
+  await page.getByLabel('Name').fill('Runtime API token')
+  await page.getByLabel('Data value 1').fill(`secret-${runId}`)
 
   const responsePromise = page.waitForResponse(
     (response) =>
@@ -65,12 +52,12 @@ test('stores Realmroot Agent state from the credential sheet [spec: agents/realm
   await page.getByRole('button', { name: 'Save credential' }).click()
   const credentialResponse = await responsePromise
 
-  expect(credentialResponse.status(), 'create Realmroot credential').toBe(201)
+  expect(credentialResponse.status(), 'create opaque credential').toBe(201)
   expect(credentialResponse.request().postDataJSON()).toEqual({
-    name: 'Realmroot identity',
-    type: 'ama.dev/realmroot-agent-state',
+    name: 'Runtime API token',
+    type: 'opaque',
     metadata: {},
-    secret: { stringData: { 'state.json': state } },
+    secret: { stringData: { value: `secret-${runId}` } },
   })
   await expect(page.getByText('Credential stored')).toBeVisible()
 })

@@ -10,7 +10,7 @@ import {
 
 describe('credential form model', () => {
   it('defines default secret fields for every credential type', () => {
-    const expected: Record<CredentialType, Record<string, string>> = {
+    const expected = {
       opaque: { value: '' },
       'ama.dev/basic-auth': { username: '', password: '' },
       'ama.dev/ssh-auth': { 'ssh-privatekey': '' },
@@ -23,10 +23,10 @@ describe('credential form model', () => {
         'expires-at': '',
         scopes: '',
       },
-      'ama.dev/realmroot-agent-state': { 'state.json': '' },
-    }
+    } satisfies Partial<Record<CredentialType, Record<string, string>>>
 
     expect(Object.fromEntries(credentialTypes.map(({ type }) => [type, defaultCredentialData(type)]))).toEqual(expected)
+    expect(credentialTypes.map(({ type }) => type)).not.toContain('ama.dev/realmroot-agent-state')
   })
 
   it('filters blank values and trims keys before submitting secret data', () => {

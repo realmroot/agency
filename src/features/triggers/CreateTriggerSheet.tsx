@@ -323,7 +323,8 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                 <Field>
                   <FieldLabel>HTTP entry</FieldLabel>
                   <FieldDescription>
-                    POST JSON to /api/v1/triggers/&lt;triggerId&gt;/runs with a Realmroot DPoP credential token.
+                    Send a POST request with JSON to /api/v1/triggers/&lt;triggerId&gt;/runs using an authorized access
+                    token.
                   </FieldDescription>
                 </Field>
               )}

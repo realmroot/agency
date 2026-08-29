@@ -25,7 +25,7 @@ export function IdentitiesView({
 }) {
   if (identities.length === 0)
     return (
-      <EmptyState title="No identities" body="Create an Identity to provision a Runtime-specific Realmroot Agent." />
+      <EmptyState title="No identities" body="Create an identity to give an agent a stable identity and runtime." />
     )
   return (
     <TableSurface
@@ -69,7 +69,7 @@ export function IdentitiesView({
               {!identity.metadata.archivedAt ? (
                 <ConfirmAction
                   title="Archive Identity?"
-                  description="AMA will archive this Identity without deleting the Realmroot Agent."
+                  description="Archived identities can no longer be selected. Existing session history is retained."
                   confirmLabel="Archive identity"
                   destructive
                   onConfirm={() => onArchive(identity.metadata.uid)}

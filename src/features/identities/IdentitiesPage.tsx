@@ -25,7 +25,7 @@ export function IdentitiesPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Identities"
-        description="Provision and bind Runtime-specific Realmroot Agent identities."
+        description="Create and assign stable identities to agents."
         actions={
           <Button type="button" onClick={() => setCreating(true)}>
             <BadgeCheck data-icon="inline-start" />

@@ -290,7 +290,9 @@ export function AgentForm({
               </SelectGroup>
             </SelectContent>
           </Select>
-          <FieldDescription>Binding an Identity fixes this Agent's session and trigger Runtime.</FieldDescription>
+          <FieldDescription>
+            The selected identity sets the runtime for this agent's sessions and triggers.
+          </FieldDescription>
         </Field>
         <AllowedToolsField
           label="Allowed tools"
@@ -524,9 +526,7 @@ export function SessionForm({
             </SelectContent>
           </Select>
           <FieldDescription>
-            {selectedAgent?.spec.identity
-              ? `Locked by ${selectedAgent.spec.identity.username}'s Identity.`
-              : 'Runtime is selected per session.'}
+            {selectedAgent?.spec.identity ? 'Set by the selected identity.' : 'Runtime is selected per session.'}
           </FieldDescription>
         </Field>
         <TextAreaField

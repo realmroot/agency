@@ -21,19 +21,19 @@ export function IdentityDetailPage() {
         eyebrow="Identity"
         title={identity?.metadata.name ?? 'Identity detail'}
         titleAccessory={identity ? <StatusBadge value={identity.status.state} /> : null}
-        description="Safe Realmroot identity metadata. Private state and tokens remain inside the managed Vault."
+        description="Identity details are safe to view. Credentials remain protected."
       />
       {identity ? (
         <DetailSection
           title="Identity configuration"
-          description="Runtime and Realmroot identity attributes are immutable after provisioning."
+          description="The handle and runtime cannot be changed after creation."
         >
           <MetaGrid columns={4}>
-            <Meta label="Username" value={identity.spec.username} />
+            <Meta label="Handle" value={identity.spec.username} />
             <Meta label="Runtime" value={identity.spec.runtime} />
             <Meta label="State" value={identity.status.state} />
-            <Meta label="Remote Agent" value={identity.status.descriptor?.agentId ?? 'Pending'} />
-            <Meta label="Bound AMA Agent" value={identity.status.boundAgentId ?? 'Unbound'} />
+            <Meta label="External ID" value={identity.status.descriptor?.agentId ?? 'Pending'} />
+            <Meta label="Assigned agent" value={identity.status.boundAgentId ?? 'Unassigned'} />
             <Meta label="Updated" value={formatDate(identity.metadata.updatedAt)} />
           </MetaGrid>
         </DetailSection>

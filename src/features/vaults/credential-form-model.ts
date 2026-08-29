@@ -19,7 +19,6 @@ export const credentialTypes: Array<{ type: CredentialType; label: string }> = [
   { type: 'ama.dev/tls', label: 'TLS' },
   { type: 'ama.dev/private-key-jwk', label: 'Private key JWK' },
   { type: 'ama.dev/oauth-token', label: 'OAuth token' },
-  { type: 'ama.dev/realmroot-agent-state', label: 'Realmroot Agent state' },
 ]
 
 export function defaultCredentialData(type: CredentialType): Record<string, string> {

@@ -193,14 +193,7 @@ function CredentialSecretFields({
         </>
       )
     case 'ama.dev/realmroot-agent-state':
-      return (
-        <SecretTextarea
-          label="Realmroot Agent state JSON"
-          description="Paste the complete YW1h.json enrolled with AGENT=ama. AMA stores it as state.json."
-          value={form.data['state.json']!}
-          onChange={(value) => setData('state.json', value)}
-        />
-      )
+      return null
   }
 }
 

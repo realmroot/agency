@@ -48,7 +48,7 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   const identityName = `Codex identity ${runId}`
   const username = `codex-${Date.now()}`
   await page.getByLabel('Name', { exact: true }).fill(identityName)
-  await page.getByLabel('Realmroot username').fill(username)
+  await page.getByLabel('Handle').fill(username)
   const identityResponsePromise = page.waitForResponse(
     (response) => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/identities',
   )
@@ -57,7 +57,12 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   expect(identityResponse.status(), await identityResponse.text()).toBe(201)
   const identity = (await identityResponse.json()) as { metadata: { uid: string }; spec: { runtime: string } }
   expect(identity.spec.runtime).toBe('codex')
-  await expect(page.getByRole('link', { name: identityName })).toBeVisible()
+  const identityLink = page.getByRole('link', { name: identityName })
+  await expect(identityLink).toBeVisible()
+  await identityLink.click()
+  await expect(page.getByText('Handle', { exact: true })).toBeVisible()
+  await expect(page.getByText(username, { exact: true })).toBeVisible()
+  await expect(page.getByText('Identity details are safe to view. Credentials remain protected.')).toBeVisible()
 
   await page.goto('/agents')
   await page.getByRole('button', { name: 'Create agent' }).click()
@@ -84,7 +89,7 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   await page.goto('/sessions')
   await page.getByRole('button', { name: 'Create session' }).click()
   const sessionDialog = page.getByRole('dialog', { name: 'Create Session' })
-  await expect(sessionDialog.getByText(`Locked by ${username}'s Identity.`)).toBeVisible()
+  await expect(sessionDialog.getByText('Set by the selected identity.')).toBeVisible()
   const runtimeSelect = sessionDialog.getByRole('combobox').nth(2)
   await expect(runtimeSelect).toBeDisabled()
   await expect(runtimeSelect).toContainText('Codex')

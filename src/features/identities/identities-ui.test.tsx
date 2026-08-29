@@ -74,7 +74,7 @@ describe('[spec: identities/console] Identity console', () => {
     )
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Codex operator' } })
-    fireEvent.change(screen.getByLabelText('Realmroot username'), { target: { value: 'codex-operator' } })
+    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'codex-operator' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
 
     await waitFor(() => expect(postedBody).not.toBeNull())
@@ -105,7 +105,7 @@ describe('[spec: identities/console] Identity console', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Copilot reviewer' } })
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Reviews pull requests' } })
-    fireEvent.change(screen.getByLabelText('Realmroot username'), { target: { value: 'reviewer' } })
+    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'reviewer' } })
     fireEvent.click(screen.getByRole('combobox'))
     fireEvent.click(await screen.findByRole('option', { name: 'Copilot' }))
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
@@ -136,7 +136,7 @@ describe('[spec: identities/console] Identity console', () => {
       </QueryClientProvider>,
     )
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Retry me' } })
-    fireEvent.change(screen.getByLabelText('Realmroot username'), { target: { value: 'retry-me' } })
+    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'retry-me' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
 
     await waitFor(() => expect(errorToast).toHaveBeenCalled())
