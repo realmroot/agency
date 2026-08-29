@@ -239,7 +239,7 @@ func reusableEmptyDirMount(mountPath string) (bool, error) {
 }
 
 func publishEmptyDirMount(stagingPath string, mountPath string) (bool, error) {
-	if err := os.Rename(stagingPath, mountPath); err != nil {
+	if err := renameNoReplace(stagingPath, mountPath); err != nil {
 		info, statErr := os.Lstat(mountPath)
 		if statErr != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			return false, err
