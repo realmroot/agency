@@ -94,6 +94,8 @@ describe('CreateAgentSheet', () => {
     )
     expect(screen.getByText('Create Agent')).toBeInTheDocument()
     expect(screen.getByText('Save agent')).toBeInTheDocument()
+    expect(screen.getByLabelText('Skills')).toHaveValue('')
+    expect(screen.queryByText('ama@coding-agent')).toBeNull()
   })
 
   it('calls API and closes sheet on successful submission', async () => {
@@ -131,7 +133,7 @@ describe('CreateAgentSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save agent' }))
     await waitFor(() => expect(closed).toBe(true))
     const body = postedBody as unknown as Record<string, unknown>
-    expect(body).toMatchObject({ metadata: { name: 'Coding agent' } })
+    expect(body).toMatchObject({ metadata: { name: 'Coding agent' }, spec: { skills: [] } })
     expect(body.metadata).not.toHaveProperty('description')
   })
 

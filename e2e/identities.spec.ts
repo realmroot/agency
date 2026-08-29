@@ -74,6 +74,7 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   await page.goto('/agents')
   await page.getByRole('button', { name: 'Create agent' }).click()
   const agentDialog = page.getByRole('dialog', { name: 'Create Agent' })
+  await expect(agentDialog.getByLabel('Skills')).toHaveValue('')
   await agentDialog.getByRole('combobox').nth(1).click()
   await page.getByRole('option', { name: `${identityName} · codex` }).click()
   const agentResponsePromise = page.waitForResponse(
@@ -84,9 +85,10 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   expect(agentResponse.status(), await agentResponse.text()).toBe(201)
   const agent = (await agentResponse.json()) as {
     metadata: { uid: string }
-    spec: { identity: { identityId: string; runtime: string } | null }
+    spec: { identity: { identityId: string; runtime: string } | null; skills: string[] }
   }
   expect(agent.spec.identity).toMatchObject({ identityId: identity.metadata.uid, runtime: 'codex' })
+  expect(agent.spec.skills).toEqual([])
   const pinProviderResponse = await page.request.patch(`/api/v1/agents/${agent.metadata.uid}`, {
     headers,
     data: { spec: { provider: 'workers-ai' } },

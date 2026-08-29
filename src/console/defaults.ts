@@ -24,7 +24,7 @@ export const emptyAgent: AgentFormState = {
   systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
   provider: 'workers-ai',
   model: '',
-  skills: 'ama@coding-agent',
+  skills: '',
   allowedTools: DEFAULT_ALLOWED_TOOLS,
   mcpConnectors: '',
   identityRef: '',
