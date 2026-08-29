@@ -34,10 +34,31 @@ reports lease state through the Go AMA SDK.
 
 CLI command bootstrap:
 
-- declares top-level Cobra commands
-- wires Viper-backed daemon configuration
-- handles auth/config/version command surfaces
-- starts the daemon from the root command
+- declares explicit `run`, managed lifecycle, auth, and version commands
+- wires Viper-backed foreground configuration
+- delegates local instance persistence to `instance.Registry`
+- delegates native background service ownership to `managed.Controller`
+
+The root command never starts a Runner implicitly.
+
+### `instance.Registry`
+
+Local managed Runner definitions:
+
+- derives one stable instance id from normalized API Server and Environment id
+- stores non-secret immutable instance identity and mutable runtime configuration
+- restores the shared credential-file reference for runtime use
+- validates that managed state and work directories use the deterministic instance layout
+
+### `managed.Controller`
+
+Native process lifecycle:
+
+- installs one user service per Runner instance through launchd, systemd, or Windows Service Control Manager
+- starts, stops, restarts, and disables that service
+- waits for the daemon's first successful heartbeat readiness record
+- reports native local state separately from AMA control-plane state
+- owns local service logs without storing credentials
 
 ### `version.Info`
 

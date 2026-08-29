@@ -56,15 +56,14 @@ func (s IdentityStore) EnsureMachineID() (string, error) {
 }
 
 func (s IdentityStore) LoadRunnerID() (string, error) {
-	machineID, err := s.EnsureMachineID()
-	if err != nil {
-		return "", err
-	}
 	state, err := s.load()
 	if err != nil {
 		return "", err
 	}
-	key := s.identityKey(machineID)
+	if strings.TrimSpace(state.MachineID) == "" {
+		return "", nil
+	}
+	key := s.identityKey(state.MachineID)
 	for _, binding := range state.Bindings {
 		if binding.Key == key {
 			return binding.RunnerID, nil

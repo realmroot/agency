@@ -6,13 +6,16 @@ Feature: Runners
   expired leases. AMA stays the control plane and canonical event store;
   runner-local runtime endpoints are never exposed.
 
-  @runners/api-server-storage @unit
-  Scenario: Isolate default runner storage by API Server
+  @runners/local-instances @unit
+  Scenario: Manage isolated local Runner instances
     Given an operator does not configure runner state or work directories
-    When runners connect to different AMA API Servers
-    Then each API Server receives a stable isolated state directory
-    And each work directory is nested under its API Server state directory
-    And explicit state and work directory overrides remain unchanged
+    When runners connect to AMA API Servers and Environments
+    Then each API Server and Environment pair receives one stable isolated state directory
+    And the same pair cannot run more than one local Runner process
+    And the operator can start, list, inspect, stop, restart, configure, view logs, and remove local Runner instances
+    And local process state is reported separately from AMA control-plane heartbeat state
+    And restarting an instance reuses its Runner identity, workspaces, and session event logs
+    And explicit state and work directory overrides are available only to foreground run mode
 
   # ── Eligibility and registration (domain + usecase: matching, binding) ──
 

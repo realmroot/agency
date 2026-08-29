@@ -14,6 +14,8 @@ import (
 
 const appDirectoryName = "ama-runner"
 
+const instanceIDPrefix = "runner_"
+
 func DefaultConfigPath() string {
 	return userdirs.ConfigFile(appDirectoryName, "config.json")
 }
@@ -26,7 +28,15 @@ func DefaultStateDir() string {
 	return userdirs.StateDir(appDirectoryName)
 }
 
-func DefaultStateDirForAPIServer(apiServer string) (string, error) {
+func DefaultInstanceConfigDir() string {
+	path := userdirs.ConfigFile(appDirectoryName, "instances")
+	if path == "" {
+		return ""
+	}
+	return path
+}
+
+func DefaultStateDirForInstance(apiServer string, environmentID string) (string, error) {
 	stateDir := DefaultStateDir()
 	if stateDir == "" {
 		return "", nil
@@ -35,7 +45,11 @@ func DefaultStateDirForAPIServer(apiServer string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(stateDir, "servers", storageKey), nil
+	environmentKey, err := environmentStorageKey(environmentID)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(stateDir, "servers", storageKey, "environments", environmentKey), nil
 }
 
 func DefaultWorkDirForStateDir(stateDir string) string {
@@ -69,4 +83,45 @@ func apiServerStorageKey(value string) (string, error) {
 		host += "-" + port
 	}
 	return host + "-" + hex.EncodeToString(digest[:16]), nil
+}
+
+func InstanceID(apiServer string, environmentID string) (string, error) {
+	if err := ValidateAPIServerURL(apiServer); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(environmentID) == "" {
+		return "", fmt.Errorf("AMA environment id is required")
+	}
+	parsed, err := url.Parse(strings.TrimSpace(apiServer))
+	if err != nil {
+		return "", fmt.Errorf("parse AMA API server URL: %w", err)
+	}
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	parsed.Host = strings.ToLower(parsed.Host)
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
+	parsed.RawPath = ""
+	digest := sha256.Sum256([]byte(parsed.String() + "\x00" + strings.TrimSpace(environmentID)))
+	return instanceIDPrefix + hex.EncodeToString(digest[:8]), nil
+}
+
+func environmentStorageKey(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", fmt.Errorf("AMA environment id is required")
+	}
+	digest := sha256.Sum256([]byte(value))
+	readable := strings.Map(func(character rune) rune {
+		if unicode.IsLetter(character) || unicode.IsDigit(character) || character == '.' || character == '-' || character == '_' {
+			return character
+		}
+		return '-'
+	}, value)
+	readable = strings.Trim(readable, "-.")
+	if len(readable) > 48 {
+		readable = readable[:48]
+	}
+	if readable == "" {
+		readable = "environment"
+	}
+	return readable + "-" + hex.EncodeToString(digest[:8]), nil
 }

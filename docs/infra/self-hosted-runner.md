@@ -33,65 +33,63 @@ ama-runner auth login --api-server "https://ama.example.com"
 
 The command discovers Realmroot metadata from `/api/v1/configz`, starts a loopback listener at `http://127.0.0.1:49174/oauth/callback`, opens the public-native authorization-code PKCE flow, and stores the short-lived Bearer access token plus rotating refresh credential in the local credential file. Register that exact callback in Realmroot; wildcard ports are unsupported. The command never prints access or refresh tokens.
 
-By default, the config file is:
+Foreground `run` configuration may be read from `$AMA_RUNNER_CONFIG`, `$XDG_CONFIG_HOME/ama-runner/config.json`, or `$HOME/.config/ama-runner/config.json`. Managed instance definitions are stored separately below `$XDG_CONFIG_HOME/ama-runner/instances` or `$HOME/.config/ama-runner/instances`.
 
-- `$AMA_RUNNER_CONFIG` when set
-- `$XDG_CONFIG_HOME/ama-runner/config.json`
-- `$HOME/.config/ama-runner/config.json`
+The shared credential file remains `$AMA_RUNNER_CREDENTIALS`, `$XDG_CONFIG_HOME/ama-runner/credentials.json`, or `$HOME/.config/ama-runner/credentials.json`. Saved profiles are keyed by AMA API Server and OIDC account, and refresh writes are serialized so multiple Runner instances can reuse one login safely. Managed instance definitions contain only non-secret configuration and a credential-file reference.
 
-By default, the credential file is:
+On Windows, Go's native `%APPDATA%` and `%LOCALAPPDATA%` directories provide the equivalent configuration, credential, instance, state, workspace, log, and session-event locations.
 
-- `$AMA_RUNNER_CREDENTIALS` when set
-- `$XDG_CONFIG_HOME/ama-runner/credentials.json`
-- `$HOME/.config/ama-runner/credentials.json`
-
-On Windows, Go's native user directories are used instead:
-
-- `%APPDATA%\ama-runner\config.json`
-- `%APPDATA%\ama-runner\credentials.json`
-- `%LOCALAPPDATA%\ama-runner` for state, workspaces, and session logs
-
-When `stateDir` and `workDir` are omitted, the runner derives both from the selected AMA API Server. Each normalized API Server receives a stable directory below the native state root:
+Default state and work directories are derived from the normalized AMA API Server and Environment pair:
 
 ```text
-<native-state-root>/ama-runner/servers/<api-server-key>/
-<native-state-root>/ama-runner/servers/<api-server-key>/work/
+<native-state-root>/ama-runner/servers/<api-server-key>/environments/<environment-key>/
+<native-state-root>/ama-runner/servers/<api-server-key>/environments/<environment-key>/work/
 ```
 
-The readable key includes the API Server hostname plus a short digest of the complete normalized URL, so different schemes, ports, or base paths cannot collide. Restarting a runner against the same API Server reuses its runner identity, process lock, workspaces, and session event logs without requiring path flags.
+The local machine hostname is not part of the key. The normalized API Server origin and Environment id determine the key, so different pairs cannot collide while restarting the same pair reuses its Runner identity, process lock, workspaces, and session event logs.
 
-The config directory is created with `0700` permissions and the credential file is written with `0600` permissions where the host filesystem supports POSIX modes. Treat the credential file as local operator credential material.
-The credential file is shared across runner config files by default. Saved profiles are keyed by AMA API server and OIDC account, and refresh writes are serialized with a local credential lock so multiple runner daemons can reuse one login safely.
-
-Required daemon configuration can come from environment variables, flags, or a JSON config file.
-
-Environment variables:
+Create and start a managed Runner instance with:
 
 ```bash
-export AMA_API_SERVER="https://ama.example.com"
-export AMA_PROJECT_ID="project_..."
-export AMA_ENVIRONMENT_ID="env_..."
-export AMA_RUNNER_ALLOW_UNSAFE_PROCESS="true"
-export AMA_RUNNER_WORKDIR="/var/lib/ama-runner/workspace"
+ama-runner start \
+  --api-server "https://ama.example.com" \
+  --project-id "project_..." \
+  --environment-id "env_..." \
+  --allow-unsafe-process
 ```
 
-Runners connected to different API Servers are isolated automatically and may run concurrently with no directory flags. Multiple concurrent daemons connected to the same API Server still require explicit distinct `stateDir` values; an omitted `workDir` is then derived as `<stateDir>/work`. `stateDir` owns the process lock and runner identity, so sharing the same effective state directory intentionally prevents duplicate processes.
-
-Useful flags:
+`start` stores the instance, installs it with the native user service manager, enables automatic startup, waits for the first successful heartbeat, and prints its stable local instance id. One API Server and Environment pair owns at most one local Runner process.
 
 ```bash
-ama-runner \
-  --api-server "$AMA_API_SERVER" \
-  --project-id "$AMA_PROJECT_ID" \
-  --environment-id "$AMA_ENVIRONMENT_ID" \
-  --allow-unsafe-process \
-  --work-dir /var/lib/ama-runner/workspace
+ama-runner list
+ama-runner status runner_...
+ama-runner stop runner_...
+ama-runner restart runner_...
+ama-runner logs --follow runner_...
+ama-runner configure runner_... --max-concurrent 10
+ama-runner remove runner_...
 ```
 
-The Windows runner is also a foreground process, matching macOS and Linux. Start it from PowerShell and stop it with `Ctrl-C`:
+`list` and `status` report native local process state separately from AMA control-plane heartbeat state. `stop` drains leases and disables automatic startup. `remove` preserves state by default; `remove --purge` explicitly deletes the Runner identity, workspaces, session events, and logs.
+
+Use explicit foreground mode in containers, development shells, or an existing external service manager:
+
+```bash
+ama-runner run \
+  --api-server "https://ama.example.com" \
+  --project-id "project_..." \
+  --environment-id "env_..." \
+  --allow-unsafe-process
+```
+
+The binary has no implicit foreground root command: `ama-runner --api-server ...` is invalid. Explicit `--state-dir` and `--work-dir` overrides are accepted only by `run`; managed `start` always uses the deterministic instance directories.
+
+This storage change uses a one-time operator data migration. Before installing the new binary, stop the old process and move its API-Server-scoped `runner-state.json`, `runner.lock`, and complete `work` directory into the new directory for its configured Environment. Do not copy only the identity file: the `work` directory is the durable owner of runner-local session JSONL. The new binary reads only the new layout and has no legacy fallback.
+
+Foreground mode on Windows uses the same explicit command and stops with `Ctrl-C`:
 
 ```powershell
-.\ama-runner.exe `
+.\ama-runner.exe run `
   --api-server $env:AMA_API_SERVER `
   --project-id $env:AMA_PROJECT_ID `
   --environment-id $env:AMA_ENVIRONMENT_ID

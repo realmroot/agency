@@ -103,26 +103,53 @@ func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
 	if got := DefaultStateDir(); got != filepath.Join(stateRoot, appDirectoryName) {
 		t.Fatalf("state directory = %q", got)
 	}
+	if got := DefaultInstanceConfigDir(); got != filepath.Join(configRoot, appDirectoryName, "instances") {
+		t.Fatalf("instance config directory = %q", got)
+	}
 	if got := DefaultWorkDirForStateDir(DefaultStateDir()); got != filepath.Join(stateRoot, appDirectoryName, "work") {
 		t.Fatalf("work directory = %q", got)
 	}
 }
 
-// [spec: runners/api-server-storage]
-func TestDefaultServerPathsAreStableAndIsolated(t *testing.T) {
+func TestInstanceIDIsStableForServerAndEnvironment(t *testing.T) {
+	first, err := InstanceID("https://AMA.example.test/", "env_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized, err := InstanceID("https://ama.example.test", "env_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherEnvironment, err := InstanceID("https://ama.example.test", "env_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != normalized || first == otherEnvironment || !strings.HasPrefix(first, "runner_") {
+		t.Fatalf("unexpected instance ids %q %q %q", first, normalized, otherEnvironment)
+	}
+	if _, err := InstanceID("://bad", "env_1"); err == nil {
+		t.Fatal("invalid API Server must fail")
+	}
+	if _, err := InstanceID("https://ama.example.test", ""); err == nil {
+		t.Fatal("empty Environment must fail")
+	}
+}
+
+// [spec: runners/local-instances]
+func TestDefaultInstancePathsAreStableAndIsolated(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
 
-	first, err := DefaultStateDirForAPIServer("https://AMA.example.test/")
+	first, err := DefaultStateDirForInstance("https://AMA.example.test/", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	normalized, err := DefaultStateDirForAPIServer("https://ama.example.test")
+	normalized, err := DefaultStateDirForInstance("https://ama.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := DefaultStateDirForAPIServer("https://ama-staging.example.test")
+	second, err := DefaultStateDirForInstance("https://ama-staging.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,6 +159,13 @@ func TestDefaultServerPathsAreStableAndIsolated(t *testing.T) {
 	if first == second {
 		t.Fatalf("different API Servers must not share a directory: %q", first)
 	}
+	otherEnvironment, err := DefaultStateDirForInstance("https://ama.example.test", "env_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == otherEnvironment {
+		t.Fatalf("different Environments must not share a directory: %q", first)
+	}
 	variants := []string{
 		"http://localhost:8787",
 		"https://localhost:8787",
@@ -139,7 +173,7 @@ func TestDefaultServerPathsAreStableAndIsolated(t *testing.T) {
 	}
 	variantPaths := map[string]struct{}{}
 	for _, apiServer := range variants {
-		path, err := DefaultStateDirForAPIServer(apiServer)
+		path, err := DefaultStateDirForInstance(apiServer, "env_1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -148,15 +182,17 @@ func TestDefaultServerPathsAreStableAndIsolated(t *testing.T) {
 	if len(variantPaths) != len(variants) {
 		t.Fatalf("scheme, port, or base path collided: %#v", variantPaths)
 	}
-	serversRoot := filepath.Join(stateRoot, appDirectoryName, "servers")
-	if filepath.Dir(first) != serversRoot || filepath.Dir(second) != serversRoot {
-		t.Fatalf("server directories must live under %q: %q %q", serversRoot, first, second)
+	if filepath.Base(filepath.Dir(first)) != "environments" || filepath.Base(filepath.Dir(second)) != "environments" {
+		t.Fatalf("instance directories must live below environment directories: %q %q", first, second)
 	}
 	if got := DefaultWorkDirForStateDir(first); got != filepath.Join(first, "work") {
 		t.Fatalf("work directory = %q", got)
 	}
-	if _, err := DefaultStateDirForAPIServer("://invalid"); err == nil {
+	if _, err := DefaultStateDirForInstance("://invalid", "env_1"); err == nil {
 		t.Fatal("invalid API Server must not produce a storage directory")
+	}
+	if _, err := DefaultStateDirForInstance("https://ama.example.test", ""); err == nil {
+		t.Fatal("empty Environment must not produce a storage directory")
 	}
 }
 
@@ -365,104 +401,5 @@ func TestCredentialStoreRejectsInvalidProfilesAndFiles(t *testing.T) {
 	}
 	if err := saveRawCredentialFile(filepath.Join(blockedParent, "credentials.json"), CredentialStore{}); err == nil {
 		t.Fatal("expected save under file parent to fail")
-	}
-}
-
-func TestSaveLocalConfigValuePrunesUnknownKeys(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(path, []byte(`{
-		"apiServer": "https://ama.example.test",
-		"accessToken": "old-token",
-		"refreshToken": "old-refresh"
-	}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := SaveLocalConfigValue(path, "environmentId", "env_1"); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	config := string(data)
-	if strings.Contains(config, "accessToken") || strings.Contains(config, "refreshToken") {
-		t.Fatalf("expected credentials to be pruned from local config, got %s", config)
-	}
-	if !strings.Contains(config, `"apiServer"`) || !strings.Contains(config, `"environmentId"`) {
-		t.Fatalf("expected allowed config keys to remain, got %s", config)
-	}
-}
-
-func TestLocalConfigParsesAllowedValueTypes(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.json")
-	values := map[string]string{
-		"apiServer":          "https://ama.example.test",
-		"allowUnsafeProcess": "true",
-		"maxConcurrent":      "3",
-		"workDir":            "/tmp/work",
-	}
-	for key, value := range values {
-		if err := SaveLocalConfigValue(path, key, value); err != nil {
-			t.Fatalf("expected %s to save, got %v", key, err)
-		}
-	}
-	config, err := LoadLocalConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if config["allowUnsafeProcess"] != true || config["maxConcurrent"] != float64(3) && config["maxConcurrent"] != 3 {
-		t.Fatalf("unexpected parsed local config: %#v", config)
-	}
-	keys := LocalConfigKeys()
-	if len(keys) == 0 || keys[0] > keys[len(keys)-1] {
-		t.Fatalf("expected sorted config keys, got %#v", keys)
-	}
-}
-
-func TestLocalConfigRejectsInvalidValues(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.json")
-	if _, err := LoadLocalConfig(""); err == nil {
-		t.Fatal("expected empty config path to fail")
-	}
-	cases := []struct {
-		key   string
-		value string
-	}{
-		{key: "allowUnsafeProcess", value: "maybe"},
-		{key: "maxConcurrent", value: "many"},
-		{key: "unknown", value: "value"},
-	}
-	for _, tc := range cases {
-		if err := SaveLocalConfigValue(path, tc.key, tc.value); err == nil {
-			t.Fatalf("expected invalid value error for %s=%s", tc.key, tc.value)
-		}
-	}
-	if _, err := LoadLocalConfig(filepath.Join(t.TempDir(), "missing.json")); err != nil {
-		t.Fatalf("expected missing config to load empty, got %v", err)
-	}
-	if err := os.WriteFile(path, []byte(`not json`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := LoadLocalConfig(path); err == nil {
-		t.Fatal("expected invalid local config json error")
-	}
-	if _, err := loadWritableLocalConfig(path); err == nil {
-		t.Fatal("expected invalid writable local config json error")
-	}
-	blockedParent := filepath.Join(t.TempDir(), "not-a-dir")
-	if err := os.WriteFile(blockedParent, []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := SaveLocalConfigValue(filepath.Join(blockedParent, "config.json"), "apiServer", "https://ama.example.test"); err == nil {
-		t.Fatal("expected save under file parent to fail")
-	}
-	localConfigKeys["durationForTest"] = LocalDuration
-	t.Cleanup(func() { delete(localConfigKeys, "durationForTest") })
-	if got, err := parseLocalConfigValue("durationForTest", "5s"); err != nil || got != "5s" {
-		t.Fatalf("expected duration parse success, got %#v err=%v", got, err)
-	}
-	if _, err := parseLocalConfigValue("durationForTest", "soon"); err == nil {
-		t.Fatal("expected invalid duration error")
 	}
 }

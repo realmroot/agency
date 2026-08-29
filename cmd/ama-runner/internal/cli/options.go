@@ -26,7 +26,7 @@ var runConfigOptions = []runConfigOption{
 	{Key: "projectId", Flag: "project-id", Env: "AMA_PROJECT_ID", Usage: "AMA project id"},
 	{Key: "environmentId", Flag: "environment-id", Env: "AMA_ENVIRONMENT_ID", Usage: "AMA environment id"},
 	{Key: "allowUnsafeProcess", Flag: "allow-unsafe-process", Env: "AMA_RUNNER_ALLOW_UNSAFE_PROCESS", Default: false, Usage: "acknowledge unsafe process adapter"},
-	{Key: "stateDir", Flag: "state-dir", Env: "AMA_RUNNER_STATE_DIR", Usage: "override runner state directory (default: isolated by API server)"},
+	{Key: "stateDir", Flag: "state-dir", Env: "AMA_RUNNER_STATE_DIR", Usage: "override foreground runner state directory (default: isolated by API server and environment)"},
 	{Key: "workDir", Flag: "work-dir", Env: "AMA_RUNNER_WORKDIR", Usage: "override local work directory (default: state directory/work)"},
 	{Key: "maxConcurrent", Flag: "max-concurrent", Env: "AMA_RUNNER_MAX_CONCURRENT", Default: 5, Usage: "max concurrent leases"},
 	{Key: "heartbeatInterval", Env: "AMA_RUNNER_HEARTBEAT_INTERVAL", Default: 20 * time.Second},
@@ -38,8 +38,19 @@ var runConfigOptions = []runConfigOption{
 }
 
 func RegisterRunFlags(command *cobra.Command) {
+	registerRunFlags(command, false)
+}
+
+func RegisterManagedStartFlags(command *cobra.Command) {
+	registerRunFlags(command, true)
+}
+
+func registerRunFlags(command *cobra.Command, managed bool) {
 	flags := command.Flags()
 	for _, option := range runConfigOptions {
+		if managed && (option.Key == "stateDir" || option.Key == "workDir") {
+			continue
+		}
 		if option.Flag == "" {
 			continue
 		}
@@ -63,7 +74,15 @@ func RegisterGlobalFlags(command *cobra.Command) {
 }
 
 func LoadRunConfig(command *cobra.Command) (runnerconfig.Config, error) {
-	values, err := newRunConfigViper(command)
+	return loadRunConfig(command, false)
+}
+
+func LoadManagedStartConfig(command *cobra.Command) (runnerconfig.Config, error) {
+	return loadRunConfig(command, true)
+}
+
+func loadRunConfig(command *cobra.Command, managed bool) (runnerconfig.Config, error) {
+	values, err := newRunConfigViper(command, managed)
 	if err != nil {
 		return runnerconfig.Config{}, err
 	}
@@ -77,6 +96,10 @@ func LoadRunConfig(command *cobra.Command) (runnerconfig.Config, error) {
 	var config runnerconfig.Config
 	if err := values.Unmarshal(&config, viper.DecodeHook(mapstructure.StringToTimeDurationHookFunc())); err != nil {
 		return runnerconfig.Config{}, err
+	}
+	if managed {
+		config.StateDir = ""
+		config.WorkDir = ""
 	}
 	config.ConfigPath = configPath
 	config.CredentialPath = credentialPath()
@@ -92,10 +115,13 @@ func LoadRunConfig(command *cobra.Command) (runnerconfig.Config, error) {
 	return config, nil
 }
 
-func newRunConfigViper(command *cobra.Command) (*viper.Viper, error) {
+func newRunConfigViper(command *cobra.Command, managed bool) (*viper.Viper, error) {
 	values := viper.New()
 	for _, option := range runConfigOptions {
 		values.SetDefault(option.Key, defaultRunValue(option))
+		if managed && (option.Key == "stateDir" || option.Key == "workDir") {
+			continue
+		}
 		if err := values.BindEnv(option.Key, option.Env); err != nil {
 			return nil, err
 		}
@@ -119,7 +145,7 @@ func defaultRunValue(option runConfigOption) any {
 
 func applyDefaultStoragePaths(config *runnerconfig.Config) error {
 	if strings.TrimSpace(config.StateDir) == "" {
-		stateDir, err := runnerconfig.DefaultStateDirForAPIServer(config.APIServer)
+		stateDir, err := runnerconfig.DefaultStateDirForInstance(config.APIServer, config.EnvironmentID)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,15 +20,7 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CONFIG", configPath)
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "apiServer", "https://ama.example.test"); err != nil {
-		t.Fatal(err)
-	}
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "environmentId", "env_1"); err != nil {
-		t.Fatal(err)
-	}
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "allowUnsafeProcess", "true"); err != nil {
-		t.Fatal(err)
-	}
+	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID:   "acct_1",
 		APIServer:   "https://ama.example.test",
@@ -64,15 +57,7 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "apiServer", "https://ama.example.test"); err != nil {
-		t.Fatal(err)
-	}
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "environmentId", "env_1"); err != nil {
-		t.Fatal(err)
-	}
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "allowUnsafeProcess", "true"); err != nil {
-		t.Fatal(err)
-	}
+	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
 	command := runConfigTestCommand(t,
 		"--config", configPath,
 		"--work-dir", t.TempDir(),
@@ -91,7 +76,8 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	}
 }
 
-func TestLoadRunConfigScopesDefaultStorageByAPIServer(t *testing.T) {
+// [spec: runners/local-instances]
+func TestLoadRunConfigScopesDefaultStorageByAPIServerAndEnvironment(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
@@ -130,6 +116,18 @@ func TestLoadRunConfigScopesDefaultStorageByAPIServer(t *testing.T) {
 	}
 	if production.WorkDir != filepath.Join(production.StateDir, "work") || staging.WorkDir != filepath.Join(staging.StateDir, "work") {
 		t.Fatalf("work directories must be nested under state directories: production=%#v staging=%#v", production, staging)
+	}
+	otherEnvironmentCommand := runConfigTestCommand(t,
+		"--api-server", "https://ama.example.test",
+		"--environment-id", "env_2",
+		"--allow-unsafe-process",
+	)
+	otherEnvironment, err := LoadRunConfig(otherEnvironmentCommand)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if otherEnvironment.StateDir == production.StateDir || otherEnvironment.WorkDir == production.WorkDir {
+		t.Fatalf("Environments share storage: first=%#v second=%#v", production, otherEnvironment)
 	}
 	activeCommand := runConfigTestCommand(t,
 		"--environment-id", "env_1",
@@ -192,7 +190,7 @@ func TestLoadRunConfigReturnsValidationError(t *testing.T) {
 }
 
 func TestOptionBindingErrorsWhenCommandsMissExpectedFlags(t *testing.T) {
-	if _, err := newRunConfigViper(&cobra.Command{}); err == nil {
+	if _, err := newRunConfigViper(&cobra.Command{}, false); err == nil {
 		t.Fatal("expected missing run flag binding error")
 	}
 	if _, err := LoadAuthLoginConfig(&cobra.Command{}); err == nil {
@@ -200,6 +198,46 @@ func TestOptionBindingErrorsWhenCommandsMissExpectedFlags(t *testing.T) {
 	}
 	if _, err := AuthProfileAPIServer(&cobra.Command{}); err == nil {
 		t.Fatal("expected missing auth switch flag binding error")
+	}
+}
+
+func TestManagedStartConfigAlwaysUsesDerivedStorage(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("AMA_RUNNER_STATE_DIR", filepath.Join(t.TempDir(), "env-state"))
+	t.Setenv("AMA_RUNNER_WORKDIR", filepath.Join(t.TempDir(), "env-work"))
+	writeRunConfig(t, configPath, map[string]any{
+		"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true,
+		"stateDir": filepath.Join(t.TempDir(), "config-state"), "workDir": filepath.Join(t.TempDir(), "config-work"),
+	})
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	command := &cobra.Command{}
+	RegisterGlobalFlags(command)
+	RegisterManagedStartFlags(command)
+	if err := command.ParseFlags([]string{"--config", configPath}); err != nil {
+		t.Fatal(err)
+	}
+	if command.Flags().Lookup("state-dir") != nil || command.Flags().Lookup("work-dir") != nil {
+		t.Fatal("managed start must not expose storage overrides")
+	}
+	config, err := LoadManagedStartConfig(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := runnerconfig.DefaultStateDirForInstance(config.APIServer, config.EnvironmentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.StateDir != expected || config.WorkDir != filepath.Join(expected, "work") {
+		t.Fatalf("managed storage was overridden: %#v", config)
 	}
 }
 
@@ -245,9 +283,7 @@ func TestRunDaemonReturnsConfigError(t *testing.T) {
 
 func TestAuthConfigPathAndProfileAPIServer(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.json")
-	if err := runnerconfig.SaveLocalConfigValue(configPath, "apiServer", "https://config.example.test"); err != nil {
-		t.Fatal(err)
-	}
+	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://config.example.test"})
 	command := authSwitchTestCommand(t, "--config", configPath)
 	got, err := AuthProfileAPIServer(command)
 	if err != nil {
@@ -259,6 +295,17 @@ func TestAuthConfigPathAndProfileAPIServer(t *testing.T) {
 	t.Setenv("AMA_RUNNER_CONFIG", configPath)
 	if got := authLoginConfigPath(authLoginTestCommand(t)); got != configPath {
 		t.Fatalf("expected auth login config env path, got %q", got)
+	}
+}
+
+func writeRunConfig(t *testing.T, path string, value map[string]any) {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 

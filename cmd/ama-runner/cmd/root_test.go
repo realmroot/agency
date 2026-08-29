@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,8 +21,11 @@ import (
 	"time"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/instance"
+	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/managed"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/testutil"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
+	"github.com/spf13/cobra"
 )
 
 func TestRunFailsOnInvalidConfig(t *testing.T) {
@@ -33,7 +37,7 @@ func TestRunFailsOnInvalidConfig(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	err := execute(context.Background(), []string{"--api-server", "://bad"}, testBuild(), nil, nil)
+	err := execute(context.Background(), []string{"run", "--api-server", "://bad"}, testBuild(), nil, nil)
 	if err == nil {
 		t.Fatal("expected invalid config error")
 	}
@@ -85,14 +89,233 @@ func TestRootCommandHelpAndArgumentValidation(t *testing.T) {
 	if err := execute(context.Background(), []string{"auth", "switch", "one", "two"}, testBuild(), &output, nil); err == nil {
 		t.Fatal("expected auth switch argument validation error")
 	}
-	if err := execute(context.Background(), []string{"config", "get"}, testBuild(), &output, nil); err == nil {
-		t.Fatal("expected config get argument validation error")
+	if err := execute(context.Background(), []string{"status"}, testBuild(), &output, nil); err == nil {
+		t.Fatal("expected status argument validation error")
 	}
-	if err := execute(context.Background(), []string{"config", "list", "extra"}, testBuild(), &output, nil); err == nil {
-		t.Fatal("expected config list argument validation error")
+	if err := execute(context.Background(), []string{"stop"}, testBuild(), &output, nil); err == nil {
+		t.Fatal("expected stop argument validation error")
 	}
-	if err := execute(context.Background(), []string{"config", "set", "only-key"}, testBuild(), &output, nil); err == nil {
-		t.Fatal("expected config set argument validation error")
+	if err := execute(context.Background(), []string{"restart"}, testBuild(), &output, nil); err == nil {
+		t.Fatal("expected restart argument validation error")
+	}
+}
+
+func TestRootCommandDoesNotImplicitlyRunDaemon(t *testing.T) {
+	var output bytes.Buffer
+	if err := execute(context.Background(), nil, testBuild(), &output, nil); err != nil {
+		t.Fatalf("root help failed: %v", err)
+	}
+	if !strings.Contains(output.String(), "Available Commands") || !strings.Contains(output.String(), "run") {
+		t.Fatalf("unexpected root help %q", output.String())
+	}
+	if err := execute(context.Background(), []string{"--api-server", "https://ama.example.test"}, testBuild(), nil, nil); err == nil {
+		t.Fatal("legacy implicit foreground flags must be rejected")
+	}
+}
+
+type fakeManagedController struct {
+	started      []string
+	stopped      []string
+	restarted    []string
+	run          []string
+	running      bool
+	logPath      string
+	operationErr error
+}
+
+func (f *fakeManagedController) Start(record instance.Record) error {
+	f.started = append(f.started, record.ID)
+	return f.operationErr
+}
+func (f *fakeManagedController) Stop(record instance.Record, _ bool) error {
+	f.stopped = append(f.stopped, record.ID)
+	return f.operationErr
+}
+func (f *fakeManagedController) Restart(record instance.Record) error {
+	f.restarted = append(f.restarted, record.ID)
+	return f.operationErr
+}
+func (f *fakeManagedController) Status(_ context.Context, record instance.Record) managed.Status {
+	return managed.Status{
+		ID: record.ID, APIServer: record.Config.APIServer, EnvironmentID: record.Config.EnvironmentID,
+		LocalState: "ready", ControlState: "active", PID: 42,
+	}
+}
+func (f *fakeManagedController) RunService(record instance.Record) error {
+	f.run = append(f.run, record.ID)
+	return f.operationErr
+}
+func (f *fakeManagedController) LogPath(instance.Record) string { return f.logPath }
+func (f *fakeManagedController) IsRunning(instance.Record) (bool, error) {
+	return f.running, f.operationErr
+}
+
+// [spec: runners/local-instances]
+func TestManagedLifecycleCommands(t *testing.T) {
+	registryDir := filepath.Join(t.TempDir(), "instances")
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakeManagedController{logPath: filepath.Join(t.TempDir(), "runner.log")}
+	originalFactory := newManagedController
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return fake, nil }
+	t.Cleanup(func() { newManagedController = originalFactory })
+
+	base := []string{"--registry-dir", registryDir}
+	var output bytes.Buffer
+	startArgs := append(append([]string{}, base...), "start", "--api-server", "https://ama.example.test", "--project-id", "project_1", "--environment-id", "env_1", "--allow-unsafe-process", "--max-concurrent", "1")
+	if err := execute(context.Background(), startArgs, testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	records, err := (instance.Registry{Dir: registryDir}).List()
+	if err != nil || len(records) != 1 {
+		t.Fatalf("managed start did not create one instance: records=%#v err=%v", records, err)
+	}
+	record := records[0]
+	if len(fake.started) != 1 || !strings.Contains(record.Config.StateDir, filepath.Join("environments", "env_1-")) {
+		t.Fatalf("unexpected managed start: fake=%#v record=%#v", fake, record)
+	}
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "start", record.ID), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	if err := execute(context.Background(), startArgs, testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.started) != 3 {
+		t.Fatalf("repeated start was not idempotently delegated: %#v", fake.started)
+	}
+	conflictingStart := append([]string{}, startArgs...)
+	conflictingStart[len(conflictingStart)-1] = "2"
+	if err := execute(context.Background(), conflictingStart, testBuild(), nil, nil); err == nil {
+		t.Fatal("existing instance configuration conflict must fail")
+	}
+
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "list", "--output", "json"), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"localState": "ready"`) || !strings.Contains(output.String(), `"controlPlaneState": "active"`) {
+		t.Fatalf("unexpected list output %s", output.String())
+	}
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "status", record.ID), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "CONTROL PLANE") || !strings.Contains(output.String(), "42") {
+		t.Fatalf("unexpected status output %s", output.String())
+	}
+
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--max-concurrent", "3"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	configured, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || configured.Config.MaxConcurrent != 3 {
+		t.Fatalf("instance was not configured: %#v err=%v", configured, err)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID), testBuild(), nil, nil); err == nil {
+		t.Fatal("configure without changes must fail")
+	}
+	fake.running = true
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--max-concurrent", "4"), testBuild(), nil, nil); err == nil {
+		t.Fatal("configure while running must fail")
+	}
+	fake.running = false
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--max-concurrent", "0"), testBuild(), nil, nil); err == nil {
+		t.Fatal("invalid configuration must fail")
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--project-id", "project_2", "--allow-unsafe-process=true"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(fake.logPath, []byte("runner ready\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "logs", record.ID), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "runner ready\n" {
+		t.Fatalf("unexpected logs %q", output.String())
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "restart", record.ID), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "stop", record.ID), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.restarted) != 1 || len(fake.stopped) != 1 {
+		t.Fatalf("lifecycle commands were not delegated: %#v", fake)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "service-run", record.ID), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.run) != 1 {
+		t.Fatalf("service run was not delegated: %#v", fake)
+	}
+	controllerFailure := errors.New("controller unavailable")
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return nil, controllerFailure }
+	for _, args := range [][]string{
+		{"list"},
+		{"status", record.ID},
+		{"start", record.ID},
+		{"stop", record.ID},
+		{"restart", record.ID},
+		{"logs", record.ID},
+		{"configure", record.ID, "--max-concurrent", "2"},
+		{"remove", record.ID},
+		{"service-run", record.ID},
+	} {
+		if err := execute(context.Background(), append(append([]string{}, base...), args...), testBuild(), nil, nil); !errors.Is(err, controllerFailure) {
+			t.Fatalf("%v did not return controller failure: %v", args, err)
+		}
+	}
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return fake, nil }
+	fake.operationErr = controllerFailure
+	for _, args := range [][]string{
+		{"start", record.ID},
+		{"stop", record.ID},
+		{"restart", record.ID},
+		{"configure", record.ID, "--max-concurrent", "2"},
+		{"remove", record.ID},
+		{"service-run", record.ID},
+	} {
+		if err := execute(context.Background(), append(append([]string{}, base...), args...), testBuild(), nil, nil); !errors.Is(err, controllerFailure) {
+			t.Fatalf("%v did not return lifecycle failure: %v", args, err)
+		}
+	}
+	fake.operationErr = nil
+	if err := os.MkdirAll(record.Config.StateDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(record.Config.StateDir, "preserved-event"), []byte("event"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "remove", record.ID, "--purge"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (instance.Registry{Dir: registryDir}).Get(record.ID); !errors.Is(err, instance.ErrNotFound) {
+		t.Fatalf("instance was not removed: %v", err)
+	}
+	if _, err := os.Stat(record.Config.StateDir); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("purged instance state still exists: %v", err)
+	}
+}
+
+func TestLifecycleFormattingAndDefaultRegistry(t *testing.T) {
+	registry := commandRegistry(&cobra.Command{})
+	if registry.Dir != instance.DefaultRegistry().Dir {
+		t.Fatalf("unexpected default registry %q", registry.Dir)
+	}
+	if err := printStatuses(nil, "yaml", nil); err == nil {
+		t.Fatal("unsupported output format must fail")
 	}
 }
 
@@ -225,40 +448,6 @@ func lockRunnerCallbackPort(t *testing.T) {
 	})
 }
 
-func TestRunConfigSetUsesRunnerConfigEnvironmentPath(t *testing.T) {
-	configPath := filepath.Join(t.TempDir(), "runner.json")
-	t.Setenv("AMA_RUNNER_CONFIG", configPath)
-	var output bytes.Buffer
-
-	err := execute(context.Background(), []string{"config", "set", "environmentId", "env_1"}, testBuild(), &output, nil)
-	if err != nil {
-		t.Fatalf("expected config set to succeed, got %v", err)
-	}
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(data), `"environmentId": "env_1"`) {
-		t.Fatalf("expected config to be written to AMA_RUNNER_CONFIG path, got %s", string(data))
-	}
-	output.Reset()
-	err = execute(context.Background(), []string{"config", "get", "environmentId"}, testBuild(), &output, nil)
-	if err != nil {
-		t.Fatalf("expected config get to succeed, got %v", err)
-	}
-	if strings.TrimSpace(output.String()) != "env_1" {
-		t.Fatalf("unexpected config get output %q", output.String())
-	}
-	output.Reset()
-	err = execute(context.Background(), []string{"config", "list"}, testBuild(), &output, nil)
-	if err != nil {
-		t.Fatalf("expected config list to succeed, got %v", err)
-	}
-	if !strings.Contains(output.String(), "environmentId=env_1") {
-		t.Fatalf("unexpected config list output %q", output.String())
-	}
-}
-
 func TestRunAuthStatusCommand(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
@@ -333,7 +522,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 	t.Setenv("AMA_ENVIRONMENT_ID", "env_1")
 	t.Setenv("AMA_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
-	err := execute(ctx, nil, testBuild(), nil, nil)
+	err := execute(ctx, []string{"run"}, testBuild(), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "context canceled") {
 		t.Fatalf("expected context cancellation, got %v", err)
 	}

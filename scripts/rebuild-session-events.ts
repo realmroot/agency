@@ -1,5 +1,4 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
@@ -111,8 +110,9 @@ function inferSessionId(eventsPath: string): string {
 
 function defaultWorkDir(): string {
   if (process.env.AMA_RUNNER_WORK_DIR) return process.env.AMA_RUNNER_WORK_DIR
-  if (process.env.XDG_STATE_HOME) return join(process.env.XDG_STATE_HOME, 'ama-runner', 'work')
-  return join(process.env.HOME || homedir(), '.local', 'state', 'ama-runner', 'work')
+  throw new Error(
+    'Runner work directories are isolated by API Server and Environment; pass --work-dir or AMA_RUNNER_WORK_DIR',
+  )
 }
 
 function firstCreatedAt(targetPath: string): string | null {
@@ -139,7 +139,7 @@ Options:
   --source-format <format>  auto, provider-events, bridge-ndjson (default: auto)
   --session-id <id>         AMA session id. Default target is the runner store for this session.
   --events <path>           Exact target events.jsonl path. Session id is inferred from its parent directory unless --session-id is set.
-  --work-dir <path>         AMA runner work dir. Defaults to $AMA_RUNNER_WORK_DIR or ~/.local/state/ama-runner/work
+  --work-dir <path>         AMA Runner work dir. Required unless AMA_RUNNER_WORK_DIR is set.
   --dry-run                 Build and validate without writing
   --no-backup               Replace target without backing up the existing file
 

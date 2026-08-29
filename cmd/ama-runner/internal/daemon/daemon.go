@@ -76,6 +76,11 @@ func (d *Daemon) Start(ctx context.Context) error {
 		return err
 	}
 	defer releaseLock()
+	startedAt := time.Now().UTC()
+	if err := d.writeRuntimeState("starting", startedAt, time.Time{}); err != nil {
+		return err
+	}
+	defer d.removeRuntimeState()
 
 	if err := os.MkdirAll(d.Config.WorkDir, 0o755); err != nil {
 		return err
@@ -101,6 +106,10 @@ func (d *Daemon) Start(ctx context.Context) error {
 		if ctx.Err() != nil && d.RunnerID != "" {
 			_ = d.sendOfflineHeartbeat(context.Background())
 		}
+		return err
+	}
+	if err := d.writeRuntimeState("ready", startedAt, time.Now().UTC()); err != nil {
+		_ = d.sendOfflineHeartbeat(context.Background())
 		return err
 	}
 	// One-time readiness line so logs show the runner came up and is connected

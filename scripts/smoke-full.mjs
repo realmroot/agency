@@ -268,6 +268,7 @@ function startRunner(binary, origin, token, environmentId, stateDir, workDir, cr
   return startProcess(
     binary,
     [
+      'run',
       '--api-server',
       origin,
       '--project-id',
@@ -298,6 +299,110 @@ function startRunner(binary, origin, token, environmentId, stateDir, workDir, cr
       },
     },
   )
+}
+
+function managedRunnerEnvironment(temp, credentialPath) {
+  return {
+    ...process.env,
+    XDG_CONFIG_HOME: join(temp, 'managed-config'),
+    XDG_STATE_HOME: join(temp, 'managed-state'),
+    AMA_RUNNER_CREDENTIALS: credentialPath,
+    AMA_RUNNER_HEARTBEAT_INTERVAL: '5s',
+    AMA_RUNNER_LEASE_SECONDS: '30',
+    AMA_RUNNER_RENEW_INTERVAL: '10s',
+    AMA_RUNNER_COMMAND_TIMEOUT: '4m',
+    AMA_RUNNER_SHUTDOWN_GRACE: '5s',
+    AMA_RUNNER_MAX_SESSION_DURATION: '4m',
+  }
+}
+
+function managedStatus(binary, instanceId, env) {
+  const result = run(binary, ['status', instanceId, '--output', 'json'], { env })
+  const statuses = JSON.parse(result.stdout)
+  if (!Array.isArray(statuses) || statuses.length !== 1) {
+    fail('managed Runner status did not return exactly one instance', result.stdout)
+  }
+  return statuses[0]
+}
+
+function verifyManagedRunnerLifecycle(binary, origin, token, environmentId, temp, credentialPath) {
+  const env = managedRunnerEnvironment(temp, credentialPath)
+  let instanceId = null
+  let verified = false
+  try {
+    const started = run(
+      binary,
+      [
+        'start',
+        '--api-server',
+        origin,
+        '--project-id',
+        token.projectId,
+        '--environment-id',
+        environmentId,
+        '--allow-unsafe-process',
+        '--max-concurrent',
+        '1',
+      ],
+      { env },
+    )
+    instanceId = started.stdout.trim().split(/\s+/, 1)[0]
+    if (!instanceId?.startsWith('runner_')) {
+      fail('managed Runner start did not return an instance id', started.stdout)
+    }
+    const first = managedStatus(binary, instanceId, env)
+    if (first.localState !== 'ready' || first.controlPlaneState !== 'active' || !first.runnerId) {
+      fail('managed Runner did not become locally ready and remotely active', JSON.stringify(first, null, 2))
+    }
+
+    run(binary, ['stop', instanceId], { env })
+    const stopped = managedStatus(binary, instanceId, env)
+    if (stopped.localState !== 'stopped') {
+      fail('managed Runner did not stop locally', JSON.stringify(stopped, null, 2))
+    }
+
+    run(binary, ['start', instanceId], { env })
+    run(binary, ['restart', instanceId], { env })
+    const restarted = managedStatus(binary, instanceId, env)
+    if (restarted.localState !== 'ready' || restarted.runnerId !== first.runnerId) {
+      fail(
+        'managed Runner restart did not preserve its remote Runner identity',
+        JSON.stringify({ first, restarted }, null, 2),
+      )
+    }
+    info(`verified managed lifecycle for ${instanceId} (${first.runnerId})`)
+    verified = true
+  } finally {
+    const cleanupIds = instanceId
+      ? [instanceId]
+      : JSON.parse(run(binary, ['list', '--output', 'json'], { env }).stdout).map((item) => item.id)
+    for (const cleanupId of cleanupIds) {
+      if (!verified) {
+        const status = spawnSync(binary, ['status', cleanupId, '--output', 'json'], { env, encoding: 'utf8' })
+        const logs = spawnSync(binary, ['logs', cleanupId], { env, encoding: 'utf8' })
+        let nativeLogs = 'unavailable'
+        try {
+          const stateDir = JSON.parse(status.stdout)?.[0]?.stateDir
+          const logDir = stateDir ? join(stateDir, 'logs') : null
+          if (logDir && existsSync(logDir)) {
+            nativeLogs = readdirSync(logDir)
+              .map((name) => `${name}:\n${readFileSync(join(logDir, name), 'utf8')}`)
+              .join('\n')
+          }
+        } catch (error) {
+          nativeLogs = `failed to read native logs: ${error.message}`
+        }
+        console.error(
+          [
+            `managed lifecycle status before cleanup:\n${status.stdout || status.stderr}`,
+            `managed lifecycle logs before cleanup:\n${logs.stdout || logs.stderr}`,
+            `managed native service logs before cleanup:\n${nativeLogs}`,
+          ].join('\n'),
+        )
+      }
+      run(binary, ['remove', cleanupId, '--purge'], { env })
+    }
+  }
 }
 
 async function waitForRunner(origin, token, environmentId) {
@@ -413,13 +518,15 @@ function eventRecord(value) {
   return value?.record ?? value
 }
 
-function hasAssistantText(value, marker) {
+function hasExactAssistantText(value, expected) {
   const record = eventRecord(value)
   const message = record?.payload?.message
   return (
     message?.role === 'assistant' &&
     Array.isArray(message.content) &&
-    message.content.some((block) => block?.type === 'text' && typeof block.text === 'string' && block.text.includes(marker))
+    message.content.some(
+      (block) => block?.type === 'text' && typeof block.text === 'string' && block.text.trim() === expected,
+    )
   )
 }
 
@@ -617,6 +724,8 @@ async function main() {
       },
     })
     const environmentId = environment.metadata.uid
+    verifyManagedRunnerLifecycle(runnerBinary, origin, token, environmentId, temp, credentialPath)
+    await waitForReady(origin)
 
     const identity = await api(origin, token, '/api/v1/identities', {
       method: 'POST',
@@ -695,10 +804,6 @@ async function main() {
       (frame) => frame.type === 'event' && frame.record?.type === 'runtime.started',
       'runtime.started',
     )
-    await socket.waitFor((frame) => frame.type === 'event' && hasAssistantText(frame, DONE_MARKER), DONE_MARKER)
-    assertToolEvents('live browser socket events', socket.frames)
-    assertAgentToolEvents('live browser socket events', socket.frames)
-
     const completedSession = await waitFor(async () => {
       const current = await api(origin, token, `/api/v1/sessions/${sessionId}`)
       if (current.status?.phase === 'error') {
@@ -709,6 +814,12 @@ async function main() {
     if (completedSession.status?.phase !== 'idle' && completedSession.status?.phase !== 'stopped') {
       fail('session did not complete cleanly', JSON.stringify(completedSession.status, null, 2))
     }
+    await socket.waitFor(
+      (frame) => frame.type === 'event' && hasExactAssistantText(frame, DONE_MARKER),
+      `exact final assistant marker ${DONE_MARKER}`,
+    )
+    assertToolEvents('live browser socket events', socket.frames)
+    assertAgentToolEvents('live browser socket events', socket.frames)
 
     assertWorkspace(workDir, sessionId, identity)
     socket.requestBackfill()
@@ -716,7 +827,10 @@ async function main() {
       (frame) => frame.type === 'backfill' && frame.requestId === BACKFILL_REQUEST_ID,
       'initial completed-session backfill',
     )
-    if (!Array.isArray(firstBackfill.events) || !firstBackfill.events.some((event) => hasAssistantText(event, DONE_MARKER))) {
+    if (
+      !Array.isArray(firstBackfill.events) ||
+      !firstBackfill.events.some((event) => hasExactAssistantText(event, DONE_MARKER))
+    ) {
       fail('browser socket backfill does not include the completed runtime event', JSON.stringify(firstBackfill, null, 2))
     }
     assertToolEvents('initial completed-session backfill', firstBackfill.events)
@@ -736,13 +850,19 @@ async function main() {
     if (reconnectBackfill.type === 'runner_unavailable') {
       fail('completed session backfill reported runner_unavailable after runner reconnect')
     }
-    if (!Array.isArray(reconnectBackfill.events) || !reconnectBackfill.events.some((event) => hasAssistantText(event, DONE_MARKER))) {
+    if (
+      !Array.isArray(reconnectBackfill.events) ||
+      !reconnectBackfill.events.some((event) => hasExactAssistantText(event, DONE_MARKER))
+    ) {
       secondSocket.requestBackfill()
       const explicitBackfill = await secondSocket.waitFor(
         (frame) => frame.type === 'backfill' && frame.requestId === BACKFILL_REQUEST_ID,
         'explicit backfill after runner reconnect',
       )
-      if (!Array.isArray(explicitBackfill.events) || !explicitBackfill.events.some((event) => hasAssistantText(event, DONE_MARKER))) {
+      if (
+        !Array.isArray(explicitBackfill.events) ||
+        !explicitBackfill.events.some((event) => hasExactAssistantText(event, DONE_MARKER))
+      ) {
         fail(
           'completed session backfill after runner reconnect does not include the runtime event',
           JSON.stringify({ automatic: reconnectBackfill, explicit: explicitBackfill }, null, 2),
@@ -816,6 +936,9 @@ async function main() {
   }
   if (failure) {
     console.error(`\nsmoke failed: ${failure.message}`)
+    if (server) {
+      console.error(`e2e server exit: code=${server.child.exitCode} signal=${server.child.signalCode}`)
+    }
     if (failure.detail) {
       console.error(failure.detail)
     }

@@ -34,20 +34,31 @@ func rootCommand(ctx context.Context, build version.Info, stdout io.Writer, stde
 	stderr = writerOrDiscard(stderr)
 	root := &cobra.Command{
 		Use:           "ama-runner",
-		Short:         "Run an AMA self-hosted runner daemon",
+		Short:         "Manage AMA self-hosted Runner instances",
 		Version:       build.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(command *cobra.Command, _ []string) error {
-			return runDaemon(ctx, command, build)
-		},
 	}
 	root.SetOut(stdout)
 	root.SetErr(stderr)
 	root.SetVersionTemplate(fmt.Sprintf("%s %s (%s, built %s)\n", build.Name, build.Version, build.Commit, build.BuildDate))
 	runnercli.RegisterGlobalFlags(root)
-	runnercli.RegisterRunFlags(root)
-	root.AddCommand(authCommand(ctx, stdout), configCommand(stdout), versionCommand(build, stdout))
+	root.PersistentFlags().String("registry-dir", "", "managed Runner instance registry directory")
+	_ = root.PersistentFlags().MarkHidden("registry-dir")
+	root.AddCommand(
+		authCommand(ctx, stdout),
+		runCommand(ctx, build),
+		startCommand(build, stdout),
+		listCommand(ctx, build, stdout),
+		statusCommand(ctx, build, stdout),
+		stopCommand(build, stdout),
+		restartCommand(build, stdout),
+		logsCommand(ctx, build, stdout),
+		configureCommand(build, stdout),
+		removeCommand(build, stdout),
+		serviceRunCommand(build),
+		versionCommand(build, stdout),
+	)
 	return root
 }
 
