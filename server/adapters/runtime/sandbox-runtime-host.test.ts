@@ -658,9 +658,38 @@ describe('session-runtime', () => {
     expect(mockSandbox.exec).toHaveBeenCalledWith(expect.stringContaining('https://webi.sh/realmroot%400.4.2'), {
       timeout: 120_000,
     })
+    expect(mockSandbox.exec).toHaveBeenCalledWith(expect.stringContaining('WEBI_PKG='), { timeout: 120_000 })
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
       PATH: '/workspace/.ama/environment/bin:/workspace/.ama/environment/.local/bin:/usr/bin',
     })
+  })
+
+  it('rejects a successful Webi response that is not the requested package installer', async () => {
+    mockSandbox.exec.mockImplementation(async (command: string) =>
+      command.includes('export WEBI_PKG=')
+        ? {
+            exitCode: 1,
+            stdout: '',
+            stderr: 'Webi did not return an installer for the requested package',
+          }
+        : { exitCode: 0, stdout: '', stderr: '' },
+    )
+
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_webi_missing',
+        sandboxId: 'sandbox_webi_missing',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {},
+        environmentSnapshot: { packages: { webi: ['missing-package@1.0.0'] } },
+      }),
+    ).rejects.toMatchObject({
+      code: 'environment_package_installation_failed',
+      step: 'webi-install:missing-package@1.0.0',
+      diagnostic: 'Webi did not return an installer for the requested package',
+    })
+    expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
   })
 
   it('fails cloud startup with a generic package installation error', async () => {
