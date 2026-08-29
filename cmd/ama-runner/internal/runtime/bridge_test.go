@@ -60,16 +60,45 @@ func TestRuntimeBridgeRejectsMissingRuntimeAndNode(t *testing.T) {
 	}
 }
 
+func TestResolveNodeExecutableUsesRuntimeManagerTarget(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell shim fixture is Unix-only")
+	}
+	dir := t.TempDir()
+	actualNode := filepath.Join(dir, "actual-node")
+	if err := os.WriteFile(actualNode, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	shimNode := filepath.Join(dir, "node")
+	shim := "#!/bin/sh\nif [ \"$1\" = \"-p\" ]; then\n  printf '%s\\n' '" + actualNode + "'\n  exit 0\nfi\nexit 1\n"
+	if err := os.WriteFile(shimNode, []byte(shim), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+
+	resolved, err := resolveNodeExecutable(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved != actualNode {
+		t.Fatalf("expected runtime manager target %q, got %q", actualNode, resolved)
+	}
+}
+
 func installFakeNode(t *testing.T, script string) string {
 	t.Helper()
 	dir := t.TempDir()
 	scriptPath := filepath.Join(dir, "node.sh")
-	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
 	fakeNode := filepath.Join(dir, "node")
 	if runtime.GOOS == "windows" {
 		fakeNode += ".cmd"
+	}
+	probe := "if [ \"$1\" = \"-p\" ]; then\n  printf '%s\\n' '" + fakeNode + "'\n  exit 0\nfi\n"
+	script = strings.Replace(script, "#!/bin/sh\n", "#!/bin/sh\n"+probe, 1)
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
 		if err := os.WriteFile(fakeNode, []byte("@echo off\r\nsh \"%~dp0node.sh\" %*\r\n"), 0o755); err != nil {
 			t.Fatal(err)
 		}
