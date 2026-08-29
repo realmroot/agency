@@ -9,7 +9,16 @@ vi.mock('../repos/usage-write', () => ({ createUsageWriteRepo: () => ({ recordPr
 import type { AmaEvent } from '@shared/session-events'
 import { createCloudLoopChecker, createEventStore } from './session-event-store'
 
-function fakeStampDb(row: { metadata: string | null; environmentId?: string | null } | undefined) {
+function fakeStampDb(
+  row:
+    | {
+        metadata: string | null
+        organizationId?: string | null
+        projectId?: string
+        environmentId?: string | null
+      }
+    | undefined,
+) {
   const get = vi.fn().mockResolvedValue(row)
   const db = { select: vi.fn(() => ({ from: () => ({ where: () => ({ get }) }) })), _get: get }
   return db
@@ -52,7 +61,12 @@ const query = { order: 'asc' as const, limit: 50 }
 // checker is the only branch; the separate relay checker is gone.
 function makeStore(inDo: boolean, environmentId: string | null = 'env_1') {
   const doStore = fakeDoStore()
-  const db = fakeStampDb({ metadata: null, environmentId })
+  const db = fakeStampDb({
+    metadata: null,
+    organizationId: 'org_1',
+    projectId: 'project_1',
+    environmentId,
+  })
   const store = createEventStore(db as never, async () => inDo, doStore as never)
   return { store, doStore }
 }
@@ -85,7 +99,11 @@ describe('createEventStore — storage follows the loop', () => {
   it('non-cloud queryEvents relays to the runner and does not fall back to cloud storage', async () => {
     const relay = makeStore(false)
     expect((await relay.store.queryEvents('sess_1', query)).rows[0]).toEqual({ id: 'relay_event' })
-    expect(relay.doStore.relayQuery).toHaveBeenCalledWith('sess_1', query, 'env_1')
+    expect(relay.doStore.relayQuery).toHaveBeenCalledWith('sess_1', query, {
+      organizationId: 'org_1',
+      projectId: 'project_1',
+      environmentId: 'env_1',
+    })
 
     const offline = makeStore(false)
     offline.doStore.relayQuery.mockResolvedValue({ rows: [], hasMore: false, runnerUnavailable: true })

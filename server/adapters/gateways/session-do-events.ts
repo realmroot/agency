@@ -48,7 +48,7 @@ export interface SessionDoEventStore {
   relayQuery(
     sessionId: string,
     query: EventQuery,
-    environmentId: string | null,
+    route: { organizationId: string | null; projectId: string; environmentId: string } | null,
   ): Promise<EventPage & { runnerUnavailable?: boolean }>
   stream(sessionId: string): Promise<{ type: string; payload: string }[]>
   count(sessionId: string): Promise<number>
@@ -63,11 +63,13 @@ export function createSessionDoEventStore(env: Env): SessionDoEventStore {
     async query(sessionId, query) {
       return await callSessionObject<EventPage>(env, sessionId, '/events/query', { sessionId, query })
     },
-    async relayQuery(sessionId, query, environmentId) {
-      if (!environmentId) {
+    async relayQuery(sessionId, query, route) {
+      if (!route) {
         return { rows: [], hasMore: false, runnerUnavailable: true }
       }
-      return await callRunnerPool<EventPage & { runnerUnavailable?: boolean }>(env, environmentId, '/backfill', {
+      return await callRunnerPool<EventPage & { runnerUnavailable?: boolean }>(env, route.environmentId, '/backfill', {
+        organizationId: route.organizationId,
+        projectId: route.projectId,
         sessionId,
         query,
       })

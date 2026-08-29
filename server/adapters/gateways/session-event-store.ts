@@ -38,13 +38,27 @@ export function createCloudLoopChecker(db: Db): CloudLoopChecker {
   }
 }
 
-async function sessionEnvironmentId(db: Db, sessionId: string): Promise<string | null> {
+async function sessionRunnerRoute(
+  db: Db,
+  sessionId: string,
+): Promise<{ organizationId: string | null; projectId: string; environmentId: string } | null> {
   const row = await db
-    .select({ environmentId: sessions.environmentId })
+    .select({
+      organizationId: sessions.organizationId,
+      projectId: sessions.projectId,
+      environmentId: sessions.environmentId,
+    })
     .from(sessions)
     .where(eq(sessions.id, sessionId))
     .get()
-  return row?.environmentId ?? null
+  if (!row?.environmentId) {
+    return null
+  }
+  return {
+    organizationId: row.organizationId,
+    projectId: row.projectId,
+    environmentId: row.environmentId,
+  }
 }
 
 export function createEventStore(db: Db, isCloudLoop: CloudLoopChecker, doStore: SessionDoEventStore): EventStore {
@@ -81,7 +95,7 @@ export function createEventStore(db: Db, isCloudLoop: CloudLoopChecker, doStore:
       if (await isCloudLoop(sessionId)) {
         return await doStore.query(sessionId, query)
       }
-      return await doStore.relayQuery(sessionId, query, await sessionEnvironmentId(db, sessionId))
+      return await doStore.relayQuery(sessionId, query, await sessionRunnerRoute(db, sessionId))
     },
     async eventStream(sessionId) {
       return (await isCloudLoop(sessionId)) ? await doStore.stream(sessionId) : []
