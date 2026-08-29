@@ -353,6 +353,47 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     })
   })
 
+  it('[spec: sessions/identity-materialization] resolves emptyDir seed projections without exposing secret references', async () => {
+    secretVersionForResolutionMock.mockResolvedValueOnce({
+      state: 'active',
+      metadata: JSON.stringify({ encryptedSecretData: { 'state.json': 'cipher' } }),
+      secretRef: 'identity-state-ref',
+    })
+    decryptSecretValueMock.mockResolvedValueOnce('private-state')
+    const gateway = createRuntimeSecretGateway(env, fakeDb)
+
+    await expect(
+      gateway.resolveWorkspaceManifest(
+        scope,
+        [
+          {
+            name: 'runtime-state',
+            type: 'empty_dir',
+            seedFrom: [
+              {
+                type: 'secret',
+                secretRef: 'identity-state-ref',
+                items: [{ key: 'state.json', path: 'identities/issuer/runtime.json' }],
+              },
+            ],
+          },
+        ],
+        [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+      ),
+    ).resolves.toEqual({
+      root: '/workspace',
+      mounts: [
+        {
+          type: 'empty_dir',
+          name: 'runtime-state',
+          mountPath: '/workspace/.ama/runtime-state',
+          readOnly: false,
+          files: [{ path: 'identities/issuer/runtime.json', content: 'private-state' }],
+        },
+      ],
+    })
+  })
+
   it('rejects unresolved workspace secrets and unsafe file names', async () => {
     const gateway = createRuntimeSecretGateway(env, fakeDb)
     secretVersionForResolutionMock.mockResolvedValueOnce({ state: 'revoked', metadata: '{}', secretRef: 'git-ref' })

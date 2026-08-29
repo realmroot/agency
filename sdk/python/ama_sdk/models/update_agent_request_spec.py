@@ -13,7 +13,6 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.agent_subagent_input import AgentSubagentInput
-  from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
 
 
 
@@ -25,7 +24,7 @@ T = TypeVar("T", bound="UpdateAgentRequestSpec")
 
 @_attrs_define
 class UpdateAgentRequestSpec:
-    """ 
+    """
         Attributes:
             system_prompt (str | Unset):  Example: Answer with citations..
             provider (None | str | Unset):  Example: workers-ai.
@@ -36,7 +35,7 @@ class UpdateAgentRequestSpec:
                 'allowedTools': ['read', 'grep']}].
             allowed_tools (list[str] | Unset):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str] | Unset):  Example: ['github'].
-            realmroot (None | RealmrootAgentBindingType0 | Unset):
+            identity_ref (None | str | Unset):  Example: identity_abc123.
      """
 
     system_prompt: str | Unset = UNSET
@@ -46,7 +45,7 @@ class UpdateAgentRequestSpec:
     subagents: list[AgentSubagentInput] | Unset = UNSET
     allowed_tools: list[str] | Unset = UNSET
     mcp_connectors: list[str] | Unset = UNSET
-    realmroot: None | RealmrootAgentBindingType0 | Unset = UNSET
+    identity_ref: None | str | Unset = UNSET
 
 
 
@@ -54,7 +53,6 @@ class UpdateAgentRequestSpec:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_subagent_input import AgentSubagentInput
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
         system_prompt = self.system_prompt
 
         provider: None | str | Unset
@@ -96,13 +94,11 @@ class UpdateAgentRequestSpec:
 
 
 
-        realmroot: dict[str, Any] | None | Unset
-        if isinstance(self.realmroot, Unset):
-            realmroot = UNSET
-        elif isinstance(self.realmroot, RealmrootAgentBindingType0):
-            realmroot = self.realmroot.to_dict()
+        identity_ref: None | str | Unset
+        if isinstance(self.identity_ref, Unset):
+            identity_ref = UNSET
         else:
-            realmroot = self.realmroot
+            identity_ref = self.identity_ref
 
 
         field_dict: dict[str, Any] = {}
@@ -123,8 +119,8 @@ class UpdateAgentRequestSpec:
             field_dict["allowedTools"] = allowed_tools
         if mcp_connectors is not UNSET:
             field_dict["mcpConnectors"] = mcp_connectors
-        if realmroot is not UNSET:
-            field_dict["realmroot"] = realmroot
+        if identity_ref is not UNSET:
+            field_dict["identityRef"] = identity_ref
 
         return field_dict
 
@@ -133,7 +129,6 @@ class UpdateAgentRequestSpec:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_subagent_input import AgentSubagentInput
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
         d = dict(src_dict)
         system_prompt = d.pop("systemPrompt", UNSET)
 
@@ -178,24 +173,14 @@ class UpdateAgentRequestSpec:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors", UNSET))
 
 
-        def _parse_realmroot(data: object) -> None | RealmrootAgentBindingType0 | Unset:
+        def _parse_identity_ref(data: object) -> None | str | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
                 return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_realmroot_agent_binding_type_0 = RealmrootAgentBindingType0.from_dict(data)
+            return cast(None | str | Unset, data)
 
-
-
-                return componentsschemas_realmroot_agent_binding_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | RealmrootAgentBindingType0 | Unset, data)
-
-        realmroot = _parse_realmroot(d.pop("realmroot", UNSET))
+        identity_ref = _parse_identity_ref(d.pop("identityRef", UNSET))
 
 
         update_agent_request_spec = cls(
@@ -206,8 +191,7 @@ class UpdateAgentRequestSpec:
             subagents=subagents,
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
-            realmroot=realmroot,
+            identity_ref=identity_ref,
         )
 
         return update_agent_request_spec
-

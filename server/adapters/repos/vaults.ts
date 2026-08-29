@@ -124,6 +124,10 @@ function visibilityFilter(visibility: VaultVisibility) {
   )
 }
 
+function publicVisibilityFilter(visibility: VaultVisibility) {
+  return and(visibilityFilter(visibility), isNull(vaults.managedBy))
+}
+
 function versionColumns(version: InsertVersionInput) {
   return {
     provider: version.reference.provider,
@@ -138,7 +142,7 @@ export function createVaultRepo(db: Db): VaultRepo {
   return {
     async list(query: VaultListQuery): Promise<ListPageResult<Vault>> {
       const filters = [
-        visibilityFilter(query),
+        publicVisibilityFilter(query),
         query.archived ? isNotNull(vaults.archivedAt) : isNull(vaults.archivedAt),
         query.search ? like(vaults.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(vaults.createdAt, query.createdFrom) : undefined,
@@ -164,19 +168,29 @@ export function createVaultRepo(db: Db): VaultRepo {
       const row = await db
         .select()
         .from(vaults)
-        .where(and(eq(vaults.id, vaultId), visibilityFilter(visibility)))
+        .where(and(eq(vaults.id, vaultId), publicVisibilityFilter(visibility)))
+        .get()
+      return row ? vaultRecordFrom(row) : null
+    },
+
+    async findIdentityManaged(vaultId, visibility) {
+      const row = await db
+        .select()
+        .from(vaults)
+        .where(and(eq(vaults.id, vaultId), visibilityFilter(visibility), eq(vaults.managedBy, 'identity')))
         .get()
       return row ? vaultRecordFrom(row) : null
     },
 
     async insert(input: CreateVaultInput, createdAt): Promise<Vault> {
       const row = {
-        id: newId('vault'),
+        id: input.id ?? newId('vault'),
         organizationId: input.organizationId,
         projectId: input.projectId,
         name: input.name,
         description: input.description,
         scope: input.scope,
+        managedBy: input.managedBy ?? null,
         archivedAt: null,
         createdAt,
         updatedAt: createdAt,

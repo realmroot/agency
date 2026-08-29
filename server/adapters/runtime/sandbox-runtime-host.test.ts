@@ -165,6 +165,13 @@ describe('session-runtime', () => {
             readOnly: false,
             files: [{ path: 'notes.md', content: 'keep this out of the volume manifest' }],
           },
+          {
+            name: 'runtime-state',
+            type: 'empty_dir',
+            mountPath: '/workspace/.ama/runtime-state',
+            readOnly: false,
+            files: [{ path: 'state.json', content: 'keep this out of the volume manifest' }],
+          },
         ],
       }),
     ).toEqual({
@@ -176,6 +183,13 @@ describe('session-runtime', () => {
           memoryRef: 'ama://memories/store_1',
           name: 'memory',
           mountPath: '/workspace/.ama/memory-stores/store_1',
+          status: 'declared',
+        },
+        {
+          type: 'empty_dir',
+          name: 'runtime-state',
+          mountPath: '/workspace/.ama/runtime-state',
+          files: [{ path: 'state.json' }],
           status: 'declared',
         },
         {
@@ -593,78 +607,114 @@ describe('session-runtime', () => {
     )
   })
 
-  it('[spec: sessions/realmroot-identity] validates cloud Realmroot state and writes a private session copy', async () => {
-    const issuer = 'https://realmroot.example.com/api/auth'
-    const state = JSON.stringify({
-      version: 18,
-      agent_id: 'rr_agent_1',
-      origin: 'https://realmroot.example.com',
-      issuer,
-      runtime: 'ama',
-      host_id: 'host_1',
-      agent_key_id: 'key_1',
-      agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
-      enrollment_idempotency_key: 'enroll_1',
+  it('[spec: environments/cloud-go-packages] installs declared Go packages before cloud workspace preparation', async () => {
+    mockSandbox.exec.mockImplementation(async (command: string) => ({
+      exitCode: 0,
+      stdout: command === 'printf %s "$PATH"' ? '/usr/local/go/bin:/usr/bin' : '',
+      stderr: '',
+    }))
+
+    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      sessionId: 'session_packages',
+      sandboxId: 'sandbox_packages',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: { systemPrompt: 'Use declared tools.' },
+      environmentSnapshot: {
+        packages: { type: 'packages', go: ['github.com/realmroot/cli@v0.4.2'] },
+      },
+      workspaceManifest: { root: '/workspace', mounts: [] },
     })
+
+    expect(mockSandbox.exec).toHaveBeenCalledWith(
+      "GOBIN='/workspace/.ama/environment/bin' go install 'github.com/realmroot/cli@v0.4.2'",
+      { timeout: 120_000 },
+    )
+    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
+      PATH: '/workspace/.ama/environment/bin:/usr/local/go/bin:/usr/bin',
+    })
+    const installOrder = mockSandbox.exec.mock.invocationCallOrder.find((_, index) =>
+      String(mockSandbox.exec.mock.calls[index]?.[0]).includes(' go install '),
+    )
+    expect(installOrder).toBeLessThan(mockSandbox.setEnvVars.mock.invocationCallOrder[0]!)
+  })
+
+  it('fails cloud startup with a generic package installation error', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) =>
-      command.startsWith('cat ')
-        ? { exitCode: 1, stdout: '', stderr: 'missing' }
+      command.includes(' go install ')
+        ? { exitCode: 1, stdout: '', stderr: 'provider-specific failure' }
         : { exitCode: 0, stdout: '', stderr: '' },
     )
 
     await expect(
       startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
-        sessionId: 'session_realmroot',
-        sandboxId: 'sandbox_realmroot',
+        sessionId: 'session_packages_error',
+        sandboxId: 'sandbox_packages_error',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
-        agentSnapshot: {
-          systemPrompt: 'Use Realmroot.',
-          realmroot: {
-            agentId: 'rr_agent_1',
-            origin: 'https://realmroot.example.com',
-            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
-          },
-        },
-        environmentSnapshot: { runtimeConfig: {} },
-        workspaceManifest: {
-          root: '/workspace',
-          mounts: [
-            {
-              name: 'realmroot-agent-state',
-              type: 'secret',
-              mountPath: '/workspace/.ama/realmroot-source',
-              readOnly: true,
-              files: [{ path: 'state.json', content: state }],
-            },
-          ],
-        },
+        agentSnapshot: {},
+        environmentSnapshot: { packages: { go: ['example.com/tool@v1.0.0'] } },
       }),
-    ).resolves.toMatchObject({ sandboxId: 'sandbox_realmroot' })
-
-    const stateWrite = mockSandbox.writeFile.mock.calls.find(([path]) => String(path).endsWith('/YW1h.json'))
-    expect(stateWrite).toEqual([
-      expect.stringContaining('/.ama/realmroot-state/identities/'),
-      state,
-      { encoding: 'utf-8' },
-    ])
-    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
-    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('chmod 600')
-    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('command -v realmroot')
+    ).rejects.toThrow('Environment package installation failed')
+    expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
   })
 
-  it('[spec: sessions/realmroot-identity] rejects cloud state for a different Realmroot Agent', async () => {
+  it.each([
+    'ama',
+    'codex',
+    'claude-code',
+    'copilot',
+  ] as const)('[spec: sessions/identity-materialization] materializes %s state through a generic writable emptyDir', async (runtime) => {
+    const issuer = 'https://realmroot.example.com/api/auth'
+    const state = JSON.stringify({
+      version: 18,
+      agent_id: 'installation_agent_1',
+      origin: 'https://realmroot.example.com',
+      issuer,
+      runtime,
+      host_id: 'host_1',
+      agent_key_id: 'key_1',
+      agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
+      enrollment_idempotency_key: 'enroll_1',
+      identity: {
+        id: 'rr_agent_1',
+        issuer,
+        subject: 'rr_agent_1',
+        username: 'reviewer',
+        name: 'Reviewer',
+        runtime,
+      },
+    })
+    mockSandbox.exec.mockImplementation(async (command: string) => {
+      if (command.includes("] && [ -d '/workspace/.ama/realmroot-state' ]")) {
+        return { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith("[ -e '/workspace/.ama/realmroot-state' ]")) {
+        return { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith('mv -T -n ')) return { exitCode: 0, stdout: '', stderr: '' }
+      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+        return { exitCode: 1, stdout: '', stderr: 'published' }
+      }
+      return { exitCode: 0, stdout: '', stderr: '' }
+    })
+
     await expect(
       startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_realmroot',
         sandboxId: 'sandbox_realmroot',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
+        env: { AGENT: runtime },
         agentSnapshot: {
           systemPrompt: 'Use Realmroot.',
-          realmroot: {
+          identity: {
+            identityId: 'identity_1',
             agentId: 'rr_agent_1',
-            origin: 'https://realmroot.example.com',
+            issuer,
+            subject: 'rr_agent_1',
+            username: 'reviewer',
+            runtime,
             credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
           },
         },
@@ -674,37 +724,78 @@ describe('session-runtime', () => {
           mounts: [
             {
               name: 'realmroot-agent-state',
-              type: 'secret',
-              mountPath: '/workspace/.ama/realmroot-source',
-              readOnly: true,
+              type: 'empty_dir',
+              mountPath: '/workspace/.ama/realmroot-state',
+              readOnly: false,
               files: [
                 {
-                  path: 'state.json',
-                  content: JSON.stringify({
-                    version: 18,
-                    agent_id: 'rr_agent_other',
-                    origin: 'https://realmroot.example.com',
-                    issuer: 'https://realmroot.example.com/api/auth',
-                    runtime: 'ama',
-                    host_id: 'host_1',
-                    agent_key_id: 'key_1',
-                    agent_private_key:
-                      'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
-                    enrollment_idempotency_key: 'enroll_1',
-                  }),
+                  path: `identities/${Buffer.from(issuer).toString('base64url')}/${Buffer.from(runtime).toString('base64url')}.json`,
+                  content: state,
                 },
               ],
             },
           ],
         },
       }),
-    ).rejects.toThrow('does not match the bound Agent')
+    ).resolves.toMatchObject({ sandboxId: 'sandbox_realmroot' })
+
+    const runtimeFile = `${Buffer.from(runtime).toString('base64url')}.json`
+    const stateWrite = mockSandbox.writeFile.mock.calls.find(
+      ([path]) => String(path).includes('/.ama-empty-dir-') && String(path).endsWith(`/${runtimeFile}`),
+    )
+    expect(stateWrite).toEqual([expect.stringContaining('/.ama/.ama-empty-dir-'), state, { encoding: 'utf-8' }])
+    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
+    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('mv -T -n ')
+    expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).not.toContain('command -v realmroot')
+    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({ AGENT: runtime })
   })
 
-  it('[spec: sessions/realmroot-identity] preserves an existing valid writable cloud state on repeated preparation', async () => {
+  it('[spec: sessions/identity-materialization] does not interpret Realmroot-specific state in the cloud host', async () => {
+    const issuer = 'https://realmroot.example.com/api/auth'
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_realmroot',
+        sandboxId: 'sandbox_realmroot',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {
+          systemPrompt: 'Use Realmroot.',
+          identity: {
+            identityId: 'identity_1',
+            agentId: 'rr_agent_1',
+            issuer,
+            subject: 'rr_agent_1',
+            username: 'reviewer',
+            runtime: 'ama',
+            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+          },
+        },
+        environmentSnapshot: { runtimeConfig: {} },
+        workspaceManifest: {
+          root: '/workspace',
+          mounts: [
+            {
+              name: 'realmroot-agent-state',
+              type: 'empty_dir',
+              mountPath: '/workspace/.ama/realmroot-state',
+              readOnly: false,
+              files: [
+                {
+                  path: `identities/${Buffer.from(issuer).toString('base64url')}/YW1h.json`,
+                  content: 'opaque runtime-owned state',
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({ sandboxId: 'sandbox_realmroot' })
+  })
+
+  it('[spec: sessions/identity-materialization] preserves an existing valid writable cloud state on repeated preparation', async () => {
     const sourceState = JSON.stringify({
       version: 18,
-      agent_id: 'rr_agent_1',
+      agent_id: 'installation_agent_1',
       origin: 'https://realmroot.example.com',
       issuer: 'https://realmroot.example.com/api/auth',
       runtime: 'ama',
@@ -712,30 +803,28 @@ describe('session-runtime', () => {
       agent_key_id: 'key_1',
       agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
       enrollment_idempotency_key: 'enroll_1',
-    })
-    const evolvedState = JSON.stringify({
-      ...JSON.parse(sourceState),
-      protocol_credential: {
-        resource_indicator: 'https://realmroot.example.com/',
-        authorization_details: [],
-        credential_endpoint: 'https://realmroot.example.com/api/credentials',
-        proof_target: 'https://realmroot.example.com/',
-        private_key: 'AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI',
-        access_token: 'refreshed',
-        expires_at: '2026-09-01T00:00:00.000Z',
-        scopes: ['agent:operate'],
+      identity: {
+        id: 'rr_agent_1',
+        issuer: 'https://realmroot.example.com/api/auth',
+        subject: 'rr_agent_1',
+        username: 'reviewer',
+        name: 'Reviewer',
+        runtime: 'ama',
       },
     })
-    let existingState: string | null = null
-    mockSandbox.exec.mockImplementation(async (command: string) =>
-      command.startsWith('cat ')
-        ? existingState === null
-          ? { exitCode: 1, stdout: '', stderr: 'missing' }
-          : { exitCode: 0, stdout: existingState, stderr: '' }
-        : { exitCode: 0, stdout: '', stderr: '' },
-    )
-    mockSandbox.writeFile.mockImplementation(async (path: string) => {
-      if (path.endsWith('/YW1h.json')) existingState = sourceState
+    let volumeExists = false
+    mockSandbox.exec.mockImplementation(async (command: string) => {
+      if (command.includes("] && [ -d '/workspace/.ama/realmroot-state' ]")) {
+        return volumeExists ? { exitCode: 0, stdout: '', stderr: '' } : { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith("[ -e '/workspace/.ama/realmroot-state' ]")) {
+        return { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith('mv -T -n ')) volumeExists = true
+      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+        return { exitCode: 1, stdout: '', stderr: 'published' }
+      }
+      return { exitCode: 0, stdout: '', stderr: '' }
     })
     const input = {
       sessionId: 'session_realmroot_repeat',
@@ -744,9 +833,13 @@ describe('session-runtime', () => {
       model: '@cf/moonshotai/kimi-k2.6',
       agentSnapshot: {
         systemPrompt: 'Use Realmroot.',
-        realmroot: {
+        identity: {
+          identityId: 'identity_1',
           agentId: 'rr_agent_1',
-          origin: 'https://realmroot.example.com',
+          issuer: 'https://realmroot.example.com/api/auth',
+          subject: 'rr_agent_1',
+          username: 'reviewer',
+          runtime: 'ama' as const,
           credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
         },
       },
@@ -756,23 +849,136 @@ describe('session-runtime', () => {
         mounts: [
           {
             name: 'realmroot-agent-state',
-            type: 'secret' as const,
-            mountPath: '/workspace/.ama/realmroot-source',
-            readOnly: true,
-            files: [{ path: 'state.json', content: sourceState }],
+            type: 'empty_dir' as const,
+            mountPath: '/workspace/.ama/realmroot-state',
+            readOnly: false as const,
+            files: [
+              {
+                path: `identities/${Buffer.from('https://realmroot.example.com/api/auth').toString('base64url')}/YW1h.json`,
+                content: sourceState,
+              },
+            ],
           },
         ],
       },
     }
 
     await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
-    existingState = evolvedState
     await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
 
-    const targetWrites = mockSandbox.writeFile.mock.calls.filter(([path]) => String(path).endsWith('/YW1h.json'))
+    const targetWrites = mockSandbox.writeFile.mock.calls.filter(
+      ([path]) => String(path).includes('/.ama-empty-dir-') && String(path).endsWith('/YW1h.json'),
+    )
     expect(targetWrites).toHaveLength(1)
     expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
-    expect(existingState).toBe(evolvedState)
+    expect(volumeExists).toBe(true)
+  })
+
+  it('[spec: sessions/identity-materialization] rejects a cloud emptyDir mount through a symbolic link', async () => {
+    mockSandbox.exec.mockImplementation(async (command: string) =>
+      command.includes("[ ! -L '/workspace/.ama/realmroot-state' ]")
+        ? { exitCode: 1, stdout: '', stderr: 'symbolic link' }
+        : { exitCode: 0, stdout: '', stderr: '' },
+    )
+
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_symlink',
+        sandboxId: 'sandbox_symlink',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {},
+        environmentSnapshot: null,
+        workspaceManifest: {
+          root: '/workspace',
+          mounts: [
+            {
+              name: 'runtime-state',
+              type: 'empty_dir',
+              mountPath: '/workspace/.ama/realmroot-state',
+              readOnly: false,
+              files: [{ path: 'state.json', content: 'secret' }],
+            },
+          ],
+        },
+      }),
+    ).rejects.toThrow('Sandbox workspace setup failed')
+    expect(mockSandbox.writeFile).not.toHaveBeenCalled()
+  })
+
+  it('[spec: sessions/identity-materialization] reuses the winner of concurrent cloud emptyDir publication', async () => {
+    let volumeExists = false
+    const remainingStaging = new Set<string>()
+    const publishWaiters: Array<{
+      staging: string
+      resolve: (value: { exitCode: number; stdout: string; stderr: string }) => void
+    }> = []
+    mockSandbox.exec.mockImplementation(async (command: string) => {
+      if (command.includes("] && [ -d '/workspace/.ama/runtime-state' ]")) {
+        return volumeExists ? { exitCode: 0, stdout: '', stderr: '' } : { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith("[ -e '/workspace/.ama/runtime-state' ]")) {
+        return { exitCode: 1, stdout: '', stderr: 'missing' }
+      }
+      if (command.startsWith('mv -T -n ')) {
+        const staging = command.match(/^mv -T -n '([^']+)'/)?.[1]
+        if (!staging) throw new Error(`unexpected publish command: ${command}`)
+        return await new Promise((resolve) => {
+          publishWaiters.push({ staging, resolve })
+          if (publishWaiters.length !== 2) return
+          volumeExists = true
+          remainingStaging.add(publishWaiters[1]!.staging)
+          for (const waiter of publishWaiters) waiter.resolve({ exitCode: 0, stdout: '', stderr: '' })
+        })
+      }
+      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+        const staging = command.match(/^\[ -d '([^']+)'/)?.[1]
+        return staging && remainingStaging.has(staging)
+          ? { exitCode: 0, stdout: '', stderr: '' }
+          : { exitCode: 1, stdout: '', stderr: 'published' }
+      }
+      if (command.startsWith("rm -rf '/workspace/.ama/.ama-empty-dir-")) {
+        const staging = command.match(/^rm -rf '([^']+)'/)?.[1]
+        if (staging) remainingStaging.delete(staging)
+      }
+      return { exitCode: 0, stdout: '', stderr: '' }
+    })
+    const input = {
+      sessionId: 'session_concurrent',
+      sandboxId: 'sandbox_concurrent',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: {},
+      environmentSnapshot: null,
+      workspaceManifest: {
+        root: '/workspace' as const,
+        mounts: [
+          {
+            name: 'runtime-state',
+            type: 'empty_dir' as const,
+            mountPath: '/workspace/.ama/runtime-state',
+            readOnly: false as const,
+            files: [{ path: 'state.json', content: 'secret' }],
+          },
+        ],
+      },
+    }
+
+    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      ...input,
+      sessionId: 'session_import_warmup',
+      sandboxId: 'sandbox_import_warmup',
+      workspaceManifest: { root: '/workspace', mounts: [] },
+    })
+
+    await expect(
+      Promise.all([
+        startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
+        startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
+      ]),
+    ).resolves.toHaveLength(2)
+    expect(mockSandbox.writeFile).toHaveBeenCalledTimes(2)
+    expect(remainingStaging.size).toBe(0)
   })
 
   it('stops the configured executor backend for a sandbox', async () => {

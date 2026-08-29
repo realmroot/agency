@@ -66,14 +66,17 @@ const SessionSubagentSchema = z
   .strict()
   .openapi('SessionSubagent')
 
-const SessionRealmrootBindingSchema = z
+const SessionIdentityDescriptorSchema = z
   .object({
+    identityId: z.string(),
     agentId: z.string(),
-    origin: z.string().url(),
-    credentialRef: z.string(),
+    issuer: z.string().url(),
+    subject: z.string(),
+    username: z.string(),
+    runtime: RuntimeSchema,
   })
   .strict()
-  .openapi('SessionRealmrootBinding')
+  .openapi('SessionIdentityDescriptor')
 
 const AgentVersionSnapshotSchema = z
   .object({
@@ -88,9 +91,7 @@ const AgentVersionSnapshotSchema = z
     subagents: z.array(SessionSubagentSchema),
     allowedTools: z.array(z.string()),
     mcpConnectors: z.array(z.string()),
-    // Historical snapshots predate Realmroot bindings, so absence remains a
-    // valid persisted representation while newly created snapshots write null.
-    realmroot: SessionRealmrootBindingSchema.nullable().optional(),
+    identity: SessionIdentityDescriptorSchema.nullable(),
     createdAt: z.string().datetime(),
   })
   .openapi('SessionAgentSnapshot')
@@ -753,8 +754,13 @@ function serializeSessionMetadata(metadata: Session['metadata']): z.infer<typeof
   }
 }
 
-function serializeAgentSnapshot(snapshot: Session['status']['bindings']['agent']['snapshot']) {
-  return snapshot
+function serializeAgentSnapshot(
+  snapshot: Session['status']['bindings']['agent']['snapshot'],
+): z.infer<typeof AgentVersionSnapshotSchema> {
+  if (!snapshot) throw new Error('Session Agent snapshot is unavailable')
+  if (!snapshot.identity) return snapshot
+  const { credentialRef: _credentialRef, ...identity } = snapshot.identity
+  return { ...snapshot, identity }
 }
 
 // Forwards an authorised browser WebSocket upgrade to the Session DO, carrying the
@@ -1295,7 +1301,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         options: {
           ...(metadata.name !== undefined ? { name: metadata.name } : {}),
           metadata: { labels: metadata.labels ?? {}, annotations: metadata.annotations ?? {} },
-          runtime: spec.runtime,
+          ...(spec.runtime !== undefined ? { runtime: spec.runtime } : {}),
           runtimeConfig: {},
           ...(spec.env !== undefined ? { env: spec.env } : {}),
           ...(spec.envFrom !== undefined ? { envFrom: spec.envFrom } : {}),

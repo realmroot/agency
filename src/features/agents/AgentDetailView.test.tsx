@@ -41,6 +41,7 @@ function buildSessionAgentSnapshot(overrides: Partial<SessionAgentSnapshot> = {}
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
+    identity: null,
     createdAt: now,
     ...overrides,
   }
@@ -103,6 +104,29 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
       </MemoryRouter>,
     )
     expect(screen.getAllByText('v1').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('[spec: agents/identity-binding] renders the selected immutable version Identity without private references', () => {
+    const agent = buildAgent()
+    const version = buildAgentVersion({
+      identity: {
+        identityId: 'identity_codex',
+        agentId: 'realmroot_agent_1',
+        issuer: 'https://id.realmroot.dev/api/auth',
+        subject: 'agent:realmroot_agent_1',
+        username: 'codex-operator',
+        runtime: 'codex',
+      },
+    })
+    render(
+      <MemoryRouter>
+        <AgentDetailView agent={agent} versions={[version]} sessions={[]} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('codex-operator')).toBeInTheDocument()
+    expect(screen.getByText('codex')).toBeInTheDocument()
+    expect(screen.queryByText(/credentialRef|ama-secret|private_key|access_token/i)).toBeNull()
   })
 
   it('falls back to agent fields when versions list is empty', () => {

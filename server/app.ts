@@ -14,6 +14,7 @@ import { registerConnectorRoutes } from './http/connectors'
 import e2e from './http/e2e'
 import { registerEnvironmentRoutes } from './http/environments'
 import healthz from './http/healthz'
+import { registerIdentityRoutes } from './http/identities'
 import { registerLeaseRoutes } from './http/leases'
 import { registerMemoryStoreRoutes } from './http/memory-stores'
 import { registerProjectRoutes } from './http/projects'
@@ -57,7 +58,7 @@ export function createApp() {
         return allowedOrigins.split(',').includes(origin) ? origin : null
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID'],
+      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID', 'Idempotency-Key'],
     }),
   )
 
@@ -76,6 +77,7 @@ export function createApp() {
   const triggers = registerTriggerRoutes(createDepsApiRouter())
   const agents = registerAgentRoutes(createDepsApiRouter())
   const environments = registerEnvironmentRoutes(createDepsApiRouter())
+  const identities = registerIdentityRoutes(createDepsApiRouter())
   const providers = registerProviderRoutes(createDepsApiRouter())
   const runners = registerRunnerRoutes(createDepsApiRouter())
   const workItems = registerWorkItemRoutes(createDepsApiRouter())
@@ -108,6 +110,7 @@ export function createApp() {
     .route('/api/v1/projects', projects)
     .route('/api/v1/agents', agents)
     .route('/api/v1/environments', environments)
+    .route('/api/v1/identities', identities)
     .route('/api/v1/providers', providers)
     .route('/api/v1/runners', runners)
     .route('/api/v1/work-items', workItems)

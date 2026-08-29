@@ -1,5 +1,6 @@
-import type { Agent, AgentSpec, AgentSubagent, AgentVersion, RealmrootAgentBinding } from '@server/domain/agent'
+import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/domain/agent'
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
+import type { IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import type {
   AgentListPage,
@@ -8,6 +9,7 @@ import type {
   CreateAgentInput,
   UpdateAgentFields,
 } from '@server/usecases/ports'
+import { IdentityAlreadyBoundError } from '@server/usecases/ports'
 import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, agentVersions, connectors, providers } from '../../db/schema'
@@ -28,6 +30,15 @@ function stringify(value: unknown) {
   return JSON.stringify(value)
 }
 
+function isIdentityBindingConflict(error: unknown) {
+  let current: unknown = error
+  for (let depth = 0; depth < 4 && current instanceof Error; depth += 1) {
+    if (current.message.includes('identity_already_bound')) return true
+    current = current.cause
+  }
+  return false
+}
+
 function specFromRow(row: AgentRow | AgentVersionRow): AgentSpec {
   return {
     systemPrompt: row.systemPrompt,
@@ -37,7 +48,7 @@ function specFromRow(row: AgentRow | AgentVersionRow): AgentSpec {
     subagents: parseJson<AgentSubagent[]>(row.subagents),
     allowedTools: parseJson<string[]>(row.allowedTools),
     mcpConnectors: parseJson<string[]>(row.mcpConnectors),
-    realmroot: row.realmroot ? parseJson<RealmrootAgentBinding>(row.realmroot) : null,
+    identity: row.identitySnapshot ? parseJson<IdentityDescriptor>(row.identitySnapshot) : null,
   }
 }
 
@@ -50,7 +61,8 @@ function specColumns(spec: AgentSpec) {
     subagents: stringify(spec.subagents),
     allowedTools: stringify(spec.allowedTools),
     mcpConnectors: stringify(spec.mcpConnectors),
-    realmroot: spec.realmroot ? stringify(spec.realmroot) : null,
+    identityId: spec.identity?.identityId ?? null,
+    identitySnapshot: spec.identity ? stringify(spec.identity) : null,
   }
 }
 
@@ -156,31 +168,6 @@ export function createAgentRepo(db: Db): AgentRepo {
       )
     },
 
-    async latestVersionNumber(agentId) {
-      const row = await db
-        .select({ version: agentVersions.version })
-        .from(agentVersions)
-        .where(eq(agentVersions.agentId, agentId))
-        .orderBy(desc(agentVersions.version))
-        .limit(1)
-        .get()
-      return row?.version ?? null
-    },
-
-    async insertVersion(agent, spec, createdAt): Promise<AgentVersion> {
-      const latest = await this.latestVersionNumber(agent.metadata.uid)
-      const row = {
-        id: newId('agentver'),
-        agentId: agent.metadata.uid,
-        projectId: agent.metadata.pid ?? '',
-        version: (latest ?? 0) + 1,
-        createdAt,
-        ...specColumns(spec),
-      }
-      await db.insert(agentVersions).values(row)
-      return versionRecordFrom(row)
-    },
-
     async listVersions(projectId, agentId) {
       const rows = await db
         .select()
@@ -205,38 +192,86 @@ export function createAgentRepo(db: Db): AgentRepo {
       return row ? versionRecordFrom(row) : null
     },
 
-    async insert(input: CreateAgentInput, createdAt): Promise<Agent> {
+    async insertWithVersion(input: CreateAgentInput, createdAt) {
+      const agentId = newId('agent')
+      const versionId = newId('agentver')
       const row = {
-        id: newId('agent'),
+        id: agentId,
         projectId: input.projectId,
         name: input.name,
         description: input.description,
         archivedAt: null,
-        currentVersionId: null,
+        currentVersionId: versionId,
         createdAt,
         updatedAt: createdAt,
         ...specColumns(input.spec),
       }
-      await db.insert(agents).values(row)
-      return agentRecordFrom(row, 0)
+      const versionRow = {
+        id: versionId,
+        agentId,
+        projectId: input.projectId,
+        version: 1,
+        createdAt,
+        ...specColumns(input.spec),
+      }
+      try {
+        await db.batch([db.insert(agents).values(row), db.insert(agentVersions).values(versionRow)])
+      } catch (error) {
+        if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
+        throw error
+      }
+      return { agent: agentRecordFrom(row, 1), version: versionRecordFrom(versionRow) }
     },
 
-    async setCurrentVersion(agentId, versionId) {
-      await db.update(agents).set({ currentVersionId: versionId }).where(eq(agents.id, agentId))
+    async updateWithVersion(projectId, agent, fields, updatedAt) {
+      const versionId = newId('agentver')
+      const versionRow = {
+        id: versionId,
+        agentId: agent.metadata.uid,
+        projectId,
+        version: agent.status.version + 1,
+        createdAt: updatedAt,
+        ...specColumns(fields.spec),
+      }
+      try {
+        await db.batch([
+          db
+            .update(agents)
+            .set({
+              name: fields.name,
+              description: fields.description,
+              archivedAt: fields.archivedAt,
+              currentVersionId: versionId,
+              updatedAt,
+              ...specColumns(fields.spec),
+            })
+            .where(and(eq(agents.id, agent.metadata.uid), eq(agents.projectId, projectId))),
+          db.insert(agentVersions).values(versionRow),
+        ])
+      } catch (error) {
+        if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
+        throw error
+      }
+      return versionRecordFrom(versionRow)
     },
 
     async update(projectId, agentId, fields: UpdateAgentFields, updatedAt) {
-      await db
-        .update(agents)
-        .set({
-          name: fields.name,
-          description: fields.description,
-          archivedAt: fields.archivedAt,
-          currentVersionId: fields.currentVersionId,
-          updatedAt,
-          ...specColumns(fields.spec),
-        })
-        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+      try {
+        await db
+          .update(agents)
+          .set({
+            name: fields.name,
+            description: fields.description,
+            archivedAt: fields.archivedAt,
+            currentVersionId: fields.currentVersionId,
+            updatedAt,
+            ...specColumns(fields.spec),
+          })
+          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+      } catch (error) {
+        if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
+        throw error
+      }
     },
 
     async unarchive(projectId, agentId, updatedAt) {

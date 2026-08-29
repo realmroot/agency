@@ -108,6 +108,7 @@ function testAuthEnv(overrides: Partial<Env> = {}) {
   return {
     AMA_RUNTIME_MODE: 'test',
     AMA_E2E_TEST_AUTH: 'true',
+    OIDC_ISSUER: 'https://id-e2e.test/api/auth',
     OIDC_CLIENT_ID: 'ama',
     OIDC_RUNNER_CLIENT_ID: 'ama-runner',
     OIDC_RESOURCE: 'https://ama.example.com',

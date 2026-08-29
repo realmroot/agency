@@ -12,6 +12,11 @@ export const queryKeys = {
     detail: (id: string) => ['agents', 'detail', id] as const,
     versions: (id: string) => ['agents', 'detail', id, 'versions'] as const,
   },
+  identities: {
+    all: ['identities'] as const,
+    list: (includeArchived = false) => ['identities', 'list', { includeArchived }] as const,
+    detail: (id: string) => ['identities', 'detail', id] as const,
+  },
   environments: {
     all: ['environments'] as const,
     list: (includeArchived = false) => ['environments', 'list', { includeArchived }] as const,

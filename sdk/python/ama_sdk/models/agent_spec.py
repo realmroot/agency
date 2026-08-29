@@ -12,7 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.agent_subagent import AgentSubagent
-  from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+  from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
 
 
 
@@ -24,7 +24,7 @@ T = TypeVar("T", bound="AgentSpec")
 
 @_attrs_define
 class AgentSpec:
-    """ 
+    """
         Attributes:
             system_prompt (str):  Example: Answer with citations..
             provider (None | str):  Example: workers-ai.
@@ -35,7 +35,7 @@ class AgentSpec:
                 'allowedTools': ['read', 'grep'], 'skills': ['ama@code-review'], 'mcpConnectors': ['github']}].
             allowed_tools (list[str]):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str]):  Example: ['github'].
-            realmroot (None | RealmrootAgentBindingType0):
+            identity (IdentityDescriptorType0 | None):
      """
 
     system_prompt: str
@@ -45,7 +45,7 @@ class AgentSpec:
     subagents: list[AgentSubagent]
     allowed_tools: list[str]
     mcp_connectors: list[str]
-    realmroot: None | RealmrootAgentBindingType0
+    identity: IdentityDescriptorType0 | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -54,7 +54,7 @@ class AgentSpec:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.agent_subagent import AgentSubagent
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+        from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
         system_prompt = self.system_prompt
 
         provider: None | str
@@ -82,11 +82,11 @@ class AgentSpec:
 
 
 
-        realmroot: dict[str, Any] | None
-        if isinstance(self.realmroot, RealmrootAgentBindingType0):
-            realmroot = self.realmroot.to_dict()
+        identity: dict[str, Any] | None
+        if isinstance(self.identity, IdentityDescriptorType0):
+            identity = self.identity.to_dict()
         else:
-            realmroot = self.realmroot
+            identity = self.identity
 
 
         field_dict: dict[str, Any] = {}
@@ -99,7 +99,7 @@ class AgentSpec:
             "subagents": subagents,
             "allowedTools": allowed_tools,
             "mcpConnectors": mcp_connectors,
-            "realmroot": realmroot,
+            "identity": identity,
         })
 
         return field_dict
@@ -109,7 +109,7 @@ class AgentSpec:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.agent_subagent import AgentSubagent
-        from ..models.realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
+        from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
         d = dict(src_dict)
         system_prompt = d.pop("systemPrompt")
 
@@ -148,22 +148,22 @@ class AgentSpec:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors"))
 
 
-        def _parse_realmroot(data: object) -> None | RealmrootAgentBindingType0:
+        def _parse_identity(data: object) -> IdentityDescriptorType0 | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_realmroot_agent_binding_type_0 = RealmrootAgentBindingType0.from_dict(data)
+                componentsschemas_identity_descriptor_type_0 = IdentityDescriptorType0.from_dict(data)
 
 
 
-                return componentsschemas_realmroot_agent_binding_type_0
+                return componentsschemas_identity_descriptor_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | RealmrootAgentBindingType0, data)
+            return cast(IdentityDescriptorType0 | None, data)
 
-        realmroot = _parse_realmroot(d.pop("realmroot"))
+        identity = _parse_identity(d.pop("identity"))
 
 
         agent_spec = cls(
@@ -174,7 +174,7 @@ class AgentSpec:
             subagents=subagents,
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
-            realmroot=realmroot,
+            identity=identity,
         )
 
 

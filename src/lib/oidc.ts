@@ -40,7 +40,7 @@ export async function signIn(returnTo: string) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ returnTo }),
   })
-  if (!response.ok) throw new Error('Failed to start Realmroot sign-in')
+  if (!response.ok) throw new Error('Failed to start sign-in')
   const attempt = (await response.json()) as { authorizationUrl: string }
   window.location.assign(attempt.authorizationUrl)
 }

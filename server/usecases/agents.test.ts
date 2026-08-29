@@ -22,29 +22,18 @@ function spec(overrides: Partial<AgentSpec> = {}): AgentSpec {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
-    realmroot: null,
+    identity: null,
     ...overrides,
   }
 }
 
-function withRealmrootVault(
-  deps: Deps,
-  values: { vaultPhase?: 'active' | 'revoked'; credentialPhase?: 'active' | 'revoked'; type?: string } = {},
-) {
-  deps.vaults = {
-    find: async () =>
-      values.vaultPhase === 'revoked' ? null : ({ status: { phase: values.vaultPhase ?? 'active' } } as never),
-    findCredential: async () => ({
-      spec: { vaultId: 'vault_1', type: values.type ?? 'ama.dev/realmroot-agent-state' },
-      status: { phase: values.credentialPhase ?? 'active' },
-    }),
-  } as never
-  return deps
-}
-
-const realmroot = {
+const identityDescriptor = {
+  identityId: 'identity_1',
   agentId: 'rr_agent_1',
-  origin: 'https://realmroot.example.com',
+  issuer: 'https://realmroot.example.com/api/auth',
+  subject: 'rr_agent_1',
+  username: 'reviewer',
+  runtime: 'codex' as const,
   credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
 }
 
@@ -93,12 +82,10 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
     liveAgents: async () => [],
-    latestVersionNumber: async () => null,
-    insertVersion: async (agent, value, createdAt): Promise<AgentVersion> => agentVersion(agent, value, createdAt),
     listVersions: async () => [],
     findVersion: async () => null,
-    insert: async (input, createdAt): Promise<Agent> =>
-      agentRecord({
+    insertWithVersion: async (input, createdAt) => {
+      const agent = agentRecord({
         metadata: {
           uid: 'agent_new',
           name: input.name,
@@ -107,9 +94,25 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
           updatedAt: createdAt,
         },
         spec: input.spec,
-        status: { currentVersionId: null, version: 0 },
-      }),
-    setCurrentVersion: async () => {},
+        status: { currentVersionId: 'agentver_1', version: 1 },
+      })
+      return {
+        agent,
+        version: {
+          metadata: resourceMetadata({
+            uid: 'agentver_1',
+            pid: input.projectId,
+            name: 'v1',
+            createdAt,
+            updatedAt: createdAt,
+          }),
+          spec: input.spec,
+          status: { agentId: agent.metadata.uid, version: 1 },
+        },
+      }
+    },
+    updateWithVersion: async (_projectId, agent, fields, createdAt): Promise<AgentVersion> =>
+      agentVersion(agent, fields.spec, createdAt),
     update: async () => {},
     unarchive: async () => {},
     providerEnabled: async () => true,
@@ -153,14 +156,9 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
 
 describe('[spec: agents/create] createAgent', () => {
   it('inserts the agent, snapshots version 1, and sets it current', async () => {
-    const setCurrent: string[] = []
-    const deps = fakeDeps({
-      repo: { setCurrentVersion: async (_agentId, versionId) => void setCurrent.push(versionId) },
-    })
-    const agent = await createAgent(deps, auth, { name: 'Research', description: null, spec: spec() })
-    expect(agent.status.currentVersionId).toBe('agentver_new')
-    expect(agent.status.version).toBe(2)
-    expect(setCurrent).toEqual(['agentver_new'])
+    const agent = await createAgent(fakeDeps(), auth, { name: 'Research', description: null, spec: spec() })
+    expect(agent.status.currentVersionId).toBe('agentver_1')
+    expect(agent.status.version).toBe(1)
   })
 
   it('rejects an empty system prompt', async () => {
@@ -259,62 +257,136 @@ describe('[spec: agents/create] createAgent', () => {
   })
 })
 
-describe('[spec: agents/realmroot-binding] Realmroot Agent binding', () => {
-  it('accepts a visible active Realmroot state credential', async () => {
-    const created = await createAgent(withRealmrootVault(fakeDeps()), auth, {
-      name: 'Realmroot agent',
+describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Identity binding', () => {
+  function withIdentity(deps: Deps, boundAgentId: string | null = null) {
+    deps.identities = {
+      find: async () => ({
+        metadata: resourceMetadata({
+          uid: 'identity_1',
+          pid: 'project_1',
+          name: 'Identity',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+        spec: { username: 'reviewer', runtime: 'codex' },
+        status: { phase: 'active', state: 'active', failureCode: null, boundAgentId, descriptor: identityDescriptor },
+      }),
+      bind: async () => ({}) as never,
+    } as never
+    return deps
+  }
+
+  it('accepts an active Identity and snapshots its safe descriptor', async () => {
+    const created = await createAgent(withIdentity(fakeDeps()), auth, {
+      name: 'Identity agent',
       description: null,
-      spec: spec({ realmroot }),
+      spec: spec(),
+      identityRef: 'identity_1',
     })
 
-    expect(created.spec.realmroot).toEqual(realmroot)
+    expect(created.spec.identity).toEqual(identityDescriptor)
+  })
+
+  it('rejects an Identity already bound to another Agent', async () => {
+    await expect(
+      createAgent(withIdentity(fakeDeps(), 'agent_other'), auth, {
+        name: 'Identity agent',
+        description: null,
+        spec: spec(),
+        identityRef: 'identity_1',
+      }),
+    ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError', code: 'identity_already_bound' })
   })
 
   it.each([
-    [{ ...realmroot, origin: 'http://realmroot.example.com' }, 'HTTPS'],
-    [{ ...realmroot, credentialRef: 'external://secret' }, 'AMA Vault'],
-    [{ ...realmroot, credentialRef: 'ama://vaults/vault_1' }, 'active credential'],
-    [{ ...realmroot, credentialRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1' }, 'active credential'],
-  ])('rejects an invalid or non-credential-scoped binding %#', async (binding, message) => {
+    null,
+    { archivedAt: '2026-01-02T00:00:00.000Z', state: 'active', descriptor: identityDescriptor },
+    { archivedAt: null, state: 'provisioning', descriptor: identityDescriptor },
+    { archivedAt: null, state: 'active', descriptor: null },
+  ])('rejects a missing, archived, provisioning, or descriptor-less Identity %#', async (condition) => {
+    const deps = fakeDeps()
+    deps.identities = {
+      find: async () =>
+        condition
+          ? {
+              metadata: resourceMetadata({
+                uid: 'identity_invalid',
+                pid: 'project_1',
+                name: 'Invalid',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+                archivedAt: condition.archivedAt,
+              }),
+              spec: { username: 'reviewer', runtime: 'codex' },
+              status: {
+                phase: condition.archivedAt ? 'archived' : 'active',
+                state: condition.state,
+                failureCode: null,
+                boundAgentId: null,
+                descriptor: condition.descriptor,
+              },
+            }
+          : null,
+    } as never
     await expect(
-      createAgent(withRealmrootVault(fakeDeps()), auth, {
-        name: 'Realmroot agent',
+      createAgent(deps, auth, {
+        name: 'Invalid Identity',
         description: null,
-        spec: spec({ realmroot: binding }),
+        spec: spec(),
+        identityRef: 'identity_invalid',
       }),
-    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining(message) } })
-  })
-
-  it.each([
-    ['revoked credential', { credentialPhase: 'revoked' }],
-    ['invisible vault', { vaultPhase: 'revoked' }],
-    ['wrong credential type', { type: 'opaque' }],
-  ])('rejects a %s', async (_name, values) => {
-    await expect(
-      createAgent(withRealmrootVault(fakeDeps(), values as never), auth, {
-        name: 'Realmroot agent',
-        description: null,
-        spec: spec({ realmroot }),
-      }),
-    ).rejects.toMatchObject({ fields: { realmroot: expect.stringContaining('active credential') } })
+    ).rejects.toMatchObject({ fields: { identityRef: expect.any(String) } })
   })
 
   it('creates a new immutable Agent version when the binding changes', async () => {
     const inserted: AgentSpec[] = []
-    const deps = withRealmrootVault(
+    const deps = withIdentity(
       fakeDeps({
         repo: {
-          insertVersion: async (agent, value, createdAt) => {
-            inserted.push(value)
-            return agentVersion(agent, value, createdAt)
+          updateWithVersion: async (_projectId, agent, fields, createdAt) => {
+            inserted.push(fields.spec)
+            return agentVersion(agent, fields.spec, createdAt)
           },
         },
       }),
     )
 
-    await updateAgent(deps, auth, agentRecord(), { realmroot })
+    await updateAgent(deps, auth, agentRecord(), { identityRef: 'identity_1' })
     expect(inserted).toHaveLength(1)
-    expect(inserted[0]?.realmroot).toEqual(realmroot)
+    expect(inserted[0]?.identity).toEqual(identityDescriptor)
+  })
+
+  it('allows one Agent to select a new Identity while every prior Identity stays attributed to that Agent', async () => {
+    const descriptors = {
+      identity_1: identityDescriptor,
+      identity_2: { ...identityDescriptor, identityId: 'identity_2', agentId: 'rr_agent_2', username: 'reviewer-2' },
+    }
+    const deps = fakeDeps()
+    deps.identities = {
+      find: async (_projectId: string, identityId: string) => ({
+        metadata: resourceMetadata({
+          uid: identityId,
+          pid: 'project_1',
+          name: identityId,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+        spec: { username: descriptors[identityId as keyof typeof descriptors].username, runtime: 'codex' },
+        status: {
+          phase: 'active',
+          state: 'active',
+          failureCode: null,
+          boundAgentId: 'agent_1',
+          descriptor: descriptors[identityId as keyof typeof descriptors],
+        },
+      }),
+      bind: async () => ({}) as never,
+    } as never
+
+    const first = await updateAgent(deps, auth, agentRecord(), { identityRef: 'identity_1' })
+    const second = await updateAgent(deps, auth, first.agent, { identityRef: 'identity_2' })
+    expect(first.agent.spec.identity?.identityId).toBe('identity_1')
+    expect(second.agent.spec.identity?.identityId).toBe('identity_2')
   })
 })
 
@@ -323,9 +395,9 @@ describe('[spec: agents/update] updateAgent', () => {
     const inserted: AgentSpec[] = []
     const deps = fakeDeps({
       repo: {
-        insertVersion: async (agent, value, createdAt) => {
-          inserted.push(value)
-          return agentVersion(agent, value, createdAt, {
+        updateWithVersion: async (_projectId, agent, fields, createdAt) => {
+          inserted.push(fields.spec)
+          return agentVersion(agent, fields.spec, createdAt, {
             metadata: resourceMetadata({
               uid: 'agentver_2',
               pid: agent.metadata.pid,
@@ -348,9 +420,9 @@ describe('[spec: agents/update] updateAgent', () => {
     let versioned = false
     const deps = fakeDeps({
       repo: {
-        insertVersion: async (agent, value, createdAt) => {
+        updateWithVersion: async (_projectId, agent, fields, createdAt) => {
           versioned = true
-          return agentVersion(agent, value, createdAt)
+          return agentVersion(agent, fields.spec, createdAt)
         },
       },
     })

@@ -109,13 +109,18 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
     expect(validateSecretData('opaque', { any: 'thing', token: 'ok' })).toBeNull()
   })
 
-  it('[spec: agents/realmroot-binding] accepts only an AGENT=ama Realmroot state object in state.json', () => {
+  it.each([
+    'ama',
+    'codex',
+    'claude-code',
+    'copilot',
+  ] as const)('[spec: identities/provision] accepts a Realmroot state object enrolled with AGENT=%s', (runtime) => {
     const state = JSON.stringify({
       version: 18,
       agent_id: 'rr_agent_1',
       origin: 'https://realmroot.example.com',
       issuer: 'https://realmroot.example.com/api/auth',
-      runtime: 'ama',
+      runtime,
       host_id: 'host_1',
       agent_key_id: 'key_1',
       agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
@@ -125,14 +130,17 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
     expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': state, extra: 'no' })).toEqual({
       'stringData.extra': 'Credential type ama.dev/realmroot-agent-state does not define extra.',
     })
-    expect(
-      validateSecretData('ama.dev/realmroot-agent-state', {
-        'state.json': JSON.stringify({ ...JSON.parse(state), runtime: 'codex' }),
-      }),
-    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state must be enrolled with AGENT=ama.' })
     expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': '{bad' })).toEqual({
       'stringData.state.json': 'Realmroot Agent state must be valid JSON.',
     })
+  })
+
+  it('[spec: identities/provision] rejects unsupported Realmroot runtimes', () => {
+    expect(
+      validateSecretData('ama.dev/realmroot-agent-state', {
+        'state.json': JSON.stringify(realmrootState({ runtime: 'unknown-runtime' })),
+      }),
+    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state contains an unsupported runtime.' })
   })
 
   it('rejects missing, unsafe, empty, and extra data keys', () => {
@@ -164,7 +172,7 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
   })
 })
 
-describe('[spec: agents/realmroot-binding] strict Realmroot v0.4.2 state parsing', () => {
+describe('[spec: identities/provision] strict Realmroot v0.4.2 state parsing', () => {
   it('rejects unknown top-level and malformed nested structures', () => {
     expect(() => parseRealmrootAgentState(JSON.stringify(realmrootState({ future_field: true })))).toThrow(
       'fields unknown to v0.4.2',
@@ -296,7 +304,7 @@ describe('[spec: agents/realmroot-binding] strict Realmroot v0.4.2 state parsing
     })
 
     expect(parseRealmrootAgentState(JSON.stringify(state))).toEqual({
-      agentId: 'rr_agent_1',
+      agentId: 'identity_1',
       origin: 'https://realmroot.example.com',
       issuer: 'https://realmroot.example.com/api/auth',
       runtime: 'ama',

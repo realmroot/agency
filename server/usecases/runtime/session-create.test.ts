@@ -1,3 +1,4 @@
+import type { SessionInsert, WorkItemInsert } from '@shared/runtime-rows'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthScope } from '../ports'
 
@@ -24,6 +25,7 @@ const {
   createAgentSnapshotMock,
   createEnvironmentSnapshotMock,
   insertSessionMock,
+  insertWorkItemMock,
   updateSessionWhenStateMock,
   findAgentMock,
   findAgentVersionMock,
@@ -49,7 +51,8 @@ const {
   resolveSessionProviderConfigMock: vi.fn(async () => ({ ok: true, config: null })),
   createAgentSnapshotMock: vi.fn(() => ({ id: 'agentver_1', providerId: 'anthropic', model: '@cf/x' })),
   createEnvironmentSnapshotMock: vi.fn(() => ({ id: 'envver_1', hostingMode: 'cloud', runtimeConfig: {} })),
-  insertSessionMock: vi.fn(async () => undefined),
+  insertSessionMock: vi.fn<(row: SessionInsert) => Promise<void>>(async () => undefined),
+  insertWorkItemMock: vi.fn<(row: WorkItemInsert) => Promise<void>>(async () => undefined),
   updateSessionWhenStateMock: vi.fn<
     (projectId: string, sessionId: string, expected: string | string[], fields: Record<string, unknown>) => boolean
   >(() => true),
@@ -94,6 +97,7 @@ const store = {
   findEnvironmentVersion: findEnvironmentVersionMock,
   resolveEnvironmentForRuntime: resolveEnvironmentForRuntimeMock,
   insertSession: insertSessionMock,
+  insertWorkItem: insertWorkItemMock,
   updateSessionWhenState: updateSessionWhenStateMock,
   secretVersionForResolution: secretVersionForResolutionMock,
 }
@@ -152,6 +156,8 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     recordAuditMock.mockReset()
     insertSessionMock.mockReset()
     insertSessionMock.mockResolvedValue(undefined)
+    insertWorkItemMock.mockReset()
+    insertWorkItemMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
     findAgentMock.mockResolvedValue({
@@ -258,6 +264,8 @@ describe('createSessionForAgent — environment resolution', () => {
     recordAuditMock.mockReset()
     insertSessionMock.mockReset()
     insertSessionMock.mockResolvedValue(undefined)
+    insertWorkItemMock.mockReset()
+    insertWorkItemMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
     findAgentMock.mockResolvedValue({
@@ -270,6 +278,14 @@ describe('createSessionForAgent — environment resolution', () => {
     findEnvironmentMock.mockResolvedValue({ id: 'env_resolved', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      provider: 'anthropic',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: null,
+    } as never)
+    createEnvironmentSnapshotMock.mockReturnValue({ id: 'envver_1', type: 'cloud' } as never)
   })
 
   it('resolves an environment for the runtime/model when none is pinned', async () => {
@@ -305,6 +321,46 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_pinned')
   })
 
+  it('uses the runner-local model at self-hosted boundaries while preserving canonical snapshots', async () => {
+    const canonicalModel = 'openai/gpt-5.6-sol'
+    const localModel = 'gpt-5.6-sol'
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: canonicalModel, providerId: 'openai' })
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      provider: 'openai',
+      providerId: 'openai',
+      model: canonicalModel,
+      identity: null,
+    } as never)
+    findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'self_hosted' })
+    createEnvironmentSnapshotMock.mockReturnValue({ id: 'envver_1', type: 'self_hosted' } as never)
+    resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      null,
+      { runtime: 'codex', prompt: 'Run canonical Codex model' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', localModel)
+    const insertedSession = insertSessionMock.mock.calls[0]?.[0]
+    expect(insertedSession).toBeDefined()
+    expect(JSON.parse(insertedSession?.agentSnapshot ?? 'null')).toMatchObject({ model: canonicalModel })
+    expect(JSON.parse(insertedSession?.modelConfig ?? 'null')).toEqual({ provider: 'openai', model: canonicalModel })
+
+    const workItem = insertWorkItemMock.mock.calls[0]?.[0]
+    expect(workItem).toBeDefined()
+    expect(JSON.parse(workItem?.payload ?? 'null')).toMatchObject({
+      model: localModel,
+      runtimeRequirement: { runtime: 'codex', model: localModel },
+      agentSnapshot: { model: canonicalModel },
+    })
+  })
+
   it('returns a 409 and creates no session when no environment can be resolved', async () => {
     resolveEnvironmentForRuntimeMock.mockResolvedValue(null)
 
@@ -330,10 +386,14 @@ describe('createSessionForAgent — environment resolution', () => {
   })
 })
 
-describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', () => {
+describe('[spec: sessions/identity-materialization] Identity runtime inputs', () => {
   const binding = {
+    identityId: 'identity_1',
     agentId: 'rr_agent_1',
-    origin: 'https://realmroot.example.com',
+    issuer: 'https://realmroot.example.com/api/auth',
+    subject: 'rr_agent_1',
+    username: 'runner',
+    runtime: 'ama' as const,
     credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
   }
 
@@ -353,7 +413,7 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       id: 'agentver_1',
       providerId: 'anthropic',
       model: '@cf/x',
-      realmroot: binding,
+      identity: binding,
     } as never)
     secretVersionForResolutionMock.mockReset()
     secretVersionForResolutionMock.mockResolvedValue({
@@ -364,13 +424,24 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     })
   })
 
-  it('injects reserved env and only the bound credential as a read-only source mount', async () => {
+  it.each([
+    'ama',
+    'codex',
+    'claude-code',
+    'copilot',
+  ] as const)('[spec: identities/runtime-constraint] inherits %s and declaratively seeds the bound credential into a writable emptyDir', async (runtime) => {
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: { ...binding, runtime },
+    } as never)
     const result = await createSessionForAgent(
       deps,
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Use private resources' },
+      { prompt: 'Use private resources' },
       null,
     )
 
@@ -379,26 +450,58 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
       insertSessionMock.mock.calls as unknown as Array<[{ env: string; volumes: string; volumeMounts: string }]>
     )[0]![0]
     expect(JSON.parse(inserted.env)).toEqual({
-      AGENT: 'ama',
-      REALMROOT_ORIGIN: binding.origin,
+      AGENT: runtime,
+      REALMROOT_ORIGIN: new URL(binding.issuer).origin,
       REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
     })
     expect(JSON.parse(inserted.volumes)).toEqual([
       {
         name: 'realmroot-agent-state',
-        type: 'secret',
-        secretRef: binding.credentialRef,
-        items: [{ key: 'state.json', path: 'state.json' }],
+        type: 'empty_dir',
+        seedFrom: [
+          {
+            type: 'secret',
+            secretRef: binding.credentialRef,
+            items: [
+              {
+                key: 'state.json',
+                path: `identities/${Buffer.from(binding.issuer).toString('base64url')}/${Buffer.from(runtime).toString('base64url')}.json`,
+              },
+            ],
+          },
+        ],
       },
     ])
     expect(JSON.parse(inserted.volumeMounts)).toEqual([
       {
         name: 'realmroot-agent-state',
-        mountPath: '/workspace/.ama/realmroot-source',
-        readOnly: true,
+        mountPath: '/workspace/.ama/realmroot-state',
+        readOnly: false,
       },
     ])
     expect(secretVersionForResolutionMock).toHaveBeenCalledWith('org_1', 'proj_1', binding.credentialRef)
+  })
+
+  it('[spec: identities/runtime-constraint] rejects an explicit runtime conflicting with the Identity', async () => {
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: { ...binding, runtime: 'codex' },
+    } as never)
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'ama', prompt: 'Start' },
+      null,
+    )
+    expect(result).toMatchObject({
+      ok: false,
+      error: { status: 409, code: 'identity_runtime_mismatch' },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -504,6 +607,49 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
     expect(insertSessionMock).not.toHaveBeenCalled()
   })
 
+  it('rejects duplicate emptyDir paths across seed projections', async () => {
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      {
+        runtime: 'ama',
+        prompt: 'Start',
+        volumes: [
+          {
+            name: 'state',
+            type: 'empty_dir',
+            seedFrom: [
+              {
+                type: 'secret',
+                secretRef: 'ama://vaults/v/credentials/a',
+                items: [{ key: 'a', path: 'shared.json' }],
+              },
+              {
+                type: 'secret',
+                secretRef: 'ama://vaults/v/credentials/b',
+                items: [{ key: 'b', path: 'shared.json' }],
+              },
+            ],
+          },
+        ],
+        volumeMounts: [{ name: 'state', mountPath: '/workspace/.ama/state', readOnly: false }],
+      },
+      null,
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        fields: {
+          'volumes.0.seedFrom.1.items.0.path': expect.stringContaining('unique across projections'),
+        },
+      },
+    })
+    expect(insertSessionMock).not.toHaveBeenCalled()
+  })
+
   it('fails a new Session after the bound credential is revoked', async () => {
     secretVersionForResolutionMock.mockResolvedValue({ state: 'revoked', metadata: '{}', secretRef: 'ref' })
     const result = await createSessionForAgent(
@@ -517,7 +663,10 @@ describe('[spec: sessions/realmroot-identity] Realmroot Agent runtime inputs', (
 
     expect(result).toMatchObject({
       ok: false,
-      error: { code: 'validation_error', fields: { 'volumes.0.secretRef': expect.stringContaining('active') } },
+      error: {
+        code: 'validation_error',
+        fields: { 'volumes.0.seedFrom.0.secretRef': expect.stringContaining('active') },
+      },
     })
     expect(insertSessionMock).not.toHaveBeenCalled()
   })

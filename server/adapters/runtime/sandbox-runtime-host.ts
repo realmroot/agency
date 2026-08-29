@@ -1,7 +1,6 @@
 import { parseAmaSandboxToolInput } from '@ama/runtime-contracts/tool-contracts'
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import { getModel, type Model } from '@earendil-works/pi-ai'
-import type { RealmrootAgentBinding } from '@server/domain/agent'
 import { gitRepositoryMountPath } from '@server/domain/git-repository'
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
 import {
@@ -11,7 +10,6 @@ import {
   volumeMountPath,
   volumeMountReadOnly,
 } from '@server/domain/runtime/execution-inputs'
-import { parseRealmrootAgentState } from '@server/domain/vault'
 import type { WorkspaceGitCredential, WorkspaceManifest, WorkspaceManifestMount } from '@server/domain/workspace'
 import type {
   AmaTurnExecutor,
@@ -124,9 +122,11 @@ export type SessionTurnInput = {
   resolveToolResult?: (input: RuntimeToolPolicyInput) => Promise<Record<string, unknown> | null>
 }
 
+let sandboxBindingPromise: Promise<typeof import('@cloudflare/sandbox')['getSandbox']> | null = null
+
 async function getSandboxBinding() {
-  const { getSandbox } = await import('@cloudflare/sandbox')
-  return getSandbox
+  sandboxBindingPromise ??= import('@cloudflare/sandbox').then(({ getSandbox }) => getSandbox)
+  return await sandboxBindingPromise
 }
 
 export function workspaceVolumeManifest(manifest: WorkspaceManifest = { root: '/workspace', mounts: [] }) {
@@ -148,6 +148,15 @@ export function workspaceVolumeManifest(manifest: WorkspaceManifest = { root: '/
           memoryRef: mount.memoryRef,
           name: mount.name,
           mountPath: mount.mountPath,
+          status: 'declared',
+        }
+      }
+      if (mount.type === 'empty_dir') {
+        return {
+          type: 'empty_dir',
+          name: mount.name,
+          mountPath: mount.mountPath,
+          files: mount.files.map((file) => ({ path: file.path })),
           status: 'declared',
         }
       }
@@ -205,7 +214,6 @@ async function prepareCloudWorkspace(
   values: {
     manifest: WorkspaceManifest
     env: Record<string, string>
-    realmroot: RealmrootAgentBinding | null
   },
 ) {
   const homeDir = values.env.HOME || '/root'
@@ -303,59 +311,108 @@ async function prepareCloudWorkspace(
       await execOrThrow(sandbox, `chmod -R a-w ${shellQuote(mountPath)}`)
     }
   }
-  if (values.realmroot) {
-    await prepareCloudRealmrootState(sandbox, values.manifest, values.realmroot)
+  for (const mount of values.manifest.mounts.filter(
+    (mount): mount is Extract<WorkspaceManifestMount, { type: 'empty_dir' }> => mount.type === 'empty_dir',
+  )) {
+    await materializeCloudEmptyDir(sandbox, mount)
   }
 }
 
-async function prepareCloudRealmrootState(
+async function materializeCloudEmptyDir(
   sandbox: CloudWorkspaceSandbox,
-  manifest: WorkspaceManifest,
-  binding: RealmrootAgentBinding,
+  mount: Extract<WorkspaceManifestMount, { type: 'empty_dir' }>,
 ) {
-  const source = manifest.mounts.find((mount) => mount.type === 'secret' && mount.name === 'realmroot-agent-state')
-  const stateFile = source?.type === 'secret' ? source.files.find((file) => file.path === 'state.json') : null
-  if (!stateFile) throw new Error('Realmroot Agent credential has no state.json data key')
-  const state = matchingRealmrootState(stateFile.content, binding)
-  const targetDir = `/workspace/.ama/realmroot-state/identities/${base64Url(state.issuer)}`
-  await execOrThrow(
-    sandbox,
-    `mkdir -p ${shellQuote(targetDir)} && chmod 700 ${shellQuote('/workspace/.ama/realmroot-state')} ${shellQuote('/workspace/.ama/realmroot-state/identities')} ${shellQuote(targetDir)}`,
+  if (!mount.mountPath.startsWith('/workspace/')) {
+    throw new Error(`Invalid empty directory volume mount path: ${mount.mountPath}`)
+  }
+  await rejectCloudWorkspaceSymlinks(sandbox, mount.mountPath)
+  const existing = await sandbox.exec(
+    `[ ! -L ${shellQuote(mount.mountPath)} ] && [ -d ${shellQuote(mount.mountPath)} ]`,
   )
-  const target = `${targetDir}/${base64Url(state.runtime)}.json`
-  const existing = await sandbox.exec(`cat ${shellQuote(target)}`)
-  if (existing.exitCode === 0 || existing.success === true) {
-    const existingState = matchingRealmrootState(existing.stdout ?? '', binding)
-    if (existingState.issuer !== state.issuer) {
-      throw new Error('Session Realmroot Agent state issuer does not match the bound credential')
+  if (commandSucceeded(existing)) return
+  const occupied = await sandbox.exec(`[ -e ${shellQuote(mount.mountPath)} ] || [ -L ${shellQuote(mount.mountPath)} ]`)
+  if (commandSucceeded(occupied)) {
+    throw new Error(`Empty directory volume mount path is not a directory: ${mount.mountPath}`)
+  }
+  const parentPath = mount.mountPath.slice(0, mount.mountPath.lastIndexOf('/'))
+  const stagingPath = `${parentPath}/.ama-empty-dir-${crypto.randomUUID()}`
+  await execOrThrow(sandbox, `umask 077 && mkdir -p ${shellQuote(parentPath)} && mkdir ${shellQuote(stagingPath)}`)
+  try {
+    for (const file of mount.files) {
+      if (
+        !file.path ||
+        file.path.startsWith('/') ||
+        file.path.split('/').some((segment) => !segment || segment === '..')
+      ) {
+        throw new Error(`Invalid empty directory seed path: ${file.path}`)
+      }
+      const target = `${stagingPath}/${file.path}`
+      const seedParentPath = target.slice(0, target.lastIndexOf('/'))
+      await execOrThrow(
+        sandbox,
+        `umask 077 && mkdir -p ${shellQuote(seedParentPath)} && : > ${shellQuote(target)} && chmod 600 ${shellQuote(target)}`,
+      )
+      await sandbox.writeFile(target, file.content, { encoding: 'utf-8' })
+      await execOrThrow(sandbox, `chmod 600 ${shellQuote(target)}`)
     }
-  } else {
-    await sandbox.writeFile(target, stateFile.content, { encoding: 'utf-8' })
+    await execOrThrow(sandbox, `mv -T -n ${shellQuote(stagingPath)} ${shellQuote(mount.mountPath)}`)
+    const stagingRemains = await sandbox.exec(`[ -d ${shellQuote(stagingPath)} ]`)
+    if (commandSucceeded(stagingRemains)) {
+      await rejectCloudWorkspaceSymlinks(sandbox, mount.mountPath)
+      const winner = await sandbox.exec(
+        `[ ! -L ${shellQuote(mount.mountPath)} ] && [ -d ${shellQuote(mount.mountPath)} ]`,
+      )
+      if (!commandSucceeded(winner)) {
+        throw new Error(`Empty directory volume publication conflict: ${mount.mountPath}`)
+      }
+      await execOrThrow(sandbox, `rm -rf ${shellQuote(stagingPath)}`)
+    }
+  } catch (cause) {
+    let cleanupError: unknown = null
+    try {
+      await execOrThrow(sandbox, `rm -rf ${shellQuote(stagingPath)}`)
+    } catch (error) {
+      cleanupError = error
+    }
+    if (cleanupError) throw new AggregateError([cause, cleanupError], 'Empty directory materialization failed')
+    throw cause
   }
-  await execOrThrow(sandbox, `chmod 600 ${shellQuote(target)} && command -v realmroot >/dev/null`)
 }
 
-function matchingRealmrootState(content: string, binding: RealmrootAgentBinding) {
-  const state = parseRealmrootAgentState(content)
-  if (state.agentId !== binding.agentId || normalizedOrigin(state.origin) !== normalizedOrigin(binding.origin)) {
-    throw new Error('Realmroot Agent credential does not match the bound Agent id and origin')
-  }
-  return state
+function commandSucceeded(result: { success?: boolean; exitCode?: number }) {
+  return result.success === true || result.exitCode === 0
 }
 
-function normalizedOrigin(value: string) {
-  const parsed = new URL(value)
-  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
-    throw new Error('Realmroot Agent state origin must be a safe HTTPS URL')
-  }
-  return `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}`
+async function rejectCloudWorkspaceSymlinks(sandbox: CloudWorkspaceSandbox, mountPath: string) {
+  const segments = mountPath.slice('/workspace/'.length).split('/')
+  const prefixes = segments.map((_, index) => `/workspace/${segments.slice(0, index + 1).join('/')}`)
+  await execOrThrow(sandbox, prefixes.map((path) => `[ ! -L ${shellQuote(path)} ]`).join(' && '))
 }
 
-function base64Url(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+const CLOUD_ENVIRONMENT_BIN = '/workspace/.ama/environment/bin'
+
+async function prepareCloudEnvironmentPackages(
+  sandbox: CloudWorkspaceSandbox,
+  environmentSnapshot: Record<string, unknown> | null,
+) {
+  const packages = environmentSnapshot?.packages
+  if (!packages || typeof packages !== 'object' || Array.isArray(packages)) return null
+  const goPackages = (packages as Record<string, unknown>).go
+  if (!Array.isArray(goPackages) || goPackages.length === 0) return null
+  try {
+    await execOrThrow(sandbox, `mkdir -p ${shellQuote(CLOUD_ENVIRONMENT_BIN)}`)
+    for (const module of goPackages) {
+      if (typeof module !== 'string' || !module) {
+        throw new Error('Go package declaration must be a non-empty string')
+      }
+      await execOrThrow(sandbox, `GOBIN=${shellQuote(CLOUD_ENVIRONMENT_BIN)} go install ${shellQuote(module)}`, {
+        timeout: GIT_CLONE_TIMEOUT_MS,
+      })
+    }
+    return CLOUD_ENVIRONMENT_BIN
+  } catch (cause) {
+    throw new Error('Environment package installation failed', { cause })
+  }
 }
 
 export async function startSessionRuntime(
@@ -366,17 +423,18 @@ export async function startSessionRuntime(
   if (env.AMA_RUNTIME_MODE !== 'test') {
     const getSandbox = await getSandboxBinding()
     const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
-    const sessionEnv = input.env ?? {}
+    const sessionEnv = { ...(input.env ?? {}) }
+    const environmentBin = await prepareCloudEnvironmentPackages(sandbox, input.environmentSnapshot)
+    if (environmentBin) {
+      const inheritedPath = sessionEnv.PATH ?? (await sandbox.exec('printf %s "$PATH"')).stdout ?? ''
+      sessionEnv.PATH = inheritedPath ? `${environmentBin}:${inheritedPath}` : environmentBin
+    }
     if (Object.keys(sessionEnv).length > 0) {
       await sandbox.setEnvVars(sessionEnv)
     }
     await prepareCloudWorkspace(sandbox, {
       manifest: input.workspaceManifest ?? { root: '/workspace', mounts: [] },
       env: sessionEnv,
-      realmroot:
-        input.agentSnapshot.realmroot && typeof input.agentSnapshot.realmroot === 'object'
-          ? (input.agentSnapshot.realmroot as RealmrootAgentBinding)
-          : null,
     })
   }
 

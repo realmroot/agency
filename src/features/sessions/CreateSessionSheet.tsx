@@ -37,6 +37,11 @@ export function CreateSessionSheet({
     queryFn: () => api.listEnvironments(),
     enabled: open,
   })
+  const runnersQuery = useQuery({
+    queryKey: queryKeys.runners.list({ state: 'active' }),
+    queryFn: () => api.listRunners({ state: 'active' }),
+    enabled: open,
+  })
   const memoryStoresQuery = useQuery({
     queryKey: queryKeys.memoryStores.list(false),
     queryFn: () => api.listMemoryStores(),
@@ -48,7 +53,21 @@ export function CreateSessionSheet({
     enabled: open,
   })
   const agents = agentsQuery.data?.data ?? EMPTY_RESOURCES
-  const environments = environmentsQuery.data?.data ?? EMPTY_RESOURCES
+  const allEnvironments = environmentsQuery.data?.data ?? EMPTY_RESOURCES
+  const runners = runnersQuery.data?.data ?? EMPTY_RESOURCES
+  const identityRuntime = agents.find((agent) => agent.metadata.uid === form.agentId)?.spec.identity?.runtime
+  const environments = identityRuntime
+    ? allEnvironments.filter((environment) =>
+        environment.spec.type === 'cloud'
+          ? identityRuntime === 'ama'
+          : runners.some(
+              (runner) =>
+                runner.environmentId === environment.metadata.uid &&
+                runner.state === 'active' &&
+                runner.runtimes.some((runtime) => runtime.runtime === identityRuntime && runtime.state === 'ready'),
+            ),
+      )
+    : allEnvironments
   const memoryStores = memoryStoresQuery.data?.data ?? EMPTY_RESOURCES
   const vaults = vaultsQuery.data?.data ?? EMPTY_RESOURCES
   const createSession = useMutation({
@@ -82,14 +101,22 @@ export function CreateSessionSheet({
     const activeEnvironment = environments.find((environment) => !isArchived(environment))
     setForm((current) => {
       const nextAgentId = agentId || current.agentId || activeAgent?.metadata.uid || ''
-      const nextEnvironmentId = current.environmentId || activeEnvironment?.metadata.uid || ''
-      if (current.agentId === nextAgentId && current.environmentId === nextEnvironmentId) {
+      const nextEnvironmentId = environments.some((environment) => environment.metadata.uid === current.environmentId)
+        ? current.environmentId
+        : activeEnvironment?.metadata.uid || ''
+      const identityRuntime = agents.find((agent) => agent.metadata.uid === nextAgentId)?.spec.identity?.runtime
+      if (
+        current.agentId === nextAgentId &&
+        current.environmentId === nextEnvironmentId &&
+        (!identityRuntime || current.runtime === identityRuntime)
+      ) {
         return current
       }
       return {
         ...current,
         agentId: nextAgentId,
         environmentId: nextEnvironmentId,
+        ...(identityRuntime ? { runtime: identityRuntime } : {}),
       }
     })
   }, [agentId, agents, environments, open])

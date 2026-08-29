@@ -154,6 +154,7 @@ function defaultAgentSnapshot(agentId: string): SessionAgentSnapshot {
     subagents: [],
     allowedTools: ['read', 'write'],
     mcpConnectors: [],
+    identity: null,
     createdAt: now,
   }
 }

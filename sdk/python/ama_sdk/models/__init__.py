@@ -81,6 +81,9 @@ from .create_environment_request_spec import CreateEnvironmentRequestSpec
 from .create_environment_request_spec_variables import CreateEnvironmentRequestSpecVariables
 from .create_environment_request_spec_variables_additional_property import CreateEnvironmentRequestSpecVariablesAdditionalProperty
 from .create_http_trigger_run_request import CreateHttpTriggerRunRequest
+from .create_identity_request import CreateIdentityRequest
+from .create_identity_request_spec import CreateIdentityRequestSpec
+from .create_identity_request_spec_runtime import CreateIdentityRequestSpecRuntime
 from .create_lease_request import CreateLeaseRequest
 from .create_memory_store_memory_request import CreateMemoryStoreMemoryRequest
 from .create_memory_store_memory_request_metadata import CreateMemoryStoreMemoryRequestMetadata
@@ -120,6 +123,8 @@ from .create_vault_request_spec import CreateVaultRequestSpec
 from .create_vault_request_spec_scope import CreateVaultRequestSpecScope
 from .edit_tool_input import EditToolInput
 from .edit_tool_input_edits_item import EditToolInputEditsItem
+from .empty_dir_volume import EmptyDirVolume
+from .empty_dir_volume_type import EmptyDirVolumeType
 from .env_from_entry import EnvFromEntry
 from .env_from_entry_type import EnvFromEntryType
 from .environment import Environment
@@ -175,6 +180,14 @@ from .git_repository_volume_type import GitRepositoryVolumeType
 from .grep_tool_input import GrepToolInput
 from .http_trigger_concurrency import HttpTriggerConcurrency
 from .http_trigger_concurrency_mode import HttpTriggerConcurrencyMode
+from .identity import Identity
+from .identity_descriptor_type_0 import IdentityDescriptorType0
+from .identity_descriptor_type_0_runtime import IdentityDescriptorType0Runtime
+from .identity_list_response import IdentityListResponse
+from .identity_spec import IdentitySpec
+from .identity_spec_runtime import IdentitySpecRuntime
+from .identity_status import IdentityStatus
+from .identity_status_state import IdentityStatusState
 from .image_content_block import ImageContentBlock
 from .image_content_block_type import ImageContentBlockType
 from .json_content_block import JsonContentBlock
@@ -185,6 +198,7 @@ from .lease_state import LeaseState
 from .list_agents_archived import ListAgentsArchived
 from .list_connectors_availability import ListConnectorsAvailability
 from .list_environments_archived import ListEnvironmentsArchived
+from .list_identities_archived import ListIdentitiesArchived
 from .list_leases_state import ListLeasesState
 from .list_memory_stores_archived import ListMemoryStoresArchived
 from .list_pagination import ListPagination
@@ -247,7 +261,6 @@ from .put_runner_heartbeat_request_metadata import PutRunnerHeartbeatRequestMeta
 from .put_runner_heartbeat_request_state import PutRunnerHeartbeatRequestState
 from .read_tool_input import ReadToolInput
 from .read_usage_summary_group_by import ReadUsageSummaryGroupBy
-from .realmroot_agent_binding_type_0 import RealmrootAgentBindingType0
 from .reasoning_content_block import ReasoningContentBlock
 from .reasoning_content_block_type import ReasoningContentBlockType
 from .resource_create_metadata import ResourceCreateMetadata
@@ -325,6 +338,8 @@ from .runtime_usage import RuntimeUsage
 from .runtime_usage_window import RuntimeUsageWindow
 from .secret_item import SecretItem
 from .secret_volume import SecretVolume
+from .secret_volume_projection import SecretVolumeProjection
+from .secret_volume_projection_type import SecretVolumeProjectionType
 from .secret_volume_type import SecretVolumeType
 from .session import Session
 from .session_agent_snapshot import SessionAgentSnapshot
@@ -373,6 +388,7 @@ from .session_event_type_8_type import SessionEventType8Type
 from .session_event_type_9 import SessionEventType9
 from .session_event_type_9_type import SessionEventType9Type
 from .session_events_accepted import SessionEventsAccepted
+from .session_identity_descriptor_type_0 import SessionIdentityDescriptorType0
 from .session_list_response import SessionListResponse
 from .session_message import SessionMessage
 from .session_message_delivery import SessionMessageDelivery
@@ -383,7 +399,6 @@ from .session_metadata import SessionMetadata
 from .session_metadata_annotations import SessionMetadataAnnotations
 from .session_metadata_labels import SessionMetadataLabels
 from .session_placement_type_0 import SessionPlacementType0
-from .session_realmroot_binding_type_0 import SessionRealmrootBindingType0
 from .session_socket_abort_message import SessionSocketAbortMessage
 from .session_socket_abort_message_type import SessionSocketAbortMessageType
 from .session_socket_ack_message import SessionSocketAckMessage
@@ -450,6 +465,7 @@ from .update_environment_request import UpdateEnvironmentRequest
 from .update_environment_request_spec import UpdateEnvironmentRequestSpec
 from .update_environment_request_spec_variables import UpdateEnvironmentRequestSpecVariables
 from .update_environment_request_spec_variables_additional_property import UpdateEnvironmentRequestSpecVariablesAdditionalProperty
+from .update_identity_request import UpdateIdentityRequest
 from .update_lease_request import UpdateLeaseRequest
 from .update_lease_request_error import UpdateLeaseRequestError
 from .update_lease_request_result import UpdateLeaseRequestResult
@@ -609,6 +625,9 @@ __all__ = (
     "CreateEnvironmentRequestSpecVariables",
     "CreateEnvironmentRequestSpecVariablesAdditionalProperty",
     "CreateHttpTriggerRunRequest",
+    "CreateIdentityRequest",
+    "CreateIdentityRequestSpec",
+    "CreateIdentityRequestSpecRuntime",
     "CreateLeaseRequest",
     "CreateMemoryStoreMemoryRequest",
     "CreateMemoryStoreMemoryRequestMetadata",
@@ -648,6 +667,8 @@ __all__ = (
     "CreateVaultRequestSpecScope",
     "EditToolInput",
     "EditToolInputEditsItem",
+    "EmptyDirVolume",
+    "EmptyDirVolumeType",
     "EnvFromEntry",
     "EnvFromEntryType",
     "Environment",
@@ -703,6 +724,14 @@ __all__ = (
     "GrepToolInput",
     "HttpTriggerConcurrency",
     "HttpTriggerConcurrencyMode",
+    "Identity",
+    "IdentityDescriptorType0",
+    "IdentityDescriptorType0Runtime",
+    "IdentityListResponse",
+    "IdentitySpec",
+    "IdentitySpecRuntime",
+    "IdentityStatus",
+    "IdentityStatusState",
     "ImageContentBlock",
     "ImageContentBlockType",
     "JsonContentBlock",
@@ -713,6 +742,7 @@ __all__ = (
     "ListAgentsArchived",
     "ListConnectorsAvailability",
     "ListEnvironmentsArchived",
+    "ListIdentitiesArchived",
     "ListLeasesState",
     "ListMemoryStoresArchived",
     "ListPagination",
@@ -775,7 +805,6 @@ __all__ = (
     "PutRunnerHeartbeatRequestState",
     "ReadToolInput",
     "ReadUsageSummaryGroupBy",
-    "RealmrootAgentBindingType0",
     "ReasoningContentBlock",
     "ReasoningContentBlockType",
     "ResourceCreateMetadata",
@@ -853,6 +882,8 @@ __all__ = (
     "RuntimeUsageWindow",
     "SecretItem",
     "SecretVolume",
+    "SecretVolumeProjection",
+    "SecretVolumeProjectionType",
     "SecretVolumeType",
     "Session",
     "SessionAgentSnapshot",
@@ -901,6 +932,7 @@ __all__ = (
     "SessionEventType8Type",
     "SessionEventType9",
     "SessionEventType9Type",
+    "SessionIdentityDescriptorType0",
     "SessionListResponse",
     "SessionMessage",
     "SessionMessageDelivery",
@@ -911,7 +943,6 @@ __all__ = (
     "SessionMetadataAnnotations",
     "SessionMetadataLabels",
     "SessionPlacementType0",
-    "SessionRealmrootBindingType0",
     "SessionSocketAbortMessage",
     "SessionSocketAbortMessageType",
     "SessionSocketAckMessage",
@@ -978,6 +1009,7 @@ __all__ = (
     "UpdateEnvironmentRequestSpec",
     "UpdateEnvironmentRequestSpecVariables",
     "UpdateEnvironmentRequestSpecVariablesAdditionalProperty",
+    "UpdateIdentityRequest",
     "UpdateLeaseRequest",
     "UpdateLeaseRequestError",
     "UpdateLeaseRequestResult",

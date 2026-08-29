@@ -8,12 +8,11 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..types import UNSET, Unset
 from typing import cast
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
+  from ..models.session_identity_descriptor_type_0 import SessionIdentityDescriptorType0
   from ..models.session_subagent import SessionSubagent
 
 
@@ -26,7 +25,7 @@ T = TypeVar("T", bound="SessionAgentSnapshot")
 
 @_attrs_define
 class SessionAgentSnapshot:
-    """ 
+    """
         Attributes:
             id (str):
             agent_id (str):
@@ -39,8 +38,8 @@ class SessionAgentSnapshot:
             subagents (list[SessionSubagent]):
             allowed_tools (list[str]):
             mcp_connectors (list[str]):
+            identity (None | SessionIdentityDescriptorType0):
             created_at (datetime.datetime):
-            realmroot (None | SessionRealmrootBindingType0 | Unset):
      """
 
     id: str
@@ -54,8 +53,8 @@ class SessionAgentSnapshot:
     subagents: list[SessionSubagent]
     allowed_tools: list[str]
     mcp_connectors: list[str]
+    identity: None | SessionIdentityDescriptorType0
     created_at: datetime.datetime
-    realmroot: None | SessionRealmrootBindingType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -63,7 +62,7 @@ class SessionAgentSnapshot:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
+        from ..models.session_identity_descriptor_type_0 import SessionIdentityDescriptorType0
         from ..models.session_subagent import SessionSubagent
         id = self.id
 
@@ -99,15 +98,13 @@ class SessionAgentSnapshot:
 
 
 
-        created_at = self.created_at.isoformat()
-
-        realmroot: dict[str, Any] | None | Unset
-        if isinstance(self.realmroot, Unset):
-            realmroot = UNSET
-        elif isinstance(self.realmroot, SessionRealmrootBindingType0):
-            realmroot = self.realmroot.to_dict()
+        identity: dict[str, Any] | None
+        if isinstance(self.identity, SessionIdentityDescriptorType0):
+            identity = self.identity.to_dict()
         else:
-            realmroot = self.realmroot
+            identity = self.identity
+
+        created_at = self.created_at.isoformat()
 
 
         field_dict: dict[str, Any] = {}
@@ -124,10 +121,9 @@ class SessionAgentSnapshot:
             "subagents": subagents,
             "allowedTools": allowed_tools,
             "mcpConnectors": mcp_connectors,
+            "identity": identity,
             "createdAt": created_at,
         })
-        if realmroot is not UNSET:
-            field_dict["realmroot"] = realmroot
 
         return field_dict
 
@@ -135,7 +131,7 @@ class SessionAgentSnapshot:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.session_realmroot_binding_type_0 import SessionRealmrootBindingType0
+        from ..models.session_identity_descriptor_type_0 import SessionIdentityDescriptorType0
         from ..models.session_subagent import SessionSubagent
         d = dict(src_dict)
         id = d.pop("id")
@@ -177,29 +173,27 @@ class SessionAgentSnapshot:
         mcp_connectors = cast(list[str], d.pop("mcpConnectors"))
 
 
-        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
-
-
-
-
-        def _parse_realmroot(data: object) -> None | SessionRealmrootBindingType0 | Unset:
+        def _parse_identity(data: object) -> None | SessionIdentityDescriptorType0:
             if data is None:
-                return data
-            if isinstance(data, Unset):
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_session_realmroot_binding_type_0 = SessionRealmrootBindingType0.from_dict(data)
+                componentsschemas_session_identity_descriptor_type_0 = SessionIdentityDescriptorType0.from_dict(data)
 
 
 
-                return componentsschemas_session_realmroot_binding_type_0
+                return componentsschemas_session_identity_descriptor_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | SessionRealmrootBindingType0 | Unset, data)
+            return cast(None | SessionIdentityDescriptorType0, data)
 
-        realmroot = _parse_realmroot(d.pop("realmroot", UNSET))
+        identity = _parse_identity(d.pop("identity"))
+
+
+        created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
+
+
 
 
         session_agent_snapshot = cls(
@@ -214,8 +208,8 @@ class SessionAgentSnapshot:
             subagents=subagents,
             allowed_tools=allowed_tools,
             mcp_connectors=mcp_connectors,
+            identity=identity,
             created_at=created_at,
-            realmroot=realmroot,
         )
 
 

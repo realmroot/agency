@@ -389,7 +389,7 @@ export type RunnerGitCredential = {
 };
 export type RunnerWorkspaceMount = {
     name: string;
-    type: 'git_repository' | 'memory' | 'secret';
+    type: 'git_repository' | 'memory' | 'secret' | 'empty_dir';
     mountPath: string;
     url?: string;
     ref?: string;
@@ -405,7 +405,7 @@ export type RunnerWorkspaceManifest = {
 };
 export type RunnerVolume = {
     name: string;
-    type: 'secret' | 'git_repository' | 'memory';
+    type: 'secret' | 'git_repository' | 'memory' | 'empty_dir';
     secretRef?: string;
     url?: string;
     ref?: string;
@@ -660,7 +660,7 @@ export type AgentSpec = {
     subagents: Array<AgentSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot: RealmrootAgentBinding;
+    identity: IdentityDescriptor;
 };
 export type AgentSubagent = {
     name: string;
@@ -671,10 +671,13 @@ export type AgentSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
-export type RealmrootAgentBinding = {
+export type IdentityDescriptor = {
+    identityId: string;
     agentId: string;
-    origin: string;
-    credentialRef: string;
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
 } | null;
 export type AgentStatus = {
     phase: ResourcePhase;
@@ -692,7 +695,7 @@ export type CreateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
+        identityRef?: string | null;
     };
 };
 export type ResourceCreateMetadata = {
@@ -718,7 +721,7 @@ export type UpdateAgentRequest = {
         subagents?: Array<AgentSubagentInput>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
-        realmroot?: RealmrootAgentBinding;
+        identityRef?: string | null;
     };
     /**
      * Lifecycle transition: true archives the agent, false unarchives it.
@@ -831,6 +834,34 @@ export type EnvironmentVersion = {
 export type EnvironmentVersionStatus = {
     environmentId: string;
     version: number;
+};
+export type IdentityListResponse = {
+    data: Array<Identity>;
+    pagination: ListPagination;
+};
+export type Identity = {
+    metadata: ResourceMetadata;
+    spec: {
+        username: string;
+        runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
+    };
+    status: {
+        phase: ResourcePhase;
+        state: 'provisioning' | 'active' | 'error';
+        failureCode: string | null;
+        boundAgentId: string | null;
+        descriptor: IdentityDescriptor;
+    };
+};
+export type CreateIdentityRequest = {
+    metadata: ResourceCreateMetadata;
+    spec: {
+        username: string;
+        runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
+    };
+};
+export type UpdateIdentityRequest = {
+    archived: true;
 };
 export type ProviderListResponse = {
     data: Array<Provider>;
@@ -1248,7 +1279,9 @@ export type Volume = ({
     type: 'git_repository';
 } & GitRepositoryVolume) | ({
     type: 'memory';
-} & MemoryVolume);
+} & MemoryVolume) | ({
+    type: 'empty_dir';
+} & EmptyDirVolume);
 export type SecretVolume = {
     name: string;
     type: 'secret';
@@ -1271,6 +1304,16 @@ export type MemoryVolume = {
     name: string;
     type: 'memory';
     memoryRef: string;
+};
+export type EmptyDirVolume = {
+    name: string;
+    type: 'empty_dir';
+    seedFrom?: Array<SecretVolumeProjection>;
+};
+export type SecretVolumeProjection = {
+    type: 'secret';
+    secretRef: string;
+    items?: Array<SecretItem>;
 };
 export type VolumeMount = {
     name: string;
@@ -1310,7 +1353,7 @@ export type CreateTriggerRequest = {
             spec: {
                 agentId: string;
                 environmentId?: string | null;
-                runtime: RuntimeName;
+                runtime?: RuntimeName;
                 env?: ExecutionEnv;
                 envFrom?: Array<EnvFromEntry>;
                 volumes?: Array<Volume>;
@@ -1468,7 +1511,7 @@ export type SessionAgentSnapshot = {
     subagents: Array<SessionSubagent>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
-    realmroot?: SessionRealmrootBinding;
+    identity: SessionIdentityDescriptor;
     createdAt: string;
 };
 export type SessionSubagent = {
@@ -1480,10 +1523,13 @@ export type SessionSubagent = {
     skills: Array<string>;
     mcpConnectors: Array<string>;
 };
-export type SessionRealmrootBinding = {
+export type SessionIdentityDescriptor = {
+    identityId: string;
     agentId: string;
-    origin: string;
-    credentialRef: string;
+    issuer: string;
+    subject: string;
+    username: string;
+    runtime: RuntimeName;
 } | null;
 export type SessionEnvironmentSnapshot = {
     id: string;
@@ -1523,7 +1569,7 @@ export type SessionCreateMetadata = {
 export type ExecutionSpecInput = {
     agentId: string;
     environmentId?: string | null;
-    runtime: RuntimeName;
+    runtime?: RuntimeName;
     env?: ExecutionEnv;
     envFrom?: Array<EnvFromEntry>;
     volumes?: Array<Volume>;
@@ -2021,6 +2067,10 @@ export type CreateAgentErrors = {
      * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
+    /**
+     * Identity already bound
+     */
+    409: ErrorResponse;
 };
 export type CreateAgentError = CreateAgentErrors[keyof CreateAgentErrors];
 export type CreateAgentResponses = {
@@ -2362,6 +2412,147 @@ export type ReadEnvironmentVersionResponses = {
     200: EnvironmentVersion;
 };
 export type ReadEnvironmentVersionResponse = ReadEnvironmentVersionResponses[keyof ReadEnvironmentVersionResponses];
+export type ListIdentitiesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Filter by lifecycle. Defaults to false (live resources only).
+         */
+        archived?: 'true' | 'false';
+        search?: string;
+        createdFrom?: string;
+        createdTo?: string;
+        limit?: number;
+        cursor?: string;
+    };
+    url: '/api/v1/identities';
+};
+export type ListIdentitiesErrors = {
+    /**
+     * Invalid cursor
+     */
+    400: ErrorResponse;
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+};
+export type ListIdentitiesError = ListIdentitiesErrors[keyof ListIdentitiesErrors];
+export type ListIdentitiesResponses = {
+    /**
+     * Identity list
+     */
+    200: IdentityListResponse;
+};
+export type ListIdentitiesResponse = ListIdentitiesResponses[keyof ListIdentitiesResponses];
+export type CreateIdentityData = {
+    body: CreateIdentityRequest;
+    headers: {
+        'idempotency-key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/identities';
+};
+export type CreateIdentityErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * User principal required
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Realmroot provisioning failed
+     */
+    502: ErrorResponse;
+};
+export type CreateIdentityError = CreateIdentityErrors[keyof CreateIdentityErrors];
+export type CreateIdentityResponses = {
+    /**
+     * Identity provisioned
+     */
+    201: Identity;
+};
+export type CreateIdentityResponse = CreateIdentityResponses[keyof CreateIdentityResponses];
+export type ReadIdentityData = {
+    body?: never;
+    path: {
+        identityId: string;
+    };
+    query?: never;
+    url: '/api/v1/identities/{identityId}';
+};
+export type ReadIdentityErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Not found
+     */
+    404: ErrorResponse;
+};
+export type ReadIdentityError = ReadIdentityErrors[keyof ReadIdentityErrors];
+export type ReadIdentityResponses = {
+    /**
+     * Identity
+     */
+    200: Identity;
+};
+export type ReadIdentityResponse = ReadIdentityResponses[keyof ReadIdentityResponses];
+export type UpdateIdentityData = {
+    body: UpdateIdentityRequest;
+    path: {
+        identityId: string;
+    };
+    query?: never;
+    url: '/api/v1/identities/{identityId}';
+};
+export type UpdateIdentityErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Not found
+     */
+    404: ErrorResponse;
+    /**
+     * Identity is in use
+     */
+    409: ErrorResponse;
+};
+export type UpdateIdentityError = UpdateIdentityErrors[keyof UpdateIdentityErrors];
+export type UpdateIdentityResponses = {
+    /**
+     * Archived identity
+     */
+    200: Identity;
+};
+export type UpdateIdentityResponse = UpdateIdentityResponses[keyof UpdateIdentityResponses];
 export type ListProvidersData = {
     body?: never;
     path?: never;

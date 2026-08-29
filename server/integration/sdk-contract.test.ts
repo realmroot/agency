@@ -208,6 +208,27 @@ describe('[CF] generated SDK contract', () => {
     expect(runner.raw).toBeTruthy()
   })
 
+  it('forwards the required Identity idempotency key through the TypeScript facade', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      expect(request.headers.get('idempotency-key')).toBe('identity-idempotency-1')
+      return Response.json({ error: { type: 'fixture_stop', message: 'header captured' } }, { status: 409 })
+    })
+    vi.stubGlobal('fetch', fetch)
+    const client = createAmaClient({
+      baseUrl: 'https://example.com',
+      authorize: async () => ({ accessToken: 'token', dpopProof: 'proof' }),
+    })
+
+    await expect(
+      client.identities.create(
+        { metadata: { name: 'Reviewer' }, spec: { username: 'reviewer', runtime: 'codex' } },
+        'identity-idempotency-1',
+      ),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
   it('uses an explicit native WebSocket factory for runner Bearer auth and strips legacy DPoP headers', async () => {
     const socket = {
       addEventListener: vi.fn(),

@@ -23,6 +23,12 @@
           { "name": "listVersions", "operationId": "listAgentVersions" },
           { "name": "getVersion", "operationId": "readAgentVersion" }
         ] },
+        { "name": "identities", "methods": [
+          { "name": "list", "operationId": "listIdentities" },
+          { "name": "create", "operationId": "createIdentity" },
+          { "name": "get", "operationId": "readIdentity" },
+          { "name": "archive", "operationId": "updateIdentity" }
+        ] },
         { "name": "environments", "methods": [
           { "name": "list", "operationId": "listEnvironments" },
           { "name": "create", "operationId": "createEnvironment" },

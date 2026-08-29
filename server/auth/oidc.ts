@@ -338,12 +338,13 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPay
     : AMA_SCOPES
   const scope = ['openid', 'profile', 'email', 'offline_access', ...resourceScopes].join(' ')
   return {
+    iss: env.OIDC_ISSUER?.replace(/\/$/, '') || 'https://oidc.test/api/auth',
     sub: `user_e2e_${safeRunId}`,
     email: `${safeRunId}@e2e.example.com`,
     name: `E2E User ${safeRunId}`,
     ...(clientId ? { client_id: clientId, azp: clientId } : {}),
     scope,
-    [REALMROOT_ORGANIZATION_CLAIM]: `org_e2e_${safeOrgRunId}`,
+    ...(directives.get('personal') === '1' ? {} : { [REALMROOT_ORGANIZATION_CLAIM]: `org_e2e_${safeOrgRunId}` }),
     roles: runnerScoped ? ['runner'] : roles.length ? roles : ['owner'],
     permissions: [],
     teams: sanitizeList(directives.get('teams')),

@@ -153,6 +153,31 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
     })
   })
 
+  it('normalizes a writable empty directory with declarative seed projections', () => {
+    const volume = {
+      name: 'runtime-state',
+      type: 'empty_dir' as const,
+      seedFrom: [
+        {
+          type: 'secret' as const,
+          secretRef: 'ama://vaults/v/credentials/c',
+          items: [{ key: 'state.json', path: 'identities/issuer/runtime.json' }],
+        },
+      ],
+    }
+    expect(
+      normalizeWorkspaceSpec(
+        workspaceSpec(
+          [volume],
+          [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+        ),
+      ),
+    ).toEqual({
+      volumes: [volume],
+      volumeMounts: [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+    })
+  })
+
   it('rejects invalid workspace declarations', () => {
     expect(normalizeWorkspaceSpec(workspaceSpec([], [{ name: 'x', mountPath: '/tmp/x' }]))).toEqual({
       fields: { 'volumeMounts.0.mountPath': 'Volume mount path must stay under /workspace.' },
@@ -199,6 +224,17 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
   })
 
   it('rejects missing or conflicting mounts', () => {
+    expect(normalizeWorkspaceSpec(workspaceSpec([{ name: 'state', type: 'empty_dir' }], []))).toEqual({
+      fields: { 'volumes.0.name': 'Empty directory volume must have a matching volume mount.' },
+    })
+    expect(
+      normalizeWorkspaceSpec(
+        workspaceSpec(
+          [{ name: 'state', type: 'empty_dir' }],
+          [{ name: 'state', mountPath: '/workspace/.ama/state', readOnly: true }],
+        ),
+      ),
+    ).toEqual({ fields: { 'volumeMounts.0.readOnly': 'Empty directory volumes must be writable.' } })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec([{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' }], []),

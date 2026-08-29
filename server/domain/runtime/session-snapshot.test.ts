@@ -15,7 +15,7 @@ function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
     subagents: [],
     allowedTools: ['read', 'bash'],
     mcpConnectors: [],
-    realmroot: null,
+    identity: null,
     createdAt: '2026-06-25T00:00:00.000Z',
     ...overrides,
   }
@@ -97,13 +97,17 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
   })
 })
 
-describe('[spec: sessions/realmroot-identity] Realmroot workspace context', () => {
+describe('[spec: sessions/identity-materialization] Realmroot workspace context', () => {
   it('announces the Realmroot toolbox without exposing credential material', () => {
     const augmented = agentSnapshotWithWorkspaceContext(
       agentSnapshot({
-        realmroot: {
+        identity: {
+          identityId: 'identity_1',
           agentId: 'rr_agent_1',
-          origin: 'https://realmroot.example.com',
+          issuer: 'https://realmroot.example.com/api/auth',
+          subject: 'rr_agent_1',
+          username: 'runner',
+          runtime: 'codex',
           credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
         },
       }),

@@ -432,7 +432,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
               spec: {
                 agentId: spec.template.spec.agentId,
                 environmentId: spec.template.spec.environmentId ?? null,
-                runtime: spec.template.spec.runtime,
+                ...(spec.template.spec.runtime !== undefined ? { runtime: spec.template.spec.runtime } : {}),
                 promptTemplate: spec.template.spec.promptTemplate,
                 env: spec.template.spec.env ?? {},
                 envFrom: normalizeEnvFrom(spec.template.spec.envFrom ?? []),
@@ -730,7 +730,7 @@ function conflictOrValidation(c: Parameters<Parameters<TriggerRoutes['openapi']>
     return c.json(errorBody('validation_error', error.message, { fields: error.fields }), 400)
   }
   if (error instanceof TriggerConflictError) {
-    return c.json(errorBody(error.status === 404 ? 'not_found' : 'conflict', error.message), error.status)
+    return c.json(errorBody(error.code, error.message), error.status)
   }
   throw error
 }

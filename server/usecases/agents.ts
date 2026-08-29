@@ -2,15 +2,12 @@ import {
   type Agent,
   type AgentSpec,
   type AgentSubagent,
-  type RealmrootAgentBinding,
   validateAllowedTools,
-  validateRealmrootBinding,
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
-import { secretRefIdentity } from '@server/domain/vault'
 import type { Deps } from './deps'
-import { AgentArchivedError, AgentValidationError, type AuthScope } from './ports'
+import { AgentArchivedError, AgentValidationError, type AuthScope, IdentityAlreadyBoundError } from './ports'
 
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
@@ -42,31 +39,21 @@ async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
   if (subagentConnectorError) {
     throw new AgentValidationError('Invalid agent configuration', subagentConnectorError)
   }
-  const realmrootError = validateRealmrootBinding(config.realmroot)
-  if (realmrootError) {
-    throw new AgentValidationError('Invalid agent configuration', realmrootError)
-  }
-  if (config.realmroot && !(await realmrootCredentialActive(deps, auth, config.realmroot.credentialRef))) {
-    throw new AgentValidationError('Invalid agent configuration', {
-      realmroot: 'Realmroot credential must reference an active credential in a visible AMA Vault.',
-    })
-  }
 }
 
-async function realmrootCredentialActive(deps: Deps, auth: AuthScope, reference: string) {
-  const identity = secretRefIdentity(reference)
-  if (!identity?.credentialId || identity.versionId) return false
-  const vault = await deps.vaults.find(identity.vaultId, {
-    organizationId: auth.organization.id,
-    projectId: auth.project.id,
-  })
-  if (vault?.status.phase !== 'active') return false
-  const credential = await deps.vaults.findCredential(identity.vaultId, identity.credentialId)
-  return (
-    credential?.spec.vaultId === identity.vaultId &&
-    credential.spec.type === 'ama.dev/realmroot-agent-state' &&
-    credential.status.phase === 'active'
-  )
+async function selectedIdentity(deps: Deps, auth: AuthScope, identityRef: string | null, agentId?: string) {
+  if (!identityRef) return null
+  if (!deps.identities) throw new Error('Identity dependencies are not configured')
+  const identity = await deps.identities.find(auth.project.id, identityRef)
+  if (!identity || identity.metadata.archivedAt || identity.status.state !== 'active' || !identity.status.descriptor) {
+    throw new AgentValidationError('Invalid agent configuration', {
+      identityRef: 'Identity must be active in the selected project.',
+    })
+  }
+  if (identity.status.boundAgentId && identity.status.boundAgentId !== agentId) {
+    throw new IdentityAlreadyBoundError()
+  }
+  return identity.status.descriptor
 }
 
 // A null provider defers project-default resolution to session start, so it
@@ -109,16 +96,15 @@ async function validateSubagentMcpConnectors(deps: Deps, projectId: string, suba
 export async function createAgent(
   deps: Deps,
   auth: AuthScope,
-  input: { name: string; description: string | null; spec: AgentSpec },
+  input: { name: string; description: string | null; spec: Omit<AgentSpec, 'identity'>; identityRef?: string | null },
 ): Promise<Agent> {
-  await validateConfig(deps, auth, input.spec)
+  const spec: AgentSpec = { ...input.spec, identity: await selectedIdentity(deps, auth, input.identityRef ?? null) }
+  await validateConfig(deps, auth, spec)
   const createdAt = new Date().toISOString()
-  const agent = await deps.agents.insert(
-    { projectId: auth.project.id, name: input.name, description: input.description, spec: input.spec },
+  const { agent, version } = await deps.agents.insertWithVersion(
+    { projectId: auth.project.id, name: input.name, description: input.description, spec },
     createdAt,
   )
-  const version = await deps.agents.insertVersion(agent, input.spec, createdAt)
-  await deps.agents.setCurrentVersion(agent.metadata.uid, version.metadata.uid)
   return {
     ...agent,
     status: { ...agent.status, currentVersionId: version.metadata.uid, version: version.status.version },
@@ -135,7 +121,7 @@ const RUNTIME_CONFIG_FIELDS = [
   'subagents',
   'allowedTools',
   'mcpConnectors',
-  'realmroot',
+  'identityRef',
 ] as const
 
 export interface UpdateAgentPatch {
@@ -148,7 +134,7 @@ export interface UpdateAgentPatch {
   subagents?: AgentSubagent[]
   allowedTools?: string[]
   mcpConnectors?: string[]
-  realmroot?: RealmrootAgentBinding | null
+  identityRef?: string | null
   archived?: boolean
 }
 
@@ -190,6 +176,10 @@ export async function updateAgent(
     return { agent, archived: false }
   }
 
+  const nextIdentity =
+    fields.identityRef !== undefined
+      ? await selectedIdentity(deps, auth, fields.identityRef, agent.metadata.uid)
+      : agent.spec.identity
   const next: AgentSpec = {
     systemPrompt: fields.systemPrompt !== undefined ? fields.systemPrompt : agent.spec.systemPrompt,
     provider: fields.provider !== undefined ? fields.provider : agent.spec.provider,
@@ -198,7 +188,7 @@ export async function updateAgent(
     subagents: fields.subagents ?? agent.spec.subagents,
     allowedTools: fields.allowedTools ?? agent.spec.allowedTools,
     mcpConnectors: fields.mcpConnectors ?? agent.spec.mcpConnectors,
-    realmroot: fields.realmroot !== undefined ? fields.realmroot : agent.spec.realmroot,
+    identity: nextIdentity,
   }
   await validateConfig(deps, auth, next)
 
@@ -206,18 +196,27 @@ export async function updateAgent(
   const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => fields[field] !== undefined)
   // A runtime change snapshots a new immutable version; otherwise the current
   // version (id + number) is retained.
-  const version = runtimeChanged ? await deps.agents.insertVersion(agent, next, updatedAt) : null
   const archivedAt = archived === true ? updatedAt : agent.metadata.archivedAt
   const name = fields.name ?? agent.metadata.name
   const description = fields.description !== undefined ? fields.description : agent.metadata.description
+  const version = runtimeChanged
+    ? await deps.agents.updateWithVersion(
+        auth.project.id,
+        agent,
+        { name, description, spec: next, archivedAt },
+        updatedAt,
+      )
+    : null
   const currentVersionId = version?.metadata.uid ?? agent.status.currentVersionId
 
-  await deps.agents.update(
-    auth.project.id,
-    agent.metadata.uid,
-    { name, description, spec: next, archivedAt, currentVersionId },
-    updatedAt,
-  )
+  if (!runtimeChanged) {
+    await deps.agents.update(
+      auth.project.id,
+      agent.metadata.uid,
+      { name, description, spec: next, archivedAt, currentVersionId },
+      updatedAt,
+    )
+  }
 
   const updated: Agent = {
     ...agent,

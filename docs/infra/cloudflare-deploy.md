@@ -8,7 +8,7 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 - Workers AI binding: `AI`
 - Cloudflare Sandbox container binding: `SANDBOX`
 - Production D1 database: `any-managed-agents-db`
-- Staging D1 database: `any-managed-agents-db-staging`
+- Staging D1 database: `any-managed-agents-db-staging-v2`
 - Container image built from this repository's `Dockerfile`
 
 ## Realmroot Applications and Resource Server

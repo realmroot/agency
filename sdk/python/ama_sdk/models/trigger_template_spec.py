@@ -12,6 +12,7 @@ from ..models.runtime_name import RuntimeName
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.empty_dir_volume import EmptyDirVolume
   from ..models.env_from_entry import EnvFromEntry
   from ..models.execution_env import ExecutionEnv
   from ..models.git_repository_volume import GitRepositoryVolume
@@ -29,14 +30,14 @@ T = TypeVar("T", bound="TriggerTemplateSpec")
 
 @_attrs_define
 class TriggerTemplateSpec:
-    """ 
+    """
         Attributes:
             agent_id (str):  Example: agent_abc123.
             environment_id (None | str):  Example: env_abc123.
             runtime (RuntimeName):  Example: codex.
             env (ExecutionEnv):  Example: {'AK_API_URL': 'https://ak.example.com'}.
             env_from (list[EnvFromEntry]):
-            volumes (list[GitRepositoryVolume | MemoryVolume | SecretVolume]):
+            volumes (list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume]):
             volume_mounts (list[VolumeMount]):
             prompt_template (str):  Example: Research current Canadian banking bonus offers..
      """
@@ -46,7 +47,7 @@ class TriggerTemplateSpec:
     runtime: RuntimeName
     env: ExecutionEnv
     env_from: list[EnvFromEntry]
-    volumes: list[GitRepositoryVolume | MemoryVolume | SecretVolume]
+    volumes: list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume]
     volume_mounts: list[VolumeMount]
     prompt_template: str
 
@@ -55,6 +56,7 @@ class TriggerTemplateSpec:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.empty_dir_volume import EmptyDirVolume
         from ..models.env_from_entry import EnvFromEntry
         from ..models.execution_env import ExecutionEnv
         from ..models.git_repository_volume import GitRepositoryVolume
@@ -83,6 +85,8 @@ class TriggerTemplateSpec:
             if isinstance(volumes_item_data, SecretVolume):
                 volumes_item = volumes_item_data.to_dict()
             elif isinstance(volumes_item_data, GitRepositoryVolume):
+                volumes_item = volumes_item_data.to_dict()
+            elif isinstance(volumes_item_data, MemoryVolume):
                 volumes_item = volumes_item_data.to_dict()
             else:
                 volumes_item = volumes_item_data.to_dict()
@@ -120,6 +124,7 @@ class TriggerTemplateSpec:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.empty_dir_volume import EmptyDirVolume
         from ..models.env_from_entry import EnvFromEntry
         from ..models.execution_env import ExecutionEnv
         from ..models.git_repository_volume import GitRepositoryVolume
@@ -160,7 +165,7 @@ class TriggerTemplateSpec:
         volumes = []
         _volumes = d.pop("volumes")
         for volumes_item_data in (_volumes):
-            def _parse_volumes_item(data: object) -> GitRepositoryVolume | MemoryVolume | SecretVolume:
+            def _parse_volumes_item(data: object) -> EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume:
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
@@ -181,13 +186,23 @@ class TriggerTemplateSpec:
                     return componentsschemas_volume_type_1
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
+                try:
+                    if not isinstance(data, dict):
+                        raise TypeError()
+                    componentsschemas_volume_type_2 = MemoryVolume.from_dict(data)
+
+
+
+                    return componentsschemas_volume_type_2
+                except (TypeError, ValueError, AttributeError, KeyError):
+                    pass
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_volume_type_2 = MemoryVolume.from_dict(data)
+                componentsschemas_volume_type_3 = EmptyDirVolume.from_dict(data)
 
 
 
-                return componentsschemas_volume_type_2
+                return componentsschemas_volume_type_3
 
             volumes_item = _parse_volumes_item(volumes_item_data)
 
@@ -218,4 +233,3 @@ class TriggerTemplateSpec:
         )
 
         return trigger_template_spec
-

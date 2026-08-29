@@ -94,7 +94,8 @@ export interface AgentRow {
   subagents: string
   allowedTools: string
   mcpConnectors: string
-  realmroot: string | null
+  identityId: string | null
+  identitySnapshot: string | null
   archivedAt: string | null
   currentVersionId: string | null
   createdAt: string
@@ -113,7 +114,8 @@ export interface AgentVersionRow {
   subagents: string
   allowedTools: string
   mcpConnectors: string
-  realmroot: string | null
+  identityId: string | null
+  identitySnapshot: string | null
   createdAt: string
 }
 

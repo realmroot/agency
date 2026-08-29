@@ -811,6 +811,43 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
     expect((postedBody!.spec as { template: { spec: { runtime: string } } }).template.spec.runtime).toBe('codex')
   })
 
+  it('[spec: triggers/create] locks and submits the selected Agent Identity Runtime', async () => {
+    let postedBody: Record<string, unknown> | null = null
+    renderSheet(
+      [
+        http.post('*/api/v1/triggers', async ({ request }) => {
+          postedBody = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(trigger({ id: 'trigger_identity', runtime: 'codex' }), { status: 201 })
+        }),
+      ],
+      {
+        agents: [
+          agent({
+            identity: {
+              identityId: 'identity_codex',
+              agentId: 'realmroot_agent_1',
+              issuer: 'https://id.realmroot.dev/api/auth',
+              subject: 'agent:realmroot_agent_1',
+              username: 'codex-operator',
+              runtime: 'codex',
+            },
+          }),
+        ],
+      },
+    )
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Identity trigger' } })
+    fireEvent.change(screen.getByLabelText('Prompt template'), { target: { value: 'Run as the Realmroot identity.' } })
+
+    expect(await screen.findByText("Locked by codex-operator's Identity.")).toBeTruthy()
+    const runtimeSelect = screen.getAllByRole('combobox')[3] as HTMLButtonElement
+    expect(runtimeSelect.disabled).toBe(true)
+    expect(runtimeSelect.textContent).toContain('Codex')
+    fireEvent.submit(screen.getByRole('button', { name: /create trigger/i }).closest('form') as HTMLFormElement)
+
+    await waitFor(() => expect(postedBody).not.toBeNull())
+    expect(postedBody).toMatchObject({ spec: { template: { spec: { runtime: 'codex' } } } })
+  })
+
   it('updates intervalUnit when a different unit is selected', async () => {
     stubPointerEvents()
     let postedBody: Record<string, unknown> | null = null

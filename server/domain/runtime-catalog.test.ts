@@ -7,6 +7,7 @@ import {
   runtimeSupportsHostingMode,
   runtimeSupportsLivePrompts,
   runtimesSupport,
+  selfHostedRuntimeModel,
 } from './runtime-catalog'
 
 describe('runtimeSupportsLivePrompts', () => {
@@ -32,6 +33,27 @@ describe('runtimeRequirement', () => {
   })
 })
 
+describe('selfHostedRuntimeModel', () => {
+  it('returns null when no model is selected', () => {
+    expect(selfHostedRuntimeModel('openai', null)).toBeNull()
+    expect(selfHostedRuntimeModel('openai')).toBeNull()
+  })
+
+  it('strips only the exact provider prefix from a canonical model id', () => {
+    expect(selfHostedRuntimeModel('openai', 'openai/gpt-5.6-sol')).toBe('gpt-5.6-sol')
+  })
+
+  it('preserves already-local and Workers AI model ids', () => {
+    expect(selfHostedRuntimeModel('openai', 'gpt-5.6-sol')).toBe('gpt-5.6-sol')
+    expect(selfHostedRuntimeModel('workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe('@cf/moonshotai/kimi-k2.6')
+  })
+
+  it('preserves slash-containing runner-native and mismatched provider model ids', () => {
+    expect(selfHostedRuntimeModel('openai', 'org/model')).toBe('org/model')
+    expect(selfHostedRuntimeModel('openai', 'anthropic/claude-opus-4')).toBe('anthropic/claude-opus-4')
+  })
+})
+
 describe('runtimesSupport', () => {
   const runtimes = [{ runtime: 'copilot', state: 'ready', models: ['auto', 'gpt-4.1'] }] satisfies RuntimeSupport
 
@@ -42,6 +64,12 @@ describe('runtimesSupport', () => {
 
   it('requires only the ready runtime when model is null', () => {
     expect(runtimesSupport(runtimes, 'copilot', null)).toBe(true)
+  })
+
+  it('matches the normalized model exactly without stripping another prefix', () => {
+    const inventory = [{ runtime: 'codex', state: 'ready', models: ['gpt-5.6-sol'] }] satisfies RuntimeSupport
+    expect(runtimesSupport(inventory, 'codex', 'gpt-5.6-sol')).toBe(true)
+    expect(runtimesSupport(inventory, 'codex', 'openai/gpt-5.6-sol')).toBe(false)
   })
 })
 

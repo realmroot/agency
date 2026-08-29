@@ -2,6 +2,7 @@ import { gitRepositoryMountPath } from '@server/domain/git-repository'
 import { memoryStoreIdFromRef } from '@server/domain/memory-store'
 import {
   type EnvFromEntry,
+  isEmptyDirVolume,
   isGitRepositoryVolume,
   isMemoryVolume,
   type SecretItem,
@@ -108,6 +109,30 @@ export async function resolveRuntimeWorkspaceManifest(
         memoryRef: memoryStore.memoryRef,
         readOnly: volumeMountReadOnly(volume.name, volumeMounts),
         files: memoryFiles(memoryStore.memories),
+      })
+      continue
+    }
+    if (isEmptyDirVolume(volume)) {
+      const files: WorkspaceFile[] = []
+      for (const projection of volume.seedFrom ?? []) {
+        if (projection.type !== 'secret') {
+          throw new Error(`Runtime empty directory volume ${volume.name} has unsupported seed projection`)
+        }
+        files.push(...(await resolveSecretMount(env, repo, scope, projection.secretRef, projection.items)))
+      }
+      const paths = new Set<string>()
+      for (const file of files) {
+        if (paths.has(file.path)) {
+          throw new Error(`Runtime empty directory volume ${volume.name} projects duplicate item path ${file.path}`)
+        }
+        paths.add(file.path)
+      }
+      mounts.push({
+        type: 'empty_dir',
+        name: volume.name,
+        mountPath: mountPath ?? `/workspace/.ama/empty-dirs/${volume.name}`,
+        readOnly: false,
+        files,
       })
       continue
     }

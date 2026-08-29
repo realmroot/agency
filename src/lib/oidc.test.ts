@@ -91,7 +91,7 @@ describe('server-owned browser authentication', () => {
       vi.fn(async () => jsonResponse({ error: { type: 'unavailable' } }, 503)),
     )
 
-    await expect(signIn('/agents')).rejects.toThrow('Failed to start Realmroot sign-in')
+    await expect(signIn('/agents')).rejects.toThrow('Failed to start sign-in')
   })
 
   it('logs out through the server session endpoint and clears the e2e credential', async () => {

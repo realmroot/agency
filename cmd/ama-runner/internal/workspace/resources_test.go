@@ -58,6 +58,364 @@ func TestMaterializeSecretMountWritableAndRejectsUnsafePaths(t *testing.T) {
 	}
 }
 
+func TestMaterializeEmptyDirRejectsInvalidMountsAndSeedPaths(t *testing.T) {
+	root := t.TempDir()
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{}); err == nil {
+		t.Fatal("expected missing empty directory mount path error")
+	}
+
+	occupied := filepath.Join(root, "occupied")
+	if err := os.WriteFile(occupied, []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/occupied",
+	}); err == nil || !strings.Contains(err.Error(), "must be a directory") {
+		t.Fatalf("expected occupied mount path error, got %v", err)
+	}
+
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/runtime-state",
+		Files:     []protocol.WorkspaceFile{{Path: "../outside", Content: "secret"}},
+	}); err == nil {
+		t.Fatal("expected unsafe seed path error")
+	}
+	if _, err := os.Stat(filepath.Join(root, "outside")); !os.IsNotExist(err) {
+		t.Fatalf("expected no seed outside the mount, got %v", err)
+	}
+}
+
+func TestMaterializeEmptyDirRejectsParentFileConflict(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "parent")
+	if err := os.WriteFile(parent, []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/parent/runtime-state",
+	}); err == nil {
+		t.Fatal("expected parent file conflict")
+	}
+}
+
+func TestRejectWorkspaceSymlinkComponentsHandlesWorkspaceBoundaries(t *testing.T) {
+	root := t.TempDir()
+	if err := rejectWorkspaceSymlinkComponents(root, root); err != nil {
+		t.Fatalf("expected workspace root to be accepted: %v", err)
+	}
+	if err := rejectWorkspaceSymlinkComponents(root, filepath.Dir(root)); err == nil || !strings.Contains(err.Error(), "stay inside") {
+		t.Fatalf("expected outside path rejection, got %v", err)
+	}
+
+	target := t.TempDir()
+	linked := filepath.Join(root, "linked")
+	if err := os.Symlink(target, linked); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
+	if err := rejectWorkspaceSymlinkComponents(root, filepath.Join(linked, "runtime-state")); err == nil || !strings.Contains(err.Error(), "symbolic links") {
+		t.Fatalf("expected symlink component rejection, got %v", err)
+	}
+}
+
+func TestReusableEmptyDirMountClassifiesFilesystemEntries(t *testing.T) {
+	t.Run("missing", func(t *testing.T) {
+		reusable, err := reusableEmptyDirMount(filepath.Join(t.TempDir(), "missing"))
+		if err != nil || reusable {
+			t.Fatalf("expected missing path to require publication, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		mountPath := filepath.Join(t.TempDir(), "mount")
+		if err := os.Mkdir(mountPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err != nil || !reusable {
+			t.Fatalf("expected directory reuse, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("regular file", func(t *testing.T) {
+		mountPath := filepath.Join(t.TempDir(), "mount")
+		if err := os.WriteFile(mountPath, []byte("occupied"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err == nil || reusable || !strings.Contains(err.Error(), "must be a directory") {
+			t.Fatalf("expected regular file rejection, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("symbolic link", func(t *testing.T) {
+		root := t.TempDir()
+		target := filepath.Join(root, "target")
+		mountPath := filepath.Join(root, "mount")
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, mountPath); err != nil {
+			t.Skipf("symlink not supported: %v", err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err == nil || reusable || !strings.Contains(err.Error(), "symbolic links") {
+			t.Fatalf("expected symbolic link rejection, reusable=%v err=%v", reusable, err)
+		}
+	})
+}
+
+func TestMaterializeEmptyDirCleansUpConflictingSeedTrees(t *testing.T) {
+	tests := []struct {
+		name  string
+		files []protocol.WorkspaceFile
+	}{
+		{
+			name: "file blocks child directory",
+			files: []protocol.WorkspaceFile{
+				{Path: "state", Content: "file"},
+				{Path: "state/runtime.json", Content: "nested"},
+			},
+		},
+		{
+			name: "directory blocks file",
+			files: []protocol.WorkspaceFile{
+				{Path: "state/runtime.json", Content: "nested"},
+				{Path: "state", Content: "file"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+				MountPath: "/workspace/runtime-state",
+				Files:     test.files,
+			}); err == nil {
+				t.Fatal("expected conflicting seed tree error")
+			}
+			entries, err := os.ReadDir(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Fatalf("expected failed staging directory cleanup, got %#v", entries)
+			}
+		})
+	}
+}
+
+func TestPublishEmptyDirMountHandlesWinnerAndConcurrentReuse(t *testing.T) {
+	t.Run("publishes a new mount", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || !published {
+			t.Fatalf("expected publication, published=%v err=%v", published, err)
+		}
+	})
+
+	t.Run("reuses an empty concurrent directory winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || published {
+			t.Fatalf("expected empty concurrent winner reuse, published=%v err=%v", published, err)
+		}
+		if info, err := os.Stat(target); err != nil || !info.IsDir() {
+			t.Fatalf("expected empty winner directory to remain, info=%v err=%v", info, err)
+		}
+		if info, err := os.Stat(staging); err != nil || !info.IsDir() {
+			t.Fatalf("expected unpublished staging directory to remain available for cleanup, info=%v err=%v", info, err)
+		}
+	})
+
+	t.Run("reuses a concurrent directory winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(target, "winner"), []byte("state"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || published {
+			t.Fatalf("expected concurrent winner reuse, published=%v err=%v", published, err)
+		}
+		if data, err := os.ReadFile(filepath.Join(target, "winner")); err != nil || string(data) != "state" {
+			t.Fatalf("expected winner contents to remain intact, data=%q err=%v", data, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected unpublished staging directory to remain available for cleanup: %v", err)
+		}
+	})
+
+	t.Run("rejects a concurrent regular file winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, []byte("file"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if published, err := publishEmptyDirMount(staging, target); err == nil || published {
+			t.Fatalf("expected non-directory conflict, published=%v err=%v", published, err)
+		}
+		if data, err := os.ReadFile(target); err != nil || string(data) != "file" {
+			t.Fatalf("expected existing file to remain intact, data=%q err=%v", data, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected rejected staging directory to remain available for cleanup: %v", err)
+		}
+	})
+
+	t.Run("rejects a concurrent symbolic link winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		targetDir := filepath.Join(root, "target-dir")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(targetDir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(targetDir, target); err != nil {
+			t.Skipf("symlink not supported: %v", err)
+		}
+		if published, err := publishEmptyDirMount(staging, target); err == nil || published {
+			t.Fatalf("expected symbolic link conflict, published=%v err=%v", published, err)
+		}
+		info, err := os.Lstat(target)
+		if err != nil || info.Mode()&os.ModeSymlink == 0 {
+			t.Fatalf("expected existing symbolic link to remain intact, info=%v err=%v", info, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected rejected staging directory to remain available for cleanup: %v", err)
+		}
+	})
+}
+
+func TestMaterializeMemoryAndSecretMountsPropagateFilesystemConflicts(t *testing.T) {
+	tests := []struct {
+		name        string
+		mountPath   string
+		prepare     func(t *testing.T, mountPath string)
+		materialize func(root string) error
+	}{
+		{
+			name:      "memory mount is a file",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
+				return err
+			},
+		},
+		{
+			name:      "memory seed parent is a file",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "blocked"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+					MemoryRef: "ama://memories/store_1",
+					Files:     []protocol.WorkspaceFile{{Path: "blocked/plan.md", Content: "ship"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "memory seed target is a directory",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "plan.md"),
+			prepare:   prepareMountDirectory,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+					MemoryRef: "ama://memories/store_1",
+					Files:     []protocol.WorkspaceFile{{Path: "plan.md", Content: "ship"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "secret mount is a file",
+			mountPath: "secrets",
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets"})
+				return err
+			},
+		},
+		{
+			name:      "secret seed parent is a file",
+			mountPath: filepath.Join("secrets", "blocked"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{
+					MountPath: "/workspace/secrets",
+					Files:     []protocol.WorkspaceFile{{Path: "blocked/TOKEN", Content: "value"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "secret seed target is a directory",
+			mountPath: filepath.Join("secrets", "TOKEN"),
+			prepare:   prepareMountDirectory,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{
+					MountPath: "/workspace/secrets",
+					Files:     []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+				})
+				return err
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			test.prepare(t, filepath.Join(root, test.mountPath))
+			if err := test.materialize(root); err == nil {
+				t.Fatal("expected filesystem conflict to be propagated")
+			}
+		})
+	}
+}
+
+func prepareMountFile(t *testing.T, filePath string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filePath, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func prepareMountDirectory(t *testing.T, directoryPath string) {
+	t.Helper()
+	if err := os.MkdirAll(directoryPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestMaterializeSecretMountReadOnly(t *testing.T) {
 	root := t.TempDir()
 	path, err := materializeSecretMount(root, protocol.WorkspaceMount{
@@ -234,6 +592,71 @@ func TestMaterializeGitRepositoryRejectsInvalidInputs(t *testing.T) {
 	}, ""); err == nil {
 		t.Fatal("expected unsafe git mount path error")
 	}
+	if err := os.WriteFile(filepath.Join(root, "repos"), []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := materializeGitRepository(context.Background(), t.TempDir(), root, protocol.WorkspaceMount{
+		URL: "https://github.com/saltbo/slink.git",
+	}, ""); err == nil {
+		t.Fatal("expected repository mount parent conflict")
+	}
+}
+
+func TestMaterializeGitRepositoryPropagatesCacheRefAndWorktreeErrors(t *testing.T) {
+	t.Run("cache directory conflict", func(t *testing.T) {
+		workDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(workDir, "repositories"), []byte("occupied"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), protocol.WorkspaceMount{
+			URL: "https://github.com/saltbo/slink.git",
+		}, ""); err == nil {
+			t.Fatal("expected repository cache conflict")
+		}
+	})
+
+	t.Run("missing requested ref", func(t *testing.T) {
+		installWorkspaceScriptedGit(t, `#!/bin/sh
+case "$*" in
+  *rev-parse*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+		workDir := t.TempDir()
+		volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git", Ref: "missing"}
+		repositoryURL, err := parseGitRepositoryURL(volume.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(repositoryCacheDir(workDir, repositoryURL), ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), volume, ""); err == nil || !strings.Contains(err.Error(), "not available") {
+			t.Fatalf("expected missing repository ref error, got %v", err)
+		}
+	})
+
+	t.Run("worktree add failure", func(t *testing.T) {
+		installWorkspaceScriptedGit(t, `#!/bin/sh
+case "$*" in
+  *rev-parse*) echo HEAD; exit 0 ;;
+  *"worktree add"*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+		workDir := t.TempDir()
+		volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git", Ref: "main"}
+		repositoryURL, err := parseGitRepositoryURL(volume.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(repositoryCacheDir(workDir, repositoryURL), ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), volume, ""); err == nil {
+			t.Fatal("expected worktree add error")
+		}
+	})
 }
 
 func TestMaterializeGitRepositoryUsesCacheAndExistingMount(t *testing.T) {

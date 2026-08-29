@@ -37,9 +37,11 @@ const routes = app
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
 
-    const body: { runId?: string } = await c.req.json<{ runId?: string }>().catch(() => ({}))
+    const body: { runId?: string; personal?: boolean } = await c.req
+      .json<{ runId?: string; personal?: boolean }>()
+      .catch(() => ({}))
     const runId = body.runId?.replaceAll(/[^A-Za-z0-9_-]/g, '_') || newId('run')
-    const accessToken = `e2e:${runId}`
+    const accessToken = `e2e:${runId}${body.personal ? ';personal=1' : ''}`
     const claims = await getAccessTokenClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
     const project = await upsertProjectForClaims(drizzle(c.env.DB), claims, new Date().toISOString())
     return c.json(

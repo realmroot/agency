@@ -15,6 +15,11 @@
 // server/runtime/session-create module; only dependency acquisition changed.
 
 import type { RuntimeName } from '@server/contracts/environment-contracts'
+import {
+  IdentityRuntimeMismatchError,
+  IdentityRuntimeRequiredError,
+  resolveIdentityRuntime,
+} from '@server/domain/identity'
 import { amaMemoryRef, memoryStoreIdFromRef } from '@server/domain/memory-store'
 import { runtimeDriverName } from '@server/domain/runtime/driver'
 import type {
@@ -35,7 +40,7 @@ import {
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
 import { newId, now, requestIdFrom, stringify } from '@server/domain/runtime/util'
-import { runtimeRequirement } from '@server/domain/runtime-catalog'
+import { runtimeRequirement, selfHostedRuntimeModel } from '@server/domain/runtime-catalog'
 import { environmentHostingMode } from '@server/domain/runtime-session'
 import { hasSecretMaterial, sessionUserMetadata } from '@server/domain/session'
 import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
@@ -58,8 +63,7 @@ import { validateRuntimeProviderModel } from './provisioning'
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
-const REALMROOT_SOURCE_VOLUME = 'realmroot-agent-state'
-const REALMROOT_SOURCE_MOUNT = '/workspace/.ama/realmroot-source'
+const REALMROOT_STATE_VOLUME = 'realmroot-agent-state'
 const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
 const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
 
@@ -208,6 +212,37 @@ async function validateDeclaredVolumes(
       return { fields: { [`${field}.name`]: 'Volume names must be unique.' } }
     }
     volumeNames.add(volume.name)
+    if (volume.type === 'empty_dir') {
+      const seedPaths = new Set<string>()
+      for (const [projectionIndex, projection] of (volume.seedFrom ?? []).entries()) {
+        const projectionField = `${field}.seedFrom.${projectionIndex}`
+        const itemFields = validateSecretItems(projectionField, projection.items)
+        if (itemFields) {
+          return { fields: itemFields }
+        }
+        for (const [itemIndex, item] of (projection.items ?? []).entries()) {
+          if (seedPaths.has(item.path)) {
+            return {
+              fields: {
+                [`${projectionField}.items.${itemIndex}.path`]:
+                  'Empty directory seed paths must be unique across projections.',
+              },
+            }
+          }
+          seedPaths.add(item.path)
+        }
+        const version = await store.secretVersionForResolution(
+          auth.organization.id,
+          auth.project.id,
+          projection.secretRef,
+        )
+        if (version?.state !== 'active') {
+          return { fields: { [`${projectionField}.secretRef`]: 'Seed secret reference must be active.' } }
+        }
+      }
+      normalizedVolumes.push(volume)
+      continue
+    }
     if (volume.type !== 'secret') {
       if (volume.type === 'git_repository' && volume.secretRef) {
         const itemFields = validateSecretItems(field, volume.items)
@@ -306,8 +341,8 @@ function sessionTitleFromPrompt(prompt: string) {
   return title.length > 80 ? `${title.slice(0, 77).trimEnd()}...` : title
 }
 
-function realmrootRuntimeInputs(
-  binding: AgentSnapshot['realmroot'],
+function identityRuntimeInputs(
+  binding: AgentSnapshot['identity'],
   env: Record<string, string>,
   envFrom: EnvFromEntry[],
   volumes: Volume[],
@@ -337,38 +372,44 @@ function realmrootRuntimeInputs(
       },
     }
   }
-  if (volumes.some((volume) => volume.name === REALMROOT_SOURCE_VOLUME)) {
-    return { fields: { volumes: `Volume name ${REALMROOT_SOURCE_VOLUME} is reserved for Realmroot Agent state.` } }
+  if (volumes.some((volume) => volume.name === REALMROOT_STATE_VOLUME)) {
+    return { fields: { volumes: `Volume name ${REALMROOT_STATE_VOLUME} is reserved for Realmroot Agent state.` } }
   }
-  if (
-    volumeMounts.some(
-      (mount) =>
-        pathsOverlap(mount.mountPath, REALMROOT_SOURCE_MOUNT) || pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR),
-    )
-  ) {
+  if (volumeMounts.some((mount) => pathsOverlap(mount.mountPath, REALMROOT_STATE_DIR))) {
     return { fields: { volumeMounts: 'Realmroot Agent state mount paths are reserved.' } }
   }
+  const issuerPath = base64Url(binding.issuer)
+  const runtimePath = `${base64Url(binding.runtime)}.json`
   return {
     env: {
       ...env,
-      AGENT: 'ama',
-      REALMROOT_ORIGIN: binding.origin,
+      AGENT: binding.runtime,
+      REALMROOT_ORIGIN: new URL(binding.issuer).origin,
       REALMROOT_STATE_DIR,
     },
     volumes: [
       ...volumes,
       {
-        name: REALMROOT_SOURCE_VOLUME,
-        type: 'secret',
-        secretRef: binding.credentialRef,
-        items: [{ key: 'state.json', path: 'state.json' }],
+        name: REALMROOT_STATE_VOLUME,
+        type: 'empty_dir',
+        seedFrom: [
+          {
+            type: 'secret',
+            secretRef: binding.credentialRef,
+            items: [{ key: 'state.json', path: `identities/${issuerPath}/${runtimePath}` }],
+          },
+        ],
       },
     ],
-    volumeMounts: [
-      ...volumeMounts,
-      { name: REALMROOT_SOURCE_VOLUME, mountPath: REALMROOT_SOURCE_MOUNT, readOnly: true },
-    ],
+    volumeMounts: [...volumeMounts, { name: REALMROOT_STATE_VOLUME, mountPath: REALMROOT_STATE_DIR, readOnly: false }],
   }
+}
+
+function base64Url(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
 // ── Work item enqueue ───────────────────────────────────────────────────────
@@ -437,6 +478,7 @@ function selfHostedSessionWorkItem(
   values: Parameters<typeof enqueueSelfHostedSessionWork>[2],
   timestamp: string,
 ): WorkItemInsert {
+  const runnerModel = selfHostedRuntimeModel(values.agentSnapshot.provider, values.agentSnapshot.model)
   const payload = {
     protocol: 'ama-runner-work',
     type: 'session.start',
@@ -445,7 +487,7 @@ function selfHostedSessionWorkItem(
     runtime: values.runtime,
     runtimeConfig: values.runtimeConfig,
     provider: values.agentSnapshot.provider,
-    ...(values.agentSnapshot.model ? { model: values.agentSnapshot.model } : {}),
+    ...(runnerModel ? { model: runnerModel } : {}),
     runtimeDriver: runtimeDriverName(values.runtime, 'self_hosted'),
     agentSnapshot: values.agentSnapshot,
     environmentSnapshot: values.environmentSnapshot,
@@ -458,9 +500,7 @@ function selfHostedSessionWorkItem(
     resume: values.resume ?? false,
     resumeToken: values.resumeToken ?? null,
     runtimeRequirement:
-      values.environmentSnapshot?.type === 'self_hosted'
-        ? runtimeRequirement(values.runtime, values.agentSnapshot.model)
-        : null,
+      values.environmentSnapshot?.type === 'self_hosted' ? runtimeRequirement(values.runtime, runnerModel) : null,
   }
   return {
     id: newId('work'),
@@ -591,8 +631,17 @@ export async function createSessionForAgent(
   }
   const providerId = agentVersion.providerId
   const agentSnapshot = createAgentSnapshot(agentVersion, providerId)
-  const realmrootInputs = realmrootRuntimeInputs(
-    agentSnapshot.realmroot,
+  let runtime: RuntimeName
+  try {
+    runtime = resolveIdentityRuntime(options.runtime, agentSnapshot.identity)
+  } catch (error) {
+    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+      return { ok: false, error: { status: 409, code: error.code, message: error.message } }
+    }
+    throw error
+  }
+  const realmrootInputs = identityRuntimeInputs(
+    agentSnapshot.identity,
     options.env ?? {},
     options.envFrom ?? [],
     normalizedWorkspaceVolumes.volumes,
@@ -670,14 +719,18 @@ export async function createSessionForAgent(
   // so they resolve to nothing and must pin an environment explicitly.
   const environmentId =
     requestedEnvironmentId ??
-    (await store.resolveEnvironmentForRuntime(auth.project.id, options.runtime, agentVersion.model))
+    (await store.resolveEnvironmentForRuntime(
+      auth.project.id,
+      runtime,
+      selfHostedRuntimeModel(providerId, agentVersion.model),
+    ))
   if (!environmentId) {
     return {
       ok: false,
       error: {
         status: 409,
         code: 'conflict',
-        message: `No environment has an active runner for runtime "${options.runtime}"; specify environmentId`,
+        message: `No environment has an active runner for runtime "${runtime}"; specify environmentId`,
       },
     }
   }
@@ -752,7 +805,6 @@ export async function createSessionForAgent(
   const runtimeConfig = options.runtimeConfig ?? {}
   const environmentSnapshot = baseEnvironmentSnapshot
   const hostingMode = environmentHostingMode(environmentSnapshot)
-  const runtime = options.runtime
   const usesCloudLoop = runtime === 'ama'
   if (
     !(await validateRuntimeProviderModel(

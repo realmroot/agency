@@ -123,6 +123,7 @@ function collectOperations(document) {
       const parameters = operation.parameters ?? []
       const pathParams = parameters.filter((param) => param.in === 'path')
       const queryParams = parameters.filter((param) => param.in === 'query')
+      const headerParams = parameters.filter((param) => param.in === 'header')
       const bodyType = requestBodyType(operation)
       const success = successResponse(operation)
       result.set(operation.operationId, {
@@ -132,6 +133,7 @@ function collectOperations(document) {
         tag: operation.tags?.[0] ?? 'default',
         pathParams,
         queryParams,
+        headerParams,
         bodyType,
         success,
         errorStatuses: Object.keys(operation.responses ?? {}).filter((status) => Number(status) >= 400),
@@ -505,8 +507,11 @@ function generateTypeScriptMethod(method) {
   const pathParams = operation.pathParams.map((param) => `${param.name}: ${tsScalarType(param.schema)}`)
   const queryParam = operation.queryParams.length > 0 ? `query?: types.${pascal(operation.id)}Data['query']` : undefined
   const bodyParam = operation.bodyType ? `body: types.${operation.bodyType}` : undefined
+  const headerParams = operation.headerParams.map(
+    (param) => `${camel(param.name)}${param.required ? '' : '?'}: ${tsScalarType(param.schema)}`,
+  )
   const optionsParam = operation.id === 'createTriggerRun' ? 'options?: { headers?: Record<string, string> }' : undefined
-  const params = [...pathParams, bodyParam, queryParam, optionsParam].filter(Boolean).join(', ')
+  const params = [...pathParams, bodyParam, ...headerParams, queryParam, optionsParam].filter(Boolean).join(', ')
   const callParts = ['client']
   if (operation.pathParams.length > 0) {
     callParts.push(`path: { ${operation.pathParams.map((param) => param.name).join(', ')} }`)
@@ -516,6 +521,11 @@ function generateTypeScriptMethod(method) {
   }
   if (operation.bodyType) {
     callParts.push('body')
+  }
+  if (operation.headerParams.length > 0) {
+    callParts.push(
+      `headers: { ${operation.headerParams.map((param) => `${JSON.stringify(param.name)}: ${camel(param.name)}`).join(', ')} }`,
+    )
   }
   if (operation.id === 'createTriggerRun') {
     callParts.push('headers: options?.headers')
@@ -570,11 +580,14 @@ function generateGoMethod(serviceName, method) {
   }
   const rawName = `${pascal(operation.id)}WithResponse`
   const pathArgs = operation.pathParams.map((param) => `${goParamName(param.name)} ${goScalarType(param.schema)}`)
-  const queryArg = operation.queryParams.length > 0 ? `params *${pascal(operation.id)}Params` : undefined
+  const requestParamsArg =
+    operation.queryParams.length > 0 || operation.headerParams.length > 0
+      ? `params *${pascal(operation.id)}Params`
+      : undefined
   const bodyArg = operation.bodyType ? `body ${operation.bodyType}` : undefined
-  const args = ['ctx context.Context', ...pathArgs, queryArg, bodyArg].filter(Boolean).join(', ')
+  const args = ['ctx context.Context', ...pathArgs, requestParamsArg, bodyArg].filter(Boolean).join(', ')
   const rawArgs = ['ctx', ...operation.pathParams.map((param) => goParamName(param.name))]
-  if (operation.queryParams.length > 0) rawArgs.push('params')
+  if (operation.queryParams.length > 0 || operation.headerParams.length > 0) rawArgs.push('params')
   if (operation.bodyType) rawArgs.push('body')
   const errors = operation.errorStatuses.map((status) => `response.JSON${status}`).join(', ')
   const returnType = operation.success.empty ? 'error' : `(*${operation.success.type}, error)`
@@ -591,7 +604,7 @@ function generateGoCreateRawEventsMethod(serviceName) {
 }
 
 function goResourceName(name) {
-  return pascal(name).replace(/Id/g, 'ID')
+  return pascal(name).replace(/Id(?=$|[A-Z])/g, 'ID')
 }
 
 function goServiceName(name, prefix = '') {
@@ -652,12 +665,18 @@ function generatePythonMethod(method) {
   }
   const moduleAlias = pythonModuleAlias(operation.id)
   const pathArgs = operation.pathParams.map((param) => `${pythonName(param.name)}: ${pythonScalarType(param.schema)}`)
+  const headerArgs = operation.headerParams.map(
+    (param) => `${pythonName(param.name)}: ${pythonScalarType(param.schema)}${param.required ? '' : ' | None = None'}`,
+  )
   const queryArg = operation.queryParams.length > 0 ? '**query: Any' : undefined
   const bodyArg = operation.bodyType ? 'body: Any' : undefined
-  const args = ['self', ...pathArgs, bodyArg, queryArg].filter(Boolean).join(', ')
+  const args = ['self', ...pathArgs, bodyArg, ...headerArgs, queryArg].filter(Boolean).join(', ')
   const callArgs = operation.pathParams.map((param) => `${pythonName(param.name)}=${pythonName(param.name)}`)
   callArgs.push('client=self._client')
   if (operation.bodyType) callArgs.push('body=body')
+  for (const param of operation.headerParams) {
+    callArgs.push(`${pythonName(param.name)}=${pythonName(param.name)}`)
+  }
   if (operation.queryParams.length > 0) callArgs.push('**query')
   return `def ${pythonName(method.name)}(${args}) -> Any:\n    return _unwrap(${moduleAlias}.sync_detailed(${callArgs.join(', ')}))`
 }
@@ -703,7 +722,7 @@ function pascal(value) {
 }
 
 function camel(value) {
-  return value.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+  return value.replace(/[-_]([a-z])/g, (_, letter) => letter.toUpperCase())
 }
 
 function indent(value, spaces) {

@@ -11,11 +11,12 @@
 //   pnpm run smoke:real
 
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
+import WebSocket from 'ws'
 
 const ROOT = process.cwd()
 const RUNTIME = 'codex'
@@ -27,7 +28,15 @@ const SUBAGENT_RESULT = '4'
 const BACKFILL_REQUEST_ID = 'full_smoke_backfill'
 const timeoutMs = Number(process.env.AMA_FULL_SMOKE_TIMEOUT_MS ?? 5 * 60 * 1000)
 
-const packages = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] }
+const packages = {
+  type: 'packages',
+  apt: [],
+  cargo: [],
+  gem: [],
+  go: ['github.com/realmroot/cli@v0.4.2'],
+  npm: [],
+  pip: [],
+}
 
 function smokeCodexModel() {
   if (process.env.AMA_FULL_SMOKE_MODEL) return process.env.AMA_FULL_SMOKE_MODEL
@@ -73,11 +82,23 @@ function run(command, args, options = {}) {
 }
 
 function commandExists(binary) {
-  return spawnSync(binary, ['--version'], { encoding: 'utf8', stdio: 'pipe' }).status === 0
+  const options = { encoding: 'utf8', stdio: 'pipe' }
+  return spawnSync(binary, ['--version'], options).status === 0 || spawnSync(binary, ['--help'], options).status === 0
 }
 
 function tempRoot() {
   return mkdtempSync(join(tmpdir(), 'ama-full-smoke-'))
+}
+
+function removeTempRoot(path) {
+  const makeDirectoriesWritable = (directory) => {
+    chmodSync(directory, 0o700)
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) makeDirectoriesWritable(join(directory, entry.name))
+    }
+  }
+  makeDirectoriesWritable(path)
+  rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
 }
 
 function findFreePort() {
@@ -185,11 +206,8 @@ async function waitForReady(origin) {
 
 async function api(origin, token, path, options = {}) {
   const method = options.method ?? (options.body === undefined ? 'GET' : 'POST')
-  const proofTarget = new URL(path, origin)
-  proofTarget.search = ''
   const headers = {
-    authorization: `DPoP ${token.accessToken}`,
-    dpop: `e2e-proof:${method}:${proofTarget.toString()}`,
+    authorization: `Bearer ${token.accessToken}`,
     'x-ama-project-id': token.projectId,
     ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...(options.headers ?? {}),
@@ -211,13 +229,39 @@ async function e2eToken(origin, runId) {
   const response = await fetch(`${origin}/api/v1/e2e/auth/token`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ runId }),
+    body: JSON.stringify({ runId, personal: true }),
   })
   const text = await response.text()
   if (response.status !== 201) {
     throw new Error(`POST /api/v1/e2e/auth/token returned ${response.status}: ${text}`)
   }
-  return JSON.parse(text)
+  return { ...JSON.parse(text), runnerAccessToken: `e2e-runner:${runId};personal=1` }
+}
+
+async function e2eBrowserCookie(origin, accessToken) {
+  const response = await fetch(`${origin}/api/v1/e2e/auth/session`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ accessToken }),
+  })
+  if (response.status !== 204) {
+    throw new Error(`POST /api/v1/e2e/auth/session returned ${response.status}: ${await response.text()}`)
+  }
+  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0]
+  if (!cookie) throw new Error('E2E browser session did not set a cookie')
+  return cookie
+}
+
+async function sessionSocketTicket(origin, sessionId, cookie) {
+  const response = await fetch(`${origin}/api/v1/sessions/${sessionId}/socket-tickets`, {
+    method: 'POST',
+    headers: { cookie, origin },
+  })
+  const text = await response.text()
+  if (response.status !== 201) {
+    throw new Error(`POST /api/v1/sessions/${sessionId}/socket-tickets returned ${response.status}: ${text}`)
+  }
+  return JSON.parse(text).ticket
 }
 
 function startRunner(binary, origin, token, environmentId, stateDir, workDir, credentialPath) {
@@ -270,14 +314,10 @@ function socketURL(origin, sessionId) {
   return url.toString()
 }
 
-function openSocket(url, token) {
+function openSocket(url, ticket) {
   return new Promise((resolve, reject) => {
-    const proofTarget = url.replace(/^ws/, 'http')
-    const socket = new WebSocket(url, [
-      'ama-dpop',
-      `ama-access.${Buffer.from(token.accessToken).toString('base64url')}`,
-      `ama-proof.${Buffer.from(`e2e-proof:GET:${proofTarget}`).toString('base64url')}`,
-    ])
+    const origin = url.replace(/^ws/, 'http').replace(/\/api\/v1\/.*$/, '')
+    const socket = new WebSocket(url, ['ama-ticket', `ama-ticket.${ticket}`], { origin })
     const timer = setTimeout(() => {
       socket.close()
       reject(new Error(`socket open timed out: ${url}`))
@@ -473,7 +513,7 @@ function listTree(root, limit = 120) {
   return rows.length > 0 ? rows.join('\n') : `${root} is empty`
 }
 
-function assertWorkspace(workDir, sessionId) {
+function assertWorkspace(workDir, sessionId, identity) {
   const paths = workspacePaths(workDir, sessionId)
   statSync(paths.workspace)
   const result = readFileSync(paths.resultFile, 'utf8')
@@ -486,6 +526,25 @@ function assertWorkspace(workDir, sessionId) {
   }
   assertToolEvents('runner local event log', eventLog)
   assertAgentToolEvents('runner local event log', eventLog)
+  const issuerDir = Buffer.from(identity.status.descriptor.issuer).toString('base64url')
+  const runtimeFile = `${Buffer.from(identity.spec.runtime).toString('base64url')}.json`
+  const statePath = join(paths.workspace, '.ama', 'realmroot-state', 'identities', issuerDir, runtimeFile)
+  const state = JSON.parse(readFileSync(statePath, 'utf8'))
+  const stableAgentId = state.identity?.id ?? state.agent_id
+  if (state.runtime !== identity.spec.runtime || stableAgentId !== identity.status.descriptor.agentId) {
+    fail(
+      'runner materialized Realmroot state does not match the bound Identity',
+      JSON.stringify(
+        {
+          statePath,
+          expected: { runtime: identity.spec.runtime, agentId: identity.status.descriptor.agentId },
+          actual: { runtime: state.runtime, agentId: stableAgentId },
+        },
+        null,
+        2,
+      ),
+    )
+  }
 }
 
 function recentOutput(output) {
@@ -498,7 +557,6 @@ async function main() {
   if (!commandExists('codex')) {
     fail('codex CLI is required for full smoke')
   }
-
   const temp = tempRoot()
   const runnerBinary = join(temp, 'ama-runner')
   const stateDir = join(temp, 'state')
@@ -522,7 +580,7 @@ async function main() {
 
     info(`starting local e2e server on ${origin}`)
     server = startProcess('pnpm', ['run', 'e2e:server'], {
-      env: { ...process.env, E2E_PORT: String(port) },
+      env: { ...process.env, E2E_PORT: String(port), AMA_E2E_FAKE_REALMROOT_ENROLLMENT: 'true' },
     })
     await waitForReady(origin)
     token = await e2eToken(origin, runId)
@@ -534,8 +592,8 @@ async function main() {
           {
             accountId: runId,
             apiServer: origin,
-            accessToken: token.accessToken,
-            tokenType: 'DPoP',
+            accessToken: token.runnerAccessToken,
+            tokenType: 'Bearer',
             dpopPrivateKey: 'e2e-only',
           },
         ],
@@ -559,6 +617,18 @@ async function main() {
       },
     })
     const environmentId = environment.metadata.uid
+
+    const identity = await api(origin, token, '/api/v1/identities', {
+      method: 'POST',
+      headers: { 'idempotency-key': `full-smoke-identity-${runId}` },
+      body: {
+        metadata: { name: `full-smoke-identity-${runId}` },
+        spec: { username: `smoke-${Date.now()}`, runtime: RUNTIME },
+      },
+    })
+    if (identity.spec.runtime !== RUNTIME || identity.status.state !== 'active') {
+      fail('Identity did not provision with the smoke Runtime', JSON.stringify(identity, null, 2))
+    }
 
     const agent = await api(origin, token, '/api/v1/agents', {
       method: 'POST',
@@ -584,6 +654,7 @@ async function main() {
             },
           ],
           mcpConnectors: [],
+          identityRef: identity.metadata.uid,
         },
       },
     })
@@ -595,7 +666,6 @@ async function main() {
         spec: {
           agentId: agent.metadata.uid,
           environmentId,
-          runtime: RUNTIME,
           env: {},
           envFrom: [],
           volumes: [],
@@ -611,9 +681,14 @@ async function main() {
       },
     })
     sessionId = session.metadata.uid
+    if (session.spec.runtime !== RUNTIME || session.status?.bindings?.agent?.snapshot?.identity?.identityId !== identity.metadata.uid) {
+      fail('Session did not inherit the bound Identity Runtime', JSON.stringify(session, null, 2))
+    }
     info(`created session ${sessionId}`)
 
-    socket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
+    const browserCookie = await e2eBrowserCookie(origin, token.accessToken)
+    const ticket = await sessionSocketTicket(origin, sessionId, browserCookie)
+    socket = watchSocket(await openSocket(socketURL(origin, sessionId), ticket))
     runner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
     await socket.waitFor(
@@ -635,7 +710,7 @@ async function main() {
       fail('session did not complete cleanly', JSON.stringify(completedSession.status, null, 2))
     }
 
-    assertWorkspace(workDir, sessionId)
+    assertWorkspace(workDir, sessionId, identity)
     socket.requestBackfill()
     const firstBackfill = await socket.waitFor(
       (frame) => frame.type === 'backfill' && frame.requestId === BACKFILL_REQUEST_ID,
@@ -652,7 +727,8 @@ async function main() {
     restartedRunner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
 
-    secondSocket = watchSocket(await openSocket(socketURL(origin, sessionId), token))
+    const reconnectTicket = await sessionSocketTicket(origin, sessionId, browserCookie)
+    secondSocket = watchSocket(await openSocket(socketURL(origin, sessionId), reconnectTicket))
     const reconnectBackfill = await secondSocket.waitFor(
       (frame) => frame.type === 'backfill',
       'automatic backfill after runner reconnect',
@@ -725,6 +801,18 @@ async function main() {
     await stopProcess(runner?.child)
     await stopProcess(restartedRunner?.child)
     await stopProcess(server?.child)
+    if (process.env.AMA_FULL_SMOKE_KEEP_TEMP === 'true') {
+      info(`retained smoke temp directory by request: ${temp}`)
+    } else {
+      try {
+        removeTempRoot(temp)
+      } catch {
+        const cleanupMessage = `failed to remove smoke temp directory: ${temp}`
+        failure = failure
+          ? { ...failure, detail: [failure.detail, cleanupMessage].filter(Boolean).join('\n\n') }
+          : { message: cleanupMessage, detail: '' }
+      }
+    }
   }
   if (failure) {
     console.error(`\nsmoke failed: ${failure.message}`)

@@ -31,6 +31,7 @@ export function AgentDetailPage() {
     queryFn: () => api.listAgentVersions(agentId as string),
     enabled: Boolean(agentId),
   })
+  const identitiesQuery = useQuery({ queryKey: queryKeys.identities.list(false), queryFn: () => api.listIdentities() })
   const sessionsQuery = useQuery({
     queryKey: queryKeys.sessions.list(false),
     queryFn: () => api.listSessions(),
@@ -51,6 +52,7 @@ export function AgentDetailPage() {
           allowedTools: parseTools(input.allowedTools),
           mcpConnectors: parseTools(input.mcpConnectors),
           subagents: agent?.spec.subagents ?? [],
+          identityRef: input.identityRef || null,
         },
       }),
     onSuccess: () => {
@@ -122,6 +124,8 @@ export function AgentDetailPage() {
                   event.preventDefault()
                   updateAgent.mutate(form)
                 }}
+                identities={identitiesQuery.data?.data ?? []}
+                agentId={agentId as string}
               />
             ) : null}
             {updateAgent.error instanceof Error ? (
@@ -144,5 +148,6 @@ function agentToForm(agent: Agent): AgentFormState {
     skills: agent.spec.skills.join('\n'),
     allowedTools: agent.spec.allowedTools.join('\n'),
     mcpConnectors: agent.spec.mcpConnectors.join('\n'),
+    identityRef: agent.spec.identity?.identityId ?? '',
   }
 }

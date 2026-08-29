@@ -37,6 +37,12 @@ func secretMounts(mounts []protocol.WorkspaceMount) []protocol.WorkspaceMount {
 	})
 }
 
+func emptyDirMounts(mounts []protocol.WorkspaceMount) []protocol.WorkspaceMount {
+	return lo.Filter(mounts, func(mount protocol.WorkspaceMount, _ int) bool {
+		return mount.Type == "empty_dir"
+	})
+}
+
 func fileManifestEntries(files []protocol.WorkspaceFile) []protocol.WorkspaceFile {
 	return lo.Map(files, func(file protocol.WorkspaceFile, _ int) protocol.WorkspaceFile {
 		return protocol.WorkspaceFile{Path: file.Path}
@@ -159,6 +165,113 @@ func materializeSecretMount(sessionRoot string, volume protocol.WorkspaceMount) 
 		}
 		return os.Chmod(path, 0o400)
 	})
+}
+
+func materializeEmptyDirMount(sessionRoot string, volume protocol.WorkspaceMount) (string, error) {
+	mountPath, err := localMountPathForWorkspacePath(sessionRoot, volume.MountPath)
+	if err != nil {
+		return "", err
+	}
+	if err := rejectWorkspaceSymlinkComponents(sessionRoot, mountPath); err != nil {
+		return "", err
+	}
+	if reusable, err := reusableEmptyDirMount(mountPath); err != nil {
+		return "", err
+	} else if reusable {
+		return mountPath, nil
+	}
+	parent := filepath.Dir(mountPath)
+	if err := os.MkdirAll(parent, 0o700); err != nil {
+		return "", err
+	}
+	stagingPath, err := os.MkdirTemp(parent, ".ama-empty-dir-")
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if stagingPath != "" {
+			_ = os.RemoveAll(stagingPath)
+		}
+	}()
+	if err := os.Chmod(stagingPath, 0o700); err != nil {
+		return "", err
+	}
+	for _, file := range volume.Files {
+		relative, err := cleanMemoryPath(file.Path)
+		if err != nil {
+			return "", err
+		}
+		fullPath := filepath.Join(stagingPath, relative)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o700); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(fullPath, []byte(file.Content), 0o600); err != nil {
+			return "", err
+		}
+	}
+	if reusable, err := reusableEmptyDirMount(mountPath); err != nil {
+		return "", err
+	} else if reusable {
+		return mountPath, nil
+	}
+	published, err := publishEmptyDirMount(stagingPath, mountPath)
+	if err != nil {
+		return "", err
+	}
+	if published {
+		stagingPath = ""
+	}
+	return mountPath, nil
+}
+
+func reusableEmptyDirMount(mountPath string) (bool, error) {
+	info, err := os.Lstat(mountPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return false, fmt.Errorf("empty directory mount path must be a directory without symbolic links")
+	}
+	return true, nil
+}
+
+func publishEmptyDirMount(stagingPath string, mountPath string) (bool, error) {
+	if err := renameNoReplace(stagingPath, mountPath); err != nil {
+		info, statErr := os.Lstat(mountPath)
+		if statErr != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return false, err
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func rejectWorkspaceSymlinkComponents(sessionRoot string, target string) error {
+	relative, err := filepath.Rel(sessionRoot, target)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("empty directory mount path must stay inside the workspace")
+	}
+	current := sessionRoot
+	for _, component := range strings.Split(relative, string(filepath.Separator)) {
+		if component == "" || component == "." {
+			continue
+		}
+		current = filepath.Join(current, component)
+		info, err := os.Lstat(current)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("empty directory mount path must not contain symbolic links")
+		}
+	}
+	return nil
 }
 
 func resetMemoryStorePermissions(root string) error {

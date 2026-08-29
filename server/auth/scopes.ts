@@ -10,6 +10,7 @@ const resourceNames = [
   'budgets',
   'connectors',
   'environments',
+  'identities',
   'leases',
   'memory-stores',
   'projects',

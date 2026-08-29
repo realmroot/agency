@@ -102,7 +102,7 @@ export function useSessionRuntimeSession({
         dispatch({
           type: 'connection',
           state: 'error',
-          error: error instanceof Error ? error.message : 'Realmroot DPoP credential is unavailable',
+          error: error instanceof Error ? error.message : 'Session credentials are unavailable',
         })
       })
 

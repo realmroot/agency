@@ -58,6 +58,12 @@ export declare function createAmaClient(config: AmaClientConfig): {
         listVersions: (agentId: string) => Promise<types.AgentVersionListResponse>;
         getVersion: (agentId: string, version: number) => Promise<types.AgentVersion>;
     };
+    identities: {
+        list: (query?: types.ListIdentitiesData["query"]) => Promise<types.IdentityListResponse>;
+        create: (body: types.CreateIdentityRequest, idempotencyKey: string) => Promise<types.Identity>;
+        get: (identityId: string) => Promise<types.Identity>;
+        archive: (identityId: string, body: types.UpdateIdentityRequest) => Promise<types.Identity>;
+    };
     environments: {
         list: (query?: types.ListEnvironmentsData["query"]) => Promise<types.EnvironmentListResponse>;
         create: (body: types.CreateEnvironmentRequest) => Promise<types.Environment>;

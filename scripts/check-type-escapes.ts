@@ -37,7 +37,7 @@ const RULES: Rule[] = [
     // Opaque field usages dropped sharply this pass (lastError, pricing, policy
     // docs, agent policies, resourceLimits, session env); the remaining consts
     // back legitimately freeform fields such as metadata and runtimeConfig.
-    baseline: 18,
+    baseline: 14,
   },
 ]
 

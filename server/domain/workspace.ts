@@ -2,6 +2,7 @@ import { gitRepositoryMountPath, normalizeGitRepositoryUrl } from './git-reposit
 import { memoryStoreIdFromRef, memoryStoreMountPath } from './memory-store'
 import {
   type GitRepositoryVolume,
+  isEmptyDirVolume,
   isGitRepositoryVolume,
   isMemoryVolume,
   type MemoryVolume,
@@ -48,6 +49,13 @@ export type WorkspaceManifestMount =
       name: string
       mountPath: string
       readOnly: boolean
+      files: WorkspaceFile[]
+    }
+  | {
+      type: 'empty_dir'
+      name: string
+      mountPath: string
+      readOnly: false
       files: WorkspaceFile[]
     }
 
@@ -110,6 +118,22 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
     }
     volumeNames.add(volume.name)
     if (!isGitRepositoryVolume(volume)) {
+      if (isEmptyDirVolume(volume)) {
+        const mountIndex = normalizedMounts.findIndex((mount) => mount.name === volume.name)
+        if (mountIndex === -1) {
+          return { fields: { [`volumes.${index}.name`]: 'Empty directory volume must have a matching volume mount.' } }
+        }
+        if (normalizedMounts[mountIndex]!.readOnly) {
+          return { fields: { [`volumeMounts.${mountIndex}.readOnly`]: 'Empty directory volumes must be writable.' } }
+        }
+        const mountPath = normalizedMounts[mountIndex]!.mountPath
+        if (mountPaths.has(mountPath)) {
+          return { fields: { [`volumeMounts.${mountIndex}.mountPath`]: 'Mount path must be unique within a session.' } }
+        }
+        mountPaths.add(mountPath)
+        normalizedVolumes.push(volume)
+        continue
+      }
       if (!isMemoryVolume(volume)) {
         normalizedVolumes.push(volume)
         continue
