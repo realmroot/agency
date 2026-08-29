@@ -38,12 +38,4 @@ describe('deployment environment example', () => {
     expect(guide).toContain('Loads the saved Realmroot Bearer Context-login profile.')
     expect(guide).not.toContain('device-login profile and DPoP private key')
   })
-
-  it('routes root health probes through the Worker before the SPA assets', () => {
-    const wrangler = readFileSync('wrangler.toml', 'utf8')
-    const workerFirst = wrangler.match(/^run_worker_first = \[(.+)\]$/m)?.[1] ?? ''
-
-    expect(workerFirst).toContain('"/healthz"')
-    expect(workerFirst).toContain('"/readyz"')
-  })
 })

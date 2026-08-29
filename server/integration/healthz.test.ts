@@ -10,8 +10,8 @@ describe('[CF] GET /api/healthz [spec: api-contracts/health]', () => {
     await expect(res.text()).resolves.toBe('ok')
   })
 
-  it.each(['/healthz', '/readyz'])('serves %s outside the SPA fallback', async (path) => {
-    const res = await SELF.fetch(`https://example.com${path}`)
+  it('serves readiness under the API namespace', async () => {
+    const res = await SELF.fetch('https://example.com/api/readyz')
 
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/plain')
