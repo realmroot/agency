@@ -3819,6 +3819,7 @@ type EnvironmentPackages struct {
 	Npm   []string                `json:"npm"`
 	Pip   []string                `json:"pip"`
 	Type  EnvironmentPackagesType `json:"type"`
+	Webi  []string                `json:"webi"`
 }
 
 // EnvironmentPackagesType defines model for EnvironmentPackages.Type.

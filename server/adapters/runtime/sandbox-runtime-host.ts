@@ -22,6 +22,7 @@ import { isAmaSandboxToolName } from '@shared/agent-tools'
 import type { AmaEvent } from '@shared/session-events'
 import { canonicalProvider } from '../../domain/runtime/provider'
 import type { Env } from '../../env'
+import { EnvironmentPackageInstallationError } from '../../runtime-error'
 import {
   isRuntimePolicyDenied,
   isRuntimeTurnCancelled,
@@ -390,6 +391,23 @@ async function rejectCloudWorkspaceSymlinks(sandbox: CloudWorkspaceSandbox, moun
 }
 
 const CLOUD_ENVIRONMENT_BIN = '/workspace/.ama/environment/bin'
+const CLOUD_ENVIRONMENT_HOME = '/workspace/.ama/environment'
+const CLOUD_WEBI_BIN = `${CLOUD_ENVIRONMENT_HOME}/.local/bin`
+const PINNED_WEBI_PACKAGE = /^[a-z0-9][a-z0-9._-]*@v?[0-9][a-zA-Z0-9._-]*$/
+
+async function installEnvironmentPackage(sandbox: CloudWorkspaceSandbox, step: string, command: string) {
+  try {
+    const result = await sandbox.exec(command, { timeout: GIT_CLONE_TIMEOUT_MS })
+    if (!commandSucceeded(result)) {
+      throw new EnvironmentPackageInstallationError(step, result.stderr || result.stdout || 'Command failed')
+    }
+  } catch (cause) {
+    if (cause instanceof EnvironmentPackageInstallationError) throw cause
+    throw new EnvironmentPackageInstallationError(step, cause instanceof Error ? cause.message : String(cause), {
+      cause,
+    })
+  }
+}
 
 async function prepareCloudEnvironmentPackages(
   sandbox: CloudWorkspaceSandbox,
@@ -397,22 +415,42 @@ async function prepareCloudEnvironmentPackages(
 ) {
   const packages = environmentSnapshot?.packages
   if (!packages || typeof packages !== 'object' || Array.isArray(packages)) return null
-  const goPackages = (packages as Record<string, unknown>).go
-  if (!Array.isArray(goPackages) || goPackages.length === 0) return null
-  try {
-    await execOrThrow(sandbox, `mkdir -p ${shellQuote(CLOUD_ENVIRONMENT_BIN)}`)
-    for (const module of goPackages) {
-      if (typeof module !== 'string' || !module) {
-        throw new Error('Go package declaration must be a non-empty string')
-      }
-      await execOrThrow(sandbox, `GOBIN=${shellQuote(CLOUD_ENVIRONMENT_BIN)} go install ${shellQuote(module)}`, {
-        timeout: GIT_CLONE_TIMEOUT_MS,
-      })
+  const declarations = packages as Record<string, unknown>
+  const goPackages = Array.isArray(declarations.go) ? declarations.go : []
+  const webiPackages = Array.isArray(declarations.webi) ? declarations.webi : []
+  if (goPackages.length === 0 && webiPackages.length === 0) return null
+
+  await installEnvironmentPackage(
+    sandbox,
+    'prepare-directories',
+    `mkdir -p ${shellQuote(CLOUD_ENVIRONMENT_BIN)} ${shellQuote(CLOUD_ENVIRONMENT_HOME)}`,
+  )
+  for (const module of goPackages) {
+    if (typeof module !== 'string' || !module) {
+      throw new EnvironmentPackageInstallationError('validate-go-package', 'Package must be a non-empty string')
     }
-    return CLOUD_ENVIRONMENT_BIN
-  } catch (cause) {
-    throw new Error('Environment package installation failed', { cause })
+    await installEnvironmentPackage(
+      sandbox,
+      `go-install:${module}`,
+      `GOBIN=${shellQuote(CLOUD_ENVIRONMENT_BIN)} go install ${shellQuote(module)}`,
+    )
   }
+  for (const declaration of webiPackages) {
+    if (typeof declaration !== 'string' || !PINNED_WEBI_PACKAGE.test(declaration)) {
+      throw new EnvironmentPackageInstallationError(
+        'validate-webi-package',
+        'Package must use a pinned name@version declaration',
+      )
+    }
+    const installerPath = `${CLOUD_ENVIRONMENT_HOME}/webi-${crypto.randomUUID()}.sh`
+    const installerUrl = `https://webi.sh/${encodeURIComponent(declaration)}`
+    await installEnvironmentPackage(
+      sandbox,
+      `webi-install:${declaration}`,
+      `curl -fsS --proto '=https' --tlsv1.2 ${shellQuote(installerUrl)} -o ${shellQuote(installerPath)} && HOME=${shellQuote(CLOUD_ENVIRONMENT_HOME)} sh ${shellQuote(installerPath)} && rm -f ${shellQuote(installerPath)}`,
+    )
+  }
+  return [CLOUD_ENVIRONMENT_BIN, CLOUD_WEBI_BIN].join(':')
 }
 
 export async function startSessionRuntime(

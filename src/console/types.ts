@@ -1,4 +1,4 @@
-export const ENVIRONMENT_PACKAGE_MANAGERS = ['apt', 'cargo', 'gem', 'go', 'npm', 'pip'] as const
+export const ENVIRONMENT_PACKAGE_MANAGERS = ['apt', 'cargo', 'gem', 'go', 'npm', 'pip', 'webi'] as const
 
 export type EnvironmentPackageManager = (typeof ENVIRONMENT_PACKAGE_MANAGERS)[number]
 

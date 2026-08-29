@@ -104,6 +104,8 @@ export function createApp() {
 
   const routes = app
     .route('/api/healthz', healthz)
+    .route('/healthz', healthz)
+    .route('/readyz', healthz)
     .route('/api/v1/configz', configz)
     .route('/api/v1/e2e', e2e)
     .route('/api/v1/auth', auth)

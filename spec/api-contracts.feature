@@ -11,6 +11,7 @@ Feature: API contracts
     Given the Worker app is initialized
     When a client requests the healthz endpoint
     Then the response is 200 with plain text ok
+    And root healthz and readyz probes bypass the SPA fallback
     And the versioned OpenAPI contract does not publish a health resource
 
   @api-contracts/openapi @api

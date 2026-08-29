@@ -84,6 +84,7 @@ function normalizePackages(value: unknown): EnvironmentPackages {
     go: stringArray(packages.go),
     npm: stringArray(packages.npm),
     pip: stringArray(packages.pip),
+    webi: stringArray(packages.webi),
   }
 }
 

@@ -2,7 +2,7 @@ import { SELF } from 'cloudflare:test'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultClaims, dpopHeaders, setupOidcProvider, signIn } from './auth'
 
-const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] } as const
+const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] } as const
 
 function createEnvironmentBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
   return {

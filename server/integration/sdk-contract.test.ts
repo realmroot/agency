@@ -81,7 +81,7 @@ async function createEnvironmentThroughSdk(ama: AmaClient, runId: string) {
     spec: {
       type: 'cloud',
       networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true },
-      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+      packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] },
     },
   })) as Json
 }

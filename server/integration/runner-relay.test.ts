@@ -44,7 +44,7 @@ async function createSelfHostedEnvironment(authorization: string) {
       spec: {
         type: 'self_hosted',
         networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true },
-        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+        packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] },
       },
     }),
   })

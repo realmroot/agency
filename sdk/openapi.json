@@ -3585,6 +3585,16 @@
               "maxLength": 160
             },
             "maxItems": 200
+          },
+          "webi": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 160,
+              "pattern": "^[a-z0-9][a-z0-9._-]*@v?[0-9][a-zA-Z0-9._-]*$"
+            },
+            "maxItems": 200
           }
         },
         "required": [
@@ -3594,7 +3604,8 @@
           "gem",
           "go",
           "npm",
-          "pip"
+          "pip",
+          "webi"
         ],
         "additionalProperties": false
       },

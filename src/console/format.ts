@@ -45,6 +45,7 @@ export function parsePackages(value: EnvironmentPackageFormEntry[]) {
     go: [] as string[],
     npm: [] as string[],
     pip: [] as string[],
+    webi: [] as string[],
   }
   for (const item of value) {
     const name = item.name.trim()

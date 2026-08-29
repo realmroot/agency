@@ -782,6 +782,7 @@ export type EnvironmentPackages = {
     go: Array<string>;
     npm: Array<string>;
     pip: Array<string>;
+    webi: Array<string>;
 };
 export type EnvironmentStatus = {
     phase: ResourcePhase;

@@ -236,6 +236,14 @@ export type CloudTurnOutcome =
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: ReturnType<typeof safeRuntimeError> }
 
+function isRuntimeUserMessageEvent(event: AmaEvent) {
+  if (event.type !== 'message.started' && event.type !== 'message.updated' && event.type !== 'message.completed') {
+    return false
+  }
+  const payload = event.payload as { message?: { role?: unknown } }
+  return payload.message?.role === 'user'
+}
+
 export async function executeCloudSessionTurn(
   deps: CloudTurnDeps,
   auth: AuthScope,
@@ -305,6 +313,7 @@ export async function executeCloudSessionTurn(
       },
     })
     const startedAt = Date.now()
+    const turnCallbacks = callbacks
     const result = await deps.amaTurnExecutor.runTurn({
       sessionId: session.id,
       sandboxId: session.sandboxId ?? '',
@@ -317,10 +326,18 @@ export async function executeCloudSessionTurn(
       ...(deps.cloudTurnQueue.runsInline()
         ? {}
         : { shouldPause: () => Date.now() - startedAt > CLOUD_TURN_SOFT_BUDGET_MS }),
-      ensureActive: callbacks.ensureActive,
-      onEvent: callbacks.onEvent,
-      resolveToolResult: callbacks.resolveToolResult,
-      approveToolCall: callbacks.approveToolCall,
+      ensureActive: turnCallbacks.ensureActive,
+      onEvent:
+        work.prompt === undefined
+          ? turnCallbacks.onEvent
+          : async (event) => {
+              // AMA persisted the submitted prompt before starting the model
+              // turn. The Pi runtime emits the same user-message lifecycle;
+              // keep that transport echo out of the canonical transcript.
+              if (!isRuntimeUserMessageEvent(event)) await turnCallbacks.onEvent(event)
+            },
+      resolveToolResult: turnCallbacks.resolveToolResult,
+      approveToolCall: turnCallbacks.approveToolCall,
     })
     if (result.status === 'idle') {
       await store.updateSessionWhenState(auth.project.id, session.id, 'running', {

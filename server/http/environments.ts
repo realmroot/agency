@@ -409,7 +409,16 @@ function configFromPayload(body: z.infer<typeof EnvironmentPayloadSchema>) {
     scope: spec.scope ?? ('project' as const),
     type: spec.type ?? ('cloud' as const),
     networking: spec.networking ?? { type: 'open' as const, allowMcpServers: false, allowPackageManagers: true },
-    packages: spec.packages ?? { type: 'packages' as const, apt: [], cargo: [], gem: [], go: [], npm: [], pip: [] },
+    packages: spec.packages ?? {
+      type: 'packages' as const,
+      apt: [],
+      cargo: [],
+      gem: [],
+      go: [],
+      npm: [],
+      pip: [],
+      webi: [],
+    },
     variables: spec.variables ?? {},
   }
 }

@@ -1,3 +1,4 @@
+import type { AmaEvent } from '@shared/session-events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   type CloudTurnDeps,
@@ -33,11 +34,18 @@ const {
   releaseTurnLeaseMock,
   incrementContinuationDepthMock,
 } = vi.hoisted(() => ({
-  runSessionTurnMock: vi.fn<(input: { provider: string; model: string | null }) => Promise<{ status: string }>>(),
+  runSessionTurnMock:
+    vi.fn<
+      (input: {
+        provider: string
+        model: string | null
+        onEvent: (event: AmaEvent) => Promise<void>
+      }) => Promise<{ status: string }>
+    >(),
   enqueueCloudTurnMock: vi.fn(),
   cloudTurnsRunInlineMock: vi.fn(() => false),
   recordAuditMock: vi.fn(),
-  appendEventMock: vi.fn(async () => 'event_test'),
+  appendEventMock: vi.fn<(scope: unknown, event: AmaEvent) => Promise<string>>(async () => 'event_test'),
   findSessionMock: vi.fn(),
   sessionEventStreamMock: vi.fn(() => [] as unknown[]),
   updateSessionWhenStateMock: vi.fn<
@@ -210,7 +218,15 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
   })
 
   it('records the user prompt as a canonical transcript event before running a prompt turn', async () => {
-    runSessionTurnMock.mockResolvedValue({ status: 'idle' })
+    runSessionTurnMock.mockImplementation(async (input) => {
+      await input.onEvent({
+        type: 'message.completed',
+        payload: {
+          message: { id: 'runtime-user-message', role: 'user', content: [{ type: 'text', text: 'continue the task' }] },
+        },
+      })
+      return { status: 'idle' }
+    })
     findSessionMock.mockResolvedValue(fakeSession({ state: 'idle' }))
 
     await consumeCloudTurnQueueMessage(deps, {
@@ -235,6 +251,12 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
       }),
     )
     expect(runSessionTurnMock).toHaveBeenCalledWith(expect.objectContaining({ prompt: 'continue the task' }))
+    const userMessages = appendEventMock.mock.calls.filter(
+      ([, event]) =>
+        event.type === 'message.completed' &&
+        (event.payload as { message?: { role?: string } }).message?.role === 'user',
+    )
+    expect(userMessages).toHaveLength(1)
   })
 
   it('parks the session idle with a policy-denied reason when the turn is policy-denied', async () => {

@@ -33,9 +33,10 @@ const packages = {
   apt: [],
   cargo: [],
   gem: [],
-  go: ['github.com/realmroot/cli@v0.4.2'],
+  go: [],
   npm: [],
   pip: [],
+  webi: ['realmroot@0.4.2'],
 }
 
 function smokeCodexModel() {
@@ -264,43 +265,6 @@ async function sessionSocketTicket(origin, sessionId, cookie) {
   return JSON.parse(text).ticket
 }
 
-function startRunner(binary, origin, token, environmentId, stateDir, workDir, credentialPath) {
-  return startProcess(
-    binary,
-    [
-      'run',
-      '--api-server',
-      origin,
-      '--project-id',
-      token.projectId,
-      '--environment-id',
-      environmentId,
-      '--state-dir',
-      stateDir,
-      '--work-dir',
-      workDir,
-      '--allow-unsafe-process',
-      '--max-concurrent',
-      '1',
-    ],
-    {
-      cwd: ROOT,
-      prefix: 'ama-runner',
-      env: {
-        ...process.env,
-        AMA_RUNNER_CREDENTIALS: credentialPath,
-        AMA_RUNNER_HEARTBEAT_INTERVAL: '5s',
-        AMA_RUNNER_LEASE_SECONDS: '30',
-        AMA_RUNNER_RENEW_INTERVAL: '10s',
-        AMA_RUNNER_COMMAND_TIMEOUT: '4m',
-        AMA_RUNNER_SHUTDOWN_GRACE: '5s',
-        AMA_RUNNER_MAX_SESSION_DURATION: '4m',
-        AMA_RUNTIME_BRIDGE_HOST_HOME: process.env.AMA_RUNTIME_BRIDGE_HOST_HOME ?? process.env.HOME ?? '',
-      },
-    },
-  )
-}
-
 function managedRunnerEnvironment(temp, credentialPath) {
   return {
     ...process.env,
@@ -313,6 +277,7 @@ function managedRunnerEnvironment(temp, credentialPath) {
     AMA_RUNNER_COMMAND_TIMEOUT: '4m',
     AMA_RUNNER_SHUTDOWN_GRACE: '5s',
     AMA_RUNNER_MAX_SESSION_DURATION: '4m',
+    AMA_RUNTIME_BRIDGE_HOST_HOME: process.env.AMA_RUNTIME_BRIDGE_HOST_HOME ?? process.env.HOME ?? '',
   }
 }
 
@@ -328,7 +293,6 @@ function managedStatus(binary, instanceId, env) {
 function verifyManagedRunnerLifecycle(binary, origin, token, environmentId, temp, credentialPath) {
   const env = managedRunnerEnvironment(temp, credentialPath)
   let instanceId = null
-  let verified = false
   try {
     const started = run(
       binary,
@@ -371,37 +335,19 @@ function verifyManagedRunnerLifecycle(binary, origin, token, environmentId, temp
       )
     }
     info(`verified managed lifecycle for ${instanceId} (${first.runnerId})`)
-    verified = true
-  } finally {
-    const cleanupIds = instanceId
-      ? [instanceId]
-      : JSON.parse(run(binary, ['list', '--output', 'json'], { env }).stdout).map((item) => item.id)
-    for (const cleanupId of cleanupIds) {
-      if (!verified) {
-        const status = spawnSync(binary, ['status', cleanupId, '--output', 'json'], { env, encoding: 'utf8' })
-        const logs = spawnSync(binary, ['logs', cleanupId], { env, encoding: 'utf8' })
-        let nativeLogs = 'unavailable'
-        try {
-          const stateDir = JSON.parse(status.stdout)?.[0]?.stateDir
-          const logDir = stateDir ? join(stateDir, 'logs') : null
-          if (logDir && existsSync(logDir)) {
-            nativeLogs = readdirSync(logDir)
-              .map((name) => `${name}:\n${readFileSync(join(logDir, name), 'utf8')}`)
-              .join('\n')
-          }
-        } catch (error) {
-          nativeLogs = `failed to read native logs: ${error.message}`
-        }
-        console.error(
-          [
-            `managed lifecycle status before cleanup:\n${status.stdout || status.stderr}`,
-            `managed lifecycle logs before cleanup:\n${logs.stdout || logs.stderr}`,
-            `managed native service logs before cleanup:\n${nativeLogs}`,
-          ].join('\n'),
-        )
-      }
-      run(binary, ['remove', cleanupId, '--purge'], { env })
+    return { instanceId, env, status: restarted }
+  } catch (error) {
+    if (instanceId) {
+      const status = spawnSync(binary, ['status', instanceId, '--output', 'json'], { env, encoding: 'utf8' })
+      const logs = spawnSync(binary, ['logs', instanceId], { env, encoding: 'utf8' })
+      console.error(
+        [`managed lifecycle status:\n${status.stdout || status.stderr}`, `managed lifecycle logs:\n${logs.stdout || logs.stderr}`].join(
+          '\n',
+        ),
+      )
+      spawnSync(binary, ['remove', instanceId, '--purge'], { env, encoding: 'utf8' })
     }
+    throw error
   }
 }
 
@@ -666,15 +612,12 @@ async function main() {
   }
   const temp = tempRoot()
   const runnerBinary = join(temp, 'ama-runner')
-  const stateDir = join(temp, 'state')
-  const workDir = join(temp, 'work')
   const credentialPath = join(temp, 'credentials.json')
   const runId = `full-smoke-${Date.now()}`
   const port = Number(process.env.E2E_PORT || (await findFreePort()))
   const origin = `http://localhost:${port}`
   let server = null
-  let runner = null
-  let restartedRunner = null
+  let managedRunner = null
   let socket = null
   let secondSocket = null
   let token = null
@@ -724,7 +667,11 @@ async function main() {
       },
     })
     const environmentId = environment.metadata.uid
-    verifyManagedRunnerLifecycle(runnerBinary, origin, token, environmentId, temp, credentialPath)
+    managedRunner = verifyManagedRunnerLifecycle(runnerBinary, origin, token, environmentId, temp, credentialPath)
+    const { stateDir, workDir } = managedRunner.status
+    if (!stateDir || !workDir) {
+      fail('managed Runner status did not expose its automatically selected storage paths')
+    }
     await waitForReady(origin)
 
     const identity = await api(origin, token, '/api/v1/identities', {
@@ -798,7 +745,6 @@ async function main() {
     const browserCookie = await e2eBrowserCookie(origin, token.accessToken)
     const ticket = await sessionSocketTicket(origin, sessionId, browserCookie)
     socket = watchSocket(await openSocket(socketURL(origin, sessionId), ticket))
-    runner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
     await waitForRunner(origin, token, environmentId)
     await socket.waitFor(
       (frame) => frame.type === 'event' && frame.record?.type === 'runtime.started',
@@ -836,9 +782,7 @@ async function main() {
     assertToolEvents('initial completed-session backfill', firstBackfill.events)
     assertAgentToolEvents('initial completed-session backfill', firstBackfill.events)
 
-    await stopProcess(runner.child)
-    runner = null
-    restartedRunner = startRunner(runnerBinary, origin, token, environmentId, stateDir, workDir, credentialPath)
+    run(runnerBinary, ['restart', managedRunner.instanceId], { env: managedRunner.env })
     await waitForRunner(origin, token, environmentId)
 
     const reconnectTicket = await sessionSocketTicket(origin, sessionId, browserCookie)
@@ -901,13 +845,20 @@ async function main() {
       `origin: ${origin}`,
       token ? `projectId: ${token.projectId}` : null,
       sessionId ? `sessionId: ${sessionId}` : null,
-      sessionId && existsSync(workDir) ? `sessionDir: ${workspacePaths(workDir, sessionId).sessionDir}` : null,
-      existsSync(workDir) ? `workDir tree:\n${listTree(workDir)}` : null,
-      existsSync(stateDir) ? `stateDir tree:\n${listTree(stateDir)}` : null,
+      sessionId && managedRunner?.status.workDir && existsSync(managedRunner.status.workDir)
+        ? `sessionDir: ${workspacePaths(managedRunner.status.workDir, sessionId).sessionDir}`
+        : null,
+      managedRunner?.status.workDir && existsSync(managedRunner.status.workDir)
+        ? `workDir tree:\n${listTree(managedRunner.status.workDir)}`
+        : null,
+      managedRunner?.status.stateDir && existsSync(managedRunner.status.stateDir)
+        ? `stateDir tree:\n${listTree(managedRunner.status.stateDir)}`
+        : null,
       ...liveDiagnostics,
       server ? `e2e server output:\n${recentOutput(server.output)}` : null,
-      runner ? `runner output:\n${recentOutput(runner.output)}` : null,
-      restartedRunner ? `restarted runner output:\n${recentOutput(restartedRunner.output)}` : null,
+      managedRunner
+        ? `runner logs:\n${spawnSync(runnerBinary, ['logs', managedRunner.instanceId], { env: managedRunner.env, encoding: 'utf8' }).stdout}`
+        : null,
       socket ? `socket frames:\n${JSON.stringify(socket.frames.slice(-20), null, 2)}` : null,
       secondSocket ? `second socket frames:\n${JSON.stringify(secondSocket.frames.slice(-20), null, 2)}` : null,
     ].filter(Boolean)
@@ -918,8 +869,12 @@ async function main() {
   } finally {
     socket?.close()
     secondSocket?.close()
-    await stopProcess(runner?.child)
-    await stopProcess(restartedRunner?.child)
+    if (managedRunner) {
+      spawnSync(runnerBinary, ['remove', managedRunner.instanceId, '--purge'], {
+        env: managedRunner.env,
+        encoding: 'utf8',
+      })
+    }
     await stopProcess(server?.child)
     if (process.env.AMA_FULL_SMOKE_KEEP_TEMP === 'true') {
       info(`retained smoke temp directory by request: ${temp}`)

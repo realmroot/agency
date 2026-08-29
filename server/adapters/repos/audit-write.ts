@@ -8,10 +8,10 @@ function newId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
 }
 
-// The scheduler actor is recorded as a system actor with no user id; every
-// other caller is the authenticated user.
+// Internal principals are recorded as system actors with no user id. These
+// scopes are constructed by AMA itself rather than accepted from a token.
 function defaultActor(auth: AuthScope) {
-  if (auth.user.id === 'system:scheduler') {
+  if (auth.user.id.startsWith('system:') && auth.roles.includes('system')) {
     return { actorType: 'system' as const, actorUserId: null, controllerUserId: null }
   }
   if (auth.agentActor) {
