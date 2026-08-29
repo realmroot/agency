@@ -1,3 +1,4 @@
+import type { SessionInsert, WorkItemInsert } from '@shared/runtime-rows'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthScope } from '../ports'
 
@@ -24,6 +25,7 @@ const {
   createAgentSnapshotMock,
   createEnvironmentSnapshotMock,
   insertSessionMock,
+  insertWorkItemMock,
   updateSessionWhenStateMock,
   findAgentMock,
   findAgentVersionMock,
@@ -49,7 +51,8 @@ const {
   resolveSessionProviderConfigMock: vi.fn(async () => ({ ok: true, config: null })),
   createAgentSnapshotMock: vi.fn(() => ({ id: 'agentver_1', providerId: 'anthropic', model: '@cf/x' })),
   createEnvironmentSnapshotMock: vi.fn(() => ({ id: 'envver_1', hostingMode: 'cloud', runtimeConfig: {} })),
-  insertSessionMock: vi.fn(async () => undefined),
+  insertSessionMock: vi.fn<(row: SessionInsert) => Promise<void>>(async () => undefined),
+  insertWorkItemMock: vi.fn<(row: WorkItemInsert) => Promise<void>>(async () => undefined),
   updateSessionWhenStateMock: vi.fn<
     (projectId: string, sessionId: string, expected: string | string[], fields: Record<string, unknown>) => boolean
   >(() => true),
@@ -94,6 +97,7 @@ const store = {
   findEnvironmentVersion: findEnvironmentVersionMock,
   resolveEnvironmentForRuntime: resolveEnvironmentForRuntimeMock,
   insertSession: insertSessionMock,
+  insertWorkItem: insertWorkItemMock,
   updateSessionWhenState: updateSessionWhenStateMock,
   secretVersionForResolution: secretVersionForResolutionMock,
 }
@@ -152,6 +156,8 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     recordAuditMock.mockReset()
     insertSessionMock.mockReset()
     insertSessionMock.mockResolvedValue(undefined)
+    insertWorkItemMock.mockReset()
+    insertWorkItemMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
     findAgentMock.mockResolvedValue({
@@ -258,6 +264,8 @@ describe('createSessionForAgent — environment resolution', () => {
     recordAuditMock.mockReset()
     insertSessionMock.mockReset()
     insertSessionMock.mockResolvedValue(undefined)
+    insertWorkItemMock.mockReset()
+    insertWorkItemMock.mockResolvedValue(undefined)
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
     findAgentMock.mockResolvedValue({
@@ -270,6 +278,14 @@ describe('createSessionForAgent — environment resolution', () => {
     findEnvironmentMock.mockResolvedValue({ id: 'env_resolved', currentVersionId: 'envver_1' })
     findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'cloud' })
     resolveEnvironmentForRuntimeMock.mockReset()
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      provider: 'anthropic',
+      providerId: 'anthropic',
+      model: '@cf/x',
+      identity: null,
+    } as never)
+    createEnvironmentSnapshotMock.mockReturnValue({ id: 'envver_1', type: 'cloud' } as never)
   })
 
   it('resolves an environment for the runtime/model when none is pinned', async () => {
@@ -303,6 +319,46 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(result.ok).toBe(true)
     expect(resolveEnvironmentForRuntimeMock).not.toHaveBeenCalled()
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_pinned')
+  })
+
+  it('uses the runner-local model at self-hosted boundaries while preserving canonical snapshots', async () => {
+    const canonicalModel = 'openai/gpt-5.6-sol'
+    const localModel = 'gpt-5.6-sol'
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: canonicalModel, providerId: 'openai' })
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      provider: 'openai',
+      providerId: 'openai',
+      model: canonicalModel,
+      identity: null,
+    } as never)
+    findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'self_hosted' })
+    createEnvironmentSnapshotMock.mockReturnValue({ id: 'envver_1', type: 'self_hosted' } as never)
+    resolveEnvironmentForRuntimeMock.mockResolvedValue('env_resolved')
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      null,
+      { runtime: 'codex', prompt: 'Run canonical Codex model' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(resolveEnvironmentForRuntimeMock).toHaveBeenCalledWith('proj_1', 'codex', localModel)
+    const insertedSession = insertSessionMock.mock.calls[0]?.[0]
+    expect(insertedSession).toBeDefined()
+    expect(JSON.parse(insertedSession?.agentSnapshot ?? 'null')).toMatchObject({ model: canonicalModel })
+    expect(JSON.parse(insertedSession?.modelConfig ?? 'null')).toEqual({ provider: 'openai', model: canonicalModel })
+
+    const workItem = insertWorkItemMock.mock.calls[0]?.[0]
+    expect(workItem).toBeDefined()
+    expect(JSON.parse(workItem?.payload ?? 'null')).toMatchObject({
+      model: localModel,
+      runtimeRequirement: { runtime: 'codex', model: localModel },
+      agentSnapshot: { model: canonicalModel },
+    })
   })
 
   it('returns a 409 and creates no session when no environment can be resolved', async () => {

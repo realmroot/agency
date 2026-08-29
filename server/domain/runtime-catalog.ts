@@ -66,6 +66,12 @@ export function runtimeRequirement(runtime: RuntimeName, model?: string | null):
   }
 }
 
+export function selfHostedRuntimeModel(provider: string, model?: string | null) {
+  if (!model) return null
+  const prefix = `${provider}/`
+  return model.startsWith(prefix) ? model.slice(prefix.length) : model
+}
+
 export function runtimesSupport(runtimes: RuntimeSupport, runtime: RuntimeName, model?: string | null) {
   return runtimes.some(
     (entry) =>

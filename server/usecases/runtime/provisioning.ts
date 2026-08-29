@@ -6,7 +6,11 @@
 import type { RuntimeName } from '@server/contracts/environment-contracts'
 import { runtimeDriver } from '@server/domain/runtime/driver'
 import type { AgentSnapshot, EnvironmentSnapshot } from '@server/domain/runtime/session-snapshot'
-import { runtimeCatalogSupportsProviderModel, runtimesSupport } from '@server/domain/runtime-catalog'
+import {
+  runtimeCatalogSupportsProviderModel,
+  runtimesSupport,
+  selfHostedRuntimeModel,
+} from '@server/domain/runtime-catalog'
 import type { AuthScope, ProviderRepo, SessionOrchestrationStore } from '../ports'
 
 type ProvisioningDeps = {
@@ -40,8 +44,9 @@ export async function validateRuntimeProviderModel(
     return false
   }
   const activeRunnerRuntimes = await deps.sessionOrchestration.activeRunnerRuntimes(auth.project.id, environmentId)
+  const runnerModel = selfHostedRuntimeModel(provider, model)
   return (
-    activeRunnerRuntimes.some((runtimes) => runtimesSupport(runtimes, runtime, model)) ||
+    activeRunnerRuntimes.some((runtimes) => runtimesSupport(runtimes, runtime, runnerModel)) ||
     activeRunnerRuntimes.length === 0
   )
 }

@@ -40,7 +40,7 @@ import {
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
 import { newId, now, requestIdFrom, stringify } from '@server/domain/runtime/util'
-import { runtimeRequirement } from '@server/domain/runtime-catalog'
+import { runtimeRequirement, selfHostedRuntimeModel } from '@server/domain/runtime-catalog'
 import { environmentHostingMode } from '@server/domain/runtime-session'
 import { hasSecretMaterial, sessionUserMetadata } from '@server/domain/session'
 import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
@@ -478,6 +478,7 @@ function selfHostedSessionWorkItem(
   values: Parameters<typeof enqueueSelfHostedSessionWork>[2],
   timestamp: string,
 ): WorkItemInsert {
+  const runnerModel = selfHostedRuntimeModel(values.agentSnapshot.provider, values.agentSnapshot.model)
   const payload = {
     protocol: 'ama-runner-work',
     type: 'session.start',
@@ -486,7 +487,7 @@ function selfHostedSessionWorkItem(
     runtime: values.runtime,
     runtimeConfig: values.runtimeConfig,
     provider: values.agentSnapshot.provider,
-    ...(values.agentSnapshot.model ? { model: values.agentSnapshot.model } : {}),
+    ...(runnerModel ? { model: runnerModel } : {}),
     runtimeDriver: runtimeDriverName(values.runtime, 'self_hosted'),
     agentSnapshot: values.agentSnapshot,
     environmentSnapshot: values.environmentSnapshot,
@@ -499,9 +500,7 @@ function selfHostedSessionWorkItem(
     resume: values.resume ?? false,
     resumeToken: values.resumeToken ?? null,
     runtimeRequirement:
-      values.environmentSnapshot?.type === 'self_hosted'
-        ? runtimeRequirement(values.runtime, values.agentSnapshot.model)
-        : null,
+      values.environmentSnapshot?.type === 'self_hosted' ? runtimeRequirement(values.runtime, runnerModel) : null,
   }
   return {
     id: newId('work'),
@@ -719,7 +718,12 @@ export async function createSessionForAgent(
   // active runner can serve this runtime/model. Cloud runtimes have no runner,
   // so they resolve to nothing and must pin an environment explicitly.
   const environmentId =
-    requestedEnvironmentId ?? (await store.resolveEnvironmentForRuntime(auth.project.id, runtime, agentVersion.model))
+    requestedEnvironmentId ??
+    (await store.resolveEnvironmentForRuntime(
+      auth.project.id,
+      runtime,
+      selfHostedRuntimeModel(providerId, agentVersion.model),
+    ))
   if (!environmentId) {
     return {
       ok: false,
