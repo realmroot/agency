@@ -301,7 +301,7 @@ describe('[CF] per-runner relay end-to-end', () => {
     browser.ws.close()
   })
 
-  it('relays browser socket backfill requests to the runner local event log', async () => {
+  it('relays browser socket and REST backfill requests to the runner local event log [spec: sessions/events-query]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
@@ -360,6 +360,41 @@ describe('[CF] per-runner relay end-to-end', () => {
       'browser backfill from runner',
     )
     expect((backfill.events as Array<{ id: string }>)[0].id).toBe('event_history')
+
+    const restEventsPromise = jsonFetch(`/api/v1/sessions/${session.id}/events`, authorization)
+    const restRequest = await reconnectedRunnerCh.waitForFrame(
+      (f) => f.type === 'session.backfill_request' && f.sessionId === session.id && f.eventId !== request.eventId,
+      'REST session.backfill_request',
+    )
+    reconnectedRunnerCh.ws.send(
+      JSON.stringify({
+        type: 'session.backfill_response',
+        eventId: restRequest.eventId,
+        sessionId: session.id,
+        events: [
+          {
+            id: 'event_rest_history',
+            sessionId: session.id,
+            sequence: 2,
+            createdAt: '2026-06-20T00:00:01.000Z',
+            type: 'message.completed',
+            payload: {
+              message: {
+                id: 'msg_rest_history',
+                role: 'assistant',
+                content: [{ type: 'text', text: 'REST history from runner' }],
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const restEventsResponse = await restEventsPromise
+    expect(restEventsResponse.status).toBe(200)
+    expect(await restEventsResponse.json()).toMatchObject({
+      data: [{ id: 'event_rest_history', sessionId: session.id, sequence: 2 }],
+      pagination: { hasMore: false },
+    })
 
     reconnectedRunnerCh.ws.close()
     browser.ws.close()

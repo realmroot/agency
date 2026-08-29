@@ -135,9 +135,10 @@ Feature: Sessions
 
   @sessions/events-query @api
   Scenario: Query session events with stable pagination and filters
-    Given a session has many events
+    Given a cloud session has stored events or a self-hosted session has runner-local events
     When the client lists events with limit, order, type filter, or cursor
     Then the response returns a deterministic page with sequence boundaries
+    And self-hosted history is read through the owning runner instead of returning an empty cloud page
     And CSV and SSE views are available through content negotiation
 
   @sessions/tool-result-redaction @api
