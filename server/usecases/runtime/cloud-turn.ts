@@ -204,6 +204,19 @@ export async function startSessionRuntimeForRow(
   } catch (error) {
     const safeError = safeRuntimeError(error)
     const failedAt = now()
+    await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
+    await appendRuntimeEvent(deps, {
+      auth,
+      sessionId,
+      event: {
+        type: 'runtime.error',
+        payload: {
+          message: safeError.message,
+          ...(safeError.code ? { code: safeError.code } : {}),
+          ...(safeError.detail ? { details: safeError.detail } : {}),
+        },
+      },
+    })
     const failed = {
       state: 'error',
       stateReason: safeError.message,
@@ -225,7 +238,6 @@ export async function startSessionRuntimeForRow(
       sessionId,
       metadata: { ...safeError },
     })
-    await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
   }
 }
 

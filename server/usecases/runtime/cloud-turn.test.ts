@@ -1,5 +1,6 @@
 import type { AmaEvent } from '@shared/session-events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { EnvironmentPackageInstallationError } from '../../runtime-error'
 import {
   type CloudTurnDeps,
   consumeCloudTurnQueueMessage,
@@ -424,6 +425,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
     resolveEnvFromMock.mockReset()
     resolveEnvFromMock.mockResolvedValue({})
     recordAuditMock.mockReset()
+    appendEventMock.mockClear()
     findSessionMock.mockReset()
     findSessionMock.mockResolvedValue(pendingRow())
     updateSessionWhenStateMock.mockReset()
@@ -481,5 +483,47 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
     expect(successAudits.length).toBeGreaterThanOrEqual(1)
     // The initial-prompt dispatch performs a second updateSessionWhenState CAS.
     expect(updateSessionWhenStateMock.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('[spec: environments/cloud-packages] persists a safe runtime error event when package setup fails', async () => {
+    startSessionRuntimeMock.mockRejectedValue(
+      new EnvironmentPackageInstallationError(
+        'webi-install:realmroot@0.4.2',
+        'Webi did not return an installer for the requested package',
+      ),
+    )
+
+    await startSessionRuntimeForRow(startupDeps, auth, {
+      pending: pendingRow() as never,
+      agentSnapshot,
+      environmentSnapshot: null,
+      runtime: 'ama',
+      runtimeConfig: {},
+    })
+
+    expect(appendEventMock).toHaveBeenCalledWith(
+      { organizationId: 'org_1', projectId: 'proj_1', sessionId: 'session_1' },
+      {
+        type: 'runtime.error',
+        payload: {
+          message: 'Environment package installation failed at webi-install:realmroot@0.4.2',
+          code: 'environment_package_installation_failed',
+          details: {
+            step: 'webi-install:realmroot@0.4.2',
+            stderr: 'Webi did not return an installer for the requested package',
+          },
+        },
+      },
+    )
+    expect(updateSessionWhenStateMock).toHaveBeenCalledWith(
+      'proj_1',
+      'session_1',
+      'pending',
+      expect.objectContaining({
+        state: 'error',
+        stateReason: 'Environment package installation failed at webi-install:realmroot@0.4.2',
+      }),
+    )
+    expect(stopSessionRuntimeMock).toHaveBeenCalledWith(env, 'sandbox_1')
   })
 })
