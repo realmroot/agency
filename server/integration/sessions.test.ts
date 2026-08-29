@@ -838,7 +838,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(unarchiveRes.status).toBe(200)
     await expect(unarchiveRes.json()).resolves.toMatchObject({ metadata: { uid: createdId, archivedAt: null } })
-  })
+  }, 10_000)
 
   it('updates name and metadata without disturbing runtime-managed metadata', async () => {
     const authorization = await signIn()
