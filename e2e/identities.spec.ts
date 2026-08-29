@@ -48,7 +48,7 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   const identityName = `Codex identity ${runId}`
   const username = `codex-${Date.now()}`
   await page.getByLabel('Name', { exact: true }).fill(identityName)
-  await page.getByLabel('Handle').fill(username)
+  await page.getByLabel('Username').fill(username)
   const identityResponsePromise = page.waitForResponse(
     (response) => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/identities',
   )
@@ -59,9 +59,16 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   expect(identity.spec.runtime).toBe('codex')
   const identityLink = page.getByRole('link', { name: identityName })
   await expect(identityLink).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Assigned agent' })).toBeVisible()
+  await expect(page.getByText('Unassigned', { exact: true })).toBeVisible()
   await identityLink.click()
-  await expect(page.getByText('Handle', { exact: true })).toBeVisible()
+  await expect(page.getByText('Username', { exact: true })).toBeVisible()
   await expect(page.getByText(username, { exact: true })).toBeVisible()
+  await expect(page.getByText('Status', { exact: true })).toBeVisible()
+  await expect(page.getByText('Active', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Assigned agent', { exact: true })).toBeVisible()
+  await expect(page.getByText('Unassigned', { exact: true })).toBeVisible()
+  await expect(page.getByText('External ID', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Identity details are safe to view. Credentials remain protected.')).toBeVisible()
 
   await page.goto('/agents')
@@ -85,6 +92,10 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
     data: { spec: { provider: 'workers-ai' } },
   })
   expect(pinProviderResponse.status(), 'pin Agent provider for Session creation').toBe(200)
+
+  await page.goto(`/identities/${identity.metadata.uid}`)
+  await expect(page.getByText('Assigned', { exact: true })).toBeVisible()
+  await expect(page.getByText(agent.metadata.uid, { exact: true })).toHaveCount(0)
 
   await page.goto('/sessions')
   await page.getByRole('button', { name: 'Create session' }).click()

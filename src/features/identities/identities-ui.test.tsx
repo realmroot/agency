@@ -44,6 +44,16 @@ function identity(overrides: Partial<Identity> = {}): Identity {
   }
 }
 
+function identityInState(state: 'provisioning' | 'error', overrides: Partial<Identity> = {}): Identity {
+  const fixture = identity(overrides)
+  Object.assign(fixture.status, {
+    phase: state,
+    state,
+    failureCode: state === 'error' ? 'authorization_failed' : null,
+  })
+  return fixture
+}
+
 const list = (data: Identity[]) => ({
   data,
   pagination: { limit: 50, hasMore: false, nextCursor: null },
@@ -57,10 +67,15 @@ describe('[spec: identities/console] Identity console', () => {
   it('creates a Codex Identity with an idempotency key', async () => {
     let postedBody: Record<string, unknown> | null = null
     let idempotencyKey: string | null = null
+    let finishRequest!: () => void
+    const pendingRequest = new Promise<void>((resolve) => {
+      finishRequest = resolve
+    })
     server.use(
       http.post('*/api/v1/identities', async ({ request }) => {
         postedBody = (await request.json()) as Record<string, unknown>
         idempotencyKey = request.headers.get('idempotency-key')
+        await pendingRequest
         return HttpResponse.json(identity(), { status: 201 })
       }),
     )
@@ -74,15 +89,18 @@ describe('[spec: identities/console] Identity console', () => {
     )
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Codex operator' } })
-    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'codex-operator' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'codex-operator' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
 
     await waitFor(() => expect(postedBody).not.toBeNull())
+    expect(screen.getByRole('button', { name: 'Creating identity…' })).toBeDisabled()
     expect(postedBody).toEqual({
       metadata: { name: 'Codex operator' },
       spec: { username: 'codex-operator', runtime: 'codex' },
     })
     expect(idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i)
+    finishRequest()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create identity' })).toBeDisabled())
   })
 
   it('submits optional description and a changed runtime, then resets and closes', async () => {
@@ -105,7 +123,7 @@ describe('[spec: identities/console] Identity console', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Copilot reviewer' } })
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Reviews pull requests' } })
-    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'reviewer' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'reviewer' } })
     fireEvent.click(screen.getByRole('combobox'))
     fireEvent.click(await screen.findByRole('option', { name: 'Copilot' }))
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
@@ -136,7 +154,7 @@ describe('[spec: identities/console] Identity console', () => {
       </QueryClientProvider>,
     )
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Retry me' } })
-    fireEvent.change(screen.getByLabelText('Handle'), { target: { value: 'retry-me' } })
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'retry-me' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
 
     await waitFor(() => expect(errorToast).toHaveBeenCalled())
@@ -155,9 +173,40 @@ describe('[spec: identities/console] Identity console', () => {
 
     expect(await screen.findByRole('link', { name: 'Codex operator' })).toBeTruthy()
     expect(screen.getByText('codex')).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Assigned agent' })).toBeTruthy()
+    expect(screen.getByText('Unassigned')).toBeTruthy()
     expect(screen.queryByText(/private_key|access_token|state\.json/i)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Create identity' }))
     expect(await screen.findByRole('heading', { name: 'Create Identity' })).toBeTruthy()
+  })
+
+  it('shows plain-language provisioning and error statuses', async () => {
+    server.use(
+      http.get('*/api/v1/identities', () =>
+        HttpResponse.json(
+          list([
+            identityInState('provisioning', {
+              metadata: { ...identity().metadata, uid: 'identity_creating', name: 'Creating operator' },
+            }),
+            identityInState('error', {
+              metadata: { ...identity().metadata, uid: 'identity_error', name: 'Attention operator' },
+            }),
+          ]),
+        ),
+      ),
+    )
+    render(
+      <QueryClientProvider client={client()}>
+        <MemoryRouter>
+          <IdentitiesPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByText('Creating')).toBeTruthy()
+    expect(screen.getByText('Needs attention')).toHaveAttribute('data-variant', 'destructive')
+    expect(screen.queryByText('provisioning')).toBeNull()
+    expect(screen.queryByText('error')).toBeNull()
   })
 
   it('archives an unbound Identity only after destructive confirmation', async () => {
@@ -236,13 +285,18 @@ describe('[spec: identities/console] Identity console', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText('agent_bound')).toBeTruthy()
-    expect(screen.getByText('archived')).toBeTruthy()
+    expect(await screen.findByText('Assigned')).toBeTruthy()
+    expect(screen.getByText('Archived')).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.queryByText('agent_bound')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Archive identity' })).toBeNull()
   })
 
-  it('shows immutable Runtime and remote Agent metadata without credential state', async () => {
-    server.use(http.get('*/api/v1/identities/:identityId', () => HttpResponse.json(identity())))
+  it('shows immutable username and Runtime metadata without credential state', async () => {
+    server.use(
+      http.get('*/api/v1/identities/:identityId', () =>
+        HttpResponse.json(identity({ status: { ...identity().status, boundAgentId: 'agent_bound_internal_1' } })),
+      ),
+    )
     render(
       <QueryClientProvider client={client()}>
         <MemoryRouter initialEntries={['/identities/identity_codex']}>
@@ -254,7 +308,15 @@ describe('[spec: identities/console] Identity console', () => {
     )
 
     expect(await screen.findByText('Codex operator')).toBeTruthy()
-    expect(screen.getByText('realmroot_agent_1')).toBeTruthy()
+    expect(screen.getByText('The username and runtime cannot be changed after creation.')).toBeTruthy()
+    expect(screen.getByText('Username')).toBeTruthy()
+    expect(screen.getByText('Assigned agent')).toBeTruthy()
+    expect(screen.getByText('Status')).toBeTruthy()
+    expect(screen.getAllByText('Active').length).toBeGreaterThan(0)
+    expect(screen.getByText('Assigned')).toBeTruthy()
+    expect(screen.queryByText('agent_bound_internal_1')).toBeNull()
+    expect(screen.queryByText('realmroot_agent_1')).toBeNull()
+    expect(screen.queryByText('External ID')).toBeNull()
     expect(screen.getByText('codex')).toBeTruthy()
     expect(screen.queryByText(/private_key|access_token|credentialRef/i)).toBeNull()
   })

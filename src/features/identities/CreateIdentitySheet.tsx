@@ -73,7 +73,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="identity-username">Handle</FieldLabel>
+              <FieldLabel htmlFor="identity-username">Username</FieldLabel>
               <Input
                 id="identity-username"
                 required
@@ -106,7 +106,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
               </FieldDescription>
             </Field>
             <Button type="submit" disabled={create.isPending || !form.name.trim() || !form.username.trim()}>
-              {create.isPending ? 'Provisioning identity…' : 'Create identity'}
+              {create.isPending ? 'Creating identity…' : 'Create identity'}
             </Button>
           </FieldGroup>
         </form>

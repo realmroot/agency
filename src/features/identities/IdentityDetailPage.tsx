@@ -4,6 +4,7 @@ import { DetailSection, EmptyState, Meta, MetaGrid, PageHeader, StatusBadge } fr
 import { formatDate } from '@/console/format'
 import { api } from '@/lib/amarpc'
 import { queryKeys } from '@/lib/query-keys'
+import { identityAssignmentLabel, identityStatusLabel } from './identity-display'
 
 export function IdentityDetailPage() {
   const { identityId } = useParams()
@@ -20,20 +21,26 @@ export function IdentityDetailPage() {
       <PageHeader
         eyebrow="Identity"
         title={identity?.metadata.name ?? 'Identity detail'}
-        titleAccessory={identity ? <StatusBadge value={identity.status.state} /> : null}
+        titleAccessory={
+          identity ? (
+            <StatusBadge
+              value={identity.metadata.archivedAt ? 'archived' : identity.status.state}
+              label={identityStatusLabel(identity)}
+            />
+          ) : null
+        }
         description="Identity details are safe to view. Credentials remain protected."
       />
       {identity ? (
         <DetailSection
           title="Identity configuration"
-          description="The handle and runtime cannot be changed after creation."
+          description="The username and runtime cannot be changed after creation."
         >
           <MetaGrid columns={4}>
-            <Meta label="Handle" value={identity.spec.username} />
+            <Meta label="Username" value={identity.spec.username} />
             <Meta label="Runtime" value={identity.spec.runtime} />
-            <Meta label="State" value={identity.status.state} />
-            <Meta label="External ID" value={identity.status.descriptor?.agentId ?? 'Pending'} />
-            <Meta label="Assigned agent" value={identity.status.boundAgentId ?? 'Unassigned'} />
+            <Meta label="Status" value={identityStatusLabel(identity)} />
+            <Meta label="Assigned agent" value={identityAssignmentLabel(identity)} />
             <Meta label="Updated" value={formatDate(identity.metadata.updatedAt)} />
           </MetaGrid>
         </DetailSection>

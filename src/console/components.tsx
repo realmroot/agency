@@ -74,7 +74,7 @@ export function DisabledNav({ icon, label }: { icon: ReactNode; label: string })
   )
 }
 
-export function StatusBadge({ value, detail }: { value: string; detail?: string | null }) {
+export function StatusBadge({ value, label, detail }: { value: string; label?: string; detail?: string | null }) {
   const variant =
     value === 'error' || value === 'missing' || value === 'blocked'
       ? 'destructive'
@@ -85,7 +85,7 @@ export function StatusBadge({ value, detail }: { value: string; detail?: string 
           value === 'disconnected'
         ? 'secondary'
         : 'outline'
-  const badge = <UiBadge variant={variant}>{value}</UiBadge>
+  const badge = <UiBadge variant={variant}>{label ?? value}</UiBadge>
   if (!detail) {
     return badge
   }

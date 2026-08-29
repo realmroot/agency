@@ -13,6 +13,7 @@ import {
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Identity } from '@/lib/amarpc'
+import { identityAssignmentLabel, identityStatusLabel } from './identity-display'
 
 export function IdentitiesView({
   identities,
@@ -39,7 +40,7 @@ export function IdentitiesView({
           <TableHead>Description</TableHead>
           <TableHead>Runtime</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="hidden lg:table-cell">Bound agent</TableHead>
+          <TableHead className="hidden lg:table-cell">Assigned agent</TableHead>
           <TableHead className="hidden lg:table-cell">Updated</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -61,9 +62,12 @@ export function IdentitiesView({
               <StatusBadge value={identity.spec.runtime} />
             </TableCell>
             <TableCell>
-              <StatusBadge value={identity.metadata.archivedAt ? 'archived' : identity.status.state} />
+              <StatusBadge
+                value={identity.metadata.archivedAt ? 'archived' : identity.status.state}
+                label={identityStatusLabel(identity)}
+              />
             </TableCell>
-            <TableCell className="hidden lg:table-cell">{identity.status.boundAgentId ?? 'Unbound'}</TableCell>
+            <TableCell className="hidden lg:table-cell">{identityAssignmentLabel(identity)}</TableCell>
             <TableCell className="hidden lg:table-cell">{formatDate(identity.metadata.updatedAt)}</TableCell>
             <TableCell className="text-right">
               {!identity.metadata.archivedAt ? (
