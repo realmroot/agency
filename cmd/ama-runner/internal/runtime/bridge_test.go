@@ -374,6 +374,22 @@ func TestRuntimeCommandEnvironmentSanitizesRunnerSecrets(t *testing.T) {
 	}
 }
 
+func TestRuntimeCommandEnvironmentOmitsUnpinnedProviderAndModel(t *testing.T) {
+	env, err := commandEnvironment(Request{
+		SessionID:     "session_1",
+		Runtime:       "codex",
+		RuntimeConfig: map[string]any{},
+		WorkDir:       t.TempDir(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	envText := strings.Join(env, "\n")
+	if strings.Contains(envText, "AMA_PROVIDER=") || strings.Contains(envText, "AMA_MODEL=") {
+		t.Fatalf("expected unpinned provider and model to be omitted, got %q", envText)
+	}
+}
+
 func TestRuntimeCommandEnvironmentRejectsUnserializableConfig(t *testing.T) {
 	if _, err := commandEnvironment(Request{
 		SessionID:     "session_1",

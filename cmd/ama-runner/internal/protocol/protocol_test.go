@@ -29,6 +29,24 @@ func TestParseWorkPayloadAcceptsSessionStart(t *testing.T) {
 	}
 }
 
+func TestParseWorkPayloadAcceptsRuntimeSelectedProviderAndModel(t *testing.T) {
+	payload, err := ParseWorkPayload(ama.JSON{
+		"protocol":           "ama-runner-work",
+		"type":               "session.start",
+		"sessionId":          "session_1",
+		"hostingMode":        "self_hosted",
+		"runtime":            "codex",
+		"runtimeConfig":      ama.JSON{},
+		"runtimeRequirement": ama.JSON{"runtime": "codex"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Provider != "" || payload.Model != "" {
+		t.Fatalf("expected provider and model to remain unpinned, got %#v", payload)
+	}
+}
+
 func TestParseWorkPayloadNormalizesApprovedToolCall(t *testing.T) {
 	payload, err := ParseWorkPayload(ama.JSON{
 		"protocol": "ama-runner-work",
@@ -111,7 +129,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 				"runtimeConfig":      ama.JSON{},
 				"runtimeRequirement": ama.JSON{"runtime": "codex"},
 			},
-			want: "runtime, runtimeConfig, and provider",
+			want: "runtime and runtimeConfig",
 		},
 		{
 			name: "missing runtime requirement",
