@@ -325,7 +325,19 @@ function verifyManagedRunnerLifecycle(binary, origin, token, environmentId, temp
           '\n',
         ),
       )
-      spawnSync(binary, ['remove', instanceId, '--purge'], { env, encoding: 'utf8' })
+      const removal = spawnSync(binary, ['remove', instanceId, '--purge'], { env, encoding: 'utf8' })
+      if (removal.status !== 0) {
+        error.smokeCleanupFailed = true
+        error.detail = [
+          error.detail,
+          `failed to remove managed Runner ${instanceId}`,
+          removal.error?.message,
+          removal.stdout,
+          removal.stderr,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      }
     }
     throw error
   }
@@ -572,6 +584,7 @@ async function main() {
   let token = null
   let sessionId = null
   let failure = null
+  let preserveTempAfterCleanupFailure = false
 
   try {
     run('pnpm', ['run', 'bridge:build'])
@@ -781,6 +794,7 @@ async function main() {
     info(`verified ${sessionId}; live event types: ${types.join(', ')}`)
     info('AMA full-chain smoke passed')
   } catch (error) {
+    preserveTempAfterCleanupFailure = error?.smokeCleanupFailed === true
     const liveDiagnostics = []
     if (token && sessionId) {
       try {
@@ -827,15 +841,26 @@ async function main() {
   } finally {
     socket?.close()
     secondSocket?.close()
+    let managedRunnerRemoved = !preserveTempAfterCleanupFailure
     if (managedRunner) {
-      spawnSync(runnerBinary, ['remove', managedRunner.instanceId, '--purge'], {
+      const removal = spawnSync(runnerBinary, ['remove', managedRunner.instanceId, '--purge'], {
         env: managedRunner.env,
         encoding: 'utf8',
       })
+      if (removal.status !== 0) {
+        managedRunnerRemoved = false
+        const cleanupMessage = `failed to remove managed Runner ${managedRunner.instanceId}; retained smoke temp directory: ${temp}`
+        const cleanupDetail = [removal.error?.message, removal.stdout, removal.stderr].filter(Boolean).join('\n')
+        failure = failure
+          ? { ...failure, detail: [failure.detail, cleanupMessage, cleanupDetail].filter(Boolean).join('\n\n') }
+          : { message: cleanupMessage, detail: cleanupDetail }
+      }
     }
     await stopProcess(server?.child)
     if (process.env.AMA_FULL_SMOKE_KEEP_TEMP === 'true') {
       info(`retained smoke temp directory by request: ${temp}`)
+    } else if (!managedRunnerRemoved) {
+      info(`retained smoke temp directory after managed Runner cleanup failure: ${temp}`)
     } else {
       try {
         removeTempRoot(temp)

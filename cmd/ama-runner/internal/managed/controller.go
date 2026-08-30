@@ -39,12 +39,15 @@ type nativeService interface {
 type serviceFactory func(service.Interface, *service.Config) (nativeService, error)
 
 type Controller struct {
-	Registry       instance.Registry
-	Build          version.Info
-	Executable     string
-	WaitTimeout    time.Duration
-	newService     serviceFactory
-	exitServiceRun func(int)
+	Registry              instance.Registry
+	Build                 version.Info
+	Executable            string
+	WaitTimeout           time.Duration
+	newService            serviceFactory
+	exitServiceRun        func(int)
+	syncStartAtLogin      func(string, bool) error
+	startInstalledService func(string, bool) error
+	updateStartAtLogin    func(string, bool) (func() error, error)
 }
 
 type Status struct {
@@ -61,6 +64,7 @@ type Status struct {
 	ReadyAt        time.Time `json:"readyAt,omitempty"`
 	StateDir       string    `json:"stateDir"`
 	WorkDir        string    `json:"workDir"`
+	StartAtLogin   bool      `json:"startAtLogin"`
 	ServiceManager string    `json:"serviceManager,omitempty"`
 }
 
@@ -87,6 +91,24 @@ func (c *Controller) IsRunning(record instance.Record) (bool, error) {
 	return status == service.StatusRunning, nil
 }
 
+func (c *Controller) SetStartAtLogin(record instance.Record, enabled bool) (func() error, error) {
+	managedService, err := c.service(record, noopProgram{})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := managedService.Status(); errors.Is(err, service.ErrNotInstalled) {
+		return func() error { return nil }, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("inspect runner instance %s service before changing login startup: %w", record.ID, err)
+	}
+	serviceName := serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_")
+	rollback, err := c.updateStartAtLogin(serviceName, enabled)
+	if err != nil {
+		return nil, fmt.Errorf("configure runner instance %s login startup: %w", record.ID, err)
+	}
+	return rollback, nil
+}
+
 func NewController(registry instance.Registry, build version.Info) (*Controller, error) {
 	executable, err := os.Executable()
 	if err != nil {
@@ -100,7 +122,10 @@ func NewController(registry instance.Registry, build version.Info) (*Controller,
 		newService: func(program service.Interface, config *service.Config) (nativeService, error) {
 			return service.New(program, config)
 		},
-		exitServiceRun: os.Exit,
+		exitServiceRun:        os.Exit,
+		syncStartAtLogin:      syncServiceStartAtLogin,
+		startInstalledService: startServiceNow,
+		updateStartAtLogin:    updateServiceStartAtLogin,
 	}, nil
 }
 
@@ -117,8 +142,16 @@ func (c *Controller) Start(record instance.Record) error {
 		return err
 	}
 	if errors.Is(err, service.ErrNotInstalled) {
-		if err := managedService.Install(); err != nil {
-			return fmt.Errorf("install runner instance %s: %w", record.ID, err)
+		if err := c.install(record, managedService); err != nil {
+			return err
+		}
+		status = service.StatusStopped
+	} else if status == service.StatusStopped {
+		if err := managedService.Uninstall(); err != nil {
+			return fmt.Errorf("refresh runner instance %s service: %w", record.ID, err)
+		}
+		if err := c.install(record, managedService); err != nil {
+			return err
 		}
 		status = service.StatusStopped
 	}
@@ -128,7 +161,28 @@ func (c *Controller) Start(record instance.Record) error {
 	if err := managedService.Start(); err != nil {
 		return fmt.Errorf("start runner instance %s: %w", record.ID, err)
 	}
+	serviceName := serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_")
+	if err := c.startInstalledService(serviceName, record.StartAtLogin); err != nil {
+		if stopErr := managedService.Stop(); stopErr != nil {
+			return fmt.Errorf("start runner instance %s: %w; rollback stop failed: %v", record.ID, err, stopErr)
+		}
+		return fmt.Errorf("start runner instance %s: %w", record.ID, err)
+	}
 	return c.waitReady(record)
+}
+
+func (c *Controller) install(record instance.Record, managedService nativeService) error {
+	if err := managedService.Install(); err != nil {
+		return fmt.Errorf("install runner instance %s: %w", record.ID, err)
+	}
+	serviceName := serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_")
+	if err := c.syncStartAtLogin(serviceName, record.StartAtLogin); err != nil {
+		if uninstallErr := managedService.Uninstall(); uninstallErr != nil {
+			return fmt.Errorf("configure runner instance %s login startup: %w; rollback uninstall failed: %v", record.ID, err, uninstallErr)
+		}
+		return fmt.Errorf("configure runner instance %s login startup: %w", record.ID, err)
+	}
+	return nil
 }
 
 func (c *Controller) Stop(record instance.Record, force bool) error {
@@ -181,6 +235,13 @@ func (c *Controller) Restart(record instance.Record) error {
 	if err := managedService.Restart(); err != nil {
 		return fmt.Errorf("restart runner instance %s: %w", record.ID, err)
 	}
+	serviceName := serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_")
+	if err := c.startInstalledService(serviceName, record.StartAtLogin); err != nil {
+		if stopErr := managedService.Stop(); stopErr != nil {
+			return fmt.Errorf("restart runner instance %s: %w; rollback stop failed: %v", record.ID, err, stopErr)
+		}
+		return fmt.Errorf("restart runner instance %s: %w", record.ID, err)
+	}
 	return c.waitReadyAfter(record, restartedAt)
 }
 
@@ -188,7 +249,7 @@ func (c *Controller) Status(ctx context.Context, record instance.Record) Status 
 	result := Status{
 		ID: record.ID, APIServer: record.Config.APIServer, ProjectID: record.Config.ProjectID,
 		EnvironmentID: record.Config.EnvironmentID, AccountID: record.AccountID, LocalState: "stopped", ControlState: "unknown",
-		StateDir: record.Config.StateDir, WorkDir: record.Config.WorkDir,
+		StateDir: record.Config.StateDir, WorkDir: record.Config.WorkDir, StartAtLogin: record.StartAtLogin,
 	}
 	managedService, err := c.service(record, noopProgram{})
 	if err == nil {
@@ -249,6 +310,10 @@ func (c *Controller) service(record instance.Record, program service.Interface) 
 			environment[name] = value
 		}
 	}
+	startType := "manual"
+	if record.StartAtLogin {
+		startType = "automatic"
+	}
 	return c.newService(program, &service.Config{
 		Name:        serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_"),
 		DisplayName: "AMA Runner " + record.ID,
@@ -258,12 +323,12 @@ func (c *Controller) service(record instance.Record, program service.Interface) 
 		EnvVars:     environment,
 		Option: service.KeyValue{
 			"UserService":  true,
-			"KeepAlive":    true,
-			"RunAtLoad":    true,
+			"KeepAlive":    record.StartAtLogin,
+			"RunAtLoad":    record.StartAtLogin,
 			"LogOutput":    true,
 			"LogDirectory": logDir,
 			"Restart":      "on-failure",
-			"StartType":    "automatic",
+			"StartType":    startType,
 			"OnFailure":    "restart",
 		},
 	})

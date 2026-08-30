@@ -47,6 +47,7 @@ Local managed Runner definitions:
 
 - derives one stable instance id from normalized API Server and Environment id
 - stores non-secret immutable instance identity and mutable runtime configuration
+- stores the explicit login-startup policy, which defaults to disabled
 - restores the shared credential-file reference for runtime use
 - validates that managed state and work directories use the deterministic instance layout
 
@@ -55,6 +56,8 @@ Local managed Runner definitions:
 Native process lifecycle:
 
 - installs one user service per Runner instance through launchd, systemd, or Windows Service Control Manager
+- starts installed services immediately without implicitly enabling login startup
+- updates the persisted login-startup policy without interrupting a running service
 - starts, stops, restarts, and disables that service
 - waits for the daemon's first successful heartbeat readiness record
 - reports native local state separately from AMA control-plane state

@@ -25,6 +25,7 @@ type Record struct {
 	Version        int                 `json:"version"`
 	ID             string              `json:"id"`
 	Config         runnerconfig.Config `json:"config"`
+	StartAtLogin   bool                `json:"startAtLogin"`
 	CredentialPath string              `json:"credentialPath"`
 	AccountID      string              `json:"accountId"`
 	CreatedAt      time.Time           `json:"createdAt"`

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -151,6 +152,224 @@ func TestNewControllerUsesCurrentExecutableAndDefaults(t *testing.T) {
 	if controller.Executable == "" || controller.Registry.Dir != registry.Dir || controller.WaitTimeout != defaultWaitTimeout {
 		t.Fatalf("unexpected controller %#v", controller)
 	}
+}
+
+// [spec: runners/local-instances]
+func TestControllerConfiguresServiceLoginStartupPolicy(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		startAtLogin bool
+		startType    string
+	}{
+		{name: "disabled by default", startAtLogin: false, startType: "manual"},
+		{name: "explicitly enabled", startAtLogin: true, startType: "automatic"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			record := managedTestRecord(t)
+			record.StartAtLogin = test.startAtLogin
+			var captured *service.Config
+			controller := &Controller{
+				Registry:   instance.Registry{Dir: t.TempDir()},
+				Executable: "/tmp/ama-runner",
+				newService: func(_ service.Interface, config *service.Config) (nativeService, error) {
+					captured = config
+					return &fakeService{statusErr: service.ErrNotInstalled}, nil
+				},
+			}
+
+			status := controller.Status(context.Background(), record)
+			if captured == nil {
+				t.Fatal("service configuration was not created")
+			}
+			if captured.Option["RunAtLoad"] != test.startAtLogin || captured.Option["KeepAlive"] != test.startAtLogin || captured.Option["StartType"] != test.startType {
+				t.Fatalf("unexpected login startup service options: %#v", captured.Option)
+			}
+			if status.StartAtLogin != test.startAtLogin {
+				t.Fatalf("status did not preserve login startup policy: %#v", status)
+			}
+		})
+	}
+}
+
+// [spec: runners/local-instances]
+func TestControllerUpdatesLoginStartupWithoutChangingServiceState(t *testing.T) {
+	for _, status := range []service.Status{service.StatusRunning, service.StatusStopped} {
+		t.Run(fmt.Sprintf("status=%d", status), func(t *testing.T) {
+			record := managedTestRecord(t)
+			record.StartAtLogin = false
+			native := &fakeService{status: status}
+			controller := managedTestController(record, native)
+			var name string
+			var enabled bool
+			rollbackCalled := false
+			controller.updateStartAtLogin = func(serviceName string, newValue bool) (func() error, error) {
+				name, enabled = serviceName, newValue
+				return func() error {
+					rollbackCalled = true
+					return nil
+				}, nil
+			}
+
+			rollback, err := controller.SetStartAtLogin(record, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name != serviceNamePrefix+strings.TrimPrefix(record.ID, "runner_") || !enabled {
+				t.Fatalf("unexpected native policy update: name=%q enabled=%t", name, enabled)
+			}
+			if rollback == nil {
+				t.Fatal("native policy update did not return its rollback")
+			}
+			if err := rollback(); err != nil || !rollbackCalled {
+				t.Fatalf("controller did not pass through updater rollback: called=%t err=%v", rollbackCalled, err)
+			}
+			if native.started != 0 || native.stopped != 0 || native.restarted != 0 || native.uninstalled != 0 {
+				t.Fatalf("policy update changed service state: %#v", native)
+			}
+		})
+	}
+}
+
+func TestControllerLoginStartupUpdateBoundaries(t *testing.T) {
+	record := managedTestRecord(t)
+
+	t.Run("service creation failure", func(t *testing.T) {
+		failure := errors.New("service creation failed")
+		controller := &Controller{
+			newService: func(service.Interface, *service.Config) (nativeService, error) { return nil, failure },
+		}
+		if _, err := controller.SetStartAtLogin(record, true); !errors.Is(err, failure) {
+			t.Fatalf("expected service creation failure, got %v", err)
+		}
+	})
+
+	t.Run("uninstalled service", func(t *testing.T) {
+		native := &fakeService{statusErr: service.ErrNotInstalled}
+		controller := managedTestController(record, native)
+		updates := 0
+		controller.updateStartAtLogin = func(string, bool) (func() error, error) {
+			updates++
+			return nil, nil
+		}
+		rollback, err := controller.SetStartAtLogin(record, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rollback == nil || rollback() != nil {
+			t.Fatal("uninstalled service must return a no-op rollback")
+		}
+		if updates != 0 {
+			t.Fatal("uninstalled service must defer login policy to persisted configuration")
+		}
+	})
+
+	t.Run("native update failure", func(t *testing.T) {
+		failure := errors.New("native update failed")
+		controller := managedTestController(record, &fakeService{status: service.StatusRunning})
+		controller.updateStartAtLogin = func(string, bool) (func() error, error) { return nil, failure }
+		if _, err := controller.SetStartAtLogin(record, true); !errors.Is(err, failure) {
+			t.Fatalf("expected native update failure, got %v", err)
+		}
+	})
+
+	t.Run("native rollback failure", func(t *testing.T) {
+		failure := errors.New("native rollback failed")
+		controller := managedTestController(record, &fakeService{status: service.StatusRunning})
+		controller.updateStartAtLogin = func(string, bool) (func() error, error) {
+			return func() error { return failure }, nil
+		}
+		rollback, err := controller.SetStartAtLogin(record, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rollback == nil || !errors.Is(rollback(), failure) {
+			t.Fatal("controller did not pass through the updater rollback failure")
+		}
+	})
+
+	t.Run("service status failure", func(t *testing.T) {
+		failure := errors.New("status failed")
+		controller := managedTestController(record, &fakeService{statusErr: failure})
+		if _, err := controller.SetStartAtLogin(record, true); !errors.Is(err, failure) {
+			t.Fatalf("expected status failure, got %v", err)
+		}
+	})
+}
+
+// [spec: runners/local-instances]
+func TestControllerAppliesLoginStartupPolicyToInstalledService(t *testing.T) {
+	for _, startAtLogin := range []bool{false, true} {
+		t.Run(fmt.Sprintf("startAtLogin=%t", startAtLogin), func(t *testing.T) {
+			record := managedTestRecord(t)
+			record.StartAtLogin = startAtLogin
+			native := &fakeService{statusErr: service.ErrNotInstalled}
+			native.onStart = func() { writeManagedTestRuntime(t, record, "ready", time.Now().UTC()) }
+			native.onRestart = func() { writeManagedTestRuntime(t, record, "ready", time.Now().UTC().Add(time.Second)) }
+			controller := managedTestController(record, native)
+			var syncedName string
+			var syncedPolicy bool
+			controller.syncStartAtLogin = func(name string, enabled bool) error {
+				syncedName = name
+				syncedPolicy = enabled
+				return nil
+			}
+			var starts []bool
+			controller.startInstalledService = func(name string, enabled bool) error {
+				if name != syncedName {
+					t.Fatalf("installed service name changed: synced=%q started=%q", syncedName, name)
+				}
+				starts = append(starts, enabled)
+				return nil
+			}
+
+			if err := controller.Start(record); err != nil {
+				t.Fatal(err)
+			}
+			if syncedName != serviceNamePrefix+strings.TrimPrefix(record.ID, "runner_") || syncedPolicy != startAtLogin || len(starts) != 1 || starts[0] != startAtLogin {
+				t.Fatalf("login startup policy was not applied: name=%q synced=%t starts=%v", syncedName, syncedPolicy, starts)
+			}
+			if err := controller.Restart(record); err != nil {
+				t.Fatal(err)
+			}
+			if len(starts) != 2 || starts[1] != startAtLogin {
+				t.Fatalf("restart did not preserve login startup policy: %v", starts)
+			}
+		})
+	}
+}
+
+func TestControllerRollsBackPlatformLoginStartupFailures(t *testing.T) {
+	record := managedTestRecord(t)
+
+	t.Run("policy synchronization", func(t *testing.T) {
+		failure := errors.New("sync login startup failed")
+		native := &fakeService{statusErr: service.ErrNotInstalled}
+		controller := managedTestController(record, native)
+		controller.syncStartAtLogin = func(string, bool) error { return failure }
+
+		err := controller.Start(record)
+		if !errors.Is(err, failure) {
+			t.Fatalf("expected synchronization failure, got %v", err)
+		}
+		if !native.installed || native.uninstalled != 1 || native.started != 0 {
+			t.Fatalf("failed policy synchronization did not roll back installation: %#v", native)
+		}
+	})
+
+	t.Run("immediate start", func(t *testing.T) {
+		failure := errors.New("start installed service failed")
+		native := &fakeService{statusErr: service.ErrNotInstalled}
+		controller := managedTestController(record, native)
+		controller.startInstalledService = func(string, bool) error { return failure }
+
+		err := controller.Start(record)
+		if !errors.Is(err, failure) {
+			t.Fatalf("expected immediate start failure, got %v", err)
+		}
+		if native.started != 1 || native.stopped != 1 {
+			t.Fatalf("failed immediate start did not stop the service: %#v", native)
+		}
+	})
 }
 
 func TestControllerStatusAndServiceBranches(t *testing.T) {
@@ -480,10 +699,13 @@ func TestManagedRuntimeHelpersRejectInvalidState(t *testing.T) {
 
 func managedTestController(record instance.Record, native *fakeService) *Controller {
 	return &Controller{
-		Registry:       instance.Registry{Dir: filepath.Dir(record.Config.StateDir)},
-		WaitTimeout:    time.Second,
-		newService:     func(service.Interface, *service.Config) (nativeService, error) { return native, nil },
-		exitServiceRun: func(int) {},
+		Registry:              instance.Registry{Dir: filepath.Dir(record.Config.StateDir)},
+		WaitTimeout:           time.Second,
+		newService:            func(service.Interface, *service.Config) (nativeService, error) { return native, nil },
+		exitServiceRun:        func(int) {},
+		syncStartAtLogin:      func(string, bool) error { return nil },
+		startInstalledService: func(string, bool) error { return nil },
+		updateStartAtLogin:    func(string, bool) (func() error, error) { return func() error { return nil }, nil },
 	}
 }
 

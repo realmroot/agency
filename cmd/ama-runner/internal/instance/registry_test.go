@@ -48,12 +48,16 @@ func TestRegistryKeepsOneRecordPerAPIServerAndEnvironment(t *testing.T) {
 	if loaded.RuntimeConfig().CredentialPath != first.CredentialPath || loaded.Config.ConfigPath != "" {
 		t.Fatalf("managed runtime paths were not restored: %#v", loaded)
 	}
+	if loaded.StartAtLogin {
+		t.Fatal("new instance must default to disabled login startup")
+	}
+	loaded.StartAtLogin = true
 	loaded.Config.MaxConcurrent = 3
 	if err := registry.Put(loaded); err != nil {
 		t.Fatal(err)
 	}
 	updated, err := registry.Get(first.ID)
-	if err != nil || updated.Config.MaxConcurrent != 3 || !updated.UpdatedAt.After(updated.CreatedAt) {
+	if err != nil || updated.Config.MaxConcurrent != 3 || !updated.StartAtLogin || !updated.UpdatedAt.After(updated.CreatedAt) {
 		t.Fatalf("instance update was not persisted: %#v err=%v", updated, err)
 	}
 	if err := registry.Remove(first.ID); err != nil {
