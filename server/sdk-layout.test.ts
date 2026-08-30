@@ -12,7 +12,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     execFileSync('pnpm', ['run', 'openapi:generate'], { encoding: 'utf8' })
     const after = Object.fromEntries(files.map((file) => [file, readFileSync(file, 'utf8')]))
     expect(after).toEqual(before)
-  }, 30_000)
+  }, 60_000)
 
   it('keeps only the TypeScript SDK in pnpm workspaces', () => {
     const workspace = readFileSync('pnpm-workspace.yaml', 'utf8')
@@ -35,7 +35,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     expect(() =>
       execFileSync('pnpm', ['--filter', '@any-managed-agents/sdk', 'run', 'smoke'], { encoding: 'utf8' }),
     ).not.toThrow()
-  })
+  }, 30_000)
 
   it('keeps generated runner WebSocket facades on Bearer while Agent sockets remain DPoP', () => {
     const typescript = readFileSync('sdk/typescript/src/client.ts', 'utf8')

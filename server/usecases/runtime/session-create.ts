@@ -486,7 +486,7 @@ function selfHostedSessionWorkItem(
     hostingMode: values.environmentSnapshot?.type ?? 'self_hosted',
     runtime: values.runtime,
     runtimeConfig: values.runtimeConfig,
-    provider: values.agentSnapshot.provider,
+    ...(values.agentSnapshot.provider ? { provider: values.agentSnapshot.provider } : {}),
     ...(runnerModel ? { model: runnerModel } : {}),
     runtimeDriver: runtimeDriverName(values.runtime, 'self_hosted'),
     agentSnapshot: values.agentSnapshot,
@@ -618,19 +618,8 @@ export async function createSessionForAgent(
   if (!agentVersion) {
     throw new Error('Agent current version is required')
   }
-  if (!agentVersion.providerId) {
-    return {
-      ok: false,
-      error: {
-        status: 409,
-        code: 'conflict',
-        message: 'Agent must pin a provider before a session can be created',
-        detail: { resourceType: 'provider', resourceId: agentId },
-      },
-    }
-  }
   const providerId = agentVersion.providerId
-  const agentSnapshot = createAgentSnapshot(agentVersion, providerId)
+  const agentSnapshot = createAgentSnapshot(agentVersion)
   let runtime: RuntimeName
   try {
     runtime = resolveIdentityRuntime(options.runtime, agentSnapshot.identity)
@@ -659,59 +648,61 @@ export async function createSessionForAgent(
     }
   }
   const prompt = sessionPrompt(userPrompt)
-  const { decision: policyDecision, override: policyOverride } = await policy.evaluateProviderForSession(auth, {
-    providerId,
-    modelId: agentVersion.model,
-    adminOverride: false,
-  })
-  if (!policyDecision.allowed) {
-    await audit.record(auth, {
-      action: 'session.create',
-      resourceType: 'session',
-      outcome: 'denied',
-      requestId: requestIdFrom(requestId),
-      policyCategory: policyDecision.category,
-      metadata: { agentId, providerId, modelId: agentVersion.model, decision: policyDecision },
+  if (providerId) {
+    const { decision: policyDecision, override: policyOverride } = await policy.evaluateProviderForSession(auth, {
+      providerId,
+      modelId: agentVersion.model,
+      adminOverride: false,
     })
-    return {
-      ok: false,
-      error: {
-        status: 403,
-        code: 'policy_denied',
-        message: policyDecision.message,
-        detail: {
-          category: policyDecision.category,
-          resourceType:
-            policyDecision.category === 'budget'
-              ? 'budget'
-              : policyDecision.category === 'model'
-                ? 'model'
-                : 'provider',
-          resourceId:
-            policyDecision.category === 'budget'
-              ? policyDecision.rule
-              : policyDecision.category === 'model'
-                ? agentVersion.model
-                : providerId,
-          ruleId: policyDecision.rule,
+    if (!policyDecision.allowed) {
+      await audit.record(auth, {
+        action: 'session.create',
+        resourceType: 'session',
+        outcome: 'denied',
+        requestId: requestIdFrom(requestId),
+        policyCategory: policyDecision.category,
+        metadata: { agentId, providerId, modelId: agentVersion.model, decision: policyDecision },
+      })
+      return {
+        ok: false,
+        error: {
+          status: 403,
+          code: 'policy_denied',
+          message: policyDecision.message,
+          detail: {
+            category: policyDecision.category,
+            resourceType:
+              policyDecision.category === 'budget'
+                ? 'budget'
+                : policyDecision.category === 'model'
+                  ? 'model'
+                  : 'provider',
+            resourceId:
+              policyDecision.category === 'budget'
+                ? policyDecision.rule
+                : policyDecision.category === 'model'
+                  ? agentVersion.model
+                  : providerId,
+            ruleId: policyDecision.rule,
+          },
         },
-      },
+      }
     }
-  }
-  if (policyOverride) {
-    await audit.record(auth, {
-      action: 'session.create',
-      resourceType: 'session',
-      outcome: 'success',
-      requestId: requestIdFrom(requestId),
-      policyCategory: 'override',
-      metadata: {
-        agentId,
-        providerId,
-        modelId: agentVersion.model,
-        overriddenDecision: policyOverride,
-      },
-    })
+    if (policyOverride) {
+      await audit.record(auth, {
+        action: 'session.create',
+        resourceType: 'session',
+        outcome: 'success',
+        requestId: requestIdFrom(requestId),
+        policyCategory: 'override',
+        metadata: {
+          agentId,
+          providerId,
+          modelId: agentVersion.model,
+          overriddenDecision: policyOverride,
+        },
+      })
+    }
   }
 
   // Resolve an environment when the caller didn't pin one: pick one whose
@@ -892,7 +883,10 @@ export async function createSessionForAgent(
     resumeToken: null,
     runtimeEndpointPath: null,
     modelProvider: providerId,
-    modelConfig: stringify({ provider: providerId, ...(agentSnapshot.model ? { model: agentSnapshot.model } : {}) }),
+    modelConfig: stringify({
+      ...(providerId ? { provider: providerId } : {}),
+      ...(agentSnapshot.model ? { model: agentSnapshot.model } : {}),
+    }),
     state: 'pending',
     stateReason: hostingMode === 'self_hosted' ? 'waiting-for-runner' : null,
     activeTurnId: null,

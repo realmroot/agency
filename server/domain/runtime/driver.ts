@@ -75,7 +75,7 @@ export function runtimePlacement(values: {
   hostingMode: RuntimeHostingMode
   runtime: RuntimeName
   runtimeConfig: Record<string, unknown>
-  provider: string
+  provider: string | null
   model: string | null
   metadata?: Record<string, unknown>
 }) {

@@ -178,7 +178,7 @@ export function SessionDetailView({
                 <MetaGrid>
                   <Meta label="Agent id" value={session.spec.agentId} />
                   <Meta label="Version" value={`v${agentSnapshot.version}`} />
-                  <Meta label="Provider" value={agentSnapshot.provider} />
+                  <Meta label="Provider" value={agentSnapshot.provider ?? 'Not pinned'} />
                   <Meta label="Model" value={agentSnapshot.model ?? 'None'} />
                   <Meta label="Skills" value={agentSnapshot.skills.join(', ') || 'None'} />
                   <Meta label="Allowed tools" value={agentSnapshot.allowedTools.join(', ') || 'None'} />

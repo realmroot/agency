@@ -321,6 +321,34 @@ describe('createSessionForAgent — environment resolution', () => {
     expect(findEnvironmentMock).toHaveBeenCalledWith('proj_1', 'env_pinned')
   })
 
+  it('leaves provider and model selection to the self-hosted runtime when the agent pins neither', async () => {
+    evaluateProviderPolicyForSessionMock.mockClear()
+    findAgentVersionMock.mockResolvedValue({ id: 'agentver_1', model: null, providerId: null })
+    createAgentSnapshotMock.mockReturnValue({
+      id: 'agentver_1',
+      provider: null,
+      model: null,
+      identity: null,
+    } as never)
+    findEnvironmentVersionMock.mockResolvedValue({ id: 'envver_1', hostingMode: 'self_hosted' })
+    createEnvironmentSnapshotMock.mockReturnValue({ id: 'envver_1', type: 'self_hosted' } as never)
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_pinned',
+      { runtime: 'codex', prompt: 'Use the Codex runtime default' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(createAgentSnapshotMock).toHaveBeenCalledWith(expect.objectContaining({ providerId: null }))
+    expect(evaluateProviderPolicyForSessionMock).not.toHaveBeenCalled()
+    expect(JSON.parse(insertSessionMock.mock.calls[0]?.[0].modelConfig ?? 'null')).toEqual({})
+    expect(insertSessionMock.mock.calls[0]?.[0].modelProvider).toBeNull()
+  })
+
   it('uses the runner-local model at self-hosted boundaries while preserving canonical snapshots', async () => {
     const canonicalModel = 'openai/gpt-5.6-sol'
     const localModel = 'gpt-5.6-sol'

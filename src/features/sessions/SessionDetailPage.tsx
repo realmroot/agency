@@ -2,11 +2,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { useParams } from 'react-router'
 import { EmptyState } from '@/console/components'
-import { api } from '@/lib/amarpc'
+import { api, type Session } from '@/lib/amarpc'
 import { queryKeys } from '@/lib/query-keys'
 import { SessionDetailView } from './SessionDetailView'
 import { useSessionActions } from './use-session-actions'
 import { useSessionRuntimeSession } from './use-session-runtime'
+
+export function sessionRefetchInterval(phase: Session['status']['phase'] | undefined) {
+  return phase === 'pending' || phase === 'running' ? 2000 : false
+}
 
 export function SessionDetailPage() {
   const { sessionId } = useParams()
@@ -18,7 +22,7 @@ export function SessionDetailPage() {
     queryFn: () => api.readSession(sessionId as string),
     enabled: Boolean(sessionId),
     /* v8 ignore start -- refetchInterval is a React Query internal callback */
-    refetchInterval: (query) => (query.state.data?.status.phase === 'pending' ? 2000 : false),
+    refetchInterval: (query) => sessionRefetchInterval(query.state.data?.status.phase),
     /* v8 ignore stop */
   })
   const session = sessionQuery.data ?? null

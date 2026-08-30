@@ -66,8 +66,9 @@ export function runtimeRequirement(runtime: RuntimeName, model?: string | null):
   }
 }
 
-export function selfHostedRuntimeModel(provider: string, model?: string | null) {
+export function selfHostedRuntimeModel(provider: string | null, model?: string | null) {
   if (!model) return null
+  if (!provider) return model
   const prefix = `${provider}/`
   return model.startsWith(prefix) ? model.slice(prefix.length) : model
 }

@@ -21,7 +21,7 @@ import {
 } from '@/test/resource-fixtures'
 import { buildTestSession, type TestSessionOverrides } from '@/testing/session'
 import { CreateSessionSheet, formatCreateSessionError } from './CreateSessionSheet'
-import { SessionDetailPage } from './SessionDetailPage'
+import { SessionDetailPage, sessionRefetchInterval } from './SessionDetailPage'
 import { SessionDetailView } from './SessionDetailView'
 import { SessionRuntimePanel } from './SessionRuntimePanel'
 import { SessionsPage } from './SessionsPage'
@@ -1969,6 +1969,13 @@ describe('SessionsPage', () => {
 // ---------------------------------------------------------------------------
 
 describe('SessionDetailPage', () => {
+  it('keeps polling pending and running sessions until the control plane reaches a terminal turn state [spec: sessions/live-state-refresh]', () => {
+    expect(sessionRefetchInterval('pending')).toBe(2000)
+    expect(sessionRefetchInterval('running')).toBe(2000)
+    expect(sessionRefetchInterval('idle')).toBe(false)
+    expect(sessionRefetchInterval('error')).toBe(false)
+  })
+
   it('shows loading state while session query is pending', () => {
     server.use(http.get('*/api/v1/sessions/session_loading', () => new Promise(() => {})))
 

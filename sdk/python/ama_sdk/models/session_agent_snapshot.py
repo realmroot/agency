@@ -32,7 +32,7 @@ class SessionAgentSnapshot:
             project_id (str):
             version (int):
             system_prompt (str):
-            provider (str):  Example: workers-ai.
+            provider (None | str):  Example: workers-ai.
             model (None | str):
             skills (list[str]):
             subagents (list[SessionSubagent]):
@@ -47,7 +47,7 @@ class SessionAgentSnapshot:
     project_id: str
     version: int
     system_prompt: str
-    provider: str
+    provider: None | str
     model: None | str
     skills: list[str]
     subagents: list[SessionSubagent]
@@ -74,6 +74,7 @@ class SessionAgentSnapshot:
 
         system_prompt = self.system_prompt
 
+        provider: None | str
         provider = self.provider
 
         model: None | str
@@ -144,7 +145,13 @@ class SessionAgentSnapshot:
 
         system_prompt = d.pop("systemPrompt")
 
-        provider = d.pop("provider")
+        def _parse_provider(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        provider = _parse_provider(d.pop("provider"))
+
 
         def _parse_model(data: object) -> None | str:
             if data is None:

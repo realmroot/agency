@@ -4848,7 +4848,7 @@ type SessionAgentSnapshot struct {
 	McpConnectors []string                   `json:"mcpConnectors"`
 	Model         *string                    `json:"model"`
 	ProjectId     string                     `json:"projectId"`
-	Provider      string                     `json:"provider"`
+	Provider      *string                    `json:"provider"`
 	Skills        []string                   `json:"skills"`
 	Subagents     []SessionSubagent          `json:"subagents"`
 	SystemPrompt  string                     `json:"systemPrompt"`
@@ -5182,7 +5182,7 @@ type SessionMetadata struct {
 type SessionPlacement struct {
 	HostingMode EnvironmentHostingMode `json:"hostingMode"`
 	Model       *string                `json:"model"`
-	Provider    string                 `json:"provider"`
+	Provider    *string                `json:"provider"`
 }
 
 // SessionSocketAbortMessage defines model for SessionSocketAbortMessage.

@@ -48,6 +48,10 @@ describe('selfHostedRuntimeModel', () => {
     expect(selfHostedRuntimeModel('workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe('@cf/moonshotai/kimi-k2.6')
   })
 
+  it('preserves a runner-native model id when no provider is pinned', () => {
+    expect(selfHostedRuntimeModel(null, 'gpt-runtime-default')).toBe('gpt-runtime-default')
+  })
+
   it('preserves slash-containing runner-native and mismatched provider model ids', () => {
     expect(selfHostedRuntimeModel('openai', 'org/model')).toBe('org/model')
     expect(selfHostedRuntimeModel('openai', 'anthropic/claude-opus-4')).toBe('anthropic/claude-opus-4')
