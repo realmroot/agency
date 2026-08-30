@@ -42,7 +42,7 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	if config.APIServer != "https://ama.example.test" || config.EnvironmentID != "env_1" {
 		t.Fatalf("expected saved login and config file values, got %#v", config)
 	}
-	if config.CredentialPath != credentialPath || config.ConfigPath != configPath {
+	if config.CredentialPath != credentialPath || config.CredentialAccountID != "acct_1" || config.ConfigPath != configPath {
 		t.Fatalf("unexpected path/token flags: %#v", config)
 	}
 }
@@ -256,7 +256,7 @@ func TestApplySavedLoginFillsServerFromBearerProfile(t *testing.T) {
 	if err := applySavedLogin(&config); err != nil {
 		t.Fatalf("apply saved login: %v", err)
 	}
-	if config.APIServer != "https://ama.example.test" {
+	if config.APIServer != "https://ama.example.test" || config.CredentialAccountID != "acct_1" {
 		t.Fatalf("expected saved server, got %#v", config)
 	}
 }

@@ -298,6 +298,31 @@ func TestNewTokenSourceWithoutSavedBearerProfileFailsClosed(t *testing.T) {
 	}
 }
 
+// [spec: runners/local-instances]
+func TestTokenSourceUsesPinnedAccountWhenAPIServerHasMultipleProfiles(t *testing.T) {
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	for _, profile := range []runnerconfig.CredentialProfile{
+		{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"},
+		{AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "token-2", TokenType: "Bearer"},
+	} {
+		if err := runnerconfig.SaveCredentialProfile(credentialPath, profile); err != nil {
+			t.Fatal(err)
+		}
+	}
+	source, err := NewTokenSource(runnerconfig.Config{
+		CredentialPath:      credentialPath,
+		CredentialAccountID: "acct_1",
+		APIServer:           "https://ama.example.test",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := source.AccessToken(context.Background())
+	if err != nil || token != "token-1" {
+		t.Fatalf("expected pinned account token, token=%q err=%v", token, err)
+	}
+}
+
 func TestNewTokenSourceRejectsLegacyDPoPProfile(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := os.WriteFile(credentialPath, []byte(`{

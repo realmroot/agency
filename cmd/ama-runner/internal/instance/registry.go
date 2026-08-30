@@ -15,7 +15,7 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/securefile"
 )
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 const registryLockFileName = "registry.lock"
 
@@ -26,6 +26,7 @@ type Record struct {
 	ID             string              `json:"id"`
 	Config         runnerconfig.Config `json:"config"`
 	CredentialPath string              `json:"credentialPath"`
+	AccountID      string              `json:"accountId"`
 	CreatedAt      time.Time           `json:"createdAt"`
 	UpdatedAt      time.Time           `json:"updatedAt"`
 }
@@ -46,15 +47,21 @@ func NewRecord(config runnerconfig.Config) (Record, error) {
 	if err := validateManagedConfig(config); err != nil {
 		return Record{}, err
 	}
+	if strings.TrimSpace(config.CredentialAccountID) == "" {
+		return Record{}, fmt.Errorf("runner account id is required")
+	}
 	now := time.Now().UTC()
 	credentialPath := config.CredentialPath
+	accountID := config.CredentialAccountID
 	config.ConfigPath = ""
 	config.CredentialPath = ""
+	config.CredentialAccountID = ""
 	return Record{
 		Version:        schemaVersion,
 		ID:             id,
 		Config:         config,
 		CredentialPath: credentialPath,
+		AccountID:      accountID,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}, nil
@@ -179,6 +186,7 @@ func (record Record) RuntimeConfig() runnerconfig.Config {
 	config := record.Config
 	config.ConfigPath = ""
 	config.CredentialPath = record.CredentialPath
+	config.CredentialAccountID = record.AccountID
 	return config
 }
 
@@ -227,6 +235,9 @@ func validateRecord(record Record) error {
 	}
 	if strings.TrimSpace(record.CredentialPath) == "" {
 		return fmt.Errorf("runner credential path is required")
+	}
+	if strings.TrimSpace(record.AccountID) == "" {
+		return fmt.Errorf("runner account id is required")
 	}
 	return nil
 }

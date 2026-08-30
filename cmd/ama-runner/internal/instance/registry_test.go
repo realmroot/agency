@@ -93,7 +93,7 @@ func TestRegistryRejectsTamperedAndUnsafeRecords(t *testing.T) {
 		t.Fatalf("missing remove must return ErrNotFound, got %v", err)
 	}
 	badVersion := newTestRecord(t, "https://ama.example.test", "env_3")
-	badVersion.Version = 2
+	badVersion.Version = 1
 	if err := registry.Create(badVersion); err == nil {
 		t.Fatal("unsupported instance schema must fail")
 	}
@@ -101,6 +101,11 @@ func TestRegistryRejectsTamperedAndUnsafeRecords(t *testing.T) {
 	missingCredential.CredentialPath = ""
 	if err := registry.Create(missingCredential); err == nil {
 		t.Fatal("missing credential reference must fail")
+	}
+	missingAccount := newTestRecord(t, "https://ama.example.test", "env_6")
+	missingAccount.AccountID = ""
+	if err := registry.Create(missingAccount); err == nil {
+		t.Fatal("missing account reference must fail")
 	}
 	customStorage := newTestRecord(t, "https://ama.example.test", "env_5")
 	customStorage.Config.StateDir = t.TempDir()
@@ -146,7 +151,8 @@ func newTestRecord(t *testing.T, apiServer string, environmentID string) Record 
 		MaxConcurrent: 1, HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60,
 		RenewInterval: 20 * time.Second, CommandTimeout: 10 * time.Minute,
 		ShutdownGraceInterval: 5 * time.Second, MaxSessionDuration: 2 * time.Hour,
-		CredentialPath: filepath.Join(t.TempDir(), "credentials.json"),
+		CredentialPath:      filepath.Join(t.TempDir(), "credentials.json"),
+		CredentialAccountID: "acct_1",
 	})
 	if err != nil {
 		t.Fatal(err)

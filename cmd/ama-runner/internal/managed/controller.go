@@ -52,6 +52,7 @@ type Status struct {
 	APIServer      string    `json:"apiServer"`
 	ProjectID      string    `json:"projectId,omitempty"`
 	EnvironmentID  string    `json:"environmentId"`
+	AccountID      string    `json:"accountId"`
 	LocalState     string    `json:"localState"`
 	ControlState   string    `json:"controlPlaneState"`
 	PID            int       `json:"pid,omitempty"`
@@ -186,7 +187,7 @@ func (c *Controller) Restart(record instance.Record) error {
 func (c *Controller) Status(ctx context.Context, record instance.Record) Status {
 	result := Status{
 		ID: record.ID, APIServer: record.Config.APIServer, ProjectID: record.Config.ProjectID,
-		EnvironmentID: record.Config.EnvironmentID, LocalState: "stopped", ControlState: "unknown",
+		EnvironmentID: record.Config.EnvironmentID, AccountID: record.AccountID, LocalState: "stopped", ControlState: "unknown",
 		StateDir: record.Config.StateDir, WorkDir: record.Config.WorkDir,
 	}
 	managedService, err := c.service(record, noopProgram{})

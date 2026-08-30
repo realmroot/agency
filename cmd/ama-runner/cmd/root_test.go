@@ -137,7 +137,7 @@ func (f *fakeManagedController) Restart(record instance.Record) error {
 }
 func (f *fakeManagedController) Status(_ context.Context, record instance.Record) managed.Status {
 	return managed.Status{
-		ID: record.ID, APIServer: record.Config.APIServer, EnvironmentID: record.Config.EnvironmentID,
+		ID: record.ID, APIServer: record.Config.APIServer, EnvironmentID: record.Config.EnvironmentID, AccountID: record.AccountID,
 		LocalState: "ready", ControlState: "active", PID: 42,
 	}
 }
@@ -179,7 +179,7 @@ func TestManagedLifecycleCommands(t *testing.T) {
 		t.Fatalf("managed start did not create one instance: records=%#v err=%v", records, err)
 	}
 	record := records[0]
-	if len(fake.started) != 1 || !strings.Contains(record.Config.StateDir, filepath.Join("environments", "env_1-")) {
+	if len(fake.started) != 1 || record.AccountID != "acct_1" || !strings.Contains(record.Config.StateDir, filepath.Join("environments", "env_1-")) {
 		t.Fatalf("unexpected managed start: fake=%#v record=%#v", fake, record)
 	}
 	output.Reset()
@@ -193,6 +193,22 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	if len(fake.started) != 3 {
 		t.Fatalf("repeated start was not idempotently delegated: %#v", fake.started)
 	}
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "other-token", TokenType: "Bearer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "start", record.ID), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	stillPinned, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || stillPinned.AccountID != "acct_1" {
+		t.Fatalf("managed restart changed the bound account: record=%#v err=%v", stillPinned, err)
+	}
+	if err := execute(context.Background(), startArgs, testBuild(), nil, nil); err == nil {
+		t.Fatal("starting the same instance configuration with another active account must fail")
+	}
 	conflictingStart := append([]string{}, startArgs...)
 	conflictingStart[len(conflictingStart)-1] = "2"
 	if err := execute(context.Background(), conflictingStart, testBuild(), nil, nil); err == nil {
@@ -203,14 +219,14 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	if err := execute(context.Background(), append(append([]string{}, base...), "list", "--output", "json"), testBuild(), &output, nil); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), `"localState": "ready"`) || !strings.Contains(output.String(), `"controlPlaneState": "active"`) {
+	if !strings.Contains(output.String(), `"accountId": "acct_1"`) || !strings.Contains(output.String(), `"localState": "ready"`) || !strings.Contains(output.String(), `"controlPlaneState": "active"`) {
 		t.Fatalf("unexpected list output %s", output.String())
 	}
 	output.Reset()
 	if err := execute(context.Background(), append(append([]string{}, base...), "status", record.ID), testBuild(), &output, nil); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), "CONTROL PLANE") || !strings.Contains(output.String(), "42") {
+	if !strings.Contains(output.String(), "ACCOUNT") || !strings.Contains(output.String(), "acct_1") || !strings.Contains(output.String(), "CONTROL PLANE") || !strings.Contains(output.String(), "42") {
 		t.Fatalf("unexpected status output %s", output.String())
 	}
 

@@ -211,6 +211,7 @@ func applySavedLogin(config *runnerconfig.Config) error {
 	if !strings.EqualFold(strings.TrimSpace(saved.TokenType), "Bearer") {
 		return errors.New("saved AMA runner login is not a Realmroot Bearer credential; run ama-runner auth login again")
 	}
+	config.CredentialAccountID = saved.AccountID
 	return nil
 }
 

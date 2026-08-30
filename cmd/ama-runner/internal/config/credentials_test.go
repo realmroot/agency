@@ -328,6 +328,41 @@ func TestCredentialProfileSelectionEdgeCases(t *testing.T) {
 	if _, err := LoadCredentialProfile(path, "https://shared.example.test"); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
 		t.Fatalf("expected ambiguous profile error, got %v", err)
 	}
+	pinned, err := LoadCredentialProfileByAccountID(path, "https://shared.example.test", "acct_shared_1")
+	if err != nil || pinned == nil || pinned.AccessToken != "token-1" {
+		t.Fatalf("expected exact account profile, profile=%#v err=%v", pinned, err)
+	}
+	if missing, err := LoadCredentialProfileByAccountID(path, "https://shared.example.test", "acct_missing"); err != nil || missing != nil {
+		t.Fatalf("missing exact account must return nil, profile=%#v err=%v", missing, err)
+	}
+	if _, err := LoadCredentialProfileByAccountID(path, "", "acct_shared_1"); err == nil {
+		t.Fatal("exact account selection without an API server must fail")
+	}
+	updated, err := UpdateCredentialProfileByAccountID(path, "https://shared.example.test", "acct_shared_1", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		current.AccessToken = "token-1-refreshed"
+		return current, true, nil
+	})
+	if err != nil || updated.AccessToken != "token-1-refreshed" {
+		t.Fatalf("update exact account: profile=%#v err=%v", updated, err)
+	}
+	store, err := LoadCredentialStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(store.Active, "acct_other") {
+		t.Fatalf("refreshing a pinned account must not change the globally active account, got %q", store.Active)
+	}
+	if _, err := UpdateCredentialProfileByAccountID(path, "https://shared.example.test", "", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		return current, false, nil
+	}); err == nil {
+		t.Fatal("updating an empty exact account must fail")
+	}
+	if _, err := UpdateCredentialProfileByAccountID(path, "https://shared.example.test", "acct_shared_1", func(current CredentialProfile) (CredentialProfile, bool, error) {
+		current.AccountID = "acct_shared_2"
+		return current, true, nil
+	}); err == nil {
+		t.Fatal("updating a pinned profile must not change its account")
+	}
 	switched, err := SwitchCredentialProfile(path, "https://shared.example.test", "Two")
 	if err != nil {
 		t.Fatalf("switch by display name: %v", err)

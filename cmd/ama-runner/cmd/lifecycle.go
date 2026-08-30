@@ -58,7 +58,7 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 					existing, getErr := registry.Get(record.ID)
 					switch {
 					case getErr == nil:
-						if existing.Config != record.Config || existing.CredentialPath != record.CredentialPath {
+						if existing.Config != record.Config || existing.CredentialPath != record.CredentialPath || existing.AccountID != record.AccountID {
 							return fmt.Errorf("runner instance %s already exists with different configuration; use ama-runner configure %s", record.ID, record.ID)
 						}
 						record = existing
@@ -380,7 +380,7 @@ func printStatuses(stdout io.Writer, output string, statuses []managed.Status) e
 		return encoder.Encode(statuses)
 	case "table":
 		writer := tabwriter.NewWriter(stdout, 0, 4, 2, ' ', 0)
-		if _, err := fmt.Fprintln(writer, "INSTANCE\tAPI SERVER\tENVIRONMENT\tLOCAL\tCONTROL PLANE\tPID"); err != nil {
+		if _, err := fmt.Fprintln(writer, "INSTANCE\tAPI SERVER\tENVIRONMENT\tACCOUNT\tLOCAL\tCONTROL PLANE\tPID"); err != nil {
 			return err
 		}
 		for _, status := range statuses {
@@ -388,7 +388,7 @@ func printStatuses(stdout io.Writer, output string, statuses []managed.Status) e
 			if status.PID > 0 {
 				pid = fmt.Sprintf("%d", status.PID)
 			}
-			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\n", status.ID, status.APIServer, status.EnvironmentID, status.LocalState, status.ControlState, pid); err != nil {
+			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", status.ID, status.APIServer, status.EnvironmentID, status.AccountID, status.LocalState, status.ControlState, pid); err != nil {
 				return err
 			}
 		}

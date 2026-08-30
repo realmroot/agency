@@ -39,23 +39,14 @@ func saveCredentialProfileUnlocked(path string, profile CredentialProfile) error
 	if strings.TrimSpace(path) == "" {
 		return fmt.Errorf("runner credential path is required")
 	}
-	if strings.TrimSpace(profile.AccessToken) == "" {
-		return fmt.Errorf("runner access token is required")
-	}
-	if strings.TrimSpace(profile.AccountID) == "" {
-		return fmt.Errorf("runner account id is required")
-	}
-	if !strings.EqualFold(strings.TrimSpace(profile.TokenType), "Bearer") {
-		return fmt.Errorf("runner token type must be Bearer")
+	profile, err := normalizedCredentialProfile(profile)
+	if err != nil {
+		return err
 	}
 	values, err := loadRawCredentialFile(path)
 	if err != nil {
 		return err
 	}
-	profile.APIServer = strings.TrimRight(profile.APIServer, "/")
-	profile.AccountID = strings.TrimSpace(profile.AccountID)
-	profile.Email = strings.TrimSpace(profile.Email)
-	profile.Name = strings.TrimSpace(profile.Name)
 	store := values
 	store.Active = profileKey(profile.APIServer, profile.AccountID)
 	store.Profiles = upsertCredentialProfile(store.Profiles, profile)
@@ -178,12 +169,19 @@ func loadActiveCredentialProfileUnlocked(path string) (*CredentialProfile, error
 }
 
 func LoadCredentialProfile(path string, apiServer string) (*CredentialProfile, error) {
+	return LoadCredentialProfileByAccountID(path, apiServer, "")
+}
+
+func LoadCredentialProfileByAccountID(path string, apiServer string, accountID string) (*CredentialProfile, error) {
 	if strings.TrimSpace(apiServer) == "" {
+		if strings.TrimSpace(accountID) != "" {
+			return nil, fmt.Errorf("AMA API server URL is required with a runner account id")
+		}
 		return LoadActiveCredentialProfile(path)
 	}
 	var profile *CredentialProfile
 	err := withCredentialStoreLock(path, func() error {
-		loaded, err := loadCredentialProfileUnlocked(path, apiServer)
+		loaded, err := loadCredentialProfileByAccountIDUnlocked(path, apiServer, accountID)
 		if err != nil {
 			return err
 		}
@@ -194,12 +192,24 @@ func LoadCredentialProfile(path string, apiServer string) (*CredentialProfile, e
 }
 
 func loadCredentialProfileUnlocked(path string, apiServer string) (*CredentialProfile, error) {
+	return loadCredentialProfileByAccountIDUnlocked(path, apiServer, "")
+}
+
+func loadCredentialProfileByAccountIDUnlocked(path string, apiServer string, accountID string) (*CredentialProfile, error) {
 	if strings.TrimSpace(apiServer) == "" {
 		return loadActiveCredentialProfileUnlocked(path)
 	}
 	store, err := loadCredentialStoreUnlocked(path)
 	if err != nil {
 		return nil, err
+	}
+	accountID = strings.TrimSpace(accountID)
+	if accountID != "" {
+		profile, ok := findCredentialProfileByKey(store.Profiles, profileKey(apiServer, accountID))
+		if !ok {
+			return nil, nil
+		}
+		return validateCredentialProfile(profile)
 	}
 	if active, ok := findCredentialProfileByKey(store.Profiles, store.Active); ok && strings.TrimRight(active.APIServer, "/") == strings.TrimRight(apiServer, "/") {
 		return credentialProfileByKey(store, store.Active)
@@ -219,12 +229,34 @@ func UpdateCredentialProfile(
 	apiServer string,
 	update func(CredentialProfile) (CredentialProfile, bool, error),
 ) (CredentialProfile, error) {
+	return updateCredentialProfile(path, apiServer, "", true, update)
+}
+
+func UpdateCredentialProfileByAccountID(
+	path string,
+	apiServer string,
+	accountID string,
+	update func(CredentialProfile) (CredentialProfile, bool, error),
+) (CredentialProfile, error) {
+	if strings.TrimSpace(accountID) == "" {
+		return CredentialProfile{}, fmt.Errorf("runner account id is required")
+	}
+	return updateCredentialProfile(path, apiServer, accountID, false, update)
+}
+
+func updateCredentialProfile(
+	path string,
+	apiServer string,
+	accountID string,
+	activate bool,
+	update func(CredentialProfile) (CredentialProfile, bool, error),
+) (CredentialProfile, error) {
 	var updated CredentialProfile
 	if update == nil {
 		return CredentialProfile{}, fmt.Errorf("credential profile update function is required")
 	}
 	err := withCredentialStoreLock(path, func() error {
-		profile, err := loadCredentialProfileUnlocked(path, apiServer)
+		profile, err := loadCredentialProfileByAccountIDUnlocked(path, apiServer, accountID)
 		if err != nil {
 			return err
 		}
@@ -238,8 +270,11 @@ func UpdateCredentialProfile(
 		if err != nil {
 			return err
 		}
+		if strings.TrimSpace(accountID) != "" && (strings.TrimSpace(next.AccountID) != strings.TrimSpace(accountID) || strings.TrimRight(next.APIServer, "/") != strings.TrimRight(apiServer, "/")) {
+			return fmt.Errorf("credential update cannot change a pinned runner account")
+		}
 		if shouldSave {
-			if err := saveCredentialProfileUnlocked(path, next); err != nil {
+			if err := updateCredentialProfileUnlocked(path, next, activate); err != nil {
 				return err
 			}
 		}
@@ -247,6 +282,39 @@ func UpdateCredentialProfile(
 		return nil
 	})
 	return updated, err
+}
+
+func updateCredentialProfileUnlocked(path string, profile CredentialProfile, activate bool) error {
+	profile, err := normalizedCredentialProfile(profile)
+	if err != nil {
+		return err
+	}
+	store, err := loadRawCredentialFile(path)
+	if err != nil {
+		return err
+	}
+	store.Profiles = upsertCredentialProfile(store.Profiles, profile)
+	if activate {
+		store.Active = profileKey(profile.APIServer, profile.AccountID)
+	}
+	return saveRawCredentialFile(path, store)
+}
+
+func normalizedCredentialProfile(profile CredentialProfile) (CredentialProfile, error) {
+	if strings.TrimSpace(profile.AccessToken) == "" {
+		return CredentialProfile{}, fmt.Errorf("runner access token is required")
+	}
+	if strings.TrimSpace(profile.AccountID) == "" {
+		return CredentialProfile{}, fmt.Errorf("runner account id is required")
+	}
+	if !strings.EqualFold(strings.TrimSpace(profile.TokenType), "Bearer") {
+		return CredentialProfile{}, fmt.Errorf("runner token type must be Bearer")
+	}
+	profile.APIServer = strings.TrimRight(profile.APIServer, "/")
+	profile.AccountID = strings.TrimSpace(profile.AccountID)
+	profile.Email = strings.TrimSpace(profile.Email)
+	profile.Name = strings.TrimSpace(profile.Name)
+	return profile, nil
 }
 
 func credentialProfileByKey(store CredentialStore, key string) (*CredentialProfile, error) {
