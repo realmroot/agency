@@ -75,6 +75,14 @@ Feature: Runtime
     Then the runner stores those provider events outside the canonical session event log
     And rebuild maps the stored provider events through the same runtime mapper used during live execution
 
+  @runtime/codex-shell-isolation @usecase
+  Scenario: Keep Codex tool processes inside the session environment
+    Given a self-hosted Codex runtime uses the host account only to authenticate the provider CLI
+    When Codex launches a shell tool for the session
+    Then the provider CLI reads its login from the host home
+    And the shell tool uses the session home, temporary directories, and git configuration
+    And the shell tool does not load the host login shell profile
+
   @runtime/session-history-retention @usecase
   Scenario: Preserve durable session history while expiring runner workspaces
     Given an old self-hosted session has durable history, disposable runner artifacts, and unknown diagnostic artifacts
