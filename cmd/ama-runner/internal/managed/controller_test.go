@@ -336,7 +336,7 @@ func TestControllerReportsRemoteControlPlaneState(t *testing.T) {
 		StateDir: stateDir, WorkDir: runnerconfig.DefaultWorkDirForStateDir(stateDir), MaxConcurrent: 1,
 		HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60, RenewInterval: 20 * time.Second,
 		CommandTimeout: 10 * time.Minute, ShutdownGraceInterval: 5 * time.Second, MaxSessionDuration: 2 * time.Hour,
-		CredentialPath: credentialPath,
+		CredentialPath: credentialPath, CredentialAccountID: "acct_1",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -502,7 +502,7 @@ func managedTestRecord(t *testing.T) instance.Record {
 		MaxConcurrent: 1, HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60,
 		RenewInterval: 20 * time.Second, CommandTimeout: 10 * time.Minute,
 		ShutdownGraceInterval: 5 * time.Second, MaxSessionDuration: 2 * time.Hour,
-		CredentialPath: filepath.Join(t.TempDir(), "credentials.json"),
+		CredentialPath: filepath.Join(t.TempDir(), "credentials.json"), CredentialAccountID: "acct_1",
 	})
 	if err != nil {
 		t.Fatal(err)

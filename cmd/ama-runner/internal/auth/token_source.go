@@ -29,7 +29,7 @@ func NewTokenSource(config runnerconfig.Config, httpClient *http.Client) (*Token
 		HTTPClient: httpClient,
 		client:     OAuthClient{HTTPClient: httpClient},
 	}
-	saved, err := runnerconfig.LoadCredentialProfile(config.CredentialPath, config.APIServer)
+	saved, err := runnerconfig.LoadCredentialProfileByAccountID(config.CredentialPath, config.APIServer, config.CredentialAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,13 @@ func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, er
 		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
 	}
 	previousAccessToken := s.saved.AccessToken
-	next, err := runnerconfig.UpdateCredentialProfile(
+	update := runnerconfig.UpdateCredentialProfile
+	if s.Config.CredentialAccountID != "" {
+		update = func(path string, apiServer string, callback func(runnerconfig.CredentialProfile) (runnerconfig.CredentialProfile, bool, error)) (runnerconfig.CredentialProfile, error) {
+			return runnerconfig.UpdateCredentialProfileByAccountID(path, apiServer, s.Config.CredentialAccountID, callback)
+		}
+	}
+	next, err := update(
 		s.Config.CredentialPath,
 		s.Config.APIServer,
 		func(current runnerconfig.CredentialProfile) (runnerconfig.CredentialProfile, bool, error) {

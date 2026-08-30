@@ -15,6 +15,7 @@ Feature: Runners
     And the operator can start, list, inspect, stop, restart, configure, view logs, and remove local Runner instances
     And local process state is reported separately from AMA control-plane heartbeat state
     And restarting an instance reuses its Runner identity, workspaces, and session event logs
+    And each instance keeps using the Realmroot account selected when it was created even when another account becomes active for the same API Server
     And explicit state and work directory overrides are available only to foreground run mode
 
   # ── Eligibility and registration (domain + usecase: matching, binding) ──

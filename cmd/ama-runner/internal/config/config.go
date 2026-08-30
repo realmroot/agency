@@ -30,6 +30,7 @@ func ValidateAPIServerURL(value string) error {
 type Config struct {
 	ConfigPath            string        `json:"-" mapstructure:"config"`
 	CredentialPath        string        `json:"-" mapstructure:"-"`
+	CredentialAccountID   string        `json:"-" mapstructure:"-"`
 	APIServer             string        `json:"apiServer" mapstructure:"apiServer"`
 	ProjectID             string        `json:"projectId" mapstructure:"projectId"`
 	EnvironmentID         string        `json:"environmentId" mapstructure:"environmentId"`
