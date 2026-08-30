@@ -610,14 +610,26 @@ export const codexProvider: RuntimeProvider = {
     let wakePrompt: (() => void) | undefined
     const codexPathOverride = resolveCliPath('codex')
     const systemPrompt = agentSystemPrompt(request)
+    const configuredSubagents = objectValue(request.agentSnapshot).subagents
+    const hasNamedSubagents = Array.isArray(configuredSubagents) && configuredSubagents.length > 0
+    const developerInstructions = [
+      systemPrompt,
+      hasNamedSubagents
+        ? 'When spawning a configured named subagent, set fork_turns to "none"; full-history forks cannot select a named agent type.'
+        : undefined,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join('\n\n')
     const codex = new Codex({
       env: sdkEnv(request),
       // Managed sessions must not inherit the host user's personal Codex Apps
       // connectors (e.g. the GitHub connector creates PRs as the host user
       // instead of with the session-scoped git credential).
       config: {
-        features: { apps: false, multi_agent: true },
-        ...(systemPrompt ? { developer_instructions: systemPrompt } : {}),
+        // Codex exec --json omits unified custom-tool events, while the standard shell
+        // path emits correlated command_execution events that AMA can persist and relay.
+        features: { apps: false, multi_agent: true, unified_exec: false },
+        ...(developerInstructions ? { developer_instructions: developerInstructions } : {}),
       },
       ...(codexPathOverride ? { codexPathOverride } : {}),
     })

@@ -13,15 +13,13 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { homedir, tmpdir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import WebSocket from 'ws'
 
 const ROOT = process.cwd()
 const RUNTIME = 'codex'
-const PROVIDER = 'workers-ai'
-const MODEL = smokeCodexModel()
 const DONE_MARKER = 'AMA_FULL_SMOKE_DONE'
 const RESULT_MARKER = 'AMA_FULL_SMOKE_RUNTIME_OK'
 const SUBAGENT_RESULT = '4'
@@ -36,25 +34,7 @@ const packages = {
   go: [],
   npm: [],
   pip: [],
-  webi: ['realmroot@0.4.2'],
-}
-
-function smokeCodexModel() {
-  if (process.env.AMA_FULL_SMOKE_MODEL) return process.env.AMA_FULL_SMOKE_MODEL
-  const hostHome = process.env.AMA_RUNTIME_BRIDGE_HOST_HOME ?? homedir()
-  try {
-    const cache = JSON.parse(readFileSync(join(hostHome, '.codex', 'models_cache.json'), 'utf8'))
-    const models = Array.isArray(cache.models) ? cache.models : []
-    const visible = models
-      .filter((model) => typeof model?.slug === 'string' && model.slug && model.visibility !== 'hide')
-      .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0))
-    const collaborationModel = visible.find((model) => model.slug === 'gpt-5.3-codex-spark')
-    if (collaborationModel) return collaborationModel.slug
-    if (visible[0]) return visible[0].slug
-  } catch {
-    // The runner uses this same fallback when the host model cache is unavailable.
-  }
-  return 'gpt-5.3-codex'
+  webi: [],
 }
 
 function info(message) {
@@ -476,6 +456,15 @@ function hasExactAssistantText(value, expected) {
   )
 }
 
+function isAssistantTextMessage(value) {
+  const message = eventRecord(value)?.payload?.message
+  return (
+    message?.role === 'assistant' &&
+    Array.isArray(message.content) &&
+    message.content.some((block) => block?.type === 'text' && typeof block.text === 'string')
+  )
+}
+
 function eventTypes(frames) {
   return frames
     .filter((frame) => frame.type === 'event')
@@ -490,45 +479,6 @@ function assertToolEvents(label, value) {
   }
   if (!serialized.includes('"type":"tool_result"')) {
     fail(`${label} is missing a tool_result content block`, serialized)
-  }
-}
-
-function eventRecords(value) {
-  if (typeof value === 'string') {
-    return value
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => JSON.parse(line))
-  }
-  if (Array.isArray(value)) return value.map(eventRecord).filter(Boolean)
-  return [eventRecord(value)].filter(Boolean)
-}
-
-function contentBlocks(record, type) {
-  const content = record?.payload?.message?.content
-  return Array.isArray(content) ? content.filter((block) => block?.type === type) : []
-}
-
-function assertAgentToolEvents(label, value) {
-  const records = eventRecords(value)
-  const agentToolCallIds = new Set(
-    records
-      .flatMap((record) => contentBlocks(record, 'tool_call'))
-      .filter((block) => block.toolCall?.name === 'agent')
-      .map((block) => block.toolCall?.id)
-      .filter(Boolean),
-  )
-  if (agentToolCallIds.size === 0) {
-    fail(`${label} is missing an agent tool_call content block`, JSON.stringify(value, null, 2))
-  }
-  const agentResults = records
-    .flatMap((record) => contentBlocks(record, 'tool_result'))
-    .filter((block) => agentToolCallIds.has(block.toolCallId))
-  if (agentResults.length === 0) {
-    fail(`${label} is missing an agent tool_result content block`, JSON.stringify(value, null, 2))
-  }
-  if (!agentResults.some((block) => JSON.stringify(block).includes(SUBAGENT_RESULT))) {
-    fail(`${label} agent tool_result does not include the expected sub-agent answer`, JSON.stringify(agentResults, null, 2))
   }
 }
 
@@ -578,7 +528,6 @@ function assertWorkspace(workDir, sessionId, identity) {
     fail('runner local event log does not include the final assistant marker', paths.eventLog)
   }
   assertToolEvents('runner local event log', eventLog)
-  assertAgentToolEvents('runner local event log', eventLog)
   const issuerDir = Buffer.from(identity.status.descriptor.issuer).toString('base64url')
   const runtimeFile = `${Buffer.from(identity.spec.runtime).toString('base64url')}.json`
   const statePath = join(paths.workspace, '.ama', 'realmroot-state', 'identities', issuerDir, runtimeFile)
@@ -695,18 +644,16 @@ async function main() {
             'You are running the AMA full-chain smoke test.',
             'Before using any file or shell tool, you MUST call the spawn_agent collaboration tool exactly once with the arithmetic-checker agent and ask it to reply only 4 for 2+2.',
             'You MUST call wait for that child and receive 4 before continuing. If the child result is unavailable, fail instead of completing the task.',
+            'After the child returns 4, use the shell tool to run pwd exactly once.',
             `Write exactly "${RESULT_MARKER}\\n" to ama-full-smoke-result.txt in the workspace root.`,
             `When done, reply exactly "${DONE_MARKER}".`,
           ].join('\n'),
-          provider: PROVIDER,
-          model: MODEL,
           skills: [],
           subagents: [
             {
               name: 'arithmetic-checker',
               description: 'Answers one arithmetic smoke-test question.',
               systemPrompt: 'Answer the delegated arithmetic question exactly and do not modify files.',
-              model: MODEL,
             },
           ],
           mcpConnectors: [],
@@ -714,6 +661,10 @@ async function main() {
         },
       },
     })
+
+    if (agent.spec.provider !== null || agent.spec.model !== null) {
+      fail('Agent unexpectedly pinned a platform provider or model', JSON.stringify(agent.spec, null, 2))
+    }
 
     const session = await api(origin, token, '/api/v1/sessions', {
       method: 'POST',
@@ -731,6 +682,7 @@ async function main() {
           'Run the full-chain AMA smoke test.',
           `Before any other tool call, you MUST call spawn_agent exactly once with subagent type arithmetic-checker and prompt it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
           `Then you MUST call wait for that child and receive "${SUBAGENT_RESULT}" before using file or shell tools.`,
+          'After the child returns 4, use the shell tool to run pwd exactly once.',
           `Ensure ama-full-smoke-result.txt contains exactly "${RESULT_MARKER}\\n".`,
           `Reply exactly "${DONE_MARKER}" and nothing else.`,
         ].join('\n'),
@@ -760,14 +712,23 @@ async function main() {
     if (completedSession.status?.phase !== 'idle' && completedSession.status?.phase !== 'stopped') {
       fail('session did not complete cleanly', JSON.stringify(completedSession.status, null, 2))
     }
-    await socket.waitFor(
-      (frame) => frame.type === 'event' && hasExactAssistantText(frame, DONE_MARKER),
-      `exact final assistant marker ${DONE_MARKER}`,
+    const finalAssistantFrame = await socket.waitFor(
+      (frame) => frame.type === 'event' && isAssistantTextMessage(frame),
+      'final assistant message',
+      10_000,
     )
+    if (!hasExactAssistantText(finalAssistantFrame, DONE_MARKER)) {
+      fail('runtime completed without the expected final assistant marker', JSON.stringify(finalAssistantFrame, null, 2))
+    }
     assertToolEvents('live browser socket events', socket.frames)
-    assertAgentToolEvents('live browser socket events', socket.frames)
 
     assertWorkspace(workDir, sessionId, identity)
+    const restEvents = await api(origin, token, `/api/v1/sessions/${sessionId}/events`)
+    if (!Array.isArray(restEvents.data) || !restEvents.data.some((event) => hasExactAssistantText(event, DONE_MARKER))) {
+      fail('REST session events do not include the completed runtime event', JSON.stringify(restEvents, null, 2))
+    }
+    assertToolEvents('REST session events', restEvents.data)
+
     socket.requestBackfill()
     const firstBackfill = await socket.waitFor(
       (frame) => frame.type === 'backfill' && frame.requestId === BACKFILL_REQUEST_ID,
@@ -780,7 +741,6 @@ async function main() {
       fail('browser socket backfill does not include the completed runtime event', JSON.stringify(firstBackfill, null, 2))
     }
     assertToolEvents('initial completed-session backfill', firstBackfill.events)
-    assertAgentToolEvents('initial completed-session backfill', firstBackfill.events)
 
     run(runnerBinary, ['restart', managedRunner.instanceId], { env: managedRunner.env })
     await waitForRunner(origin, token, environmentId)
@@ -813,10 +773,8 @@ async function main() {
         )
       }
       assertToolEvents('explicit backfill after runner reconnect', explicitBackfill.events)
-      assertAgentToolEvents('explicit backfill after runner reconnect', explicitBackfill.events)
     } else {
       assertToolEvents('automatic backfill after runner reconnect', reconnectBackfill.events)
-      assertAgentToolEvents('automatic backfill after runner reconnect', reconnectBackfill.events)
     }
 
     const types = eventTypes(socket.frames)
