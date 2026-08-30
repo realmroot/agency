@@ -43,6 +43,12 @@ Feature: Sessions
     Then session creation succeeds without selecting a platform provider or model
     And the runtime receives no pinned provider or model requirement
 
+  @sessions/cloud-requires-model @api
+  Scenario: Require an explicit model for the AMA cloud runtime
+    Given an active agent version does not pin a provider or model
+    When a session selects the AMA cloud runtime
+    Then session creation is rejected without inventing a platform provider or model
+
   @sessions/live-state-refresh @web
   Scenario: Refresh a live session until its turn state settles
     Given a session detail page is showing a pending or running session

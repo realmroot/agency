@@ -128,10 +128,6 @@ v1.0 keeps model and provider policy in AMA before runtime work starts. The
 cloud-owned runtime calls provider adapters from the Worker side. The sandbox
 does not call the Cloudflare REST API directly for model work.
 
-Required settings:
-
-- `AMA_DEFAULT_MODEL=@cf/moonshotai/kimi-k2.6`
-
 Optional settings:
 
 - `AMA_AI_GATEWAY_ID`: Cloudflare AI Gateway id for third-party gateway-routed

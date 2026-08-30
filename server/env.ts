@@ -17,7 +17,6 @@ export interface Env {
   CLOUD_TURNS?: Queue<unknown>
   // Wake-up queue for durable HTTP trigger runs. D1 owns FIFO and run state.
   TRIGGER_DISPATCHES?: Queue<unknown>
-  AMA_DEFAULT_MODEL?: string
   AMA_RUNTIME_MODE?: string
   AMA_VAULT_ENCRYPTION_KEY?: string
   // AI Gateway name for third-party ({vendor}/{model}) cloud models (Unified

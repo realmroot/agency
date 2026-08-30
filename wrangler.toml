@@ -17,7 +17,6 @@ run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 [vars]
 AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
 AMA_RUNTIME_MODE = "live"
-AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = "01a02088-aac0-74a9-a5a9-ffca6cf338c0"
@@ -144,7 +143,6 @@ routes = [
 
 [env.staging.vars]
 AMA_RUNTIME_MODE = "live"
-AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = ""
@@ -226,7 +224,6 @@ max_instances = 20
 [env.e2e]
 
 [env.e2e.vars]
-AMA_DEFAULT_MODEL = "@cf/moonshotai/kimi-k2.6"
 OIDC_ISSUER = "https://oidc.test/api/auth"
 OIDC_CLIENT_ID = "ama-e2e"
 OIDC_TRUSTED_BEARER_CLIENT_IDS = ""

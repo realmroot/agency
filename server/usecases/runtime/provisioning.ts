@@ -30,6 +30,12 @@ export async function validateRuntimeProviderModel(
   if (!driver.supportsHostingMode(hostingMode)) {
     return false
   }
+  // AMA's in-Worker model client has no provider-owned default-selection
+  // protocol. A Cloudflare model is therefore an explicit Agent pin, while
+  // external CLI runtimes remain free to resolve their own defaults.
+  if (runtime === 'ama') {
+    return Boolean(provider && model && (await deps.providers.findModel(provider, model)))
+  }
   if (hostingMode === 'cloud') {
     // Cloud dispatches every model through the Workers AI binding + AI Gateway,
     // so the global catalog (populated by discovery) is the source of truth for

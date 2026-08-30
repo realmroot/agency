@@ -12,6 +12,7 @@ import {
   setupOidcProvider,
   signIn,
   signInUser,
+  TEST_WORKERS_AI_MODEL_ID,
 } from './auth'
 import { seedPolicy } from './policy-seed'
 
@@ -220,12 +221,11 @@ async function createAgent(authorization: string, data: Record<string, unknown> 
         systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : 'Work through AMA runtime.',
         skills: Array.isArray(skills) ? skills : ['ama@cloud-session'],
         mcpConnectors: Array.isArray(mcpConnectors) ? mcpConnectors : ['github'],
-        // Agents must pin a provider before a session can be created. The cloud
-        // runtime ('ama') routes through the Workers AI binding, which only
-        // recognizes the 'workers-ai' provider and supplies a default model when
-        // none is pinned. The seeded global provider row backs the agent provider
-        // FK and the cloud catalog check.
+        // Most session tests exercise the AMA runtime, which requires an
+        // explicit provider/model pin. The runtime-default case below creates
+        // its own unpinned Agent instead of relying on this fixture.
         provider: typeof provider === 'string' ? provider : 'workers-ai',
+        model: TEST_WORKERS_AI_MODEL_ID,
         ...rest,
       },
     }),
@@ -468,6 +468,40 @@ describe('[CF] /api/v1/sessions', () => {
     expect(JSON.parse(work?.payload ?? 'null')).not.toHaveProperty('provider')
   })
 
+  it('rejects an unpinned AMA cloud session without inventing defaults [spec: sessions/cloud-requires-model]', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, {
+      hostingMode: 'cloud',
+      mcpPolicy: { allowedConnectors: [] },
+    })
+    const agentRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        metadata: { name: 'Unpinned cloud agent' },
+        spec: { systemPrompt: 'Do not invent a model.', skills: [], mcpConnectors: [] },
+      }),
+    })
+    expect(agentRes.status).toBe(201)
+    const agent = (await agentRes.json()) as { metadata: { uid: string } }
+
+    const createRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: agent.metadata.uid,
+        environmentId: environment.id,
+        runtime: 'ama',
+        prompt: 'This must not select a platform model.',
+      }),
+    })
+    expect(createRes.status).toBe(409)
+    await expect(createRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'conflict',
+        details: { runtime: 'ama', hostingMode: 'cloud', provider: null, model: null },
+      },
+    })
+  })
+
   it('rejects an unpinned session when no runner environment is available [spec: sessions/create]', async () => {
     const authorization = await signIn()
     // An environment exists but has no active runner, so it is not a candidate.
@@ -643,7 +677,7 @@ describe('[CF] /api/v1/sessions', () => {
         placement: {
           hostingMode: 'cloud',
           provider: 'workers-ai',
-          model: null,
+          model: TEST_WORKERS_AI_MODEL_ID,
         },
       },
     })
@@ -1029,7 +1063,7 @@ describe('[CF] /api/v1/sessions', () => {
         placement: {
           hostingMode: 'self_hosted',
           provider: 'workers-ai',
-          model: null,
+          model: TEST_WORKERS_AI_MODEL_ID,
         },
       },
     })
@@ -2500,7 +2534,7 @@ describe('[CF] /api/v1/sessions', () => {
   it('rejects cloud sessions for runtimes without a cloud driver before allocating runtime state', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, { mcpPolicy: {} })
-    const agent = await createAgent(authorization, { mcpConnectors: [] })
+    const agent = await createAgent(authorization, { mcpConnectors: [], model: null })
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',

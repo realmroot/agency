@@ -103,6 +103,33 @@ describe('session-runtime', () => {
     ])
   })
 
+  it('rejects a missing AMA cloud model instead of applying a platform default', async () => {
+    await expect(
+      runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+        sessionId: 'session_123',
+        sandboxId: 'sandbox_123',
+        provider: 'workers-ai',
+        model: null,
+        agentSnapshot: { systemPrompt: 'No defaults.' },
+        prompt: 'Do not run.',
+        onEvent: async () => undefined,
+      }),
+    ).rejects.toThrow('AMA cloud runtime requires an explicitly pinned model')
+  })
+
+  it('rejects cloud sandbox startup without an explicitly pinned model', async () => {
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, {
+        sessionId: 'session_123',
+        sandboxId: 'sandbox_123',
+        provider: 'workers-ai',
+        model: null,
+        agentSnapshot: { systemPrompt: 'No defaults.' },
+        environmentSnapshot: null,
+      }),
+    ).rejects.toThrow('AMA cloud runtime requires an explicitly pinned model')
+  })
+
   it('returns cloud-owned runtime metadata in test mode', async () => {
     await expect(
       startSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, {

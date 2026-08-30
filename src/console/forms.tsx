@@ -397,7 +397,7 @@ function AgentProviderModelFields({
         value={selectedModelKey || '__none__'}
         onValueChange={(key) => {
           if (key === '__none__') {
-            setValue({ ...value, model: '' })
+            setValue({ ...value, provider: '', model: '' })
             return
           }
           const [provider, ...rest] = key.split('::')

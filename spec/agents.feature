@@ -10,8 +10,7 @@ Feature: Agents
     When the user creates an agent with instructions, provider, model, skills, tools, MCP connectors, and metadata
     Then the agent is stored with a current version, project id, timestamps, and archive state
     And the first version snapshots the normalized runtime configuration
-    And the agent defaults to the project default provider without forcing a model
-    And an unselected model remains null without a synthetic default model id
+    And an unselected provider and model remain null without synthetic platform defaults
 
   @agents/update @usecase
   Scenario: Version an agent on runtime-relevant change

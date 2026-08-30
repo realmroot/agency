@@ -153,7 +153,7 @@ export const agents = sqliteTable(
     name: text('name').notNull(),
     description: text('description'),
     systemPrompt: text('system_prompt').notNull(),
-    // null = resolve the project default provider at session start.
+    // null = leave provider resolution to a runtime that owns defaults.
     providerId: text('provider_id').references(() => providers.id),
     model: text('model'),
     skills: text('skills').notNull().default('[]'),
