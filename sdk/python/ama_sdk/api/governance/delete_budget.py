@@ -17,11 +17,11 @@ def _get_kwargs(
     budget_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
@@ -83,7 +83,7 @@ def sync_detailed(
     """ Delete a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -114,7 +114,7 @@ def sync(
     """ Delete a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -140,7 +140,7 @@ async def asyncio_detailed(
     """ Delete a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -171,7 +171,7 @@ async def asyncio(
     """ Delete a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -9,6 +9,7 @@ import type {
 } from '@server/domain/environment'
 import { defaultEnvironmentPackages } from '@server/domain/environment'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreateEnvironmentInput,
   EnvironmentListPage,
@@ -24,10 +25,6 @@ import { DEFAULT_CONNECTORS } from '../../domain/connector'
 type Db = ReturnType<typeof drizzle>
 type EnvironmentRow = typeof environments.$inferSelect
 type EnvironmentVersionRow = typeof environmentVersions.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string) {
   return JSON.parse(value) as T
@@ -222,7 +219,7 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
         .limit(1)
         .get()
       const row = {
-        id: newId('envver'),
+        id: newPrimaryKey(),
         environmentId: environment.metadata.uid,
         projectId: environment.metadata.pid ?? '',
         version: (latest?.version ?? 0) + 1,
@@ -259,7 +256,7 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
 
     async insert(input: CreateEnvironmentInput, createdAt): Promise<Environment> {
       const row = {
-        id: newId('env'),
+        id: newPrimaryKey(),
         projectId: input.projectId,
         name: input.name,
         description: input.description,

@@ -157,9 +157,16 @@ function provisioningHarness(
         return value
       },
       findCredential: async (_vaultId: string, id: string) => credentials.get(id) ?? null,
+      findIdentityCredential: async (vaultId: string, identityId: string, purpose: string) =>
+        [...credentials.values()].find(
+          (value) =>
+            value.spec.vaultId === vaultId &&
+            value.spec.metadata.identityId === identityId &&
+            value.spec.metadata.purpose === purpose,
+        ) ?? null,
       latestVersionNumber: async () => 1,
       insertCredentialWithVersion: async (
-        credentialInput: { type: Credential['spec']['type'] },
+        credentialInput: { type: Credential['spec']['type']; metadata: Record<string, unknown> },
         versionInput: { id: string; credentialId: string; vaultId: string },
       ) => {
         credentialCount += 1
@@ -175,7 +182,7 @@ function provisioningHarness(
             vaultId: versionInput.vaultId,
             organizationId: auth.organization.id,
             type: credentialInput.type,
-            metadata: {},
+            metadata: credentialInput.metadata,
           },
           status: {
             phase: 'active',
@@ -271,6 +278,10 @@ function provisioningHarness(
     secrets,
     credentialCount: () => credentialCount,
     credentialCreates: (id: string) => credentialCreates.get(id) ?? 0,
+    credentialFor: (identityId: string, purpose: string) =>
+      [...credentials.values()].find(
+        (value) => value.spec.metadata.identityId === identityId && value.spec.metadata.purpose === purpose,
+      ) ?? null,
   }
 }
 
@@ -384,13 +395,13 @@ describe('[CF] Identity concurrency invariants', () => {
       .bind(auth.project.id)
       .first<{ id: string; credential_id: string | null }>()
     if (!row) throw new Error('Expected failed Identity')
-    const checkpointId = `vaultcred_checkpoint_${row.id}`
+    const checkpoint = fx.credentialFor(row.id, 'provisioning-checkpoint')
     expect(row.credential_id).toBeNull()
-    expect(fx.credentials.has(checkpointId)).toBe(true)
+    expect(checkpoint).not.toBeNull()
 
     await expect(createIdentity(fx.deps, auth, createInput)).resolves.toMatchObject({ status: { state: 'active' } })
     expect(fx.initialize).toHaveBeenCalledOnce()
-    expect(fx.credentialCreates(checkpointId)).toBe(1)
+    expect(fx.credentialCreates(checkpoint!.metadata.uid)).toBe(1)
   })
 
   it('recovers a deterministic final credential committed before activation', async () => {
@@ -405,14 +416,15 @@ describe('[CF] Identity concurrency invariants', () => {
       .bind(auth.project.id)
       .first<{ id: string }>()
     if (!row) throw new Error('Expected failed Identity')
-    const finalId = `vaultcred_state_${row.id}`
-    const committedFinalState = fx.secrets.get(finalId)
+    const finalCredential = fx.credentialFor(row.id, 'agent-state')
+    expect(finalCredential).not.toBeNull()
+    const committedFinalState = fx.secrets.get(finalCredential!.metadata.uid)
     expect(committedFinalState).toContain('agent_private_key')
 
     await expect(createIdentity(fx.deps, auth, createInput)).resolves.toMatchObject({ status: { state: 'active' } })
     expect(fx.initialize).toHaveBeenCalledOnce()
-    expect(fx.credentialCreates(finalId)).toBe(1)
-    expect(fx.secrets.get(finalId)).toBe(committedFinalState)
+    expect(fx.credentialCreates(finalCredential!.metadata.uid)).toBe(1)
+    expect(fx.secrets.get(finalCredential!.metadata.uid)).toBe(committedFinalState)
   })
 
   it('rejects a stale owner checkpoint CAS after takeover activation and preserves final state', async () => {
@@ -443,15 +455,18 @@ describe('[CF] Identity concurrency invariants', () => {
       .bind(auth.project.id)
       .run()
     const winner = await createIdentity(fx.deps, auth, createInput)
-    const finalId = `vaultcred_state_${winner.metadata.uid}`
-    const finalState = fx.secrets.get(finalId)
+    const finalCredential = fx.credentialFor(winner.metadata.uid, 'agent-state')
+    expect(finalCredential).not.toBeNull()
+    const finalState = fx.secrets.get(finalCredential!.metadata.uid)
     expect(finalState).toContain('agent_private_key')
 
     const staleWrite = oldCheckpointWriter
     if (!staleWrite) throw new Error('Expected stale checkpoint writer')
     await expect(staleWrite(enrolledCheckpoint())).rejects.toThrow('ownership was lost')
-    expect(fx.secrets.get(finalId)).toBe(finalState)
-    await expect(fx.identities.provisioning(winner.metadata.uid)).resolves.toMatchObject({ credentialId: finalId })
+    expect(fx.secrets.get(finalCredential!.metadata.uid)).toBe(finalState)
+    await expect(fx.identities.provisioning(winner.metadata.uid)).resolves.toMatchObject({
+      credentialId: finalCredential!.metadata.uid,
+    })
 
     rejectOldProvision(new Error('stale request terminated'))
     await expect(staleOwner).rejects.toMatchObject({ code: 'realmroot_provisioning_failed' })

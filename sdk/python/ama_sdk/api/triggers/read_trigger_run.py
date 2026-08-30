@@ -19,11 +19,11 @@ def _get_kwargs(
     run_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -89,8 +89,8 @@ def sync_detailed(
     """ Read a trigger run
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
-        run_id (str):  Example: trigrun_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        run_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -123,8 +123,8 @@ def sync(
     """ Read a trigger run
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
-        run_id (str):  Example: trigrun_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        run_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -152,8 +152,8 @@ async def asyncio_detailed(
     """ Read a trigger run
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
-        run_id (str):  Example: trigrun_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        run_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -186,8 +186,8 @@ async def asyncio(
     """ Read a trigger run
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
-        run_id (str):  Example: trigrun_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        run_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

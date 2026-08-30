@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -103,7 +103,7 @@ def sync_detailed(
     """ Update or archive a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (UpdateMemoryStoreRequest):
 
     Raises:
@@ -137,7 +137,7 @@ def sync(
     """ Update or archive a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (UpdateMemoryStoreRequest):
 
     Raises:
@@ -166,7 +166,7 @@ async def asyncio_detailed(
     """ Update or archive a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (UpdateMemoryStoreRequest):
 
     Raises:
@@ -200,7 +200,7 @@ async def asyncio(
     """ Update or archive a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (UpdateMemoryStoreRequest):
 
     Raises:

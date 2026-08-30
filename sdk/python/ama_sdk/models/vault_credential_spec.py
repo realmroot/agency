@@ -24,9 +24,9 @@ T = TypeVar("T", bound="VaultCredentialSpec")
 
 @_attrs_define
 class VaultCredentialSpec:
-    """ 
+    """
         Attributes:
-            vault_id (str):  Example: vault_abc123.
+            vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
             organization_id (str):  Example: org_abc123.
             type_ (VaultCredentialSpecType):  Example: opaque.
             metadata (VaultCredentialSpecMetadata):  Example: {'owner': 'platform'}.

@@ -57,14 +57,15 @@ const CredentialVersionSchema = z
     metadata: ResourceMetadataSchema,
     spec: z
       .object({
-        credentialId: z.string().openapi({ example: 'vaultcred_abc123' }),
-        vaultId: z.string().openapi({ example: 'vault_abc123' }),
+        credentialId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000008' }),
+        vaultId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000007' }),
         organizationId: z.string().openapi({ example: 'org_abc123' }),
         version: z.number().int().openapi({ example: 2 }),
         provider: SecretProviderSchema.openapi({ example: 'ama' }),
-        secretRef: z
-          .string()
-          .openapi({ example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123' }),
+        secretRef: z.string().openapi({
+          example:
+            'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009',
+        }),
         referenceName: z.string().openapi({ example: 'AMA_PROJECT_ABC123_TOKEN_V2' }),
         hasSecret: z.boolean().openapi({ example: true }),
         dataKeys: z.array(z.string()).openapi({ example: ['token'] }),
@@ -86,7 +87,7 @@ const CredentialSchema = z
     metadata: ResourceMetadataSchema,
     spec: z
       .object({
-        vaultId: z.string().openapi({ example: 'vault_abc123' }),
+        vaultId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000007' }),
         organizationId: z.string().openapi({ example: 'org_abc123' }),
         type: CredentialTypeSchema.openapi({ example: 'opaque' }),
         metadata: JsonObjectSchema.openapi({ example: { owner: 'platform' } }),
@@ -95,7 +96,7 @@ const CredentialSchema = z
     status: z
       .object({
         phase: z.enum(CREDENTIAL_STATES).openapi({ example: 'active' }),
-        activeVersionId: z.string().nullable().openapi({ example: 'vaultver_abc123' }),
+        activeVersionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000009' }),
         activeVersion: CredentialVersionSchema.nullable(),
         revokedAt: z.string().datetime().nullable().openapi({ example: null }),
         revokedByUserId: z.string().nullable().openapi({ example: null }),
@@ -168,15 +169,21 @@ const UpdateCredentialSchema = z
   .openapi('UpdateVaultCredentialRequest')
 
 const VaultParamsSchema = z.object({
-  vaultId: z.string().openapi({ param: { name: 'vaultId', in: 'path' }, example: 'vault_abc123' }),
+  vaultId: z
+    .string()
+    .openapi({ param: { name: 'vaultId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000007' }),
 })
 
 const CredentialParamsSchema = VaultParamsSchema.extend({
-  credentialId: z.string().openapi({ param: { name: 'credentialId', in: 'path' }, example: 'vaultcred_abc123' }),
+  credentialId: z
+    .string()
+    .openapi({ param: { name: 'credentialId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000008' }),
 })
 
 const VersionParamsSchema = CredentialParamsSchema.extend({
-  versionId: z.string().openapi({ param: { name: 'versionId', in: 'path' }, example: 'vaultver_abc123' }),
+  versionId: z
+    .string()
+    .openapi({ param: { name: 'versionId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000009' }),
 })
 
 const credentialStateQuery = z

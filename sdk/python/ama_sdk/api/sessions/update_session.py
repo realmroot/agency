@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -113,7 +113,7 @@ def sync_detailed(
     lifecycle archiving (archived: true|false).
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (UpdateSessionRequest):
 
     Raises:
@@ -150,7 +150,7 @@ def sync(
     lifecycle archiving (archived: true|false).
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (UpdateSessionRequest):
 
     Raises:
@@ -182,7 +182,7 @@ async def asyncio_detailed(
     lifecycle archiving (archived: true|false).
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (UpdateSessionRequest):
 
     Raises:
@@ -219,7 +219,7 @@ async def asyncio(
     lifecycle archiving (archived: true|false).
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (UpdateSessionRequest):
 
     Raises:

@@ -3,6 +3,7 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { createRemoteJWKSet, customFetch, type JWKSCacheInput, type JWTPayload, jwksCache, jwtVerify } from 'jose'
 import { projects } from '../db/schema'
 import type { Env } from '../env'
+import { newPrimaryKey } from '../id'
 import { verifyDpopCredential } from './dpop'
 import { AMA_SCOPES } from './scopes'
 
@@ -215,7 +216,7 @@ export async function upsertProjectForClaims(
     .get()
   if (!project) {
     project = {
-      id: newId('project'),
+      id: newPrimaryKey(),
       organizationId,
       name: projectName,
       createdAt: timestamp,

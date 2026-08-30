@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -110,7 +110,7 @@ def sync_detailed(
     """ Create a memory in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (CreateMemoryStoreMemoryRequest):
 
     Raises:
@@ -144,7 +144,7 @@ def sync(
     """ Create a memory in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (CreateMemoryStoreMemoryRequest):
 
     Raises:
@@ -173,7 +173,7 @@ async def asyncio_detailed(
     """ Create a memory in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (CreateMemoryStoreMemoryRequest):
 
     Raises:
@@ -207,7 +207,7 @@ async def asyncio(
     """ Create a memory in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         body (CreateMemoryStoreMemoryRequest):
 
     Raises:

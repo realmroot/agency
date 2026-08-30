@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -113,7 +113,7 @@ def sync_detailed(
     true`; restore with `archived: false`.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (UpdateTriggerRequest):
 
     Raises:
@@ -150,7 +150,7 @@ def sync(
     true`; restore with `archived: false`.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (UpdateTriggerRequest):
 
     Raises:
@@ -182,7 +182,7 @@ async def asyncio_detailed(
     true`; restore with `archived: false`.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (UpdateTriggerRequest):
 
     Raises:
@@ -219,7 +219,7 @@ async def asyncio(
     true`; restore with `archived: false`.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (UpdateTriggerRequest):
 
     Raises:

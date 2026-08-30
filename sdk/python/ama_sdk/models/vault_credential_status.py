@@ -25,10 +25,10 @@ T = TypeVar("T", bound="VaultCredentialStatus")
 
 @_attrs_define
 class VaultCredentialStatus:
-    """ 
+    """
         Attributes:
             phase (VaultCredentialStatusPhase):  Example: active.
-            active_version_id (None | str):  Example: vaultver_abc123.
+            active_version_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
             active_version (None | VaultCredentialVersionType0):
             revoked_at (datetime.datetime | None):
             revoked_by_user_id (None | str):

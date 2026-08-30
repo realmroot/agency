@@ -24,9 +24,9 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -113,7 +113,7 @@ def sync_detailed(
     """ List work leases
 
     Args:
-        runner_id (str | Unset):  Example: runner_abc123.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         state (ListLeasesState | Unset):  Example: active.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
@@ -153,7 +153,7 @@ def sync(
     """ List work leases
 
     Args:
-        runner_id (str | Unset):  Example: runner_abc123.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         state (ListLeasesState | Unset):  Example: active.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
@@ -188,7 +188,7 @@ async def asyncio_detailed(
     """ List work leases
 
     Args:
-        runner_id (str | Unset):  Example: runner_abc123.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         state (ListLeasesState | Unset):  Example: active.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
@@ -228,7 +228,7 @@ async def asyncio(
     """ List work leases
 
     Args:
-        runner_id (str | Unset):  Example: runner_abc123.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         state (ListLeasesState | Unset):  Example: active.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):

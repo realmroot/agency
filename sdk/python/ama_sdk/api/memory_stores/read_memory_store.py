@@ -18,11 +18,11 @@ def _get_kwargs(
     store_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -87,7 +87,7 @@ def sync_detailed(
     """ Read a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ def sync(
     """ Read a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -144,7 +144,7 @@ async def asyncio_detailed(
     """ Read a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,7 +175,7 @@ async def asyncio(
     """ Read a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

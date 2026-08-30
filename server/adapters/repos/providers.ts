@@ -1,4 +1,5 @@
 import type { ModelAvailability, ModelCatalogState } from '@server/domain/provider'
+import { newPrimaryKey } from '@server/id'
 import type {
   ProviderCatalogStatus,
   ProviderModelRecord,
@@ -14,10 +15,6 @@ import { agents, providerModels, providers } from '../../db/schema'
 type Db = ReturnType<typeof drizzle>
 type ProviderRow = typeof providers.$inferSelect
 type ProviderModelRow = typeof providerModels.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string | null, fallback: T) {
   return value ? (JSON.parse(value) as T) : fallback
@@ -162,7 +159,7 @@ export function createProviderRepo(db: Db): ProviderRepo {
         await db.update(providerModels).set(values).where(eq(providerModels.id, existing.id))
         return { record: modelRecordFrom({ ...existing, ...values }), created: false }
       }
-      const row = { id: newId('model'), ...values, createdAt: timestamp }
+      const row = { id: newPrimaryKey(), ...values, createdAt: timestamp }
       await db.insert(providerModels).values(row)
       return { record: modelRecordFrom(row), created: true }
     },

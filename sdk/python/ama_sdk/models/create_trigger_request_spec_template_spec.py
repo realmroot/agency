@@ -33,9 +33,9 @@ T = TypeVar("T", bound="CreateTriggerRequestSpecTemplateSpec")
 class CreateTriggerRequestSpecTemplateSpec:
     """
         Attributes:
-            agent_id (str):  Example: agent_abc123.
+            agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
             prompt_template (str):  Example: Research current Canadian banking bonus offers..
-            environment_id (None | str | Unset):  Example: env_abc123.
+            environment_id (None | str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             runtime (RuntimeName | Unset):  Example: codex.
             env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
             env_from (list[EnvFromEntry] | Unset):

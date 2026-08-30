@@ -1,5 +1,6 @@
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
 import { runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
+import { newPrimaryKey } from '@server/id'
 import type {
   ClaimLeaseInput,
   FinishLeaseInput,
@@ -32,10 +33,6 @@ type WorkItemRow = typeof workItems.$inferSelect
 type MemoryStoreSnapshot = { memoryRef: string; storeId: string; memories: Array<{ path: string; content: string }> }
 
 const DEFAULT_LEASE_DURATION_SECONDS = 60
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function now() {
   return new Date().toISOString()
@@ -106,7 +103,7 @@ async function replaceMemoryStoreSnapshots(
         .where(and(eq(memoryStoreMemories.projectId, projectId), eq(memoryStoreMemories.storeId, snapshot.storeId))),
       ...snapshot.memories.map((memory) =>
         db.insert(memoryStoreMemories).values({
-          id: newId('memory'),
+          id: newPrimaryKey(),
           projectId,
           storeId: snapshot.storeId,
           path: memory.path,
@@ -488,7 +485,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         return 'at_capacity'
       }
       const lease = {
-        id: newId('lease'),
+        id: newPrimaryKey(),
         workItemId: input.workItemId,
         runnerId: input.runnerId,
         organizationId: input.organizationId,
@@ -779,7 +776,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           ),
         )
       const channel = {
-        id: newId('channel'),
+        id: newPrimaryKey(),
         sessionId: workItem.sessionId,
         workItemId: workItem.id,
         leaseId,

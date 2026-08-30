@@ -23,9 +23,9 @@ T = TypeVar("T", bound="SessionBindingsAgent")
 
 @_attrs_define
 class SessionBindingsAgent:
-    """ 
+    """
         Attributes:
-            version_id (str):  Example: agentver_abc123.
+            version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000003.
             snapshot (SessionAgentSnapshot):
      """
 

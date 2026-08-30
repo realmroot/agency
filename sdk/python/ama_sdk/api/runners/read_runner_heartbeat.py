@@ -18,11 +18,11 @@ def _get_kwargs(
     runner_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -87,7 +87,7 @@ def sync_detailed(
     """ Read the current runner heartbeat state
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ def sync(
     """ Read the current runner heartbeat state
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -144,7 +144,7 @@ async def asyncio_detailed(
     """ Read the current runner heartbeat state
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,7 +175,7 @@ async def asyncio(
     """ Read the current runner heartbeat state
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -28,7 +28,7 @@ export const RunnerWorkspaceMountSchema = z
     url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
     credential: RunnerGitCredentialSchema.optional(),
-    memoryRef: z.string().optional().openapi({ example: 'ama://memories/memstore_abc123' }),
+    memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
     description: z.string().nullable().optional(),
     readOnly: z.boolean().optional(),
     files: z.array(RunnerWorkspaceFileSchema).optional(),
@@ -51,7 +51,7 @@ export const RunnerVolumeSchema = z
     secretRef: z.string().optional(),
     url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
-    memoryRef: z.string().optional().openapi({ example: 'ama://memories/memstore_abc123' }),
+    memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
   })
   .strict()
   .openapi('RunnerVolume')
@@ -80,7 +80,7 @@ export const RunnerWorkPayloadSchema = z
   .object({
     protocol: z.literal('ama-runner-work').optional(),
     type: z.string().optional().openapi({ example: 'session.start' }),
-    sessionId: z.string().optional().openapi({ example: 'session_abc123' }),
+    sessionId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
     hostingMode: z.string().optional().openapi({ example: 'self_hosted' }),
     runtime: z.string().optional().openapi({ example: 'codex' }),
     runtimeConfig: JsonObjectSchema.optional(),
@@ -151,14 +151,14 @@ export const RunnerChannelMessageSchema = z
     z
       .object({
         type: z.literal('runner.channel.accepted'),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         environmentId: z.string().optional(),
       })
       .strict(),
     z
       .object({
         type: z.literal('work.assigned'),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         lease: RunnerOpaqueJsonObjectSchema,
         workItem: RunnerOpaqueJsonObjectSchema,
       })
@@ -167,8 +167,8 @@ export const RunnerChannelMessageSchema = z
       .object({
         type: z.literal('session.command'),
         requestId: z.string().optional(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         command: RunnerSessionCommandSchema,
       })
       .strict(),
@@ -176,8 +176,8 @@ export const RunnerChannelMessageSchema = z
       .object({
         type: z.literal('session.command.result'),
         requestId: z.string(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         accepted: z.boolean(),
         error: z.string().optional(),
       })
@@ -186,8 +186,8 @@ export const RunnerChannelMessageSchema = z
       .object({
         type: z.literal('sandbox.request'),
         requestId: z.string(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         request: RunnerSandboxRequestSchema,
       })
       .strict(),
@@ -195,8 +195,8 @@ export const RunnerChannelMessageSchema = z
       .object({
         type: z.literal('sandbox.response'),
         requestId: z.string(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
-        runnerId: z.string().optional().openapi({ example: 'runner_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
+        runnerId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
         ok: z.boolean(),
         result: RunnerOpaqueJsonObjectSchema.optional(),
         error: z.string().optional(),
@@ -206,14 +206,14 @@ export const RunnerChannelMessageSchema = z
       .object({
         type: z.literal('session.backfill_request'),
         eventId: z.string(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
       })
       .strict(),
     z
       .object({
         type: z.literal('session.backfill_response'),
         eventId: z.string(),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
         events: z.array(RunnerOpaqueJsonObjectSchema),
         error: z.string().optional(),
       })
@@ -221,7 +221,7 @@ export const RunnerChannelMessageSchema = z
     z
       .object({
         type: z.literal('runner.event'),
-        sessionId: z.string().openapi({ example: 'session_abc123' }),
+        sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
         record: RunnerOpaqueJsonObjectSchema,
       })
       .strict(),

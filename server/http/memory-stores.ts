@@ -38,7 +38,7 @@ const MemoryStoreMemorySchema = z
     metadata: ResourceMetadataSchema,
     spec: z
       .object({
-        storeId: z.string().openapi({ example: 'memstore_abc123' }),
+        storeId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000a' }),
         path: z.string().openapi({ example: 'guides/review.md' }),
         content: z.string().openapi({ example: 'Review for correctness first.' }),
         metadata: JsonObjectSchema.openapi({ example: {} }),
@@ -86,11 +86,15 @@ const UpdateMemorySchema = CreateMemorySchema.partial()
   .openapi('UpdateMemoryStoreMemoryRequest')
 
 const StoreParamsSchema = z.object({
-  storeId: z.string().openapi({ param: { name: 'storeId', in: 'path' }, example: 'memstore_abc123' }),
+  storeId: z
+    .string()
+    .openapi({ param: { name: 'storeId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000a' }),
 })
 
 const MemoryParamsSchema = StoreParamsSchema.extend({
-  memoryId: z.string().openapi({ param: { name: 'memoryId', in: 'path' }, example: 'memory_abc123' }),
+  memoryId: z
+    .string()
+    .openapi({ param: { name: 'memoryId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000b' }),
 })
 
 const StoreListQuerySchema = listQuerySchema()

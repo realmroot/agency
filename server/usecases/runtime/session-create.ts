@@ -39,11 +39,12 @@ import {
   normalizeEnvironmentSnapshot,
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
-import { newId, now, requestIdFrom, stringify } from '@server/domain/runtime/util'
+import { now, requestIdFrom, stringify } from '@server/domain/runtime/util'
 import { runtimeRequirement, selfHostedRuntimeModel } from '@server/domain/runtime-catalog'
 import { environmentHostingMode } from '@server/domain/runtime-session'
 import { hasSecretMaterial, sessionUserMetadata } from '@server/domain/session'
 import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
+import { newPrimaryKey } from '@server/id'
 import { safeRuntimeError } from '@server/runtime-error'
 import { SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
@@ -503,7 +504,7 @@ function selfHostedSessionWorkItem(
       values.environmentSnapshot?.type === 'self_hosted' ? runtimeRequirement(values.runtime, runnerModel) : null,
   }
   return {
-    id: newId('work'),
+    id: newPrimaryKey(),
     organizationId: auth.organization.id,
     projectId: auth.project.id,
     sessionId: values.session.id,
@@ -786,7 +787,7 @@ export async function createSessionForAgent(
   }
 
   const timestamp = now()
-  const id = crypto.randomUUID()
+  const id = newPrimaryKey()
   const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(
     agentSnapshot,
     validatedVolumes.volumes,

@@ -25,9 +25,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -112,8 +112,8 @@ def sync_detailed(
     """ Update a memory
 
     Args:
-        store_id (str):  Example: memstore_abc123.
-        memory_id (str):  Example: memory_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
+        memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
         body (UpdateMemoryStoreMemoryRequest):
 
     Raises:
@@ -149,8 +149,8 @@ def sync(
     """ Update a memory
 
     Args:
-        store_id (str):  Example: memstore_abc123.
-        memory_id (str):  Example: memory_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
+        memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
         body (UpdateMemoryStoreMemoryRequest):
 
     Raises:
@@ -181,8 +181,8 @@ async def asyncio_detailed(
     """ Update a memory
 
     Args:
-        store_id (str):  Example: memstore_abc123.
-        memory_id (str):  Example: memory_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
+        memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
         body (UpdateMemoryStoreMemoryRequest):
 
     Raises:
@@ -218,8 +218,8 @@ async def asyncio(
     """ Update a memory
 
     Args:
-        store_id (str):  Example: memstore_abc123.
-        memory_id (str):  Example: memory_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
+        memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
         body (UpdateMemoryStoreMemoryRequest):
 
     Raises:

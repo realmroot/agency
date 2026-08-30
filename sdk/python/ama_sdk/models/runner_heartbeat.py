@@ -26,9 +26,9 @@ T = TypeVar("T", bound="RunnerHeartbeat")
 
 @_attrs_define
 class RunnerHeartbeat:
-    """ 
+    """
         Attributes:
-            runner_id (str):  Example: runner_abc123.
+            runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
             state (RunnerHeartbeatState):  Example: active.
             current_load (int):  Example: 1.
             runtime_usage (list[RuntimeUsage]):

@@ -1,3 +1,4 @@
+import { newPrimaryKey } from '@server/id'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type {
   EventQuery,
@@ -465,7 +466,7 @@ export function createSessionRepo(db: Db): SessionRepo {
 
     async insertMessage(record) {
       const row = {
-        id: `msg_${crypto.randomUUID().replaceAll('-', '')}`,
+        id: newPrimaryKey(),
         organizationId: record.organizationId,
         projectId: record.projectId,
         sessionId: record.sessionId,

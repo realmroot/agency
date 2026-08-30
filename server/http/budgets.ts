@@ -52,7 +52,9 @@ const UpdateBudgetSchema = z
 const BudgetListResponseSchema = listResponseSchema('BudgetListResponse', BudgetSchema)
 
 const BudgetParamsSchema = z.object({
-  budgetId: z.string().openapi({ param: { name: 'budgetId', in: 'path' }, example: 'budget_abc123' }),
+  budgetId: z
+    .string()
+    .openapi({ param: { name: 'budgetId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000014' }),
 })
 
 function errorBody(type: string, message: string, details?: Record<string, unknown>) {

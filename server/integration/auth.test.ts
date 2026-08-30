@@ -8,6 +8,7 @@ import { registerAuthRoutes } from '../http/auth'
 import { createDepsApiRouter } from '../openapi'
 import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInRunner, signInUser } from './auth'
 
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 const browserIssuer = 'https://identity.alias.test/api/auth'
 const browserClientId = 'ama-test'
 const browserResource = 'https://ama.tftt.cc/api'
@@ -769,7 +770,7 @@ describe('[CF] projects v1', () => {
     }
     expect(body.data).toHaveLength(1)
     expect(body.data[0]).toMatchObject({
-      id: expect.stringMatching(/^project_/),
+      id: expect.stringMatching(UUID_V7),
       name: 'Default project',
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
@@ -785,7 +786,7 @@ describe('[CF] projects v1', () => {
     })
     expect(createRes.status).toBe(201)
     const project = (await createRes.json()) as Record<string, unknown> & { id: string }
-    expect(project).toMatchObject({ id: expect.stringMatching(/^project_/), name: 'Control Plane' })
+    expect(project).toMatchObject({ id: expect.stringMatching(UUID_V7), name: 'Control Plane' })
     expect(project).not.toHaveProperty('organizationId')
 
     const readRes = await jsonFetch(`/api/v1/projects/${project.id}`, authorization)

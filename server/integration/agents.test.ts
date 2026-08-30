@@ -1,4 +1,5 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultClaims, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
@@ -22,6 +23,8 @@ function agentBody(name: string, spec: Record<string, unknown> = {}, metadata: R
     },
   }
 }
+
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 describe('[CF] /api/v1/agents', () => {
   beforeEach(async () => {
@@ -83,6 +86,33 @@ describe('[CF] /api/v1/agents', () => {
         error: { type: 'validation_error', message: 'Invalid request' },
       })
     }
+  })
+
+  it('[spec: api-contracts/resource-identifiers] creates UUIDv7 identifiers and reads persisted prefixed identifiers', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Opaque identifier agent')),
+    })
+    expect(createRes.status).toBe(201)
+    const created = (await createRes.json()) as { metadata: { uid: string } }
+    expect(created.metadata.uid).toMatch(UUID_V7)
+    const stored = await env.DB.prepare('SELECT project_id FROM agents WHERE id = ?')
+      .bind(created.metadata.uid)
+      .first<{ project_id: string }>()
+    if (!stored) throw new Error('Expected created Agent')
+
+    const legacyId = 'agent_legacy_identifier'
+    const now = '2026-08-29T00:00:00.000Z'
+    await env.DB.prepare(`INSERT INTO agents (
+      id,project_id,name,system_prompt,skills,subagents,allowed_tools,mcp_connectors,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .bind(legacyId, stored.project_id, 'Legacy identifier agent', 'Work.', '[]', '[]', '[]', '[]', now, now)
+      .run()
+
+    const readRes = await jsonFetch(`/api/v1/agents/${legacyId}`, authorization)
+    expect(readRes.status).toBe(200)
+    await expect(readRes.json()).resolves.toMatchObject({ metadata: { uid: legacyId } })
   })
 
   it('creates, reads, updates, versions, and archives project-scoped agents [spec: agents/api-crud] [spec: agents/api-archive]', async () => {

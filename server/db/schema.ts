@@ -388,6 +388,14 @@ export const vaultCredentials = sqliteTable(
   (table) => [
     index('idx_vault_credentials_vault_created').on(table.vaultId, table.createdAt, table.id),
     index('idx_vault_credentials_project_created').on(table.projectId, table.createdAt, table.id),
+    uniqueIndex('idx_vault_credentials_identity_purpose')
+      .on(
+        table.vaultId,
+        sql`json_extract(${table.metadata}, '$.managedBy')`,
+        sql`json_extract(${table.metadata}, '$.identityId')`,
+        sql`coalesce(json_extract(${table.metadata}, '$.purpose'), case when ${table.type} = 'ama.dev/realmroot-agent-state' then 'agent-state' end)`,
+      )
+      .where(sql`json_extract(${table.metadata}, '$.managedBy') = 'identity'`),
     check('ck_vault_credentials_state', sql`${table.state} in ('active','revoked')`),
     check(
       'ck_vault_credentials_type',

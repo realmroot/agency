@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -103,7 +103,7 @@ def sync_detailed(
     """ Update a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         body (UpdateBudgetRequest):
 
     Raises:
@@ -137,7 +137,7 @@ def sync(
     """ Update a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         body (UpdateBudgetRequest):
 
     Raises:
@@ -166,7 +166,7 @@ async def asyncio_detailed(
     """ Update a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         body (UpdateBudgetRequest):
 
     Raises:
@@ -200,7 +200,7 @@ async def asyncio(
     """ Update a budget
 
     Args:
-        budget_id (str):  Example: budget_abc123.
+        budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         body (UpdateBudgetRequest):
 
     Raises:

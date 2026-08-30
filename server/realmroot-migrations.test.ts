@@ -331,6 +331,56 @@ function seedIdentityMigrationAgent(
 }
 
 describe('[spec: identities/migration] Identity resource migration', () => {
+  it('adds normalized Identity credential uniqueness while preserving a legacy no-purpose final credential', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0030_identity_resources.sql')
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
+      INSERT INTO vaults (id,organization_id,project_id,name,scope,managed_by,created_at,updated_at)
+        VALUES ('vault_identity','org_1','project_1','Identity','project','identity','2026-01-01','2026-01-01');
+      INSERT INTO vault_credentials (id,vault_id,organization_id,project_id,name,type,metadata,state,created_at,updated_at)
+        VALUES (
+          '018f2a74-6f0d-7b33-8e91-4bb8131cb8d0',
+          'vault_identity',
+          'org_1',
+          'project_1',
+          'Legacy state',
+          'ama.dev/realmroot-agent-state',
+          '{"managedBy":"identity","identityId":"identity_1"}',
+          'active',
+          '2026-01-01',
+          '2026-01-01'
+        );
+    `)
+
+    apply(db, '0031_identity_credential_uniqueness.sql')
+
+    expect(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?")
+        .get('idx_vault_credentials_identity_purpose'),
+    ).toEqual({ name: 'idx_vault_credentials_identity_purpose' })
+    expect(() =>
+      db.exec(`INSERT INTO vault_credentials (
+        id,vault_id,organization_id,project_id,name,type,metadata,state,created_at,updated_at
+      ) VALUES (
+        '018f2a74-6f0d-7b33-8e91-4bb8131cb8d1',
+        'vault_identity',
+        'org_1',
+        'project_1',
+        'Duplicate state',
+        'ama.dev/realmroot-agent-state',
+        '{"managedBy":"identity","identityId":"identity_1","purpose":"agent-state"}',
+        'active',
+        '2026-01-01',
+        '2026-01-01'
+      )`),
+    ).toThrow(/UNIQUE constraint failed/)
+    expect(db.prepare('SELECT count(*) AS count FROM vault_credentials').get()).toEqual({ count: 1 })
+    db.close()
+  })
+
   it('moves the Realmroot credential and snapshots into the new one-way model', () => {
     const db = new DatabaseSync(':memory:')
     applyThrough(db, '0029_web_auth_sessions.sql')

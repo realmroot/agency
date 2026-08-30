@@ -20,9 +20,9 @@ T = TypeVar("T", bound="AuthProject")
 
 @_attrs_define
 class AuthProject:
-    """ 
+    """
         Attributes:
-            id (str):  Example: project_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
             name (str):  Example: Default project.
      """
 

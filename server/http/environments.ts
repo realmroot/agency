@@ -55,7 +55,7 @@ const EnvironmentSpecSchema = z
 const EnvironmentStatusSchema = z
   .object({
     phase: ResourcePhaseSchema,
-    currentVersionId: z.string().nullable().openapi({ example: 'envver_abc123' }),
+    currentVersionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000006' }),
     version: z.number().int().openapi({ example: 1 }),
   })
   .openapi('EnvironmentStatus')
@@ -74,7 +74,7 @@ const EnvironmentVersionSchema = z
     spec: EnvironmentSpecSchema,
     status: z
       .object({
-        environmentId: z.string().openapi({ example: 'env_abc123' }),
+        environmentId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
         version: z.number().int().openapi({ example: 1 }),
       })
       .openapi('EnvironmentVersionStatus'),
@@ -117,7 +117,7 @@ const UpdateEnvironmentSchema = z
 const EnvironmentParamsSchema = z.object({
   environmentId: z.string().openapi({
     param: { name: 'environmentId', in: 'path' },
-    example: 'env_abc123',
+    example: '0195f5d6-7c20-7000-8000-000000000005',
   }),
 })
 const EnvironmentVersionParamsSchema = EnvironmentParamsSchema.extend({

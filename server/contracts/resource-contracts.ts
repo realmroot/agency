@@ -5,8 +5,8 @@ export const ResourcePhaseSchema = z.enum(['active', 'archived']).openapi('Resou
 
 export const ResourceMetadataSchema = z
   .object({
-    uid: z.string().openapi({ example: 'resource_abc123' }),
-    projectId: z.string().nullable().openapi({ example: 'project_abc123' }),
+    uid: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000017' }),
+    projectId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000001' }),
     name: z.string().openapi({ example: 'Default resource' }),
     description: z.string().nullable().openapi({ example: 'Default project resource.' }),
     labels: z.record(z.string(), z.string()),

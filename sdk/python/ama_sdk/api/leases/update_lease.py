@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -110,7 +110,7 @@ def sync_detailed(
     """ Renew or finish a work lease
 
     Args:
-        lease_id (str):  Example: lease_abc123.
+        lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
         body (UpdateLeaseRequest):
 
     Raises:
@@ -144,7 +144,7 @@ def sync(
     """ Renew or finish a work lease
 
     Args:
-        lease_id (str):  Example: lease_abc123.
+        lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
         body (UpdateLeaseRequest):
 
     Raises:
@@ -173,7 +173,7 @@ async def asyncio_detailed(
     """ Renew or finish a work lease
 
     Args:
-        lease_id (str):  Example: lease_abc123.
+        lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
         body (UpdateLeaseRequest):
 
     Raises:
@@ -207,7 +207,7 @@ async def asyncio(
     """ Renew or finish a work lease
 
     Args:
-        lease_id (str):  Example: lease_abc123.
+        lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
         body (UpdateLeaseRequest):
 
     Raises:

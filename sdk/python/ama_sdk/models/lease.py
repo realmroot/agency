@@ -23,11 +23,11 @@ T = TypeVar("T", bound="Lease")
 
 @_attrs_define
 class Lease:
-    """ 
+    """
         Attributes:
-            id (str):  Example: lease_abc123.
-            work_item_id (str):  Example: work_abc123.
-            runner_id (str):  Example: runner_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
+            work_item_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000012.
+            runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
             state (LeaseState):  Example: active.
             expires_at (datetime.datetime):
             renewed_at (datetime.datetime | None):

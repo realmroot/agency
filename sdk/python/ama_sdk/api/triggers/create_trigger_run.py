@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -113,7 +113,7 @@ def sync_detailed(
     prompt template variables.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -151,7 +151,7 @@ def sync(
     prompt template variables.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -184,7 +184,7 @@ async def asyncio_detailed(
     prompt template variables.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -222,7 +222,7 @@ async def asyncio(
     prompt template variables.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 

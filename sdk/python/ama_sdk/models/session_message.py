@@ -25,10 +25,10 @@ T = TypeVar("T", bound="SessionMessage")
 
 @_attrs_define
 class SessionMessage:
-    """ 
+    """
         Attributes:
-            id (str):  Example: msg_abc123.
-            session_id (str):  Example: session_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000f.
+            session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             type_ (SessionMessageType):  Example: prompt.
             content (str):  Example: Please continue the task and summarize the current blocker..
             delivery (SessionMessageDelivery):  Example: queued.

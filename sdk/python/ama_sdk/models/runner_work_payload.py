@@ -32,11 +32,11 @@ T = TypeVar("T", bound="RunnerWorkPayload")
 
 @_attrs_define
 class RunnerWorkPayload:
-    """ 
+    """
         Attributes:
             protocol (RunnerWorkPayloadProtocol | Unset):
             type_ (str | Unset):  Example: session.start.
-            session_id (str | Unset):  Example: session_abc123.
+            session_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             hosting_mode (str | Unset):  Example: self_hosted.
             runtime (str | Unset):  Example: codex.
             runtime_config (RunnerWorkPayloadRuntimeConfig | Unset):
@@ -402,4 +402,3 @@ class RunnerWorkPayload:
         )
 
         return runner_work_payload
-

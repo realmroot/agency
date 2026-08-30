@@ -1,5 +1,7 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
+import { createVaultRepo } from '@server/adapters/repos/vaults'
+import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dpopHeaders, setupOidcProvider, signIn } from './auth'
 
@@ -37,6 +39,71 @@ describe('[CF] /api/v1/vaults', () => {
         message: 'Authentication required',
       },
     })
+  })
+
+  it('finds a legacy no-purpose Identity credential and rejects a duplicate normalized purpose', async () => {
+    const authorization = await signIn()
+    const vaultRes = await jsonFetch('/api/v1/vaults', authorization, {
+      method: 'POST',
+      body: JSON.stringify({ metadata: { name: 'Identity migration fixture' }, spec: { scope: 'project' } }),
+    })
+    expect(vaultRes.status).toBe(201)
+    const vault = (await vaultRes.json()) as { metadata: { uid: string } }
+    const scope = await env.DB.prepare('SELECT organization_id, project_id FROM vaults WHERE id = ?')
+      .bind(vault.metadata.uid)
+      .first<{ organization_id: string; project_id: string }>()
+    if (!scope) throw new Error('Expected persisted Vault')
+
+    const legacyId = '018f2a74-6f0d-7b33-8e91-4bb8131cb8d0'
+    const duplicateId = '018f2a74-6f0d-7b33-8e91-4bb8131cb8d1'
+    const identityId = 'identity_legacy_no_purpose'
+    const now = '2026-08-29T00:00:00.000Z'
+    await env.DB.prepare(`INSERT INTO vault_credentials (
+      id,vault_id,organization_id,project_id,name,type,metadata,state,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        legacyId,
+        vault.metadata.uid,
+        scope.organization_id,
+        scope.project_id,
+        'Legacy Realmroot Agent state',
+        'ama.dev/realmroot-agent-state',
+        JSON.stringify({ managedBy: 'identity', identityId }),
+        'active',
+        now,
+        now,
+      )
+      .run()
+
+    const repo = createVaultRepo(drizzle(env.DB))
+    await expect(repo.findIdentityCredential?.(vault.metadata.uid, identityId, 'agent-state')).resolves.toMatchObject({
+      metadata: { uid: legacyId },
+      spec: { metadata: { managedBy: 'identity', identityId } },
+    })
+    await expect(
+      env.DB.prepare(`INSERT INTO vault_credentials (
+        id,vault_id,organization_id,project_id,name,type,metadata,state,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .bind(
+          duplicateId,
+          vault.metadata.uid,
+          scope.organization_id,
+          scope.project_id,
+          'Duplicate Realmroot Agent state',
+          'ama.dev/realmroot-agent-state',
+          JSON.stringify({ managedBy: 'identity', identityId, purpose: 'agent-state' }),
+          'active',
+          now,
+          now,
+        )
+        .run(),
+    ).rejects.toThrow(/UNIQUE constraint failed/)
+    const count = await env.DB.prepare(
+      "SELECT count(*) AS count FROM vault_credentials WHERE vault_id = ? AND json_extract(metadata, '$.identityId') = ?",
+    )
+      .bind(vault.metadata.uid, identityId)
+      .first<{ count: number }>()
+    expect(count?.count).toBe(1)
   })
 
   it('creates, lists, reads, updates, and archives project-scoped vaults [spec: vaults/api-crud]', async () => {

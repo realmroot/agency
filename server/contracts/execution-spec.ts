@@ -28,8 +28,8 @@ const GitRefSchema = z
     'Use a safe branch, tag, or commit ref.',
   )
 const MountPathSchema = z.string().min(1).max(200)
-const SecretRefSchema = z.string().min(1).openapi({ example: 'ama://vaults/vault_abc123' })
-const MemoryRefSchema = z.string().min(1).openapi({ example: 'ama://memories/memstore_abc123' })
+const SecretRefSchema = z.string().min(1).openapi({ example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007' })
+const MemoryRefSchema = z.string().min(1).openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' })
 const VolumeNameSchema = z
   .string()
   .min(1)
@@ -74,7 +74,7 @@ export const SecretVolumeSchema = z
     name: VolumeNameSchema.openapi({ example: 'github-token' }),
     type: z.literal('secret'),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     items: z.array(SecretItemSchema).max(50).optional(),
   })
@@ -85,7 +85,7 @@ export const SecretVolumeProjectionSchema = z
   .object({
     type: z.literal('secret'),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     items: z.array(SecretItemSchema).max(50).optional(),
   })
@@ -119,7 +119,7 @@ export const EnvFromEntrySchema = z
     type: z.literal('secret').openapi({ example: 'secret' }),
     name: z.string().min(1).max(120).optional().openapi({ example: 'API_TOKEN' }),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/vault_abc123/credentials/vaultcred_abc123',
+      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     key: z.string().min(1).max(253).optional().openapi({ example: 'token' }),
   })
@@ -132,8 +132,8 @@ export const ExecutionEnvSchema = z
 
 export const ExecutionSpecSchema = z
   .object({
-    agentId: z.string().min(1).openapi({ example: 'agent_abc123' }),
-    environmentId: z.string().min(1).nullable().openapi({ example: 'env_abc123' }),
+    agentId: z.string().min(1).openapi({ example: '0195f5d6-7c20-7000-8000-000000000002' }),
+    environmentId: z.string().min(1).nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
     runtime: RuntimeSchema.openapi({ example: 'codex' }),
     env: ExecutionEnvSchema,
     envFrom: z.array(EnvFromEntrySchema).max(50),
@@ -144,7 +144,7 @@ export const ExecutionSpecSchema = z
   .openapi('ExecutionSpec')
 
 export const ExecutionSpecInputSchema = ExecutionSpecSchema.extend({
-  environmentId: z.string().min(1).nullable().optional().openapi({ example: 'env_abc123' }),
+  environmentId: z.string().min(1).nullable().optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
   env: ExecutionEnvSchema.optional(),
   envFrom: z.array(EnvFromEntrySchema).max(50).optional(),
   volumes: z.array(VolumeSchema).max(50).optional(),

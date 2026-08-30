@@ -1,4 +1,5 @@
 import { computeModelCostMicros, isProviderErrorCategory, providerFamily } from '@server/domain/provider-adapter'
+import { newPrimaryKey } from '@server/id'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import type { AmaEvent, ToolCall } from '../../../shared/session-events'
@@ -18,10 +19,6 @@ export interface UsageRecordingScope {
 // event-store infra, not wired into Deps (no usecase records usage directly).
 export interface UsageWriteRepo {
   recordProviderSignals(scope: UsageRecordingScope, sessionEventId: string, canonicalEvent: AmaEvent): Promise<void>
-}
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
 }
 
 function numberField(payload: Record<string, unknown>, key: string) {
@@ -121,7 +118,7 @@ async function recordModelUsage(
   const pricedCostMicros = pricing ? computeModelCostMicros(pricing, { promptTokens, completionTokens }) : null
   const costMicros = eventCostMicros ?? pricedCostMicros
   await db.insert(usageRecords).values({
-    id: newId('usage'),
+    id: newPrimaryKey(),
     organizationId: scope.organizationId,
     projectId: scope.projectId,
     agentId: session?.agentId ?? null,
@@ -156,7 +153,7 @@ async function recordToolUsage(
 ) {
   const session = await sessionAttribution(db, scope)
   await db.insert(usageRecords).values({
-    id: newId('usage'),
+    id: newPrimaryKey(),
     organizationId: scope.organizationId,
     projectId: scope.projectId,
     agentId: session?.agentId ?? null,

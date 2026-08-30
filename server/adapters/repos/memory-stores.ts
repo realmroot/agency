@@ -1,5 +1,6 @@
 import type { Memory, MemoryStore } from '@server/domain/memory-store'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreateMemoryStoreInput,
   CreateMemoryStoreMemoryInput,
@@ -17,10 +18,6 @@ import { memoryStoreMemories, memoryStores } from '../../db/schema'
 type Db = ReturnType<typeof drizzle>
 type MemoryStoreRow = typeof memoryStores.$inferSelect
 type MemoryRow = typeof memoryStoreMemories.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string) {
   return JSON.parse(value) as T
@@ -101,7 +98,7 @@ export function createMemoryStoreRepo(db: Db): MemoryStoreRepo {
 
     async insert(input: CreateMemoryStoreInput, createdAt): Promise<MemoryStore> {
       const row = {
-        id: newId('memstore'),
+        id: newPrimaryKey(),
         projectId: input.projectId,
         name: input.name,
         description: input.description,
@@ -165,7 +162,7 @@ export function createMemoryStoreRepo(db: Db): MemoryStoreRepo {
 
     async insertMemory(input: CreateMemoryStoreMemoryInput, createdAt): Promise<Memory> {
       const row = {
-        id: newId('memory'),
+        id: newPrimaryKey(),
         storeId: input.storeId,
         projectId: input.projectId,
         path: input.path,

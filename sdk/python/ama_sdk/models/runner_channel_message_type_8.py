@@ -24,10 +24,10 @@ T = TypeVar("T", bound="RunnerChannelMessageType8")
 
 @_attrs_define
 class RunnerChannelMessageType8:
-    """ 
+    """
         Attributes:
             type_ (RunnerChannelMessageType8Type):
-            session_id (str):  Example: session_abc123.
+            session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             record (RunnerOpaqueJsonObject):
      """
 
@@ -83,4 +83,3 @@ class RunnerChannelMessageType8:
         )
 
         return runner_channel_message_type_8
-

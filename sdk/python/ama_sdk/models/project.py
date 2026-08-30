@@ -22,9 +22,9 @@ T = TypeVar("T", bound="Project")
 
 @_attrs_define
 class Project:
-    """ 
+    """
         Attributes:
-            id (str):  Example: project_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
             name (str):  Example: Control Plane.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):

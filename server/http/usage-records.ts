@@ -64,11 +64,11 @@ const QuerySchema = z.object({
   agentId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'agentId', in: 'query' }, example: 'agent_abc123' }),
+    .openapi({ param: { name: 'agentId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-000000000002' }),
   sessionId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'sessionId', in: 'query' }, example: 'session_abc123' }),
+    .openapi({ param: { name: 'sessionId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-00000000000e' }),
   limit: z.coerce
     .number()
     .int()
@@ -85,7 +85,9 @@ const QuerySchema = z.object({
 const UsageRecordListResponseSchema = listResponseSchema('UsageRecordListResponse', UsageRecordSchema)
 
 const UsageRecordParamsSchema = z.object({
-  recordId: z.string().openapi({ param: { name: 'recordId', in: 'path' }, example: 'usage_abc123' }),
+  recordId: z
+    .string()
+    .openapi({ param: { name: 'recordId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000016' }),
 })
 
 function serializeUsage(record: UsageRecord) {

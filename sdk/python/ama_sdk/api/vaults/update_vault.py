@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -112,7 +112,7 @@ def sync_detailed(
      Partial update. Archive with `archived: true`; restore with `archived: false`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (UpdateVaultRequest):
 
     Raises:
@@ -148,7 +148,7 @@ def sync(
      Partial update. Archive with `archived: true`; restore with `archived: false`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (UpdateVaultRequest):
 
     Raises:
@@ -179,7 +179,7 @@ async def asyncio_detailed(
      Partial update. Archive with `archived: true`; restore with `archived: false`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (UpdateVaultRequest):
 
     Raises:
@@ -215,7 +215,7 @@ async def asyncio(
      Partial update. Archive with `archived: true`; restore with `archived: false`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (UpdateVaultRequest):
 
     Raises:

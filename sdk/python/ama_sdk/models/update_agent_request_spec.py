@@ -35,7 +35,7 @@ class UpdateAgentRequestSpec:
                 'allowedTools': ['read', 'grep']}].
             allowed_tools (list[str] | Unset):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str] | Unset):  Example: ['github'].
-            identity_ref (None | str | Unset):  Example: identity_abc123.
+            identity_ref (None | str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000004.
      """
 
     system_prompt: str | Unset = UNSET

@@ -17,11 +17,11 @@ def _get_kwargs(
     session_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -90,7 +90,7 @@ def sync_detailed(
     """ Open the session browser WebSocket (live events + backfill + input)
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -121,7 +121,7 @@ def sync(
     """ Open the session browser WebSocket (live events + backfill + input)
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -147,7 +147,7 @@ async def asyncio_detailed(
     """ Open the session browser WebSocket (live events + backfill + input)
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -178,7 +178,7 @@ async def asyncio(
     """ Open the session browser WebSocket (live events + backfill + input)
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

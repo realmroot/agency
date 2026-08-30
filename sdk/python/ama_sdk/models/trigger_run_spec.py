@@ -24,9 +24,9 @@ T = TypeVar("T", bound="TriggerRunSpec")
 
 @_attrs_define
 class TriggerRunSpec:
-    """ 
+    """
         Attributes:
-            trigger_id (str):  Example: trigger_abc123.
+            trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
             scheduled_for (datetime.datetime | None):  Example: 2026-05-26T12:00:00.000Z.
             metadata (TriggerRunSpecMetadata):  Example: {'source': 'trigger'}.
      """

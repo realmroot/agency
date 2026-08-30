@@ -17,7 +17,7 @@ type ProjectRoutes = OpenAPIHono<DepsEnv>
 
 const ProjectSchema = z
   .object({
-    id: z.string().openapi({ example: 'project_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000001' }),
     name: z.string().openapi({ example: 'Control Plane' }),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -55,7 +55,9 @@ const ProjectListQuerySchema = z.object({
 })
 
 const ProjectParamsSchema = z.object({
-  projectId: z.string().openapi({ param: { name: 'projectId', in: 'path' }, example: 'project_abc123' }),
+  projectId: z
+    .string()
+    .openapi({ param: { name: 'projectId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000001' }),
 })
 
 function errorBody(type: string, message: string, details?: Record<string, unknown>) {

@@ -28,9 +28,9 @@ def _get_kwargs(
     state: ListVaultCredentialsState | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -137,7 +137,7 @@ def sync_detailed(
     """ List vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -187,7 +187,7 @@ def sync(
     """ List vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -232,7 +232,7 @@ async def asyncio_detailed(
     """ List vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -282,7 +282,7 @@ async def asyncio(
     """ List vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.

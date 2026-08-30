@@ -23,12 +23,12 @@ T = TypeVar("T", bound="TriggerStatus")
 
 @_attrs_define
 class TriggerStatus:
-    """ 
+    """
         Attributes:
             phase (ResourcePhase):
             next_due_at (datetime.datetime | None):  Example: 2026-05-26T12:00:00.000Z.
             last_dispatched_at (datetime.datetime | None):
-            last_run_id (None | str):  Example: trigrun_abc123.
+            last_run_id (None | str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
      """
 
     phase: ResourcePhase

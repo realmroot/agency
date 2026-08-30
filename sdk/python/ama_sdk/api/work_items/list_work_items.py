@@ -29,9 +29,9 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -137,8 +137,8 @@ def sync_detailed(
 
     Args:
         state (ListWorkItemsState | Unset):  Example: available.
-        session_id (str | Unset):  Example: session_abc123.
-        runner_id (str | Unset):  Example: runner_abc123.
+        session_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         search (str | Unset):  Example: session.start.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -189,8 +189,8 @@ def sync(
 
     Args:
         state (ListWorkItemsState | Unset):  Example: available.
-        session_id (str | Unset):  Example: session_abc123.
-        runner_id (str | Unset):  Example: runner_abc123.
+        session_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         search (str | Unset):  Example: session.start.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -236,8 +236,8 @@ async def asyncio_detailed(
 
     Args:
         state (ListWorkItemsState | Unset):  Example: available.
-        session_id (str | Unset):  Example: session_abc123.
-        runner_id (str | Unset):  Example: runner_abc123.
+        session_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         search (str | Unset):  Example: session.start.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -288,8 +288,8 @@ async def asyncio(
 
     Args:
         state (ListWorkItemsState | Unset):  Example: available.
-        session_id (str | Unset):  Example: session_abc123.
-        runner_id (str | Unset):  Example: runner_abc123.
+        session_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         search (str | Unset):  Example: session.start.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.

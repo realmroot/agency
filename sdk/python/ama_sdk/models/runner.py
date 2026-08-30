@@ -28,13 +28,14 @@ T = TypeVar("T", bound="Runner")
 
 @_attrs_define
 class Runner:
-    """ 
+    """
         Attributes:
-            id (str):  Example: runner_abc123.
-            project_id (str):  Example: project_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
+            project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
             name (str):  Example: mac-mini-build-runner.
-            environment_id (None | str):  Example: env_abc123.
-            secret_ref (None | str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
+            environment_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+            secret_ref (None | str):  Example:
+                ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
             auth_mode (RunnerAuthMode):  Example: realmroot.
             state (RunnerState):  Example: active.
             current_load (int):
