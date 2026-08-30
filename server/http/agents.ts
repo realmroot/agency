@@ -69,10 +69,12 @@ const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
   example: ['read', 'bash', 'edit'],
 })
 
+const RealmrootAgentIdSchema = z.string().min(1).max(160).regex(/^\S+$/)
+
 const IdentityDescriptorSchema = z
   .object({
     identityId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000004' }),
-    agentId: z.string().min(1).max(160).openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    agentId: RealmrootAgentIdSchema.openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
     issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
     subject: z.string().openapi({ example: 'agent:019ff41a-7da6-708f-8b05-44d4d0373685' }),
     username: z.string().openapi({ example: 'researcher' }),
@@ -213,7 +215,13 @@ const AgentVersionParamsSchema = AgentParamsSchema.extend({
     }),
 })
 
-const ListQuerySchema = listQuerySchema()
+const ListQuerySchema = listQuerySchema().extend({
+  identityAgentId: RealmrootAgentIdSchema.optional().openapi({
+    param: { name: 'identityAgentId', in: 'query' },
+    description: 'Exact Realmroot Agent actor id bound through the Agent Identity.',
+    example: '019ff41a-7da6-708f-8b05-44d4d0373685',
+  }),
+})
 const AgentListResponseSchema = listResponseSchema('AgentListResponse', AgentSchema)
 const AgentVersionListResponseSchema = listResponseSchema('AgentVersionListResponse', AgentVersionSchema)
 
@@ -336,7 +344,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const { archived, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
+      const { archived, search, createdFrom, createdTo, identityAgentId, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -346,6 +354,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       const page = await deps.agents.list({
         projectId: auth.project.id,
         archived: archived === 'true',
+        ...(identityAgentId ? { identityAgentId } : {}),
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),

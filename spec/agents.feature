@@ -64,6 +64,13 @@ Feature: Agents
     Then it includes the agents collection, item, and versions paths
     And the system prompt, tools, sub-agents, and skills contract is exposed through OpenAPI and generated SDKs
 
+  @agents/api-identity-lookup @api
+  Scenario: Resolve an agent by its Realmroot actor identity
+    Given an active agent is bound to a Realmroot Identity in a project
+    When the user filters agents by the exact Realmroot actor id
+    Then the bound agent is returned without exposing agents from another project
+    And missing, archived, and malformed identity filters follow the collection contract
+
 	  @agents/api-pagination @api
 	  Scenario: List agents with pagination, filters, and tenant scope
 	    Given a project has active and archived agents created across dates

@@ -70,12 +70,13 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       search: 'research',
       createdFrom: '2026-05-01T00:00:00.000Z',
       createdTo: '2026-05-31T23:59:59.999Z',
+      identityAgentId: 'realmroot_agent_1',
       limit: 25,
       cursor: 'cursor_value',
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/agents?archived=true&search=research&createdFrom=2026-05-01T00%3A00%3A00.000Z&createdTo=2026-05-31T23%3A59%3A59.999Z&limit=25&cursor=cursor_value',
+      '/api/v1/agents?archived=true&search=research&createdFrom=2026-05-01T00%3A00%3A00.000Z&createdTo=2026-05-31T23%3A59%3A59.999Z&identityAgentId=realmroot_agent_1&limit=25&cursor=cursor_value',
       expect.objectContaining({
         body: undefined,
         method: 'GET',

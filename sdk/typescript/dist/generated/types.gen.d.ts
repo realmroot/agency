@@ -2024,6 +2024,10 @@ export type ListAgentsData = {
         createdTo?: string;
         limit?: number;
         cursor?: string;
+        /**
+         * Exact Realmroot Agent actor id bound through the Agent Identity.
+         */
+        identityAgentId?: string;
     };
     url: '/api/v1/agents';
 };

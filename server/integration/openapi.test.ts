@@ -279,7 +279,9 @@ describe('[CF] OpenAPI documentation', () => {
     ).toEqual(expect.arrayContaining(['triggerId', 'state', 'search', 'createdFrom', 'createdTo', 'limit', 'cursor']))
     expect(
       doc.paths['/api/v1/agents'].get.parameters?.map((parameter) => (parameter as { name?: string }).name),
-    ).toEqual(expect.arrayContaining(['archived', 'search', 'createdFrom', 'createdTo', 'limit', 'cursor']))
+    ).toEqual(
+      expect.arrayContaining(['archived', 'search', 'createdFrom', 'createdTo', 'identityAgentId', 'limit', 'cursor']),
+    )
 
     expect(doc.components?.securitySchemes).toEqual(
       expect.objectContaining({

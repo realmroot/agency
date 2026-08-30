@@ -2948,6 +2948,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 160,
+            "pattern": "^\\S+$",
             "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
           },
           "issuer": {
@@ -9064,6 +9065,20 @@
             },
             "required": false,
             "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^\\S+$",
+              "description": "Exact Realmroot Agent actor id bound through the Agent Identity.",
+              "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
+            },
+            "required": false,
+            "description": "Exact Realmroot Agent actor id bound through the Agent Identity.",
+            "name": "identityAgentId",
             "in": "query"
           }
         ],

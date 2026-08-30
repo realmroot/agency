@@ -399,6 +399,111 @@ describe('[CF] /api/v1/agents', () => {
     })
   })
 
+  it('resolves the project agent bound to an exact Realmroot actor id [spec: agents/api-identity-lookup]', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Realmroot-bound agent')),
+    })
+    expect(createRes.status).toBe(201)
+    const created = (await createRes.json()) as { metadata: { uid: string } }
+    const stored = await env.DB.prepare('SELECT project_id FROM agents WHERE id = ?')
+      .bind(created.metadata.uid)
+      .first<{ project_id: string }>()
+    if (!stored) throw new Error('Expected created Agent')
+
+    const realmrootAgentId = '019ff41a-7da6-708f-8b05-44d4d0373685'
+    const identityId = 'identity_exact_actor_lookup'
+    const now = '2026-08-30T00:00:00.000Z'
+    await env.DB.prepare(`INSERT INTO identities (
+      id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+      idempotency_key_hash,request_fingerprint,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        identityId,
+        stored.project_id,
+        defaultClaims().organizationId,
+        'Exact actor Identity',
+        'exact-actor',
+        'codex',
+        'active',
+        'vault_exact_actor_lookup',
+        'credential_exact_actor_lookup',
+        realmrootAgentId,
+        'https://id.realmroot.dev/api/auth',
+        realmrootAgentId,
+        'hash_exact_actor_lookup',
+        'fingerprint_exact_actor_lookup',
+        now,
+        now,
+      )
+      .run()
+
+    const bindRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { identityRef: identityId } }),
+    })
+    expect(bindRes.status).toBe(200)
+
+    const lookupRes = await jsonFetch(
+      `/api/v1/agents?identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
+      authorization,
+    )
+    expect(lookupRes.status).toBe(200)
+    await expect(lookupRes.json()).resolves.toMatchObject({
+      data: [
+        {
+          metadata: { uid: created.metadata.uid },
+          spec: { identity: { identityId, agentId: realmrootAgentId } },
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+
+    const missingRes = await jsonFetch('/api/v1/agents?identityAgentId=missing-realmroot-agent', authorization)
+    expect(missingRes.status).toBe(200)
+    await expect(missingRes.json()).resolves.toMatchObject({ data: [] })
+
+    const otherAuthorization = await signIn({
+      ...defaultClaims(),
+      sub: 'user_exact_actor_other',
+      email: 'exact-actor-other@example.com',
+      organizationId: 'org_exact_actor_other',
+    })
+    const concealedRes = await jsonFetch(
+      `/api/v1/agents?identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
+      otherAuthorization,
+    )
+    expect(concealedRes.status).toBe(200)
+    await expect(concealedRes.json()).resolves.toMatchObject({ data: [] })
+
+    const archiveRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: true }),
+    })
+    expect(archiveRes.status).toBe(200)
+    const defaultArchivedLookup = await jsonFetch(
+      `/api/v1/agents?identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
+      authorization,
+    )
+    await expect(defaultArchivedLookup.json()).resolves.toMatchObject({ data: [] })
+    const archivedLookup = await jsonFetch(
+      `/api/v1/agents?archived=true&identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
+      authorization,
+    )
+    expect(archivedLookup.status).toBe(200)
+    await expect(archivedLookup.json()).resolves.toMatchObject({
+      data: [{ metadata: { uid: created.metadata.uid, archivedAt: expect.any(String) } }],
+    })
+
+    const emptyRes = await jsonFetch('/api/v1/agents?identityAgentId=', authorization)
+    expect(emptyRes.status).toBe(400)
+    const whitespaceRes = await jsonFetch('/api/v1/agents?identityAgentId=%20actor%20', authorization)
+    expect(whitespaceRes.status).toBe(400)
+    const oversizedRes = await jsonFetch(`/api/v1/agents?identityAgentId=${'a'.repeat(161)}`, authorization)
+    expect(oversizedRes.status).toBe(400)
+  })
+
   it('validates provider against configured providers', async () => {
     const authorization = await signIn()
 
