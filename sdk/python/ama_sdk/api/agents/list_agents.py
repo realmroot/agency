@@ -25,11 +25,12 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_agent_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -54,6 +55,8 @@ def _get_kwargs(
     params["limit"] = limit
 
     params["cursor"] = cursor
+
+    params["identityAgentId"] = identity_agent_id
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -123,6 +126,7 @@ def sync_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_agent_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -136,6 +140,8 @@ def sync_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
+            Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -153,6 +159,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_agent_id=identity_agent_id,
 
     )
 
@@ -171,6 +178,7 @@ def sync(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_agent_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -184,6 +192,8 @@ def sync(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
+            Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -202,6 +212,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_agent_id=identity_agent_id,
 
     ).parsed
 
@@ -214,6 +225,7 @@ async def asyncio_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_agent_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -227,6 +239,8 @@ async def asyncio_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
+            Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -244,6 +258,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_agent_id=identity_agent_id,
 
     )
 
@@ -262,6 +277,7 @@ async def asyncio(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_agent_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -275,6 +291,8 @@ async def asyncio(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
+            Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -293,5 +311,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_agent_id=identity_agent_id,
 
     )).parsed

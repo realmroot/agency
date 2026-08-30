@@ -27,8 +27,12 @@ export type AgentAllowedToolInput = ArrayItem<NonNullable<AgentInput['spec']['al
 export type ResourceMetadata = Agent['metadata']
 export type ResourcePhase = ResourceMetadata['archivedAt'] extends string | null ? AgentStatus['phase'] : never
 
+export interface AgentListOptions extends ListOptions {
+  identityAgentId?: string
+}
+
 export const agentsApi = {
-  listAgents: (options: ListOptions = {}) =>
+  listAgents: (options: AgentListOptions = {}) =>
     rpcRequest<ListResponse<Agent>>(v1.agents.$get(queryArg<typeof v1.agents.$get>(options))),
   readAgent: (id: string) => rpcRequest<Agent>(v1.agents[':agentId'].$get({ param: { agentId: id } })),
   createAgent: (input: AgentInput) => rpcRequest<Agent>(v1.agents.$post(jsonArg<typeof v1.agents.$post>(input))),

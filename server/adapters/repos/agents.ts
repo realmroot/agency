@@ -13,7 +13,7 @@ import type {
 import { IdentityAlreadyBoundError } from '@server/usecases/ports'
 import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { agents, agentVersions, connectors, providers } from '../../db/schema'
+import { agents, agentVersions, connectors, identities, providers } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
@@ -115,9 +115,28 @@ function versionRecordFrom(row: AgentVersionRow): AgentVersion {
 export function createAgentRepo(db: Db): AgentRepo {
   return {
     async list(query: AgentListQuery): Promise<AgentListPage> {
+      const identity = query.identityAgentId
+        ? await db
+            .select({ id: identities.id, boundAgentId: identities.boundAgentId })
+            .from(identities)
+            .where(
+              and(
+                eq(identities.projectId, query.projectId),
+                eq(identities.remoteAgentId, query.identityAgentId),
+                eq(identities.state, 'active'),
+                isNull(identities.archivedAt),
+              ),
+            )
+            .get()
+        : null
+      if (query.identityAgentId && !identity?.boundAgentId) {
+        return { rows: [], hasMore: false }
+      }
       const filters = [
         eq(agents.projectId, query.projectId),
         query.archived ? isNotNull(agents.archivedAt) : isNull(agents.archivedAt),
+        identity?.boundAgentId ? eq(agents.id, identity.boundAgentId) : undefined,
+        identity ? eq(agents.identityId, identity.id) : undefined,
         query.search ? like(agents.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(agents.createdAt, query.createdFrom) : undefined,
         query.createdTo ? lte(agents.createdAt, query.createdTo) : undefined,

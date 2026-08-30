@@ -5955,6 +5955,9 @@ type ListAgentsParams struct {
 	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// IdentityAgentId Exact Realmroot Agent actor id bound through the Agent Identity.
+	IdentityAgentId *string `form:"identityAgentId,omitempty" json:"identityAgentId,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
@@ -10635,6 +10638,18 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 		if params.Cursor != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.IdentityAgentId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identityAgentId", *params.IdentityAgentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
