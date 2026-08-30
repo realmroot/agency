@@ -85,7 +85,7 @@ const AgentVersionSnapshotSchema = z
     projectId: z.string(),
     version: z.number().int(),
     systemPrompt: z.string(),
-    provider: z.string().openapi({ example: 'workers-ai' }),
+    provider: z.string().nullable().openapi({ example: 'workers-ai' }),
     model: z.string().nullable(),
     skills: z.array(z.string()),
     subagents: z.array(SessionSubagentSchema),
@@ -114,7 +114,7 @@ const EnvironmentVersionSnapshotSchema = z
 const SessionPlacementSchema = z
   .object({
     hostingMode: EnvironmentHostingModeSchema,
-    provider: z.string().openapi({ example: 'workers-ai' }),
+    provider: z.string().nullable().openapi({ example: 'workers-ai' }),
     model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
   })
   .openapi('SessionPlacement')

@@ -419,6 +419,55 @@ describe('[CF] /api/v1/sessions', () => {
     await expect(createRes.json()).resolves.toMatchObject({ spec: { environmentId: environment.id } })
   })
 
+  it('lets a self-hosted runtime choose its default model [spec: sessions/runtime-default-model]', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, {
+      hostingMode: 'self_hosted',
+      mcpPolicy: { allowedConnectors: [] },
+    })
+    const agentRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        metadata: { name: 'Runtime default model agent' },
+        spec: { systemPrompt: 'Use the runtime default model.', skills: [], mcpConnectors: [] },
+      }),
+    })
+    expect(agentRes.status).toBe(201)
+    const agent = (await agentRes.json()) as { metadata: { uid: string } }
+    const capability = { runtime: 'codex' as const, models: ['gpt-runtime-default'], state: 'ready' as const }
+    const runner = await registerRunner(authorization, environment.id, ['codex'])
+    await heartbeatRunner(authorization, runner.id, ['codex'], [capability])
+
+    const createRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: agent.metadata.uid,
+        environmentId: environment.id,
+        runtime: 'codex',
+        prompt: 'Use the Codex runtime default.',
+      }),
+    })
+    const createText = await createRes.text()
+    expect(createRes.status, createText).toBe(201)
+    const session = JSON.parse(createText) as { metadata: { uid: string }; spec: { runtime: string } }
+    expect(session.spec.runtime).toBe('codex')
+
+    const row = await env.DB.prepare('SELECT model_provider, model_config FROM sessions WHERE id = ?')
+      .bind(session.metadata.uid)
+      .first<{ model_provider: string | null; model_config: string }>()
+    expect(row?.model_provider).toBeNull()
+    expect(JSON.parse(row?.model_config ?? 'null')).toEqual({})
+    const work = await env.DB.prepare('SELECT payload FROM work_items WHERE session_id = ?')
+      .bind(session.metadata.uid)
+      .first<{ payload: string }>()
+    expect(JSON.parse(work?.payload ?? 'null')).toMatchObject({
+      runtime: 'codex',
+      runtimeRequirement: { runtime: 'codex' },
+    })
+    expect(JSON.parse(work?.payload ?? 'null')).not.toHaveProperty('model')
+    expect(JSON.parse(work?.payload ?? 'null')).not.toHaveProperty('provider')
+  })
+
   it('rejects an unpinned session when no runner environment is available [spec: sessions/create]', async () => {
     const authorization = await signIn()
     // An environment exists but has no active runner, so it is not a candidate.

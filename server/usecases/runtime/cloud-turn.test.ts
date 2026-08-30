@@ -123,7 +123,7 @@ function fakeSession(overrides: Record<string, unknown> = {}) {
     sandboxId: 'sandbox_1',
     modelProvider: 'workers-ai',
     modelConfig: JSON.stringify({}),
-    agentSnapshot: JSON.stringify({ providerId: 'anthropic', model: '@cf/x' }),
+    agentSnapshot: JSON.stringify({ provider: 'anthropic', model: '@cf/x' }),
     environmentSnapshot: null,
     metadata: null,
     ...overrides,
@@ -412,7 +412,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
     }
   }
 
-  const agentSnapshot = { providerId: 'anthropic', model: '@cf/x', mcpConnectors: [] } as never
+  const agentSnapshot = { provider: 'anthropic', model: '@cf/x', mcpConnectors: [] } as never
 
   beforeEach(() => {
     startSessionRuntimeMock.mockReset()

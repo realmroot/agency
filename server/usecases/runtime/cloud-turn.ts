@@ -126,6 +126,9 @@ export async function startSessionRuntimeForRow(
       sessionVolumeMounts,
     )
     const env = { ...(sessionEnv ?? {}), ...resolvedEnv }
+    if (!agentSnapshot.provider) {
+      throw new Error('Cloud session provider is required')
+    }
     const startedRuntime = await withTimeout(
       deps.cloudRuntime.startCloudSession({
         sessionId,

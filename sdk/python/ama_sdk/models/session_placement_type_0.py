@@ -22,15 +22,15 @@ T = TypeVar("T", bound="SessionPlacementType0")
 
 @_attrs_define
 class SessionPlacementType0:
-    """ 
+    """
         Attributes:
             hosting_mode (EnvironmentHostingMode):
-            provider (str):  Example: workers-ai.
+            provider (None | str):  Example: workers-ai.
             model (None | str):  Example: @cf/moonshotai/kimi-k2.6.
      """
 
     hosting_mode: EnvironmentHostingMode
-    provider: str
+    provider: None | str
     model: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -41,6 +41,7 @@ class SessionPlacementType0:
     def to_dict(self) -> dict[str, Any]:
         hosting_mode = self.hosting_mode.value
 
+        provider: None | str
         provider = self.provider
 
         model: None | str
@@ -67,7 +68,13 @@ class SessionPlacementType0:
 
 
 
-        provider = d.pop("provider")
+        def _parse_provider(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        provider = _parse_provider(d.pop("provider"))
+
 
         def _parse_model(data: object) -> None | str:
             if data is None:

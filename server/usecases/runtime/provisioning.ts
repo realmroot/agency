@@ -23,7 +23,7 @@ export async function validateRuntimeProviderModel(
   environmentId: string,
   hostingMode: 'cloud' | 'self_hosted',
   runtime: RuntimeName,
-  provider: string,
+  provider: string | null,
   model: string | null,
 ) {
   const driver = runtimeDriver(runtime)
@@ -34,13 +34,14 @@ export async function validateRuntimeProviderModel(
     // Cloud dispatches every model through the Workers AI binding + AI Gateway,
     // so the global catalog (populated by discovery) is the source of truth for
     // what exists. provider is the vendor slug, which is the provider row id.
+    if (!provider) return false
     return model
       ? Boolean(await deps.providers.findModel(provider, model))
       : Boolean(await deps.providers.findBySlug(provider))
   }
   // self_hosted: the catalog is a loose pre-filter; the runner's structured
   // runtimes list does the real gating.
-  if (!runtimeCatalogSupportsProviderModel(hostingMode, runtime, provider, model)) {
+  if (provider && !runtimeCatalogSupportsProviderModel(hostingMode, runtime, provider, model)) {
     return false
   }
   const activeRunnerRuntimes = await deps.sessionOrchestration.activeRunnerRuntimes(auth.project.id, environmentId)

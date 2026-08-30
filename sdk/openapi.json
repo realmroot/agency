@@ -6971,6 +6971,7 @@
           },
           "provider": {
             "type": "string",
+            "nullable": true,
             "example": "workers-ai"
           },
           "model": {
@@ -7169,6 +7170,7 @@
           },
           "provider": {
             "type": "string",
+            "nullable": true,
             "example": "workers-ai"
           },
           "model": {

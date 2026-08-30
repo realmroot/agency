@@ -98,7 +98,7 @@ export interface BoundSessionEnvironment {
 
 export interface SessionPlacement {
   hostingMode: SessionHostingMode
-  provider: string
+  provider: string | null
   model: string | null
   driver: string | null
   backend: string | null
@@ -111,7 +111,7 @@ export interface SessionAgentSnapshot {
   projectId: string
   version: number
   systemPrompt: string
-  provider: string
+  provider: string | null
   model: string | null
   skills: string[]
   subagents: AgentSubagent[]

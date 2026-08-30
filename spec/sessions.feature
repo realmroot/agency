@@ -36,6 +36,19 @@ Feature: Sessions
 	    And repository resources are declared in the deterministic workspace manifest
 	    And raw credentials are rejected from the request body
 
+  @sessions/runtime-default-model @api
+  Scenario: Let the selected runtime choose its default model
+    Given an active agent version does not pin a provider or model
+    When a session is created with a compatible runtime and environment
+    Then session creation succeeds without selecting a platform provider or model
+    And the runtime receives no pinned provider or model requirement
+
+  @sessions/live-state-refresh @web
+  Scenario: Refresh a live session until its turn state settles
+    Given a session detail page is showing a pending or running session
+    When the runtime completes after its final event is delivered
+    Then the page continues refreshing the session resource until it leaves the live state
+
   @sessions/secret-projection @usecase
   Scenario: Project credential secrets into runtime inputs
     Given a session references vault credentials without pinning a version

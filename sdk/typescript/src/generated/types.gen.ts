@@ -1689,7 +1689,7 @@ export type SessionAgentSnapshot = {
     projectId: string;
     version: number;
     systemPrompt: string;
-    provider: string;
+    provider: string | null;
     model: string | null;
     skills: Array<string>;
     subagents: Array<SessionSubagent>;
@@ -1737,7 +1737,7 @@ export type SessionEnvironmentJsonObject = {
 
 export type SessionPlacement = {
     hostingMode: EnvironmentHostingMode;
-    provider: string;
+    provider: string | null;
     model: string | null;
 } | null;
 

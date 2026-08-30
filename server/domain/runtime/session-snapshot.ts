@@ -26,14 +26,14 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-export function createAgentSnapshot(row: AgentVersionRow, providerId: string) {
+export function createAgentSnapshot(row: AgentVersionRow) {
   return {
     id: row.id,
     agentId: row.agentId,
     projectId: row.projectId,
     version: row.version,
     systemPrompt: row.systemPrompt,
-    provider: providerId,
+    provider: row.providerId,
     model: row.model,
     skills: JSON.parse(row.skills) as string[],
     subagents: JSON.parse(row.subagents) as AgentSubagent[],
