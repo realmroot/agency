@@ -22,7 +22,7 @@ export const emptyAgent: AgentFormState = {
   name: 'Coding agent',
   description: 'Executes development work in a managed sandbox.',
   systemPrompt: 'You are a focused coding agent. Make changes, run checks, and report the result.',
-  provider: 'workers-ai',
+  provider: '',
   model: '',
   skills: '',
   allowedTools: DEFAULT_ALLOWED_TOOLS,

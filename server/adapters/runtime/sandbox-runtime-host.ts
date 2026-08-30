@@ -466,7 +466,9 @@ export async function startSessionRuntime(
   env: Env,
   input: SessionRuntimeStartInput,
 ): Promise<SessionRuntimeStartResult> {
-  resolveRuntimeModel(env, input.model)
+  if (!input.model) {
+    throw new Error('AMA cloud runtime requires an explicitly pinned model')
+  }
   if (env.AMA_RUNTIME_MODE !== 'test') {
     const getSandbox = await getSandboxBinding()
     const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
@@ -589,14 +591,6 @@ function piProviderName(provider: string) {
   return canonicalProvider(provider)
 }
 
-function runtimeDefaultModel(env: Env) {
-  return env.AMA_DEFAULT_MODEL ?? '@cf/moonshotai/kimi-k2.6'
-}
-
-function resolveRuntimeModel(env: Env, model: string | null) {
-  return model ?? runtimeDefaultModel(env)
-}
-
 function fallbackModel(model: string): Model<string> {
   return {
     id: model,
@@ -628,8 +622,11 @@ export async function runSessionTurn(
   input: SessionTurnInput,
   executor = toolExecutor(env),
 ): Promise<SessionTurnResult> {
+  if (!input.model) {
+    throw new Error('AMA cloud runtime requires an explicitly pinned model')
+  }
   const provider = piProviderName(input.provider)
-  const modelId = resolveRuntimeModel(env, input.model)
+  const modelId = input.model
   const model = runtimeModel(modelId)
   return runTurn({
     sessionId: input.sessionId,

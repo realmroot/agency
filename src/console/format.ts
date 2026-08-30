@@ -73,16 +73,11 @@ export function parseVariables(value: string) {
   )
 }
 
-// The console offers "workers-ai" as the platform-default provider option, but
-// the v1 control plane resolves the project default from a null/omitted
-// provider — "workers-ai" is the platform-default provider option.
-export const PLATFORM_DEFAULT_PROVIDER = 'workers-ai'
-
-// Spread into an agent create/update body. An omitted provider lets the
-// control plane resolve the project default at session start.
+// Spread into an agent create/update body. Empty means the selected runtime
+// owns provider/model resolution.
 export function providerPatch(provider: string): { provider: string } | Record<string, never> {
   const trimmed = provider.trim()
-  return !trimmed || trimmed === PLATFORM_DEFAULT_PROVIDER ? {} : { provider: trimmed }
+  return trimmed ? { provider: trimmed } : {}
 }
 
 export function parseTools(value: string) {

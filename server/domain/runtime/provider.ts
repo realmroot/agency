@@ -7,8 +7,6 @@ export function canonicalProvider(provider: string): string {
   return provider === 'workers-ai' ? 'cloudflare-workers-ai' : provider
 }
 
-export const PLATFORM_DEFAULT_PROVIDER = 'workers-ai'
-
 // Shapes the agent snapshot a runtime turn runs against: drop the sandboxPolicy
 // (the runtime gates sandbox operations itself, the snapshot must not re-assert
 // it) and normalize skills to an array. Parses the persisted JSON column.
@@ -21,17 +19,17 @@ export function parseRuntimeAgentSnapshot(value: string | null) {
   }
 }
 
-// Single source for the session's runtime provider + model. The session's pinned
-// modelProvider wins; otherwise the agent snapshot's provider (falling back to
-// the platform default). The model prefers the session modelConfig, then the
-// agent snapshot, else null (the engine resolves the provider default).
+// Single source for the AMA cloud runtime's pinned provider + model. Runtime
+// dispatch refuses an absent provider instead of inventing a platform default.
 export function resolveSessionProviderModel(
   session: { modelProvider: string | null },
   agentSnapshot: Record<string, unknown>,
   modelConfig: Record<string, unknown>,
 ): { provider: string; model: string | null } {
-  const provider =
-    session.modelProvider ?? (typeof agentSnapshot.provider === 'string' ? agentSnapshot.provider : 'workers-ai')
+  const provider = session.modelProvider ?? (typeof agentSnapshot.provider === 'string' ? agentSnapshot.provider : null)
+  if (!provider) {
+    throw new Error('AMA cloud runtime requires an explicitly pinned provider')
+  }
   const model =
     typeof modelConfig.model === 'string'
       ? modelConfig.model

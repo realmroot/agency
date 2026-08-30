@@ -6,21 +6,20 @@ import type { Env } from '../env'
 // agent to a provider/model need the row to exist so the agent.providerId FK
 // and the provider/model availability checks resolve. Provider rows use the
 // vendor slug as their id (id === slug; discovery upserts id: slug). The cloud
-// runtime ('ama') dispatches every model through the Workers AI binding, which
-// only recognizes the 'workers-ai' provider, so this seeds that vendor plus the
-// default model the test agents pin. Call from a beforeEach: isolated storage
-// resets writes between tests.
-export const PLATFORM_PROVIDER_ID = 'workers-ai'
-export const PLATFORM_MODEL_ID = '@cf/moonshotai/kimi-k2.6'
+// runtime ('ama') dispatches every model through the Workers AI binding, so
+// this seeds one explicit provider/model fixture. Call from a beforeEach:
+// isolated storage resets writes between tests.
+export const TEST_WORKERS_AI_PROVIDER_ID = 'workers-ai'
+export const TEST_WORKERS_AI_MODEL_ID = '@cf/moonshotai/kimi-k2.6'
 
 export async function seedPlatformProvider(
   options: { providerId?: string; slug?: string; displayName?: string; modelId?: string; enabled?: boolean } = {},
 ) {
   const db = (env as unknown as Env).DB
-  const providerId = options.providerId ?? PLATFORM_PROVIDER_ID
-  const slug = options.slug ?? PLATFORM_PROVIDER_ID
+  const providerId = options.providerId ?? TEST_WORKERS_AI_PROVIDER_ID
+  const slug = options.slug ?? TEST_WORKERS_AI_PROVIDER_ID
   const displayName = options.displayName ?? 'Workers AI'
-  const modelId = options.modelId ?? PLATFORM_MODEL_ID
+  const modelId = options.modelId ?? TEST_WORKERS_AI_MODEL_ID
   const enabled = options.enabled ?? true
   const timestamp = new Date().toISOString()
   await db
