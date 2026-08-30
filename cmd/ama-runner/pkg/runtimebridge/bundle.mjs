@@ -39305,14 +39305,20 @@ var codexProvider = {
     let wakePrompt;
     const codexPathOverride = resolveCliPath("codex");
     const systemPrompt = agentSystemPrompt(request3);
+    const configuredSubagents = objectValue2(request3.agentSnapshot).subagents;
+    const hasNamedSubagents = Array.isArray(configuredSubagents) && configuredSubagents.length > 0;
+    const developerInstructions = [
+      systemPrompt,
+      hasNamedSubagents ? 'When spawning a configured named subagent, set fork_turns to "none"; full-history forks cannot select a named agent type.' : void 0
+    ].filter((value) => Boolean(value)).join("\n\n");
     const codex = new Codex({
       env: sdkEnv(request3),
       // Managed sessions must not inherit the host user's personal Codex Apps
       // connectors (e.g. the GitHub connector creates PRs as the host user
       // instead of with the session-scoped git credential).
       config: {
-        features: { apps: false, multi_agent: true },
-        ...systemPrompt ? { developer_instructions: systemPrompt } : {}
+        features: { apps: false, multi_agent: true, unified_exec: false },
+        ...developerInstructions ? { developer_instructions: developerInstructions } : {}
       },
       ...codexPathOverride ? { codexPathOverride } : {}
     });

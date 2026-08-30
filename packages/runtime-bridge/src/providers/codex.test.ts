@@ -256,7 +256,7 @@ describe('codexProvider', () => {
     expect(codexConstructorMock).toHaveBeenCalledWith({
       env: { HOME: '/home/agent' },
       config: {
-        features: { apps: false, multi_agent: true },
+        features: { apps: false, multi_agent: true, unified_exec: false },
         developer_instructions: expect.stringContaining('SYSTEM_PROMPT'),
       },
     })
@@ -268,6 +268,9 @@ describe('codexProvider', () => {
     expect(codexOptions.config.developer_instructions).toContain('Skills: saltbo/agent-kanban@ak-maintainer')
     expect(codexOptions.config.developer_instructions).toContain(
       'Available subagents: @reviewer (Reviews pull requests)',
+    )
+    expect(codexOptions.config.developer_instructions).toContain(
+      'When spawning a configured named subagent, set fork_turns to "none"',
     )
     expect(codexOptions.config).not.toHaveProperty('instructions')
     for await (const _event of handle.events) {
