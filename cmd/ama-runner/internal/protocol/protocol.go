@@ -131,8 +131,8 @@ func ParseWorkPayload(payload any) (WorkPayload, error) {
 		if normalized.HostingMode != "self_hosted" {
 			return WorkPayload{}, fmt.Errorf("session.start work item must target self_hosted hostingMode")
 		}
-		if normalized.Runtime == "" || normalized.Provider == "" || normalized.RuntimeConfig == nil {
-			return WorkPayload{}, fmt.Errorf("session.start work item must include runtime, runtimeConfig, and provider")
+		if normalized.Runtime == "" || normalized.RuntimeConfig == nil {
+			return WorkPayload{}, fmt.Errorf("session.start work item must include runtime and runtimeConfig")
 		}
 		if normalized.RuntimeRequirement == nil || normalized.RuntimeRequirement.Runtime == "" {
 			return WorkPayload{}, fmt.Errorf("session.start work item must include runtimeRequirement")

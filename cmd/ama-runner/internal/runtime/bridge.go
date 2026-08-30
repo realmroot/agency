@@ -270,10 +270,12 @@ func commandEnvironment(request Request) ([]string, error) {
 	env = append(env,
 		"AMA_SESSION_ID="+request.SessionID,
 		"AMA_RUNTIME="+request.Runtime,
-		"AMA_PROVIDER="+request.Provider,
 		"AMA_WORKSPACE="+request.WorkDir,
 		"AMA_RUNTIME_CONFIG="+string(config),
 	)
+	if request.Provider != "" {
+		env = append(env, "AMA_PROVIDER="+request.Provider)
+	}
 	if request.AgentSnapshot != nil {
 		snapshot, err := json.Marshal(request.AgentSnapshot)
 		if err != nil {
