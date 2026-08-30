@@ -36,6 +36,7 @@ func runCommand(ctx context.Context, build version.Info) *cobra.Command {
 }
 
 func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
+	var startAtLogin bool
 	command := &cobra.Command{
 		Use:           "start [instance-id]",
 		Short:         "Create or start a managed AMA Runner instance",
@@ -47,6 +48,9 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 			var record instance.Record
 			var err error
 			if len(args) == 1 {
+				if command.Flags().Changed("start-at-login") {
+					return fmt.Errorf("use ama-runner configure %s --start-at-login=<true|false> to change login startup", args[0])
+				}
 				record, err = registry.Get(args[0])
 			} else {
 				config, loadErr := runnercli.LoadManagedStartConfig(command)
@@ -55,10 +59,11 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 				}
 				record, err = instance.NewRecord(config)
 				if err == nil {
+					record.StartAtLogin = startAtLogin
 					existing, getErr := registry.Get(record.ID)
 					switch {
 					case getErr == nil:
-						if existing.Config != record.Config || existing.CredentialPath != record.CredentialPath || existing.AccountID != record.AccountID {
+						if existing.Config != record.Config || existing.StartAtLogin != record.StartAtLogin || existing.CredentialPath != record.CredentialPath || existing.AccountID != record.AccountID {
 							return fmt.Errorf("runner instance %s already exists with different configuration; use ama-runner configure %s", record.ID, record.ID)
 						}
 						record = existing
@@ -84,6 +89,7 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 		},
 	}
 	runnercli.RegisterManagedStartFlags(command)
+	command.Flags().BoolVar(&startAtLogin, "start-at-login", false, "start this Runner automatically when the user logs in")
 	return command
 }
 
@@ -235,13 +241,19 @@ func configureCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	var maxConcurrent int
 	var projectID string
 	var allowUnsafeProcess bool
+	var startAtLogin bool
 	command := &cobra.Command{
 		Use:           "configure <instance-id>",
-		Short:         "Update mutable configuration for one stopped Runner instance",
+		Short:         "Update mutable configuration for one Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(command *cobra.Command, args []string) error {
+			runtimeChanged := command.Flags().Changed("max-concurrent") || command.Flags().Changed("project-id") || command.Flags().Changed("allow-unsafe-process")
+			loginPolicySpecified := command.Flags().Changed("start-at-login")
+			if !runtimeChanged && !loginPolicySpecified {
+				return fmt.Errorf("at least one configuration flag is required")
+			}
 			registry := commandRegistry(command)
 			record, err := registry.Get(args[0])
 			if err != nil {
@@ -251,12 +263,14 @@ func configureCommand(build version.Info, stdout io.Writer) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			running, err := controller.IsRunning(record)
-			if err != nil {
-				return err
-			}
-			if running {
-				return fmt.Errorf("runner instance %s must be stopped before it can be configured", record.ID)
+			if runtimeChanged {
+				running, err := controller.IsRunning(record)
+				if err != nil {
+					return err
+				}
+				if running {
+					return fmt.Errorf("runner instance %s must be stopped before its runtime configuration can be changed", record.ID)
+				}
 			}
 			if command.Flags().Changed("max-concurrent") {
 				record.Config.MaxConcurrent = maxConcurrent
@@ -267,22 +281,39 @@ func configureCommand(build version.Info, stdout io.Writer) *cobra.Command {
 			if command.Flags().Changed("allow-unsafe-process") {
 				record.Config.AllowUnsafeProcess = allowUnsafeProcess
 			}
-			if !command.Flags().Changed("max-concurrent") && !command.Flags().Changed("project-id") && !command.Flags().Changed("allow-unsafe-process") {
-				return fmt.Errorf("at least one configuration flag is required")
+			if loginPolicySpecified {
+				record.StartAtLogin = startAtLogin
 			}
 			if err := record.Config.Validate(); err != nil {
 				return err
 			}
+			var rollbackLoginPolicy func() error
+			if loginPolicySpecified {
+				rollbackLoginPolicy, err = controller.SetStartAtLogin(record, record.StartAtLogin)
+				if err != nil {
+					return err
+				}
+			}
 			if err := registry.Put(record); err != nil {
+				if rollbackLoginPolicy != nil {
+					if rollbackErr := rollbackLoginPolicy(); rollbackErr != nil {
+						return fmt.Errorf("save runner instance %s configuration: %w; rollback login startup failed: %v", record.ID, err, rollbackErr)
+					}
+				}
 				return err
 			}
-			fmt.Fprintf(stdout, "%s configured; restart it to apply the change\n", record.ID)
+			if runtimeChanged {
+				fmt.Fprintf(stdout, "%s configured; restart it to apply the runtime change\n", record.ID)
+			} else {
+				fmt.Fprintf(stdout, "%s login startup configured; current process unchanged\n", record.ID)
+			}
 			return nil
 		},
 	}
 	command.Flags().IntVar(&maxConcurrent, "max-concurrent", 0, "max concurrent leases")
 	command.Flags().StringVar(&projectID, "project-id", "", "AMA project id")
 	command.Flags().BoolVar(&allowUnsafeProcess, "allow-unsafe-process", false, "acknowledge unsafe process adapter")
+	command.Flags().BoolVar(&startAtLogin, "start-at-login", false, "start this Runner automatically when the user logs in")
 	return command
 }
 
@@ -366,6 +397,7 @@ type managedController interface {
 	RunService(instance.Record) error
 	LogPath(instance.Record) string
 	IsRunning(instance.Record) (bool, error)
+	SetStartAtLogin(instance.Record, bool) (func() error, error)
 }
 
 var newManagedController = func(registry instance.Registry, build version.Info) (managedController, error) {
@@ -380,7 +412,7 @@ func printStatuses(stdout io.Writer, output string, statuses []managed.Status) e
 		return encoder.Encode(statuses)
 	case "table":
 		writer := tabwriter.NewWriter(stdout, 0, 4, 2, ' ', 0)
-		if _, err := fmt.Fprintln(writer, "INSTANCE\tAPI SERVER\tENVIRONMENT\tACCOUNT\tLOCAL\tCONTROL PLANE\tPID"); err != nil {
+		if _, err := fmt.Fprintln(writer, "INSTANCE\tAPI SERVER\tENVIRONMENT\tACCOUNT\tLOCAL\tCONTROL PLANE\tSTART AT LOGIN\tPID"); err != nil {
 			return err
 		}
 		for _, status := range statuses {
@@ -388,7 +420,7 @@ func printStatuses(stdout io.Writer, output string, statuses []managed.Status) e
 			if status.PID > 0 {
 				pid = fmt.Sprintf("%d", status.PID)
 			}
-			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", status.ID, status.APIServer, status.EnvironmentID, status.AccountID, status.LocalState, status.ControlState, pid); err != nil {
+			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%t\t%s\n", status.ID, status.APIServer, status.EnvironmentID, status.AccountID, status.LocalState, status.ControlState, status.StartAtLogin, pid); err != nil {
 				return err
 			}
 		}

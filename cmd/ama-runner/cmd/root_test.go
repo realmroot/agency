@@ -114,13 +114,17 @@ func TestRootCommandDoesNotImplicitlyRunDaemon(t *testing.T) {
 }
 
 type fakeManagedController struct {
-	started      []string
-	stopped      []string
-	restarted    []string
-	run          []string
-	running      bool
-	logPath      string
-	operationErr error
+	started               []string
+	stopped               []string
+	restarted             []string
+	run                   []string
+	startAtLoginUpdates   []bool
+	startAtLoginRollbacks int
+	isRunningCalls        int
+	running               bool
+	logPath               string
+	operationErr          error
+	setStartAtLogin       func(instance.Record, bool) (func() error, error)
 }
 
 func (f *fakeManagedController) Start(record instance.Record) error {
@@ -138,7 +142,7 @@ func (f *fakeManagedController) Restart(record instance.Record) error {
 func (f *fakeManagedController) Status(_ context.Context, record instance.Record) managed.Status {
 	return managed.Status{
 		ID: record.ID, APIServer: record.Config.APIServer, EnvironmentID: record.Config.EnvironmentID, AccountID: record.AccountID,
-		LocalState: "ready", ControlState: "active", PID: 42,
+		LocalState: "ready", ControlState: "active", StartAtLogin: record.StartAtLogin, PID: 42,
 	}
 }
 func (f *fakeManagedController) RunService(record instance.Record) error {
@@ -147,7 +151,21 @@ func (f *fakeManagedController) RunService(record instance.Record) error {
 }
 func (f *fakeManagedController) LogPath(instance.Record) string { return f.logPath }
 func (f *fakeManagedController) IsRunning(instance.Record) (bool, error) {
+	f.isRunningCalls++
 	return f.running, f.operationErr
+}
+func (f *fakeManagedController) SetStartAtLogin(record instance.Record, enabled bool) (func() error, error) {
+	f.startAtLoginUpdates = append(f.startAtLoginUpdates, enabled)
+	if f.setStartAtLogin != nil {
+		return f.setStartAtLogin(record, enabled)
+	}
+	if f.operationErr != nil {
+		return nil, f.operationErr
+	}
+	return func() error {
+		f.startAtLoginRollbacks++
+		return nil
+	}, nil
 }
 
 // [spec: runners/local-instances]
@@ -179,8 +197,11 @@ func TestManagedLifecycleCommands(t *testing.T) {
 		t.Fatalf("managed start did not create one instance: records=%#v err=%v", records, err)
 	}
 	record := records[0]
-	if len(fake.started) != 1 || record.AccountID != "acct_1" || !strings.Contains(record.Config.StateDir, filepath.Join("environments", "env_1-")) {
+	if len(fake.started) != 1 || record.AccountID != "acct_1" || record.StartAtLogin || !strings.Contains(record.Config.StateDir, filepath.Join("environments", "env_1-")) {
 		t.Fatalf("unexpected managed start: fake=%#v record=%#v", fake, record)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "start", record.ID, "--start-at-login"), testBuild(), nil, nil); err == nil || !strings.Contains(err.Error(), "configure") {
+		t.Fatalf("existing-id start must direct login startup changes to configure, got %v", err)
 	}
 	output.Reset()
 	if err := execute(context.Background(), append(append([]string{}, base...), "start", record.ID), testBuild(), &output, nil); err != nil {
@@ -219,14 +240,14 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	if err := execute(context.Background(), append(append([]string{}, base...), "list", "--output", "json"), testBuild(), &output, nil); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), `"accountId": "acct_1"`) || !strings.Contains(output.String(), `"localState": "ready"`) || !strings.Contains(output.String(), `"controlPlaneState": "active"`) {
+	if !strings.Contains(output.String(), `"accountId": "acct_1"`) || !strings.Contains(output.String(), `"localState": "ready"`) || !strings.Contains(output.String(), `"controlPlaneState": "active"`) || !strings.Contains(output.String(), `"startAtLogin": false`) {
 		t.Fatalf("unexpected list output %s", output.String())
 	}
 	output.Reset()
 	if err := execute(context.Background(), append(append([]string{}, base...), "status", record.ID), testBuild(), &output, nil); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), "ACCOUNT") || !strings.Contains(output.String(), "acct_1") || !strings.Contains(output.String(), "CONTROL PLANE") || !strings.Contains(output.String(), "42") {
+	if !strings.Contains(output.String(), "ACCOUNT") || !strings.Contains(output.String(), "acct_1") || !strings.Contains(output.String(), "CONTROL PLANE") || !strings.Contains(output.String(), "START AT LOGIN") || !strings.Contains(output.String(), "false") || !strings.Contains(output.String(), "42") {
 		t.Fatalf("unexpected status output %s", output.String())
 	}
 
@@ -237,10 +258,66 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	if err != nil || configured.Config.MaxConcurrent != 3 {
 		t.Fatalf("instance was not configured: %#v err=%v", configured, err)
 	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--start-at-login=true"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	configured, err = (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || !configured.StartAtLogin {
+		t.Fatalf("start-at-login was not enabled: %#v err=%v", configured, err)
+	}
+	output.Reset()
+	if err := execute(context.Background(), append(append([]string{}, base...), "status", record.ID, "--output", "json"), testBuild(), &output, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"startAtLogin": true`) {
+		t.Fatalf("JSON status did not show enabled login startup: %s", output.String())
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--start-at-login=false"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	configured, err = (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || configured.StartAtLogin {
+		t.Fatalf("start-at-login was not disabled: %#v err=%v", configured, err)
+	}
 	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID), testBuild(), nil, nil); err == nil {
 		t.Fatal("configure without changes must fail")
 	}
 	fake.running = true
+	previousIsRunningCalls := fake.isRunningCalls
+	previousStops := len(fake.stopped)
+	previousRestarts := len(fake.restarted)
+	previousUpdates := len(fake.startAtLoginUpdates)
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--start-at-login=false"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	reconciled, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || reconciled.StartAtLogin || len(fake.startAtLoginUpdates) != previousUpdates+1 || fake.startAtLoginUpdates[len(fake.startAtLoginUpdates)-1] {
+		t.Fatalf("explicit false did not reconcile login startup: %#v updates=%#v err=%v", reconciled, fake.startAtLoginUpdates, err)
+	}
+	if fake.isRunningCalls != previousIsRunningCalls || len(fake.stopped) != previousStops || len(fake.restarted) != previousRestarts {
+		t.Fatalf("explicit false reconciliation changed the current process: %#v", fake)
+	}
+	previousUpdates = len(fake.startAtLoginUpdates)
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--start-at-login=true"), testBuild(), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	runningConfigured, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || !runningConfigured.StartAtLogin {
+		t.Fatalf("running instance login startup was not updated: %#v err=%v", runningConfigured, err)
+	}
+	if fake.isRunningCalls != previousIsRunningCalls || len(fake.stopped) != previousStops || len(fake.restarted) != previousRestarts || len(fake.startAtLoginUpdates) != previousUpdates+1 {
+		t.Fatalf("login-only update changed the current process: %#v", fake)
+	}
+	if update := fake.startAtLoginUpdates[len(fake.startAtLoginUpdates)-1]; !update {
+		t.Fatalf("unexpected running login policy update: %t", update)
+	}
+	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--start-at-login=false", "--max-concurrent", "4"), testBuild(), nil, nil); err == nil {
+		t.Fatal("mixed runtime and login policy configure while running must fail")
+	}
+	afterMixedFailure, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || !afterMixedFailure.StartAtLogin || afterMixedFailure.Config.MaxConcurrent != 3 || len(fake.startAtLoginUpdates) != previousUpdates+1 {
+		t.Fatalf("failed mixed configure changed persisted policy: %#v updates=%#v err=%v", afterMixedFailure, fake.startAtLoginUpdates, err)
+	}
 	if err := execute(context.Background(), append(append([]string{}, base...), "configure", record.ID, "--max-concurrent", "4"), testBuild(), nil, nil); err == nil {
 		t.Fatal("configure while running must fail")
 	}
@@ -322,6 +399,130 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	}
 	if _, err := os.Stat(record.Config.StateDir); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("purged instance state still exists: %v", err)
+	}
+}
+
+// [spec: runners/local-instances]
+func TestManagedConfigureLoginStartupFailureDoesNotPersist(t *testing.T) {
+	registryDir, record := managedCommandTestRecord(t)
+	failure := errors.New("native login startup update failed")
+	fake := &fakeManagedController{setStartAtLogin: func(instance.Record, bool) (func() error, error) { return nil, failure }}
+	originalFactory := newManagedController
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return fake, nil }
+	t.Cleanup(func() { newManagedController = originalFactory })
+
+	err := execute(context.Background(), []string{"--registry-dir", registryDir, "configure", record.ID, "--start-at-login=true"}, testBuild(), nil, nil)
+	if !errors.Is(err, failure) {
+		t.Fatalf("expected native policy update failure, got %v", err)
+	}
+	persisted, err := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if err != nil || persisted.StartAtLogin || len(fake.startAtLoginUpdates) != 1 {
+		t.Fatalf("failed native update changed persisted policy: %#v updates=%#v err=%v", persisted, fake.startAtLoginUpdates, err)
+	}
+}
+
+// [spec: runners/local-instances]
+func TestManagedConfigureRollsBackLoginStartupWhenRegistryPutFails(t *testing.T) {
+	registryDir, record := managedCommandTestRecord(t)
+	recordPath := filepath.Join(registryDir, record.ID+".json")
+	backupPath := recordPath + ".backup"
+	fake := &fakeManagedController{}
+	fake.setStartAtLogin = func(_ instance.Record, _ bool) (func() error, error) {
+		if err := os.Rename(recordPath, backupPath); err != nil {
+			return nil, err
+		}
+		if err := os.Mkdir(recordPath, 0o700); err != nil {
+			return nil, err
+		}
+		return func() error {
+			fake.startAtLoginRollbacks++
+			return nil
+		}, nil
+	}
+	originalFactory := newManagedController
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return fake, nil }
+	t.Cleanup(func() { newManagedController = originalFactory })
+
+	err := execute(context.Background(), []string{"--registry-dir", registryDir, "configure", record.ID, "--start-at-login=true"}, testBuild(), nil, nil)
+	if err == nil {
+		t.Fatal("registry write failure must be returned")
+	}
+	if len(fake.startAtLoginUpdates) != 1 || !fake.startAtLoginUpdates[0] || fake.startAtLoginRollbacks != 1 {
+		t.Fatalf("registry failure did not invoke the native rollback: updates=%#v rollbacks=%d", fake.startAtLoginUpdates, fake.startAtLoginRollbacks)
+	}
+	if removeErr := os.Remove(recordPath); removeErr != nil {
+		t.Fatal(removeErr)
+	}
+	if renameErr := os.Rename(backupPath, recordPath); renameErr != nil {
+		t.Fatal(renameErr)
+	}
+	persisted, getErr := (instance.Registry{Dir: registryDir}).Get(record.ID)
+	if getErr != nil || persisted.StartAtLogin {
+		t.Fatalf("registry failure changed persisted policy: %#v err=%v", persisted, getErr)
+	}
+}
+
+func managedCommandTestRecord(t *testing.T) (string, instance.Record) {
+	t.Helper()
+	registryDir := filepath.Join(t.TempDir(), "instances")
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	stateDir, err := runnerconfig.DefaultStateDirForInstance("https://ama.example.test", "env_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := runnerconfig.Config{
+		APIServer: "https://ama.example.test", ProjectID: "project_1", EnvironmentID: "env_1", AllowUnsafeProcess: true,
+		StateDir: stateDir, WorkDir: runnerconfig.DefaultWorkDirForStateDir(stateDir), MaxConcurrent: 1,
+		HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60, RenewInterval: 20 * time.Second,
+		CommandTimeout: 10 * time.Minute, ShutdownGraceInterval: 5 * time.Second, MaxSessionDuration: 2 * time.Hour,
+		CredentialPath: filepath.Join(t.TempDir(), "credentials.json"), CredentialAccountID: "acct_1",
+	}
+	record, err := instance.NewRecord(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (instance.Registry{Dir: registryDir}).Create(record); err != nil {
+		t.Fatal(err)
+	}
+	return registryDir, record
+}
+
+// [spec: runners/local-instances]
+func TestManagedStartCanExplicitlyEnableLoginStartupForANewInstance(t *testing.T) {
+	registryDir := filepath.Join(t.TempDir(), "instances")
+	stateRoot := filepath.Join(t.TempDir(), "state")
+	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	t.Setenv("LOCALAPPDATA", stateRoot)
+	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
+		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakeManagedController{}
+	originalFactory := newManagedController
+	newManagedController = func(instance.Registry, version.Info) (managedController, error) { return fake, nil }
+	t.Cleanup(func() { newManagedController = originalFactory })
+
+	err := execute(context.Background(), []string{
+		"--registry-dir", registryDir,
+		"start",
+		"--api-server", "https://ama.example.test",
+		"--project-id", "project_1",
+		"--environment-id", "env_1",
+		"--allow-unsafe-process",
+		"--max-concurrent", "1",
+		"--start-at-login",
+	}, testBuild(), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := (instance.Registry{Dir: registryDir}).List()
+	if err != nil || len(records) != 1 || !records[0].StartAtLogin {
+		t.Fatalf("explicit login startup was not persisted: records=%#v err=%v", records, err)
 	}
 }
 

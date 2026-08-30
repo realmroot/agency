@@ -58,7 +58,7 @@ ama-runner start \
   --allow-unsafe-process
 ```
 
-`start` stores the instance, installs it with the native user service manager, enables automatic startup, waits for the first successful heartbeat, and prints its stable local instance id. One API Server and Environment pair owns at most one local Runner process.
+`start` stores the instance, installs it with the native user service manager, starts it immediately, waits for the first successful heartbeat, and prints its stable local instance id. Login startup is disabled by default. Pass `--start-at-login` when creating an instance to opt in. One API Server and Environment pair owns at most one local Runner process.
 
 ```bash
 ama-runner list
@@ -67,10 +67,12 @@ ama-runner stop runner_...
 ama-runner restart runner_...
 ama-runner logs --follow runner_...
 ama-runner configure runner_... --max-concurrent 10
+ama-runner configure runner_... --start-at-login=true
+ama-runner configure runner_... --start-at-login=false
 ama-runner remove runner_...
 ```
 
-`list` and `status` report native local process state separately from AMA control-plane heartbeat state. `stop` drains leases and disables automatic startup. `remove` preserves state by default; `remove --purge` explicitly deletes the Runner identity, workspaces, session events, and logs.
+`list` and `status` report native local process state, AMA control-plane heartbeat state, and the persisted login-startup policy. The login-startup policy can be changed while the Runner is running; it affects the next login without interrupting the current process. Other runtime configuration still requires a stopped Runner. `stop` drains leases and removes the native service registration. `remove` preserves state by default; `remove --purge` explicitly deletes the Runner identity, workspaces, session events, and logs.
 
 Use explicit foreground mode in containers, development shells, or an existing external service manager:
 

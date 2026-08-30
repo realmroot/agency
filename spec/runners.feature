@@ -13,6 +13,8 @@ Feature: Runners
     Then each API Server and Environment pair receives one stable isolated state directory
     And the same pair cannot run more than one local Runner process
     And the operator can start, list, inspect, stop, restart, configure, view logs, and remove local Runner instances
+    And managed Runners do not start at login unless the operator explicitly enables that policy
+    And the operator can inspect and change the start-at-login policy without changing whether the Runner is currently running
     And local process state is reported separately from AMA control-plane heartbeat state
     And restarting an instance reuses its Runner identity, workspaces, and session event logs
     And each instance keeps using the Realmroot account selected when it was created even when another account becomes active for the same API Server
