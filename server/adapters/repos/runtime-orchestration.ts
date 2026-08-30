@@ -1,3 +1,4 @@
+import { runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
 import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runtimesSupport } from '@server/domain/runtime-catalog'
 import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
@@ -15,7 +16,7 @@ import type {
   WorkItemInsert,
   WorkItemRow,
 } from '@shared/runtime-rows'
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notLike, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notLike, or, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import {
   agents,
@@ -433,7 +434,12 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         .select({ runtimes: runners.runtimes })
         .from(runners)
         .where(
-          and(eq(runners.projectId, projectId), eq(runners.environmentId, environmentId), eq(runners.state, 'active')),
+          and(
+            eq(runners.projectId, projectId),
+            eq(runners.environmentId, environmentId),
+            eq(runners.state, 'active'),
+            gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
+          ),
         )
       return activeRunners.map((runner) => parseJson<RunnerRuntime[]>(runner.runtimes) ?? [])
     },
@@ -457,6 +463,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(runners.projectId, projectId),
             eq(runners.state, 'active'),
+            gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
             isNull(runners.archivedAt),
             isNotNull(runners.environmentId),
             isNull(environments.archivedAt),

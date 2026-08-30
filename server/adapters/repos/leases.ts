@@ -1,4 +1,5 @@
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
+import { runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
 import type {
   ClaimLeaseInput,
   FinishLeaseInput,
@@ -11,7 +12,7 @@ import type {
   WorkItemClaimCandidate,
 } from '@server/usecases/ports'
 import { RunnerConflictError } from '@server/usecases/ports'
-import { and, desc, eq, gt, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, gte, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import {
   leases,
@@ -477,6 +478,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
             eq(runners.id, input.runnerId),
             eq(runners.projectId, input.projectId),
             eq(runners.state, 'active'),
+            gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
             lt(runners.currentLoad, runners.maxConcurrent),
           ),
         )

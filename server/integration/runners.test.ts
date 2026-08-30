@@ -1,4 +1,5 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInUser } from './auth'
 
@@ -267,6 +268,45 @@ describe('[CF] /api/v1/runners', () => {
     const environmentListRes = await jsonFetch(`/api/v1/runners?environmentId=${environment.id}`, authorization)
     const environmentList = (await environmentListRes.json()) as { data: Array<{ id: string }> }
     expect(environmentList.data.map((entry) => entry.id)).toEqual([activeRunner.id])
+  })
+
+  it('reports stale heartbeats offline until the runner heartbeats again [spec: runners/stale-heartbeat]', async () => {
+    const authorization = await signIn()
+    const runnerAuthorization = asRunnerAuthorization(authorization)
+    const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Crash liveness runner' }),
+    })
+    expect(runnerRes.status).toBe(201)
+    const runner = (await runnerRes.json()) as { id: string }
+    const heartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
+      method: 'PUT',
+      body: JSON.stringify({ state: 'active' }),
+    })
+    expect(heartbeatRes.status).toBe(200)
+
+    await env.DB.prepare('UPDATE runners SET last_heartbeat_at = ? WHERE id = ?')
+      .bind('2026-01-01T00:00:00.000Z', runner.id)
+      .run()
+
+    const readRes = await jsonFetch(`/api/v1/runners/${runner.id}`, authorization)
+    expect(readRes.status).toBe(200)
+    await expect(readRes.json()).resolves.toMatchObject({ id: runner.id, state: 'offline' })
+
+    const activeListRes = await jsonFetch('/api/v1/runners?state=active', authorization)
+    const activeList = (await activeListRes.json()) as { data: Array<{ id: string }> }
+    expect(activeList.data.map((entry) => entry.id)).not.toContain(runner.id)
+
+    const offlineListRes = await jsonFetch('/api/v1/runners?state=offline', authorization)
+    const offlineList = (await offlineListRes.json()) as { data: Array<{ id: string }> }
+    expect(offlineList.data.map((entry) => entry.id)).toContain(runner.id)
+
+    const recoveredHeartbeatRes = await jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
+      method: 'PUT',
+      body: JSON.stringify({ state: 'active' }),
+    })
+    expect(recoveredHeartbeatRes.status).toBe(200)
+    await expect(recoveredHeartbeatRes.json()).resolves.toMatchObject({ runnerId: runner.id, state: 'active' })
   })
 
   it('keeps disabled runners from heartbeating themselves active', async () => {

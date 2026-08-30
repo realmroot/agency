@@ -431,6 +431,16 @@ describe('[CF] /api/v1/leases', () => {
       error: { type: 'conflict', message: 'Runner is not active' },
     })
 
+    const staleRunner = await registerActiveRunner(authorization, environment.id)
+    await env.DB.prepare('UPDATE runners SET last_heartbeat_at = ? WHERE id = ?')
+      .bind('2026-01-01T00:00:00.000Z', staleRunner.id)
+      .run()
+    const staleClaimRes = await claimLease(authorization, workItem.id, staleRunner.id)
+    expect(staleClaimRes.status).toBe(409)
+    await expect(staleClaimRes.json()).resolves.toMatchObject({
+      error: { type: 'conflict', message: 'Runner is not active' },
+    })
+
     const runner = await registerActiveRunner(authorization, environment.id, { maxConcurrent: 1 })
     const missingClaimRes = await claimLease(authorization, 'work_missing', runner.id)
     expect(missingClaimRes.status).toBe(404)
@@ -464,6 +474,29 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(409)
     await expect(claimRes.json()).resolves.toMatchObject({
       error: { type: 'conflict', message: 'Runner is not eligible for this work item' },
+    })
+  })
+
+  it('does not auto-select an environment whose only active runner heartbeat is stale', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id)
+
+    await env.DB.prepare('UPDATE runners SET last_heartbeat_at = ? WHERE id = ?')
+      .bind('2026-01-01T00:00:00.000Z', runner.id)
+      .run()
+
+    const sessionRes = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: 'Do not route this session to a crashed runner.',
+        spec: { agentId: agent.id, runtime: 'ama' },
+      }),
+    })
+    expect(sessionRes.status).toBe(409)
+    await expect(sessionRes.json()).resolves.toMatchObject({
+      error: { type: 'conflict', message: expect.stringContaining('No environment has an active runner') },
     })
   })
 
