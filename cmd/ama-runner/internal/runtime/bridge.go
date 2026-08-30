@@ -26,7 +26,7 @@ type Bridge struct {
 const runtimesTimeout = 30 * time.Second
 const runtimeBridgeReadyFailureGrace = 2 * time.Second
 const runtimeBridgePipeWaitDelay = 500 * time.Millisecond
-const nodeExecutableProbeTimeout = 500 * time.Millisecond
+const nodeExecutableProbeTimeout = 2 * time.Second
 
 func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JSON, error) {
 	if request.Runtime == "" {

@@ -158,8 +158,10 @@ func TestInventoryCurrentRuntimesRefreshesWhenUninitialized(t *testing.T) {
 }
 
 func TestInventoryCurrentRuntimesReturnsStoredCopy(t *testing.T) {
-	inv := &Inventory{}
-	inv.advertisedRuntimes = []RunnerRuntime{{Runtime: "codex"}}
+	inv := &Inventory{
+		runtimesLoaded:     true,
+		advertisedRuntimes: []RunnerRuntime{{Runtime: "codex"}},
+	}
 	got := inv.CurrentRuntimes()
 	got[0].Runtime = "mutated"
 	if inv.CurrentRuntimes()[0].Runtime != "codex" {
