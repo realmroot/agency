@@ -8,6 +8,7 @@ import type {
   VaultScope,
   VersionState,
 } from '@server/domain/vault'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreateCredentialInput,
   CreateVaultInput,
@@ -20,7 +21,7 @@ import type {
   VaultVisibility,
   VersionListQuery,
 } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { vaultCredentials, vaultCredentialVersions, vaults } from '../../db/schema'
 
@@ -28,10 +29,6 @@ type Db = ReturnType<typeof drizzle>
 type VaultRow = typeof vaults.$inferSelect
 type CredentialRow = typeof vaultCredentials.$inferSelect
 type CredentialVersionRow = typeof vaultCredentialVersions.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string) {
   return JSON.parse(value) as T
@@ -184,7 +181,7 @@ export function createVaultRepo(db: Db): VaultRepo {
 
     async insert(input: CreateVaultInput, createdAt): Promise<Vault> {
       const row = {
-        id: input.id ?? newId('vault'),
+        id: input.id ?? newPrimaryKey(),
         organizationId: input.organizationId,
         projectId: input.projectId,
         name: input.name,
@@ -252,6 +249,22 @@ export function createVaultRepo(db: Db): VaultRepo {
         .select()
         .from(vaultCredentials)
         .where(and(eq(vaultCredentials.id, credentialId), eq(vaultCredentials.vaultId, vaultId)))
+        .get()
+      return row ? credentialRecordFrom(row) : null
+    },
+
+    async findIdentityCredential(vaultId, identityId, purpose) {
+      const row = await db
+        .select()
+        .from(vaultCredentials)
+        .where(
+          and(
+            eq(vaultCredentials.vaultId, vaultId),
+            sql`json_extract(${vaultCredentials.metadata}, '$.managedBy') = 'identity'`,
+            sql`json_extract(${vaultCredentials.metadata}, '$.identityId') = ${identityId}`,
+            sql`coalesce(json_extract(${vaultCredentials.metadata}, '$.purpose'), case when ${vaultCredentials.type} = 'ama.dev/realmroot-agent-state' then 'agent-state' end) = ${purpose}`,
+          ),
+        )
         .get()
       return row ? credentialRecordFrom(row) : null
     },

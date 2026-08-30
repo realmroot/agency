@@ -1,12 +1,9 @@
+import { newPrimaryKey } from '@server/id'
 import type { AuditEntry, AuthScope } from '@server/usecases/ports'
 import type { drizzle } from 'drizzle-orm/d1'
 import { auditRecords } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 // Internal principals are recorded as system actors with no user id. These
 // scopes are constructed by AMA itself rather than accepted from a token.
@@ -37,7 +34,7 @@ export function createAuditWriteRepo(db: Db): AuditWriteRepo {
     async record(auth, entry) {
       const actor = defaultActor(auth)
       await db.insert(auditRecords).values({
-        id: newId('audit'),
+        id: newPrimaryKey(),
         organizationId: auth.organization.id,
         projectId: auth.project.id,
         actorUserId: entry.actorUserId === undefined ? actor.actorUserId : entry.actorUserId,

@@ -153,12 +153,12 @@ const SessionConditionSchema = z
 const SessionBindingsSchema = z
   .object({
     agent: z.object({
-      versionId: z.string().openapi({ example: 'agentver_abc123' }),
+      versionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000003' }),
       snapshot: AgentVersionSnapshotSchema,
     }),
     environment: z.object({
-      id: z.string().nullable().openapi({ example: 'env_abc123' }),
-      versionId: z.string().nullable().openapi({ example: 'envver_abc123' }),
+      id: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
+      versionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000006' }),
       snapshot: EnvironmentVersionSnapshotSchema.nullable(),
     }),
     runtime: RuntimeSchema,
@@ -570,8 +570,8 @@ const UpdateSessionSchema = z
 
 const SessionMessageSchema = z
   .object({
-    id: z.string().openapi({ example: 'msg_abc123' }),
-    sessionId: z.string().openapi({ example: 'session_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000f' }),
+    sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
     type: z.literal('prompt').openapi({ example: 'prompt' }),
     content: z.string().openapi({ example: 'Please continue the task and summarize the current blocker.' }),
     delivery: z.enum(MESSAGE_DELIVERIES).openapi({ example: 'queued' }),
@@ -607,12 +607,12 @@ const SessionEventsAcceptedSchema = z
 
 const SessionApprovalSchema = z
   .object({
-    id: z.string().openapi({ example: 'approval_abc123' }),
-    sessionId: z.string().openapi({ example: 'session_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000010' }),
+    sessionId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
     toolCallId: z.string().openapi({ example: 'call_git_status' }),
     toolName: z.string().openapi({ example: 'bash' }),
     input: JsonObjectSchema,
-    relatedEventIds: z.array(z.string()).openapi({ example: ['event_abc123'] }),
+    relatedEventIds: z.array(z.string()).openapi({ example: ['0195f5d6-7c20-7000-8000-000000000018'] }),
     state: z.enum(APPROVAL_STATES).openapi({ example: 'pending' }),
     reason: z.string().nullable().openapi({ example: 'Looks safe' }),
     result: JsonObjectSchema.nullable().openapi({
@@ -637,16 +637,20 @@ const SessionApprovalDecisionSchema = z
   .openapi('SessionApprovalDecisionRequest')
 
 const ParamsSchema = z.object({
-  sessionId: z.string().openapi({ param: { name: 'sessionId', in: 'path' }, example: 'session_abc123' }),
+  sessionId: z
+    .string()
+    .openapi({ param: { name: 'sessionId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000e' }),
 })
 const MessageParamsSchema = ParamsSchema.extend({
-  messageId: z.string().openapi({ param: { name: 'messageId', in: 'path' }, example: 'msg_abc123' }),
+  messageId: z
+    .string()
+    .openapi({ param: { name: 'messageId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000f' }),
 })
 const ApprovalParamsSchema = ParamsSchema.extend({
   approvalId: z
     .string()
     .min(1)
-    .openapi({ param: { name: 'approvalId', in: 'path' }, example: 'approval_abc123' }),
+    .openapi({ param: { name: 'approvalId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000010' }),
 })
 
 const ListQuerySchema = listQuerySchema().extend({

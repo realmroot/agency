@@ -2,6 +2,7 @@ import type { RuntimeName } from '@server/contracts/environment-contracts'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import type { EnvFromEntry, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
 import type { Trigger, TriggerRun, TriggerSessionTemplate } from '@server/domain/trigger'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreateTriggerInput,
   ListPageResult,
@@ -17,10 +18,6 @@ import { agents, environments, triggerRuns, triggers } from '../../db/schema'
 type Db = ReturnType<typeof drizzle>
 type TriggerRow = typeof triggers.$inferSelect
 type RunRow = typeof triggerRuns.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function stringify(value: unknown) {
   return JSON.stringify(value)
@@ -168,7 +165,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
 
     async insert(input: CreateTriggerInput, timestamp) {
       const row = {
-        id: newId('trigger'),
+        id: newPrimaryKey(),
         organizationId: input.organizationId,
         projectId: input.projectId,
         lastDispatchedAt: null,

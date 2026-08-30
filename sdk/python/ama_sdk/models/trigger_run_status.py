@@ -23,14 +23,14 @@ T = TypeVar("T", bound="TriggerRunStatus")
 
 @_attrs_define
 class TriggerRunStatus:
-    """ 
+    """
         Attributes:
             phase (TriggerRunStatusPhase):  Example: dispatched.
-            idempotency_key (str):  Example: trigger_abc123:2026-05-26T12:00:00.000Z.
-            correlation_id (str):  Example: schedule:trigger_abc123:2026-05-26T12:00:00.000Z.
+            idempotency_key (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z.
+            correlation_id (str):  Example: schedule:0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z.
             heartbeat_at (datetime.datetime | None):  Example: 2026-05-26T12:01:00.000Z.
             triggered_at (datetime.datetime):  Example: 2026-05-26T12:01:00.000Z.
-            session_id (None | str):  Example: session_abc123.
+            session_id (None | str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             error_message (None | str):
      """
 

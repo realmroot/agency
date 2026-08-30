@@ -22,10 +22,11 @@ T = TypeVar("T", bound="EnvFromEntry")
 
 @_attrs_define
 class EnvFromEntry:
-    """ 
+    """
         Attributes:
             type_ (EnvFromEntryType):  Example: secret.
-            secret_ref (str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123.
+            secret_ref (str):  Example:
+                ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
             name (str | Unset):  Example: API_TOKEN.
             key (str | Unset):  Example: token.
      """
@@ -86,4 +87,3 @@ class EnvFromEntry:
         )
 
         return env_from_entry
-

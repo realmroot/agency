@@ -59,10 +59,10 @@ function identityRecord(
   }
 }
 
-function credential(id: string, type: Credential['spec']['type']): Credential {
+function credential(id: string, type: Credential['spec']['type'], metadata: Record<string, unknown> = {}): Credential {
   return {
     metadata: resourceMetadata({ uid: id, pid: 'project_1', name: id, createdAt: timestamp, updatedAt: timestamp }),
-    spec: { vaultId: 'vault_identity', organizationId: 'user:user_1', type, metadata: {} },
+    spec: { vaultId: 'vault_identity', organizationId: 'user:user_1', type, metadata },
     status: {
       phase: 'active',
       activeVersionId: `ver_${id}`,
@@ -224,13 +224,20 @@ function fixture(
       find: async () => vault(),
       findIdentityManaged: async () => vault(),
       findCredential: async (_vaultId: string, id: string) => credentials.get(id) ?? null,
+      findIdentityCredential: async (vaultId: string, identityId: string, purpose: string) =>
+        [...credentials.values()].find(
+          (value) =>
+            value.spec.vaultId === vaultId &&
+            value.spec.metadata.identityId === identityId &&
+            value.spec.metadata.purpose === purpose,
+        ) ?? null,
       latestVersionNumber: async () => 1,
       insertCredentialWithVersion: async (
-        credInput: { type: Credential['spec']['type'] },
+        credInput: { type: Credential['spec']['type']; metadata: Record<string, unknown> },
         verInput: { credentialId: string; id: string },
       ) => {
         credentialNumber += 1
-        const created = credential(verInput.credentialId, credInput.type)
+        const created = credential(verInput.credentialId, credInput.type, credInput.metadata)
         credentials.set(verInput.credentialId, created)
         return { credential: created, version: version(verInput.id, verInput.credentialId, 1) }
       },
@@ -419,7 +426,7 @@ describe('[spec: identities/provision] createIdentity', () => {
     await expect(createIdentity(fx.deps, auth, input)).rejects.toMatchObject({ code: 'identity_initialization_failed' })
   })
 
-  it('recovers a committed deterministic checkpoint before generating another key', async () => {
+  it('recovers a committed checkpoint before generating another key', async () => {
     const fx = fixture({
       checkpointJson: JSON.stringify({
         version: 1,
@@ -428,11 +435,11 @@ describe('[spec: identities/provision] createIdentity', () => {
         state: { version: 18, runtime: 'codex', installation_private_key: 'recovered-key' },
       }),
     })
-    const findCredential = fx.deps.vaults.findCredential
-    fx.deps.vaults.findCredential = async (vaultId, credentialId) =>
-      credentialId.startsWith('vaultcred_checkpoint_')
-        ? credential(credentialId, 'opaque')
-        : findCredential(vaultId, credentialId)
+    const findIdentityCredential = fx.deps.vaults.findIdentityCredential!
+    fx.deps.vaults.findIdentityCredential = async (vaultId, identityId, purpose) =>
+      purpose === 'provisioning-checkpoint'
+        ? credential('vaultcred_checkpoint_legacy', 'opaque', { managedBy: 'identity', identityId, purpose })
+        : findIdentityCredential(vaultId, identityId, purpose)
     await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({ status: { state: 'active' } })
     expect(fx.initialize).not.toHaveBeenCalled()
   })
@@ -468,17 +475,58 @@ describe('[spec: identities/provision] createIdentity', () => {
     await expect(createIdentity(fx.deps, auth, input)).rejects.toMatchObject({ code: 'realmroot_provisioning_failed' })
   })
 
-  it('reuses deterministic enrolled and final credentials after a crash', async () => {
+  it('reuses enrolled and legacy no-purpose final credentials after a crash', async () => {
     const fx = fixture()
-    const findCredential = fx.deps.vaults.findCredential
-    fx.deps.vaults.findCredential = async (vaultId, credentialId) =>
-      credentialId.startsWith('vaultcred_enrolled_')
-        ? credential(credentialId, 'opaque')
-        : credentialId.startsWith('vaultcred_state_')
-          ? credential(credentialId, 'ama.dev/realmroot-agent-state')
-          : findCredential(vaultId, credentialId)
-    await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({ status: { state: 'active' } })
+    const findIdentityCredential = fx.deps.vaults.findIdentityCredential!
+    fx.deps.vaults.findIdentityCredential = async (vaultId, identityId, purpose) =>
+      purpose === 'enrolled-checkpoint'
+        ? credential('vaultcred_enrolled_legacy', 'opaque', { managedBy: 'identity', identityId, purpose })
+        : purpose === 'agent-state'
+          ? credential('vaultcred_state_legacy', 'ama.dev/realmroot-agent-state', {
+              managedBy: 'identity',
+              identityId,
+            })
+          : findIdentityCredential(vaultId, identityId, purpose)
+    await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({
+      status: {
+        state: 'active',
+        descriptor: { credentialRef: 'ama://vaults/vault_identity/credentials/vaultcred_state_legacy' },
+      },
+    })
     expect(fx.credentialCount()).toBe(1)
+  })
+
+  it('re-reads the winning credential when concurrent find-or-create loses the unique insert race', async () => {
+    const fx = fixture()
+    const winnerId = '018f2a74-6f0d-7b33-8e91-4bb8131cb8d0'
+    const findIdentityCredential = fx.deps.vaults.findIdentityCredential!
+    const persistedFinalCredentials: Credential[] = []
+    let finalLookups = 0
+    fx.deps.vaults.findIdentityCredential = async (vaultId, identityId, purpose) => {
+      if (purpose !== 'agent-state') return findIdentityCredential(vaultId, identityId, purpose)
+      finalLookups += 1
+      return persistedFinalCredentials[0] ?? null
+    }
+    const insertCredentialWithVersion = fx.deps.vaults.insertCredentialWithVersion
+    const insertFinal = vi.fn(async (metadata: Record<string, unknown>) => {
+      persistedFinalCredentials.push(credential(winnerId, 'ama.dev/realmroot-agent-state', metadata))
+      throw new Error('UNIQUE constraint failed: index idx_vault_credentials_identity_purpose')
+    })
+    fx.deps.vaults.insertCredentialWithVersion = async (...args) => {
+      if (args[0].metadata.purpose === 'agent-state') return insertFinal(args[0].metadata)
+      return insertCredentialWithVersion(...args)
+    }
+
+    await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({
+      status: {
+        state: 'active',
+        descriptor: { credentialRef: `ama://vaults/vault_identity/credentials/${winnerId}` },
+      },
+    })
+    expect(finalLookups).toBe(2)
+    expect(insertFinal).toHaveBeenCalledOnce()
+    expect(persistedFinalCredentials).toHaveLength(1)
+    expect(fx.credentialCount()).toBe(2)
   })
 
   it('fails safely when the final provisioning location loses its checkpoint pointer', async () => {
@@ -522,11 +570,11 @@ describe('[spec: identities/provision] createIdentity', () => {
         state: { version: 18, runtime: 'codex' },
       }),
     })
-    const findCredential = fx.deps.vaults.findCredential
-    fx.deps.vaults.findCredential = async (vaultId, credentialId) =>
-      credentialId.startsWith('vaultcred_checkpoint_')
-        ? credential(credentialId, 'opaque')
-        : findCredential(vaultId, credentialId)
+    const findIdentityCredential = fx.deps.vaults.findIdentityCredential!
+    fx.deps.vaults.findIdentityCredential = async (vaultId, identityId, purpose) =>
+      purpose === 'provisioning-checkpoint'
+        ? credential('vaultcred_checkpoint_legacy', 'opaque', { managedBy: 'identity', identityId, purpose })
+        : findIdentityCredential(vaultId, identityId, purpose)
     const { oidc: _oidc, ...authWithoutOidc } = auth
     await expect(createIdentity(fx.deps, authWithoutOidc, input)).rejects.toMatchObject({
       code: 'realmroot_provisioning_failed',

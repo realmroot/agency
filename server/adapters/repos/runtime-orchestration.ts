@@ -2,6 +2,7 @@ import { runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
 import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runtimesSupport } from '@server/domain/runtime-catalog'
 import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
+import { newPrimaryKey } from '@server/id'
 import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import type { ConnectorRecord, RunnerRuntime, SessionOrchestrationStore } from '@server/usecases/ports'
 import type {
@@ -385,7 +386,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           .where(and(eq(memoryStoreMemories.projectId, projectId), eq(memoryStoreMemories.storeId, storeId))),
         ...memories.map((memory) =>
           db.insert(memoryStoreMemories).values({
-            id: `memory_${crypto.randomUUID().replaceAll('-', '')}`,
+            id: newPrimaryKey(),
             projectId,
             storeId,
             path: memory.path,

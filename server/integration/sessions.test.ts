@@ -17,6 +17,7 @@ import {
 import { seedPolicy } from './policy-seed'
 
 const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
   const requestInit = normalizeTestRequest(path, init)
@@ -688,7 +689,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(serialized).not.toContain('runtimeEndpointPath')
     expect(serialized).not.toContain('organizationId')
     expect(serialized).not.toContain('resumeToken')
-    expect(created.status.bindings.environment.versionId).toMatch(/^envver_/)
+    expect(created.status.bindings.environment.versionId).toMatch(UUID_V7)
     expect(created.status.startedAt).toEqual(expect.any(String))
 
     const listRes = await jsonFetch('/api/v1/sessions', authorization)

@@ -25,9 +25,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -107,8 +107,8 @@ def sync_detailed(
      Revoke with `state: 'revoked'` and an optional `revokeReason`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -146,8 +146,8 @@ def sync(
      Revoke with `state: 'revoked'` and an optional `revokeReason`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -180,8 +180,8 @@ async def asyncio_detailed(
      Revoke with `state: 'revoked'` and an optional `revokeReason`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -219,8 +219,8 @@ async def asyncio(
      Revoke with `state: 'revoked'` and an optional `revokeReason`.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialRequest):
 
     Raises:

@@ -26,7 +26,7 @@ T = TypeVar("T", bound="RunnerWorkspaceMount")
 
 @_attrs_define
 class RunnerWorkspaceMount:
-    """ 
+    """
         Attributes:
             name (str):  Example: source.
             type_ (RunnerWorkspaceMountType):  Example: git_repository.
@@ -34,7 +34,7 @@ class RunnerWorkspaceMount:
             url (str | Unset):  Example: https://github.com/saltbo/any-managed-agents.git.
             ref (str | Unset):  Example: main.
             credential (RunnerGitCredential | Unset):
-            memory_ref (str | Unset):  Example: ama://memories/memstore_abc123.
+            memory_ref (str | Unset):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
             description (None | str | Unset):
             read_only (bool | Unset):
             files (list[RunnerWorkspaceFile] | Unset):
@@ -186,4 +186,3 @@ class RunnerWorkspaceMount:
         )
 
         return runner_workspace_mount
-

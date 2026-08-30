@@ -2,6 +2,7 @@ import { eq, max } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import type { AmaEvent } from '../../shared/session-events'
 import { createUsageWriteRepo } from '../adapters/repos/usage-write'
+import { newPrimaryKey } from '../id'
 import { redactToolResultsFromPayload } from '../redaction'
 import { sessionEvents } from './schema'
 
@@ -13,15 +14,11 @@ export interface EventWriteContext {
   sessionId: string
 }
 
-function newEventId() {
-  return `event_${crypto.randomUUID().replaceAll('-', '')}`
-}
-
 // Single insert path for session events: allocates the next sequence (retrying
 // on unique collisions) and redacts only tool-result output before storage.
 export async function insertCanonicalSessionEvent(db: Db, scope: EventWriteContext, event: AmaEvent): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const eventId = newEventId()
+    const eventId = newPrimaryKey()
     const latest = await db
       .select({ sequence: max(sessionEvents.sequence) })
       .from(sessionEvents)

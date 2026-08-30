@@ -1,3 +1,4 @@
+import { newPrimaryKey } from '@server/id'
 import type { ListPageResult, ProjectListQuery, ProjectRecord, ProjectRepo } from '@server/usecases/ports'
 import { and, desc, eq, lt, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
@@ -5,10 +6,6 @@ import { projects } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type ProjectRow = typeof projects.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 // organizationId stays in the DB for tenancy but never leaves the record.
 function recordFrom(row: ProjectRow): ProjectRecord {
@@ -48,7 +45,7 @@ export function createProjectRepo(db: Db): ProjectRepo {
 
     async insert(organizationId, name, timestamp) {
       const row: ProjectRow = {
-        id: newId('project'),
+        id: newPrimaryKey(),
         organizationId,
         name,
         createdAt: timestamp,

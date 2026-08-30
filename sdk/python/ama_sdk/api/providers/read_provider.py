@@ -18,11 +18,11 @@ def _get_kwargs(
     provider_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -87,7 +87,7 @@ def sync_detailed(
     """ Read a model vendor
 
     Args:
-        provider_id (str):  Example: provider_abc123.
+        provider_id (str):  Example: anthropic.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ def sync(
     """ Read a model vendor
 
     Args:
-        provider_id (str):  Example: provider_abc123.
+        provider_id (str):  Example: anthropic.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -144,7 +144,7 @@ async def asyncio_detailed(
     """ Read a model vendor
 
     Args:
-        provider_id (str):  Example: provider_abc123.
+        provider_id (str):  Example: anthropic.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,7 +175,7 @@ async def asyncio(
     """ Read a model vendor
 
     Args:
-        provider_id (str):  Example: provider_abc123.
+        provider_id (str):  Example: anthropic.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

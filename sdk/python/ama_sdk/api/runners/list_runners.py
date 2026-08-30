@@ -30,9 +30,9 @@ def _get_kwargs(
     environment_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -150,7 +150,7 @@ def sync_detailed(
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListRunnersState | Unset):  Example: active.
-        environment_id (str | Unset):  Example: env_abc123.
+        environment_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -204,7 +204,7 @@ def sync(
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListRunnersState | Unset):  Example: active.
-        environment_id (str | Unset):  Example: env_abc123.
+        environment_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -253,7 +253,7 @@ async def asyncio_detailed(
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListRunnersState | Unset):  Example: active.
-        environment_id (str | Unset):  Example: env_abc123.
+        environment_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -307,7 +307,7 @@ async def asyncio(
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListRunnersState | Unset):  Example: active.
-        environment_id (str | Unset):  Example: env_abc123.
+        environment_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

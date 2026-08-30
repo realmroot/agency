@@ -19,11 +19,11 @@ def _get_kwargs(
     version: int,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -96,7 +96,7 @@ def sync_detailed(
     """ Read an agent version
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
         version (int):  Example: 1.
 
     Raises:
@@ -130,7 +130,7 @@ def sync(
     """ Read an agent version
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
         version (int):  Example: 1.
 
     Raises:
@@ -159,7 +159,7 @@ async def asyncio_detailed(
     """ Read an agent version
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
         version (int):  Example: 1.
 
     Raises:
@@ -193,7 +193,7 @@ async def asyncio(
     """ Read an agent version
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
         version (int):  Example: 1.
 
     Raises:

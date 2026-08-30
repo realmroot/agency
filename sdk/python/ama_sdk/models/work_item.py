@@ -27,14 +27,14 @@ T = TypeVar("T", bound="WorkItem")
 
 @_attrs_define
 class WorkItem:
-    """ 
+    """
         Attributes:
-            id (str):  Example: work_abc123.
-            project_id (str):  Example: project_abc123.
-            session_id (None | str):  Example: session_abc123.
-            environment_id (None | str):  Example: env_abc123.
-            runner_id (None | str):  Example: runner_abc123.
-            lease_id (None | str):  Example: lease_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000012.
+            project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
+            session_id (None | str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+            environment_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+            runner_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
+            lease_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
             type_ (str):  Example: session.start.
             state (WorkItemState):  Example: available.
             priority (int):

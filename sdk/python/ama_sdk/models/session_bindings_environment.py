@@ -23,10 +23,10 @@ T = TypeVar("T", bound="SessionBindingsEnvironment")
 
 @_attrs_define
 class SessionBindingsEnvironment:
-    """ 
+    """
         Attributes:
-            id (None | str):  Example: env_abc123.
-            version_id (None | str):  Example: envver_abc123.
+            id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+            version_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000006.
             snapshot (None | SessionEnvironmentSnapshotType0):
      """
 

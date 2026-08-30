@@ -19,11 +19,11 @@ def _get_kwargs(
     version: int,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -96,7 +96,7 @@ def sync_detailed(
     """ Read an environment version
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
 
     Raises:
@@ -130,7 +130,7 @@ def sync(
     """ Read an environment version
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
 
     Raises:
@@ -159,7 +159,7 @@ async def asyncio_detailed(
     """ Read an environment version
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
 
     Raises:
@@ -193,7 +193,7 @@ async def asyncio(
     """ Read an environment version
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
 
     Raises:

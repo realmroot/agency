@@ -1,4 +1,5 @@
 import type { PolicyScopeLevel } from '@server/domain/policy'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreatePolicyInput,
   PolicyRecord,
@@ -12,10 +13,6 @@ import { policies } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type PolicyRow = typeof policies.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string, fallback: T) {
   return value ? (JSON.parse(value) as T) : fallback
@@ -71,7 +68,7 @@ export function createPolicyRepo(db: Db): PolicyRepo {
 
     async insert(input: CreatePolicyInput, timestamp) {
       const row: PolicyRow = {
-        id: newId('policy'),
+        id: newPrimaryKey(),
         organizationId: input.organizationId,
         projectId: input.projectId,
         scope: input.scope.level,

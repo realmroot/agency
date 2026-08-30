@@ -89,7 +89,9 @@ const QuerySchema = z.object({
 const AuditListResponseSchema = listResponseSchema('AuditRecordListResponse', AuditRecordSchema)
 
 const AuditRecordParamsSchema = z.object({
-  recordId: z.string().openapi({ param: { name: 'recordId', in: 'path' }, example: 'audit_abc123' }),
+  recordId: z
+    .string()
+    .openapi({ param: { name: 'recordId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000015' }),
 })
 
 function serializeAudit(record: AuditRecord) {

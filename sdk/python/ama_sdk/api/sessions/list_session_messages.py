@@ -22,9 +22,9 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -109,7 +109,7 @@ def sync_detailed(
     """ List session messages
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
 
@@ -146,7 +146,7 @@ def sync(
     """ List session messages
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
 
@@ -178,7 +178,7 @@ async def asyncio_detailed(
     """ List session messages
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
 
@@ -215,7 +215,7 @@ async def asyncio(
     """ List session messages
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
 

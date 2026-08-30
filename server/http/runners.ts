@@ -59,10 +59,10 @@ const RunnerRuntimeSchema = z
 
 const RunnerSchema = z
   .object({
-    id: z.string().openapi({ example: 'runner_abc123' }),
-    projectId: z.string().openapi({ example: 'project_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
+    projectId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000001' }),
     name: z.string().openapi({ example: 'mac-mini-build-runner' }),
-    environmentId: z.string().nullable().openapi({ example: 'env_abc123' }),
+    environmentId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
     secretRef: NullableSecretRefSchema,
     authMode: z.enum(RUNNER_AUTH_MODES).openapi({ example: 'realmroot' }),
     state: z.enum(RUNNER_STATES).openapi({ example: 'active' }),
@@ -81,7 +81,7 @@ const RunnerSchema = z
 // Singleton liveness sub-resource: the runner's current heartbeat state.
 const RunnerHeartbeatSchema = z
   .object({
-    runnerId: z.string().openapi({ example: 'runner_abc123' }),
+    runnerId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
     state: z.enum(RUNNER_STATES).openapi({ example: 'active' }),
     currentLoad: z.number().int().openapi({ example: 1 }),
     runtimeUsage: z.array(RuntimeUsageSchema).openapi({ example: [] }),
@@ -93,7 +93,7 @@ const RunnerHeartbeatSchema = z
 const CreateRunnerSchema = z
   .object({
     name: z.string().min(1).max(120).openapi({ example: 'mac-mini-build-runner' }),
-    environmentId: z.string().min(1).optional().openapi({ example: 'env_abc123' }),
+    environmentId: z.string().min(1).optional().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
     secretRef: SecretRefSchema.optional(),
     authMode: z.enum(RUNNER_AUTH_MODES).optional().openapi({ example: 'realmroot' }),
     maxConcurrent: z.number().int().min(1).max(100).optional().openapi({ example: 2 }),
@@ -124,7 +124,9 @@ const PutHeartbeatSchema = z
   .openapi('PutRunnerHeartbeatRequest')
 
 const ParamsSchema = z.object({
-  runnerId: z.string().openapi({ param: { name: 'runnerId', in: 'path' }, example: 'runner_abc123' }),
+  runnerId: z
+    .string()
+    .openapi({ param: { name: 'runnerId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000011' }),
 })
 
 const RunnerListQuerySchema = listQuerySchema().extend({
@@ -135,7 +137,7 @@ const RunnerListQuerySchema = listQuerySchema().extend({
   environmentId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'environmentId', in: 'query' }, example: 'env_abc123' }),
+    .openapi({ param: { name: 'environmentId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-000000000005' }),
 })
 
 const RunnerListResponseSchema = listResponseSchema('RunnerListResponse', RunnerSchema)

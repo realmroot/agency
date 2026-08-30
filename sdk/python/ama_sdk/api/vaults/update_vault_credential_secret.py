@@ -25,9 +25,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "put",
@@ -114,8 +114,8 @@ def sync_detailed(
      Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialSecretRequest):
 
     Raises:
@@ -153,8 +153,8 @@ def sync(
      Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialSecretRequest):
 
     Raises:
@@ -187,8 +187,8 @@ async def asyncio_detailed(
      Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialSecretRequest):
 
     Raises:
@@ -226,8 +226,8 @@ async def asyncio(
      Updates credential secret material. AMA records version snapshots internally for auditability.
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         body (UpdateVaultCredentialSecretRequest):
 
     Raises:

@@ -24,9 +24,9 @@ const JsonObjectSchema = z.record(z.string(), z.unknown())
 
 const LeaseSchema = z
   .object({
-    id: z.string().openapi({ example: 'lease_abc123' }),
-    workItemId: z.string().openapi({ example: 'work_abc123' }),
-    runnerId: z.string().openapi({ example: 'runner_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000013' }),
+    workItemId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000012' }),
+    runnerId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
     state: z.enum(LEASE_STATES).openapi({ example: 'active' }),
     expiresAt: z.string().datetime(),
     renewedAt: z.string().datetime().nullable(),
@@ -38,8 +38,8 @@ const LeaseSchema = z
 
 const CreateLeaseSchema = z
   .object({
-    workItemId: z.string().min(1).openapi({ example: 'work_abc123' }),
-    runnerId: z.string().min(1).openapi({ example: 'runner_abc123' }),
+    workItemId: z.string().min(1).openapi({ example: '0195f5d6-7c20-7000-8000-000000000012' }),
+    runnerId: z.string().min(1).openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
     leaseDurationSeconds: z.number().int().min(15).max(MAX_LEASE_DURATION_SECONDS).optional().openapi({ example: 60 }),
   })
   .strict()
@@ -61,14 +61,16 @@ const UpdateLeaseSchema = z
   .openapi('UpdateLeaseRequest')
 
 const LeaseParamsSchema = z.object({
-  leaseId: z.string().openapi({ param: { name: 'leaseId', in: 'path' }, example: 'lease_abc123' }),
+  leaseId: z
+    .string()
+    .openapi({ param: { name: 'leaseId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000013' }),
 })
 
 const LeaseListQuerySchema = z.object({
   runnerId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'runnerId', in: 'query' }, example: 'runner_abc123' }),
+    .openapi({ param: { name: 'runnerId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-000000000011' }),
   state: z
     .enum(LEASE_STATES)
     .optional()

@@ -2,6 +2,7 @@ import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/doma
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
 import type { IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
+import { newPrimaryKey } from '@server/id'
 import type {
   AgentListPage,
   AgentListQuery,
@@ -17,10 +18,6 @@ import { agents, agentVersions, connectors, providers } from '../../db/schema'
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
 type AgentVersionRow = typeof agentVersions.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string) {
   return JSON.parse(value) as T
@@ -193,8 +190,8 @@ export function createAgentRepo(db: Db): AgentRepo {
     },
 
     async insertWithVersion(input: CreateAgentInput, createdAt) {
-      const agentId = newId('agent')
-      const versionId = newId('agentver')
+      const agentId = newPrimaryKey()
+      const versionId = newPrimaryKey()
       const row = {
         id: agentId,
         projectId: input.projectId,
@@ -224,7 +221,7 @@ export function createAgentRepo(db: Db): AgentRepo {
     },
 
     async updateWithVersion(projectId, agent, fields, updatedAt) {
-      const versionId = newId('agentver')
+      const versionId = newPrimaryKey()
       const versionRow = {
         id: versionId,
         agentId: agent.metadata.uid,

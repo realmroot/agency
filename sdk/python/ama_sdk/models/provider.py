@@ -26,9 +26,9 @@ T = TypeVar("T", bound="Provider")
 
 @_attrs_define
 class Provider:
-    """ 
+    """
         Attributes:
-            id (str):  Example: provider_abc123.
+            id (str):  Example: anthropic.
             slug (str):  Example: anthropic.
             display_name (str):  Example: Anthropic.
             enabled (bool):  Example: True.

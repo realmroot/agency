@@ -1,5 +1,6 @@
 import type { RunnerAuthMode } from '@server/domain/runner-queue'
 import { effectiveRunnerState, runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
+import { newPrimaryKey } from '@server/id'
 import type {
   CreateRunnerInput,
   ListPageResult,
@@ -21,10 +22,6 @@ type RunnerRow = typeof runners.$inferSelect
 // The DB column is a closed enum; the port types carry the value as a plain
 // string, so writes/filters cast through this single schema-derived alias.
 type RunnerStateColumn = RunnerRow['state']
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string | null) {
   return value ? (JSON.parse(value) as T) : null
@@ -194,7 +191,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
 
     async insert(input, timestamp) {
       const row = {
-        id: newId('runner'),
+        id: newPrimaryKey(),
         ...columnsFromInput(input),
         state: 'offline',
         currentLoad: 0,

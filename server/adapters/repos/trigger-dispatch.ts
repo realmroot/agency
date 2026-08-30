@@ -1,6 +1,7 @@
 import { RuntimeSchema } from '@server/contracts/environment-contracts'
 import type { ResourceMetadata } from '@server/domain/resource'
 import type { Trigger, TriggerSessionTemplate } from '@server/domain/trigger'
+import { newPrimaryKey } from '@server/id'
 import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type {
   ClaimedRun,
@@ -15,10 +16,6 @@ import { httpTriggerPendingRuns, projects, sessions, triggerRuns, triggers } fro
 
 type Db = ReturnType<typeof drizzle>
 type TriggerRow = typeof triggers.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string | null, fallback: T) {
   return value ? (JSON.parse(value) as T) : fallback
@@ -147,7 +144,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
     },
 
     async claimRun(trigger, heartbeatAt): Promise<ClaimedRun | null> {
-      const runId = newId('schedrun')
+      const runId = newPrimaryKey()
       const scheduledFor = trigger.nextDueAt
       const idempotencyKey = `${trigger.id}:${scheduledFor}`
       const correlationId = `schedule:${idempotencyKey}`
@@ -180,7 +177,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
     },
 
     async claimHttpRun(auth, trigger, triggeredAt, rawIdempotencyKey, metadata): Promise<ClaimedRun | null> {
-      const runId = newId('httprun')
+      const runId = newPrimaryKey()
       const idempotencyKey = rawIdempotencyKey
         ? `http:${trigger.metadata.uid}:${rawIdempotencyKey}`
         : `http:${trigger.metadata.uid}:${runId}`
@@ -213,7 +210,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
     },
 
     async enqueueHttpRun(auth, trigger, triggeredAt, rawIdempotencyKey, metadata, input) {
-      const runId = newId('httprun')
+      const runId = newPrimaryKey()
       const idempotencyKey = rawIdempotencyKey
         ? `http:${trigger.metadata.uid}:${rawIdempotencyKey}`
         : `http:${trigger.metadata.uid}:${runId}`

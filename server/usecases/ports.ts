@@ -661,6 +661,11 @@ export interface VaultRepo {
 
   listCredentials(query: CredentialListQuery): Promise<ListPageResult<Credential>>
   findCredential(vaultId: string, credentialId: string): Promise<Credential | null>
+  findIdentityCredential?(
+    vaultId: string,
+    identityId: string,
+    purpose: 'provisioning-checkpoint' | 'enrolled-checkpoint' | 'agent-state',
+  ): Promise<Credential | null>
   activeVersion(credential: Credential): Promise<CredentialVersion | null>
   latestVersionNumber(credentialId: string): Promise<number>
   insertCredentialWithVersion(

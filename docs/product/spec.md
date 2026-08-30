@@ -96,6 +96,8 @@ Core product resources follow the standard resource entity shape in API and SDK 
 
 This applies to agents, environments, vaults, memory stores, triggers, and their child resources such as versions, memories, credentials, credential versions, and trigger runs. External callers use `metadata.uid` as the stable id. Create and update requests remain business-shaped request DTOs; callers do not submit full resource entities.
 
+AMA-generated primary keys are canonical lowercase UUIDv7 strings. Resource type is conveyed by the representation and canonical URI, not encoded as an identifier prefix. Existing opaque identifiers remain valid and must not be rejected based on format.
+
 Session creation validates the selected Agent provider/model against the selected Session runtime and Environment hosting mode. If the exact runtime/provider/model combination is unsupported, session creation fails before workspace allocation, sandbox creation, or self-hosted lease creation.
 
 Session creation resolves runtime inputs into safe execution references. Runtime secrets travel as `secretRef` URL references in `envFrom` or `volumes` and are materialized only at dispatch — on self-hosted lease claim or cloud session startup — never stored raw in D1 or session records. Workers AI runs on the platform binding and contributes no connection env.
@@ -121,7 +123,7 @@ Session `volumes` may include GitHub repository declarations, mounted through `v
   "owner": "saltbo",
   "repo": "any-managed-agents",
   "ref": "main",
-  "secretRef": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+  "secretRef": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
 }
 ```
 

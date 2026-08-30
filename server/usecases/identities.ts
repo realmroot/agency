@@ -1,8 +1,11 @@
 import type { Identity, IdentityCheckpoint } from '@server/domain/identity'
 import type { RuntimeName } from '@server/domain/runtime-catalog'
+import { newPrimaryKey } from '@server/id'
 import type { Deps } from './deps'
 import type { AuthScope, RealmrootManagementCredential } from './ports'
 import { createCredential } from './vaults'
+
+type IdentityCredentialPurpose = 'provisioning-checkpoint' | 'enrolled-checkpoint' | 'agent-state'
 
 function identityDeps(deps: Deps) {
   if (!deps.identities || !deps.realmrootEnrollment || !deps.realmrootManagement)
@@ -39,13 +42,44 @@ async function digest(value: string) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-function newId() {
-  return `identity_${crypto.randomUUID().replaceAll('-', '')}`
-}
-
 function realmrootOrigin(issuer: string) {
   if (!issuer) throw new Error('Realmroot issuer is unavailable')
   return new URL(issuer).origin
+}
+
+async function findIdentityCredential(
+  deps: Deps,
+  vaultId: string,
+  identityId: string,
+  purpose: IdentityCredentialPurpose,
+) {
+  if (!deps.vaults.findIdentityCredential) throw new Error('Identity managed Credential access is unavailable')
+  return await deps.vaults.findIdentityCredential(vaultId, identityId, purpose)
+}
+
+async function findOrCreateIdentityCredential(
+  deps: Deps,
+  vault: Parameters<typeof createCredential>[1],
+  identityId: string,
+  purpose: IdentityCredentialPurpose,
+  input: Omit<Parameters<typeof createCredential>[2], 'credentialId' | 'versionId' | 'metadata'> & {
+    metadata?: Record<string, unknown>
+  },
+) {
+  const existing = await findIdentityCredential(deps, vault.metadata.uid, identityId, purpose)
+  if (existing) return existing
+  try {
+    return (
+      await createCredential(deps, vault, {
+        ...input,
+        metadata: { ...input.metadata, managedBy: 'identity', identityId, purpose },
+      })
+    ).credential
+  } catch (error) {
+    const concurrent = await findIdentityCredential(deps, vault.metadata.uid, identityId, purpose)
+    if (concurrent) return concurrent
+    throw error
+  }
 }
 
 async function checkpointFromVault(deps: Deps, auth: AuthScope, identityId: string) {
@@ -84,20 +118,11 @@ async function saveCheckpoint(
     projectId: auth.project.id,
   })
   if (!vault) throw new Error('Identity managed Vault is unavailable')
-  const enrolledCredentialId = `vaultcred_enrolled_${identityId}`
-  const existing = await deps.vaults.findCredential(provisioning.vaultId, enrolledCredentialId)
-  const credential =
-    existing ??
-    (
-      await createCredential(deps, vault, {
-        credentialId: enrolledCredentialId,
-        versionId: `vaultver_enrolled_${identityId}`,
-        name: 'Identity enrolled checkpoint',
-        type: 'opaque',
-        metadata: { managedBy: 'identity', identityId, purpose: 'enrolled-checkpoint' },
-        secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
-      })
-    ).credential
+  const credential = await findOrCreateIdentityCredential(deps, vault, identityId, 'enrolled-checkpoint', {
+    name: 'Identity enrolled checkpoint',
+    type: 'opaque',
+    secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
+  })
   await identityDeps(deps).identities.setCredential(
     identityId,
     owner,
@@ -136,7 +161,7 @@ export async function createIdentity(
     }),
   )
   const configured = identityDeps(deps)
-  const identityId = newId()
+  const identityId = newPrimaryKey()
   const timestamp = new Date()
   const owner = `provisioning_${crypto.randomUUID().replaceAll('-', '')}`
   const claim = await configured.identities.claim(
@@ -148,7 +173,7 @@ export async function createIdentity(
       description: input.description,
       username: input.username,
       runtime: input.runtime,
-      vaultId: `vault_${identityId}`,
+      vaultId: newPrimaryKey(),
       idempotencyKeyHash: keyHash,
       requestFingerprint: fingerprint,
     },
@@ -191,9 +216,13 @@ export async function createIdentity(
         timestamp.toISOString(),
       )
     }
-    const checkpointCredentialId = `vaultcred_checkpoint_${identity.metadata.uid}`
     if (!location.credentialId) {
-      const recovered = await deps.vaults.findCredential(location.vaultId, checkpointCredentialId)
+      const recovered = await findIdentityCredential(
+        deps,
+        location.vaultId,
+        identity.metadata.uid,
+        'provisioning-checkpoint',
+      )
       if (recovered) {
         await configured.identities.setCredential(
           identity.metadata.uid,
@@ -212,18 +241,21 @@ export async function createIdentity(
         runtime: input.runtime,
         idempotencyKey: input.idempotencyKey,
       })
-      const created = await createCredential(deps, vault, {
-        credentialId: checkpointCredentialId,
-        versionId: `vaultver_checkpoint_${identity.metadata.uid}`,
-        name: 'Identity provisioning checkpoint',
-        type: 'opaque',
-        metadata: { managedBy: 'identity', identityId: identity.metadata.uid, purpose: 'provisioning-checkpoint' },
-        secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
-      })
+      const credential = await findOrCreateIdentityCredential(
+        deps,
+        vault,
+        identity.metadata.uid,
+        'provisioning-checkpoint',
+        {
+          name: 'Identity provisioning checkpoint',
+          type: 'opaque',
+          secret: { stringData: { 'state.json': JSON.stringify(checkpoint) } },
+        },
+      )
       await configured.identities.setCredential(
         identity.metadata.uid,
         owner,
-        created.credential.metadata.uid,
+        credential.metadata.uid,
         new Date().toISOString(),
       )
     }
@@ -273,20 +305,17 @@ export async function createIdentity(
       projectId: auth.project.id,
     })
     if (!vault) throw new Error('Identity managed Vault is unavailable')
-    const finalCredentialId = `vaultcred_state_${identity.metadata.uid}`
-    const existingFinalState = await deps.vaults.findCredential(location.vaultId, finalCredentialId)
-    const finalStateCredential =
-      existingFinalState ??
-      (
-        await createCredential(deps, vault, {
-          credentialId: finalCredentialId,
-          versionId: `vaultver_state_${identity.metadata.uid}`,
-          name: 'Realmroot Agent state',
-          type: 'ama.dev/realmroot-agent-state',
-          metadata: { managedBy: 'identity', identityId: identity.metadata.uid },
-          secret: { stringData: { 'state.json': JSON.stringify(provisioned.checkpoint.state) } },
-        })
-      ).credential
+    const finalStateCredential = await findOrCreateIdentityCredential(
+      deps,
+      vault,
+      identity.metadata.uid,
+      'agent-state',
+      {
+        name: 'Realmroot Agent state',
+        type: 'ama.dev/realmroot-agent-state',
+        secret: { stringData: { 'state.json': JSON.stringify(provisioned.checkpoint.state) } },
+      },
+    )
     return await configured.identities.activate(
       identity.metadata.uid,
       owner,

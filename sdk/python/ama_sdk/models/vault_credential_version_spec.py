@@ -24,14 +24,15 @@ T = TypeVar("T", bound="VaultCredentialVersionSpec")
 
 @_attrs_define
 class VaultCredentialVersionSpec:
-    """ 
+    """
         Attributes:
-            credential_id (str):  Example: vaultcred_abc123.
-            vault_id (str):  Example: vault_abc123.
+            credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+            vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
             organization_id (str):  Example: org_abc123.
             version (int):  Example: 2.
             provider (VaultCredentialVersionSpecProvider):  Example: ama.
-            secret_ref (str):  Example: ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123.
+            secret_ref (str):  Example: ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-
+                8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009.
             reference_name (str):  Example: AMA_PROJECT_ABC123_TOKEN_V2.
             has_secret (bool):  Example: True.
             data_keys (list[str]):  Example: ['token'].

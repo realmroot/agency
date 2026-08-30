@@ -7,6 +7,7 @@ import type {
   VaultScope,
 } from '@server/domain/vault'
 import { secretReference } from '@server/domain/vault'
+import { newPrimaryKey } from '@server/id'
 import type { Deps } from './deps'
 import { VaultSecretError } from './ports'
 
@@ -42,8 +43,8 @@ export async function createCredential(
   input: CreateCredentialInputDto,
 ): Promise<CreateCredentialResult> {
   const timestamp = new Date().toISOString()
-  const credentialId = input.credentialId ?? newId('vaultcred')
-  const versionId = input.versionId ?? newId('vaultver')
+  const credentialId = input.credentialId ?? newPrimaryKey()
+  const versionId = input.versionId ?? newPrimaryKey()
   let reference: ReturnType<typeof secretReference>
   try {
     reference = secretReference({ vaultId: vault.metadata.uid, credentialId, versionId }, 1, input.type, input.secret)
@@ -90,7 +91,7 @@ export async function rotateCredential(
   let reference: ReturnType<typeof secretReference>
   let stored: Record<string, unknown> | undefined
   let nextVersion: number
-  const versionId = newId('vaultver')
+  const versionId = newPrimaryKey()
   try {
     nextVersion = (await deps.vaults.latestVersionNumber(credential.metadata.uid)) + 1
     reference = secretReference(
@@ -129,10 +130,6 @@ export async function rotateCredential(
 
 function secretError(error: unknown) {
   return new VaultSecretError(error instanceof Error ? error.message : 'Invalid secret reference')
-}
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
 }
 
 export type { VaultScope }

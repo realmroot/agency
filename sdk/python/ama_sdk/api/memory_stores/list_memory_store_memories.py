@@ -22,9 +22,9 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -109,7 +109,7 @@ def sync_detailed(
     """ List memories in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
@@ -147,7 +147,7 @@ def sync(
     """ List memories in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
@@ -180,7 +180,7 @@ async def asyncio_detailed(
     """ List memories in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
@@ -218,7 +218,7 @@ async def asyncio(
     """ List memories in a memory store
 
     Args:
-        store_id (str):  Example: memstore_abc123.
+        store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.

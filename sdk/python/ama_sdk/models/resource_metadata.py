@@ -25,10 +25,10 @@ T = TypeVar("T", bound="ResourceMetadata")
 
 @_attrs_define
 class ResourceMetadata:
-    """ 
+    """
         Attributes:
-            uid (str):  Example: resource_abc123.
-            project_id (None | str):  Example: project_abc123.
+            uid (str):  Example: 0195f5d6-7c20-7000-8000-000000000017.
+            project_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
             name (str):  Example: Default resource.
             description (None | str):  Example: Default project resource..
             labels (ResourceMetadataLabels):

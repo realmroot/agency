@@ -22,13 +22,13 @@ T = TypeVar("T", bound="RunnerChannelMessageType3")
 
 @_attrs_define
 class RunnerChannelMessageType3:
-    """ 
+    """
         Attributes:
             type_ (RunnerChannelMessageType3Type):
             request_id (str):
-            session_id (str):  Example: session_abc123.
+            session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             accepted (bool):
-            runner_id (str | Unset):  Example: runner_abc123.
+            runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
             error (str | Unset):
      """
 
@@ -102,4 +102,3 @@ class RunnerChannelMessageType3:
         )
 
         return runner_channel_message_type_3
-

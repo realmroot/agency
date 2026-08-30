@@ -26,14 +26,14 @@ T = TypeVar("T", bound="SessionApproval")
 
 @_attrs_define
 class SessionApproval:
-    """ 
+    """
         Attributes:
-            id (str):  Example: approval_abc123.
-            session_id (str):  Example: session_abc123.
+            id (str):  Example: 0195f5d6-7c20-7000-8000-000000000010.
+            session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             tool_call_id (str):  Example: call_git_status.
             tool_name (str):  Example: bash.
             input_ (SessionApprovalInput):
-            related_event_ids (list[str]):  Example: ['event_abc123'].
+            related_event_ids (list[str]):  Example: ['0195f5d6-7c20-7000-8000-000000000018'].
             state (SessionApprovalState):  Example: pending.
             reason (None | str):  Example: Looks safe.
             result (None | SessionApprovalResultType0): Caller-provided custom tool result recorded instead of executing the

@@ -22,10 +22,10 @@ T = TypeVar("T", bound="AgentStatus")
 
 @_attrs_define
 class AgentStatus:
-    """ 
+    """
         Attributes:
             phase (ResourcePhase):
-            current_version_id (None | str):  Example: agentver_abc123.
+            current_version_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000003.
             version (int):  Example: 1.
      """
 

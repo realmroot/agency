@@ -23,9 +23,9 @@ T = TypeVar("T", bound="MemoryStoreMemorySpec")
 
 @_attrs_define
 class MemoryStoreMemorySpec:
-    """ 
+    """
         Attributes:
-            store_id (str):  Example: memstore_abc123.
+            store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
             path (str):  Example: guides/review.md.
             content (str):  Example: Review for correctness first..
             metadata (MemoryStoreMemorySpecMetadata):

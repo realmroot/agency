@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -110,7 +110,7 @@ def sync_detailed(
     """ Create vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (CreateVaultCredentialRequest):
 
     Raises:
@@ -144,7 +144,7 @@ def sync(
     """ Create vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (CreateVaultCredentialRequest):
 
     Raises:
@@ -173,7 +173,7 @@ async def asyncio_detailed(
     """ Create vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (CreateVaultCredentialRequest):
 
     Raises:
@@ -207,7 +207,7 @@ async def asyncio(
     """ Create vault credential metadata
 
     Args:
-        vault_id (str):  Example: vault_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         body (CreateVaultCredentialRequest):
 
     Raises:

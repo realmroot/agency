@@ -21,11 +21,11 @@ T = TypeVar("T", bound="MemoryVolume")
 
 @_attrs_define
 class MemoryVolume:
-    """ 
+    """
         Attributes:
             name (str):  Example: team-memory.
             type_ (MemoryVolumeType):
-            memory_ref (str):  Example: ama://memories/memstore_abc123.
+            memory_ref (str):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
      """
 
     name: str
@@ -75,4 +75,3 @@ class MemoryVolume:
         )
 
         return memory_volume
-

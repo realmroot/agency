@@ -20,11 +20,11 @@ def _get_kwargs(
     version_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -104,9 +104,9 @@ def sync_detailed(
     """ Read a vault credential version
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -141,9 +141,9 @@ def sync(
     """ Read a vault credential version
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,9 +173,9 @@ async def asyncio_detailed(
     """ Read a vault credential version
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -210,9 +210,9 @@ async def asyncio(
     """ Read a vault credential version
 
     Args:
-        vault_id (str):  Example: vault_abc123.
-        credential_id (str):  Example: vaultcred_abc123.
-        version_id (str):  Example: vaultver_abc123.
+        vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
+        credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -89,7 +89,7 @@ const TriggerStatusSchema = z
     phase: ResourcePhaseSchema,
     nextDueAt: z.string().datetime().nullable().openapi({ example: '2026-05-26T12:00:00.000Z' }),
     lastDispatchedAt: z.string().datetime().nullable().openapi({ example: null }),
-    lastRunId: z.string().nullable().openapi({ example: 'trigrun_abc123' }),
+    lastRunId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000d' }),
   })
   .openapi('TriggerStatus')
 
@@ -106,7 +106,7 @@ const TriggerRunSchema = z
     metadata: ResourceMetadataSchema,
     spec: z
       .object({
-        triggerId: z.string().openapi({ example: 'trigger_abc123' }),
+        triggerId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000c' }),
         scheduledFor: z.string().datetime().nullable().openapi({ example: '2026-05-26T12:00:00.000Z' }),
         metadata: JsonObjectSchema.openapi({ example: { source: 'trigger' } }),
       })
@@ -114,11 +114,15 @@ const TriggerRunSchema = z
     status: z
       .object({
         phase: z.enum(RUN_STATES).openapi({ example: 'dispatched' }),
-        idempotencyKey: z.string().openapi({ example: 'trigger_abc123:2026-05-26T12:00:00.000Z' }),
-        correlationId: z.string().openapi({ example: 'schedule:trigger_abc123:2026-05-26T12:00:00.000Z' }),
+        idempotencyKey: z
+          .string()
+          .openapi({ example: '0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z' }),
+        correlationId: z
+          .string()
+          .openapi({ example: 'schedule:0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z' }),
         heartbeatAt: z.string().datetime().nullable().openapi({ example: '2026-05-26T12:01:00.000Z' }),
         triggeredAt: z.string().datetime().openapi({ example: '2026-05-26T12:01:00.000Z' }),
-        sessionId: z.string().nullable().openapi({ example: 'session_abc123' }),
+        sessionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
         errorMessage: z.string().nullable().openapi({ example: null }),
       })
       .openapi('TriggerRunStatus'),
@@ -198,11 +202,13 @@ const UpdateTriggerSchema = z
   .openapi('UpdateTriggerRequest')
 
 const TriggerParamsSchema = z.object({
-  triggerId: z.string().openapi({ param: { name: 'triggerId', in: 'path' }, example: 'trigger_abc123' }),
+  triggerId: z
+    .string()
+    .openapi({ param: { name: 'triggerId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000c' }),
 })
 
 const RunParamsSchema = TriggerParamsSchema.extend({
-  runId: z.string().openapi({ param: { name: 'runId', in: 'path' }, example: 'trigrun_abc123' }),
+  runId: z.string().openapi({ param: { name: 'runId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-00000000000d' }),
 })
 
 const suspendQuery = z

@@ -25,12 +25,12 @@ T = TypeVar("T", bound="RunnerChannelMessageType1")
 
 @_attrs_define
 class RunnerChannelMessageType1:
-    """ 
+    """
         Attributes:
             type_ (RunnerChannelMessageType1Type):
             lease (RunnerOpaqueJsonObject):
             work_item (RunnerOpaqueJsonObject):
-            runner_id (str | Unset):  Example: runner_abc123.
+            runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
      """
 
     type_: RunnerChannelMessageType1Type
@@ -96,4 +96,3 @@ class RunnerChannelMessageType1:
         )
 
         return runner_channel_message_type_1
-

@@ -18,11 +18,11 @@ def _get_kwargs(
     agent_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -87,7 +87,7 @@ def sync_detailed(
     """ Read an agent
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ def sync(
     """ Read an agent
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -144,7 +144,7 @@ async def asyncio_detailed(
     """ Read an agent
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,7 +175,7 @@ async def asyncio(
     """ Read an agent
 
     Args:
-        agent_id (str):  Example: agent_abc123.
+        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

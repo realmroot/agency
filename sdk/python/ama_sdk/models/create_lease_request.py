@@ -21,10 +21,10 @@ T = TypeVar("T", bound="CreateLeaseRequest")
 
 @_attrs_define
 class CreateLeaseRequest:
-    """ 
+    """
         Attributes:
-            work_item_id (str):  Example: work_abc123.
-            runner_id (str):  Example: runner_abc123.
+            work_item_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000012.
+            runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
             lease_duration_seconds (int | Unset):  Example: 60.
      """
 
@@ -73,4 +73,3 @@ class CreateLeaseRequest:
         )
 
         return create_lease_request
-

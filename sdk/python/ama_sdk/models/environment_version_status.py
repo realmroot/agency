@@ -20,9 +20,9 @@ T = TypeVar("T", bound="EnvironmentVersionStatus")
 
 @_attrs_define
 class EnvironmentVersionStatus:
-    """ 
+    """
         Attributes:
-            environment_id (str):  Example: env_abc123.
+            environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             version (int):  Example: 1.
      """
 

@@ -22,14 +22,14 @@ T = TypeVar("T", bound="RunnerVolume")
 
 @_attrs_define
 class RunnerVolume:
-    """ 
+    """
         Attributes:
             name (str):  Example: source.
             type_ (RunnerVolumeType):  Example: git_repository.
             secret_ref (str | Unset):
             url (str | Unset):  Example: https://github.com/saltbo/any-managed-agents.git.
             ref (str | Unset):  Example: main.
-            memory_ref (str | Unset):  Example: ama://memories/memstore_abc123.
+            memory_ref (str | Unset):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
      """
 
     name: str
@@ -104,4 +104,3 @@ class RunnerVolume:
         )
 
         return runner_volume
-

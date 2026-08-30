@@ -20,9 +20,9 @@ T = TypeVar("T", bound="AgentVersionStatus")
 
 @_attrs_define
 class AgentVersionStatus:
-    """ 
+    """
         Attributes:
-            agent_id (str):  Example: agent_abc123.
+            agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
             version (int):  Example: 1.
      """
 

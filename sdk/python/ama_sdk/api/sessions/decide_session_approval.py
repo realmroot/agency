@@ -25,9 +25,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -108,8 +108,8 @@ def sync_detailed(
     tool (or records the provided custom result); denial resumes the runtime with the denial.
 
     Args:
-        session_id (str):  Example: session_abc123.
-        approval_id (str):  Example: approval_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        approval_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000010.
         body (SessionApprovalDecisionRequest):
 
     Raises:
@@ -148,8 +148,8 @@ def sync(
     tool (or records the provided custom result); denial resumes the runtime with the denial.
 
     Args:
-        session_id (str):  Example: session_abc123.
-        approval_id (str):  Example: approval_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        approval_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000010.
         body (SessionApprovalDecisionRequest):
 
     Raises:
@@ -183,8 +183,8 @@ async def asyncio_detailed(
     tool (or records the provided custom result); denial resumes the runtime with the denial.
 
     Args:
-        session_id (str):  Example: session_abc123.
-        approval_id (str):  Example: approval_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        approval_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000010.
         body (SessionApprovalDecisionRequest):
 
     Raises:
@@ -223,8 +223,8 @@ async def asyncio(
     tool (or records the provided custom result); denial resumes the runtime with the denial.
 
     Args:
-        session_id (str):  Example: session_abc123.
-        approval_id (str):  Example: approval_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        approval_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000010.
         body (SessionApprovalDecisionRequest):
 
     Raises:

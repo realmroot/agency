@@ -29,9 +29,9 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
 
-    
+
+
 
     params: dict[str, Any] = {}
 
@@ -150,7 +150,7 @@ def sync_detailed(
     events, text/event-stream streams new events as SSE.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         cursor (int | None | Unset):  Example: 42.
         order (ListSessionEventsOrder | Unset):  Example: asc.
         limit (int | Unset):  Example: 100.
@@ -202,7 +202,7 @@ def sync(
     events, text/event-stream streams new events as SSE.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         cursor (int | None | Unset):  Example: 42.
         order (ListSessionEventsOrder | Unset):  Example: asc.
         limit (int | Unset):  Example: 100.
@@ -249,7 +249,7 @@ async def asyncio_detailed(
     events, text/event-stream streams new events as SSE.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         cursor (int | None | Unset):  Example: 42.
         order (ListSessionEventsOrder | Unset):  Example: asc.
         limit (int | Unset):  Example: 100.
@@ -301,7 +301,7 @@ async def asyncio(
     events, text/event-stream streams new events as SSE.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         cursor (int | None | Unset):  Example: 42.
         order (ListSessionEventsOrder | Unset):  Example: asc.
         limit (int | Unset):  Example: 100.

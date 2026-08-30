@@ -25,13 +25,13 @@ T = TypeVar("T", bound="RunnerChannelMessageType4")
 
 @_attrs_define
 class RunnerChannelMessageType4:
-    """ 
+    """
         Attributes:
             type_ (RunnerChannelMessageType4Type):
             request_id (str):
-            session_id (str):  Example: session_abc123.
+            session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
             request (RunnerSandboxRequest):
-            runner_id (str | Unset):  Example: runner_abc123.
+            runner_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000011.
      """
 
     type_: RunnerChannelMessageType4Type
@@ -101,4 +101,3 @@ class RunnerChannelMessageType4:
         )
 
         return runner_channel_message_type_4
-

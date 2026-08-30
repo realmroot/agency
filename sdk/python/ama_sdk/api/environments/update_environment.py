@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -113,7 +113,7 @@ def sync_detailed(
     false} unarchives. Field updates on an archived environment are rejected with 409.
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -150,7 +150,7 @@ def sync(
     false} unarchives. Field updates on an archived environment are rejected with 409.
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -182,7 +182,7 @@ async def asyncio_detailed(
     false} unarchives. Field updates on an archived environment are rejected with 409.
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -219,7 +219,7 @@ async def asyncio(
     false} unarchives. Field updates on an archived environment are rejected with 409.
 
     Args:
-        environment_id (str):  Example: env_abc123.
+        environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         body (UpdateEnvironmentRequest):
 
     Raises:

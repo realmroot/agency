@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -106,7 +106,7 @@ def sync_detailed(
     active lease attached to the session.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (CreateSessionEventsRequest):
 
     Raises:
@@ -143,7 +143,7 @@ def sync(
     active lease attached to the session.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (CreateSessionEventsRequest):
 
     Raises:
@@ -175,7 +175,7 @@ async def asyncio_detailed(
     active lease attached to the session.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (CreateSessionEventsRequest):
 
     Raises:
@@ -212,7 +212,7 @@ async def asyncio(
     active lease attached to the session.
 
     Args:
-        session_id (str):  Example: session_abc123.
+        session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         body (CreateSessionEventsRequest):
 
     Raises:

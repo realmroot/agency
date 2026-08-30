@@ -40,7 +40,7 @@ type PricingDto = z.infer<typeof PricingSchema>
 // shared across all projects and refreshed by the scheduled discovery job.
 const ProviderSchema = z
   .object({
-    id: z.string().openapi({ example: 'provider_abc123' }),
+    id: z.string().openapi({ example: 'anthropic' }),
     slug: z.string().openapi({ example: 'anthropic' }),
     displayName: z.string().openapi({ example: 'Anthropic' }),
     enabled: z.boolean().openapi({ example: true }),
@@ -78,7 +78,7 @@ const CatalogRefreshSchema = z
   .openapi('CatalogRefreshResult')
 
 const ProviderParamsSchema = z.object({
-  providerId: z.string().openapi({ param: { name: 'providerId', in: 'path' }, example: 'provider_abc123' }),
+  providerId: z.string().openapi({ param: { name: 'providerId', in: 'path' }, example: 'anthropic' }),
 })
 
 function listEnvelope<T>(data: T[]) {

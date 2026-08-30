@@ -17,11 +17,11 @@ def _get_kwargs(
     trigger_id: str,
 
 ) -> dict[str, Any]:
-    
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
@@ -85,7 +85,7 @@ def sync_detailed(
      Permanently deletes the trigger and its run history.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ def sync(
      Permanently deletes the trigger and its run history.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -146,7 +146,7 @@ async def asyncio_detailed(
      Permanently deletes the trigger and its run history.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -179,7 +179,7 @@ async def asyncio(
      Permanently deletes the trigger and its run history.
 
     Args:
-        trigger_id (str):  Example: trigger_abc123.
+        trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

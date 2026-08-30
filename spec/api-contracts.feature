@@ -48,6 +48,13 @@ Feature: API contracts
     Then agent, environment, vault, memory, trigger, and child-resource responses use metadata, spec, and status
     And every resource response exposes its stable uid in metadata.uid
 
+  @api-contracts/resource-identifiers @api
+  Scenario: Generate opaque time-ordered resource identifiers
+    Given AMA creates a resource with a server-owned primary key
+    When the resource is persisted and returned through the API
+    Then its identifier is a standard UUID version 7 without a resource-type prefix
+    And previously persisted identifiers remain valid resource locators
+
   # ── Pagination and filtering (e2e: cross-stack list contracts) ──
   # Native Playwright e2e specs execute these scenarios for real through `pnpm run e2e`.
 

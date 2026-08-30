@@ -1,4 +1,5 @@
 import type { BudgetScope } from '@server/domain/policy'
+import { newPrimaryKey } from '@server/id'
 import type { BudgetRecord, BudgetRepo, CreateBudgetInput, UpdateBudgetFields } from '@server/usecases/ports'
 import { and, eq } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
@@ -6,10 +7,6 @@ import { budgets } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type BudgetRow = typeof budgets.$inferSelect
-
-function newId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`
-}
 
 function parseJson<T>(value: string, fallback: T) {
   return value ? (JSON.parse(value) as T) : fallback
@@ -57,7 +54,7 @@ export function createBudgetRepo(db: Db): BudgetRepo {
 
     async insert(input: CreateBudgetInput, timestamp) {
       const row: BudgetRow = {
-        id: newId('budget'),
+        id: newPrimaryKey(),
         organizationId: input.organizationId,
         projectId: input.projectId,
         scope: input.scope,

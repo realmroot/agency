@@ -24,9 +24,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
@@ -110,7 +110,7 @@ def sync_detailed(
     """ Update or archive a self-hosted runner
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         body (UpdateRunnerRequest):
 
     Raises:
@@ -144,7 +144,7 @@ def sync(
     """ Update or archive a self-hosted runner
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         body (UpdateRunnerRequest):
 
     Raises:
@@ -173,7 +173,7 @@ async def asyncio_detailed(
     """ Update or archive a self-hosted runner
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         body (UpdateRunnerRequest):
 
     Raises:
@@ -207,7 +207,7 @@ async def asyncio(
     """ Update or archive a self-hosted runner
 
     Args:
-        runner_id (str):  Example: runner_abc123.
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         body (UpdateRunnerRequest):
 
     Raises:

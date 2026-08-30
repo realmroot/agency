@@ -11,6 +11,7 @@
 // rows.
 
 import type { SessionEvent } from '@server/domain/session'
+import { newPrimaryKey } from '@server/id'
 import { redactToolResultsFromPayload } from '@server/redaction'
 import type { EventPage, EventQuery } from '@server/usecases/ports'
 import { type AmaEvent, isAmaSessionEventType, normalizeAmaEvent } from '@shared/session-events'
@@ -31,10 +32,6 @@ type EventRow = {
   payload: string
   metadata: string
   created_at: string
-}
-
-function newEventId() {
-  return `event_${crypto.randomUUID().replaceAll('-', '')}`
 }
 
 const CREATE_TABLE = `CREATE TABLE IF NOT EXISTS session_events (
@@ -80,7 +77,7 @@ export function appendCanonicalEventToSql(
   event: AmaEvent,
 ): { id: string; sequence: number; record: SessionEvent } {
   const normalized = normalizeAmaEvent(event)
-  const eventId = newEventId()
+  const eventId = newPrimaryKey()
   const maxSequence =
     sql
       .exec<{ m: number | null }>('SELECT max(sequence) AS m FROM session_events WHERE session_id = ?', scope.sessionId)

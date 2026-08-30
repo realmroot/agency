@@ -1674,7 +1674,7 @@
           },
           "memoryRef": {
             "type": "string",
-            "example": "ama://memories/memstore_abc123"
+            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
           },
           "description": {
             "type": "string",
@@ -1750,7 +1750,7 @@
           },
           "memoryRef": {
             "type": "string",
-            "example": "ama://memories/memstore_abc123"
+            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
           }
         },
         "required": [
@@ -1828,7 +1828,7 @@
           },
           "sessionId": {
             "type": "string",
-            "example": "session_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000e"
           },
           "hostingMode": {
             "type": "string",
@@ -2050,7 +2050,7 @@
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "environmentId": {
                 "type": "string"
@@ -2072,7 +2072,7 @@
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "lease": {
                 "$ref": "#/components/schemas/RunnerOpaqueJsonObject"
@@ -2102,11 +2102,11 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "command": {
                 "$ref": "#/components/schemas/RunnerSessionCommand"
@@ -2133,11 +2133,11 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "accepted": {
                 "type": "boolean"
@@ -2168,11 +2168,11 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "request": {
                 "$ref": "#/components/schemas/RunnerSandboxRequest"
@@ -2200,11 +2200,11 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "runnerId": {
                 "type": "string",
-                "example": "runner_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000011"
               },
               "ok": {
                 "type": "boolean"
@@ -2238,7 +2238,7 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               }
             },
             "required": [
@@ -2262,7 +2262,7 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "events": {
                 "type": "array",
@@ -2293,7 +2293,7 @@
               },
               "sessionId": {
                 "type": "string",
-                "example": "session_abc123"
+                "example": "0195f5d6-7c20-7000-8000-00000000000e"
               },
               "record": {
                 "$ref": "#/components/schemas/RunnerOpaqueJsonObject"
@@ -2555,7 +2555,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "name": {
             "type": "string",
@@ -2627,7 +2627,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "name": {
             "type": "string",
@@ -2728,12 +2728,12 @@
         "properties": {
           "uid": {
             "type": "string",
-            "example": "resource_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000017"
           },
           "projectId": {
             "type": "string",
             "nullable": true,
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "name": {
             "type": "string",
@@ -2942,7 +2942,7 @@
         "properties": {
           "identityId": {
             "type": "string",
-            "example": "identity_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000004"
           },
           "agentId": {
             "type": "string",
@@ -2992,7 +2992,7 @@
           "currentVersionId": {
             "type": "string",
             "nullable": true,
-            "example": "agentver_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000003"
           },
           "version": {
             "type": "integer",
@@ -3099,7 +3099,7 @@
                 "type": "string",
                 "nullable": true,
                 "minLength": 1,
-                "example": "identity_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000004"
               }
             },
             "required": [
@@ -3297,7 +3297,7 @@
                 "type": "string",
                 "nullable": true,
                 "minLength": 1,
-                "example": "identity_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000004"
               }
             },
             "additionalProperties": false
@@ -3370,7 +3370,7 @@
         "properties": {
           "agentId": {
             "type": "string",
-            "example": "agent_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000002"
           },
           "version": {
             "type": "integer",
@@ -3618,7 +3618,7 @@
           "currentVersionId": {
             "type": "string",
             "nullable": true,
-            "example": "envver_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000006"
           },
           "version": {
             "type": "integer",
@@ -3787,7 +3787,7 @@
         "properties": {
           "environmentId": {
             "type": "string",
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "version": {
             "type": "integer",
@@ -3978,7 +3978,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "provider_abc123"
+            "example": "anthropic"
           },
           "slug": {
             "type": "string",
@@ -4235,11 +4235,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "runner_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000011"
           },
           "projectId": {
             "type": "string",
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "name": {
             "type": "string",
@@ -4248,7 +4248,7 @@
           "environmentId": {
             "type": "string",
             "nullable": true,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "secretRef": {
             "$ref": "#/components/schemas/NullableSecretRef"
@@ -4343,7 +4343,7 @@
         "type": "string",
         "nullable": true,
         "minLength": 1,
-        "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+        "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
       },
       "RuntimeUsage": {
         "type": "object",
@@ -4449,12 +4449,12 @@
           "environmentId": {
             "type": "string",
             "minLength": 1,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "authMode": {
             "type": "string",
@@ -4540,7 +4540,7 @@
         "properties": {
           "runnerId": {
             "type": "string",
-            "example": "runner_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000011"
           },
           "state": {
             "type": "string",
@@ -4661,31 +4661,31 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "work_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000012"
           },
           "projectId": {
             "type": "string",
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "sessionId": {
             "type": "string",
             "nullable": true,
-            "example": "session_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000e"
           },
           "environmentId": {
             "type": "string",
             "nullable": true,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "runnerId": {
             "type": "string",
             "nullable": true,
-            "example": "runner_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000011"
           },
           "leaseId": {
             "type": "string",
             "nullable": true,
-            "example": "lease_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000013"
           },
           "type": {
             "type": "string",
@@ -4772,15 +4772,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "lease_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000013"
           },
           "workItemId": {
             "type": "string",
-            "example": "work_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000012"
           },
           "runnerId": {
             "type": "string",
-            "example": "runner_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000011"
           },
           "state": {
             "type": "string",
@@ -4834,12 +4834,12 @@
           "workItemId": {
             "type": "string",
             "minLength": 1,
-            "example": "work_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000012"
           },
           "runnerId": {
             "type": "string",
             "minLength": 1,
-            "example": "runner_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000011"
           },
           "leaseDurationSeconds": {
             "type": "integer",
@@ -5758,13 +5758,13 @@
           "agentId": {
             "type": "string",
             "minLength": 1,
-            "example": "agent_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000002"
           },
           "environmentId": {
             "type": "string",
             "nullable": true,
             "minLength": 1,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "runtime": {
             "$ref": "#/components/schemas/RuntimeName"
@@ -5849,7 +5849,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "key": {
             "type": "string",
@@ -5908,7 +5908,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "items": {
             "type": "array",
@@ -5977,7 +5977,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007"
           },
           "items": {
             "type": "array",
@@ -6013,7 +6013,7 @@
           "memoryRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://memories/memstore_abc123"
+            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
           }
         },
         "required": [
@@ -6065,7 +6065,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "items": {
             "type": "array",
@@ -6128,7 +6128,7 @@
           "lastRunId": {
             "type": "string",
             "nullable": true,
-            "example": "trigrun_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000d"
           }
         },
         "required": [
@@ -6247,13 +6247,13 @@
                       "agentId": {
                         "type": "string",
                         "minLength": 1,
-                        "example": "agent_abc123"
+                        "example": "0195f5d6-7c20-7000-8000-000000000002"
                       },
                       "environmentId": {
                         "type": "string",
                         "nullable": true,
                         "minLength": 1,
-                        "example": "env_abc123"
+                        "example": "0195f5d6-7c20-7000-8000-000000000005"
                       },
                       "runtime": {
                         "$ref": "#/components/schemas/RuntimeName"
@@ -6465,13 +6465,13 @@
                       "agentId": {
                         "type": "string",
                         "minLength": 1,
-                        "example": "agent_abc123"
+                        "example": "0195f5d6-7c20-7000-8000-000000000002"
                       },
                       "environmentId": {
                         "type": "string",
                         "nullable": true,
                         "minLength": 1,
-                        "example": "env_abc123"
+                        "example": "0195f5d6-7c20-7000-8000-000000000005"
                       },
                       "runtime": {
                         "$ref": "#/components/schemas/RuntimeName"
@@ -6581,7 +6581,7 @@
         "properties": {
           "triggerId": {
             "type": "string",
-            "example": "trigger_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000c"
           },
           "scheduledFor": {
             "type": "string",
@@ -6621,11 +6621,11 @@
           },
           "idempotencyKey": {
             "type": "string",
-            "example": "trigger_abc123:2026-05-26T12:00:00.000Z"
+            "example": "0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z"
           },
           "correlationId": {
             "type": "string",
-            "example": "schedule:trigger_abc123:2026-05-26T12:00:00.000Z"
+            "example": "schedule:0195f5d6-7c20-7000-8000-00000000000c:2026-05-26T12:00:00.000Z"
           },
           "heartbeatAt": {
             "type": "string",
@@ -6641,7 +6641,7 @@
           "sessionId": {
             "type": "string",
             "nullable": true,
-            "example": "session_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000e"
           },
           "errorMessage": {
             "type": "string",
@@ -6695,12 +6695,12 @@
         "properties": {
           "uid": {
             "type": "string",
-            "example": "resource_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000017"
           },
           "projectId": {
             "type": "string",
             "nullable": true,
-            "example": "project_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000001"
           },
           "name": {
             "type": "string",
@@ -6760,13 +6760,13 @@
           "agentId": {
             "type": "string",
             "minLength": 1,
-            "example": "agent_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000002"
           },
           "environmentId": {
             "type": "string",
             "nullable": true,
             "minLength": 1,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "runtime": {
             "$ref": "#/components/schemas/RuntimeName"
@@ -6907,7 +6907,7 @@
             "properties": {
               "versionId": {
                 "type": "string",
-                "example": "agentver_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000003"
               },
               "snapshot": {
                 "$ref": "#/components/schemas/SessionAgentSnapshot"
@@ -6924,12 +6924,12 @@
               "id": {
                 "type": "string",
                 "nullable": true,
-                "example": "env_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000005"
               },
               "versionId": {
                 "type": "string",
                 "nullable": true,
-                "example": "envver_abc123"
+                "example": "0195f5d6-7c20-7000-8000-000000000006"
               },
               "snapshot": {
                 "$ref": "#/components/schemas/SessionEnvironmentSnapshot"
@@ -7250,13 +7250,13 @@
           "agentId": {
             "type": "string",
             "minLength": 1,
-            "example": "agent_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000002"
           },
           "environmentId": {
             "type": "string",
             "nullable": true,
             "minLength": 1,
-            "example": "env_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
           },
           "runtime": {
             "$ref": "#/components/schemas/RuntimeName"
@@ -7383,11 +7383,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "msg_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000f"
           },
           "sessionId": {
             "type": "string",
-            "example": "session_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000e"
           },
           "type": {
             "type": "string",
@@ -7772,11 +7772,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "approval_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000010"
           },
           "sessionId": {
             "type": "string",
-            "example": "session_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000e"
           },
           "toolCallId": {
             "type": "string",
@@ -7798,7 +7798,7 @@
               "type": "string"
             },
             "example": [
-              "event_abc123"
+              "0195f5d6-7c20-7000-8000-000000000018"
             ]
           },
           "state": {
@@ -8027,7 +8027,7 @@
         "properties": {
           "storeId": {
             "type": "string",
-            "example": "memstore_abc123"
+            "example": "0195f5d6-7c20-7000-8000-00000000000a"
           },
           "path": {
             "type": "string",
@@ -8288,7 +8288,7 @@
         "properties": {
           "vaultId": {
             "type": "string",
-            "example": "vault_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000007"
           },
           "organizationId": {
             "type": "string",
@@ -8347,7 +8347,7 @@
           "activeVersionId": {
             "type": "string",
             "nullable": true,
-            "example": "vaultver_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000009"
           },
           "activeVersion": {
             "$ref": "#/components/schemas/VaultCredentialVersion"
@@ -8403,11 +8403,11 @@
         "properties": {
           "credentialId": {
             "type": "string",
-            "example": "vaultcred_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000008"
           },
           "vaultId": {
             "type": "string",
-            "example": "vault_abc123"
+            "example": "0195f5d6-7c20-7000-8000-000000000007"
           },
           "organizationId": {
             "type": "string",
@@ -8426,7 +8426,7 @@
           },
           "secretRef": {
             "type": "string",
-            "example": "ama://vaults/vault_abc123/credentials/vaultcred_abc123/versions/vaultver_abc123"
+            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009"
           },
           "referenceName": {
             "type": "string",
@@ -8932,7 +8932,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "project_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000001"
             },
             "required": true,
             "name": "projectId",
@@ -9205,7 +9205,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "agent_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
             },
             "required": true,
             "name": "agentId",
@@ -9273,7 +9273,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "agent_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
             },
             "required": true,
             "name": "agentId",
@@ -9372,7 +9372,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "agent_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
             },
             "required": true,
             "name": "agentId",
@@ -9441,7 +9441,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "agent_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
             },
             "required": true,
             "name": "agentId",
@@ -9724,7 +9724,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "env_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
             },
             "required": true,
             "name": "environmentId",
@@ -9792,7 +9792,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "env_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
             },
             "required": true,
             "name": "environmentId",
@@ -9891,7 +9891,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "env_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
             },
             "required": true,
             "name": "environmentId",
@@ -9960,7 +9960,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "env_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
             },
             "required": true,
             "name": "environmentId",
@@ -10579,7 +10579,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "provider_abc123"
+              "example": "anthropic"
             },
             "required": true,
             "name": "providerId",
@@ -10648,7 +10648,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "provider_abc123"
+              "example": "anthropic"
             },
             "required": true,
             "name": "providerId",
@@ -10876,7 +10876,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "env_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
             },
             "required": false,
             "name": "environmentId",
@@ -10945,7 +10945,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": true,
             "name": "runnerId",
@@ -11012,7 +11012,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": true,
             "name": "runnerId",
@@ -11111,7 +11111,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": true,
             "name": "runnerId",
@@ -11178,7 +11178,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": true,
             "name": "runnerId",
@@ -11277,7 +11277,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": true,
             "name": "runnerId",
@@ -11375,7 +11375,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": false,
             "name": "sessionId",
@@ -11384,7 +11384,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": false,
             "name": "runnerId",
@@ -11505,7 +11505,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "work_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000012"
             },
             "required": true,
             "name": "workItemId",
@@ -11670,7 +11670,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "runner_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
             },
             "required": false,
             "name": "runnerId",
@@ -11776,7 +11776,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "lease_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000013"
             },
             "required": true,
             "name": "leaseId",
@@ -11843,7 +11843,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "lease_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000013"
             },
             "required": true,
             "name": "leaseId",
@@ -12056,7 +12056,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "budget_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000014"
             },
             "required": true,
             "name": "budgetId",
@@ -12123,7 +12123,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "budget_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000014"
             },
             "required": true,
             "name": "budgetId",
@@ -12210,7 +12210,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "budget_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000014"
             },
             "required": true,
             "name": "budgetId",
@@ -12512,7 +12512,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "agent_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
             },
             "required": false,
             "name": "agentId",
@@ -12521,7 +12521,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": false,
             "name": "sessionId",
@@ -12615,7 +12615,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "usage_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000016"
             },
             "required": true,
             "name": "recordId",
@@ -12933,7 +12933,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "audit_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000015"
             },
             "required": true,
             "name": "recordId",
@@ -13231,7 +13231,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13299,7 +13299,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13397,7 +13397,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13459,7 +13459,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13606,7 +13606,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13705,7 +13705,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigger_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000c"
             },
             "required": true,
             "name": "triggerId",
@@ -13714,7 +13714,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "trigrun_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000d"
             },
             "required": true,
             "name": "runId",
@@ -14024,7 +14024,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14092,7 +14092,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14194,7 +14194,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14266,7 +14266,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14364,7 +14364,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14473,7 +14473,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14482,7 +14482,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "msg_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000f"
             },
             "required": true,
             "name": "messageId",
@@ -14552,7 +14552,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14718,7 +14718,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14807,7 +14807,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14876,7 +14876,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14886,7 +14886,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "example": "approval_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000010"
             },
             "required": true,
             "name": "approvalId",
@@ -14954,7 +14954,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "session_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
             },
             "required": true,
             "name": "sessionId",
@@ -14964,7 +14964,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "example": "approval_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000010"
             },
             "required": true,
             "name": "approvalId",
@@ -15247,7 +15247,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15314,7 +15314,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15403,7 +15403,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15502,7 +15502,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15601,7 +15601,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15610,7 +15610,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memory_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000b"
             },
             "required": true,
             "name": "memoryId",
@@ -15707,7 +15707,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memstore_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
             },
             "required": true,
             "name": "storeId",
@@ -15716,7 +15716,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "memory_abc123"
+              "example": "0195f5d6-7c20-7000-8000-00000000000b"
             },
             "required": true,
             "name": "memoryId",
@@ -15972,7 +15972,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16040,7 +16040,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16139,7 +16139,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16282,7 +16282,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16381,7 +16381,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16390,7 +16390,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultcred_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000008"
             },
             "required": true,
             "name": "credentialId",
@@ -16458,7 +16458,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16467,7 +16467,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultcred_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000008"
             },
             "required": true,
             "name": "credentialId",
@@ -16555,7 +16555,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16564,7 +16564,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultcred_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000008"
             },
             "required": true,
             "name": "credentialId",
@@ -16663,7 +16663,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16672,7 +16672,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultcred_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000008"
             },
             "required": true,
             "name": "credentialId",
@@ -16807,7 +16807,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vault_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
             },
             "required": true,
             "name": "vaultId",
@@ -16816,7 +16816,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultcred_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000008"
             },
             "required": true,
             "name": "credentialId",
@@ -16825,7 +16825,7 @@
           {
             "schema": {
               "type": "string",
-              "example": "vaultver_abc123"
+              "example": "0195f5d6-7c20-7000-8000-000000000009"
             },
             "required": true,
             "name": "versionId",

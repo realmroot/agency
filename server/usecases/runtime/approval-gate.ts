@@ -16,6 +16,7 @@
 
 import { type PendingSessionApproval, sessionApprovalState } from '@server/domain/runtime/approval-state'
 import { now } from '@server/domain/runtime/util'
+import { newPrimaryKey } from '@server/id'
 import type { AmaEvent } from '@shared/session-events'
 import type {
   AuditPort,
@@ -103,7 +104,7 @@ export function createToolApprovalGate(
       if (!(await policy.toolPolicyRequiresApproval(auth, toolName))) {
         return null
       }
-      const approvalId = `approval_${crypto.randomUUID().replaceAll('-', '')}`
+      const approvalId = newPrimaryKey()
       const requestEventId = await values.appendEvent({
         type: 'permission.requested',
         payload: {

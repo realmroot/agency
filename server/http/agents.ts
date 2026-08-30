@@ -71,7 +71,7 @@ const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
 
 const IdentityDescriptorSchema = z
   .object({
-    identityId: z.string().openapi({ example: 'identity_abc123' }),
+    identityId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000004' }),
     agentId: z.string().min(1).max(160).openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
     issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
     subject: z.string().openapi({ example: 'agent:019ff41a-7da6-708f-8b05-44d4d0373685' }),
@@ -109,7 +109,7 @@ const AgentSpecSchema = z
 const AgentStatusSchema = z
   .object({
     phase: ResourcePhaseSchema,
-    currentVersionId: z.string().nullable().openapi({ example: 'agentver_abc123' }),
+    currentVersionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000003' }),
     version: z.number().int().openapi({ example: 1 }),
   })
   .openapi('AgentStatus')
@@ -128,7 +128,7 @@ const AgentVersionSchema = z
     spec: AgentSpecSchema,
     status: z
       .object({
-        agentId: z.string().openapi({ example: 'agent_abc123' }),
+        agentId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000002' }),
         version: z.number().int().openapi({ example: 1 }),
       })
       .openapi('AgentVersionStatus'),
@@ -168,7 +168,12 @@ const AgentPayloadSchema = z
           .max(50)
           .optional()
           .openapi({ example: ['github'] }),
-        identityRef: z.string().min(1).nullable().optional().openapi({ example: 'identity_abc123' }),
+        identityRef: z
+          .string()
+          .min(1)
+          .nullable()
+          .optional()
+          .openapi({ example: '0195f5d6-7c20-7000-8000-000000000004' }),
       })
       .strict(),
   })
@@ -193,7 +198,7 @@ const UpdateAgentSchema = z
 const AgentParamsSchema = z.object({
   agentId: z.string().openapi({
     param: { name: 'agentId', in: 'path' },
-    example: 'agent_abc123',
+    example: '0195f5d6-7c20-7000-8000-000000000002',
   }),
 })
 

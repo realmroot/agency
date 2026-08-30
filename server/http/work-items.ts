@@ -22,12 +22,12 @@ const JsonObjectSchema = z.record(z.string(), z.unknown())
 
 const WorkItemSchema = z
   .object({
-    id: z.string().openapi({ example: 'work_abc123' }),
-    projectId: z.string().openapi({ example: 'project_abc123' }),
-    sessionId: z.string().nullable().openapi({ example: 'session_abc123' }),
-    environmentId: z.string().nullable().openapi({ example: 'env_abc123' }),
-    runnerId: z.string().nullable().openapi({ example: 'runner_abc123' }),
-    leaseId: z.string().nullable().openapi({ example: 'lease_abc123' }),
+    id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000012' }),
+    projectId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000001' }),
+    sessionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
+    environmentId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000005' }),
+    runnerId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000011' }),
+    leaseId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000013' }),
     type: z.string().openapi({ example: 'session.start' }),
     state: z.enum(WORK_ITEM_STATES).openapi({ example: 'available' }),
     priority: z.number().int().openapi({ example: 0 }),
@@ -43,7 +43,9 @@ const WorkItemSchema = z
   .openapi('WorkItem')
 
 const WorkItemParamsSchema = z.object({
-  workItemId: z.string().openapi({ param: { name: 'workItemId', in: 'path' }, example: 'work_abc123' }),
+  workItemId: z
+    .string()
+    .openapi({ param: { name: 'workItemId', in: 'path' }, example: '0195f5d6-7c20-7000-8000-000000000012' }),
 })
 
 const WorkItemListQuerySchema = z.object({
@@ -54,11 +56,11 @@ const WorkItemListQuerySchema = z.object({
   sessionId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'sessionId', in: 'query' }, example: 'session_abc123' }),
+    .openapi({ param: { name: 'sessionId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-00000000000e' }),
   runnerId: z
     .string()
     .optional()
-    .openapi({ param: { name: 'runnerId', in: 'query' }, example: 'runner_abc123' }),
+    .openapi({ param: { name: 'runnerId', in: 'query' }, example: '0195f5d6-7c20-7000-8000-000000000011' }),
   search: z
     .string()
     .min(1)
