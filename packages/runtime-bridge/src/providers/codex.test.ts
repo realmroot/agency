@@ -32,7 +32,19 @@ vi.mock('./cli-host', () => ({
   hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
   normalizeProviderUsage: (value: Record<string, unknown>) => value,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
-  sdkEnv: (request: RuntimeProviderRequest) => request.env,
+  sdkEnv: (request: RuntimeProviderRequest) => {
+    const hostHome = request.env.AMA_RUNTIME_BRIDGE_HOST_HOME
+    return hostHome
+      ? {
+          ...request.env,
+          HOME: hostHome,
+          AMA_WORKSPACE_HOME: request.env.HOME,
+          GH_CONFIG_DIR: `${request.env.HOME}/.config/gh`,
+          GIT_CONFIG_GLOBAL: `${request.env.HOME}/.gitconfig`,
+          GIT_CONFIG_NOSYSTEM: '1',
+        }
+      : request.env
+  },
 }))
 
 const { codexProvider } = await import('./codex')
@@ -257,6 +269,11 @@ describe('codexProvider', () => {
       env: { HOME: '/home/agent' },
       config: {
         features: { apps: false, multi_agent: true, unified_exec: false },
+        allow_login_shell: false,
+        shell_environment_policy: {
+          inherit: 'all',
+          set: { HOME: '/home/agent' },
+        },
         developer_instructions: expect.stringContaining('SYSTEM_PROMPT'),
       },
     })
@@ -319,6 +336,47 @@ describe('codexProvider', () => {
     } finally {
       rmSync(hostHome, { recursive: true, force: true })
     }
+  })
+
+  it('[spec: runtime/codex-shell-isolation] keeps Codex authentication on the host home and shell tools in the session environment', async () => {
+    runStreamedMock.mockResolvedValue({ events: events() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+
+    const handle = await codexProvider.execute(
+      request({
+        env: {
+          HOME: '/session/home',
+          TMPDIR: '/session/tmp',
+          TEMP: '/session/tmp',
+          TMP: '/session/tmp',
+          AMA_RUNTIME_BRIDGE_HOST_HOME: '/host/home',
+        },
+      }),
+    )
+    for await (const _event of handle.events) {
+      // drain
+    }
+
+    expect(codexConstructorMock).toHaveBeenCalledWith({
+      env: expect.objectContaining({
+        HOME: '/host/home',
+        AMA_WORKSPACE_HOME: '/session/home',
+        GH_CONFIG_DIR: '/session/home/.config/gh',
+        GIT_CONFIG_GLOBAL: '/session/home/.gitconfig',
+      }),
+      config: expect.objectContaining({
+        allow_login_shell: false,
+        shell_environment_policy: {
+          inherit: 'all',
+          set: {
+            HOME: '/session/home',
+            TMPDIR: '/session/tmp',
+            TEMP: '/session/tmp',
+            TMP: '/session/tmp',
+          },
+        },
+      }),
+    })
   })
 
   it('normalizes Codex command output into AMA tool results', async () => {

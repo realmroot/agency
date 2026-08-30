@@ -610,6 +610,21 @@ export const codexProvider: RuntimeProvider = {
     let wakePrompt: (() => void) | undefined
     const codexPathOverride = resolveCliPath('codex')
     const systemPrompt = agentSystemPrompt(request)
+    const sessionHome = request.env.HOME
+    const shellEnvironment = Object.fromEntries(
+      [
+        'HOME',
+        'AMA_WORKSPACE_HOME',
+        'GH_CONFIG_DIR',
+        'GIT_CONFIG_GLOBAL',
+        'GIT_CONFIG_NOSYSTEM',
+        'TMPDIR',
+        'TEMP',
+        'TMP',
+      ]
+        .map((key) => [key, key === 'HOME' ? sessionHome : request.env[key]] as const)
+        .filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+    )
     const configuredSubagents = objectValue(request.agentSnapshot).subagents
     const hasNamedSubagents = Array.isArray(configuredSubagents) && configuredSubagents.length > 0
     const developerInstructions = [
@@ -629,6 +644,13 @@ export const codexProvider: RuntimeProvider = {
         // Codex exec --json omits unified custom-tool events, while the standard shell
         // path emits correlated command_execution events that AMA can persist and relay.
         features: { apps: false, multi_agent: true, unified_exec: false },
+        // The Codex process needs the host HOME for its provider login, but tool
+        // subprocesses belong to the session and must never load host shell state.
+        allow_login_shell: false,
+        shell_environment_policy: {
+          inherit: 'all',
+          set: shellEnvironment,
+        },
         ...(developerInstructions ? { developer_instructions: developerInstructions } : {}),
       },
       ...(codexPathOverride ? { codexPathOverride } : {}),
