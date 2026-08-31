@@ -1,3 +1,4 @@
+import { decodeJwt, decodeProtectedHeader } from 'jose'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRealmrootEnrollmentGateway } from './realmroot-enrollment'
 
@@ -73,6 +74,98 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
         },
       }),
     ).resolves.toEqual({ checkpoint, descriptor: checkpoint.remote })
+  })
+
+  it('[spec: identities/installation-identifiers] enrolls an initialized checkpoint with legacy opaque identifiers', async () => {
+    const legacyAgentId = 'agent-legacy-installation'
+    const legacyHostId = 'host-legacy-installation'
+    const legacyKeyId = 'agent-legacy-key'
+    const requests: Array<{ url: string; init: RequestInit | undefined }> = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (request: string | URL | Request, init?: RequestInit) => {
+        const url = request.toString()
+        requests.push({ url, init })
+        if (url.endsWith('/.well-known/agent-configuration')) return Response.json(configuration)
+        if (url === `${origin}/api/agents`) {
+          return Response.json({
+            id: remoteAgentId,
+            issuer: configuration.issuer,
+            subject: remoteAgentId,
+            username: 'reviewer',
+            runtime: 'codex',
+            status: 'active',
+          })
+        }
+        if (url === configuration.agent_token_endpoint) {
+          return Response.json({ access_token: 'legacy-agent-access-token', token_type: 'DPoP' })
+        }
+        if (url === configuration.agent_endpoint) {
+          return Response.json({
+            agent: {
+              id: remoteAgentId,
+              issuer: configuration.issuer,
+              subject: remoteAgentId,
+              username: 'reviewer',
+              runtime: 'codex',
+              status: 'active',
+            },
+          })
+        }
+        throw new Error(`Unexpected request: ${url}`)
+      }),
+    )
+    const gateway = createRealmrootEnrollmentGateway()
+    const initialized = await gateway.initialize({
+      origin,
+      name: 'Reviewer',
+      username: 'reviewer',
+      runtime: 'codex',
+      idempotencyKey: 'idem-legacy-initialized',
+    })
+    const checkpoint = {
+      ...initialized,
+      state: {
+        ...initialized.state,
+        agent_id: legacyAgentId,
+        host_id: legacyHostId,
+        agent_key_id: legacyKeyId,
+      },
+    }
+
+    const result = await gateway.provision({
+      origin,
+      name: 'Reviewer',
+      username: 'reviewer',
+      runtime: 'codex',
+      idempotencyKey: 'idem-legacy-initialized',
+      checkpoint,
+      managementCredential: { headers: async () => ({ authorization: 'Bearer management' }) },
+      onCheckpoint: async () => {},
+    })
+
+    expect(result).toMatchObject({
+      checkpoint: { stage: 'enrolled' },
+      descriptor: { agentId: remoteAgentId, subject: remoteAgentId },
+    })
+    const createRequest = requests.find(({ url }) => url === `${origin}/api/agents`)
+    expect(JSON.parse(String(createRequest?.init?.body))).toMatchObject({
+      installation: {
+        agentId: legacyAgentId,
+        hostId: legacyHostId,
+        kid: legacyKeyId,
+        publicKey: { kid: legacyKeyId },
+      },
+    })
+    const tokenRequest = requests.find(({ url }) => url === configuration.agent_token_endpoint)
+    const assertion = new URLSearchParams(String(tokenRequest?.init?.body)).get('assertion')
+    expect(assertion).not.toBeNull()
+    expect(decodeProtectedHeader(assertion!)).toMatchObject({ kid: legacyKeyId })
+    expect(decodeJwt(assertion!)).toMatchObject({
+      iss: legacyHostId,
+      sub: legacyAgentId,
+      aud: configuration.issuer,
+    })
   })
 
   it('completes the fake enrollment flow, persists its checkpoint, and resumes an enrolled checkpoint', async () => {
