@@ -142,11 +142,11 @@ At startup, the daemon:
 3. Registers a runner when no runner id is configured.
 4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
 
-For a Realmroot-bound Agent, the Runner host must also have the `realmroot`
-Toolbox executable on `PATH`. The daemon advertises this as the safe
-`metadata.realmrootToolbox` capability. AMA will not lease Realmroot-bound
-Session work to a Runner that does not advertise it, and the Runner checks the
-executable again immediately before starting the Session.
+Self-hosted commands are resolved from the Runner host `PATH` at execution
+time. AMA does not probe or advertise individual command availability. A
+missing command is returned through the normal tool-result error path so the
+Agent can handle it.
+
 5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.
 6. Uploads structured lease events.
 7. Renews active leases while local work is running.

@@ -78,7 +78,7 @@ Feature: Environments
     Then each package is installed into the isolated session environment before the runtime starts
     And its bin directories are prepended to the runtime PATH
     And the cloud image provides the pinned Realmroot CLI without an Environment package declaration
-    And self-hosted Realmroot-bound Sessions run only on a Runner that advertises the Toolbox on its host PATH
+    And self-hosted commands are resolved from the Runner host at execution time without capability preflight
     And a package installation failure records a stable code, failed step, safe diagnostic, and RuntimeReady condition
     And the safe startup failure remains inspectable as a Session runtime error event
     And process-unsafe self-hosted runners do not install environment packages

@@ -200,7 +200,9 @@ describe('[spec: environments/create] createEnvironment', () => {
           },
         }),
       }),
-    ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('Runner host PATH') } })
+    ).rejects.toMatchObject({
+      fields: { packages: expect.stringContaining('resolved from the Runner host at execution time') },
+    })
   })
 })
 

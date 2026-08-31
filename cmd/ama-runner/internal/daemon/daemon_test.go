@@ -602,9 +602,6 @@ func TestRunOnceRegistersRunnerWhenIDIsMissing(t *testing.T) {
 	if got := createMetadata(client.creates[0])["commandAcknowledgement"]; got != true {
 		t.Fatalf("expected command acknowledgement capability in create metadata, got %#v", got)
 	}
-	if got := createMetadata(client.creates[0])["realmrootToolbox"]; got != true {
-		t.Fatalf("expected Realmroot Toolbox capability in create metadata, got %#v", got)
-	}
 	if len(client.updates) != 1 || leaseState(client.updates[0]) != "completed" {
 		t.Fatalf("expected completed update, got %#v", client.updates)
 	}
@@ -1892,8 +1889,7 @@ func testDaemon(client *fakeAMAServer, adapter sandbox.SandboxAdapter) Daemon {
 			runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"),
 			runtimeEntry("copilot", true, []string{"copilot-cli"}, nil, "ready", "", "ready"),
 		),
-		RunnerID:         "runner_1",
-		ToolboxAvailable: func() bool { return true },
+		RunnerID: "runner_1",
 	}
 }
 

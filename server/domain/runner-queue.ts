@@ -104,32 +104,15 @@ export function runnerMachineId(metadata: Record<string, unknown> | undefined): 
 
 // Lease readiness gate: runtime session work is leased only when the runner
 // reports the required runtime as ready and enumerates any selected model.
-function realmrootBoundAgent(payload: Record<string, unknown>): boolean {
-  const snapshot = payload.agentSnapshot
-  return Boolean(
-    snapshot &&
-      typeof snapshot === 'object' &&
-      !Array.isArray(snapshot) &&
-      (snapshot as Record<string, unknown>).identity,
-  )
-}
-
-export function runnerSupportsWork(
-  runtimes: RuntimeSupport,
-  payload: Record<string, unknown>,
-  metadata: Record<string, unknown> = {},
-): boolean {
+export function runnerSupportsWork(runtimes: RuntimeSupport, payload: Record<string, unknown>): boolean {
   const required = workRuntimeRequirement(payload)
   if (required === null) {
     return payload.type !== 'session.start'
   }
-  return (
-    (!realmrootBoundAgent(payload) || metadata.realmrootToolbox === true) &&
-    runtimes.some(
-      (entry) =>
-        entry.runtime === required.runtime &&
-        entry.state === 'ready' &&
-        (required.model === undefined || entry.models.includes(required.model)),
-    )
+  return runtimes.some(
+    (entry) =>
+      entry.runtime === required.runtime &&
+      entry.state === 'ready' &&
+      (required.model === undefined || entry.models.includes(required.model)),
   )
 }
