@@ -608,7 +608,7 @@ export const triggers = sqliteTable(
     // baking one in at creation time.
     environmentId: text('environment_id').references(() => environments.id),
     // Mirrors TriggerType (server/usecases/ports.ts).
-    triggerType: text('trigger_type', { enum: ['scheduled', 'http'] })
+    triggerType: text('trigger_type', { enum: ['scheduled', 'http', 'inbox'] })
       .notNull()
       .default('scheduled'),
     httpConcurrencyMode: text('http_concurrency_mode', { enum: ['parallel', 'serial'] })
@@ -631,6 +631,13 @@ export const triggers = sqliteTable(
     // circular FK (trigger_runs.trigger_id already FKs triggers); a convenience
     // denormalization set by the dispatcher (advanceTrigger) that may briefly lag.
     lastRunId: text('last_run_id'),
+    inboxSubscriptionId: text('inbox_subscription_id'),
+    inboxCallbackTokenHash: text('inbox_callback_token_hash'),
+    inboxSubscriptionEtag: text('inbox_subscription_etag'),
+    inboxProvisioningState: text('inbox_provisioning_state', {
+      enum: ['pending', 'active', 'inactive', 'error'],
+    }),
+    inboxProvisioningError: text('inbox_provisioning_error'),
     metadata: text('metadata').notNull().default('{}'),
     // Nullable audit pointer with no FK — there is no users table in this D1 schema.
     // Realmroot identity references survive user-record deletion.
@@ -645,12 +652,17 @@ export const triggers = sqliteTable(
     // enum types the column; check enforces it in D1/SQLite, in parity with every
     // other hardened enum column. Mirrors RuntimeSchema (contracts/environment-contracts).
     check('ck_triggers_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
-    check('ck_triggers_type', sql`${table.triggerType} in ('scheduled','http')`),
+    check('ck_triggers_type', sql`${table.triggerType} in ('scheduled','http','inbox')`),
     check('ck_triggers_http_concurrency', sql`${table.httpConcurrencyMode} in ('parallel','serial')`),
     check(
       'ck_triggers_schedule_shape',
-      sql`(${table.triggerType} = 'scheduled' and ${table.intervalSeconds} is not null and ${table.nextDueAt} is not null) or (${table.triggerType} = 'http' and ${table.intervalSeconds} is null and ${table.nextDueAt} is null)`,
+      sql`(${table.triggerType} = 'scheduled' and ${table.intervalSeconds} is not null and ${table.nextDueAt} is not null) or (${table.triggerType} in ('http','inbox') and ${table.intervalSeconds} is null and ${table.nextDueAt} is null)`,
     ),
+    check(
+      'ck_triggers_inbox_shape',
+      sql`(${table.triggerType} = 'inbox' and ${table.inboxSubscriptionId} is not null and ${table.inboxCallbackTokenHash} is not null and ${table.inboxProvisioningState} is not null) or (${table.triggerType} != 'inbox' and ${table.inboxSubscriptionId} is null and ${table.inboxCallbackTokenHash} is null and ${table.inboxSubscriptionEtag} is null and ${table.inboxProvisioningState} is null and ${table.inboxProvisioningError} is null)`,
+    ),
+    uniqueIndex('idx_triggers_inbox_subscription').on(table.inboxSubscriptionId),
   ],
 )
 
@@ -674,6 +686,8 @@ export const triggerRuns = sqliteTable(
     sessionId: text('session_id').references(() => sessions.id),
     correlationId: text('correlation_id').notNull(),
     errorMessage: text('error_message'),
+    sourceSubscriptionId: text('source_subscription_id'),
+    sourceEventId: text('source_event_id'),
     metadata: text('metadata').notNull().default('{}'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -681,9 +695,40 @@ export const triggerRuns = sqliteTable(
   (table) => [
     uniqueIndex('idx_trigger_runs_unique_occurrence').on(table.triggerId, table.scheduledFor),
     uniqueIndex('idx_trigger_runs_idempotency_key').on(table.idempotencyKey),
+    uniqueIndex('idx_trigger_runs_source_event').on(table.sourceSubscriptionId, table.sourceEventId),
     index('idx_trigger_runs_trigger_created').on(table.triggerId, table.createdAt, table.id),
     index('idx_trigger_runs_project_created').on(table.projectId, table.createdAt, table.id),
     check('ck_trigger_runs_state', sql`${table.state} in ('claimed','queued','dispatching','dispatched','failed')`),
+  ],
+)
+
+export const sessionRoutes = sqliteTable(
+  'session_routes',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organization_id').notNull(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id),
+    triggerId: text('trigger_id')
+      .notNull()
+      .references(() => triggers.id, { onDelete: 'cascade' }),
+    routingKeyHash: text('routing_key_hash').notNull(),
+    // Soft reservation: the route is claimed before Session creation so
+    // concurrent first deliveries cannot create two Sessions for one key.
+    sessionId: text('session_id').notNull(),
+    activationRunId: text('activation_run_id')
+      .notNull()
+      .references(() => triggerRuns.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_session_routes_trigger_key').on(table.agentId, table.triggerId, table.routingKeyHash),
+    uniqueIndex('idx_session_routes_session').on(table.sessionId),
+    index('idx_session_routes_project').on(table.projectId, table.triggerId),
   ],
 )
 

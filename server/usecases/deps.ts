@@ -12,6 +12,8 @@ import type {
   EnvironmentRepo,
   EventStore,
   IdentityRepo,
+  InboxActivationRepo,
+  InboxSubscriptionGateway,
   LeaseRepo,
   MemoryStoreRepo,
   PolicyPort,
@@ -69,6 +71,8 @@ export interface Deps {
   usageRecords: UsageRepo
   auditRecords: AuditReadRepo
   triggers: TriggerRepo
+  inboxActivations?: InboxActivationRepo
+  inboxSubscriptions?: InboxSubscriptionGateway
   triggerDispatch: TriggerDispatchRepo
   triggerDispatchQueue?: TriggerDispatchQueue
   projects: ProjectRepo

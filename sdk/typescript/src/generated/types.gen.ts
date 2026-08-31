@@ -973,6 +973,23 @@ export type UpdateIdentityRequest = {
     archived: true;
 };
 
+export type InboxNotificationReceipt = {
+    eventId: string;
+    subscriptionId: string;
+    triggerRunId: string;
+    state: 'accepted';
+};
+
+export type InboxNotification = {
+    eventId: string;
+    type: 'message.created';
+    subscriptionId: string;
+    agentId: string;
+    messageId: string;
+    routingKey?: string;
+    occurredAt: string;
+};
+
 export type ProviderListResponse = {
     data: Array<Provider>;
     pagination: {
@@ -1382,6 +1399,8 @@ export type TriggerSource = {
 } | {
     type: 'http';
     concurrency?: HttpTriggerConcurrency;
+} | {
+    type: 'inbox';
 };
 
 export type TriggerSchedule = {
@@ -1492,6 +1511,11 @@ export type TriggerStatus = {
     nextDueAt: string | null;
     lastDispatchedAt: string | null;
     lastRunId: string | null;
+    subscription: {
+        id: string;
+        phase: 'pending' | 'active' | 'inactive' | 'error';
+        errorMessage: string | null;
+    } | null;
 };
 
 export type CreateTriggerRequest = {
@@ -1507,6 +1531,8 @@ export type CreateTriggerRequest = {
         } | {
             type: 'http';
             concurrency?: HttpTriggerConcurrency;
+        } | {
+            type: 'inbox';
         };
         suspend?: boolean;
         template: {
@@ -1555,6 +1581,8 @@ export type UpdateTriggerRequest = {
         } | {
             type: 'http';
             concurrency?: HttpTriggerConcurrency;
+        } | {
+            type: 'inbox';
         };
         suspend?: boolean;
         template?: {
@@ -2900,6 +2928,39 @@ export type UpdateIdentityResponses = {
 
 export type UpdateIdentityResponse = UpdateIdentityResponses[keyof UpdateIdentityResponses];
 
+export type CreateInboxNotificationData = {
+    body: InboxNotification;
+    path?: never;
+    query?: never;
+    url: '/api/v1/inbox-notifications';
+};
+
+export type CreateInboxNotificationErrors = {
+    /**
+     * Invalid notification
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid callback token
+     */
+    401: ErrorResponse;
+    /**
+     * Notification does not match the Subscription
+     */
+    403: ErrorResponse;
+};
+
+export type CreateInboxNotificationError = CreateInboxNotificationErrors[keyof CreateInboxNotificationErrors];
+
+export type CreateInboxNotificationResponses = {
+    /**
+     * Notification durably accepted or previously accepted
+     */
+    202: InboxNotificationReceipt;
+};
+
+export type CreateInboxNotificationResponse = CreateInboxNotificationResponses[keyof CreateInboxNotificationResponses];
+
 export type ListProvidersData = {
     body?: never;
     path?: never;
@@ -4087,6 +4148,10 @@ export type CreateTriggerErrors = {
      * Conflict
      */
     409: ErrorResponse;
+    /**
+     * Inbox Subscription failure
+     */
+    502: ErrorResponse;
 };
 
 export type CreateTriggerError = CreateTriggerErrors[keyof CreateTriggerErrors];
@@ -4122,6 +4187,10 @@ export type DeleteTriggerErrors = {
      * Trigger not found
      */
     404: ErrorResponse;
+    /**
+     * Inbox Subscription failure
+     */
+    502: ErrorResponse;
 };
 
 export type DeleteTriggerError = DeleteTriggerErrors[keyof DeleteTriggerErrors];
@@ -4200,6 +4269,10 @@ export type UpdateTriggerErrors = {
      * Conflict
      */
     409: ErrorResponse;
+    /**
+     * Inbox Subscription failure
+     */
+    502: ErrorResponse;
 };
 
 export type UpdateTriggerError = UpdateTriggerErrors[keyof UpdateTriggerErrors];

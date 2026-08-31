@@ -390,6 +390,7 @@ export function trigger(overrides: TriggerOverrides = {}): Trigger {
       lastDispatchedAt:
         overrides.lastDispatchedAt === undefined ? '2026-06-18T12:00:00.000Z' : overrides.lastDispatchedAt,
       lastRunId: overrides.lastRunId === undefined ? 'trigrun_1' : overrides.lastRunId,
+      subscription: null,
     },
   }
 }

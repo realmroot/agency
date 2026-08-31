@@ -28,6 +28,9 @@ export interface Env {
   // Realmroot management Resource used when exchanging the current User's AMA
   // grant for the agents:write audience.
   REALMROOT_MANAGEMENT_RESOURCE?: string
+  // Inbox protected-resource base used by the AMA service identity to manage
+  // Trigger-owned Subscriptions through PUT/DELETE /subscriptions/{id}.
+  INBOX_RESOURCE?: string
   // Additional confidential/public Web applications allowed to present
   // Realmroot Bearer tokens for the exact AMA Resource.
   OIDC_TRUSTED_BEARER_CLIENT_IDS?: string

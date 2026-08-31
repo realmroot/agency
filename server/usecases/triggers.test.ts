@@ -69,6 +69,7 @@ function triggerRecord(
       nextDueAt: base.nextDueAt,
       lastDispatchedAt: null,
       lastRunId: null,
+      subscription: null,
       ...overrides.status,
     },
   }

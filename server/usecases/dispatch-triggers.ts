@@ -125,7 +125,7 @@ async function recordHttpDispatch(
   })
 }
 
-async function dispatchToReusableHttpSession(
+export async function dispatchToReusableSession(
   deps: Deps,
   auth: AuthScope,
   session: RuntimeSessionHandle,
@@ -415,7 +415,7 @@ export async function dispatchHttpTrigger(
   }
 
   if (existingSession) {
-    const outcome = await dispatchToReusableHttpSession(deps, auth, existingSession, renderedPrompt, run.correlationId)
+    const outcome = await dispatchToReusableSession(deps, auth, existingSession, renderedPrompt, run.correlationId)
     if (!outcome.ok) {
       const message = outcome.message
       await deps.triggerDispatch.markRunFailed(trigger, run, message)
@@ -582,7 +582,7 @@ async function dispatchClaimedSerialHttpRun(
   }
 
   if (existingSession) {
-    const outcome = await dispatchToReusableHttpSession(
+    const outcome = await dispatchToReusableSession(
       deps,
       auth,
       existingSession,

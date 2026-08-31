@@ -113,7 +113,7 @@ describe('[spec: triggers/console-list] TriggersView', () => {
     )
 
     expect(screen.getByText('No triggers')).toBeTruthy()
-    expect(screen.getByText(/Schedule a trigger to dispatch an agent/)).toBeTruthy()
+    expect(screen.getByText(/Create a scheduled, HTTP, or Inbox trigger to wake an agent/)).toBeTruthy()
   })
 
   it('renders rows with name, agent, schedule, status, and a pause action when active', () => {
@@ -780,6 +780,53 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
       spec: {
         source: { type: 'http' },
         template: { spec: { promptTemplate: 'Handle {{ body.ticket.id }}' } },
+      },
+    })
+  })
+
+  it('posts an Inbox trigger only for a Realmroot-bound Agent', async () => {
+    stubPointerEvents()
+    let postedBody: Record<string, unknown> | null = null
+    renderSheet(
+      [
+        http.post('*/api/v1/triggers', async ({ request }) => {
+          postedBody = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(trigger({ id: 'trigger_inbox', source: { type: 'inbox' }, nextDueAt: null }), {
+            status: 201,
+          })
+        }),
+      ],
+      {
+        agents: [
+          agent({
+            identity: {
+              identityId: 'identity_inbox',
+              agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+              issuer: 'https://id.realmroot.dev/api/auth',
+              subject: 'agent:019ff41a-7da6-708f-8b05-49a4cc6d5300',
+              username: 'inbox-operator',
+              runtime: 'ama',
+            },
+          }),
+        ],
+      },
+    )
+
+    const typeSelect = screen.getByRole('combobox', { name: 'Trigger type' }) as HTMLElement
+    fireEvent.pointerDown(typeSelect, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.click(await screen.findByRole('option', { name: 'Inbox' }))
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Inbox triage' } })
+    fireEvent.change(screen.getByLabelText('Prompt template'), { target: { value: 'Triage the referenced Message.' } })
+
+    const submitButton = await waitForFormReady()
+    fireEvent.click(submitButton)
+
+    await waitFor(() => expect(postedBody).not.toBeNull())
+    expect(postedBody).toMatchObject({
+      metadata: { name: 'Inbox triage' },
+      spec: {
+        source: { type: 'inbox' },
+        template: { spec: { runtime: 'ama', promptTemplate: 'Triage the referenced Message.' } },
       },
     })
   })

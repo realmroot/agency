@@ -2,7 +2,6 @@ import type { RuntimeName } from '@server/contracts/environment-contracts'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import type { EnvFromEntry, Volume, VolumeMount } from '@server/domain/runtime/execution-inputs'
 import type { Trigger, TriggerRun, TriggerSessionTemplate } from '@server/domain/trigger'
-import { newPrimaryKey } from '@server/id'
 import type {
   CreateTriggerInput,
   ListPageResult,
@@ -63,10 +62,12 @@ function recordFrom(row: TriggerRow): Trigger {
                 windowSeconds: row.windowSeconds ?? 0,
               },
             }
-          : {
-              type: 'http',
-              concurrency: { mode: row.httpConcurrencyMode ?? 'parallel' },
-            },
+          : type === 'http'
+            ? {
+                type: 'http',
+                concurrency: { mode: row.httpConcurrencyMode ?? 'parallel' },
+              }
+            : { type: 'inbox' },
       suspend: !row.enabled,
       template,
     },
@@ -75,6 +76,14 @@ function recordFrom(row: TriggerRow): Trigger {
       nextDueAt: row.nextDueAt,
       lastDispatchedAt: row.lastDispatchedAt,
       lastRunId: row.lastRunId,
+      subscription:
+        type === 'inbox' && row.inboxSubscriptionId && row.inboxProvisioningState
+          ? {
+              id: row.inboxSubscriptionId,
+              phase: row.inboxProvisioningState,
+              errorMessage: row.inboxProvisioningError,
+            }
+          : null,
     },
   }
 }
@@ -108,7 +117,11 @@ function runRecordFrom(row: RunRow): TriggerRun {
 function configColumns(config: CreateTriggerInput['config']) {
   const schedule = config.source.type === 'schedule' ? config.source.schedule : null
   return {
-    triggerType: schedule ? ('scheduled' as const) : ('http' as const),
+    triggerType: schedule
+      ? ('scheduled' as const)
+      : config.source.type === 'http'
+        ? ('http' as const)
+        : ('inbox' as const),
     httpConcurrencyMode: config.source.type === 'http' ? (config.source.concurrency?.mode ?? 'parallel') : 'parallel',
     agentId: config.template.spec.agentId,
     environmentId: config.template.spec.environmentId,
@@ -165,13 +178,18 @@ export function createTriggerRepo(db: Db): TriggerRepo {
 
     async insert(input: CreateTriggerInput, timestamp) {
       const row = {
-        id: newPrimaryKey(),
+        id: input.id,
         organizationId: input.organizationId,
         projectId: input.projectId,
         lastDispatchedAt: null,
         lastRunId: null,
         createdByUserId: input.createdByUserId,
         archivedAt: null,
+        inboxSubscriptionId: input.inboxProvisioning?.subscriptionId ?? null,
+        inboxCallbackTokenHash: input.inboxProvisioning?.callbackTokenHash ?? null,
+        inboxSubscriptionEtag: input.inboxProvisioning?.etag ?? null,
+        inboxProvisioningState: input.inboxProvisioning?.phase ?? null,
+        inboxProvisioningError: input.inboxProvisioning?.errorMessage ?? null,
         createdAt: timestamp,
         updatedAt: timestamp,
         ...configColumns(input.config),
@@ -183,7 +201,20 @@ export function createTriggerRepo(db: Db): TriggerRepo {
     async update(projectId, triggerId, fields: UpdateTriggerFields, updatedAt) {
       const row = await db
         .update(triggers)
-        .set({ archivedAt: fields.archivedAt, updatedAt, ...configColumns(fields.config) })
+        .set({
+          archivedAt: fields.archivedAt,
+          updatedAt,
+          ...(fields.inboxProvisioning !== undefined
+            ? {
+                inboxSubscriptionId: fields.inboxProvisioning?.subscriptionId ?? null,
+                inboxCallbackTokenHash: fields.inboxProvisioning?.callbackTokenHash ?? null,
+                inboxSubscriptionEtag: fields.inboxProvisioning?.etag ?? null,
+                inboxProvisioningState: fields.inboxProvisioning?.phase ?? null,
+                inboxProvisioningError: fields.inboxProvisioning?.errorMessage ?? null,
+              }
+            : {}),
+          ...configColumns(fields.config),
+        })
         .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId)))
         .returning()
         .get()

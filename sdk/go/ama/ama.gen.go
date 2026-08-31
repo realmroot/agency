@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	InboxCallbackBearerScopes inboxCallbackBearerContextKey = "inboxCallbackBearer.Scopes"
 	OidcAccessTokenScopes     oidcAccessTokenContextKey     = "oidcAccessToken.Scopes"
 	SessionSocketTicketScopes sessionSocketTicketContextKey = "sessionSocketTicket.Scopes"
 )
@@ -620,6 +621,21 @@ func (e CreateTriggerRequestSpecSource1Type) Valid() bool {
 	}
 }
 
+// Defines values for CreateTriggerRequestSpecSource2Type.
+const (
+	CreateTriggerRequestSpecSource2TypeInbox CreateTriggerRequestSpecSource2Type = "inbox"
+)
+
+// Valid indicates whether the value is a known member of the CreateTriggerRequestSpecSource2Type enum.
+func (e CreateTriggerRequestSpecSource2Type) Valid() bool {
+	switch e {
+	case CreateTriggerRequestSpecSource2TypeInbox:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateVaultCredentialRequestType.
 const (
 	CreateVaultCredentialRequestTypeBasicAuth           CreateVaultCredentialRequestType = "ama.dev/basic-auth"
@@ -1076,6 +1092,36 @@ const (
 func (e ImageContentBlockType) Valid() bool {
 	switch e {
 	case Image:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InboxNotificationType.
+const (
+	MessageCreated InboxNotificationType = "message.created"
+)
+
+// Valid indicates whether the value is a known member of the InboxNotificationType enum.
+func (e InboxNotificationType) Valid() bool {
+	switch e {
+	case MessageCreated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InboxNotificationReceiptState.
+const (
+	InboxNotificationReceiptStateAccepted InboxNotificationReceiptState = "accepted"
+)
+
+// Valid indicates whether the value is a known member of the InboxNotificationReceiptState enum.
+func (e InboxNotificationReceiptState) Valid() bool {
+	switch e {
+	case InboxNotificationReceiptStateAccepted:
 		return true
 	default:
 		return false
@@ -2342,6 +2388,45 @@ func (e TriggerSource1Type) Valid() bool {
 	}
 }
 
+// Defines values for TriggerSource2Type.
+const (
+	TriggerSource2TypeInbox TriggerSource2Type = "inbox"
+)
+
+// Valid indicates whether the value is a known member of the TriggerSource2Type enum.
+func (e TriggerSource2Type) Valid() bool {
+	switch e {
+	case TriggerSource2TypeInbox:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TriggerStatusSubscriptionPhase.
+const (
+	TriggerStatusSubscriptionPhaseActive   TriggerStatusSubscriptionPhase = "active"
+	TriggerStatusSubscriptionPhaseError    TriggerStatusSubscriptionPhase = "error"
+	TriggerStatusSubscriptionPhaseInactive TriggerStatusSubscriptionPhase = "inactive"
+	TriggerStatusSubscriptionPhasePending  TriggerStatusSubscriptionPhase = "pending"
+)
+
+// Valid indicates whether the value is a known member of the TriggerStatusSubscriptionPhase enum.
+func (e TriggerStatusSubscriptionPhase) Valid() bool {
+	switch e {
+	case TriggerStatusSubscriptionPhaseActive:
+		return true
+	case TriggerStatusSubscriptionPhaseError:
+		return true
+	case TriggerStatusSubscriptionPhaseInactive:
+		return true
+	case TriggerStatusSubscriptionPhasePending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateBudgetRequestWindow.
 const (
 	Day   UpdateBudgetRequestWindow = "day"
@@ -2486,6 +2571,21 @@ func (e UpdateTriggerRequestSpecSource1Type) Valid() bool {
 	}
 }
 
+// Defines values for UpdateTriggerRequestSpecSource2Type.
+const (
+	Inbox UpdateTriggerRequestSpecSource2Type = "inbox"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTriggerRequestSpecSource2Type enum.
+func (e UpdateTriggerRequestSpecSource2Type) Valid() bool {
+	switch e {
+	case Inbox:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateVaultCredentialRequestState.
 const (
 	UpdateVaultCredentialRequestStateRevoked UpdateVaultCredentialRequestState = "revoked"
@@ -2551,16 +2651,16 @@ func (e UsageRecordProviderType) Valid() bool {
 
 // Defines values for UsageRecordState.
 const (
-	UsageRecordStateError   UsageRecordState = "error"
-	UsageRecordStateSuccess UsageRecordState = "success"
+	Error   UsageRecordState = "error"
+	Success UsageRecordState = "success"
 )
 
 // Valid indicates whether the value is a known member of the UsageRecordState enum.
 func (e UsageRecordState) Valid() bool {
 	switch e {
-	case UsageRecordStateError:
+	case Error:
 		return true
-	case UsageRecordStateSuccess:
+	case Success:
 		return true
 	default:
 		return false
@@ -3130,19 +3230,19 @@ func (e ListVaultCredentialsParamsState) Valid() bool {
 
 // Defines values for ListVaultCredentialVersionsParamsState.
 const (
-	ListVaultCredentialVersionsParamsStateActive     ListVaultCredentialVersionsParamsState = "active"
-	ListVaultCredentialVersionsParamsStateRevoked    ListVaultCredentialVersionsParamsState = "revoked"
-	ListVaultCredentialVersionsParamsStateSuperseded ListVaultCredentialVersionsParamsState = "superseded"
+	Active     ListVaultCredentialVersionsParamsState = "active"
+	Revoked    ListVaultCredentialVersionsParamsState = "revoked"
+	Superseded ListVaultCredentialVersionsParamsState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListVaultCredentialVersionsParamsState enum.
 func (e ListVaultCredentialVersionsParamsState) Valid() bool {
 	switch e {
-	case ListVaultCredentialVersionsParamsStateActive:
+	case Active:
 		return true
-	case ListVaultCredentialVersionsParamsStateRevoked:
+	case Revoked:
 		return true
-	case ListVaultCredentialVersionsParamsStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -3718,6 +3818,14 @@ type CreateTriggerRequestSpecSource1 struct {
 // CreateTriggerRequestSpecSource1Type defines model for CreateTriggerRequest.Spec.Source.1.Type.
 type CreateTriggerRequestSpecSource1Type string
 
+// CreateTriggerRequestSpecSource2 defines model for .
+type CreateTriggerRequestSpecSource2 struct {
+	Type CreateTriggerRequestSpecSource2Type `json:"type"`
+}
+
+// CreateTriggerRequestSpecSource2Type defines model for CreateTriggerRequest.Spec.Source.2.Type.
+type CreateTriggerRequestSpecSource2Type string
+
 // CreateTriggerRequest_Spec_Source defines model for CreateTriggerRequest.Spec.Source.
 type CreateTriggerRequest_Spec_Source struct {
 	union json.RawMessage
@@ -4127,6 +4235,31 @@ type ImageContentBlock struct {
 
 // ImageContentBlockType defines model for ImageContentBlock.Type.
 type ImageContentBlockType string
+
+// InboxNotification defines model for InboxNotification.
+type InboxNotification struct {
+	AgentId        string                `json:"agentId"`
+	EventId        string                `json:"eventId"`
+	MessageId      string                `json:"messageId"`
+	OccurredAt     time.Time             `json:"occurredAt"`
+	RoutingKey     *string               `json:"routingKey,omitempty"`
+	SubscriptionId string                `json:"subscriptionId"`
+	Type           InboxNotificationType `json:"type"`
+}
+
+// InboxNotificationType defines model for InboxNotification.Type.
+type InboxNotificationType string
+
+// InboxNotificationReceipt defines model for InboxNotificationReceipt.
+type InboxNotificationReceipt struct {
+	EventId        string                        `json:"eventId"`
+	State          InboxNotificationReceiptState `json:"state"`
+	SubscriptionId string                        `json:"subscriptionId"`
+	TriggerRunId   string                        `json:"triggerRunId"`
+}
+
+// InboxNotificationReceiptState defines model for InboxNotificationReceipt.State.
+type InboxNotificationReceiptState string
 
 // JsonContentBlock defines model for JsonContentBlock.
 type JsonContentBlock struct {
@@ -5454,6 +5587,14 @@ type TriggerSource1 struct {
 // TriggerSource1Type defines model for TriggerSource.1.Type.
 type TriggerSource1Type string
 
+// TriggerSource2 defines model for .
+type TriggerSource2 struct {
+	Type TriggerSource2Type `json:"type"`
+}
+
+// TriggerSource2Type defines model for TriggerSource.2.Type.
+type TriggerSource2Type string
+
 // TriggerSpec defines model for TriggerSpec.
 type TriggerSpec struct {
 	Source   TriggerSource   `json:"source"`
@@ -5467,7 +5608,15 @@ type TriggerStatus struct {
 	LastRunId        *string       `json:"lastRunId"`
 	NextDueAt        *time.Time    `json:"nextDueAt"`
 	Phase            ResourcePhase `json:"phase"`
+	Subscription     *struct {
+		ErrorMessage *string                        `json:"errorMessage"`
+		Id           string                         `json:"id"`
+		Phase        TriggerStatusSubscriptionPhase `json:"phase"`
+	} `json:"subscription"`
 }
+
+// TriggerStatusSubscriptionPhase defines model for TriggerStatus.Subscription.Phase.
+type TriggerStatusSubscriptionPhase string
 
 // TriggerTemplate defines model for TriggerTemplate.
 type TriggerTemplate struct {
@@ -5660,6 +5809,14 @@ type UpdateTriggerRequestSpecSource1 struct {
 
 // UpdateTriggerRequestSpecSource1Type defines model for UpdateTriggerRequest.Spec.Source.1.Type.
 type UpdateTriggerRequestSpecSource1Type string
+
+// UpdateTriggerRequestSpecSource2 defines model for .
+type UpdateTriggerRequestSpecSource2 struct {
+	Type UpdateTriggerRequestSpecSource2Type `json:"type"`
+}
+
+// UpdateTriggerRequestSpecSource2Type defines model for UpdateTriggerRequest.Spec.Source.2.Type.
+type UpdateTriggerRequestSpecSource2Type string
 
 // UpdateTriggerRequest_Spec_Source defines model for UpdateTriggerRequest.Spec.Source.
 type UpdateTriggerRequest_Spec_Source struct {
@@ -5939,6 +6096,9 @@ type WriteToolInput struct {
 	Content string `json:"content"`
 	Path    string `json:"path"`
 }
+
+// inboxCallbackBearerContextKey is the context key for inboxCallbackBearer security scheme
+type inboxCallbackBearerContextKey string
 
 // oidcAccessTokenContextKey is the context key for oidcAccessToken security scheme
 type oidcAccessTokenContextKey string
@@ -6261,6 +6421,9 @@ type UpdateIdentityJSONRequestBody = UpdateIdentityRequest
 
 // UpdateIdentityApplicationMergePatchPlusJSONRequestBody defines body for UpdateIdentity for application/merge-patch+json ContentType.
 type UpdateIdentityApplicationMergePatchPlusJSONRequestBody = UpdateIdentityRequest
+
+// CreateInboxNotificationJSONRequestBody defines body for CreateInboxNotification for application/json ContentType.
+type CreateInboxNotificationJSONRequestBody = InboxNotification
 
 // CreateLeaseJSONRequestBody defines body for CreateLease for application/json ContentType.
 type CreateLeaseJSONRequestBody = CreateLeaseRequest
@@ -6778,6 +6941,32 @@ func (t *CreateTriggerRequest_Spec_Source) FromCreateTriggerRequestSpecSource1(v
 
 // MergeCreateTriggerRequestSpecSource1 performs a merge with any union data inside the CreateTriggerRequest_Spec_Source, using the provided CreateTriggerRequestSpecSource1
 func (t *CreateTriggerRequest_Spec_Source) MergeCreateTriggerRequestSpecSource1(v CreateTriggerRequestSpecSource1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCreateTriggerRequestSpecSource2 returns the union data inside the CreateTriggerRequest_Spec_Source as a CreateTriggerRequestSpecSource2
+func (t CreateTriggerRequest_Spec_Source) AsCreateTriggerRequestSpecSource2() (CreateTriggerRequestSpecSource2, error) {
+	var body CreateTriggerRequestSpecSource2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCreateTriggerRequestSpecSource2 overwrites any union data inside the CreateTriggerRequest_Spec_Source as the provided CreateTriggerRequestSpecSource2
+func (t *CreateTriggerRequest_Spec_Source) FromCreateTriggerRequestSpecSource2(v CreateTriggerRequestSpecSource2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCreateTriggerRequestSpecSource2 performs a merge with any union data inside the CreateTriggerRequest_Spec_Source, using the provided CreateTriggerRequestSpecSource2
+func (t *CreateTriggerRequest_Spec_Source) MergeCreateTriggerRequestSpecSource2(v CreateTriggerRequestSpecSource2) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -8424,6 +8613,32 @@ func (t *TriggerSource) MergeTriggerSource1(v TriggerSource1) error {
 	return err
 }
 
+// AsTriggerSource2 returns the union data inside the TriggerSource as a TriggerSource2
+func (t TriggerSource) AsTriggerSource2() (TriggerSource2, error) {
+	var body TriggerSource2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTriggerSource2 overwrites any union data inside the TriggerSource as the provided TriggerSource2
+func (t *TriggerSource) FromTriggerSource2(v TriggerSource2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTriggerSource2 performs a merge with any union data inside the TriggerSource, using the provided TriggerSource2
+func (t *TriggerSource) MergeTriggerSource2(v TriggerSource2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t TriggerSource) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -8476,6 +8691,32 @@ func (t *UpdateTriggerRequest_Spec_Source) FromUpdateTriggerRequestSpecSource1(v
 
 // MergeUpdateTriggerRequestSpecSource1 performs a merge with any union data inside the UpdateTriggerRequest_Spec_Source, using the provided UpdateTriggerRequestSpecSource1
 func (t *UpdateTriggerRequest_Spec_Source) MergeUpdateTriggerRequestSpecSource1(v UpdateTriggerRequestSpecSource1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpdateTriggerRequestSpecSource2 returns the union data inside the UpdateTriggerRequest_Spec_Source as a UpdateTriggerRequestSpecSource2
+func (t UpdateTriggerRequest_Spec_Source) AsUpdateTriggerRequestSpecSource2() (UpdateTriggerRequestSpecSource2, error) {
+	var body UpdateTriggerRequestSpecSource2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateTriggerRequestSpecSource2 overwrites any union data inside the UpdateTriggerRequest_Spec_Source as the provided UpdateTriggerRequestSpecSource2
+func (t *UpdateTriggerRequest_Spec_Source) FromUpdateTriggerRequestSpecSource2(v UpdateTriggerRequestSpecSource2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateTriggerRequestSpecSource2 performs a merge with any union data inside the UpdateTriggerRequest_Spec_Source, using the provided UpdateTriggerRequestSpecSource2
+func (t *UpdateTriggerRequest_Spec_Source) MergeUpdateTriggerRequestSpecSource2(v UpdateTriggerRequestSpecSource2) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -8819,6 +9060,11 @@ type ClientInterface interface {
 	UpdateIdentity(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateInboxNotificationWithBody request with any body
+	CreateInboxNotificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateInboxNotification(ctx context.Context, body CreateInboxNotificationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListLeases request
 	ListLeases(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9493,6 +9739,30 @@ func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, body 
 
 func (c *APIClient) UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(c.Server, identityId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) CreateInboxNotificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateInboxNotificationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) CreateInboxNotification(ctx context.Context, body CreateInboxNotificationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateInboxNotificationRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -12075,6 +12345,46 @@ func NewUpdateIdentityRequestWithBody(server string, identityId string, contentT
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewCreateInboxNotificationRequest calls the generic CreateInboxNotification builder with application/json body
+func NewCreateInboxNotificationRequest(server string, body CreateInboxNotificationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateInboxNotificationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateInboxNotificationRequestWithBody generates requests for CreateInboxNotification with any type of body
+func NewCreateInboxNotificationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/inbox-notifications")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -15932,6 +16242,11 @@ type ClientWithResponsesInterface interface {
 
 	UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
 
+	// CreateInboxNotificationWithBodyWithResponse request with any body
+	CreateInboxNotificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error)
+
+	CreateInboxNotificationWithResponse(ctx context.Context, body CreateInboxNotificationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error)
+
 	// ListLeasesWithResponse request
 	ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error)
 
@@ -17091,6 +17406,39 @@ func (r UpdateIdentityResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UpdateIdentityResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateInboxNotificationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON202      *InboxNotificationReceipt
+	JSON400      *ErrorResponse
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateInboxNotificationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateInboxNotificationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateInboxNotificationResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18481,6 +18829,7 @@ type CreateTriggerResponse struct {
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
+	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18513,6 +18862,7 @@ type DeleteTriggerResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18581,6 +18931,7 @@ type UpdateTriggerResponse struct {
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
+	JSON502      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19569,6 +19920,23 @@ func (c *ClientWithResponses) UpdateIdentityWithApplicationMergePatchPlusJSONBod
 		return nil, err
 	}
 	return ParseUpdateIdentityResponse(rsp)
+}
+
+// CreateInboxNotificationWithBodyWithResponse request with arbitrary body returning *CreateInboxNotificationResponse
+func (c *ClientWithResponses) CreateInboxNotificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error) {
+	rsp, err := c.CreateInboxNotificationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateInboxNotificationResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateInboxNotificationWithResponse(ctx context.Context, body CreateInboxNotificationJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error) {
+	rsp, err := c.CreateInboxNotification(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateInboxNotificationResponse(rsp)
 }
 
 // ListLeasesWithResponse request returning *ListLeasesResponse
@@ -21658,6 +22026,53 @@ func ParseUpdateIdentityResponse(rsp *http.Response) (*UpdateIdentityResponse, e
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateInboxNotificationResponse parses an HTTP response from a CreateInboxNotificationWithResponse call
+func ParseCreateInboxNotificationResponse(rsp *http.Response) (*CreateInboxNotificationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateInboxNotificationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest InboxNotificationReceipt
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
@@ -23804,6 +24219,13 @@ func ParseCreateTriggerResponse(rsp *http.Response) (*CreateTriggerResponse, err
 		}
 		response.JSON409 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
 	}
 
 	return response, nil
@@ -23843,6 +24265,13 @@ func ParseDeleteTriggerResponse(rsp *http.Response) (*DeleteTriggerResponse, err
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
 
 	}
 
@@ -23951,6 +24380,13 @@ func ParseUpdateTriggerResponse(rsp *http.Response) (*UpdateTriggerResponse, err
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
 
 	}
 

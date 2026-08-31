@@ -149,5 +149,10 @@
       ]
     }
   },
-  "facadeExclusions": []
+  "facadeExclusions": [
+    {
+      "operationId": "createInboxNotification",
+      "reason": "Inbox callback credentials are service-managed and must not be exposed through user-facing SDK facades."
+    }
+  ]
 }

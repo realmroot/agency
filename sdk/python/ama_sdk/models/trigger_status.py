@@ -12,6 +12,8 @@ from ..models.resource_phase import ResourcePhase
 from typing import cast
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.trigger_status_subscription_type_0 import TriggerStatusSubscriptionType0
 
 
 
@@ -29,12 +31,14 @@ class TriggerStatus:
             next_due_at (datetime.datetime | None):  Example: 2026-05-26T12:00:00.000Z.
             last_dispatched_at (datetime.datetime | None):
             last_run_id (None | str):  Example: 0195f5d6-7c20-7000-8000-00000000000d.
+            subscription (None | TriggerStatusSubscriptionType0):
      """
 
     phase: ResourcePhase
     next_due_at: datetime.datetime | None
     last_dispatched_at: datetime.datetime | None
     last_run_id: None | str
+    subscription: None | TriggerStatusSubscriptionType0
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -42,6 +46,7 @@ class TriggerStatus:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.trigger_status_subscription_type_0 import TriggerStatusSubscriptionType0
         phase = self.phase.value
 
         next_due_at: None | str
@@ -59,6 +64,12 @@ class TriggerStatus:
         last_run_id: None | str
         last_run_id = self.last_run_id
 
+        subscription: dict[str, Any] | None
+        if isinstance(self.subscription, TriggerStatusSubscriptionType0):
+            subscription = self.subscription.to_dict()
+        else:
+            subscription = self.subscription
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -67,6 +78,7 @@ class TriggerStatus:
             "nextDueAt": next_due_at,
             "lastDispatchedAt": last_dispatched_at,
             "lastRunId": last_run_id,
+            "subscription": subscription,
         })
 
         return field_dict
@@ -75,6 +87,7 @@ class TriggerStatus:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.trigger_status_subscription_type_0 import TriggerStatusSubscriptionType0
         d = dict(src_dict)
         phase = ResourcePhase(d.pop("phase"))
 
@@ -125,11 +138,30 @@ class TriggerStatus:
         last_run_id = _parse_last_run_id(d.pop("lastRunId"))
 
 
+        def _parse_subscription(data: object) -> None | TriggerStatusSubscriptionType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                subscription_type_0 = TriggerStatusSubscriptionType0.from_dict(data)
+
+
+
+                return subscription_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | TriggerStatusSubscriptionType0, data)
+
+        subscription = _parse_subscription(d.pop("subscription"))
+
+
         trigger_status = cls(
             phase=phase,
             next_due_at=next_due_at,
             last_dispatched_at=last_dispatched_at,
             last_run_id=last_run_id,
+            subscription=subscription,
         )
 
 

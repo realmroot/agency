@@ -190,7 +190,13 @@ describe('[CF] generated SDK contract', () => {
 
   it('omits internal browser-only operations from OpenAPI and stable authenticated facades', () => {
     const exclusions = resources.facadeExclusions
-    expect(exclusions).toEqual([])
+    expect(exclusions).toEqual([
+      {
+        operationId: 'createInboxNotification',
+        reason:
+          'Inbox callback credentials are service-managed and must not be exposed through user-facing SDK facades.',
+      },
+    ])
     expect(new Set(exclusions.map(({ operationId }) => operationId)).size).toBe(exclusions.length)
     expect(operations.map(({ operationId }) => operationId)).not.toContain('createAuthorizationAttempt')
     expect(operations.map(({ operationId }) => operationId)).not.toContain('deleteCurrentAuthSession')

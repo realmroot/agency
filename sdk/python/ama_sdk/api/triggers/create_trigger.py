@@ -23,9 +23,9 @@ def _get_kwargs(
     headers: dict[str, Any] = {}
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -83,6 +83,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_409
+
+    if response.status_code == 502:
+        response_502 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_502
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)

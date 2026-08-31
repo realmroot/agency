@@ -787,7 +787,7 @@ export async function createSessionForAgent(
   }
 
   const timestamp = now()
-  const id = newPrimaryKey()
+  const id = options.id ?? newPrimaryKey()
   const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(
     agentSnapshot,
     validatedVolumes.volumes,

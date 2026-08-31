@@ -32,6 +32,9 @@ function triggerTiming(trigger: Trigger) {
   if (trigger.spec.source.type === 'http') {
     return 'HTTP POST'
   }
+  if (trigger.spec.source.type === 'inbox') {
+    return 'Inbox'
+  }
   return formatInterval(trigger.spec.source.schedule.intervalSeconds)
 }
 
@@ -51,7 +54,7 @@ export function TriggersView({
   agentById?: Map<string, Agent> | undefined
 }) {
   if (triggers.length === 0) {
-    return <EmptyState title="No triggers" body="Schedule a trigger to dispatch an agent on a recurring interval." />
+    return <EmptyState title="No triggers" body="Create a scheduled, HTTP, or Inbox trigger to wake an agent." />
   }
   return (
     <TableSurface

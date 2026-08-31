@@ -123,6 +123,7 @@ function httpTrigger(
       nextDueAt: null,
       lastDispatchedAt: null,
       lastRunId: null,
+      subscription: null,
       ...overrides.status,
     },
   }
