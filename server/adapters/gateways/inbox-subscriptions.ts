@@ -9,7 +9,7 @@ function required(value: string | undefined, name: string) {
   return value.trim()
 }
 
-async function serviceAccessToken(env: Env, audience: string) {
+async function serviceAccessToken(env: Env, resource: string) {
   const issuer = required(env.OIDC_ISSUER, 'OIDC_ISSUER').replace(/\/$/, '')
   let discoveryResponse: Response
   try {
@@ -49,7 +49,7 @@ async function serviceAccessToken(env: Env, audience: string) {
       },
       body: new URLSearchParams({
         grant_type: 'client_credentials',
-        audience,
+        resource,
         scope: 'subscriptions:read subscriptions:manage',
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),

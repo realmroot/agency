@@ -15,7 +15,8 @@ operations with `API-Version: 2026-08-11`:
 The M2M exchange uses a dedicated Realmroot machine Application configured by
 `INBOX_CLIENT_ID` and the `INBOX_CLIENT_SECRET` Worker secret. The browser Web
 Application configured by `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` is never
-reused for Inbox provisioning.
+reused for Inbox provisioning. Agency sends the exact `INBOX_RESOURCE` as the
+OAuth 2.0 Resource Indicator (`resource`), never as an `audience` parameter.
 
 - `PUT {INBOX_RESOURCE}/subscriptions/{subscriptionId}` with `If-None-Match: *`
   when creating or the current `If-Match` ETag when replacing

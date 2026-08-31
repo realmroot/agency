@@ -283,6 +283,215 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
   })
 })
 
+describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
+  it('upgrades a referenced Trigger graph with foreign keys enabled and preserves every row', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec('PRAGMA foreign_keys=on')
+    applyThrough(db, '0031_identity_credential_uniqueness.sql')
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-02');
+      INSERT INTO agents (id,project_id,name,system_prompt,created_at,updated_at)
+        VALUES ('agent_1','project_1','Agent','Work','2026-01-01','2026-01-02');
+      INSERT INTO sessions (id,agent_id,organization_id,project_id,durable_object_name,state,created_at,updated_at)
+        VALUES ('session_1','agent_1','org_1','project_1','session-do-1','running','2026-01-01','2026-01-02');
+      INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,trigger_type,http_concurrency_mode,runtime,name,
+        prompt_template,interval_seconds,enabled,next_due_at,created_at,updated_at
+      ) VALUES (
+        'trigger_1','org_1','project_1','agent_1','http','serial','ama','Webhook','Handle it',
+        null,1,null,'2026-01-01','2026-01-02'
+      );
+      INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,scheduled_for,heartbeat_at,triggered_at,state,
+        idempotency_key,session_id,correlation_id,error_message,metadata,created_at,updated_at
+      ) VALUES (
+        'run_1','org_1','project_1','trigger_1',null,'2026-01-02','2026-01-02','dispatched',
+        'request_1','session_1','correlation_1',null,'{"preserved":true}','2026-01-01','2026-01-02'
+      );
+      INSERT INTO http_trigger_pending_runs (
+        sequence,run_id,trigger_id,organization_id,organization_name,project_id,project_name,
+        requested_by_user_id,routing_key_hash,rendered_prompt,created_at
+      ) VALUES (
+        7,'run_1','trigger_1','org_1','Organization','project_1','Project','user_1','route_1',
+        'Preserve this prompt','2026-01-02'
+      );
+    `)
+
+    apply(db, '0032_inbox_triggers.sql')
+
+    expect(
+      db.prepare('SELECT trigger_type,http_concurrency_mode,name FROM triggers WHERE id = ?').get('trigger_1'),
+    ).toEqual({ trigger_type: 'http', http_concurrency_mode: 'serial', name: 'Webhook' })
+    expect(
+      db
+        .prepare(
+          `SELECT trigger_id,session_id,state,metadata,source_subscription_id,source_event_id
+           FROM trigger_runs WHERE id = ?`,
+        )
+        .get('run_1'),
+    ).toEqual({
+      trigger_id: 'trigger_1',
+      session_id: 'session_1',
+      state: 'dispatched',
+      metadata: '{"preserved":true}',
+      source_subscription_id: null,
+      source_event_id: null,
+    })
+    expect(
+      db
+        .prepare('SELECT sequence,run_id,trigger_id,routing_key_hash,rendered_prompt FROM http_trigger_pending_runs')
+        .get(),
+    ).toEqual({
+      sequence: 7,
+      run_id: 'run_1',
+      trigger_id: 'trigger_1',
+      routing_key_hash: 'route_1',
+      rendered_prompt: 'Preserve this prompt',
+    })
+    expect(db.prepare('SELECT id,agent_id,state FROM sessions WHERE id = ?').get('session_1')).toEqual({
+      id: 'session_1',
+      agent_id: 'agent_1',
+      state: 'running',
+    })
+    expect(
+      (db.prepare("PRAGMA index_list('trigger_runs')").all() as Array<{ name: string }>).map(({ name }) => name),
+    ).toEqual(
+      expect.arrayContaining([
+        'idx_trigger_runs_unique_occurrence',
+        'idx_trigger_runs_idempotency_key',
+        'idx_trigger_runs_source_event',
+        'idx_trigger_runs_trigger_created',
+        'idx_trigger_runs_project_created',
+      ]),
+    )
+    expect(
+      (db.prepare("PRAGMA index_list('http_trigger_pending_runs')").all() as Array<{ name: string }>).map(
+        ({ name }) => name,
+      ),
+    ).toEqual(expect.arrayContaining(['idx_http_trigger_pending_fifo', 'idx_http_trigger_pending_project']))
+    expect(
+      (db.prepare("PRAGMA foreign_key_list('trigger_runs')").all() as Array<{ table: string; on_delete: string }>).map(
+        ({ table, on_delete }) => ({ table, onDelete: on_delete }),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        { table: 'projects', onDelete: 'NO ACTION' },
+        { table: 'triggers', onDelete: 'NO ACTION' },
+        { table: 'sessions', onDelete: 'NO ACTION' },
+      ]),
+    )
+    expect(
+      (
+        db.prepare("PRAGMA foreign_key_list('http_trigger_pending_runs')").all() as Array<{
+          table: string
+          on_delete: string
+        }>
+      ).map(({ table, on_delete }) => ({ table, onDelete: on_delete })),
+    ).toEqual(
+      expect.arrayContaining([
+        { table: 'trigger_runs', onDelete: 'CASCADE' },
+        { table: 'triggers', onDelete: 'CASCADE' },
+      ]),
+    )
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    db.exec(`
+      INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,session_id,
+        correlation_id,created_at,updated_at
+      ) VALUES (
+        'run_2','org_1','project_1','trigger_1','2026-01-03','claimed','request_2','session_1',
+        'correlation_2','2026-01-03','2026-01-03'
+      )
+    `)
+    const nextPending = db
+      .prepare(`INSERT INTO http_trigger_pending_runs (
+        run_id,trigger_id,organization_id,organization_name,project_id,project_name,
+        requested_by_user_id,routing_key_hash,rendered_prompt,created_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .run(
+        'run_2',
+        'trigger_1',
+        'org_1',
+        'Organization',
+        'project_1',
+        'Project',
+        'user_1',
+        'route_2',
+        'Next prompt',
+        '2026-01-03',
+      )
+    expect(nextPending.lastInsertRowid).toBe(8)
+    expect(() =>
+      db.exec(`INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,
+        correlation_id,created_at,updated_at
+      ) VALUES (
+        'run_duplicate','org_1','project_1','trigger_1','2026-01-03','claimed','request_2',
+        'correlation_duplicate','2026-01-03','2026-01-03'
+      )`),
+    ).toThrow(/UNIQUE constraint failed/)
+    expect(() => db.exec("DELETE FROM triggers WHERE id = 'trigger_1'")).toThrow(/FOREIGN KEY constraint failed/)
+    db.exec("DELETE FROM trigger_runs WHERE id = 'run_2'")
+    expect(db.prepare('SELECT count(*) AS count FROM http_trigger_pending_runs WHERE sequence = 8').get()).toEqual({
+      count: 0,
+    })
+    db.exec(`
+      INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,session_id,
+        correlation_id,created_at,updated_at
+      ) VALUES (
+        'run_3','org_1','project_1','trigger_1','2026-01-04','claimed','request_3','session_1',
+        'correlation_3','2026-01-04','2026-01-04'
+      )
+    `)
+    const afterCascade = db
+      .prepare(`INSERT INTO http_trigger_pending_runs (
+        run_id,trigger_id,organization_id,organization_name,project_id,project_name,
+        requested_by_user_id,routing_key_hash,rendered_prompt,created_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .run(
+        'run_3',
+        'trigger_1',
+        'org_1',
+        'Organization',
+        'project_1',
+        'Project',
+        'user_1',
+        'route_3',
+        'After cascade',
+        '2026-01-04',
+      )
+    expect(afterCascade.lastInsertRowid).toBe(9)
+    expect(() =>
+      db.exec(`INSERT INTO http_trigger_pending_runs
+        SELECT 10,run_id,trigger_id,organization_id,organization_name,project_id,project_name,
+          requested_by_user_id,routing_key_hash,rendered_prompt,created_at
+        FROM http_trigger_pending_runs WHERE sequence = 9`),
+    ).toThrow(/UNIQUE constraint failed/)
+    expect(() =>
+      db.exec(`INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,
+        correlation_id,created_at,updated_at
+      ) VALUES (
+        'run_invalid','org_1','project_1','trigger_1','2026-01-03','invalid','request_invalid',
+        'correlation_invalid','2026-01-03','2026-01-03'
+      )`),
+    ).toThrow(/CHECK constraint failed/)
+    expect(() =>
+      db.exec(`INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,trigger_type,http_concurrency_mode,runtime,name,
+        prompt_template,enabled,inbox_subscription_id,inbox_callback_token_hash,
+        inbox_callback_token_ciphertext,inbox_provisioning_state,created_at,updated_at
+      ) VALUES (
+        'trigger_inbox','org_1','project_1','agent_1','inbox','parallel','ama','Inbox','Handle it',1,
+        'sub_0123456789abcdef0123456789abcdef','hash','ciphertext','pending','2026-01-01','2026-01-02'
+      )`),
+    ).not.toThrow()
+    db.close()
+  })
+})
+
 function seedIdentityMigrationAgent(
   db: DatabaseSync,
   values: { id?: string; remoteAgentId?: string; credentialId?: string; origin?: string } = {},
