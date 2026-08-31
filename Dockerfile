@@ -8,22 +8,19 @@ RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_$
   && gh --version
 
 # Realmroot-bound cloud Sessions require Toolbox before Environment package
-# installation. Verify the pinned release archive against its official checksum.
+# installation. Cloudflare Sandbox currently runs linux/amd64, so keep the
+# release asset and its independently pinned digest explicit.
 ARG REALMROOT_VERSION=0.4.2
-ARG TARGETARCH
+ARG REALMROOT_SHA256=51a7d0d8c99a748a4bec8b8778f34659f621952d70756151d726c8c4d480e5da
 RUN set -eux; \
-  case "${TARGETARCH}" in amd64|arm64) ;; *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; esac; \
-  asset="realmroot_${REALMROOT_VERSION}_linux_${TARGETARCH}.tar.gz"; \
+  asset="realmroot_${REALMROOT_VERSION}_linux_amd64.tar.gz"; \
   release="https://github.com/realmroot/cli/releases/download/v${REALMROOT_VERSION}"; \
   curl -fsSLo "/tmp/${asset}" "${release}/${asset}"; \
-  curl -fsSLo /tmp/realmroot-checksums.txt "${release}/checksums.txt"; \
-  awk -v asset="${asset}" '$2 == asset { print }' /tmp/realmroot-checksums.txt > /tmp/realmroot.sha256; \
-  test "$(wc -l < /tmp/realmroot.sha256)" -eq 1; \
   cd /tmp; \
-  sha256sum -c realmroot.sha256; \
+  echo "${REALMROOT_SHA256}  ${asset}" | sha256sum -c -; \
   tar -xzf "${asset}" -C /usr/local/bin realmroot; \
   chmod 0755 /usr/local/bin/realmroot; \
-  rm -f "${asset}" realmroot-checksums.txt realmroot.sha256; \
+  rm -f "${asset}"; \
   realmroot version
 
 # Cloud environments install other declared Go modules at Session startup.

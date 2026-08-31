@@ -159,6 +159,27 @@ describe('[spec: environments/create] createEnvironment', () => {
     expect(environment.status.version).toBe(2)
     expect(setCurrent).toEqual(['envver_new'])
   })
+
+  it('rejects redeclaring the Realmroot CLI bundled in the cloud image', async () => {
+    await expect(
+      createEnvironment(fakeDeps(), auth, {
+        name: 'Invalid',
+        description: null,
+        config: config({
+          packages: {
+            type: 'packages',
+            apt: [],
+            cargo: [],
+            gem: [],
+            go: ['github.com/realmroot/cli@v0.4.2'],
+            npm: [],
+            pip: [],
+            webi: [],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('already provided') } })
+  })
 })
 
 describe('[spec: environments/update] updateEnvironment', () => {
@@ -186,6 +207,23 @@ describe('[spec: environments/update] updateEnvironment', () => {
     expect(inserted).toHaveLength(1)
     expect(result.environment.status.version).toBe(2)
     expect(result.environment.status.currentVersionId).toBe('envver_2')
+  })
+
+  it('rejects adding a Realmroot CLI declaration to an existing environment', async () => {
+    await expect(
+      updateEnvironment(fakeDeps(), auth, environmentRecord(), {
+        packages: {
+          type: 'packages',
+          apt: [],
+          cargo: [],
+          gem: [],
+          go: [],
+          npm: [],
+          pip: [],
+          webi: ['realmroot@0.4.2'],
+        },
+      }),
+    ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('already provided') } })
   })
 
   it('does not snapshot when only name/description change', async () => {

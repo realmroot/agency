@@ -1,6 +1,7 @@
 import { parseAmaSandboxToolInput } from '@ama/runtime-contracts/tool-contracts'
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import { getModel, type Model } from '@earendil-works/pi-ai'
+import { BUNDLED_REALMROOT_GO_PACKAGE, BUNDLED_REALMROOT_WEBI_PACKAGE } from '@server/domain/environment'
 import { gitRepositoryMountPath } from '@server/domain/git-repository'
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
 import {
@@ -416,8 +417,24 @@ async function prepareCloudEnvironmentPackages(
   const packages = environmentSnapshot?.packages
   if (!packages || typeof packages !== 'object' || Array.isArray(packages)) return null
   const declarations = packages as Record<string, unknown>
-  const goPackages = Array.isArray(declarations.go) ? declarations.go : []
-  const webiPackages = Array.isArray(declarations.webi) ? declarations.webi : []
+  const declaredGoPackages = Array.isArray(declarations.go) ? declarations.go : []
+  const declaredWebiPackages = Array.isArray(declarations.webi) ? declarations.webi : []
+  const goPackages = declaredGoPackages.filter((module) => {
+    if (typeof module !== 'string' || !module.startsWith('github.com/realmroot/cli@')) return true
+    if (module === BUNDLED_REALMROOT_GO_PACKAGE) return false
+    throw new EnvironmentPackageInstallationError(
+      `validate-go-package:${module}`,
+      `Realmroot Toolbox is pinned to ${BUNDLED_REALMROOT_GO_PACKAGE} in the cloud image`,
+    )
+  })
+  const webiPackages = declaredWebiPackages.filter((declaration) => {
+    if (typeof declaration !== 'string' || !declaration.startsWith('realmroot@')) return true
+    if (declaration === BUNDLED_REALMROOT_WEBI_PACKAGE) return false
+    throw new EnvironmentPackageInstallationError(
+      `validate-webi-package:${declaration}`,
+      `Realmroot Toolbox is pinned to ${BUNDLED_REALMROOT_WEBI_PACKAGE} in the cloud image`,
+    )
+  })
   if (goPackages.length === 0 && webiPackages.length === 0) return null
 
   await installEnvironmentPackage(

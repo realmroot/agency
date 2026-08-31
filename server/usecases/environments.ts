@@ -1,4 +1,6 @@
 import {
+  BUNDLED_REALMROOT_GO_PACKAGE,
+  BUNDLED_REALMROOT_WEBI_PACKAGE,
   type Environment,
   type EnvironmentConfig,
   hasSecretMaterial,
@@ -14,6 +16,14 @@ function validateConfig(config: EnvironmentConfig) {
   if (hasSecretMaterial(config.variables)) {
     throw new EnvironmentValidationError('Invalid environment configuration', {
       variables: 'Secret material must be stored in a vault.',
+    })
+  }
+  if (
+    config.packages.go.some((declaration) => declaration.startsWith('github.com/realmroot/cli@')) ||
+    config.packages.webi.some((declaration) => declaration.startsWith('realmroot@'))
+  ) {
+    throw new EnvironmentValidationError('Invalid environment configuration', {
+      packages: `Realmroot Toolbox ${BUNDLED_REALMROOT_GO_PACKAGE} (${BUNDLED_REALMROOT_WEBI_PACKAGE}) is already provided by the cloud image.`,
     })
   }
 }
