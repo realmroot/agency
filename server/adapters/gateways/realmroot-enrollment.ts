@@ -1,6 +1,7 @@
 import type { IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
 import type { RuntimeName } from '@server/domain/runtime-catalog'
 import type { Env } from '@server/env'
+import { newPrimaryKey } from '@server/id'
 import type { RealmrootEnrollmentGateway, RealmrootManagementCredential } from '@server/usecases/ports'
 import { exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from 'jose'
 
@@ -102,16 +103,15 @@ async function initializeState(input: { origin: string; name: string; runtime: s
   const jwk = await exportJWK(pair.privateKey)
   if (!jwk.d || !jwk.x) throw new Error('Generated Ed25519 key is not exportable')
   const privateBytes = new Uint8Array([...decodeBase64Url(jwk.d), ...decodeBase64Url(jwk.x)])
-  const id = () => crypto.randomUUID()
   return {
     version: 18,
     origin: safeOrigin(input.origin),
     issuer: '',
     runtime: input.runtime,
     name: input.name,
-    agent_id: `agent-${id()}`,
-    host_id: `host-${id()}`,
-    agent_key_id: `agent-${id()}`,
+    agent_id: newPrimaryKey(),
+    host_id: newPrimaryKey(),
+    agent_key_id: newPrimaryKey(),
     agent_private_key: base64Url(privateBytes),
     enrollment_idempotency_key: input.idempotencyKey,
   } satisfies PrivateState

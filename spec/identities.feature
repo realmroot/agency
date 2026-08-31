@@ -17,6 +17,13 @@ Feature: Identities
     Then AMA resumes with the original Identity, key, Vault, and remote Agent
     And a different request using that key is rejected as an idempotency conflict
 
+  @identities/installation-identifiers @usecase
+  Scenario: Generate standard Realmroot installation identifiers
+    Given AMA is initializing a new Realmroot Agent installation
+    When it checkpoints the Agent, host, and key identifiers
+    Then each new persistent identifier is a standard UUID version 7 without a resource-type prefix
+    And previously checkpointed opaque identifiers remain readable
+
   @identities/personal-only @api
   Scenario: Reject unsupported Identity owners
     Given an organization project or a non-User principal requests an Identity
