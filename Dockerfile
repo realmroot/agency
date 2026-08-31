@@ -7,9 +7,26 @@ RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_$
   | tar -xz --strip-components=2 -C /usr/local/bin "gh_${GH_VERSION}_linux_amd64/bin/gh" \
   && gh --version
 
-# Cloud environments install their declared Go modules at Session startup.
-# Keep only the generic installer toolchain in the image; tools such as
-# Realmroot belong to Environment packages rather than the runtime host.
+# Realmroot-bound cloud Sessions require Toolbox before Environment package
+# installation. Verify the pinned release archive against its official checksum.
+ARG REALMROOT_VERSION=0.4.2
+ARG TARGETARCH
+RUN set -eux; \
+  case "${TARGETARCH}" in amd64|arm64) ;; *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; esac; \
+  asset="realmroot_${REALMROOT_VERSION}_linux_${TARGETARCH}.tar.gz"; \
+  release="https://github.com/realmroot/cli/releases/download/v${REALMROOT_VERSION}"; \
+  curl -fsSLo "/tmp/${asset}" "${release}/${asset}"; \
+  curl -fsSLo /tmp/realmroot-checksums.txt "${release}/checksums.txt"; \
+  awk -v asset="${asset}" '$2 == asset { print }' /tmp/realmroot-checksums.txt > /tmp/realmroot.sha256; \
+  test "$(wc -l < /tmp/realmroot.sha256)" -eq 1; \
+  cd /tmp; \
+  sha256sum -c realmroot.sha256; \
+  tar -xzf "${asset}" -C /usr/local/bin realmroot; \
+  chmod 0755 /usr/local/bin/realmroot; \
+  rm -f "${asset}" realmroot-checksums.txt realmroot.sha256; \
+  realmroot version
+
+# Cloud environments install other declared Go modules at Session startup.
 ARG GO_VERSION=1.25.3
 ARG GO_SHA256=0335f314b6e7bfe08c3d0cfaa7c19db961b7b99fb20be62b0a826c992ad14e0f
 RUN curl -fsSLo /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
