@@ -1076,6 +1076,7 @@ export interface InboxProvisioningFields {
   callbackTokenHash: string
   callbackTokenCiphertext: string
   etag: string | null
+  registeredAgentSubject: string | null
   phase: 'pending' | 'active' | 'inactive' | 'error'
   errorMessage: string | null
 }
@@ -1115,7 +1116,8 @@ export interface InboxSubscriptionBinding {
   organizationId: string
   projectId: string
   projectName: string
-  agentSubject: string
+  desiredAgentSubject: string
+  registeredAgentSubject: string | null
   callbackTokenHash: string
   callbackTokenCiphertext: string
   subscriptionEtag: string | null

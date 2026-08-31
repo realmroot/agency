@@ -635,6 +635,7 @@ export const triggers = sqliteTable(
     inboxCallbackTokenHash: text('inbox_callback_token_hash'),
     inboxCallbackTokenCiphertext: text('inbox_callback_token_ciphertext'),
     inboxSubscriptionEtag: text('inbox_subscription_etag'),
+    inboxRegisteredAgentSubject: text('inbox_registered_agent_subject'),
     inboxProvisioningState: text('inbox_provisioning_state', {
       enum: ['pending', 'active', 'inactive', 'error'],
     }),
@@ -661,7 +662,7 @@ export const triggers = sqliteTable(
     ),
     check(
       'ck_triggers_inbox_shape',
-      sql`(${table.triggerType} = 'inbox' and ${table.inboxSubscriptionId} is not null and ${table.inboxCallbackTokenHash} is not null and ${table.inboxCallbackTokenCiphertext} is not null and ${table.inboxProvisioningState} is not null) or (${table.triggerType} != 'inbox' and ${table.inboxSubscriptionId} is null and ${table.inboxCallbackTokenHash} is null and ${table.inboxCallbackTokenCiphertext} is null and ${table.inboxSubscriptionEtag} is null and ${table.inboxProvisioningState} is null and ${table.inboxProvisioningError} is null)`,
+      sql`(${table.triggerType} = 'inbox' and ${table.inboxSubscriptionId} is not null and ${table.inboxCallbackTokenHash} is not null and ${table.inboxCallbackTokenCiphertext} is not null and ${table.inboxProvisioningState} is not null) or (${table.triggerType} != 'inbox' and ${table.inboxSubscriptionId} is null and ${table.inboxCallbackTokenHash} is null and ${table.inboxCallbackTokenCiphertext} is null and ${table.inboxSubscriptionEtag} is null and ${table.inboxRegisteredAgentSubject} is null and ${table.inboxProvisioningState} is null and ${table.inboxProvisioningError} is null)`,
     ),
     uniqueIndex('idx_triggers_inbox_subscription').on(table.inboxSubscriptionId),
   ],

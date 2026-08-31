@@ -74,9 +74,17 @@ const RealmrootAgentIdSchema = z.string().min(1).max(160).regex(/^\S+$/)
 const IdentityDescriptorSchema = z
   .object({
     identityId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000004' }),
-    agentId: RealmrootAgentIdSchema.openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    agentId: RealmrootAgentIdSchema.openapi({
+      description:
+        'Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.',
+      example: '019ff41a-7da6-708f-8b05-44d4d0373685',
+    }),
     issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
-    subject: z.string().openapi({ example: 'agent:019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    subject: z.string().openapi({
+      description:
+        'Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.',
+      example: '019ff41a-7da6-708f-8b05-44d4d0373685',
+    }),
     username: z.string().openapi({ example: 'researcher' }),
     runtime: z.enum(['ama', 'codex', 'claude-code', 'copilot']),
   })

@@ -98,12 +98,28 @@ describe('[CF] Inbox notification receipts', () => {
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           etag: '"subscription-v1"',
+          registeredAgentSubject: identityAgentId,
           phase: 'active',
           errorMessage: null,
         },
       },
       new Date().toISOString(),
     )
+    const oldNotification = {
+      eventId: 'event_before_rebind',
+      type: 'message.created',
+      subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
+      agentId: identityAgentId,
+      messageId: 'message_before_rebind',
+      occurredAt: '2026-08-30T11:59:00.000Z',
+    }
+    expect((await callback(token, oldNotification)).status).toBe(202)
+    expect(
+      (await callback(token, { ...oldNotification, eventId: 'event_new_too_early', agentId: agentSubject })).status,
+    ).toBe(403)
+
+    const [migratedTrigger] = await routes.reconcilableSubscriptions(10)
+    expect(migratedTrigger?.metadata.uid).toBe(trigger.metadata.uid)
     const putSubscription = vi.fn(async () => ({ etag: '"subscription-v2"' }))
     await reconcileInboxSubscription(
       {
@@ -111,7 +127,7 @@ describe('[CF] Inbox notification receipts', () => {
         inboxSubscriptions: { put: putSubscription, delete: vi.fn() },
         inboxCallbackTokens: { open: vi.fn(async () => token), seal: vi.fn() },
       } as Deps,
-      trigger,
+      migratedTrigger ?? trigger,
     )
     expect(putSubscription).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -120,6 +136,7 @@ describe('[CF] Inbox notification receipts', () => {
       }),
     )
     expect(putSubscription).not.toHaveBeenCalledWith(expect.objectContaining({ agentSubject: identityAgentId }))
+    expect((await callback(token, { ...oldNotification, eventId: 'event_old_after_rebind' })).status).toBe(403)
 
     const notification = {
       eventId: 'event_1',
@@ -157,7 +174,7 @@ describe('[CF] Inbox notification receipts', () => {
 
     const binding = await routes.findSubscription(notification.subscriptionId)
     if (!binding) throw new Error('Expected Inbox Subscription binding')
-    expect(binding).toMatchObject({ agentSubject })
+    expect(binding).toMatchObject({ desiredAgentSubject: agentSubject, registeredAgentSubject: agentSubject })
     const { routingKey: _, ...storedNotification } = notification
     const secondActivation = await routes.claimNotification(
       binding,

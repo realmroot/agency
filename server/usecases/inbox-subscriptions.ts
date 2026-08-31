@@ -43,40 +43,45 @@ function newInboxSubscriptionId() {
 
 type SubscriptionOperation = 'update' | 'deletion'
 
-function subscriptionFailure(operation: SubscriptionOperation, cause: unknown) {
-  if (cause instanceof InboxSubscriptionGatewayError) {
-    const status = cause.status === null ? '' : `, HTTP ${cause.status}`
-    return {
-      errorMessage: `Inbox Subscription ${operation} failed (${cause.code}${status})`,
-      gatewayErrorKind: cause.code,
-      gatewayErrorMessage: cause.message,
-      gatewayErrorStatus: cause.status,
-    }
-  }
+const SAFE_GATEWAY_MESSAGES: Record<InboxSubscriptionGatewayError['code'], string> = {
+  unavailable: 'Inbox Subscription gateway is unavailable',
+  rejected: 'Inbox Subscription gateway rejected the request',
+  invalid_response: 'Inbox Subscription gateway returned an invalid response',
+}
+
+function subscriptionFailure(operation: SubscriptionOperation, error: InboxSubscriptionGatewayError) {
+  const status = error.status === null ? '' : `, HTTP ${error.status}`
   return {
-    errorMessage: `Inbox Subscription ${operation} failed (unexpected error)`,
-    gatewayErrorKind: 'unexpected',
-    gatewayErrorMessage: 'Unexpected Inbox Subscription gateway error',
-    gatewayErrorStatus: null,
+    errorMessage: `Inbox Subscription ${operation} failed (${error.code}${status})`,
+    gatewayErrorKind: error.code,
+    gatewayErrorMessage: SAFE_GATEWAY_MESSAGES[error.code],
+    gatewayErrorStatus: error.status,
   }
 }
 
 function recordSubscriptionFailure(
   operation: SubscriptionOperation,
-  cause: unknown,
+  error: InboxSubscriptionGatewayError,
   binding: { projectId: string; trigger: Trigger },
   subscriptionId: string,
 ) {
-  const diagnostic = subscriptionFailure(operation, cause)
-  logError('inbox-subscription.gateway-failed', cause, {
-    operation,
-    projectId: binding.projectId,
-    triggerId: binding.trigger.metadata.uid,
-    subscriptionId,
-    gatewayErrorKind: diagnostic.gatewayErrorKind,
-    gatewayErrorMessage: diagnostic.gatewayErrorMessage,
-    gatewayErrorStatus: diagnostic.gatewayErrorStatus,
-  })
+  const diagnostic = subscriptionFailure(operation, error)
+  logError(
+    'inbox-subscription.gateway-failed',
+    {
+      code: diagnostic.gatewayErrorKind,
+      status: diagnostic.gatewayErrorStatus,
+    },
+    {
+      operation,
+      projectId: binding.projectId,
+      triggerId: binding.trigger.metadata.uid,
+      subscriptionId,
+      gatewayErrorKind: diagnostic.gatewayErrorKind,
+      gatewayErrorMessage: diagnostic.gatewayErrorMessage,
+      gatewayErrorStatus: diagnostic.gatewayErrorStatus,
+    },
+  )
   return diagnostic.errorMessage
 }
 
@@ -90,6 +95,7 @@ export async function initialInboxProvisioning(deps: Deps) {
       callbackTokenHash: await inboxTokenHash(token),
       callbackTokenCiphertext: await callbackTokens(deps).seal(subscriptionId, token),
       etag: null,
+      registeredAgentSubject: null,
       phase: 'pending',
       errorMessage: null,
     } satisfies InboxProvisioningFields,
@@ -114,20 +120,8 @@ export async function reconcileInboxSubscription(
   if (!enabled) {
     try {
       await gateway.delete({ subscriptionId, etag: binding.subscriptionEtag })
-      return repo.updateProvisioning(
-        binding.projectId,
-        trigger.metadata.uid,
-        {
-          subscriptionId,
-          callbackTokenHash: binding.callbackTokenHash,
-          callbackTokenCiphertext: binding.callbackTokenCiphertext,
-          etag: null,
-          phase: 'inactive',
-          errorMessage: null,
-        },
-        timestamp,
-      )
     } catch (cause) {
+      if (!(cause instanceof InboxSubscriptionGatewayError)) throw cause
       const errorMessage = recordSubscriptionFailure('deletion', cause, binding, subscriptionId)
       return repo.updateProvisioning(
         binding.projectId,
@@ -137,12 +131,27 @@ export async function reconcileInboxSubscription(
           callbackTokenHash: binding.callbackTokenHash,
           callbackTokenCiphertext: binding.callbackTokenCiphertext,
           etag: binding.subscriptionEtag,
+          registeredAgentSubject: binding.registeredAgentSubject,
           phase: 'error',
           errorMessage,
         },
         timestamp,
       )
     }
+    return repo.updateProvisioning(
+      binding.projectId,
+      trigger.metadata.uid,
+      {
+        subscriptionId,
+        callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
+        etag: null,
+        registeredAgentSubject: null,
+        phase: 'inactive',
+        errorMessage: null,
+      },
+      timestamp,
+    )
   }
 
   const token = suppliedToken ?? (await callbackTokens(deps).open(subscriptionId, binding.callbackTokenCiphertext))
@@ -154,32 +163,22 @@ export async function reconcileInboxSubscription(
       callbackTokenHash: binding.callbackTokenHash,
       callbackTokenCiphertext: binding.callbackTokenCiphertext,
       etag: binding.subscriptionEtag,
+      registeredAgentSubject: binding.registeredAgentSubject,
       phase: 'pending',
       errorMessage: null,
     },
     timestamp,
   )
+  let result: { etag: string }
   try {
-    const result = await gateway.put({
+    result = await gateway.put({
       subscriptionId,
-      agentSubject: binding.agentSubject,
+      agentSubject: binding.desiredAgentSubject,
       callbackToken: token,
       etag: binding.subscriptionEtag,
     })
-    return repo.updateProvisioning(
-      binding.projectId,
-      trigger.metadata.uid,
-      {
-        subscriptionId,
-        callbackTokenHash: binding.callbackTokenHash,
-        callbackTokenCiphertext: binding.callbackTokenCiphertext,
-        etag: result.etag,
-        phase: 'active',
-        errorMessage: null,
-      },
-      new Date().toISOString(),
-    )
   } catch (cause) {
+    if (!(cause instanceof InboxSubscriptionGatewayError)) throw cause
     const errorMessage = recordSubscriptionFailure('update', cause, binding, subscriptionId)
     return repo.updateProvisioning(
       binding.projectId,
@@ -189,12 +188,27 @@ export async function reconcileInboxSubscription(
         callbackTokenHash: binding.callbackTokenHash,
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
+        registeredAgentSubject: binding.registeredAgentSubject,
         phase: 'error',
         errorMessage,
       },
       new Date().toISOString(),
     )
   }
+  return repo.updateProvisioning(
+    binding.projectId,
+    trigger.metadata.uid,
+    {
+      subscriptionId,
+      callbackTokenHash: binding.callbackTokenHash,
+      callbackTokenCiphertext: binding.callbackTokenCiphertext,
+      etag: result.etag,
+      registeredAgentSubject: binding.desiredAgentSubject,
+      phase: 'active',
+      errorMessage: null,
+    },
+    new Date().toISOString(),
+  )
 }
 
 export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
@@ -206,6 +220,7 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
   try {
     await subscriptionGateway(deps).delete({ subscriptionId, etag: binding.subscriptionEtag })
   } catch (cause) {
+    if (!(cause instanceof InboxSubscriptionGatewayError)) throw cause
     const errorMessage = recordSubscriptionFailure('deletion', cause, binding, subscriptionId)
     await repo.updateProvisioning(
       binding.projectId,
@@ -215,12 +230,13 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
         callbackTokenHash: binding.callbackTokenHash,
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
+        registeredAgentSubject: binding.registeredAgentSubject,
         phase: 'error',
         errorMessage,
       },
       new Date().toISOString(),
     )
-    throw new TriggerProvisioningError(errorMessage, { cause })
+    throw new TriggerProvisioningError(errorMessage)
   }
 }
 

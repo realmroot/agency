@@ -13,7 +13,7 @@ import { dispatchInboxActivation, receiveInboxNotification } from './inbox-activ
 import { inboxTokenHash, newInboxCallbackToken } from './inbox-subscriptions'
 import { createSession } from './runtime/sessions'
 
-function inboxTrigger(): Trigger {
+function inboxTrigger(subscriptionPhase: 'pending' | 'active' | 'inactive' | 'error' = 'active'): Trigger {
   const timestamp = '2026-08-30T00:00:00.000Z'
   return {
     metadata: resourceMetadata({
@@ -45,7 +45,7 @@ function inboxTrigger(): Trigger {
       nextDueAt: null,
       lastDispatchedAt: null,
       lastRunId: null,
-      subscription: { id: 'trigger_1', phase: 'active', errorMessage: null },
+      subscription: { id: 'trigger_1', phase: subscriptionPhase, errorMessage: null },
     },
   }
 }
@@ -134,7 +134,8 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          desiredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
@@ -172,7 +173,8 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          desiredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
@@ -198,6 +200,68 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
     expect(claimNotification).not.toHaveBeenCalled()
   })
 
+  it('admits both registered and desired subjects only during a provisioning transition', async () => {
+    const token = newInboxCallbackToken()
+    const oldSubject = '01a05643-33a4-704f-8d6b-bec364657b5c'
+    const newSubject = '01a05643-33a4-704f-8d6b-c30c04e18c6c'
+    const claimNotification = vi.fn(async () => ({ runId: 'run_1', replayed: false }))
+    const notification = {
+      eventId: 'event_1',
+      type: 'message.created',
+      subscriptionId: 'trigger_1',
+      agentId: oldSubject,
+      messageId: 'message_1',
+      occurredAt: '2026-08-30T00:00:00.000Z',
+    }
+    const fake = (phase: 'pending' | 'active', registeredAgentSubject: string) =>
+      ({
+        inboxActivations: {
+          findSubscription: vi.fn(async () => ({
+            trigger: inboxTrigger(phase),
+            organizationId: 'org_1',
+            projectId: 'project_1',
+            projectName: 'Project',
+            desiredAgentSubject: newSubject,
+            registeredAgentSubject,
+            callbackTokenHash: await inboxTokenHash(token),
+            callbackTokenCiphertext: 'encrypted-token',
+            subscriptionEtag: '"v1"',
+          })),
+          claimNotification,
+        },
+      }) as unknown as Deps
+
+    await expect(
+      receiveInboxNotification(fake('active', oldSubject), `Bearer ${token}`, notification),
+    ).resolves.toEqual({ runId: 'run_1', replayed: false })
+    await expect(
+      receiveInboxNotification(fake('active', oldSubject), `Bearer ${token}`, {
+        ...notification,
+        agentId: newSubject,
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+
+    await expect(
+      receiveInboxNotification(fake('pending', oldSubject), `Bearer ${token}`, notification),
+    ).resolves.toEqual({ runId: 'run_1', replayed: false })
+    await expect(
+      receiveInboxNotification(fake('pending', oldSubject), `Bearer ${token}`, {
+        ...notification,
+        agentId: newSubject,
+      }),
+    ).resolves.toEqual({ runId: 'run_1', replayed: false })
+
+    await expect(
+      receiveInboxNotification(fake('active', newSubject), `Bearer ${token}`, {
+        ...notification,
+        agentId: newSubject,
+      }),
+    ).resolves.toEqual({ runId: 'run_1', replayed: false })
+    await expect(
+      receiveInboxNotification(fake('active', newSubject), `Bearer ${token}`, notification),
+    ).rejects.toMatchObject({ status: 403 })
+  })
+
   it('rejects an unknown Subscription and accepts notifications without a routing key', async () => {
     const token = newInboxCallbackToken()
     await expect(
@@ -216,7 +280,8 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          desiredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+          registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: null,

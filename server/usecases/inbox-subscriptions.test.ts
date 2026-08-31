@@ -10,7 +10,7 @@ import {
   reconcileInboxSubscriptions,
   removeInboxSubscription,
 } from './inbox-subscriptions'
-import { InboxSubscriptionGatewayError } from './ports'
+import { type InboxActivationRepo, type InboxSubscriptionBinding, InboxSubscriptionGatewayError } from './ports'
 
 function trigger(
   overrides: { inbox?: boolean; subscription?: boolean; suspend?: boolean; archived?: boolean } = {},
@@ -58,23 +58,26 @@ function trigger(
 
 function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: boolean } = {}) {
   const record = trigger()
-  const binding = {
+  const binding: InboxSubscriptionBinding = {
     trigger: record,
     organizationId: 'org_1',
     projectId: 'project_1',
     projectName: 'Project',
-    agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+    desiredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+    registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
     callbackTokenHash: 'current-hash',
     callbackTokenCiphertext: 'current-ciphertext',
     subscriptionEtag: '"v1"',
   }
-  const updateProvisioning = vi.fn(async (_projectId, _triggerId, fields) => ({
-    ...record,
-    status: {
-      ...record.status,
-      subscription: { id: fields.subscriptionId, phase: fields.phase, errorMessage: fields.errorMessage },
-    },
-  }))
+  const updateProvisioning = vi.fn<InboxActivationRepo['updateProvisioning']>(
+    async (_projectId, _triggerId, fields) => ({
+      ...record,
+      status: {
+        ...record.status,
+        subscription: { id: fields.subscriptionId, phase: fields.phase, errorMessage: fields.errorMessage },
+      },
+    }),
+  )
   const put = options.putError
     ? vi.fn(async () => Promise.reject(options.putError))
     : vi.fn(async () => ({ etag: '"v2"' }))
@@ -105,6 +108,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     expect(provisioning.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(provisioning.fields.callbackTokenHash).toBe(await inboxTokenHash(provisioning.token))
     expect(provisioning.fields.callbackTokenCiphertext).toBe('sealed-token')
+    expect(provisioning.fields.registeredAgentSubject).toBeNull()
     expect(fake.seal).toHaveBeenCalledWith(provisioning.fields.subscriptionId, provisioning.token)
     expect(newInboxCallbackToken()).toMatch(/^[A-Za-z0-9_-]{43}$/)
   })
@@ -158,7 +162,9 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
   })
 
   it('records a retryable error when inactive Subscription deletion fails', async () => {
-    const fake = fakeDeps({ deleteError: new Error('network') })
+    const fake = fakeDeps({
+      deleteError: new InboxSubscriptionGatewayError('unavailable', 'arbitrary remote message', { status: 503 }),
+    })
     await reconcileInboxSubscription(fake.deps, trigger({ suspend: true }))
     expect(fake.updateProvisioning).toHaveBeenCalledWith(
       'project_1',
@@ -166,7 +172,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
       expect.objectContaining({
         etag: '"v1"',
         phase: 'error',
-        errorMessage: 'Inbox Subscription deletion failed (unexpected error)',
+        errorMessage: 'Inbox Subscription deletion failed (unavailable, HTTP 503)',
       }),
       expect.any(String),
     )
@@ -209,7 +215,9 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
   })
 
   it('keeps the same accepted token after an uncertain PUT failure', async () => {
-    const fake = fakeDeps({ putError: new Error('timeout') })
+    const fake = fakeDeps({
+      putError: new InboxSubscriptionGatewayError('unavailable', 'arbitrary remote message'),
+    })
     await reconcileInboxSubscription(fake.deps, trigger())
     expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
       'project_1',
@@ -219,6 +227,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
         callbackTokenCiphertext: 'current-ciphertext',
         etag: '"v1"',
         phase: 'error',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       }),
       expect.any(String),
     )
@@ -226,13 +235,19 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
 
   it('records safe structured diagnostics for classified gateway failures', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const callbackToken = 'A'.repeat(43)
     const fake = fakeDeps({
-      putError: new InboxSubscriptionGatewayError('unavailable', 'Inbox Subscription update was rejected', {
-        status: 503,
-      }),
+      putError: new InboxSubscriptionGatewayError(
+        'unavailable',
+        `nested failure ${callbackToken} Basic c2VydmljZS1jbGllbnQ6c2VydmljZS1zZWNyZXQ=`,
+        {
+          status: 503,
+          cause: new Error(`response body contained ${callbackToken}`),
+        },
+      ),
     })
 
-    await reconcileInboxSubscription(fake.deps, trigger(), 'callback-secret')
+    await reconcileInboxSubscription(fake.deps, trigger(), callbackToken)
 
     expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
       'project_1',
@@ -252,14 +267,77 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
       triggerId: 'trigger_1',
       subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
       gatewayErrorKind: 'unavailable',
-      gatewayErrorMessage: 'Inbox Subscription update was rejected',
+      gatewayErrorMessage: 'Inbox Subscription gateway is unavailable',
       gatewayErrorStatus: 503,
+      error: { code: 'unavailable', status: 503 },
     })
-    expect(JSON.stringify(logged)).not.toContain('callback-secret')
+    expect(JSON.stringify(logged)).not.toContain(callbackToken)
+    expect(JSON.stringify(logged)).not.toContain('c2VydmljZS1jbGllbnQ6c2VydmljZS1zZWNyZXQ')
+    expect(JSON.stringify(logged)).not.toContain('response body')
     expect(JSON.stringify(logged)).not.toContain('current-ciphertext')
   })
 
+  it('propagates unknown gateway failures without logging or persisting an error phase', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const callbackToken = 'B'.repeat(43)
+    const failure = new Error(`unknown failure containing ${callbackToken}`)
+    const fake = fakeDeps({ putError: failure })
+
+    await expect(reconcileInboxSubscription(fake.deps, trigger(), callbackToken)).rejects.toBe(failure)
+
+    expect(consoleError).not.toHaveBeenCalled()
+    expect(fake.updateProvisioning).toHaveBeenCalledOnce()
+    expect(fake.updateProvisioning).toHaveBeenCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({ phase: 'pending', errorMessage: null }),
+      expect.any(String),
+    )
+  })
+
+  it('propagates the active-state persistence failure after a successful PUT', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const failure = new Error('D1 active-state write failed')
+    const fake = fakeDeps()
+    fake.updateProvisioning.mockResolvedValueOnce(trigger()).mockRejectedValueOnce(failure)
+
+    await expect(reconcileInboxSubscription(fake.deps, trigger())).rejects.toBe(failure)
+
+    expect(fake.put).toHaveBeenCalledOnce()
+    expect(fake.updateProvisioning).toHaveBeenCalledTimes(2)
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'active',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      }),
+      expect.any(String),
+    )
+    expect(consoleError).not.toHaveBeenCalled()
+
+    const pending = trigger()
+    if (!pending.status.subscription) throw new Error('Expected Inbox Subscription')
+    pending.status.subscription.phase = 'pending'
+    fake.binding.trigger = pending
+    fake.updateProvisioning.mockReset()
+    fake.updateProvisioning.mockResolvedValue(trigger())
+
+    await expect(reconcileInboxSubscription(fake.deps, pending)).resolves.toEqual(trigger())
+    expect(fake.put).toHaveBeenCalledTimes(2)
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'active',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      }),
+      expect.any(String),
+    )
+  })
+
   it('removes a Subscription or persists and propagates a deletion failure', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const success = fakeDeps()
     await expect(removeInboxSubscription(success.deps, trigger())).resolves.toBeUndefined()
     expect(success.remove).toHaveBeenCalledOnce()
@@ -267,10 +345,11 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     const noBinding = fakeDeps({ binding: false })
     await expect(removeInboxSubscription(noBinding.deps, trigger())).rejects.toThrow(/Realmroot Agent binding/)
 
-    const failure = fakeDeps({ deleteError: new Error('timeout') })
+    const gatewayFailure = new InboxSubscriptionGatewayError('rejected', 'arbitrary remote message', { status: 409 })
+    const failure = fakeDeps({ deleteError: gatewayFailure })
     await expect(removeInboxSubscription(failure.deps, trigger())).rejects.toMatchObject({
       code: 'inbox_subscription_failed',
-      cause: expect.any(Error),
+      message: 'Inbox Subscription deletion failed (rejected, HTTP 409)',
     })
     expect(failure.updateProvisioning).toHaveBeenCalledWith(
       'project_1',
@@ -278,6 +357,12 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
       expect.objectContaining({ phase: 'error', callbackTokenCiphertext: 'current-ciphertext' }),
       expect.any(String),
     )
+
+    const unknown = new Error('unknown deletion failure')
+    const unknownFailure = fakeDeps({ deleteError: unknown })
+    await expect(removeInboxSubscription(unknownFailure.deps, trigger())).rejects.toBe(unknown)
+    expect(unknownFailure.updateProvisioning).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledOnce()
   })
 
   it('reconciles the bounded set returned by persistence', async () => {

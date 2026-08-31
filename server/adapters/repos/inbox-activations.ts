@@ -1,7 +1,7 @@
 import type { IdentityDescriptor } from '@server/domain/identity'
 import { newPrimaryKey } from '@server/id'
 import type { InboxActivationRepo, PendingInboxActivation } from '@server/usecases/ports'
-import { and, asc, eq, isNotNull, isNull, ne, or } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, projects, sessionRoutes, triggerRuns, triggers } from '../../db/schema'
 import { createTriggerRepo } from './triggers'
@@ -40,6 +40,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           callbackTokenHash: triggers.inboxCallbackTokenHash,
           callbackTokenCiphertext: triggers.inboxCallbackTokenCiphertext,
           subscriptionEtag: triggers.inboxSubscriptionEtag,
+          registeredAgentSubject: triggers.inboxRegisteredAgentSubject,
           identitySnapshot: agents.identitySnapshot,
           projectName: projects.name,
         })
@@ -57,7 +58,8 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         organizationId: row.organizationId,
         projectId: row.projectId,
         projectName: row.projectName,
-        agentSubject: identity.subject,
+        desiredAgentSubject: identity.subject,
+        registeredAgentSubject: row.registeredAgentSubject,
         callbackTokenHash: row.callbackTokenHash,
         callbackTokenCiphertext: row.callbackTokenCiphertext,
         subscriptionEtag: row.subscriptionEtag,
@@ -72,6 +74,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           inboxCallbackTokenHash: fields.callbackTokenHash,
           inboxCallbackTokenCiphertext: fields.callbackTokenCiphertext,
           inboxSubscriptionEtag: fields.etag,
+          inboxRegisteredAgentSubject: fields.registeredAgentSubject,
           inboxProvisioningState: fields.phase,
           inboxProvisioningError: fields.errorMessage,
           updatedAt,
@@ -169,6 +172,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
       const rows = await db
         .select({ id: triggers.id, projectId: triggers.projectId })
         .from(triggers)
+        .innerJoin(agents, eq(agents.id, triggers.agentId))
         .where(
           and(
             eq(triggers.triggerType, 'inbox'),
@@ -176,7 +180,17 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
               and(
                 eq(triggers.enabled, true),
                 isNull(triggers.archivedAt),
-                or(eq(triggers.inboxProvisioningState, 'pending'), eq(triggers.inboxProvisioningState, 'error')),
+                or(
+                  eq(triggers.inboxProvisioningState, 'pending'),
+                  eq(triggers.inboxProvisioningState, 'error'),
+                  and(
+                    eq(triggers.inboxProvisioningState, 'active'),
+                    or(
+                      isNull(triggers.inboxRegisteredAgentSubject),
+                      sql`${triggers.inboxRegisteredAgentSubject} != json_extract(${agents.identitySnapshot}, '$.subject')`,
+                    ),
+                  ),
+                ),
               ),
               and(
                 or(eq(triggers.enabled, false), isNotNull(triggers.archivedAt)),

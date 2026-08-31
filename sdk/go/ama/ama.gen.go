@@ -4208,12 +4208,15 @@ type IdentityStatusState string
 
 // IdentityDescriptor defines model for IdentityDescriptor.
 type IdentityDescriptor struct {
+	// AgentId Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
 	AgentId    string                    `json:"agentId"`
 	IdentityId string                    `json:"identityId"`
 	Issuer     string                    `json:"issuer"`
 	Runtime    IdentityDescriptorRuntime `json:"runtime"`
-	Subject    string                    `json:"subject"`
-	Username   string                    `json:"username"`
+
+	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
+	Subject  string `json:"subject"`
+	Username string `json:"username"`
 }
 
 // IdentityDescriptorRuntime defines model for IdentityDescriptor.Runtime.
@@ -5255,12 +5258,15 @@ type SessionEventsAccepted struct {
 
 // SessionIdentityDescriptor defines model for SessionIdentityDescriptor.
 type SessionIdentityDescriptor struct {
+	// AgentId Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
 	AgentId    string      `json:"agentId"`
 	IdentityId string      `json:"identityId"`
 	Issuer     string      `json:"issuer"`
 	Runtime    RuntimeName `json:"runtime"`
-	Subject    string      `json:"subject"`
-	Username   string      `json:"username"`
+
+	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
+	Subject  string `json:"subject"`
+	Username string `json:"username"`
 }
 
 // SessionListResponse defines model for SessionListResponse.

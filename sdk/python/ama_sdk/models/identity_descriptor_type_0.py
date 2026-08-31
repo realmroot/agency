@@ -24,9 +24,11 @@ class IdentityDescriptorType0:
     """
         Attributes:
             identity_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000004.
-            agent_id (str):  Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
+            agent_id (str): Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used
+                for Inbox addressing. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
             issuer (str):  Example: https://id.realmroot.dev/api/auth.
-            subject (str):  Example: agent:019ff41a-7da6-708f-8b05-44d4d0373685.
+            subject (str): Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values;
+                legacy opaque snapshot values remain readable. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
             username (str):  Example: researcher.
             runtime (IdentityDescriptorType0Runtime):
      """
