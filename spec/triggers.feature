@@ -94,6 +94,7 @@ Feature: Triggers
     Given an active Inbox trigger for a Realmroot-bound Agent
     When Inbox delivers notifications with equal, different, and absent routing keys
     Then equal keys share one Session under an atomic route binding
+    And a terminal or archived bound Session is atomically replaced without splitting concurrent deliveries
     And different keys use different Sessions
     And notifications without a key each create a new Session
 

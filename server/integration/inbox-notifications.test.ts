@@ -234,5 +234,27 @@ describe('[CF] Inbox notification receipts', () => {
     ])
     expect(left.sessionId).toBe(right.sessionId)
     expect([left.owned, right.owned].filter(Boolean)).toHaveLength(1)
+
+    const terminalSessionId = left.sessionId
+    const [replacementLeft, replacementRight] = await Promise.all([
+      routes.replaceSessionRoute({
+        projectId: project.id,
+        triggerId: trigger.metadata.uid,
+        routingKeyHash: base.routingKeyHash,
+        expectedSessionId: terminalSessionId,
+        activationRunId: firstReceipt.triggerRunId,
+        sessionId: 'session_replacement_left',
+      }),
+      routes.replaceSessionRoute({
+        projectId: project.id,
+        triggerId: trigger.metadata.uid,
+        routingKeyHash: base.routingKeyHash,
+        expectedSessionId: terminalSessionId,
+        activationRunId: secondActivation.runId,
+        sessionId: 'session_replacement_right',
+      }),
+    ])
+    expect(replacementLeft.sessionId).toBe(replacementRight.sessionId)
+    expect([replacementLeft.owned, replacementRight.owned].filter(Boolean)).toHaveLength(1)
   })
 })

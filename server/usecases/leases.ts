@@ -44,7 +44,7 @@ export async function claimLease(
   if (runner.environmentId && candidate.environmentId && candidate.environmentId !== runner.environmentId) {
     throw new RunnerConflictError('Runner is not eligible for this work item')
   }
-  if (!runnerSupportsWork(runner.runtimes, candidate.rawPayload)) {
+  if (!runnerSupportsWork(runner.runtimes, candidate.rawPayload, runner.metadata)) {
     throw new RunnerConflictError('Runner is not eligible for this work item')
   }
   const claimed = await deps.leases.claim(

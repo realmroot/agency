@@ -355,6 +355,23 @@ func TestLeaseWorkerRuntimeRequirementHelpers(t *testing.T) {
 	}
 }
 
+func TestLeaseWorkerRejectsRealmrootBoundSessionWithoutToolbox(t *testing.T) {
+	work := codexSessionStartLease("read inbox")
+	work.workItem.Payload["agentSnapshot"] = ama.JSON{"identity": ama.JSON{"subject": "01a05643-33a4-704f-8d6b-c30c04e18c6c"}}
+	client := &fakeAMAServer{lease: work}
+	daemon := testDaemon(client, &fakeAdapter{})
+	worker := daemon.leaseWorker()
+	worker.ToolboxAvailable = func() bool { return false }
+
+	err := worker.runClaimedWork(context.Background(), work.lease, work.workItem)
+	if err == nil || !strings.Contains(err.Error(), "requires the realmroot Toolbox") {
+		t.Fatalf("expected missing Toolbox failure, got %v", err)
+	}
+	if len(client.updates) != 1 || leaseState(client.updates[0]) != "failed" {
+		t.Fatalf("expected failed lease update, got %#v", client.updates)
+	}
+}
+
 func TestLeaseWorkerRunAssignedHandlesFailureAndCancellationStates(t *testing.T) {
 	work := approvedLease()
 	work.workItem.Payload = ama.JSON{"protocol": "bad"}

@@ -24,7 +24,10 @@ function validateConfig(config: EnvironmentConfig, validateBundledPackages = tru
     (validateBundledPackages && config.packages.webi.some((declaration) => declaration.startsWith('realmroot@')))
   ) {
     throw new EnvironmentValidationError('Invalid environment configuration', {
-      packages: `Realmroot Toolbox ${BUNDLED_REALMROOT_GO_PACKAGE} (${BUNDLED_REALMROOT_WEBI_PACKAGE}) is already provided by the cloud image.`,
+      packages:
+        config.type === 'cloud'
+          ? `Realmroot Toolbox ${BUNDLED_REALMROOT_GO_PACKAGE} (${BUNDLED_REALMROOT_WEBI_PACKAGE}) is already provided by the cloud image.`
+          : 'Self-hosted Environment packages are not installed by AMA; install the Realmroot Toolbox on the Runner host PATH.',
     })
   }
 }

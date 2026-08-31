@@ -1171,6 +1171,14 @@ export interface InboxActivationRepo {
     activationRunId: string
     createdAt: string
   }): Promise<{ sessionId: string; owned: boolean }>
+  replaceSessionRoute(input: {
+    projectId: string
+    triggerId: string
+    routingKeyHash: string
+    expectedSessionId: string
+    sessionId: string
+    activationRunId: string
+  }): Promise<{ sessionId: string; owned: boolean }>
   deleteSessionRoute(projectId: string, triggerId: string, routingKeyHash: string, sessionId: string): Promise<void>
 }
 
