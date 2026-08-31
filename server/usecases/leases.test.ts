@@ -132,27 +132,6 @@ describe('[spec: runners/claim-eligibility] claimLease', () => {
     ).rejects.toBeInstanceOf(RunnerConflictError)
   })
 
-  it('conflicts when Realmroot-bound work targets a Runner without the Toolbox capability', async () => {
-    const realmrootWork = candidate({
-      rawPayload: {
-        type: 'session.start',
-        runtimeRequirement: RUNTIME_REQUIREMENT,
-        agentSnapshot: { identity: { subject: '01a05643-33a4-704f-8d6b-c30c04e18c6c' } },
-      },
-    })
-    const dependencies = fakeDeps({ leases: { claimCandidate: async () => realmrootWork } })
-
-    await expect(
-      claimLease(dependencies, auth, runner(), { workItemId: 'work_1', leaseDurationSeconds: 60 }),
-    ).rejects.toBeInstanceOf(RunnerConflictError)
-    await expect(
-      claimLease(dependencies, auth, runner({ metadata: { realmrootToolbox: true } }), {
-        workItemId: 'work_1',
-        leaseDurationSeconds: 60,
-      }),
-    ).resolves.toEqual(lease)
-  })
-
   it('maps the at-capacity claim race to a conflict', async () => {
     await expect(
       claimLease(fakeDeps({ leases: { claim: async () => 'at_capacity' } }), auth, runner(), {

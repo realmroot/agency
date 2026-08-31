@@ -22,15 +22,14 @@ import (
 )
 
 type LeaseWorker struct {
-	Config           runnerconfig.Config
-	Client           *ama.RunnerClient
-	SandboxAdapter   sandbox.SandboxAdapter
-	RuntimeAdapter   runtime.Adapter
-	RuntimeBridge    runtime.Bridge
-	Relay            *runnersession.Relay
-	RunnerID         string
-	CurrentRuntimes  func() []runtime.RunnerRuntime
-	ToolboxAvailable func() bool
+	Config          runnerconfig.Config
+	Client          *ama.RunnerClient
+	SandboxAdapter  sandbox.SandboxAdapter
+	RuntimeAdapter  runtime.Adapter
+	RuntimeBridge   runtime.Bridge
+	Relay           *runnersession.Relay
+	RunnerID        string
+	CurrentRuntimes func() []runtime.RunnerRuntime
 }
 
 // resumeTokenBox shares the latest runtime resume token between the runtime adapter
@@ -142,23 +141,10 @@ func (r LeaseWorker) runClaimedWork(ctx context.Context, lease *ama.Lease, workI
 		}
 		return err
 	}
-	if payload.Type == "session.start" && realmrootBoundAgent(payload.AgentSnapshot) &&
-		(r.ToolboxAvailable == nil || !r.ToolboxAvailable()) {
-		err := fmt.Errorf("Realmroot-bound Agent requires the realmroot Toolbox on the Runner host PATH")
-		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
-			return finishErr
-		}
-		return err
-	}
 	if payload.Type == "session.start" {
 		return r.runSessionStart(ctx, lease, payload)
 	}
 	return r.runTool(ctx, lease, workItem, payload)
-}
-
-func realmrootBoundAgent(snapshot map[string]any) bool {
-	identity, exists := snapshot["identity"]
-	return exists && identity != nil
 }
 
 func (r LeaseWorker) supportsRuntimeRequirement(required *protocol.RuntimeRequirement) bool {
