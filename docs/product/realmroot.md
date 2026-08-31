@@ -64,4 +64,6 @@ authority or translate them into a different identity.
 
 Cloud images include the pinned Realmroot CLI. Self-hosted runners must provide
 it on `PATH`; otherwise only Realmroot-bound Session startup fails with a clear
-runtime error.
+runtime error. Cloud Environment packages must not redeclare Realmroot through
+Webi or `go install`; the verified image binary is available before per-Session
+package installation and avoids spending the startup timeout rebuilding the CLI.

@@ -634,7 +634,7 @@ describe('session-runtime', () => {
     )
   })
 
-  it('[spec: environments/cloud-packages] installs declared Go packages before cloud workspace preparation', async () => {
+  it('[spec: environments/cloud-packages] skips the legacy Realmroot Go declaration provided by the image', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) => ({
       exitCode: 0,
       stdout: command === 'printf %s "$PATH"' ? '/usr/local/go/bin:/usr/bin' : '',
@@ -653,20 +653,11 @@ describe('session-runtime', () => {
       workspaceManifest: { root: '/workspace', mounts: [] },
     })
 
-    expect(mockSandbox.exec).toHaveBeenCalledWith(
-      "GOBIN='/workspace/.ama/environment/bin' go install 'github.com/realmroot/cli@v0.4.2'",
-      { timeout: 120_000 },
-    )
-    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
-      PATH: '/workspace/.ama/environment/bin:/workspace/.ama/environment/.local/bin:/usr/local/go/bin:/usr/bin',
-    })
-    const installOrder = mockSandbox.exec.mock.invocationCallOrder.find((_, index) =>
-      String(mockSandbox.exec.mock.calls[index]?.[0]).includes(' go install '),
-    )
-    expect(installOrder).toBeLessThan(mockSandbox.setEnvVars.mock.invocationCallOrder[0]!)
+    expect(mockSandbox.exec).not.toHaveBeenCalledWith(expect.stringContaining(' go install '), expect.anything())
+    expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
   })
 
-  it('installs pinned Webi packages into the isolated environment home', async () => {
+  it('skips the legacy Realmroot Webi declaration provided by the image', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) => ({
       exitCode: 0,
       stdout: command === 'printf %s "$PATH"' ? '/usr/bin' : '',
@@ -682,12 +673,23 @@ describe('session-runtime', () => {
       environmentSnapshot: { packages: { webi: ['realmroot@0.4.2'] } },
     })
 
-    expect(mockSandbox.exec).toHaveBeenCalledWith(expect.stringContaining('https://webi.sh/realmroot%400.4.2'), {
-      timeout: 120_000,
-    })
-    expect(mockSandbox.exec).toHaveBeenCalledWith(expect.stringContaining('WEBI_PKG='), { timeout: 120_000 })
-    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
-      PATH: '/workspace/.ama/environment/bin:/workspace/.ama/environment/.local/bin:/usr/bin',
+    expect(mockSandbox.exec).not.toHaveBeenCalledWith(expect.stringContaining('webi.sh/realmroot'), expect.anything())
+    expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
+  })
+
+  it('rejects a legacy Realmroot package declaration that differs from the image pin', async () => {
+    await expect(
+      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+        sessionId: 'session_realmroot_mismatch',
+        sandboxId: 'sandbox_realmroot_mismatch',
+        provider: 'workers-ai',
+        model: '@cf/moonshotai/kimi-k2.6',
+        agentSnapshot: {},
+        environmentSnapshot: { packages: { go: ['github.com/realmroot/cli@v0.4.1'] } },
+      }),
+    ).rejects.toMatchObject({
+      code: 'environment_package_installation_failed',
+      step: 'validate-go-package:github.com/realmroot/cli@v0.4.1',
     })
   })
 

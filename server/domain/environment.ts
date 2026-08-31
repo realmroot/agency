@@ -70,6 +70,10 @@ export interface EnvironmentVersionStatus {
 // snapshot. (name/description are not runtime config — they never version.)
 export const RUNTIME_CONFIG_FIELDS = ['scope', 'type', 'networking', 'packages', 'variables'] as const
 
+export const BUNDLED_REALMROOT_VERSION = '0.4.2'
+export const BUNDLED_REALMROOT_GO_PACKAGE = `github.com/realmroot/cli@v${BUNDLED_REALMROOT_VERSION}`
+export const BUNDLED_REALMROOT_WEBI_PACKAGE = `realmroot@${BUNDLED_REALMROOT_VERSION}`
+
 // Validation failures are keyed by the field that caused them; the http layer
 // maps a non-null result to a 400 validation error envelope.
 export type FieldErrors = Record<string, string>
