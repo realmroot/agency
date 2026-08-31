@@ -190,6 +190,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
         inboxCallbackTokenCiphertext: input.inboxProvisioning?.callbackTokenCiphertext ?? null,
         inboxSubscriptionEtag: input.inboxProvisioning?.etag ?? null,
         inboxRegisteredAgentSubject: input.inboxProvisioning?.registeredAgentSubject ?? null,
+        inboxTransitionTargetSubject: input.inboxProvisioning?.transitionTargetSubject ?? null,
         inboxProvisioningState: input.inboxProvisioning?.phase ?? null,
         inboxProvisioningError: input.inboxProvisioning?.errorMessage ?? null,
         createdAt: timestamp,
@@ -213,6 +214,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
                 inboxCallbackTokenCiphertext: fields.inboxProvisioning?.callbackTokenCiphertext ?? null,
                 inboxSubscriptionEtag: fields.inboxProvisioning?.etag ?? null,
                 inboxRegisteredAgentSubject: fields.inboxProvisioning?.registeredAgentSubject ?? null,
+                inboxTransitionTargetSubject: fields.inboxProvisioning?.transitionTargetSubject ?? null,
                 inboxProvisioningState: fields.inboxProvisioning?.phase ?? null,
                 inboxProvisioningError: fields.inboxProvisioning?.errorMessage ?? null,
               }

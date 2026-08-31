@@ -56,7 +56,15 @@ function trigger(
   }
 }
 
-function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: boolean } = {}) {
+function fakeDeps(
+  options: {
+    getError?: Error
+    putError?: Error
+    deleteError?: Error
+    binding?: boolean
+    remote?: { etag: string; agentSubject: string } | null
+  } = {},
+) {
   const record = trigger()
   const binding: InboxSubscriptionBinding = {
     trigger: record,
@@ -64,7 +72,9 @@ function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: bo
     projectId: 'project_1',
     projectName: 'Project',
     desiredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
-    registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+    registeredAgentSubject: '01a05643-33a4-704f-8d6b-bec364657b5c',
+    transitionTargetSubject: null,
+    subscriptionPhase: 'active',
     callbackTokenHash: 'current-hash',
     callbackTokenCiphertext: 'current-ciphertext',
     subscriptionEtag: '"v1"',
@@ -81,6 +91,13 @@ function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: bo
   const put = options.putError
     ? vi.fn(async () => Promise.reject(options.putError))
     : vi.fn(async () => ({ etag: '"v2"' }))
+  const get = options.getError
+    ? vi.fn(async () => Promise.reject(options.getError))
+    : vi.fn(async () =>
+        options.remote === undefined
+          ? { etag: '"v1"', agentSubject: '01a05643-33a4-704f-8d6b-bec364657b5c' }
+          : options.remote,
+      )
   const remove = options.deleteError
     ? vi.fn(async () => Promise.reject(options.deleteError))
     : vi.fn(async () => undefined)
@@ -92,10 +109,10 @@ function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: bo
       updateProvisioning,
       reconcilableSubscriptions: vi.fn(async () => [record]),
     },
-    inboxSubscriptions: { put, delete: remove },
+    inboxSubscriptions: { get, put, delete: remove },
     inboxCallbackTokens: { open, seal },
   } as unknown as Deps
-  return { deps, binding, updateProvisioning, put, remove, open, seal }
+  return { deps, binding, updateProvisioning, get, put, remove, open, seal }
 }
 
 describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () => {
@@ -109,6 +126,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     expect(provisioning.fields.callbackTokenHash).toBe(await inboxTokenHash(provisioning.token))
     expect(provisioning.fields.callbackTokenCiphertext).toBe('sealed-token')
     expect(provisioning.fields.registeredAgentSubject).toBeNull()
+    expect(provisioning.fields.transitionTargetSubject).toBeNull()
     expect(fake.seal).toHaveBeenCalledWith(provisioning.fields.subscriptionId, provisioning.token)
     expect(newInboxCallbackToken()).toMatch(/^[A-Za-z0-9_-]{43}$/)
   })
@@ -214,6 +232,120 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     expect(fake.put).toHaveBeenCalledWith(expect.objectContaining({ callbackToken: 'new-token' }))
   })
 
+  it('creates a missing remote Subscription after GET 404 with the persisted transition target', async () => {
+    const fake = fakeDeps({ remote: null })
+
+    await reconcileInboxSubscription(fake.deps, trigger())
+
+    expect(fake.get).toHaveBeenCalledWith({ subscriptionId: 'sub_0123456789abcdef0123456789abcdef' })
+    expect(fake.updateProvisioning).toHaveBeenCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'pending',
+        registeredAgentSubject: null,
+        transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      }),
+      expect.any(String),
+    )
+    expect(fake.put).toHaveBeenCalledWith(expect.objectContaining({ etag: null }))
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'active',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+        transitionTargetSubject: null,
+      }),
+      expect.any(String),
+    )
+  })
+
+  it('calibrates remote subject A before replacing it with target B', async () => {
+    const fake = fakeDeps()
+
+    await reconcileInboxSubscription(fake.deps, trigger())
+
+    expect(fake.updateProvisioning).toHaveBeenNthCalledWith(
+      2,
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'pending',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-bec364657b5c',
+        transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      }),
+      expect.any(String),
+    )
+    expect(fake.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+        etag: '"v1"',
+      }),
+    )
+  })
+
+  it('confirms active locally without another PUT when GET already reports the target', async () => {
+    const target = '01a05643-33a4-704f-8d6b-c30c04e18c6c'
+    const fake = fakeDeps({ remote: { etag: '"v2"', agentSubject: target } })
+
+    await reconcileInboxSubscription(fake.deps, trigger())
+
+    expect(fake.put).not.toHaveBeenCalled()
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        etag: '"v2"',
+        phase: 'active',
+        registeredAgentSubject: target,
+        transitionTargetSubject: null,
+      }),
+      expect.any(String),
+    )
+  })
+
+  it('records a safe retryable error when the remote Subscription read fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const fake = fakeDeps({
+      getError: new InboxSubscriptionGatewayError('unavailable', 'arbitrary remote message', { status: 503 }),
+    })
+
+    await reconcileInboxSubscription(fake.deps, trigger())
+
+    expect(fake.put).not.toHaveBeenCalled()
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'error',
+        errorMessage: 'Inbox Subscription read failed (unavailable, HTTP 503)',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-bec364657b5c',
+        transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      }),
+      expect.any(String),
+    )
+    expect(consoleError).toHaveBeenCalledOnce()
+  })
+
+  it('propagates an unknown remote Subscription read failure without logging or persisting error state', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const failure = new Error('unknown read failure')
+    const fake = fakeDeps({ getError: failure })
+
+    await expect(reconcileInboxSubscription(fake.deps, trigger())).rejects.toBe(failure)
+
+    expect(fake.put).not.toHaveBeenCalled()
+    expect(fake.updateProvisioning).toHaveBeenCalledTimes(1)
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({ phase: 'pending', errorMessage: null }),
+      expect.any(String),
+    )
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
   it('keeps the same accepted token after an uncertain PUT failure', async () => {
     const fake = fakeDeps({
       putError: new InboxSubscriptionGatewayError('unavailable', 'arbitrary remote message'),
@@ -227,7 +359,8 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
         callbackTokenCiphertext: 'current-ciphertext',
         etag: '"v1"',
         phase: 'error',
-        registeredAgentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+        registeredAgentSubject: '01a05643-33a4-704f-8d6b-bec364657b5c',
+        transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       }),
       expect.any(String),
     )
@@ -286,8 +419,9 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     await expect(reconcileInboxSubscription(fake.deps, trigger(), callbackToken)).rejects.toBe(failure)
 
     expect(consoleError).not.toHaveBeenCalled()
-    expect(fake.updateProvisioning).toHaveBeenCalledOnce()
-    expect(fake.updateProvisioning).toHaveBeenCalledWith(
+    expect(fake.updateProvisioning).toHaveBeenCalledTimes(2)
+    expect(fake.updateProvisioning).toHaveBeenNthCalledWith(
+      1,
       'project_1',
       'trigger_1',
       expect.objectContaining({ phase: 'pending', errorMessage: null }),
@@ -299,12 +433,15 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const failure = new Error('D1 active-state write failed')
     const fake = fakeDeps()
-    fake.updateProvisioning.mockResolvedValueOnce(trigger()).mockRejectedValueOnce(failure)
+    fake.updateProvisioning
+      .mockResolvedValueOnce(trigger())
+      .mockResolvedValueOnce(trigger())
+      .mockRejectedValueOnce(failure)
 
     await expect(reconcileInboxSubscription(fake.deps, trigger())).rejects.toBe(failure)
 
     expect(fake.put).toHaveBeenCalledOnce()
-    expect(fake.updateProvisioning).toHaveBeenCalledTimes(2)
+    expect(fake.updateProvisioning).toHaveBeenCalledTimes(3)
     expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
       'project_1',
       'trigger_1',
@@ -322,9 +459,13 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     fake.binding.trigger = pending
     fake.updateProvisioning.mockReset()
     fake.updateProvisioning.mockResolvedValue(trigger())
+    fake.get.mockResolvedValue({
+      etag: '"v2"',
+      agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+    })
 
     await expect(reconcileInboxSubscription(fake.deps, pending)).resolves.toEqual(trigger())
-    expect(fake.put).toHaveBeenCalledTimes(2)
+    expect(fake.put).toHaveBeenCalledOnce()
     expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
       'project_1',
       'trigger_1',

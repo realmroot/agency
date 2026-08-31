@@ -27,8 +27,8 @@ Feature: Triggers
     When the trigger is created, paused, resumed, archived, or deleted
     Then Agency reconciles the Trigger-owned Inbox Subscription through its service identity
     And the Subscription references the stable OIDC subject rather than the internal Identity id
-    And legacy active Subscriptions retain their registered internal id until a successful subject replacement
-    And active Subscriptions are reconciled whenever their registered and desired subjects differ
+    And legacy rows use the canonical snapshot subject only as a transition target until remote GET calibrates the registered subject
+    And active Subscriptions are reconciled whenever the remote registered subject differs from that target
     And provisioning state includes safe gateway diagnostics without exposing the callback Bearer token
 
   @triggers/lifecycle @usecase
@@ -83,7 +83,7 @@ Feature: Triggers
     Given an active Inbox trigger with a registered callback token and stable OIDC Agent subject
     When Inbox delivers the same subscription event more than once
     Then Agency durably accepts one Trigger Run before acknowledging delivery
-    And a subject transition accepts the registered and desired subjects only while provisioning is pending or failed
+    And a subject transition accepts the registered and persisted target subjects only while provisioning is pending or failed
     And active admission accepts only the subject confirmed by the last successful Subscription PUT
     And invalid tokens, internal Identity ids, and mismatched Agent subjects are rejected without creating a run
 

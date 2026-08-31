@@ -11,9 +11,9 @@ import type {
   UpdateAgentFields,
 } from '@server/usecases/ports'
 import { IdentityAlreadyBoundError } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { agents, agentVersions, connectors, identities, providers } from '../../db/schema'
+import { agents, agentVersions, connectors, identities, providers, triggers } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
@@ -316,6 +316,25 @@ export function createAgentRepo(db: Db): AgentRepo {
         return connector.availability === 'available'
       }
       return DEFAULT_CONNECTORS.some((item) => item.id === connectorId && item.availability === 'available')
+    },
+
+    async hasLiveInboxTrigger(projectId, agentId) {
+      const row = await db
+        .select({ id: triggers.id })
+        .from(triggers)
+        .where(
+          and(
+            eq(triggers.projectId, projectId),
+            eq(triggers.agentId, agentId),
+            eq(triggers.triggerType, 'inbox'),
+            eq(triggers.enabled, true),
+            isNull(triggers.archivedAt),
+            inArray(triggers.inboxProvisioningState, ['pending', 'active', 'error']),
+          ),
+        )
+        .limit(1)
+        .get()
+      return Boolean(row)
     },
   }
 }

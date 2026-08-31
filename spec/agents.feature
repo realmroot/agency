@@ -26,6 +26,13 @@ Feature: Agents
     Then a new Agent Version stores only the safe Identity descriptor and immutable runtime
     And changing or removing Identity creates another Agent Version
 
+  @agents/inbox-identity-rebind @usecase
+  Scenario: Keep a live Inbox Trigger bound to one mailbox identity
+    Given an agent has a live Inbox Trigger bound to its Realmroot Identity
+    When the user attempts to replace or remove that Identity
+    Then the update is rejected as a conflict
+    And non-Identity configuration updates remain available
+
   @agents/lifecycle @usecase
   Scenario: Partial updates leave omitted fields and prune null metadata
     Given an agent with instructions, description, model config, tools, and metadata

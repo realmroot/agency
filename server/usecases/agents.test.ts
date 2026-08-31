@@ -117,6 +117,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     unarchive: async () => {},
     providerEnabled: async () => true,
     connectorAvailable: async () => true,
+    hasLiveInboxTrigger: async () => false,
     ...overrides.repo,
   }
   return {
@@ -387,6 +388,40 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
     const second = await updateAgent(deps, auth, first.agent, { identityRef: 'identity_2' })
     expect(first.agent.spec.identity?.identityId).toBe('identity_1')
     expect(second.agent.spec.identity?.identityId).toBe('identity_2')
+  })
+
+  it('[spec: agents/inbox-identity-rebind] rejects Identity replacement and removal while allowing other updates', async () => {
+    const deps = fakeDeps({ repo: { hasLiveInboxTrigger: async () => true } })
+    deps.identities = {
+      find: async (_projectId: string, identityId: string) => ({
+        metadata: resourceMetadata({
+          uid: identityId,
+          pid: 'project_1',
+          name: identityId,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+        spec: { username: 'replacement', runtime: 'codex' },
+        status: {
+          phase: 'active',
+          state: 'active',
+          failureCode: null,
+          boundAgentId: 'agent_1',
+          descriptor: { ...identityDescriptor, identityId, subject: '01a05643-33a4-704f-8d6b-c30c04e18c6c' },
+        },
+      }),
+    } as never
+    const bound = agentRecord({ spec: { identity: identityDescriptor } })
+
+    await expect(updateAgent(deps, auth, bound, { identityRef: 'identity_2' })).rejects.toMatchObject({
+      code: 'agent_inbox_identity_conflict',
+    })
+    await expect(updateAgent(deps, auth, bound, { identityRef: null })).rejects.toMatchObject({
+      code: 'agent_inbox_identity_conflict',
+    })
+    await expect(updateAgent(deps, auth, bound, { systemPrompt: 'Updated safely.' })).resolves.toMatchObject({
+      agent: { spec: { systemPrompt: 'Updated safely.', identity: identityDescriptor } },
+    })
   })
 })
 

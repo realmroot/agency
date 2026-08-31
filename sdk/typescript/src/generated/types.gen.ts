@@ -2459,7 +2459,7 @@ export type UpdateAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Archived agent
+     * Archived Agent or live Inbox Trigger prevents the requested update
      */
     409: ErrorResponse;
 };

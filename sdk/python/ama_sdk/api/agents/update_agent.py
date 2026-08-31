@@ -110,7 +110,8 @@ def sync_detailed(
     """ Update an agent
 
      Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent are rejected with 409.
+    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
+    Trigger exists, are rejected with 409.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -147,7 +148,8 @@ def sync(
     """ Update an agent
 
      Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent are rejected with 409.
+    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
+    Trigger exists, are rejected with 409.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -179,7 +181,8 @@ async def asyncio_detailed(
     """ Update an agent
 
      Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent are rejected with 409.
+    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
+    Trigger exists, are rejected with 409.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -216,7 +219,8 @@ async def asyncio(
     """ Update an agent
 
      Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent are rejected with 409.
+    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
+    Trigger exists, are rejected with 409.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.

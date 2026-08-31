@@ -9428,7 +9428,7 @@
           "Agents"
         ],
         "summary": "Update an agent",
-        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.",
+        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.",
         "security": [
           {
             "oidcAccessToken": [
@@ -9509,7 +9509,7 @@
             }
           },
           "409": {
-            "description": "Archived agent",
+            "description": "Archived Agent or live Inbox Trigger prevents the requested update",
             "content": {
               "application/json": {
                 "schema": {

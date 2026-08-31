@@ -41,7 +41,7 @@ function newInboxSubscriptionId() {
   return `sub_${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`
 }
 
-type SubscriptionOperation = 'update' | 'deletion'
+type SubscriptionOperation = 'read' | 'update' | 'deletion'
 
 const SAFE_GATEWAY_MESSAGES: Record<InboxSubscriptionGatewayError['code'], string> = {
   unavailable: 'Inbox Subscription gateway is unavailable',
@@ -96,6 +96,7 @@ export async function initialInboxProvisioning(deps: Deps) {
       callbackTokenCiphertext: await callbackTokens(deps).seal(subscriptionId, token),
       etag: null,
       registeredAgentSubject: null,
+      transitionTargetSubject: null,
       phase: 'pending',
       errorMessage: null,
     } satisfies InboxProvisioningFields,
@@ -132,6 +133,7 @@ export async function reconcileInboxSubscription(
           callbackTokenCiphertext: binding.callbackTokenCiphertext,
           etag: binding.subscriptionEtag,
           registeredAgentSubject: binding.registeredAgentSubject,
+          transitionTargetSubject: binding.transitionTargetSubject,
           phase: 'error',
           errorMessage,
         },
@@ -147,6 +149,7 @@ export async function reconcileInboxSubscription(
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: null,
         registeredAgentSubject: null,
+        transitionTargetSubject: null,
         phase: 'inactive',
         errorMessage: null,
       },
@@ -155,6 +158,7 @@ export async function reconcileInboxSubscription(
   }
 
   const token = suppliedToken ?? (await callbackTokens(deps).open(subscriptionId, binding.callbackTokenCiphertext))
+  const transitionTargetSubject = binding.desiredAgentSubject
   await repo.updateProvisioning(
     binding.projectId,
     trigger.metadata.uid,
@@ -164,18 +168,76 @@ export async function reconcileInboxSubscription(
       callbackTokenCiphertext: binding.callbackTokenCiphertext,
       etag: binding.subscriptionEtag,
       registeredAgentSubject: binding.registeredAgentSubject,
+      transitionTargetSubject,
       phase: 'pending',
       errorMessage: null,
     },
     timestamp,
   )
+  let current: { etag: string; agentSubject: string } | null
+  try {
+    current = await gateway.get({ subscriptionId })
+  } catch (cause) {
+    if (!(cause instanceof InboxSubscriptionGatewayError)) throw cause
+    const errorMessage = recordSubscriptionFailure('read', cause, binding, subscriptionId)
+    return repo.updateProvisioning(
+      binding.projectId,
+      trigger.metadata.uid,
+      {
+        subscriptionId,
+        callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
+        etag: binding.subscriptionEtag,
+        registeredAgentSubject: binding.registeredAgentSubject,
+        transitionTargetSubject,
+        phase: 'error',
+        errorMessage,
+      },
+      new Date().toISOString(),
+    )
+  }
+
+  const registeredAgentSubject = current?.agentSubject ?? null
+  const currentEtag = current?.etag ?? null
+  await repo.updateProvisioning(
+    binding.projectId,
+    trigger.metadata.uid,
+    {
+      subscriptionId,
+      callbackTokenHash: binding.callbackTokenHash,
+      callbackTokenCiphertext: binding.callbackTokenCiphertext,
+      etag: currentEtag,
+      registeredAgentSubject,
+      transitionTargetSubject,
+      phase: 'pending',
+      errorMessage: null,
+    },
+    new Date().toISOString(),
+  )
+  if (registeredAgentSubject === transitionTargetSubject) {
+    return repo.updateProvisioning(
+      binding.projectId,
+      trigger.metadata.uid,
+      {
+        subscriptionId,
+        callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
+        etag: currentEtag,
+        registeredAgentSubject,
+        transitionTargetSubject: null,
+        phase: 'active',
+        errorMessage: null,
+      },
+      new Date().toISOString(),
+    )
+  }
   let result: { etag: string }
   try {
     result = await gateway.put({
       subscriptionId,
       agentSubject: binding.desiredAgentSubject,
       callbackToken: token,
-      etag: binding.subscriptionEtag,
+      etag: currentEtag,
     })
   } catch (cause) {
     if (!(cause instanceof InboxSubscriptionGatewayError)) throw cause
@@ -187,8 +249,9 @@ export async function reconcileInboxSubscription(
         subscriptionId,
         callbackTokenHash: binding.callbackTokenHash,
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
-        etag: binding.subscriptionEtag,
-        registeredAgentSubject: binding.registeredAgentSubject,
+        etag: currentEtag,
+        registeredAgentSubject,
+        transitionTargetSubject,
         phase: 'error',
         errorMessage,
       },
@@ -203,7 +266,8 @@ export async function reconcileInboxSubscription(
       callbackTokenHash: binding.callbackTokenHash,
       callbackTokenCiphertext: binding.callbackTokenCiphertext,
       etag: result.etag,
-      registeredAgentSubject: binding.desiredAgentSubject,
+      registeredAgentSubject: transitionTargetSubject,
+      transitionTargetSubject: null,
       phase: 'active',
       errorMessage: null,
     },
@@ -231,6 +295,7 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
         registeredAgentSubject: binding.registeredAgentSubject,
+        transitionTargetSubject: binding.transitionTargetSubject,
         phase: 'error',
         errorMessage,
       },

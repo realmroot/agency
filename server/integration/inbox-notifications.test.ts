@@ -51,6 +51,7 @@ describe('[CF] Inbox notification receipts', () => {
     if (!project) throw new Error('Expected signed-in project')
 
     const identityAgentId = '01a05643-33a4-704f-8d6b-bec364657b5c'
+    const previousAgentSubject = '01a05643-33a4-704f-8d6b-bec364657b5d'
     const agentSubject = '01a05643-33a4-704f-8d6b-c30c04e18c6c'
     const identity = {
       identityId: 'identity_inbox_test',
@@ -98,8 +99,9 @@ describe('[CF] Inbox notification receipts', () => {
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           etag: '"subscription-v1"',
-          registeredAgentSubject: identityAgentId,
-          phase: 'active',
+          registeredAgentSubject: previousAgentSubject,
+          transitionTargetSubject: agentSubject,
+          phase: 'pending',
           errorMessage: null,
         },
       },
@@ -109,22 +111,39 @@ describe('[CF] Inbox notification receipts', () => {
       eventId: 'event_before_rebind',
       type: 'message.created',
       subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-      agentId: identityAgentId,
+      agentId: previousAgentSubject,
       messageId: 'message_before_rebind',
       occurredAt: '2026-08-30T11:59:00.000Z',
     }
     expect((await callback(token, oldNotification)).status).toBe(202)
     expect(
-      (await callback(token, { ...oldNotification, eventId: 'event_new_too_early', agentId: agentSubject })).status,
-    ).toBe(403)
+      (await callback(token, { ...oldNotification, eventId: 'event_new_during_transition', agentId: agentSubject }))
+        .status,
+    ).toBe(202)
 
     const [migratedTrigger] = await routes.reconcilableSubscriptions(10)
     expect(migratedTrigger?.metadata.uid).toBe(trigger.metadata.uid)
-    const putSubscription = vi.fn(async () => ({ etag: '"subscription-v2"' }))
+    const putSubscription = vi.fn(async () => {
+      expect((await callback(token, { ...oldNotification, eventId: 'event_old_between_get_and_put' })).status).toBe(202)
+      expect(
+        (
+          await callback(token, {
+            ...oldNotification,
+            eventId: 'event_new_between_get_and_put',
+            agentId: agentSubject,
+          })
+        ).status,
+      ).toBe(202)
+      return { etag: '"subscription-v2"' }
+    })
     await reconcileInboxSubscription(
       {
         inboxActivations: routes,
-        inboxSubscriptions: { put: putSubscription, delete: vi.fn() },
+        inboxSubscriptions: {
+          get: vi.fn(async () => ({ etag: '"subscription-v1"', agentSubject: previousAgentSubject })),
+          put: putSubscription,
+          delete: vi.fn(),
+        },
         inboxCallbackTokens: { open: vi.fn(async () => token), seal: vi.fn() },
       } as Deps,
       migratedTrigger ?? trigger,
@@ -174,7 +193,12 @@ describe('[CF] Inbox notification receipts', () => {
 
     const binding = await routes.findSubscription(notification.subscriptionId)
     if (!binding) throw new Error('Expected Inbox Subscription binding')
-    expect(binding).toMatchObject({ desiredAgentSubject: agentSubject, registeredAgentSubject: agentSubject })
+    expect(binding).toMatchObject({
+      desiredAgentSubject: agentSubject,
+      registeredAgentSubject: agentSubject,
+      transitionTargetSubject: null,
+      subscriptionPhase: 'active',
+    })
     const { routingKey: _, ...storedNotification } = notification
     const secondActivation = await routes.claimNotification(
       binding,

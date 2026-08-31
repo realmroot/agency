@@ -28,6 +28,7 @@ const provisioning = {
   callbackTokenCiphertext: 'token-ciphertext',
   etag: null,
   registeredAgentSubject: null,
+  transitionTargetSubject: null,
   phase: 'pending',
   errorMessage: null,
 } as const satisfies InboxProvisioningFields

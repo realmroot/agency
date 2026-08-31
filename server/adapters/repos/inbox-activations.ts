@@ -41,6 +41,8 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           callbackTokenCiphertext: triggers.inboxCallbackTokenCiphertext,
           subscriptionEtag: triggers.inboxSubscriptionEtag,
           registeredAgentSubject: triggers.inboxRegisteredAgentSubject,
+          transitionTargetSubject: triggers.inboxTransitionTargetSubject,
+          subscriptionPhase: triggers.inboxProvisioningState,
           identitySnapshot: agents.identitySnapshot,
           projectName: projects.name,
         })
@@ -49,7 +51,8 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         .innerJoin(projects, eq(projects.id, triggers.projectId))
         .where(and(eq(triggers.inboxSubscriptionId, subscriptionId), eq(triggers.triggerType, 'inbox')))
         .get()
-      if (!row?.callbackTokenHash || !row.callbackTokenCiphertext || !row.identitySnapshot) return null
+      if (!row?.callbackTokenHash || !row.callbackTokenCiphertext || !row.identitySnapshot || !row.subscriptionPhase)
+        return null
       const trigger = await triggerRepo.find(row.projectId, row.triggerId)
       if (!trigger) return null
       const identity = parseJson<IdentityDescriptor>(row.identitySnapshot)
@@ -60,6 +63,8 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         projectName: row.projectName,
         desiredAgentSubject: identity.subject,
         registeredAgentSubject: row.registeredAgentSubject,
+        transitionTargetSubject: row.transitionTargetSubject,
+        subscriptionPhase: row.subscriptionPhase,
         callbackTokenHash: row.callbackTokenHash,
         callbackTokenCiphertext: row.callbackTokenCiphertext,
         subscriptionEtag: row.subscriptionEtag,
@@ -75,6 +80,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           inboxCallbackTokenCiphertext: fields.callbackTokenCiphertext,
           inboxSubscriptionEtag: fields.etag,
           inboxRegisteredAgentSubject: fields.registeredAgentSubject,
+          inboxTransitionTargetSubject: fields.transitionTargetSubject,
           inboxProvisioningState: fields.phase,
           inboxProvisioningError: fields.errorMessage,
           updatedAt,
