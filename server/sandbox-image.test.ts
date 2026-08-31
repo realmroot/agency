@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs'
+import {
+  BUNDLED_REALMROOT_GO_PACKAGE,
+  BUNDLED_REALMROOT_VERSION,
+  BUNDLED_REALMROOT_WEBI_PACKAGE,
+} from '@server/domain/environment'
 import { describe, expect, it } from 'vitest'
 
 const dockerfile = readFileSync(new URL('../Dockerfile', import.meta.url), 'utf8')
 
 describe('[spec: environments/cloud-packages] Cloud Sandbox image', () => {
   it('installs the pinned linux/amd64 Realmroot release after digest verification', () => {
-    expect(dockerfile).toContain('ARG REALMROOT_VERSION=0.4.2')
+    expect(dockerfile).toContain(`ARG REALMROOT_VERSION=${BUNDLED_REALMROOT_VERSION}`)
+    expect(BUNDLED_REALMROOT_GO_PACKAGE).toBe(`github.com/realmroot/cli@v${BUNDLED_REALMROOT_VERSION}`)
+    expect(BUNDLED_REALMROOT_WEBI_PACKAGE).toBe(`realmroot@${BUNDLED_REALMROOT_VERSION}`)
     expect(dockerfile).toContain(
       'ARG REALMROOT_SHA256=51a7d0d8c99a748a4bec8b8778f34659f621952d70756151d726c8c4d480e5da',
     )

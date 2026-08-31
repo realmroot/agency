@@ -12,20 +12,32 @@ import { type AuthScope, EnvironmentArchivedError, EnvironmentValidationError } 
 // Validates the config against sibling resources (MCP catalog entries) and the
 // secret-free-object rules. Throws
 // EnvironmentValidationError on the first failure.
-function validateConfig(config: EnvironmentConfig) {
+function validateConfig(config: EnvironmentConfig, validateBundledPackages = true) {
   if (hasSecretMaterial(config.variables)) {
     throw new EnvironmentValidationError('Invalid environment configuration', {
       variables: 'Secret material must be stored in a vault.',
     })
   }
   if (
-    config.packages.go.some((declaration) => declaration.startsWith('github.com/realmroot/cli@')) ||
-    config.packages.webi.some((declaration) => declaration.startsWith('realmroot@'))
+    (validateBundledPackages &&
+      config.packages.go.some((declaration) => declaration.startsWith('github.com/realmroot/cli@'))) ||
+    (validateBundledPackages && config.packages.webi.some((declaration) => declaration.startsWith('realmroot@')))
   ) {
     throw new EnvironmentValidationError('Invalid environment configuration', {
       packages: `Realmroot Toolbox ${BUNDLED_REALMROOT_GO_PACKAGE} (${BUNDLED_REALMROOT_WEBI_PACKAGE}) is already provided by the cloud image.`,
     })
   }
+}
+
+function packagesEqual(left: EnvironmentConfig['packages'], right: EnvironmentConfig['packages']): boolean {
+  return (
+    left.type === right.type &&
+    (['apt', 'cargo', 'gem', 'go', 'npm', 'pip', 'webi'] as const).every(
+      (manager) =>
+        left[manager].length === right[manager].length &&
+        left[manager].every((declaration, index) => declaration === right[manager][index]),
+    )
+  )
 }
 
 export async function createEnvironment(
@@ -106,7 +118,9 @@ export async function updateEnvironment(
     packages: configFields.packages ?? environment.spec.packages,
     variables: configFields.variables ?? environment.spec.variables,
   }
-  validateConfig(next)
+  const packagesChanged =
+    configFields.packages !== undefined && !packagesEqual(configFields.packages, environment.spec.packages)
+  validateConfig(next, packagesChanged)
 
   const updatedAt = new Date().toISOString()
   const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => configFields[field] !== undefined)
