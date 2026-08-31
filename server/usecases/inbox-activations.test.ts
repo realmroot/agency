@@ -92,20 +92,24 @@ function runtimeSession(id: string): RuntimeSessionHandle {
 
 function deps(
   overrides: {
-    activation?: PendingInboxActivation
+    activation?: PendingInboxActivation | null
     reserve?: { sessionId: string; owned: boolean }
     existing?: RuntimeSessionHandle | null
+    trigger?: Trigger | null
   } = {},
 ) {
   const marks = { dispatched: vi.fn(), failed: vi.fn() }
   const reserve = vi.fn(async () => overrides.reserve ?? { sessionId: 'session_reserved', owned: true })
   const value = {
     inboxActivations: {
-      findActivation: vi.fn(async () => overrides.activation ?? activation('route_hash')),
+      findActivation: vi.fn(async () =>
+        overrides.activation === undefined ? activation('route_hash') : overrides.activation,
+      ),
       reserveSessionRoute: reserve,
       deleteSessionRoute: vi.fn(),
+      pendingActivationIds: vi.fn(async () => ['run_1', 'run_2']),
     },
-    triggers: { find: vi.fn(async () => inboxTrigger()) },
+    triggers: { find: vi.fn(async () => (overrides.trigger === undefined ? inboxTrigger() : overrides.trigger)) },
     sessions: { findRuntimeRow: vi.fn(async () => overrides.existing ?? null) },
     triggerDispatch: { markRunDispatched: marks.dispatched, markRunFailed: marks.failed },
     audit: { record: vi.fn() },
@@ -132,6 +136,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           projectName: 'Project',
           remoteAgentId: 'realmroot-agent_1',
           callbackTokenHash: await inboxTokenHash(token),
+          callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
         })),
         claimNotification,
@@ -169,6 +174,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           projectName: 'Project',
           remoteAgentId: 'realmroot-agent_1',
           callbackTokenHash: await inboxTokenHash(token),
+          callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
         })),
         claimNotification,
@@ -187,6 +193,42 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
       receiveInboxNotification(fake, `Bearer ${token}`, { ...notification, agentId: 'other-agent' }),
     ).rejects.toMatchObject({ status: 403 })
     expect(claimNotification).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown Subscription and accepts notifications without a routing key', async () => {
+    const token = newInboxCallbackToken()
+    await expect(
+      receiveInboxNotification(
+        { inboxActivations: { findSubscription: vi.fn(async () => null) } } as unknown as Deps,
+        `Bearer ${token}`,
+        activation(null).notification,
+      ),
+    ).rejects.toMatchObject({ status: 401 })
+
+    const claimNotification = vi.fn(async () => ({ runId: 'run_1', replayed: false }))
+    const fake = {
+      inboxActivations: {
+        findSubscription: vi.fn(async () => ({
+          trigger: inboxTrigger(),
+          organizationId: 'org_1',
+          projectId: 'project_1',
+          projectName: 'Project',
+          remoteAgentId: 'realmroot-agent_1',
+          callbackTokenHash: await inboxTokenHash(token),
+          callbackTokenCiphertext: 'encrypted-token',
+          subscriptionEtag: null,
+        })),
+        claimNotification,
+      },
+    } as unknown as Deps
+    await receiveInboxNotification(fake, `Bearer ${token}`, activation(null).notification)
+    expect(claimNotification).toHaveBeenCalledWith(expect.anything(), expect.anything(), null, expect.any(String))
+  })
+
+  it('fails closed when activation persistence is unavailable', async () => {
+    await expect(
+      receiveInboxNotification({} as Deps, `Bearer ${newInboxCallbackToken()}`, activation(null).notification),
+    ).rejects.toThrow(/persistence is unavailable/)
   })
 })
 
@@ -245,5 +287,67 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       expect.anything(),
       expect.objectContaining({ options: expect.not.objectContaining({ id: expect.anything() }) }),
     )
+  })
+
+  it('ignores missing, completed, and non-Inbox Activations', async () => {
+    await expect(dispatchInboxActivation(deps({ activation: null }).value, 'run_missing')).resolves.toBeUndefined()
+    const missingTrigger = deps({ trigger: null })
+    await expect(dispatchInboxActivation(missingTrigger.value, 'run_1')).resolves.toBeUndefined()
+    const http = inboxTrigger()
+    http.spec.source = { type: 'http' }
+    await expect(dispatchInboxActivation(deps({ trigger: http }).value, 'run_1')).resolves.toBeUndefined()
+  })
+
+  it.each([{ suspend: true }, { archived: true }])('fails inactive Trigger delivery for %#', async (state) => {
+    const inactive = inboxTrigger()
+    inactive.spec.suspend = state.suspend ?? false
+    inactive.metadata.archivedAt = state.archived ? inactive.metadata.createdAt : null
+    const fake = deps({ trigger: inactive })
+    await dispatchInboxActivation(fake.value, 'run_1')
+    expect(fake.marks.failed).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Inbox Trigger is inactive')
+    expect(createSession).not.toHaveBeenCalled()
+  })
+
+  it('marks reusable Session delivery failures without creating another Session', async () => {
+    const existing = runtimeSession('session_winner')
+    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
+    vi.mocked(dispatchToReusableSession).mockResolvedValueOnce({ ok: false, message: 'Session is unavailable' })
+    await dispatchInboxActivation(fake.value, 'run_1')
+    expect(fake.marks.failed).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Session is unavailable')
+    expect(createSession).not.toHaveBeenCalled()
+  })
+
+  it('leaves a losing route race claimed until the winning Session becomes visible', async () => {
+    const fake = deps({ reserve: { sessionId: 'session_winner', owned: false }, existing: null })
+    await expect(dispatchInboxActivation(fake.value, 'run_1')).rejects.toThrow(/not yet available/)
+  })
+
+  it('releases an owned route and fails the run when Session creation fails', async () => {
+    const fake = deps()
+    vi.mocked(createSession).mockResolvedValueOnce({ ok: false, error: { message: 'No runner' } } as never)
+    await dispatchInboxActivation(fake.value, 'run_1')
+    expect(fake.value.inboxActivations?.deleteSessionRoute).toHaveBeenCalledWith(
+      'project_1',
+      'trigger_1',
+      'route_hash',
+      'session_reserved',
+    )
+    expect(fake.marks.failed).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'No runner')
+  })
+
+  it('fails a fresh Session without trying to release a route', async () => {
+    const fake = deps({ activation: activation(null) })
+    vi.mocked(createSession).mockResolvedValueOnce({ ok: false, error: { message: 'No runner' } } as never)
+    await dispatchInboxActivation(fake.value, 'run_1')
+    expect(fake.value.inboxActivations?.deleteSessionRoute).not.toHaveBeenCalled()
+    expect(fake.marks.failed).toHaveBeenCalledOnce()
+  })
+
+  it('recovers each pending durable Activation', async () => {
+    const fake = deps({ activation: null })
+    const { recoverInboxActivations } = await import('./inbox-activations')
+    await expect(recoverInboxActivations(fake.value, 7)).resolves.toBe(2)
+    expect(fake.value.inboxActivations?.pendingActivationIds).toHaveBeenCalledWith(7)
+    expect(fake.value.inboxActivations?.findActivation).toHaveBeenCalledTimes(2)
   })
 })

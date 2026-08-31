@@ -128,7 +128,7 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     nextDueAt: timing.nextDueAt,
   }
   const triggerId = newPrimaryKey()
-  const inbox = config.source.type === 'inbox' ? await initialInboxProvisioning() : null
+  const inbox = config.source.type === 'inbox' ? await initialInboxProvisioning(deps) : null
   const trigger = await deps.triggers.insert(
     {
       id: triggerId,
@@ -305,7 +305,7 @@ export async function updateTrigger(
   const leavingInbox = trigger.spec.source.type === 'inbox' && timing.source.type !== 'inbox'
   if (leavingInbox) await removeInboxSubscription(deps, trigger)
   const enteringInbox = trigger.spec.source.type !== 'inbox' && timing.source.type === 'inbox'
-  const inbox = enteringInbox ? await initialInboxProvisioning() : null
+  const inbox = enteringInbox ? await initialInboxProvisioning(deps) : null
   let updated = await deps.triggers.update(
     auth.project.id,
     trigger.metadata.uid,

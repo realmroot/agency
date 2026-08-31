@@ -12,6 +12,11 @@ function subscriptionGateway(deps: Deps) {
   return deps.inboxSubscriptions
 }
 
+function callbackTokens(deps: Deps) {
+  if (!deps.inboxCallbackTokens) throw new TriggerProvisioningError('Inbox callback token storage is unavailable')
+  return deps.inboxCallbackTokens
+}
+
 function bytesToBase64Url(bytes: Uint8Array) {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
@@ -35,13 +40,15 @@ function newInboxSubscriptionId() {
   return `sub_${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`
 }
 
-export async function initialInboxProvisioning() {
+export async function initialInboxProvisioning(deps: Deps) {
+  const subscriptionId = newInboxSubscriptionId()
   const token = newInboxCallbackToken()
   return {
     token,
     fields: {
-      subscriptionId: newInboxSubscriptionId(),
+      subscriptionId,
       callbackTokenHash: await inboxTokenHash(token),
+      callbackTokenCiphertext: await callbackTokens(deps).seal(subscriptionId, token),
       etag: null,
       phase: 'pending',
       errorMessage: null,
@@ -73,6 +80,7 @@ export async function reconcileInboxSubscription(
         {
           subscriptionId,
           callbackTokenHash: binding.callbackTokenHash,
+          callbackTokenCiphertext: binding.callbackTokenCiphertext,
           etag: null,
           phase: 'inactive',
           errorMessage: null,
@@ -86,6 +94,7 @@ export async function reconcileInboxSubscription(
         {
           subscriptionId,
           callbackTokenHash: binding.callbackTokenHash,
+          callbackTokenCiphertext: binding.callbackTokenCiphertext,
           etag: binding.subscriptionEtag,
           phase: 'error',
           errorMessage: 'Inbox Subscription deletion failed',
@@ -95,14 +104,14 @@ export async function reconcileInboxSubscription(
     }
   }
 
-  const token = suppliedToken ?? newInboxCallbackToken()
-  const tokenHash = await inboxTokenHash(token)
+  const token = suppliedToken ?? (await callbackTokens(deps).open(subscriptionId, binding.callbackTokenCiphertext))
   await repo.updateProvisioning(
     binding.projectId,
     trigger.metadata.uid,
     {
       subscriptionId,
-      callbackTokenHash: tokenHash,
+      callbackTokenHash: binding.callbackTokenHash,
+      callbackTokenCiphertext: binding.callbackTokenCiphertext,
       etag: binding.subscriptionEtag,
       phase: 'pending',
       errorMessage: null,
@@ -121,7 +130,8 @@ export async function reconcileInboxSubscription(
       trigger.metadata.uid,
       {
         subscriptionId,
-        callbackTokenHash: tokenHash,
+        callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: result.etag,
         phase: 'active',
         errorMessage: null,
@@ -134,7 +144,8 @@ export async function reconcileInboxSubscription(
       trigger.metadata.uid,
       {
         subscriptionId,
-        callbackTokenHash: tokenHash,
+        callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
         phase: 'error',
         errorMessage: 'Inbox Subscription update failed',
@@ -159,6 +170,7 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
       {
         subscriptionId,
         callbackTokenHash: binding.callbackTokenHash,
+        callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
         phase: 'error',
         errorMessage: 'Inbox Subscription deletion failed',

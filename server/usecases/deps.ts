@@ -13,6 +13,7 @@ import type {
   EventStore,
   IdentityRepo,
   InboxActivationRepo,
+  InboxCallbackTokenCodec,
   InboxSubscriptionGateway,
   LeaseRepo,
   MemoryStoreRepo,
@@ -72,6 +73,7 @@ export interface Deps {
   auditRecords: AuditReadRepo
   triggers: TriggerRepo
   inboxActivations?: InboxActivationRepo
+  inboxCallbackTokens?: InboxCallbackTokenCodec
   inboxSubscriptions?: InboxSubscriptionGateway
   triggerDispatch: TriggerDispatchRepo
   triggerDispatchQueue?: TriggerDispatchQueue

@@ -38,6 +38,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           projectId: triggers.projectId,
           organizationId: triggers.organizationId,
           callbackTokenHash: triggers.inboxCallbackTokenHash,
+          callbackTokenCiphertext: triggers.inboxCallbackTokenCiphertext,
           subscriptionEtag: triggers.inboxSubscriptionEtag,
           identitySnapshot: agents.identitySnapshot,
           projectName: projects.name,
@@ -47,7 +48,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         .innerJoin(projects, eq(projects.id, triggers.projectId))
         .where(and(eq(triggers.inboxSubscriptionId, subscriptionId), eq(triggers.triggerType, 'inbox')))
         .get()
-      if (!row?.callbackTokenHash || !row.identitySnapshot) return null
+      if (!row?.callbackTokenHash || !row.callbackTokenCiphertext || !row.identitySnapshot) return null
       const trigger = await triggerRepo.find(row.projectId, row.triggerId)
       if (!trigger) return null
       const identity = parseJson<IdentityDescriptor>(row.identitySnapshot)
@@ -58,6 +59,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         projectName: row.projectName,
         remoteAgentId: identity.agentId,
         callbackTokenHash: row.callbackTokenHash,
+        callbackTokenCiphertext: row.callbackTokenCiphertext,
         subscriptionEtag: row.subscriptionEtag,
       }
     },
@@ -68,6 +70,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         .set({
           inboxSubscriptionId: fields.subscriptionId,
           inboxCallbackTokenHash: fields.callbackTokenHash,
+          inboxCallbackTokenCiphertext: fields.callbackTokenCiphertext,
           inboxSubscriptionEtag: fields.etag,
           inboxProvisioningState: fields.phase,
           inboxProvisioningError: fields.errorMessage,

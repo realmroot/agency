@@ -13,8 +13,9 @@ GitHub Actions is intentionally limited to CI checks. Production and staging dep
 
 ## Realmroot Applications and Resource Server
 
-Create one confidential Realmroot Web Application for the AMA backend and one
-public native Application for the runner loopback PKCE flow. Register AMA as
+Create one confidential Realmroot Web Application for the AMA backend, one
+machine Application for Inbox Subscription management, and one public native
+Application for the runner loopback PKCE flow. Register AMA as
 the native Resource Server at `https://ama.tftt.cc/api` only after its RFC 9728
 discovery document and OpenAPI document are live.
 
@@ -23,6 +24,8 @@ Required settings:
 - Issuer: `OIDC_ISSUER`
 - AMA backend client id: `OIDC_CLIENT_ID`
 - AMA backend client secret: store `OIDC_CLIENT_SECRET` as a Wrangler secret.
+- Inbox machine client id: `INBOX_CLIENT_ID`
+- Inbox machine client secret: store `INBOX_CLIENT_SECRET` as a Wrangler secret.
 - Browser session encryption: store `AMA_WEB_SESSION_ENCRYPTION_KEY` as a
   distinct Wrangler secret generated from at least 32 random bytes (for example,
   `openssl rand -base64 32`). The Worker derives separate encryption and
@@ -36,6 +39,8 @@ Required settings:
   `client_secret_basic` authentication. Do not request `offline_access`; the web
   session is capped to the access-token lifetime.
 - Runner flow: public authorization code with loopback PKCE.
+- Inbox machine flow: `client_credentials` with exact Inbox scopes
+  `subscriptions:read subscriptions:manage`.
 
 Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require
@@ -52,10 +57,8 @@ The Worker uses `jose` for JWT/JWKS validation and ES256 DPoP verification for
 Realmroot CLI, Toolbox, and Agent clients. A verified `client_id` selects the
 permitted credential mode; cross-mode fallback is not accepted.
 
-When the Agent provisioning PR is stacked on this change, add its constrained
-resource token-exchange policy to this same confidential Web Application. Both
-the Application policy and the signed-in User Context must grant each target
-scope. Do not create a third machine Application.
+Inbox provisioning must use its dedicated machine Application. Do not add its
+client-credentials policy or secret to the browser Web Application.
 
 Roll out the Application migration in this order so the public SPA is never
 reused as a confidential client:
@@ -63,23 +66,25 @@ reused as a confidential client:
 1. Create the Realmroot `confidential_web` Application with the exact production
    and staging callback URIs above, AMA Resource scopes, and (after the Agent
    provisioning PR) its constrained token-exchange policies.
-2. Capture its one-time client secret. Set `OIDC_CLIENT_ID`,
-   `OIDC_CLIENT_SECRET`, and a new `AMA_WEB_SESSION_ENCRYPTION_KEY` separately in
-   each Cloudflare environment; do not commit any of these values. Keep the
+2. Capture the Web and Inbox machine Applications' one-time client secrets. Set
+   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `INBOX_CLIENT_ID`,
+   `INBOX_CLIENT_SECRET`, and a new `AMA_WEB_SESSION_ENCRYPTION_KEY` separately
+   in each Cloudflare environment; do not commit any of these values. Keep the
    runner's existing public-native `OIDC_RUNNER_CLIENT_ID` unchanged.
 3. Run the staging D1 migration command so `0029_web_auth_sessions.sql` is
    applied, deploy staging, and verify the callback, Cookie session, direct
    JWT/DPoP calls, and runner login.
 4. Apply the migration and deploy production, then remove the superseded public
-   SPA Application. Remove the machine Application only after the stacked Agent
-   provisioning change uses this confidential Web Application for exchange.
+   SPA Application.
 
-Set the three environment-specific values before step 3 (repeat without
+Set these environment-specific values before step 3 (repeat without
 `--env staging` for production):
 
 ```bash
 pnpm exec wrangler secret put OIDC_CLIENT_ID --env staging
 pnpm exec wrangler secret put OIDC_CLIENT_SECRET --env staging
+pnpm exec wrangler secret put INBOX_CLIENT_ID --env staging
+pnpm exec wrangler secret put INBOX_CLIENT_SECRET --env staging
 pnpm exec wrangler secret put AMA_WEB_SESSION_ENCRYPTION_KEY --env staging
 ```
 

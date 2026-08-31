@@ -93,6 +93,7 @@ describe('[CF] Inbox notification receipts', () => {
         inboxProvisioning: {
           subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
           callbackTokenHash: await inboxTokenHash(token),
+          callbackTokenCiphertext: 'encrypted-token',
           etag: '"subscription-v1"',
           phase: 'active',
           errorMessage: null,

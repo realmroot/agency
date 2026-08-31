@@ -3832,10 +3832,6 @@ export type CreateTriggerRunErrors = {
      * Conflict
      */
     409: ErrorResponse;
-    /**
-     * Inbox Subscription failure
-     */
-    502: ErrorResponse;
 };
 export type CreateTriggerRunError = CreateTriggerRunErrors[keyof CreateTriggerRunErrors];
 export type CreateTriggerRunResponses = {

@@ -1,5 +1,6 @@
 import { createAuditPort } from './adapters/gateways/audit'
 import { createCloudTurnQueue } from './adapters/gateways/cloud-turn-queue'
+import { createInboxCallbackTokenCodec } from './adapters/gateways/inbox-callback-tokens'
 import { createInboxSubscriptionGateway } from './adapters/gateways/inbox-subscriptions'
 import { createPolicyPort } from './adapters/gateways/policy'
 import { createProviderCatalogGateway } from './adapters/gateways/provider-catalog'
@@ -75,6 +76,7 @@ export function createDeps(env: Env): Deps {
     auditRecords: createAuditReadRepo(db),
     triggers: createTriggerRepo(db),
     inboxActivations: createInboxActivationRepo(db),
+    inboxCallbackTokens: createInboxCallbackTokenCodec(env),
     inboxSubscriptions: createInboxSubscriptionGateway(env),
     triggerDispatch: createTriggerDispatchRepo(db),
     triggerDispatchQueue: createTriggerDispatchQueue(env),

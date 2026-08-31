@@ -6,11 +6,16 @@ Trigger to one Subscription; there is no shared Subscription or Agency fan-out.
 
 ## Subscription management contract
 
-Agency calls Inbox with its existing Realmroot M2M service identity and the
-`subscriptions:manage` scope. The Inbox protected-resource base is configured as
+Agency calls Inbox with its dedicated Realmroot M2M service identity and the
+`subscriptions:read subscriptions:manage` scopes. The Inbox protected-resource base is configured as
 `INBOX_RESOURCE`. Agency controls the stable Subscription id, composed of the
 `sub_` prefix plus 32 lowercase hexadecimal characters, and uses these resource
 operations with `API-Version: 2026-08-11`:
+
+The M2M exchange uses a dedicated Realmroot machine Application configured by
+`INBOX_CLIENT_ID` and the `INBOX_CLIENT_SECRET` Worker secret. The browser Web
+Application configured by `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` is never
+reused for Inbox provisioning.
 
 - `PUT {INBOX_RESOURCE}/subscriptions/{subscriptionId}` with `If-None-Match: *`
   when creating or the current `If-Match` ETag when replacing
@@ -36,10 +41,12 @@ The PUT JSON representation is:
 ```
 
 The callback token is never placed in a URL, API response, or log. Agency stores
-only its SHA-256 hash. Agency also stores the current Subscription ETag.
+its SHA-256 hash for admission and an AES-GCM ciphertext for reliable idempotent
+Subscription retries. Retries reuse the same token, so an uncertain PUT cannot
+make Inbox and Agency disagree about which callback credential is current.
+Agency also stores the current Subscription ETag.
 Provisioning state is `pending`, `active`, `inactive`, or `error`; the scheduled
-reconciler retries pending and failed transitions and rotates the callback token
-on every PUT retry.
+reconciler retries pending and failed transitions with the same callback token.
 
 ## Notification contract
 

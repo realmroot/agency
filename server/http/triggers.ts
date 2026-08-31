@@ -488,7 +488,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         })
         return c.json(serializeResource(trigger), 201)
       } catch (error) {
-        return conflictOrValidation(c, error)
+        return triggerMutationError(c, error)
       }
     })
     .openapi(listRouteDefinition, async (c) => {
@@ -563,7 +563,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         })
         return c.json(serializeResource(result.trigger), 200)
       } catch (error) {
-        return conflictOrValidation(c, error)
+        return triggerMutationError(c, error)
       }
     })
     .openapi(deleteRouteDefinition, async (c) => {
@@ -581,7 +581,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
       try {
         await deleteTrigger(deps, scope, triggerId)
       } catch (error) {
-        return conflictOrValidation(c, error)
+        return triggerMutationError(c, error)
       }
       await deps.audit.record(scope, {
         action: 'trigger.delete',
@@ -773,8 +773,12 @@ function conflictOrValidation(c: Parameters<Parameters<TriggerRoutes['openapi']>
   if (error instanceof TriggerConflictError) {
     return c.json(errorBody(error.code, error.message), error.status)
   }
+  throw error
+}
+
+function triggerMutationError(c: Parameters<Parameters<TriggerRoutes['openapi']>[1]>[0], error: unknown) {
   if (error instanceof TriggerProvisioningError) {
     return c.json(errorBody(error.code, error.message), error.status)
   }
-  throw error
+  return conflictOrValidation(c, error)
 }

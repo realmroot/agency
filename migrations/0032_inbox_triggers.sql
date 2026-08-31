@@ -24,6 +24,7 @@ CREATE TABLE `__new_triggers` (
 	`last_run_id` text,
 	`inbox_subscription_id` text,
 	`inbox_callback_token_hash` text,
+	`inbox_callback_token_ciphertext` text,
 	`inbox_subscription_etag` text,
 	`inbox_provisioning_state` text,
 	`inbox_provisioning_error` text,
@@ -39,14 +40,14 @@ CREATE TABLE `__new_triggers` (
 	CONSTRAINT `ck_triggers_type` CHECK (`trigger_type` in ('scheduled','http','inbox')),
 	CONSTRAINT `ck_triggers_http_concurrency` CHECK (`http_concurrency_mode` in ('parallel','serial')),
 	CONSTRAINT `ck_triggers_schedule_shape` CHECK ((`trigger_type` = 'scheduled' and `interval_seconds` is not null and `next_due_at` is not null) or (`trigger_type` in ('http','inbox') and `interval_seconds` is null and `next_due_at` is null)),
-	CONSTRAINT `ck_triggers_inbox_shape` CHECK ((`trigger_type` = 'inbox' and `inbox_subscription_id` is not null and `inbox_callback_token_hash` is not null and `inbox_provisioning_state` is not null) or (`trigger_type` != 'inbox' and `inbox_subscription_id` is null and `inbox_callback_token_hash` is null and `inbox_subscription_etag` is null and `inbox_provisioning_state` is null and `inbox_provisioning_error` is null))
+	CONSTRAINT `ck_triggers_inbox_shape` CHECK ((`trigger_type` = 'inbox' and `inbox_subscription_id` is not null and `inbox_callback_token_hash` is not null and `inbox_callback_token_ciphertext` is not null and `inbox_provisioning_state` is not null) or (`trigger_type` != 'inbox' and `inbox_subscription_id` is null and `inbox_callback_token_hash` is null and `inbox_callback_token_ciphertext` is null and `inbox_subscription_etag` is null and `inbox_provisioning_state` is null and `inbox_provisioning_error` is null))
 );--> statement-breakpoint
 INSERT INTO `__new_triggers` (
 	`id`, `organization_id`, `project_id`, `agent_id`, `environment_id`,
 	`trigger_type`, `http_concurrency_mode`, `runtime`, `name`, `prompt_template`,
 	`env`, `env_from`, `volumes`, `volume_mounts`, `interval_seconds`,
 	`window_seconds`, `enabled`, `next_due_at`, `last_dispatched_at`, `last_run_id`,
-	`inbox_subscription_id`, `inbox_callback_token_hash`, `inbox_subscription_etag`, `inbox_provisioning_state`,
+	`inbox_subscription_id`, `inbox_callback_token_hash`, `inbox_callback_token_ciphertext`, `inbox_subscription_etag`, `inbox_provisioning_state`,
 	`inbox_provisioning_error`, `metadata`, `created_by_user_id`, `archived_at`,
 	`created_at`, `updated_at`
 )
@@ -55,7 +56,7 @@ SELECT
 	`trigger_type`, `http_concurrency_mode`, `runtime`, `name`, `prompt_template`,
 	`env`, `env_from`, `volumes`, `volume_mounts`, `interval_seconds`,
 	`window_seconds`, `enabled`, `next_due_at`, `last_dispatched_at`, `last_run_id`,
-	NULL, NULL, NULL, NULL, NULL, `metadata`, `created_by_user_id`, `archived_at`,
+	NULL, NULL, NULL, NULL, NULL, NULL, `metadata`, `created_by_user_id`, `archived_at`,
 	`created_at`, `updated_at`
 FROM `triggers`;--> statement-breakpoint
 DROP TABLE `triggers`;--> statement-breakpoint

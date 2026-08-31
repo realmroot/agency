@@ -31,6 +31,10 @@ export interface Env {
   // Inbox protected-resource base used by the AMA service identity to manage
   // Trigger-owned Subscriptions through PUT/DELETE /subscriptions/{id}.
   INBOX_RESOURCE?: string
+  // Dedicated Realmroot machine Application used only for Inbox Subscription
+  // management through the client_credentials grant.
+  INBOX_CLIENT_ID?: string
+  INBOX_CLIENT_SECRET?: string
   // Additional confidential/public Web applications allowed to present
   // Realmroot Bearer tokens for the exact AMA Resource.
   OIDC_TRUSTED_BEARER_CLIENT_IDS?: string

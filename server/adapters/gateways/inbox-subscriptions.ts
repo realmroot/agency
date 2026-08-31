@@ -45,12 +45,12 @@ async function serviceAccessToken(env: Env, audience: string) {
       headers: {
         accept: 'application/json',
         'content-type': 'application/x-www-form-urlencoded',
-        authorization: `Basic ${btoa(`${required(env.OIDC_CLIENT_ID, 'OIDC_CLIENT_ID')}:${required(env.OIDC_CLIENT_SECRET, 'OIDC_CLIENT_SECRET')}`)}`,
+        authorization: `Basic ${btoa(`${required(env.INBOX_CLIENT_ID, 'INBOX_CLIENT_ID')}:${required(env.INBOX_CLIENT_SECRET, 'INBOX_CLIENT_SECRET')}`)}`,
       },
       body: new URLSearchParams({
         grant_type: 'client_credentials',
         audience,
-        scope: 'subscriptions:manage',
+        scope: 'subscriptions:read subscriptions:manage',
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })

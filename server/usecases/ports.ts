@@ -1074,6 +1074,7 @@ export interface UpdateTriggerFields {
 export interface InboxProvisioningFields {
   subscriptionId: string
   callbackTokenHash: string
+  callbackTokenCiphertext: string
   etag: string | null
   phase: 'pending' | 'active' | 'inactive' | 'error'
   errorMessage: string | null
@@ -1116,6 +1117,7 @@ export interface InboxSubscriptionBinding {
   projectName: string
   remoteAgentId: string
   callbackTokenHash: string
+  callbackTokenCiphertext: string
   subscriptionEtag: string | null
 }
 
@@ -1167,6 +1169,11 @@ export interface InboxSubscriptionGateway {
     etag: string | null
   }): Promise<{ etag: string }>
   delete(input: { subscriptionId: string; etag: string | null }): Promise<void>
+}
+
+export interface InboxCallbackTokenCodec {
+  seal(subscriptionId: string, token: string): Promise<string>
+  open(subscriptionId: string, ciphertext: string): Promise<string>
 }
 
 export class InboxSubscriptionGatewayError extends Error {
