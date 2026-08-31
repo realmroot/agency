@@ -558,6 +558,11 @@ describe('[CF] /api/v1/agents', () => {
       body: JSON.stringify({ spec: { identityRef: 'identity_inbox_a' } }),
     })
     expect(bind.status).toBe(200)
+    const versionsBeforeGuard = await env.DB.prepare(
+      'SELECT id, version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ id: string; version: number }>()
     await env.DB.prepare(`INSERT INTO triggers (
       id,organization_id,project_id,agent_id,trigger_type,runtime,name,prompt_template,enabled,
       inbox_subscription_id,inbox_callback_token_hash,inbox_callback_token_ciphertext,
@@ -592,12 +597,28 @@ describe('[CF] /api/v1/agents', () => {
         error: { message: 'Agent Identity cannot be changed while a live Inbox Trigger exists.' },
       })
     }
+    const versionsAfterGuard = await env.DB.prepare(
+      'SELECT id, version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ id: string; version: number }>()
+    expect(versionsAfterGuard.results).toEqual(versionsBeforeGuard.results)
+    const guardedAgent = await env.DB.prepare('SELECT current_version_id FROM agents WHERE id = ?')
+      .bind(agent.metadata.uid)
+      .first<{ current_version_id: string }>()
+    expect(versionsAfterGuard.results.some((version) => version.id === guardedAgent?.current_version_id)).toBe(true)
 
     const safeUpdate = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ spec: { systemPrompt: 'Continue using the same Inbox Identity.' } }),
     })
     expect(safeUpdate.status).toBe(200)
+    const versionsAfterSafeUpdate = await env.DB.prepare(
+      'SELECT version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ version: number }>()
+    expect(versionsAfterSafeUpdate.results.map((version) => version.version)).toEqual([1, 2, 3])
   })
 
   it('validates provider against configured providers', async () => {

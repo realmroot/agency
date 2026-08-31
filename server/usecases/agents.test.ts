@@ -3,7 +3,7 @@ import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
 import { createAgent, updateAgent } from './agents'
 import type { Deps } from './deps'
-import { AgentArchivedError, type AuditEntry, type AuthScope } from './ports'
+import { AgentArchivedError, AgentInboxIdentityConflictError, type AuditEntry, type AuthScope } from './ports'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -117,7 +117,6 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     unarchive: async () => {},
     providerEnabled: async () => true,
     connectorAvailable: async () => true,
-    hasLiveInboxTrigger: async () => false,
     ...overrides.repo,
   }
   return {
@@ -391,7 +390,16 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
   })
 
   it('[spec: agents/inbox-identity-rebind] rejects Identity replacement and removal while allowing other updates', async () => {
-    const deps = fakeDeps({ repo: { hasLiveInboxTrigger: async () => true } })
+    const deps = fakeDeps({
+      repo: {
+        updateWithVersion: async (_projectId, agent, fields, createdAt) => {
+          if (fields.spec.identity?.identityId !== agent.spec.identity?.identityId) {
+            throw new AgentInboxIdentityConflictError()
+          }
+          return agentVersion(agent, fields.spec, createdAt)
+        },
+      },
+    })
     deps.identities = {
       find: async (_projectId: string, identityId: string) => ({
         metadata: resourceMetadata({

@@ -31,6 +31,8 @@ Feature: Agents
     Given an agent has a live Inbox Trigger bound to its Realmroot Identity
     When the user attempts to replace or remove that Identity
     Then the update is rejected as a conflict
+    And the guarded Agent update and version insert are atomic without an orphan version
+    And concurrent Inbox Trigger creation and Identity rebinding serialize around the live Trigger row
     And non-Identity configuration updates remain available
 
   @agents/lifecycle @usecase

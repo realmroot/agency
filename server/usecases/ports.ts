@@ -153,7 +153,6 @@ export interface AgentRepo {
   // Reference validation against sibling resources.
   providerEnabled(projectId: string, providerId: string): Promise<boolean>
   connectorAvailable(connectorId: string): Promise<boolean>
-  hasLiveInboxTrigger(projectId: string, agentId: string): Promise<boolean>
 }
 
 export interface IdentityListQuery {

@@ -217,7 +217,11 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
       messageId: 'message_1',
       occurredAt: '2026-08-30T00:00:00.000Z',
     }
-    const fake = (phase: 'pending' | 'active', registeredAgentSubject: string) =>
+    const fake = (
+      phase: 'pending' | 'active' | 'error',
+      registeredAgentSubject: string | null,
+      subscriptionEtag: string | null = '"v1"',
+    ) =>
       ({
         inboxActivations: {
           findSubscription: vi.fn(async () => ({
@@ -231,7 +235,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
             subscriptionPhase: phase,
             callbackTokenHash: await inboxTokenHash(token),
             callbackTokenCiphertext: 'encrypted-token',
-            subscriptionEtag: '"v1"',
+            subscriptionEtag,
           })),
           claimNotification,
         },
@@ -265,6 +269,18 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
     ).resolves.toEqual({ runId: 'run_1', replayed: false })
     await expect(
       receiveInboxNotification(fake('active', newSubject), `Bearer ${token}`, notification),
+    ).rejects.toMatchObject({ status: 403 })
+
+    await expect(receiveInboxNotification(fake('pending', null), `Bearer ${token}`, notification)).resolves.toEqual({
+      runId: 'run_1',
+      replayed: false,
+    })
+    await expect(receiveInboxNotification(fake('error', null), `Bearer ${token}`, notification)).resolves.toEqual({
+      runId: 'run_1',
+      replayed: false,
+    })
+    await expect(
+      receiveInboxNotification(fake('pending', null, null), `Bearer ${token}`, notification),
     ).rejects.toMatchObject({ status: 403 })
   })
 

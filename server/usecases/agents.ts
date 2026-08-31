@@ -7,13 +7,7 @@ import {
   validateSubagents,
 } from '@server/domain/agent'
 import type { Deps } from './deps'
-import {
-  AgentArchivedError,
-  AgentInboxIdentityConflictError,
-  AgentValidationError,
-  type AuthScope,
-  IdentityAlreadyBoundError,
-} from './ports'
+import { AgentArchivedError, AgentValidationError, type AuthScope, IdentityAlreadyBoundError } from './ports'
 
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
@@ -186,13 +180,6 @@ export async function updateAgent(
     fields.identityRef !== undefined
       ? await selectedIdentity(deps, auth, fields.identityRef, agent.metadata.uid)
       : agent.spec.identity
-  if (
-    fields.identityRef !== undefined &&
-    nextIdentity?.identityId !== agent.spec.identity?.identityId &&
-    (await deps.agents.hasLiveInboxTrigger(auth.project.id, agent.metadata.uid))
-  ) {
-    throw new AgentInboxIdentityConflictError()
-  }
   const next: AgentSpec = {
     systemPrompt: fields.systemPrompt !== undefined ? fields.systemPrompt : agent.spec.systemPrompt,
     provider: fields.provider !== undefined ? fields.provider : agent.spec.provider,

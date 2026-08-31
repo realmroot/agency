@@ -84,6 +84,8 @@ Feature: Triggers
     When Inbox delivers the same subscription event more than once
     Then Agency durably accepts one Trigger Run before acknowledging delivery
     And a subject transition accepts the registered and persisted target subjects only while provisioning is pending or failed
+    And an uncalibrated legacy row with an existing ETag temporarily admits a schema-valid subject until remote GET persists its registration
+    And a new Subscription without an ETag never receives that uncalibrated admission
     And active admission accepts only the subject confirmed by the last successful Subscription PUT
     And invalid tokens, internal Identity ids, and mismatched Agent subjects are rejected without creating a run
 

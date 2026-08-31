@@ -98,8 +98,8 @@ describe('[CF] Inbox notification receipts', () => {
           subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
-          etag: '"subscription-v1"',
-          registeredAgentSubject: previousAgentSubject,
+          etag: null,
+          registeredAgentSubject: null,
           transitionTargetSubject: agentSubject,
           phase: 'pending',
           errorMessage: null,
@@ -115,6 +115,20 @@ describe('[CF] Inbox notification receipts', () => {
       messageId: 'message_before_rebind',
       occurredAt: '2026-08-30T11:59:00.000Z',
     }
+    expect((await callback(token, oldNotification)).status).toBe(403)
+    await env.DB.prepare('UPDATE triggers SET inbox_subscription_etag = ? WHERE id = ?')
+      .bind('"subscription-v1"', trigger.metadata.uid)
+      .run()
+    expect(
+      (
+        await callback(token, {
+          ...oldNotification,
+          eventId: 'event_invalid_legacy_internal',
+          agentId: 'identity_internal_id',
+        })
+      ).status,
+    ).toBe(400)
+    oldNotification.eventId = 'event_before_rebind_calibration'
     expect((await callback(token, oldNotification)).status).toBe(202)
     expect(
       (await callback(token, { ...oldNotification, eventId: 'event_new_during_transition', agentId: agentSubject }))

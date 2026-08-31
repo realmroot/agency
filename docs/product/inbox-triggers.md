@@ -105,12 +105,27 @@ id and callback Bearer token already bind the delivery. This covers
 the non-atomic window where Inbox accepted a PUT but the local active-state write
 failed. Once provisioning is `active`, Agency accepts only the registered subject.
 
+A migrated Subscription can have a pre-existing ETag while its registered
+subject is still unknown before the first authoritative Inbox GET. In that
+bounded `pending` or `error` state, the independently authenticated Subscription
+id and callback Bearer token admit any `agentId` that has already passed the
+callback's UUIDv7 schema. The first GET persistence writes the registered subject
+and ends this uncalibrated admission before PUT. A newly created Subscription has
+no ETag, so it never receives this compatibility admission.
+
 An Agent with a live, enabled Inbox Trigger cannot replace or remove its
 Realmroot Identity; the Agent update returns `409 Conflict`. This ensures new
 mailbox messages remain readable by the same identity. For a historical A-to-B
 rebind, remote GET temporarily admits A alongside target B; after B is confirmed
 active, A notifications are rejected because identity B cannot correctly read
 mailbox A's queued messages.
+
+The Identity-changing Agent update tests for live Inbox rows and writes its new
+immutable Agent Version in one D1 batch. The version insert is conditional on the
+guarded Agent update becoming current, so a lost guard produces `409` without an
+orphan version. SQLite serializes that batch with Trigger insertion: a Trigger
+inserted first blocks the rebind, while a rebind committed first makes a later
+Trigger observe the new current Identity.
 
 Agency validates the Subscription token and Agent identity, then persistently
 deduplicates on `(subscriptionId, eventId)` by creating one Trigger Run. A `202`
