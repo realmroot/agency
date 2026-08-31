@@ -41,6 +41,11 @@ Required settings:
 - Runner flow: public authorization code with loopback PKCE.
 - Inbox machine flow: `client_credentials` with exact Inbox scopes
   `subscriptions:read subscriptions:manage`.
+- Inbox machine permissions: after declaring both scopes on the Inbox Resource
+  Server, grant the machine Application persistent direct Application
+  Permissions for `subscriptions:read` and `subscriptions:manage`. Resource
+  scope declarations alone do not grant either permission; without both direct
+  grants the issued token has no usable Inbox scope.
 
 Realmroot grants explicit AMA Resource scopes.
 Collection reads require `<resource>:read`, mutations require

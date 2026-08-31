@@ -1,6 +1,17 @@
 -- Add Inbox-backed triggers, durable source-event deduplication, and the
 -- authoritative correlated Session route binding.
-PRAGMA defer_foreign_keys=on;--> statement-breakpoint
+--
+-- D1 keeps foreign-key enforcement enabled for migrations. Preserve and remove
+-- the two child tables before rebuilding triggers, then restore them after the
+-- parent table is back. Deferring foreign keys is insufficient because dropping
+-- the parent leaves the child graph invalid when the migration commits.
+CREATE TABLE `__backup_http_trigger_pending_runs` AS
+SELECT * FROM `http_trigger_pending_runs`;--> statement-breakpoint
+CREATE TABLE `__backup_trigger_runs` AS
+SELECT * FROM `trigger_runs`;--> statement-breakpoint
+DROP TABLE `http_trigger_pending_runs`;--> statement-breakpoint
+DROP TABLE `trigger_runs`;--> statement-breakpoint
+
 CREATE TABLE `__new_triggers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`organization_id` text NOT NULL,
@@ -65,9 +76,75 @@ CREATE INDEX `idx_triggers_project_next` ON `triggers` (`project_id`,`enabled`,`
 CREATE INDEX `idx_triggers_due` ON `triggers` (`enabled`,`next_due_at`,`id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_triggers_inbox_subscription` ON `triggers` (`inbox_subscription_id`);--> statement-breakpoint
 
-ALTER TABLE `trigger_runs` ADD `source_subscription_id` text;--> statement-breakpoint
-ALTER TABLE `trigger_runs` ADD `source_event_id` text;--> statement-breakpoint
+CREATE TABLE `trigger_runs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`organization_id` text NOT NULL,
+	`project_id` text NOT NULL,
+	`trigger_id` text NOT NULL,
+	`scheduled_for` text,
+	`heartbeat_at` text,
+	`triggered_at` text NOT NULL,
+	`state` text NOT NULL,
+	`idempotency_key` text NOT NULL,
+	`session_id` text,
+	`correlation_id` text NOT NULL,
+	`error_message` text,
+	`source_subscription_id` text,
+	`source_event_id` text,
+	`metadata` text DEFAULT '{}' NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`trigger_id`) REFERENCES `triggers`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT `ck_trigger_runs_state` CHECK (`state` in ('claimed','queued','dispatching','dispatched','failed'))
+);--> statement-breakpoint
+INSERT INTO `trigger_runs` (
+	`id`, `organization_id`, `project_id`, `trigger_id`, `scheduled_for`,
+	`heartbeat_at`, `triggered_at`, `state`, `idempotency_key`, `session_id`,
+	`correlation_id`, `error_message`, `source_subscription_id`, `source_event_id`,
+	`metadata`, `created_at`, `updated_at`
+)
+SELECT
+	`id`, `organization_id`, `project_id`, `trigger_id`, `scheduled_for`,
+	`heartbeat_at`, `triggered_at`, `state`, `idempotency_key`, `session_id`,
+	`correlation_id`, `error_message`, NULL, NULL, `metadata`, `created_at`, `updated_at`
+FROM `__backup_trigger_runs`;--> statement-breakpoint
+DROP TABLE `__backup_trigger_runs`;--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_trigger_runs_unique_occurrence` ON `trigger_runs` (`trigger_id`,`scheduled_for`);--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_trigger_runs_idempotency_key` ON `trigger_runs` (`idempotency_key`);--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_trigger_runs_source_event` ON `trigger_runs` (`source_subscription_id`,`source_event_id`);--> statement-breakpoint
+CREATE INDEX `idx_trigger_runs_trigger_created` ON `trigger_runs` (`trigger_id`,`created_at`,`id`);--> statement-breakpoint
+CREATE INDEX `idx_trigger_runs_project_created` ON `trigger_runs` (`project_id`,`created_at`,`id`);--> statement-breakpoint
+
+CREATE TABLE `http_trigger_pending_runs` (
+	`sequence` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`run_id` text NOT NULL UNIQUE,
+	`trigger_id` text NOT NULL,
+	`organization_id` text NOT NULL,
+	`organization_name` text NOT NULL,
+	`project_id` text NOT NULL,
+	`project_name` text NOT NULL,
+	`requested_by_user_id` text NOT NULL,
+	`routing_key_hash` text,
+	`rendered_prompt` text NOT NULL,
+	`created_at` text NOT NULL,
+	FOREIGN KEY (`run_id`) REFERENCES `trigger_runs`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`trigger_id`) REFERENCES `triggers`(`id`) ON UPDATE no action ON DELETE cascade
+);--> statement-breakpoint
+INSERT INTO `http_trigger_pending_runs` (
+	`sequence`, `run_id`, `trigger_id`, `organization_id`, `organization_name`,
+	`project_id`, `project_name`, `requested_by_user_id`, `routing_key_hash`,
+	`rendered_prompt`, `created_at`
+)
+SELECT
+	`sequence`, `run_id`, `trigger_id`, `organization_id`, `organization_name`,
+	`project_id`, `project_name`, `requested_by_user_id`, `routing_key_hash`,
+	`rendered_prompt`, `created_at`
+FROM `__backup_http_trigger_pending_runs`;--> statement-breakpoint
+DROP TABLE `__backup_http_trigger_pending_runs`;--> statement-breakpoint
+CREATE INDEX `idx_http_trigger_pending_fifo` ON `http_trigger_pending_runs` (`trigger_id`,`sequence`);--> statement-breakpoint
+CREATE INDEX `idx_http_trigger_pending_project` ON `http_trigger_pending_runs` (`project_id`,`sequence`);--> statement-breakpoint
 
 CREATE TABLE `session_routes` (
 	`id` text PRIMARY KEY NOT NULL,

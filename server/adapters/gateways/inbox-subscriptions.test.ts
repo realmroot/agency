@@ -51,11 +51,11 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     ).resolves.toEqual({ etag: '"v1"' })
 
     const tokenRequest = requests[1]
-    expect(new URLSearchParams(String(tokenRequest?.init?.body)).get('grant_type')).toBe('client_credentials')
-    expect(new URLSearchParams(String(tokenRequest?.init?.body)).get('scope')).toBe(
-      'subscriptions:read subscriptions:manage',
-    )
-    expect(new URLSearchParams(String(tokenRequest?.init?.body)).get('audience')).toBe('https://inbox.example/api')
+    const tokenForm = new URLSearchParams(String(tokenRequest?.init?.body))
+    expect(tokenForm.get('grant_type')).toBe('client_credentials')
+    expect(tokenForm.get('scope')).toBe('subscriptions:read subscriptions:manage')
+    expect(tokenForm.get('resource')).toBe('https://inbox.example/api')
+    expect(tokenForm.has('audience')).toBe(false)
     const put = requests[2]
     expect(put?.url).toBe('https://inbox.example/api/subscriptions/sub_0123456789abcdef0123456789abcdef')
     expect(put?.url).not.toContain('callback-secret')
