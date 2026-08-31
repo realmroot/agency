@@ -7,6 +7,11 @@ import type { Env } from './env'
 import type { Deps } from './usecases/deps'
 
 export const ApiSecuritySchemes = {
+  inboxCallbackBearer: {
+    type: 'http',
+    scheme: 'bearer',
+    description: 'Per-Subscription high-entropy callback token registered by Agency with Inbox.',
+  },
   sessionSocketTicket: {
     type: 'apiKey',
     in: 'header',

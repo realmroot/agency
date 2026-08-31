@@ -21,6 +21,13 @@ Feature: Triggers
     Then the trigger is stored active without schedule timing
     And the HTTP trigger can render prompt variables from request fields
 
+  @triggers/inbox-provisioning @usecase
+  Scenario: Maintain one Inbox Subscription for an Inbox trigger
+    Given a Realmroot-bound Agent and an Inbox trigger
+    When the trigger is created, paused, resumed, archived, or deleted
+    Then Agency reconciles the Trigger-owned Inbox Subscription through its service identity
+    And provisioning state is visible without exposing the callback Bearer token
+
   @triggers/lifecycle @usecase
   Scenario: Update, archive, and restore a trigger
     Given a trigger exists
@@ -67,6 +74,21 @@ Feature: Triggers
     Then one run creates a session with a prompt rendered from body, query, and allowed headers
     And later posts with the same routing key reuse the same non-archived session instead of creating another one
     And missing template variables fail the run request without creating a session
+
+  @triggers/inbox-callback @api
+  Scenario: Reliably accept and deduplicate Inbox notifications
+    Given an active Inbox trigger with a registered callback token
+    When Inbox delivers the same subscription event more than once
+    Then Agency durably accepts one Trigger Run before acknowledging delivery
+    And invalid tokens and mismatched Agent identities are rejected without creating a run
+
+  @triggers/inbox-routing @api
+  Scenario: Route Inbox notifications into Sessions by an opaque routing key
+    Given an active Inbox trigger for a Realmroot-bound Agent
+    When Inbox delivers notifications with equal, different, and absent routing keys
+    Then equal keys share one Session under an atomic route binding
+    And different keys use different Sessions
+    And notifications without a key each create a new Session
 
   @triggers/http-serial-dispatch @usecase
   Scenario: Serial HTTP triggers queue different subjects without delaying the active subject

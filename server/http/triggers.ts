@@ -19,7 +19,12 @@ import {
   parseListCursor,
 } from '../openapi'
 import { dispatchHttpTrigger } from '../usecases/dispatch-triggers'
-import { type EnvFromEntry, TriggerConflictError, TriggerValidationError } from '../usecases/ports'
+import {
+  type EnvFromEntry,
+  TriggerConflictError,
+  TriggerProvisioningError,
+  TriggerValidationError,
+} from '../usecases/ports'
 import { createTrigger, deleteTrigger, type UpdateTriggerPatch, updateTrigger } from '../usecases/triggers'
 import { requestId } from './request-context'
 
@@ -53,6 +58,7 @@ const TriggerSourceSchema = z
       type: z.literal('http'),
       concurrency: HttpTriggerConcurrencySchema.optional(),
     }),
+    z.object({ type: z.literal('inbox') }),
   ])
   .openapi('TriggerSource')
 
@@ -90,6 +96,13 @@ const TriggerStatusSchema = z
     nextDueAt: z.string().datetime().nullable().openapi({ example: '2026-05-26T12:00:00.000Z' }),
     lastDispatchedAt: z.string().datetime().nullable().openapi({ example: null }),
     lastRunId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000d' }),
+    subscription: z
+      .object({
+        id: z.string(),
+        phase: z.enum(['pending', 'active', 'inactive', 'error']),
+        errorMessage: z.string().nullable(),
+      })
+      .nullable(),
   })
   .openapi('TriggerStatus')
 
@@ -159,6 +172,7 @@ const CreateTriggerSchema = z
         source: z.discriminatedUnion('type', [
           z.object({ type: z.literal('schedule'), schedule: SchedulePayloadSchema }),
           z.object({ type: z.literal('http'), concurrency: HttpTriggerConcurrencySchema.optional() }),
+          z.object({ type: z.literal('inbox') }),
         ]),
         suspend: z.boolean().optional().openapi({ example: false }),
         template: CreateTriggerTemplateSchema,
@@ -185,6 +199,7 @@ const UpdateTriggerSchema = z
           .discriminatedUnion('type', [
             z.object({ type: z.literal('schedule'), schedule: SchedulePayloadSchema }),
             z.object({ type: z.literal('http'), concurrency: HttpTriggerConcurrencySchema.optional() }),
+            z.object({ type: z.literal('inbox') }),
           ])
           .optional(),
         suspend: z.boolean().optional().openapi({ example: true }),
@@ -276,6 +291,10 @@ const createRouteDefinition = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    502: {
+      description: 'Inbox Subscription failure',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -328,6 +347,10 @@ const updateRouteDefinition = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Trigger not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    502: {
+      description: 'Inbox Subscription failure',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -344,6 +367,10 @@ const deleteRouteDefinition = createRoute({
     204: { description: 'Trigger deleted' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Trigger not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    502: {
+      description: 'Inbox Subscription failure',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -428,7 +455,9 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
                       windowSeconds: spec.source.schedule.windowSeconds ?? 0,
                     },
                   }
-                : { type: 'http', concurrency: spec.source.concurrency ?? { mode: 'parallel' } },
+                : spec.source.type === 'http'
+                  ? { type: 'http', concurrency: spec.source.concurrency ?? { mode: 'parallel' } }
+                  : { type: 'inbox' },
             suspend: spec.suspend ?? false,
             template: {
               metadata: {
@@ -459,7 +488,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         })
         return c.json(serializeResource(trigger), 201)
       } catch (error) {
-        return conflictOrValidation(c, error)
+        return triggerMutationError(c, error)
       }
     })
     .openapi(listRouteDefinition, async (c) => {
@@ -534,7 +563,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         })
         return c.json(serializeResource(result.trigger), 200)
       } catch (error) {
-        return conflictOrValidation(c, error)
+        return triggerMutationError(c, error)
       }
     })
     .openapi(deleteRouteDefinition, async (c) => {
@@ -549,7 +578,11 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
         return c.json(errorBody('not_found', 'Trigger not found'), 404)
       }
       const scope = auth
-      await deleteTrigger(deps, scope, triggerId)
+      try {
+        await deleteTrigger(deps, scope, triggerId)
+      } catch (error) {
+        return triggerMutationError(c, error)
+      }
       await deps.audit.record(scope, {
         action: 'trigger.delete',
         resourceType: 'trigger',
@@ -693,10 +726,12 @@ function patchFromBody(body: z.infer<typeof UpdateTriggerSchema>): UpdateTrigger
                     windowSeconds: spec.source.schedule.windowSeconds ?? 0,
                   },
                 }
-              : {
-                  type: 'http' as const,
-                  ...(spec.source.concurrency !== undefined ? { concurrency: spec.source.concurrency } : {}),
-                },
+              : spec.source.type === 'http'
+                ? {
+                    type: 'http' as const,
+                    ...(spec.source.concurrency !== undefined ? { concurrency: spec.source.concurrency } : {}),
+                  }
+                : { type: 'inbox' as const },
         }
       : {}),
     ...(spec?.suspend !== undefined ? { suspend: spec.suspend } : {}),
@@ -739,4 +774,11 @@ function conflictOrValidation(c: Parameters<Parameters<TriggerRoutes['openapi']>
     return c.json(errorBody(error.code, error.message), error.status)
   }
   throw error
+}
+
+function triggerMutationError(c: Parameters<Parameters<TriggerRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof TriggerProvisioningError) {
+    return c.json(errorBody(error.code, error.message), error.status)
+  }
+  return conflictOrValidation(c, error)
 }

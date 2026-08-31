@@ -18,6 +18,11 @@
         "name": "Sec-WebSocket-Protocol",
         "description": "Single-use opaque ticket created by POST /sessions/{sessionId}/socket-tickets."
       },
+      "inboxCallbackBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Per-Subscription high-entropy callback token registered by Agency with Inbox."
+      },
       "oidcAccessToken": {
         "type": "openIdConnect",
         "openIdConnectUrl": "https://id.realmroot.dev/api/auth/.well-known/openid-configuration",
@@ -3939,6 +3944,79 @@
         ],
         "additionalProperties": false
       },
+      "InboxNotificationReceipt": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "subscriptionId": {
+            "type": "string"
+          },
+          "triggerRunId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "accepted"
+            ]
+          }
+        },
+        "required": [
+          "eventId",
+          "subscriptionId",
+          "triggerRunId",
+          "state"
+        ]
+      },
+      "InboxNotification": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "message.created"
+            ]
+          },
+          "subscriptionId": {
+            "type": "string",
+            "pattern": "^sub_[0-9a-f]{32}$"
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i"
+          },
+          "messageId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "routingKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "eventId",
+          "type",
+          "subscriptionId",
+          "agentId",
+          "messageId",
+          "occurredAt"
+        ],
+        "additionalProperties": false
+      },
       "ProviderListResponse": {
         "type": "object",
         "properties": {
@@ -5668,6 +5746,20 @@
             "required": [
               "type"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "inbox"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
           }
         ]
       },
@@ -6130,13 +6222,41 @@
             "type": "string",
             "nullable": true,
             "example": "0195f5d6-7c20-7000-8000-00000000000d"
+          },
+          "subscription": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "active",
+                  "inactive",
+                  "error"
+                ]
+              },
+              "errorMessage": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "phase",
+              "errorMessage"
+            ]
           }
         },
         "required": [
           "phase",
           "nextDueAt",
           "lastDispatchedAt",
-          "lastRunId"
+          "lastRunId",
+          "subscription"
         ]
       },
       "CreateTriggerRequest": {
@@ -6204,6 +6324,20 @@
                       },
                       "concurrency": {
                         "$ref": "#/components/schemas/HttpTriggerConcurrency"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "inbox"
+                        ]
                       }
                     },
                     "required": [
@@ -6422,6 +6556,20 @@
                       },
                       "concurrency": {
                         "$ref": "#/components/schemas/HttpTriggerConcurrency"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "inbox"
+                        ]
                       }
                     },
                     "required": [
@@ -10431,6 +10579,73 @@
         }
       }
     },
+    "/api/v1/inbox-notifications": {
+      "post": {
+        "operationId": "createInboxNotification",
+        "tags": [
+          "Triggers"
+        ],
+        "summary": "Reliably receive an Inbox notification",
+        "description": "Authenticates the per-Subscription callback token, persistently deduplicates by (subscriptionId, eventId), and accepts the Trigger Run before asynchronous Session delivery.",
+        "security": [
+          {
+            "inboxCallbackBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxNotification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Notification durably accepted or previously accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxNotificationReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid notification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid callback token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Notification does not match the Subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/providers": {
       "get": {
         "operationId": "listProviders",
@@ -13083,6 +13298,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Inbox Subscription failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -13391,6 +13616,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Inbox Subscription failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -13445,6 +13680,16 @@
           },
           "404": {
             "description": "Trigger not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Inbox Subscription failure",
             "content": {
               "application/json": {
                 "schema": {

@@ -11,7 +11,9 @@ import {
   type TriggerSchedule,
   type TriggerSessionTemplate,
 } from '@server/domain/trigger'
+import { newPrimaryKey } from '@server/id'
 import type { Deps } from './deps'
+import { initialInboxProvisioning, reconcileInboxSubscription, removeInboxSubscription } from './inbox-subscriptions'
 import { type AuthScope, type TriggerConfig, TriggerConflictError, TriggerValidationError } from './ports'
 
 // Raw secrets must be stored as secret references, so trigger metadata, resource
@@ -83,7 +85,7 @@ function normalizeScheduleConfig(config: CreateTriggerInputDto['config']) {
   }
   if (config.nextDueAt !== null) {
     throw new TriggerValidationError('Invalid trigger schedule', {
-      schedule: 'HTTP triggers do not use schedule timing.',
+      schedule: 'Non-scheduled triggers do not use schedule timing.',
     })
   }
   return { source: config.source, nextDueAt: null }
@@ -103,6 +105,9 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
   )
   const agent = await deps.agents.find(auth.project.id, input.config.template.spec.agentId)
   if (!agent) throw new TriggerConflictError('Agent not found', 404)
+  if (input.config.source.type === 'inbox' && !agent.spec.identity) {
+    throw new TriggerConflictError('Inbox triggers require a Realmroot-bound Agent')
+  }
   let runtime: RuntimeName
   try {
     runtime = resolveIdentityRuntime(input.config.template.spec.runtime, agent.spec.identity)
@@ -122,15 +127,20 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
     template: { ...input.config.template, spec: { ...input.config.template.spec, runtime } },
     nextDueAt: timing.nextDueAt,
   }
-  return deps.triggers.insert(
+  const triggerId = newPrimaryKey()
+  const inbox = config.source.type === 'inbox' ? await initialInboxProvisioning(deps) : null
+  const trigger = await deps.triggers.insert(
     {
+      id: triggerId,
       organizationId: auth.organization.id,
       projectId: auth.project.id,
       config,
       createdByUserId: auth.user.id,
+      inboxProvisioning: inbox?.fields ?? null,
     },
     timestamp,
   )
+  return inbox ? reconcileInboxSubscription(deps, trigger, inbox.token) : trigger
 }
 
 export interface UpdateTriggerPatch {
@@ -138,6 +148,7 @@ export interface UpdateTriggerPatch {
   source?:
     | { type: 'schedule'; schedule?: Partial<TriggerSchedule> }
     | { type: 'http'; concurrency?: { mode: 'parallel' | 'serial' } }
+    | { type: 'inbox' }
   suspend?: boolean
   template?: {
     metadata?: Partial<TriggerSessionTemplate['metadata']>
@@ -162,6 +173,14 @@ function mergeTemplate(trigger: Trigger, patch: UpdateTriggerPatch): TriggerSess
 
 function mergeSource(trigger: Trigger, patch: UpdateTriggerPatch): Pick<TriggerConfig, 'source' | 'nextDueAt'> {
   const current = trigger.spec.source
+  if (patch.source?.type === 'inbox') {
+    if (patch.nextDueAt !== undefined) {
+      throw new TriggerValidationError('Invalid trigger schedule', {
+        schedule: 'Inbox triggers do not use schedule timing.',
+      })
+    }
+    return { source: { type: 'inbox' }, nextDueAt: null }
+  }
   if (patch.source?.type === 'http') {
     if (patch.nextDueAt !== undefined) {
       throw new TriggerValidationError('Invalid trigger schedule', {
@@ -204,13 +223,15 @@ function mergeSource(trigger: Trigger, patch: UpdateTriggerPatch): Pick<TriggerC
       schedule: 'HTTP triggers do not use schedule timing.',
     })
   }
-  return {
-    source: {
-      type: 'http',
-      ...(current.type === 'http' && current.concurrency !== undefined ? { concurrency: current.concurrency } : {}),
-    },
-    nextDueAt: null,
-  }
+  return current.type === 'inbox'
+    ? { source: { type: 'inbox' }, nextDueAt: null }
+    : {
+        source: {
+          type: 'http',
+          ...(current.type === 'http' && current.concurrency !== undefined ? { concurrency: current.concurrency } : {}),
+        },
+        nextDueAt: null,
+      }
 }
 
 export interface UpdateTriggerResult {
@@ -246,6 +267,9 @@ export async function updateTrigger(
   }
   const agent = await deps.agents.find(auth.project.id, agentId)
   if (!agent) throw new TriggerConflictError('Agent not found', 404)
+  if (timing.source.type === 'inbox' && !agent.spec.identity) {
+    throw new TriggerConflictError('Inbox triggers require a Realmroot-bound Agent')
+  }
   try {
     const requestedRuntime =
       patch.template?.spec?.runtime !== undefined
@@ -278,12 +302,34 @@ export async function updateTrigger(
     template,
     nextDueAt: timing.nextDueAt,
   }
-  const updated = await deps.triggers.update(auth.project.id, trigger.metadata.uid, { config, archivedAt }, timestamp)
+  const leavingInbox = trigger.spec.source.type === 'inbox' && timing.source.type !== 'inbox'
+  if (leavingInbox) await removeInboxSubscription(deps, trigger)
+  const enteringInbox = trigger.spec.source.type !== 'inbox' && timing.source.type === 'inbox'
+  const inbox = enteringInbox ? await initialInboxProvisioning(deps) : null
+  let updated = await deps.triggers.update(
+    auth.project.id,
+    trigger.metadata.uid,
+    {
+      config,
+      archivedAt,
+      ...(leavingInbox
+        ? { inboxProvisioning: null }
+        : enteringInbox
+          ? { inboxProvisioning: inbox?.fields ?? null }
+          : {}),
+    },
+    timestamp,
+  )
+  if (updated.spec.source.type === 'inbox') {
+    updated = await reconcileInboxSubscription(deps, updated, inbox?.token)
+  }
   return { trigger: updated, archived: patch.archived === true && trigger.metadata.archivedAt === null }
 }
 
 // Hard-deletes the trigger and its runs, tenant-scoped. Returns false when no
 // matching trigger exists in the project so the http layer can answer 404.
 export async function deleteTrigger(deps: Deps, auth: AuthScope, triggerId: string): Promise<boolean> {
+  const trigger = await deps.triggers.find(auth.project.id, triggerId)
+  if (trigger) await removeInboxSubscription(deps, trigger)
   return deps.triggers.delete(auth.project.id, triggerId)
 }

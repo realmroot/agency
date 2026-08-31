@@ -15,6 +15,7 @@ import e2e from './http/e2e'
 import { registerEnvironmentRoutes } from './http/environments'
 import healthz from './http/healthz'
 import { registerIdentityRoutes } from './http/identities'
+import { registerInboxNotificationRoutes } from './http/inbox-notifications'
 import { registerLeaseRoutes } from './http/leases'
 import { registerMemoryStoreRoutes } from './http/memory-stores'
 import { registerProjectRoutes } from './http/projects'
@@ -78,6 +79,7 @@ export function createApp() {
   const agents = registerAgentRoutes(createDepsApiRouter())
   const environments = registerEnvironmentRoutes(createDepsApiRouter())
   const identities = registerIdentityRoutes(createDepsApiRouter())
+  const inboxNotifications = registerInboxNotificationRoutes(createDepsApiRouter())
   const providers = registerProviderRoutes(createDepsApiRouter())
   const runners = registerRunnerRoutes(createDepsApiRouter())
   const workItems = registerWorkItemRoutes(createDepsApiRouter())
@@ -112,6 +114,7 @@ export function createApp() {
     .route('/api/v1/agents', agents)
     .route('/api/v1/environments', environments)
     .route('/api/v1/identities', identities)
+    .route('/api/v1/inbox-notifications', inboxNotifications)
     .route('/api/v1/providers', providers)
     .route('/api/v1/runners', runners)
     .route('/api/v1/work-items', workItems)
@@ -130,6 +133,11 @@ export function createApp() {
     'securitySchemes',
     'sessionSocketTicket',
     ApiSecuritySchemes.sessionSocketTicket,
+  )
+  routes.openAPIRegistry.registerComponent(
+    'securitySchemes',
+    'inboxCallbackBearer',
+    ApiSecuritySchemes.inboxCallbackBearer,
   )
   routes.openAPIRegistry.registerComponent('securitySchemes', 'oidcAccessToken', ApiSecuritySchemes.oidcAccessToken)
   for (const [name, schema] of Object.entries(RUNNER_PROTOCOL_SCHEMAS)) {

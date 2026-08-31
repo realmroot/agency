@@ -13,6 +13,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.trigger_source_type_0 import TriggerSourceType0
   from ..models.trigger_source_type_1 import TriggerSourceType1
+  from ..models.trigger_source_type_2 import TriggerSourceType2
   from ..models.trigger_template import TriggerTemplate
 
 
@@ -25,14 +26,14 @@ T = TypeVar("T", bound="TriggerSpec")
 
 @_attrs_define
 class TriggerSpec:
-    """ 
+    """
         Attributes:
-            source (TriggerSourceType0 | TriggerSourceType1):
+            source (TriggerSourceType0 | TriggerSourceType1 | TriggerSourceType2):
             suspend (bool):
             template (TriggerTemplate):
      """
 
-    source: TriggerSourceType0 | TriggerSourceType1
+    source: TriggerSourceType0 | TriggerSourceType1 | TriggerSourceType2
     suspend: bool
     template: TriggerTemplate
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -44,9 +45,12 @@ class TriggerSpec:
     def to_dict(self) -> dict[str, Any]:
         from ..models.trigger_source_type_0 import TriggerSourceType0
         from ..models.trigger_source_type_1 import TriggerSourceType1
+        from ..models.trigger_source_type_2 import TriggerSourceType2
         from ..models.trigger_template import TriggerTemplate
         source: dict[str, Any]
         if isinstance(self.source, TriggerSourceType0):
+            source = self.source.to_dict()
+        elif isinstance(self.source, TriggerSourceType1):
             source = self.source.to_dict()
         else:
             source = self.source.to_dict()
@@ -73,9 +77,10 @@ class TriggerSpec:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.trigger_source_type_0 import TriggerSourceType0
         from ..models.trigger_source_type_1 import TriggerSourceType1
+        from ..models.trigger_source_type_2 import TriggerSourceType2
         from ..models.trigger_template import TriggerTemplate
         d = dict(src_dict)
-        def _parse_source(data: object) -> TriggerSourceType0 | TriggerSourceType1:
+        def _parse_source(data: object) -> TriggerSourceType0 | TriggerSourceType1 | TriggerSourceType2:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
@@ -86,13 +91,23 @@ class TriggerSpec:
                 return componentsschemas_trigger_source_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_trigger_source_type_1 = TriggerSourceType1.from_dict(data)
+
+
+
+                return componentsschemas_trigger_source_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
             if not isinstance(data, dict):
                 raise TypeError()
-            componentsschemas_trigger_source_type_1 = TriggerSourceType1.from_dict(data)
+            componentsschemas_trigger_source_type_2 = TriggerSourceType2.from_dict(data)
 
 
 
-            return componentsschemas_trigger_source_type_1
+            return componentsschemas_trigger_source_type_2
 
         source = _parse_source(d.pop("source"))
 

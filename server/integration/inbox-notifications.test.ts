@@ -1,0 +1,163 @@
+import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
+import { createInboxActivationRepo } from '@server/adapters/repos/inbox-activations'
+import { createTriggerRepo } from '@server/adapters/repos/triggers'
+import { createDb } from '@server/db/client'
+import { inboxTokenHash, newInboxCallbackToken } from '@server/usecases/inbox-subscriptions'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { defaultClaims, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
+
+async function authenticatedFetch(path: string, authorization: string, init: RequestInit = {}) {
+  return SELF.fetch(`https://example.com${path}`, {
+    ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...dpopHeaders(authorization, init.method ?? 'GET', path),
+      ...init.headers,
+    },
+  })
+}
+
+async function callback(token: string, body: Record<string, unknown>) {
+  return SELF.fetch('https://example.com/api/v1/inbox-notifications', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  })
+}
+
+describe('[CF] Inbox notification receipts', () => {
+  beforeEach(async () => {
+    await setupOidcProvider()
+    await seedPlatformProvider()
+  })
+
+  it('persists one Trigger Run per source event and atomically reserves one Session route [spec: triggers/inbox-callback] [spec: triggers/inbox-routing]', async () => {
+    const authorization = await signIn()
+    const createAgent = await authenticatedFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify({
+        metadata: { name: `Inbox Agent ${crypto.randomUUID()}` },
+        spec: { systemPrompt: 'Triage Inbox messages.', provider: 'workers-ai', model: '@cf/moonshotai/kimi-k2.6' },
+      }),
+    })
+    expect(createAgent.status).toBe(201)
+    const agent = (await createAgent.json()) as { metadata: { uid: string } }
+    const project = await env.DB.prepare('SELECT id, name FROM projects ORDER BY created_at DESC LIMIT 1').first<{
+      id: string
+      name: string
+    }>()
+    if (!project) throw new Error('Expected signed-in project')
+
+    const remoteAgentId = '019ff41a-7da6-708f-8b05-49a4cc6d5300'
+    const identity = {
+      identityId: 'identity_inbox_test',
+      agentId: remoteAgentId,
+      issuer: 'https://id.realmroot.dev/api/auth',
+      subject: remoteAgentId,
+      username: 'inbox-agent',
+      runtime: 'ama',
+      credentialRef: 'ama-managed:vaults/test/credentials/test/versions/test',
+    }
+    await env.DB.prepare('UPDATE agents SET identity_snapshot = ? WHERE id = ?')
+      .bind(JSON.stringify(identity), agent.metadata.uid)
+      .run()
+
+    const token = newInboxCallbackToken()
+    const db = createDb(env)
+    const trigger = await createTriggerRepo(db).insert(
+      {
+        id: crypto.randomUUID(),
+        organizationId: defaultClaims().organizationId,
+        projectId: project.id,
+        createdByUserId: defaultClaims().subject,
+        config: {
+          name: 'Inbox receipt test',
+          source: { type: 'inbox' },
+          suspend: false,
+          template: {
+            metadata: { labels: {}, annotations: {} },
+            spec: {
+              agentId: agent.metadata.uid,
+              environmentId: null,
+              runtime: 'ama',
+              promptTemplate: 'Triage the referenced message.',
+              env: {},
+              envFrom: [],
+              volumes: [],
+              volumeMounts: [],
+            },
+          },
+          nextDueAt: null,
+        },
+        inboxProvisioning: {
+          subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
+          callbackTokenHash: await inboxTokenHash(token),
+          callbackTokenCiphertext: 'encrypted-token',
+          etag: '"subscription-v1"',
+          phase: 'active',
+          errorMessage: null,
+        },
+      },
+      new Date().toISOString(),
+    )
+    const notification = {
+      eventId: 'event_1',
+      type: 'message.created',
+      subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
+      agentId: remoteAgentId,
+      messageId: 'message_1',
+      routingKey: 'opaque-route',
+      occurredAt: '2026-08-30T12:00:00.000Z',
+    }
+
+    const first = await callback(token, notification)
+    expect(first.status).toBe(202)
+    const firstReceipt = (await first.json()) as { triggerRunId: string }
+    const duplicate = await callback(token, notification)
+    expect(duplicate.status).toBe(202)
+    expect(duplicate.headers.get('idempotency-replayed')).toBe('true')
+    await expect(duplicate.json()).resolves.toMatchObject({ triggerRunId: firstReceipt.triggerRunId })
+
+    const count = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM trigger_runs WHERE source_subscription_id = ? AND source_event_id = ?',
+    )
+      .bind(notification.subscriptionId, notification.eventId)
+      .first<{ count: number }>()
+    expect(count?.count).toBe(1)
+
+    const invalid = await callback(newInboxCallbackToken(), { ...notification, eventId: 'event_invalid' })
+    expect(invalid.status).toBe(401)
+    const mismatch = await callback(token, {
+      ...notification,
+      eventId: 'event_mismatch',
+      agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5301',
+    })
+    expect(mismatch.status).toBe(403)
+
+    const routes = createInboxActivationRepo(db)
+    const binding = await routes.findSubscription(notification.subscriptionId)
+    if (!binding) throw new Error('Expected Inbox Subscription binding')
+    const { routingKey: _, ...storedNotification } = notification
+    const secondActivation = await routes.claimNotification(
+      binding,
+      { ...storedNotification, eventId: 'event_route_race' },
+      await inboxTokenHash('concurrent-route'),
+      new Date().toISOString(),
+    )
+    const base = {
+      organizationId: defaultClaims().organizationId,
+      projectId: project.id,
+      agentId: agent.metadata.uid,
+      triggerId: trigger.metadata.uid,
+      routingKeyHash: await inboxTokenHash('concurrent-route'),
+      createdAt: new Date().toISOString(),
+    }
+    const [left, right] = await Promise.all([
+      routes.reserveSessionRoute({ ...base, activationRunId: firstReceipt.triggerRunId, sessionId: 'session_left' }),
+      routes.reserveSessionRoute({ ...base, activationRunId: secondActivation.runId, sessionId: 'session_right' }),
+    ])
+    expect(left.sessionId).toBe(right.sessionId)
+    expect([left.owned, right.owned].filter(Boolean)).toHaveLength(1)
+  })
+})

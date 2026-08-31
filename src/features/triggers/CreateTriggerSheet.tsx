@@ -25,7 +25,7 @@ const INTERVAL_UNITS = {
 type IntervalUnit = keyof typeof INTERVAL_UNITS
 
 interface TriggerFormState {
-  type: 'scheduled' | 'http'
+  type: 'scheduled' | 'http' | 'inbox'
   name: string
   agentId: string
   environmentId: string
@@ -94,17 +94,19 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
             ),
       )
     : allEnvironments
+  const selectedAgent = agents.find((agent) => agent.metadata.uid === form.agentId)
   const agentDescription = agentsQuery.isPending
     ? 'Loading agents.'
     : agents.length === 0
       ? 'No active agents exist in the current project.'
-      : 'The trigger dispatches the current version of this agent.'
+      : form.type === 'inbox' && selectedAgent && !selectedAgent.spec.identity
+        ? 'Inbox triggers require a Realmroot-bound Agent. Select an Agent with an Identity.'
+        : 'The trigger dispatches the current version of this agent.'
   const environmentDescription = environmentsQuery.isPending
     ? 'Loading environments.'
     : environments.length === 0
       ? 'No active environments exist in the current project.'
       : 'Select the hosting and policy environment for dispatched sessions.'
-  const selectedAgent = agents.find((agent) => agent.metadata.uid === form.agentId)
   const createTrigger = useMutation({
     mutationFn: () =>
       api.createTrigger({
@@ -113,7 +115,9 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
           source:
             form.type === 'scheduled'
               ? { type: 'schedule', schedule: { type: 'interval', intervalSeconds: intervalSeconds(form) } }
-              : { type: 'http' },
+              : form.type === 'http'
+                ? { type: 'http' }
+                : { type: 'inbox' },
           suspend: form.suspend,
           template: {
             metadata: { labels: {}, annotations: {} },
@@ -173,7 +177,8 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
       form.agentId &&
       form.environmentId &&
       form.promptTemplate.trim() &&
-      (form.type === 'http' || form.intervalValue.trim()),
+      (form.type !== 'scheduled' || form.intervalValue.trim()) &&
+      (form.type !== 'inbox' || selectedAgent?.spec.identity),
   )
 
   return (
@@ -181,7 +186,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Create Trigger</SheetTitle>
-          <SheetDescription>Schedule an agent to dispatch on a recurring interval.</SheetDescription>
+          <SheetDescription>Wake an agent from a schedule, an authenticated HTTP request, or Inbox.</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-4">
           <form className="flex flex-col gap-4" onSubmit={submit}>
@@ -200,11 +205,13 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                     <SelectGroup>
                       <SelectItem value="scheduled">scheduled</SelectItem>
                       <SelectItem value="http">HTTP POST</SelectItem>
+                      <SelectItem value="inbox">Inbox</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
                 <FieldDescription>
-                  Scheduled triggers run on an interval. HTTP triggers run when a POST creates a run.
+                  Scheduled triggers run on an interval. HTTP triggers accept a POST. Inbox triggers subscribe to
+                  message notifications.
                 </FieldDescription>
               </Field>
               <Field>
@@ -283,7 +290,9 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                 description={
                   form.type === 'http'
                     ? 'Use variables like {{ body.ticket.id }}, {{ query.source }}, or {{ headers.x-source }}.'
-                    : 'The prompt the agent runs on each scheduled dispatch.'
+                    : form.type === 'inbox'
+                      ? 'Instructions prepended to the message reference. The Agent reads the complete Message with its own Realmroot identity.'
+                      : 'The prompt the agent runs on each scheduled dispatch.'
                 }
                 value={form.promptTemplate}
                 onChange={(promptTemplate) => setForm({ ...form, promptTemplate })}
@@ -319,12 +328,20 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                   </div>
                   <FieldDescription>The minimum effective granularity is 1 minute.</FieldDescription>
                 </Field>
-              ) : (
+              ) : form.type === 'http' ? (
                 <Field>
                   <FieldLabel>HTTP entry</FieldLabel>
                   <FieldDescription>
                     Send a POST request with JSON to /api/v1/triggers/&lt;triggerId&gt;/runs using an authorized access
                     token.
+                  </FieldDescription>
+                </Field>
+              ) : (
+                <Field>
+                  <FieldLabel>Inbox Subscription</FieldLabel>
+                  <FieldDescription>
+                    Requires a Realmroot-bound Agent. Agency provisions and maintains one Inbox Subscription for this
+                    Trigger.
                   </FieldDescription>
                 </Field>
               )}
@@ -349,7 +366,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
             </FieldGroup>
             <Button type="submit" disabled={!canSubmit || createTrigger.isPending}>
               <AlarmClock data-icon="inline-start" />
-              Create trigger
+              {createTrigger.isPending ? 'Creating…' : 'Create trigger'}
             </Button>
           </form>
           {createTrigger.error ? (

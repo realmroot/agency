@@ -181,6 +181,19 @@ export const updateIdentity = (options) => (options.client ?? client).patch({
     }
 });
 /**
+ * Reliably receive an Inbox notification
+ *
+ * Authenticates the per-Subscription callback token, persistently deduplicates by (subscriptionId, eventId), and accepts the Trigger Run before asynchronous Session delivery.
+ */
+export const createInboxNotification = (options) => (options.client ?? client).post({
+    url: '/api/v1/inbox-notifications',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+/**
  * List model vendors
  */
 export const listProviders = (options) => (options?.client ?? client).get({

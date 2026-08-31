@@ -15,6 +15,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.create_trigger_request_spec_source_type_0 import CreateTriggerRequestSpecSourceType0
   from ..models.create_trigger_request_spec_source_type_1 import CreateTriggerRequestSpecSourceType1
+  from ..models.create_trigger_request_spec_source_type_2 import CreateTriggerRequestSpecSourceType2
   from ..models.create_trigger_request_spec_template import CreateTriggerRequestSpecTemplate
 
 
@@ -27,15 +28,16 @@ T = TypeVar("T", bound="CreateTriggerRequestSpec")
 
 @_attrs_define
 class CreateTriggerRequestSpec:
-    """ 
+    """
         Attributes:
-            source (CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1):
+            source (CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1 |
+                CreateTriggerRequestSpecSourceType2):
             template (CreateTriggerRequestSpecTemplate):
             suspend (bool | Unset):
             next_due_at (datetime.datetime | Unset):  Example: 2026-05-26T12:00:00.000Z.
      """
 
-    source: CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1
+    source: CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1 | CreateTriggerRequestSpecSourceType2
     template: CreateTriggerRequestSpecTemplate
     suspend: bool | Unset = UNSET
     next_due_at: datetime.datetime | Unset = UNSET
@@ -47,9 +49,12 @@ class CreateTriggerRequestSpec:
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_trigger_request_spec_source_type_0 import CreateTriggerRequestSpecSourceType0
         from ..models.create_trigger_request_spec_source_type_1 import CreateTriggerRequestSpecSourceType1
+        from ..models.create_trigger_request_spec_source_type_2 import CreateTriggerRequestSpecSourceType2
         from ..models.create_trigger_request_spec_template import CreateTriggerRequestSpecTemplate
         source: dict[str, Any]
         if isinstance(self.source, CreateTriggerRequestSpecSourceType0):
+            source = self.source.to_dict()
+        elif isinstance(self.source, CreateTriggerRequestSpecSourceType1):
             source = self.source.to_dict()
         else:
             source = self.source.to_dict()
@@ -83,9 +88,10 @@ class CreateTriggerRequestSpec:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_trigger_request_spec_source_type_0 import CreateTriggerRequestSpecSourceType0
         from ..models.create_trigger_request_spec_source_type_1 import CreateTriggerRequestSpecSourceType1
+        from ..models.create_trigger_request_spec_source_type_2 import CreateTriggerRequestSpecSourceType2
         from ..models.create_trigger_request_spec_template import CreateTriggerRequestSpecTemplate
         d = dict(src_dict)
-        def _parse_source(data: object) -> CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1:
+        def _parse_source(data: object) -> CreateTriggerRequestSpecSourceType0 | CreateTriggerRequestSpecSourceType1 | CreateTriggerRequestSpecSourceType2:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
@@ -96,13 +102,23 @@ class CreateTriggerRequestSpec:
                 return source_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                source_type_1 = CreateTriggerRequestSpecSourceType1.from_dict(data)
+
+
+
+                return source_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
             if not isinstance(data, dict):
                 raise TypeError()
-            source_type_1 = CreateTriggerRequestSpecSourceType1.from_dict(data)
+            source_type_2 = CreateTriggerRequestSpecSourceType2.from_dict(data)
 
 
 
-            return source_type_1
+            return source_type_2
 
         source = _parse_source(d.pop("source"))
 
@@ -132,4 +148,3 @@ class CreateTriggerRequestSpec:
         )
 
         return create_trigger_request_spec
-

@@ -15,6 +15,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.update_trigger_request_spec_source_type_0 import UpdateTriggerRequestSpecSourceType0
   from ..models.update_trigger_request_spec_source_type_1 import UpdateTriggerRequestSpecSourceType1
+  from ..models.update_trigger_request_spec_source_type_2 import UpdateTriggerRequestSpecSourceType2
   from ..models.update_trigger_request_spec_template import UpdateTriggerRequestSpecTemplate
 
 
@@ -27,15 +28,16 @@ T = TypeVar("T", bound="UpdateTriggerRequestSpec")
 
 @_attrs_define
 class UpdateTriggerRequestSpec:
-    """ 
+    """
         Attributes:
-            source (Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1):
+            source (Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1 |
+                UpdateTriggerRequestSpecSourceType2):
             suspend (bool | Unset):  Example: True.
             template (UpdateTriggerRequestSpecTemplate | Unset):
             next_due_at (datetime.datetime | Unset):  Example: 2026-05-26T13:00:00.000Z.
      """
 
-    source: Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1 = UNSET
+    source: Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1 | UpdateTriggerRequestSpecSourceType2 = UNSET
     suspend: bool | Unset = UNSET
     template: UpdateTriggerRequestSpecTemplate | Unset = UNSET
     next_due_at: datetime.datetime | Unset = UNSET
@@ -47,11 +49,14 @@ class UpdateTriggerRequestSpec:
     def to_dict(self) -> dict[str, Any]:
         from ..models.update_trigger_request_spec_source_type_0 import UpdateTriggerRequestSpecSourceType0
         from ..models.update_trigger_request_spec_source_type_1 import UpdateTriggerRequestSpecSourceType1
+        from ..models.update_trigger_request_spec_source_type_2 import UpdateTriggerRequestSpecSourceType2
         from ..models.update_trigger_request_spec_template import UpdateTriggerRequestSpecTemplate
         source: dict[str, Any] | Unset
         if isinstance(self.source, Unset):
             source = UNSET
         elif isinstance(self.source, UpdateTriggerRequestSpecSourceType0):
+            source = self.source.to_dict()
+        elif isinstance(self.source, UpdateTriggerRequestSpecSourceType1):
             source = self.source.to_dict()
         else:
             source = self.source.to_dict()
@@ -89,9 +94,10 @@ class UpdateTriggerRequestSpec:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.update_trigger_request_spec_source_type_0 import UpdateTriggerRequestSpecSourceType0
         from ..models.update_trigger_request_spec_source_type_1 import UpdateTriggerRequestSpecSourceType1
+        from ..models.update_trigger_request_spec_source_type_2 import UpdateTriggerRequestSpecSourceType2
         from ..models.update_trigger_request_spec_template import UpdateTriggerRequestSpecTemplate
         d = dict(src_dict)
-        def _parse_source(data: object) -> Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1:
+        def _parse_source(data: object) -> Unset | UpdateTriggerRequestSpecSourceType0 | UpdateTriggerRequestSpecSourceType1 | UpdateTriggerRequestSpecSourceType2:
             if isinstance(data, Unset):
                 return data
             try:
@@ -104,13 +110,23 @@ class UpdateTriggerRequestSpec:
                 return source_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                source_type_1 = UpdateTriggerRequestSpecSourceType1.from_dict(data)
+
+
+
+                return source_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
             if not isinstance(data, dict):
                 raise TypeError()
-            source_type_1 = UpdateTriggerRequestSpecSourceType1.from_dict(data)
+            source_type_2 = UpdateTriggerRequestSpecSourceType2.from_dict(data)
 
 
 
-            return source_type_1
+            return source_type_2
 
         source = _parse_source(d.pop("source", UNSET))
 
@@ -145,4 +161,3 @@ class UpdateTriggerRequestSpec:
         )
 
         return update_trigger_request_spec
-

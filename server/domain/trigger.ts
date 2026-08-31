@@ -5,10 +5,11 @@
 import type { ResourceMetadata, ResourcePhase } from './resource'
 import type { SessionSpec } from './session'
 
-export type TriggerType = 'scheduled' | 'http'
+export type TriggerType = 'scheduled' | 'http' | 'inbox'
 export type TriggerRunPhase = 'claimed' | 'queued' | 'dispatching' | 'dispatched' | 'failed'
-export type TriggerSourceType = 'schedule' | 'http'
+export type TriggerSourceType = 'schedule' | 'http' | 'inbox'
 export type HttpTriggerConcurrencyMode = 'parallel' | 'serial'
+export type InboxSubscriptionPhase = 'pending' | 'active' | 'inactive' | 'error'
 export type TriggerSessionTemplateSpec = Pick<
   SessionSpec,
   'agentId' | 'environmentId' | 'runtime' | 'env' | 'envFrom' | 'volumes' | 'volumeMounts'
@@ -41,6 +42,9 @@ export type TriggerSource =
         mode: HttpTriggerConcurrencyMode
       }
     }
+  | {
+      type: 'inbox'
+    }
 
 export interface Trigger {
   metadata: ResourceMetadata
@@ -59,6 +63,11 @@ export interface TriggerStatus {
   nextDueAt: string | null
   lastDispatchedAt: string | null
   lastRunId: string | null
+  subscription: {
+    id: string
+    phase: InboxSubscriptionPhase
+    errorMessage: string | null
+  } | null
 }
 
 export interface TriggerRun {

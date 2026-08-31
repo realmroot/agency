@@ -622,7 +622,7 @@ func (s TriggersService) Create(ctx context.Context, body CreateTriggerRequest) 
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
 }
 
 func (s TriggersService) Get(ctx context.Context, triggerID string) (*Trigger, error) {
@@ -638,7 +638,7 @@ func (s TriggersService) Update(ctx context.Context, triggerID string, body Upda
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
 }
 
 func (s TriggersService) Delete(ctx context.Context, triggerID string) error {
@@ -646,7 +646,7 @@ func (s TriggersService) Delete(ctx context.Context, triggerID string) error {
 	if err != nil {
 		return err
 	}
-	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON502)
 }
 
 func (s TriggersService) ListRuns(ctx context.Context, triggerID string, params *ListTriggerRunsParams) (*TriggerRunListResponse, error) {

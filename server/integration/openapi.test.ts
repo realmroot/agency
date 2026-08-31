@@ -289,7 +289,11 @@ describe('[CF] OpenAPI documentation', () => {
         sessionSocketTicket: expect.objectContaining({ type: 'apiKey', in: 'header', name: 'Sec-WebSocket-Protocol' }),
       }),
     )
-    expect(Object.keys(doc.components?.securitySchemes ?? {})).toEqual(['sessionSocketTicket', 'oidcAccessToken'])
+    expect(Object.keys(doc.components?.securitySchemes ?? {})).toEqual([
+      'sessionSocketTicket',
+      'inboxCallbackBearer',
+      'oidcAccessToken',
+    ])
     expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
     expect(doc.paths['/api/v1/sessions/{sessionId}/socket'].get.security).toEqual([
       { sessionSocketTicket: [] },
@@ -608,7 +612,9 @@ describe('[CF] OpenAPI documentation', () => {
         const scopeOperation =
           path.endsWith('/socket') || path.endsWith('/channel') ? 'write' : method === 'get' ? 'read' : 'write'
         const exactScope = `${path.split('/')[3]}:${scopeOperation}`
-        if (path.endsWith('/socket')) {
+        if (operation.operationId === 'createInboxNotification') {
+          expect(required).toEqual([{ inboxCallbackBearer: [] }])
+        } else if (path.endsWith('/socket')) {
           expect(required).toEqual([{ sessionSocketTicket: [] }, { oidcAccessToken: [exactScope] }])
         } else {
           expect(required).toEqual([{ oidcAccessToken: [exactScope] }])

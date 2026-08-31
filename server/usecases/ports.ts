@@ -1057,15 +1057,27 @@ export interface TriggerRunListQuery {
 }
 
 export interface CreateTriggerInput {
+  id: string
   organizationId: string
   projectId: string
   config: TriggerConfig
   createdByUserId: string | null
+  inboxProvisioning: InboxProvisioningFields | null
 }
 
 export interface UpdateTriggerFields {
   config: TriggerConfig
   archivedAt: string | null
+  inboxProvisioning?: InboxProvisioningFields | null
+}
+
+export interface InboxProvisioningFields {
+  subscriptionId: string
+  callbackTokenHash: string
+  callbackTokenCiphertext: string
+  etag: string | null
+  phase: 'pending' | 'active' | 'inactive' | 'error'
+  errorMessage: string | null
 }
 
 // DB boundary for triggers and their run sub-resource. The only implementation
@@ -1086,6 +1098,102 @@ export interface TriggerRepo {
   // when the agent/environment is missing (404) or unusable (409).
   agentUsable(projectId: string, agentId: string): Promise<{ status: 404 | 409; message: string } | null>
   environmentUsable(projectId: string, environmentId: string): Promise<{ status: 404 | 409; message: string } | null>
+}
+
+export interface InboxNotification {
+  eventId: string
+  type: string
+  subscriptionId: string
+  agentId: string
+  messageId: string
+  occurredAt: string
+  routingKey?: string
+}
+
+export interface InboxSubscriptionBinding {
+  trigger: Trigger
+  organizationId: string
+  projectId: string
+  projectName: string
+  remoteAgentId: string
+  callbackTokenHash: string
+  callbackTokenCiphertext: string
+  subscriptionEtag: string | null
+}
+
+export interface PendingInboxActivation {
+  run: ClaimedRun
+  triggerId: string
+  organizationId: string
+  projectId: string
+  projectName: string
+  notification: Omit<InboxNotification, 'routingKey'>
+  routingKeyHash: string | null
+}
+
+export interface InboxActivationRepo {
+  findSubscription(subscriptionId: string): Promise<InboxSubscriptionBinding | null>
+  updateProvisioning(
+    projectId: string,
+    triggerId: string,
+    fields: InboxProvisioningFields,
+    updatedAt: string,
+  ): Promise<Trigger>
+  claimNotification(
+    binding: InboxSubscriptionBinding,
+    notification: Omit<InboxNotification, 'routingKey'>,
+    routingKeyHash: string | null,
+    timestamp: string,
+  ): Promise<{ runId: string; replayed: boolean }>
+  findActivation(runId: string): Promise<PendingInboxActivation | null>
+  pendingActivationIds(limit: number): Promise<string[]>
+  reconcilableSubscriptions(limit: number): Promise<Trigger[]>
+  reserveSessionRoute(input: {
+    organizationId: string
+    projectId: string
+    agentId: string
+    triggerId: string
+    routingKeyHash: string
+    sessionId: string
+    activationRunId: string
+    createdAt: string
+  }): Promise<{ sessionId: string; owned: boolean }>
+  deleteSessionRoute(projectId: string, triggerId: string, routingKeyHash: string, sessionId: string): Promise<void>
+}
+
+export interface InboxSubscriptionGateway {
+  put(input: {
+    subscriptionId: string
+    agentId: string
+    callbackToken: string
+    etag: string | null
+  }): Promise<{ etag: string }>
+  delete(input: { subscriptionId: string; etag: string | null }): Promise<void>
+}
+
+export interface InboxCallbackTokenCodec {
+  seal(subscriptionId: string, token: string): Promise<string>
+  open(subscriptionId: string, ciphertext: string): Promise<string>
+}
+
+export class InboxSubscriptionGatewayError extends Error {
+  constructor(
+    readonly code: 'unavailable' | 'rejected' | 'invalid_response',
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options)
+    this.name = 'InboxSubscriptionGatewayError'
+  }
+}
+
+export class TriggerProvisioningError extends Error {
+  readonly status = 502 as const
+  readonly code = 'inbox_subscription_failed'
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'TriggerProvisioningError'
+  }
 }
 
 // --- trigger dispatch (background cron/queue) ---
@@ -2101,6 +2209,7 @@ export type PromptDispatchResult =
   | { ok: true; delivery: MessageDelivery; state: MessageState }
 
 export interface SessionCreateOptions {
+  id?: string
   name?: string
   metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>
   volumes?: Volume[]
