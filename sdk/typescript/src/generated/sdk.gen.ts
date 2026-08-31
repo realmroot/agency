@@ -95,7 +95,7 @@ export const readAgent = <ThrowOnError extends boolean = false>(options: Options
 /**
  * Update an agent
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.
+ * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.
  */
 export const updateAgent = <ThrowOnError extends boolean = false>(options: Options<UpdateAgentData, ThrowOnError>): RequestResult<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError>({
     url: '/api/v1/agents/{agentId}',

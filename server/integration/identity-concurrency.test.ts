@@ -1,12 +1,15 @@
 import { env } from 'cloudflare:workers'
 import { createAgentRepo } from '@server/adapters/repos/agents'
 import { createIdentityRepo } from '@server/adapters/repos/identities'
+import { createInboxActivationRepo } from '@server/adapters/repos/inbox-activations'
+import { createTriggerRepo } from '@server/adapters/repos/triggers'
 import type { AgentSpec } from '@server/domain/agent'
 import type { IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata } from '@server/domain/resource'
 import type { Credential, CredentialVersion, Vault } from '@server/domain/vault'
 import type { Deps } from '@server/usecases/deps'
 import { createIdentity } from '@server/usecases/identities'
+import { reconcileInboxSubscription } from '@server/usecases/inbox-subscriptions'
 import type { AuthScope } from '@server/usecases/ports'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -602,6 +605,139 @@ describe('[CF] Identity concurrency invariants', () => {
       spec: { identity: null },
       status: { currentVersionId: unbound.version.metadata.uid, version: 1 },
     })
+  })
+
+  it('serializes a live Inbox Trigger insert against Identity rebinding without orphaning a version', async () => {
+    const auth = await scope()
+    const db = drizzle(env.DB)
+    const identities = createIdentityRepo(db)
+    const agentRepo = createAgentRepo(db)
+    const triggerRepo = createTriggerRepo(db)
+    const activations = createInboxActivationRepo(db)
+    const oldIdentityId = 'identity_inbox_race_old'
+    const newIdentityId = 'identity_inbox_race_new'
+    const oldDescriptor: IdentityDescriptor = {
+      ...descriptor(oldIdentityId),
+      agentId: '01a05643-33a4-704f-8d6b-bec364657b60',
+      subject: '01a05643-33a4-704f-8d6b-bec364657b61',
+    }
+    const newDescriptor: IdentityDescriptor = {
+      ...descriptor(newIdentityId),
+      agentId: '01a05643-33a4-704f-8d6b-bec364657b62',
+      subject: '01a05643-33a4-704f-8d6b-bec364657b63',
+    }
+    for (const [identityId, identity] of [
+      [oldIdentityId, oldDescriptor],
+      [newIdentityId, newDescriptor],
+    ] as const) {
+      const record = {
+        id: identityId,
+        projectId: auth.project.id,
+        organizationId: auth.organization.id,
+        name: identityId,
+        description: null,
+        username: identity.username,
+        runtime: 'codex' as const,
+        vaultId: `vault_${identityId}`,
+        idempotencyKeyHash: `key_${identityId}`,
+        requestFingerprint: `request_${identityId}`,
+      }
+      await identities.claim(record, `owner_${identityId}`, timestamp, '2026-08-28T00:05:00.000Z')
+      await identities.activate(identityId, `owner_${identityId}`, `cred_${identityId}`, identity, timestamp)
+    }
+    const baseSpec = (identity: IdentityDescriptor): AgentSpec => ({
+      systemPrompt: 'Work.',
+      provider: null,
+      model: null,
+      skills: [],
+      subagents: [],
+      allowedTools: [],
+      mcpConnectors: [],
+      identity,
+    })
+    const created = await agentRepo.insertWithVersion(
+      { projectId: auth.project.id, name: 'Inbox race', description: null, spec: baseSpec(oldDescriptor) },
+      timestamp,
+    )
+    const subscriptionId = 'sub_0123456789abcdef0123456789abcdec'
+    const rebind = agentRepo.updateWithVersion(
+      auth.project.id,
+      created.agent,
+      {
+        name: created.agent.metadata.name,
+        description: null,
+        archivedAt: null,
+        spec: baseSpec(newDescriptor),
+      },
+      '2026-08-28T00:01:00.000Z',
+    )
+    const insertTrigger = triggerRepo.insert(
+      {
+        id: 'trigger_inbox_identity_race',
+        organizationId: auth.organization.id,
+        projectId: auth.project.id,
+        createdByUserId: auth.user.id,
+        config: {
+          name: 'Inbox race',
+          source: { type: 'inbox' },
+          suspend: false,
+          nextDueAt: null,
+          template: {
+            metadata: { labels: {}, annotations: {} },
+            spec: {
+              agentId: created.agent.metadata.uid,
+              environmentId: null,
+              runtime: 'codex',
+              promptTemplate: 'Handle it.',
+              env: {},
+              envFrom: [],
+              volumes: [],
+              volumeMounts: [],
+            },
+          },
+        },
+        inboxProvisioning: {
+          subscriptionId,
+          callbackTokenHash: 'callback-hash',
+          callbackTokenCiphertext: 'callback-ciphertext',
+          etag: '"v1"',
+          registeredAgentSubject: null,
+          transitionTargetSubject: null,
+          phase: 'pending',
+          errorMessage: null,
+        },
+      },
+      timestamp,
+    )
+
+    const [rebindResult, triggerResult] = await Promise.allSettled([rebind, insertTrigger])
+
+    if (triggerResult.status !== 'fulfilled') throw triggerResult.reason
+    const current = await agentRepo.find(auth.project.id, created.agent.metadata.uid)
+    if (!current) throw new Error('Expected Agent')
+    const versions = await env.DB.prepare(
+      'SELECT id, version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(created.agent.metadata.uid)
+      .all<{ id: string; version: number }>()
+    expect(versions.results.map((row) => row.version)).toEqual(rebindResult.status === 'fulfilled' ? [1, 2] : [1])
+    expect(versions.results.some((row) => row.id === current.status.currentVersionId)).toBe(true)
+    if (rebindResult.status === 'rejected') {
+      expect(rebindResult.reason).toMatchObject({ code: 'agent_inbox_identity_conflict' })
+    }
+    const binding = await activations.findSubscription(subscriptionId)
+    const expectedSubject = rebindResult.status === 'fulfilled' ? newDescriptor.subject : oldDescriptor.subject
+    expect(binding?.desiredAgentSubject).toBe(expectedSubject)
+    const put = vi.fn(async () => ({ etag: '"v2"' }))
+    await reconcileInboxSubscription(
+      {
+        inboxActivations: activations,
+        inboxSubscriptions: { get: vi.fn(async () => null), put, delete: vi.fn() },
+        inboxCallbackTokens: { open: vi.fn(async () => 'A'.repeat(43)), seal: vi.fn() },
+      } as unknown as Deps,
+      triggerResult.value,
+    )
+    expect(put).toHaveBeenCalledWith(expect.objectContaining({ agentSubject: expectedSubject }))
   })
 })
 

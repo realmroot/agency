@@ -70,6 +70,14 @@ export class IdentityAlreadyBoundError extends Error {
   }
 }
 
+export class AgentInboxIdentityConflictError extends Error {
+  readonly code = 'agent_inbox_identity_conflict'
+  constructor() {
+    super('Agent Identity cannot be changed while a live Inbox Trigger exists.')
+    this.name = 'AgentInboxIdentityConflictError'
+  }
+}
+
 // Identity claims the audit + policy ports need. Mirrors the http auth context
 // without dragging the http auth module into usecases.
 export interface AuthScope {
@@ -1076,6 +1084,8 @@ export interface InboxProvisioningFields {
   callbackTokenHash: string
   callbackTokenCiphertext: string
   etag: string | null
+  registeredAgentSubject: string | null
+  transitionTargetSubject: string | null
   phase: 'pending' | 'active' | 'inactive' | 'error'
   errorMessage: string | null
 }
@@ -1115,7 +1125,10 @@ export interface InboxSubscriptionBinding {
   organizationId: string
   projectId: string
   projectName: string
-  remoteAgentId: string
+  desiredAgentSubject: string
+  registeredAgentSubject: string | null
+  transitionTargetSubject: string | null
+  subscriptionPhase: 'pending' | 'active' | 'inactive' | 'error'
   callbackTokenHash: string
   callbackTokenCiphertext: string
   subscriptionEtag: string | null
@@ -1162,9 +1175,10 @@ export interface InboxActivationRepo {
 }
 
 export interface InboxSubscriptionGateway {
+  get(input: { subscriptionId: string }): Promise<{ etag: string; agentSubject: string } | null>
   put(input: {
     subscriptionId: string
-    agentId: string
+    agentSubject: string
     callbackToken: string
     etag: string | null
   }): Promise<{ etag: string }>
@@ -1177,13 +1191,16 @@ export interface InboxCallbackTokenCodec {
 }
 
 export class InboxSubscriptionGatewayError extends Error {
+  readonly status: number | null
+
   constructor(
     readonly code: 'unavailable' | 'rejected' | 'invalid_response',
     message: string,
-    options?: ErrorOptions,
+    options: ErrorOptions & { status?: number } = {},
   ) {
     super(message, options)
     this.name = 'InboxSubscriptionGatewayError'
+    this.status = options.status ?? null
   }
 }
 

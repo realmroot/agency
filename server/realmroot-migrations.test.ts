@@ -284,6 +284,79 @@ describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
 })
 
 describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
+  it('queues canonical snapshot subjects for remote calibration without guessing the registered subject', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec('PRAGMA foreign_keys=on')
+    applyThrough(db, '0032_inbox_triggers.sql')
+    const identity = JSON.stringify({
+      identityId: 'identity_1',
+      agentId: '01a05643-33a4-704f-8d6b-bec364657b5c',
+      issuer: 'https://id.realmroot.dev/api/auth',
+      subject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      username: 'inbox-agent',
+      runtime: 'ama',
+      credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
+    })
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-02');
+      INSERT INTO agents (id,project_id,name,system_prompt,created_at,updated_at)
+        VALUES ('agent_1','project_1','Agent','Work','2026-01-01','2026-01-02');
+      INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,trigger_type,runtime,name,prompt_template,enabled,
+        inbox_subscription_id,inbox_callback_token_hash,inbox_callback_token_ciphertext,
+        inbox_subscription_etag,inbox_provisioning_state,inbox_provisioning_error,created_at,updated_at
+      ) VALUES
+        ('trigger_active','org_1','project_1','agent_1','inbox','ama','Active','Work',1,
+         'sub_active','legacy-hash','legacy-ciphertext','"legacy-etag"','active',null,'2026-01-01','2026-01-02'),
+        ('trigger_pending','org_1','project_1','agent_1','inbox','ama','Pending','Work',1,
+         'sub_pending','pending-hash','pending-ciphertext',null,'pending','retry','2026-01-01','2026-01-02');
+    `)
+    db.prepare('UPDATE agents SET identity_snapshot = ? WHERE id = ?').run(identity, 'agent_1')
+
+    apply(db, '0033_inbox_registered_subject.sql')
+
+    expect(
+      db
+        .prepare(
+          `SELECT inbox_registered_agent_subject AS registeredAgentSubject,
+                  inbox_transition_target_subject AS transitionTargetSubject,
+                  inbox_subscription_id AS subscriptionId,
+                  inbox_callback_token_hash AS tokenHash,
+                  inbox_callback_token_ciphertext AS tokenCiphertext,
+                  inbox_subscription_etag AS etag,
+                  inbox_provisioning_state AS phase
+             FROM triggers WHERE id = 'trigger_active'`,
+        )
+        .get(),
+    ).toEqual({
+      registeredAgentSubject: null,
+      transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      subscriptionId: 'sub_active',
+      tokenHash: 'legacy-hash',
+      tokenCiphertext: 'legacy-ciphertext',
+      etag: '"legacy-etag"',
+      phase: 'pending',
+    })
+    expect(
+      db
+        .prepare(
+          `SELECT inbox_registered_agent_subject AS registeredAgentSubject,
+                  inbox_transition_target_subject AS transitionTargetSubject,
+                  inbox_provisioning_state AS phase,
+                  inbox_provisioning_error AS errorMessage
+             FROM triggers WHERE id = 'trigger_pending'`,
+        )
+        .get(),
+    ).toEqual({
+      registeredAgentSubject: null,
+      transitionTargetSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
+      phase: 'pending',
+      errorMessage: 'retry',
+    })
+    db.close()
+  })
+
   it('upgrades a referenced Trigger graph with foreign keys enabled and preserves every row', () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys=on')
@@ -319,6 +392,14 @@ describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
     `)
 
     apply(db, '0032_inbox_triggers.sql')
+    db.exec(`
+      INSERT INTO session_routes (
+        id,organization_id,project_id,agent_id,trigger_id,routing_key_hash,session_id,activation_run_id,created_at
+      ) VALUES (
+        'route_1','org_1','project_1','agent_1','trigger_1','routing-hash','session_1','run_1','2026-01-02'
+      );
+    `)
+    apply(db, '0033_inbox_registered_subject.sql')
 
     expect(
       db.prepare('SELECT trigger_type,http_concurrency_mode,name FROM triggers WHERE id = ?').get('trigger_1'),
@@ -355,6 +436,19 @@ describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
       state: 'running',
     })
     expect(
+      db.prepare('SELECT id,trigger_id,activation_run_id,session_id FROM session_routes WHERE id = ?').get('route_1'),
+    ).toEqual({ id: 'route_1', trigger_id: 'trigger_1', activation_run_id: 'run_1', session_id: 'session_1' })
+    const triggerSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'triggers'").get() as {
+      sql: string
+    }
+    expect(triggerSql.sql).toContain('inbox_transition_target_subject')
+    expect(triggerSql.sql).toContain('inbox_registered_agent_subject` is null')
+    expect(() =>
+      db
+        .prepare('UPDATE triggers SET inbox_transition_target_subject = ? WHERE id = ?')
+        .run('01a05643-33a4-704f-8d6b-c30c04e18c6c', 'trigger_1'),
+    ).toThrow(/constraint/i)
+    expect(
       (db.prepare("PRAGMA index_list('trigger_runs')").all() as Array<{ name: string }>).map(({ name }) => name),
     ).toEqual(
       expect.arrayContaining([
@@ -371,6 +465,20 @@ describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
       ),
     ).toEqual(expect.arrayContaining(['idx_http_trigger_pending_fifo', 'idx_http_trigger_pending_project']))
     expect(
+      (db.prepare("PRAGMA index_list('triggers')").all() as Array<{ name: string }>).map(({ name }) => name),
+    ).toEqual(
+      expect.arrayContaining(['idx_triggers_project_next', 'idx_triggers_due', 'idx_triggers_inbox_subscription']),
+    )
+    expect(
+      (db.prepare("PRAGMA index_list('session_routes')").all() as Array<{ name: string }>).map(({ name }) => name),
+    ).toEqual(
+      expect.arrayContaining([
+        'idx_session_routes_trigger_key',
+        'idx_session_routes_session',
+        'idx_session_routes_project',
+      ]),
+    )
+    expect(
       (db.prepare("PRAGMA foreign_key_list('trigger_runs')").all() as Array<{ table: string; on_delete: string }>).map(
         ({ table, on_delete }) => ({ table, onDelete: on_delete }),
       ),
@@ -381,6 +489,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Trigger migration', () => {
         { table: 'sessions', onDelete: 'NO ACTION' },
       ]),
     )
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
     expect(
       (
         db.prepare("PRAGMA foreign_key_list('http_trigger_pending_runs')").all() as Array<{

@@ -68,7 +68,7 @@ export const readAgent = (options) => (options.client ?? client).get({
 /**
  * Update an agent
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.
+ * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.
  */
 export const updateAgent = (options) => (options.client ?? client).patch({
     url: '/api/v1/agents/{agentId}',

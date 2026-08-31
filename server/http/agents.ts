@@ -18,7 +18,12 @@ import {
   parseListCursor,
 } from '../openapi'
 import { createAgent, type UpdateAgentPatch, updateAgent } from '../usecases/agents'
-import { AgentArchivedError, AgentValidationError, IdentityAlreadyBoundError } from '../usecases/ports'
+import {
+  AgentArchivedError,
+  AgentInboxIdentityConflictError,
+  AgentValidationError,
+  IdentityAlreadyBoundError,
+} from '../usecases/ports'
 import { requestId } from './request-context'
 
 type AgentRoutes = OpenAPIHono<DepsEnv>
@@ -74,9 +79,17 @@ const RealmrootAgentIdSchema = z.string().min(1).max(160).regex(/^\S+$/)
 const IdentityDescriptorSchema = z
   .object({
     identityId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000004' }),
-    agentId: RealmrootAgentIdSchema.openapi({ example: '019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    agentId: RealmrootAgentIdSchema.openapi({
+      description:
+        'Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.',
+      example: '019ff41a-7da6-708f-8b05-44d4d0373685',
+    }),
     issuer: z.string().url().openapi({ example: 'https://id.realmroot.dev/api/auth' }),
-    subject: z.string().openapi({ example: 'agent:019ff41a-7da6-708f-8b05-44d4d0373685' }),
+    subject: z.string().openapi({
+      description:
+        'Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.',
+      example: '019ff41a-7da6-708f-8b05-44d4d0373685',
+    }),
     username: z.string().openapi({ example: 'researcher' }),
     runtime: z.enum(['ama', 'codex', 'claude-code', 'copilot']),
   })
@@ -282,7 +295,7 @@ const updateAgentRoute = createRoute({
   tags: ['Agents'],
   summary: 'Update an agent',
   description:
-    'Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.',
+    'Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.',
   ...AuthenticatedOperation,
   request: {
     params: AgentParamsSchema,
@@ -293,7 +306,10 @@ const updateAgentRoute = createRoute({
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: { description: 'Archived agent', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Archived Agent or live Inbox Trigger prevents the requested update',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -443,6 +459,9 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         }
         return c.json(serializeAgent(result.agent), 200)
       } catch (error) {
+        if (error instanceof AgentInboxIdentityConflictError) {
+          return c.json({ error: { type: error.code, message: error.message } }, 409)
+        }
         if (error instanceof AgentArchivedError) {
           return c.json({ error: { type: 'conflict', message: error.message } }, 409)
         }

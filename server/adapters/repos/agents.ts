@@ -10,10 +10,10 @@ import type {
   CreateAgentInput,
   UpdateAgentFields,
 } from '@server/usecases/ports'
-import { IdentityAlreadyBoundError } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { AgentInboxIdentityConflictError, IdentityAlreadyBoundError } from '@server/usecases/ports'
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { agents, agentVersions, connectors, identities, providers } from '../../db/schema'
+import { agents, agentVersions, connectors, identities, providers, triggers } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
@@ -241,16 +241,18 @@ export function createAgentRepo(db: Db): AgentRepo {
 
     async updateWithVersion(projectId, agent, fields, updatedAt) {
       const versionId = newPrimaryKey()
+      const identityChanged = fields.spec.identity?.identityId !== agent.spec.identity?.identityId
+      const versionSpec = specColumns(fields.spec)
       const versionRow = {
         id: versionId,
         agentId: agent.metadata.uid,
         projectId,
         version: agent.status.version + 1,
         createdAt: updatedAt,
-        ...specColumns(fields.spec),
+        ...versionSpec,
       }
       try {
-        await db.batch([
+        const [updated, inserted] = await db.batch([
           db
             .update(agents)
             .set({
@@ -261,10 +263,68 @@ export function createAgentRepo(db: Db): AgentRepo {
               updatedAt,
               ...specColumns(fields.spec),
             })
-            .where(and(eq(agents.id, agent.metadata.uid), eq(agents.projectId, projectId))),
-          db.insert(agentVersions).values(versionRow),
+            .where(
+              and(
+                eq(agents.id, agent.metadata.uid),
+                eq(agents.projectId, projectId),
+                identityChanged
+                  ? notExists(
+                      db
+                        .select({ id: triggers.id })
+                        .from(triggers)
+                        .where(
+                          and(
+                            eq(triggers.projectId, projectId),
+                            eq(triggers.agentId, agent.metadata.uid),
+                            eq(triggers.triggerType, 'inbox'),
+                            eq(triggers.enabled, true),
+                            isNull(triggers.archivedAt),
+                            inArray(triggers.inboxProvisioningState, ['pending', 'active', 'error']),
+                          ),
+                        ),
+                    )
+                  : undefined,
+              ),
+            )
+            .returning({ id: agents.id }),
+          db
+            .insert(agentVersions)
+            .select(
+              db
+                .select({
+                  id: sql<string>`${versionRow.id}`.as('id'),
+                  agentId: sql<string>`${versionRow.agentId}`.as('agent_id'),
+                  projectId: sql<string>`${versionRow.projectId}`.as('project_id'),
+                  version: sql<number>`${versionRow.version}`.as('version'),
+                  systemPrompt: sql<string>`${versionSpec.systemPrompt}`.as('system_prompt'),
+                  providerId: sql<string | null>`${versionSpec.providerId}`.as('provider_id'),
+                  model: sql<string | null>`${versionSpec.model}`.as('model'),
+                  skills: sql<string>`${versionSpec.skills}`.as('skills'),
+                  subagents: sql<string>`${versionSpec.subagents}`.as('subagents'),
+                  allowedTools: sql<string>`${versionSpec.allowedTools}`.as('allowed_tools'),
+                  mcpConnectors: sql<string>`${versionSpec.mcpConnectors}`.as('mcp_connectors'),
+                  identityId: sql<string | null>`${versionSpec.identityId}`.as('identity_id'),
+                  identitySnapshot: sql<string | null>`${versionSpec.identitySnapshot}`.as('identity_snapshot'),
+                  createdAt: sql<string>`${versionRow.createdAt}`.as('created_at'),
+                })
+                .from(agents)
+                .where(
+                  and(
+                    eq(agents.id, agent.metadata.uid),
+                    eq(agents.projectId, projectId),
+                    eq(agents.currentVersionId, versionId),
+                  ),
+                ),
+            )
+            .returning({ id: agentVersions.id }),
         ])
+        if (updated.length === 0) {
+          if (identityChanged) throw new AgentInboxIdentityConflictError()
+          throw new Error('Agent update affected no rows')
+        }
+        if (inserted.length === 0) throw new Error('Agent version insert affected no rows')
       } catch (error) {
+        if (error instanceof AgentInboxIdentityConflictError) throw error
         if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
         throw error
       }

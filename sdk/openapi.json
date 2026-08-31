@@ -2954,6 +2954,7 @@
             "minLength": 1,
             "maxLength": 160,
             "pattern": "^\\S+$",
+            "description": "Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.",
             "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
           },
           "issuer": {
@@ -2963,7 +2964,8 @@
           },
           "subject": {
             "type": "string",
-            "example": "agent:019ff41a-7da6-708f-8b05-44d4d0373685"
+            "description": "Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.",
+            "example": "019ff41a-7da6-708f-8b05-44d4d0373685"
           },
           "username": {
             "type": "string",
@@ -7229,14 +7231,16 @@
             "type": "string"
           },
           "agentId": {
-            "type": "string"
+            "type": "string",
+            "description": "Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing."
           },
           "issuer": {
             "type": "string",
             "format": "uri"
           },
           "subject": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable."
           },
           "username": {
             "type": "string"
@@ -9424,7 +9428,7 @@
           "Agents"
         ],
         "summary": "Update an agent",
-        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent are rejected with 409.",
+        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.",
         "security": [
           {
             "oidcAccessToken": [
@@ -9505,7 +9509,7 @@
             }
           },
           "409": {
-            "description": "Archived agent",
+            "description": "Archived Agent or live Inbox Trigger prevents the requested update",
             "content": {
               "application/json": {
                 "schema": {

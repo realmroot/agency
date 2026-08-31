@@ -504,6 +504,123 @@ describe('[CF] /api/v1/agents', () => {
     expect(oversizedRes.status).toBe(400)
   })
 
+  it('returns 409 when replacing or removing Identity from an Agent with a live Inbox Trigger [spec: agents/inbox-identity-rebind]', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Inbox-bound agent')),
+    })
+    expect(createRes.status).toBe(201)
+    const agent = (await createRes.json()) as { metadata: { uid: string } }
+    const project = await env.DB.prepare('SELECT id FROM projects ORDER BY created_at DESC LIMIT 1').first<{
+      id: string
+    }>()
+    if (!project) throw new Error('Expected project')
+    const now = '2026-08-31T00:00:00.000Z'
+    const insertIdentity = async (id: string, username: string, agentId: string, subject: string) =>
+      env.DB.prepare(`INSERT INTO identities (
+        id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+        idempotency_key_hash,request_fingerprint,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .bind(
+          id,
+          project.id,
+          defaultClaims().organizationId,
+          username,
+          username,
+          'ama',
+          'active',
+          `vault_${id}`,
+          `credential_${id}`,
+          agentId,
+          'https://id.realmroot.dev/api/auth',
+          subject,
+          `hash_${id}`,
+          `fingerprint_${id}`,
+          now,
+          now,
+        )
+        .run()
+    await insertIdentity(
+      'identity_inbox_a',
+      'inbox-a',
+      '01a05643-33a4-704f-8d6b-bec364657b5c',
+      '01a05643-33a4-704f-8d6b-bec364657b5d',
+    )
+    await insertIdentity(
+      'identity_inbox_b',
+      'inbox-b',
+      '01a05643-33a4-704f-8d6b-bec364657b5e',
+      '01a05643-33a4-704f-8d6b-bec364657b5f',
+    )
+    const bind = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { identityRef: 'identity_inbox_a' } }),
+    })
+    expect(bind.status).toBe(200)
+    const versionsBeforeGuard = await env.DB.prepare(
+      'SELECT id, version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ id: string; version: number }>()
+    await env.DB.prepare(`INSERT INTO triggers (
+      id,organization_id,project_id,agent_id,trigger_type,runtime,name,prompt_template,enabled,
+      inbox_subscription_id,inbox_callback_token_hash,inbox_callback_token_ciphertext,
+      inbox_provisioning_state,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        'trigger_inbox_identity_guard',
+        defaultClaims().organizationId,
+        project.id,
+        agent.metadata.uid,
+        'inbox',
+        'ama',
+        'Inbox guard',
+        'Handle the message.',
+        1,
+        'sub_0123456789abcdef0123456789abcdee',
+        'callback-hash',
+        'callback-ciphertext',
+        'active',
+        now,
+        now,
+      )
+      .run()
+
+    for (const identityRef of ['identity_inbox_b', null]) {
+      const response = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+        method: 'PATCH',
+        body: JSON.stringify({ spec: { identityRef } }),
+      })
+      expect(response.status).toBe(409)
+      await expect(response.json()).resolves.toMatchObject({
+        error: { message: 'Agent Identity cannot be changed while a live Inbox Trigger exists.' },
+      })
+    }
+    const versionsAfterGuard = await env.DB.prepare(
+      'SELECT id, version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ id: string; version: number }>()
+    expect(versionsAfterGuard.results).toEqual(versionsBeforeGuard.results)
+    const guardedAgent = await env.DB.prepare('SELECT current_version_id FROM agents WHERE id = ?')
+      .bind(agent.metadata.uid)
+      .first<{ current_version_id: string }>()
+    expect(versionsAfterGuard.results.some((version) => version.id === guardedAgent?.current_version_id)).toBe(true)
+
+    const safeUpdate = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { systemPrompt: 'Continue using the same Inbox Identity.' } }),
+    })
+    expect(safeUpdate.status).toBe(200)
+    const versionsAfterSafeUpdate = await env.DB.prepare(
+      'SELECT version FROM agent_versions WHERE agent_id = ? ORDER BY version ASC',
+    )
+      .bind(agent.metadata.uid)
+      .all<{ version: number }>()
+    expect(versionsAfterSafeUpdate.results.map((version) => version.version)).toEqual([1, 2, 3])
+  })
+
   it('validates provider against configured providers', async () => {
     const authorization = await signIn()
 

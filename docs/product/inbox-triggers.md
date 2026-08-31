@@ -29,7 +29,7 @@ The PUT JSON representation is:
 
 ```json
 {
-  "agentId": "<Realmroot Agent UUIDv7>",
+  "agentId": "<Realmroot stable OIDC subject UUIDv7>",
   "events": ["message.created"],
   "delivery": {
     "url": "<OIDC_RESOURCE>/v1/inbox-notifications",
@@ -41,6 +41,28 @@ The PUT JSON representation is:
 }
 ```
 
+Inbox names this wire field `agentId`, but its value is the Realmroot
+`IdentityDescriptor.subject`: the Agent's stable OIDC subject. It is not the
+Realmroot internal Identity resource id from `IdentityDescriptor.agentId`.
+Those UUIDv7 values may differ, and Inbox public Agent discovery is keyed by the
+stable subject.
+
+Agency persists the remote-confirmed registered subject and the target subject
+for the current PUT transition. Before every PUT, Agency reads the Inbox
+Subscription representation and treats its UUIDv7 `agentId` as the only
+authoritative registered subject. A successful PUT advances the registered
+subject atomically with local `active` state and clears the target. Failed PUTs
+retain both subjects. If a PUT succeeded but the local active-state write failed,
+the next GET observes the target remotely and completes locally without another
+PUT.
+
+The versioned D1 migration uses the canonical `IdentityDescriptor.subject` only
+as a transition candidate, changes legacy active rows to `pending`, and leaves
+the registered subject unknown until Inbox GET calibrates it. It never guesses
+remote state from the internal `IdentityDescriptor.agentId`. Subscription ids,
+callback credentials, ETags, child Trigger Runs, pending HTTP dispatches, and
+Session routes are preserved by the constraint-compatible table rebuild.
+
 The callback token is never placed in a URL, API response, or log. Agency stores
 its SHA-256 hash for admission and an AES-GCM ciphertext for reliable idempotent
 Subscription retries. Retries reuse the same token, so an uncertain PUT cannot
@@ -48,6 +70,15 @@ make Inbox and Agency disagree about which callback credential is current.
 Agency also stores the current Subscription ETag.
 Provisioning state is `pending`, `active`, `inactive`, or `error`; the scheduled
 reconciler retries pending and failed transitions with the same callback token.
+Only classified Inbox gateway failures become provisioning errors. Every
+unknown error at the Inbox credential and HTTP boundary is converted into a
+classified error whose raw cause is retained only outside serializable Error
+properties. Failed
+transitions persist a safe gateway classification and HTTP status when available,
+and emit structured diagnostics with the operation and a static allowlisted
+message. Unknown exceptions and local persistence failures propagate unchanged;
+their arbitrary messages, stacks, response bodies, callback credentials,
+ciphertext, and service credentials are not included in gateway diagnostics.
 
 ## Notification contract
 
@@ -66,6 +97,35 @@ Inbox creates a notification receipt through
   "occurredAt": "2026-08-30T12:00:00.000Z"
 }
 ```
+
+The callback `agentId` carries the stable OIDC subject registered on the
+Subscription. While provisioning is `pending` or `error`, Agency accepts the
+registered subject and the persisted transition target because the Subscription
+id and callback Bearer token already bind the delivery. This covers
+the non-atomic window where Inbox accepted a PUT but the local active-state write
+failed. Once provisioning is `active`, Agency accepts only the registered subject.
+
+A migrated Subscription can have a pre-existing ETag while its registered
+subject is still unknown before the first authoritative Inbox GET. In that
+bounded `pending` or `error` state, the independently authenticated Subscription
+id and callback Bearer token admit any `agentId` that has already passed the
+callback's UUIDv7 schema. The first GET persistence writes the registered subject
+and ends this uncalibrated admission before PUT. A newly created Subscription has
+no ETag, so it never receives this compatibility admission.
+
+An Agent with a live, enabled Inbox Trigger cannot replace or remove its
+Realmroot Identity; the Agent update returns `409 Conflict`. This ensures new
+mailbox messages remain readable by the same identity. For a historical A-to-B
+rebind, remote GET temporarily admits A alongside target B; after B is confirmed
+active, A notifications are rejected because identity B cannot correctly read
+mailbox A's queued messages.
+
+The Identity-changing Agent update tests for live Inbox rows and writes its new
+immutable Agent Version in one D1 batch. The version insert is conditional on the
+guarded Agent update becoming current, so a lost guard produces `409` without an
+orphan version. SQLite serializes that batch with Trigger insertion: a Trigger
+inserted first blocks the rebind, while a rebind committed first makes a later
+Trigger observe the new current Identity.
 
 Agency validates the Subscription token and Agent identity, then persistently
 deduplicates on `(subscriptionId, eventId)` by creating one Trigger Run. A `202`

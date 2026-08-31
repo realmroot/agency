@@ -18,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () => {
   const putInput = {
     subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-    agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+    agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
     callbackToken: 'callback-secret',
     etag: null,
   }
@@ -44,7 +44,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv()).put({
         subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-        agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+        agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
         callbackToken: 'callback-secret',
         etag: null,
       }),
@@ -65,13 +65,56 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
       'If-None-Match': '*',
     })
     expect(JSON.parse(String(put?.init?.body))).toEqual({
-      agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+      agentId: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       events: ['message.created'],
       delivery: {
         url: 'https://agency.example/api/v1/inbox-notifications',
         authorization: { scheme: 'bearer', token: 'callback-secret' },
       },
     })
+  })
+
+  it('reads the canonical stable subject and ETag from the remote representation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (request: string | URL | Request) => {
+        const url = request.toString()
+        if (url.endsWith('/.well-known/openid-configuration')) {
+          return Response.json({
+            issuer: 'https://id.example/api/auth',
+            token_endpoint: 'https://id.example/api/auth/token',
+          })
+        }
+        if (url.endsWith('/token')) return Response.json({ access_token: 'm2m-token', token_type: 'Bearer' })
+        return Response.json(
+          { id: putInput.subscriptionId, agentId: putInput.agentSubject },
+          { headers: { etag: '"remote-v1"' } },
+        )
+      }),
+    )
+
+    await expect(
+      createInboxSubscriptionGateway(testEnv()).get({ subscriptionId: putInput.subscriptionId }),
+    ).resolves.toEqual({ etag: '"remote-v1"', agentSubject: putInput.agentSubject })
+  })
+
+  it('classifies arbitrary upstream exceptions without a serializable raw cause', async () => {
+    const callbackToken = 'A'.repeat(43)
+    const basicCredential = 'Basic c2VydmljZS1jbGllbnQ6c2VydmljZS1zZWNyZXQ='
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new Error(`upstream ${callbackToken} ${basicCredential}`))),
+    )
+
+    const error = await createInboxSubscriptionGateway(testEnv())
+      .get({ subscriptionId: putInput.subscriptionId })
+      .catch((cause: unknown) => cause)
+
+    expect(error).toMatchObject({ code: 'unavailable', message: 'Inbox M2M discovery failed' })
+    expect((error as Error & { cause?: unknown }).cause).toBeUndefined()
+    expect(JSON.stringify(error)).not.toContain(callbackToken)
+    expect(JSON.stringify(error)).not.toContain('c2VydmljZS1jbGllbnQ6c2VydmljZS1zZWNyZXQ')
+    expect(String((error as Error).stack)).not.toContain(callbackToken)
   })
 
   it('treats DELETE 404 as an idempotent success', async () => {
@@ -111,7 +154,8 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
         }
         if (url.endsWith('/token')) return Response.json({ access_token: 'm2m-token', token_type: 'Bearer' })
         subscriptionRequests.push(init ?? {})
-        if (init?.method === 'GET') return Response.json({}, { headers: { etag: '"v2"' } })
+        if (init?.method === 'GET')
+          return Response.json({ agentId: '01a05643-33a4-704f-8d6b-bec364657b5c' }, { headers: { etag: '"v2"' } })
         if (subscriptionRequests.length === 1) return new Response(null, { status: 412 })
         return Response.json({}, { headers: { etag: '"v3"' } })
       }),
@@ -120,7 +164,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv()).put({
         subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-        agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+        agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
         callbackToken: 'callback-secret',
         etag: '"v1"',
       }),
@@ -131,12 +175,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
 
   it('fails closed when a required M2M boundary is missing or crosses origins', async () => {
     await expect(
-      createInboxSubscriptionGateway(testEnv({ INBOX_RESOURCE: undefined })).put({
-        subscriptionId: 'trigger_1',
-        agentId: 'agent_1',
-        callbackToken: 'token',
-        etag: null,
-      }),
+      createInboxSubscriptionGateway(testEnv({ INBOX_RESOURCE: undefined })).put(putInput),
     ).rejects.toMatchObject({ code: 'unavailable' })
 
     vi.stubGlobal(
@@ -145,14 +184,9 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
         Response.json({ issuer: 'https://id.example/api/auth', token_endpoint: 'https://evil.example/token' }),
       ),
     )
-    await expect(
-      createInboxSubscriptionGateway(testEnv()).put({
-        subscriptionId: 'trigger_1',
-        agentId: 'agent_1',
-        callbackToken: 'token',
-        etag: null,
-      }),
-    ).rejects.toMatchObject({ code: 'invalid_response' })
+    await expect(createInboxSubscriptionGateway(testEnv()).put(putInput)).rejects.toMatchObject({
+      code: 'invalid_response',
+    })
   })
 
   it.each([
@@ -185,7 +219,6 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     )
     await expect(createInboxSubscriptionGateway(testEnv()).put(putInput)).rejects.toMatchObject({
       code: 'unavailable',
-      cause: expect.any(Error),
     })
 
     for (const [status, code] of [
@@ -234,7 +267,6 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
 
     await expect(tokenFailure(async () => Promise.reject(new Error('offline')))).rejects.toMatchObject({
       code: 'unavailable',
-      cause: expect.any(Error),
     })
     await expect(tokenFailure(async () => new Response(null, { status: 500 }))).rejects.toMatchObject({
       code: 'unavailable',
@@ -296,10 +328,10 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     }
     await expect(managementResponse(async () => Promise.reject(new Error('offline')))).rejects.toMatchObject({
       code: 'unavailable',
-      cause: expect.any(Error),
     })
     await expect(managementResponse(async () => new Response(null, { status: 503 }))).rejects.toMatchObject({
       code: 'unavailable',
+      status: 503,
     })
     await expect(managementResponse(async () => new Response(null, { status: 400 }))).rejects.toMatchObject({
       code: 'rejected',
@@ -351,7 +383,8 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
         }
         if (url.endsWith('/token')) return Response.json({ access_token: 'm2m-token', token_type: 'Bearer' })
         subscriptionRequests.push(init ?? {})
-        if (init?.method === 'GET') return Response.json({}, { headers: { etag: '"v2"' } })
+        if (init?.method === 'GET')
+          return Response.json({ agentId: '01a05643-33a4-704f-8d6b-bec364657b5c' }, { headers: { etag: '"v2"' } })
         if (subscriptionRequests.length === 1) return new Response(null, { status: 412 })
         return new Response(null, { status: 204 })
       }),

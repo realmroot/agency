@@ -69,9 +69,15 @@ const SessionSubagentSchema = z
 const SessionIdentityDescriptorSchema = z
   .object({
     identityId: z.string(),
-    agentId: z.string(),
+    agentId: z.string().openapi({
+      description:
+        'Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.',
+    }),
     issuer: z.string().url(),
-    subject: z.string(),
+    subject: z.string().openapi({
+      description:
+        'Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.',
+    }),
     username: z.string(),
     runtime: RuntimeSchema,
   })

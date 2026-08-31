@@ -24,9 +24,11 @@ class SessionIdentityDescriptorType0:
     """
         Attributes:
             identity_id (str):
-            agent_id (str):
+            agent_id (str): Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used
+                for Inbox addressing.
             issuer (str):
-            subject (str):
+            subject (str): Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values;
+                legacy opaque snapshot values remain readable.
             username (str):
             runtime (RuntimeName):  Example: codex.
      """

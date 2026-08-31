@@ -15,7 +15,7 @@ const MAX_DEPTH = 4
 const MAX_STRING_LENGTH = 4_000
 const SENSITIVE_KEY = /(authorization|cookie|password|secret|token|api[-_]?key|credential|private[-_]?key)/i
 const SENSITIVE_VALUE =
-  /\b(Bearer\s+[A-Za-z0-9._~+/-]+=*|sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/g
+  /\b(Bearer\s+[A-Za-z0-9._~+/-]+=*|Basic\s+[A-Za-z0-9+/]+=*|[A-Za-z0-9_-]{43}|sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/g
 
 function truncate(value: string) {
   return value.length > MAX_STRING_LENGTH ? `${value.slice(0, MAX_STRING_LENGTH)}...[truncated]` : value

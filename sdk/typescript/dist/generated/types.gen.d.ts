@@ -673,8 +673,14 @@ export type AgentSubagent = {
 };
 export type IdentityDescriptor = {
     identityId: string;
+    /**
+     * Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
+     */
     agentId: string;
     issuer: string;
+    /**
+     * Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
+     */
     subject: string;
     username: string;
     runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
@@ -1552,8 +1558,14 @@ export type SessionSubagent = {
 };
 export type SessionIdentityDescriptor = {
     identityId: string;
+    /**
+     * Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
+     */
     agentId: string;
     issuer: string;
+    /**
+     * Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
+     */
     subject: string;
     username: string;
     runtime: RuntimeName;
@@ -2167,7 +2179,7 @@ export type UpdateAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Archived agent
+     * Archived Agent or live Inbox Trigger prevents the requested update
      */
     409: ErrorResponse;
 };

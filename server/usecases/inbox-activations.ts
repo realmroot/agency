@@ -55,7 +55,15 @@ export async function receiveInboxNotification(
   if (!binding || !constantTimeEqual(presentedHash, binding.callbackTokenHash)) {
     throw new InboxNotificationError(401, 'invalid_callback_token', 'Inbox callback Bearer token is invalid')
   }
-  if (notification.agentId !== binding.remoteAgentId) {
+  const subscriptionPhase = binding.subscriptionPhase
+  const reconciling = subscriptionPhase === 'pending' || subscriptionPhase === 'error'
+  const transitioning = reconciling && binding.transitionTargetSubject !== null
+  const uncalibrated = reconciling && binding.registeredAgentSubject === null && binding.subscriptionEtag !== null
+  const admitted =
+    notification.agentId === binding.registeredAgentSubject ||
+    (transitioning && notification.agentId === binding.transitionTargetSubject) ||
+    uncalibrated
+  if (!admitted) {
     throw new InboxNotificationError(403, 'agent_mismatch', 'Inbox notification Agent does not match the Subscription')
   }
   const { routingKey: _, ...storedNotification } = notification
