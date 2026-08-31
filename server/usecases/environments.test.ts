@@ -180,6 +180,28 @@ describe('[spec: environments/create] createEnvironment', () => {
       }),
     ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('already provided') } })
   })
+
+  it('directs self-hosted Toolbox installation to the Runner host', async () => {
+    await expect(
+      createEnvironment(fakeDeps(), auth, {
+        name: 'Invalid',
+        description: null,
+        config: config({
+          type: 'self_hosted',
+          packages: {
+            type: 'packages',
+            apt: [],
+            cargo: [],
+            gem: [],
+            go: ['github.com/realmroot/cli@v0.4.2'],
+            npm: [],
+            pip: [],
+            webi: [],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('Runner host PATH') } })
+  })
 })
 
 describe('[spec: environments/update] updateEnvironment', () => {

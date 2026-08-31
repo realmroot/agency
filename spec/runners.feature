@@ -27,6 +27,7 @@ Feature: Runners
     Given a work item declares a structured runtime and optional model requirement
     When a runner is evaluated for the work
     Then only a runner reporting that ready runtime and exact selected model in its runtimes list is eligible
+    And Realmroot-bound Agent work requires a runner advertising an available Realmroot Toolbox
     And an already-assigned lease remains locally valid if that same matching runtime becomes limited after the scheduling heartbeat
     And a null model requires only the ready runtime without inventing a model id
     And session starts that declare no runtime requirement are not claimable

@@ -34,6 +34,18 @@ describe('[spec: runners/eligibility] runnerSupportsWork', () => {
   it('rejects session starts that declare no runtime requirement', () => {
     expect(runnerSupportsWork([], { type: 'session.start' })).toBe(false)
   })
+
+  it('requires an advertised Realmroot Toolbox for Realmroot-bound Agent work', () => {
+    const work = {
+      type: 'session.start',
+      runtimeRequirement: { runtime: 'codex' },
+      agentSnapshot: { identity: { subject: '01a05643-33a4-704f-8d6b-c30c04e18c6c' } },
+    }
+    const runtimes = [{ runtime: 'codex' as const, state: 'ready' as const, models: [] }]
+    expect(runnerSupportsWork(runtimes, work)).toBe(false)
+    expect(runnerSupportsWork(runtimes, work, { realmrootToolbox: false })).toBe(false)
+    expect(runnerSupportsWork(runtimes, work, { realmrootToolbox: true })).toBe(true)
+  })
 })
 
 describe('[spec: runners/stale-heartbeat] runner liveness', () => {

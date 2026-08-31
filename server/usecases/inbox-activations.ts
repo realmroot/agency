@@ -146,7 +146,20 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
     })
     sessionId = reserved.sessionId
     routeOwned = reserved.owned
-    const existing = await existingRouteSession(deps, activation.projectId, sessionId)
+    let existing = await existingRouteSession(deps, activation.projectId, sessionId)
+    if (existing && (existing.state === 'error' || existing.archivedAt !== null)) {
+      const replacement = await repo.replaceSessionRoute({
+        projectId: activation.projectId,
+        triggerId: trigger.metadata.uid,
+        routingKeyHash: activation.routingKeyHash,
+        expectedSessionId: existing.id,
+        sessionId: newPrimaryKey(),
+        activationRunId: activation.run.id,
+      })
+      sessionId = replacement.sessionId
+      routeOwned = replacement.owned
+      existing = await existingRouteSession(deps, activation.projectId, sessionId)
+    }
     if (existing) {
       const outcome = await dispatchExisting(deps, auth, existing, prompt, activation.run.correlationId)
       if (!outcome.ok) {

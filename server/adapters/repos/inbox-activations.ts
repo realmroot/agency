@@ -233,6 +233,34 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
       }
     },
 
+    async replaceSessionRoute(input) {
+      const replaced = await db
+        .update(sessionRoutes)
+        .set({ sessionId: input.sessionId, activationRunId: input.activationRunId })
+        .where(
+          and(
+            eq(sessionRoutes.projectId, input.projectId),
+            eq(sessionRoutes.triggerId, input.triggerId),
+            eq(sessionRoutes.routingKeyHash, input.routingKeyHash),
+            eq(sessionRoutes.sessionId, input.expectedSessionId),
+          ),
+        )
+      if ((replaced.meta.changes ?? 0) > 0) return { sessionId: input.sessionId, owned: true }
+      const existing = await db
+        .select({ sessionId: sessionRoutes.sessionId, activationRunId: sessionRoutes.activationRunId })
+        .from(sessionRoutes)
+        .where(
+          and(
+            eq(sessionRoutes.projectId, input.projectId),
+            eq(sessionRoutes.triggerId, input.triggerId),
+            eq(sessionRoutes.routingKeyHash, input.routingKeyHash),
+          ),
+        )
+        .get()
+      if (!existing) throw new Error('Inbox Session route disappeared during replacement')
+      return { sessionId: existing.sessionId, owned: existing.activationRunId === input.activationRunId }
+    },
+
     async deleteSessionRoute(projectId, triggerId, routingKeyHash, sessionId) {
       await db
         .delete(sessionRoutes)

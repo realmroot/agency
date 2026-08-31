@@ -15,21 +15,23 @@ import (
 	"github.com/samber/lo"
 	"log/slog"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
 )
 
 type Daemon struct {
-	Config         runnerconfig.Config
-	Client         *ama.RunnerClient
-	Channels       runnersession.Opener
-	Adapter        sandbox.SandboxAdapter
-	RuntimeAdapter runtime.Adapter
-	RuntimeBridge  runtime.Bridge
-	IdentityStore  *IdentityStore
-	RuntimeCatalog *runtime.Inventory
-	Build          version.Info
+	Config           runnerconfig.Config
+	Client           *ama.RunnerClient
+	Channels         runnersession.Opener
+	Adapter          sandbox.SandboxAdapter
+	RuntimeAdapter   runtime.Adapter
+	RuntimeBridge    runtime.Bridge
+	IdentityStore    *IdentityStore
+	RuntimeCatalog   *runtime.Inventory
+	Build            version.Info
+	ToolboxAvailable func() bool
 	// relay owns the runner's single per-runner relay channel for all sessions.
 	// Started once the runner id is known and kept
 	// open for the runner's lifetime; nil until Start wires it.
@@ -39,6 +41,14 @@ type Daemon struct {
 	activeLeases   int
 	activeLeaseIDs map[string]struct{}
 	leaseWG        sync.WaitGroup
+}
+
+func (d *Daemon) toolboxAvailable() bool {
+	if d.ToolboxAvailable != nil {
+		return d.ToolboxAvailable()
+	}
+	_, err := exec.LookPath("realmroot")
+	return err == nil
 }
 
 func (d *Daemon) runtimeBridge() runtime.Bridge {
@@ -324,14 +334,15 @@ func (d *Daemon) leaseWorker() LeaseWorker {
 	relay := d.relay
 	d.mu.Unlock()
 	return LeaseWorker{
-		Config:          d.Config,
-		Client:          d.Client,
-		SandboxAdapter:  d.Adapter,
-		RuntimeAdapter:  d.RuntimeAdapter,
-		RuntimeBridge:   d.runtimeBridge(),
-		Relay:           relay,
-		RunnerID:        d.RunnerID,
-		CurrentRuntimes: d.currentRuntimes,
+		Config:           d.Config,
+		Client:           d.Client,
+		SandboxAdapter:   d.Adapter,
+		RuntimeAdapter:   d.RuntimeAdapter,
+		RuntimeBridge:    d.runtimeBridge(),
+		Relay:            relay,
+		RunnerID:         d.RunnerID,
+		CurrentRuntimes:  d.currentRuntimes,
+		ToolboxAvailable: d.toolboxAvailable,
 	}
 }
 
@@ -452,6 +463,7 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 			"runnerVersion":          build.Version,
 			"runnerCommit":           build.Commit,
 			"runnerBuildDate":        build.BuildDate,
+			"realmrootToolbox":       d.toolboxAvailable(),
 		}),
 	})
 	if err != nil {
@@ -482,6 +494,7 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 			"runnerVersion":          build.Version,
 			"runnerCommit":           build.Commit,
 			"runnerBuildDate":        build.BuildDate,
+			"realmrootToolbox":       d.toolboxAvailable(),
 			"unsafe":                 true,
 		}),
 	})

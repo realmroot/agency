@@ -100,12 +100,14 @@ function deps(
 ) {
   const marks = { dispatched: vi.fn(), failed: vi.fn() }
   const reserve = vi.fn(async () => overrides.reserve ?? { sessionId: 'session_reserved', owned: true })
+  const replace = vi.fn(async () => ({ sessionId: 'session_replacement', owned: true }))
   const value = {
     inboxActivations: {
       findActivation: vi.fn(async () =>
         overrides.activation === undefined ? activation('route_hash') : overrides.activation,
       ),
       reserveSessionRoute: reserve,
+      replaceSessionRoute: replace,
       deleteSessionRoute: vi.fn(),
       pendingActivationIds: vi.fn(async () => ['run_1', 'run_2']),
     },
@@ -114,7 +116,7 @@ function deps(
     triggerDispatch: { markRunDispatched: marks.dispatched, markRunFailed: marks.failed },
     audit: { record: vi.fn() },
   } as unknown as Deps
-  return { value, marks, reserve }
+  return { value, marks, reserve, replace }
 }
 
 beforeEach(() => {
@@ -367,6 +369,53 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       existing.id,
       expect.anything(),
     )
+  })
+
+  it.each([
+    { state: 'error' as const, archivedAt: null },
+    { state: 'idle' as const, archivedAt: '2026-08-30T00:01:00.000Z' },
+  ])('atomically replaces a terminal route target %#', async ({ state, archivedAt }) => {
+    const existing = { ...runtimeSession('session_terminal'), state, archivedAt }
+    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
+    vi.mocked(fake.value.sessions.findRuntimeRow).mockResolvedValueOnce(existing).mockResolvedValueOnce(null)
+    vi.mocked(createSession).mockResolvedValueOnce({ ok: true, value: session('session_replacement') })
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    expect(fake.replace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedSessionId: existing.id,
+        activationRunId: 'run_1',
+      }),
+    )
+    expect(createSession).toHaveBeenCalledWith(
+      fake.value,
+      expect.anything(),
+      expect.objectContaining({ options: expect.objectContaining({ id: 'session_replacement' }) }),
+    )
+    expect(dispatchToReusableSession).not.toHaveBeenCalled()
+  })
+
+  it('follows the winning replacement when concurrent terminal deliveries race', async () => {
+    const terminal = { ...runtimeSession('session_terminal'), state: 'error' as const }
+    const winner = runtimeSession('session_replacement_winner')
+    const fake = deps({ reserve: { sessionId: terminal.id, owned: false }, existing: terminal })
+    vi.mocked(fake.value.inboxActivations!.replaceSessionRoute).mockResolvedValueOnce({
+      sessionId: winner.id,
+      owned: false,
+    })
+    vi.mocked(fake.value.sessions.findRuntimeRow).mockResolvedValueOnce(terminal).mockResolvedValueOnce(winner)
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    expect(dispatchToReusableSession).toHaveBeenCalledWith(
+      fake.value,
+      expect.anything(),
+      winner,
+      expect.any(String),
+      'inbox:event_1',
+    )
+    expect(createSession).not.toHaveBeenCalled()
   })
 
   it('creates a fresh Session for every notification without a routing key', async () => {
