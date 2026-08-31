@@ -31,7 +31,7 @@ credential-scoped reference:
 ```json
 {
   "realmroot": {
-    "agentId": "agt_example",
+    "agentId": "019ff41a-7da6-708f-8b05-49a4cc6d5300",
     "origin": "https://realmroot.example.com",
     "credentialRef": "ama://vaults/vault_example/credentials/vaultcred_example"
   }

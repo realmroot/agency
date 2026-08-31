@@ -10,10 +10,71 @@ const configuration = {
   agent_endpoint: `${origin}/api/agent`,
   agent_token_endpoint: `${origin}/api/agent-token`,
 }
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+const remoteAgentId = '019ff41a-7da6-708f-8b05-49a4cc6d5300'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
+  it('[spec: identities/installation-identifiers] initializes persistent installation identifiers as UUIDv7', async () => {
+    const checkpoint = await createRealmrootEnrollmentGateway().initialize({
+      origin,
+      name: 'Reviewer',
+      username: 'reviewer',
+      runtime: 'codex',
+      idempotencyKey: 'idem-uuidv7',
+    })
+
+    expect(checkpoint.state).toMatchObject({
+      agent_id: expect.stringMatching(UUID_V7),
+      host_id: expect.stringMatching(UUID_V7),
+      agent_key_id: expect.stringMatching(UUID_V7),
+    })
+  })
+
+  it('[spec: identities/installation-identifiers] resumes an enrolled checkpoint with legacy opaque identifiers', async () => {
+    const gateway = createRealmrootEnrollmentGateway()
+    const initialized = await gateway.initialize({
+      origin,
+      name: 'Reviewer',
+      username: 'reviewer',
+      runtime: 'codex',
+      idempotencyKey: 'idem-legacy',
+    })
+    const checkpoint = {
+      ...initialized,
+      stage: 'enrolled',
+      state: {
+        ...initialized.state,
+        agent_id: 'agent-legacy-installation',
+        host_id: 'host-legacy-installation',
+        agent_key_id: 'agent-legacy-key',
+      },
+      remote: {
+        agentId: 'legacy-agent-id',
+        issuer: configuration.issuer,
+        subject: 'legacy-agent-subject',
+        username: 'reviewer',
+        runtime: 'codex',
+      },
+    } as const
+
+    await expect(
+      gateway.provision({
+        origin,
+        name: 'Reviewer',
+        username: 'reviewer',
+        runtime: 'codex',
+        idempotencyKey: 'idem-legacy',
+        checkpoint,
+        managementCredential: { headers: async () => ({}) },
+        onCheckpoint: async () => {
+          throw new Error('resume must not checkpoint again')
+        },
+      }),
+    ).resolves.toEqual({ checkpoint, descriptor: checkpoint.remote })
+  })
+
   it('completes the fake enrollment flow, persists its checkpoint, and resumes an enrolled checkpoint', async () => {
     const gateway = createRealmrootEnrollmentGateway({
       AMA_E2E_TEST_AUTH: 'true',
@@ -74,9 +135,9 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
         if (url.endsWith('/.well-known/agent-configuration')) return Response.json(configuration)
         if (url === `${origin}/api/agents`) {
           return Response.json({
-            id: 'rr_agent_real',
+            id: remoteAgentId,
             issuer: configuration.issuer,
-            subject: 'rr_agent_real',
+            subject: remoteAgentId,
             username: 'reviewer',
             runtime: 'codex',
             status: 'active',
@@ -88,9 +149,9 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
         if (url === configuration.agent_endpoint) {
           return Response.json({
             agent: {
-              id: 'rr_agent_real',
+              id: remoteAgentId,
               issuer: configuration.issuer,
-              subject: 'rr_agent_real',
+              subject: remoteAgentId,
               username: 'reviewer',
               runtime: 'codex',
               status: 'active',
@@ -120,9 +181,9 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
       onCheckpoint,
     })
 
-    expect(result.descriptor).toMatchObject({ agentId: 'rr_agent_real', runtime: 'codex' })
+    expect(result.descriptor).toMatchObject({ agentId: remoteAgentId, subject: remoteAgentId, runtime: 'codex' })
     expect(result.checkpoint.state).toMatchObject({
-      identity: { id: 'rr_agent_real' },
+      identity: { id: remoteAgentId },
       protocol_credential: {
         access_token: 'agent-access-token',
         expires_at: expect.any(String),
@@ -136,6 +197,15 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
     expect(requests.find(({ url }) => url === configuration.agent_endpoint)?.init?.headers).toMatchObject({
       authorization: 'DPoP agent-access-token',
       dpop: expect.any(String),
+    })
+    const createRequest = requests.find(({ url }) => url === `${origin}/api/agents`)
+    expect(JSON.parse(String(createRequest?.init?.body))).toMatchObject({
+      installation: {
+        agentId: initialized.state.agent_id,
+        hostId: initialized.state.host_id,
+        kid: initialized.state.agent_key_id,
+        publicKey: { kid: initialized.state.agent_key_id },
+      },
     })
   })
 
