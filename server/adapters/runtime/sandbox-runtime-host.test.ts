@@ -474,7 +474,7 @@ describe('session-runtime', () => {
     expect(JSON.stringify(events)).not.toContain('AMA runtime processed: Alpha durable prompt')
   })
 
-  it('does not dispatch sandbox tools that are absent from a non-empty allow-list [spec: runtime/error-termination] [spec: runtime/sandbox-toolset]', async () => {
+  it('returns an unknown-tool result to the Agent without terminalizing the turn [spec: runtime/error-termination] [spec: runtime/sandbox-toolset]', async () => {
     const events: Record<string, unknown>[] = []
 
     await expect(
@@ -489,7 +489,7 @@ describe('session-runtime', () => {
           events.push(event)
         },
       }),
-    ).rejects.toThrow()
+    ).resolves.toEqual({ status: 'idle' })
 
     expect(mockExecutor.execute).not.toHaveBeenCalled()
     expect(events).toEqual(

@@ -532,13 +532,6 @@ function turnFailureMessage(event: AgentEvent) {
       return event.message.errorMessage ?? 'Runtime model request failed'
     }
   }
-  if (event.type === 'tool_execution_end' && event.isError) {
-    const result = event.result as { content?: Array<{ type?: string; text?: string }>; details?: unknown }
-    const text = Array.isArray(result.content)
-      ? result.content.map((item) => (item.type === 'text' && typeof item.text === 'string' ? item.text : '')).join('')
-      : ''
-    return text || 'Runtime tool execution failed'
-  }
   return null
 }
 
@@ -577,6 +570,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   const modelId = input.modelLabel
   let status: TurnStatus = { kind: 'idle' }
   let providerError: RuntimeProviderError | null = null
+  let policyFailure: string | null = null
   const agent = new Agent({
     initialState: {
       systemPrompt: runtimeSystemPrompt(input.agentSnapshot),
@@ -585,7 +579,15 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
         sessionId: input.sessionId,
         sandboxId: input.sandboxId,
         agentSnapshot: input.agentSnapshot,
-        policy: input.policy,
+        policy: {
+          approve: async (toolCall) => {
+            const decision = await input.policy.approve(toolCall)
+            if (!decision.allowed) {
+              policyFailure = decision.reason ?? 'Tool call blocked by AMA policy'
+            }
+            return decision
+          },
+        },
         toolResults: input.toolResults,
         liveness: input.liveness,
         engineSignal: controller.signal,
@@ -629,7 +631,11 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
       throw error
     }
     const eventFailure = turnFailureMessage(event)
-    if (eventFailure) {
+    const policyEventFailure = event.type === 'tool_execution_end' && event.isError ? policyFailure : null
+    if (policyEventFailure) {
+      policyFailure = null
+      status = reduceTurnStatus(status, { type: 'fail', message: policyEventFailure })
+    } else if (eventFailure) {
       status = reduceTurnStatus(
         status,
         eventFailure === CANCELLATION_REASON ? { type: 'cancel' } : { type: 'fail', message: eventFailure },

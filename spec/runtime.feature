@@ -49,10 +49,11 @@ Feature: Runtime
     And no new work starts after the cancellation boundary
 
   @runtime/error-termination @usecase
-  Scenario: Terminate a session after a runtime failure
+  Scenario: Separate recoverable tool failures from terminal runtime failures
     Given a tool is dispatched that violates the agent allow-list or fails to execute
     When the runtime executes the turn
-    Then a structured error event is recorded and the turn does not complete successfully
+    Then a structured tool-result error is recorded in the transcript so the Agent can correct the call
+    And only an unrecoverable model, provider, policy, or runtime failure terminalizes the turn
 
   @runtime/large-bridge-events @usecase
   Scenario: Relay large native runtime events across the runner bridge
