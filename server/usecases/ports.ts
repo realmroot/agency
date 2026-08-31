@@ -1115,7 +1115,7 @@ export interface InboxSubscriptionBinding {
   organizationId: string
   projectId: string
   projectName: string
-  remoteAgentId: string
+  agentSubject: string
   callbackTokenHash: string
   callbackTokenCiphertext: string
   subscriptionEtag: string | null
@@ -1164,7 +1164,7 @@ export interface InboxActivationRepo {
 export interface InboxSubscriptionGateway {
   put(input: {
     subscriptionId: string
-    agentId: string
+    agentSubject: string
     callbackToken: string
     etag: string | null
   }): Promise<{ etag: string }>
@@ -1177,13 +1177,16 @@ export interface InboxCallbackTokenCodec {
 }
 
 export class InboxSubscriptionGatewayError extends Error {
+  readonly status: number | null
+
   constructor(
     readonly code: 'unavailable' | 'rejected' | 'invalid_response',
     message: string,
-    options?: ErrorOptions,
+    options: ErrorOptions & { status?: number } = {},
   ) {
     super(message, options)
     this.name = 'InboxSubscriptionGatewayError'
+    this.status = options.status ?? null
   }
 }
 

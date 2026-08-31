@@ -29,7 +29,7 @@ The PUT JSON representation is:
 
 ```json
 {
-  "agentId": "<Realmroot Agent UUIDv7>",
+  "agentId": "<Realmroot stable OIDC subject UUIDv7>",
   "events": ["message.created"],
   "delivery": {
     "url": "<OIDC_RESOURCE>/v1/inbox-notifications",
@@ -41,6 +41,12 @@ The PUT JSON representation is:
 }
 ```
 
+Inbox names this wire field `agentId`, but its value is the Realmroot
+`IdentityDescriptor.subject`: the Agent's stable OIDC subject. It is not the
+Realmroot internal Identity resource id from `IdentityDescriptor.agentId`.
+Those UUIDv7 values may differ, and Inbox public Agent discovery is keyed by the
+stable subject.
+
 The callback token is never placed in a URL, API response, or log. Agency stores
 its SHA-256 hash for admission and an AES-GCM ciphertext for reliable idempotent
 Subscription retries. Retries reuse the same token, so an uncertain PUT cannot
@@ -48,6 +54,9 @@ make Inbox and Agency disagree about which callback credential is current.
 Agency also stores the current Subscription ETag.
 Provisioning state is `pending`, `active`, `inactive`, or `error`; the scheduled
 reconciler retries pending and failed transitions with the same callback token.
+Failed transitions persist a safe gateway classification and HTTP status when
+available, and emit structured diagnostics with the operation and static gateway
+message. Callback credentials and ciphertext are excluded from those diagnostics.
 
 ## Notification contract
 
@@ -66,6 +75,10 @@ Inbox creates a notification receipt through
   "occurredAt": "2026-08-30T12:00:00.000Z"
 }
 ```
+
+The callback `agentId` carries the same stable OIDC subject registered on the
+Subscription. Agency rejects a Realmroot internal Identity id or any other
+subject before it creates a Trigger Run.
 
 Agency validates the Subscription token and Agent identity, then persistently
 deduplicates on `(subscriptionId, eventId)` by creating one Trigger Run. A `202`

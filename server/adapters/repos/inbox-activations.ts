@@ -57,7 +57,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         organizationId: row.organizationId,
         projectId: row.projectId,
         projectName: row.projectName,
-        remoteAgentId: identity.agentId,
+        agentSubject: identity.subject,
         callbackTokenHash: row.callbackTokenHash,
         callbackTokenCiphertext: row.callbackTokenCiphertext,
         subscriptionEtag: row.subscriptionEtag,

@@ -66,7 +66,7 @@ function activation(routingKeyHash: string | null): PendingInboxActivation {
       eventId: 'event_1',
       type: 'message.created',
       subscriptionId: 'trigger_1',
-      agentId: 'realmroot-agent_1',
+      agentId: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       messageId: 'message_1',
       occurredAt: '2026-08-30T00:00:00.000Z',
     },
@@ -134,7 +134,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          remoteAgentId: 'realmroot-agent_1',
+          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
@@ -148,7 +148,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
         eventId: 'event_1',
         type: 'message.created',
         subscriptionId: 'trigger_1',
-        agentId: 'realmroot-agent_1',
+        agentId: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
         messageId: 'message_1',
         occurredAt: '2026-08-30T00:00:00.000Z',
         routingKey: 'opaque-thread',
@@ -172,7 +172,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          remoteAgentId: 'realmroot-agent_1',
+          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: '"v1"',
@@ -184,13 +184,16 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
       eventId: 'event_1',
       type: 'message.created',
       subscriptionId: 'trigger_1',
-      agentId: 'realmroot-agent_1',
+      agentId: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       messageId: 'message_1',
       occurredAt: '2026-08-30T00:00:00.000Z',
     }
     await expect(receiveInboxNotification(fake, 'Bearer invalid', notification)).rejects.toMatchObject({ status: 401 })
     await expect(
-      receiveInboxNotification(fake, `Bearer ${token}`, { ...notification, agentId: 'other-agent' }),
+      receiveInboxNotification(fake, `Bearer ${token}`, {
+        ...notification,
+        agentId: '01a05643-33a4-704f-8d6b-bec364657b5c',
+      }),
     ).rejects.toMatchObject({ status: 403 })
     expect(claimNotification).not.toHaveBeenCalled()
   })
@@ -213,7 +216,7 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
           organizationId: 'org_1',
           projectId: 'project_1',
           projectName: 'Project',
-          remoteAgentId: 'realmroot-agent_1',
+          agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
           callbackTokenHash: await inboxTokenHash(token),
           callbackTokenCiphertext: 'encrypted-token',
           subscriptionEtag: null,

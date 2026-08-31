@@ -18,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () => {
   const putInput = {
     subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-    agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+    agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
     callbackToken: 'callback-secret',
     etag: null,
   }
@@ -44,7 +44,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv()).put({
         subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-        agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+        agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
         callbackToken: 'callback-secret',
         etag: null,
       }),
@@ -65,7 +65,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
       'If-None-Match': '*',
     })
     expect(JSON.parse(String(put?.init?.body))).toEqual({
-      agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+      agentId: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       events: ['message.created'],
       delivery: {
         url: 'https://agency.example/api/v1/inbox-notifications',
@@ -120,7 +120,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv()).put({
         subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-        agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+        agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
         callbackToken: 'callback-secret',
         etag: '"v1"',
       }),
@@ -133,7 +133,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv({ INBOX_RESOURCE: undefined })).put({
         subscriptionId: 'trigger_1',
-        agentId: 'agent_1',
+        agentSubject: 'agent_1',
         callbackToken: 'token',
         etag: null,
       }),
@@ -148,7 +148,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     await expect(
       createInboxSubscriptionGateway(testEnv()).put({
         subscriptionId: 'trigger_1',
-        agentId: 'agent_1',
+        agentSubject: 'agent_1',
         callbackToken: 'token',
         etag: null,
       }),
@@ -300,6 +300,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription gateway', () =>
     })
     await expect(managementResponse(async () => new Response(null, { status: 503 }))).rejects.toMatchObject({
       code: 'unavailable',
+      status: 503,
     })
     await expect(managementResponse(async () => new Response(null, { status: 400 }))).rejects.toMatchObject({
       code: 'rejected',

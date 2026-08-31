@@ -1,6 +1,6 @@
 import { resourceMetadata } from '@server/domain/resource'
 import type { Trigger } from '@server/domain/trigger'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
 import {
   inboxTokenHash,
@@ -10,6 +10,7 @@ import {
   reconcileInboxSubscriptions,
   removeInboxSubscription,
 } from './inbox-subscriptions'
+import { InboxSubscriptionGatewayError } from './ports'
 
 function trigger(
   overrides: { inbox?: boolean; subscription?: boolean; suspend?: boolean; archived?: boolean } = {},
@@ -62,7 +63,7 @@ function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: bo
     organizationId: 'org_1',
     projectId: 'project_1',
     projectName: 'Project',
-    remoteAgentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+    agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
     callbackTokenHash: 'current-hash',
     callbackTokenCiphertext: 'current-ciphertext',
     subscriptionEtag: '"v1"',
@@ -95,6 +96,8 @@ function fakeDeps(options: { putError?: Error; deleteError?: Error; binding?: bo
 }
 
 describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it('creates a stable Subscription id with a hashed and encrypted callback token', async () => {
     const fake = fakeDeps()
     const provisioning = await initialInboxProvisioning(fake.deps)
@@ -160,7 +163,11 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     expect(fake.updateProvisioning).toHaveBeenCalledWith(
       'project_1',
       'trigger_1',
-      expect.objectContaining({ etag: '"v1"', phase: 'error', errorMessage: 'Inbox Subscription deletion failed' }),
+      expect.objectContaining({
+        etag: '"v1"',
+        phase: 'error',
+        errorMessage: 'Inbox Subscription deletion failed (unexpected error)',
+      }),
       expect.any(String),
     )
   })
@@ -171,7 +178,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
     expect(fake.open).toHaveBeenCalledWith('sub_0123456789abcdef0123456789abcdef', 'current-ciphertext')
     expect(fake.put).toHaveBeenCalledWith({
       subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-      agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
+      agentSubject: '01a05643-33a4-704f-8d6b-c30c04e18c6c',
       callbackToken: 'current-token',
       etag: '"v1"',
     })
@@ -215,6 +222,41 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
       }),
       expect.any(String),
     )
+  })
+
+  it('records safe structured diagnostics for classified gateway failures', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const fake = fakeDeps({
+      putError: new InboxSubscriptionGatewayError('unavailable', 'Inbox Subscription update was rejected', {
+        status: 503,
+      }),
+    })
+
+    await reconcileInboxSubscription(fake.deps, trigger(), 'callback-secret')
+
+    expect(fake.updateProvisioning).toHaveBeenLastCalledWith(
+      'project_1',
+      'trigger_1',
+      expect.objectContaining({
+        phase: 'error',
+        errorMessage: 'Inbox Subscription update failed (unavailable, HTTP 503)',
+      }),
+      expect.any(String),
+    )
+    expect(consoleError).toHaveBeenCalledOnce()
+    const logged = JSON.parse(String(consoleError.mock.calls[0]?.[0])) as Record<string, unknown>
+    expect(logged).toMatchObject({
+      event: 'inbox-subscription.gateway-failed',
+      operation: 'update',
+      projectId: 'project_1',
+      triggerId: 'trigger_1',
+      subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
+      gatewayErrorKind: 'unavailable',
+      gatewayErrorMessage: 'Inbox Subscription update was rejected',
+      gatewayErrorStatus: 503,
+    })
+    expect(JSON.stringify(logged)).not.toContain('callback-secret')
+    expect(JSON.stringify(logged)).not.toContain('current-ciphertext')
   })
 
   it('removes a Subscription or persists and propagates a deletion failure', async () => {

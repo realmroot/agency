@@ -1,6 +1,7 @@
 import type { Trigger } from '@server/domain/trigger'
+import { logError } from '@server/logging'
 import type { Deps } from './deps'
-import { type InboxProvisioningFields, TriggerProvisioningError } from './ports'
+import { type InboxProvisioningFields, InboxSubscriptionGatewayError, TriggerProvisioningError } from './ports'
 
 function activationRepo(deps: Deps) {
   if (!deps.inboxActivations) throw new TriggerProvisioningError('Inbox activation persistence is unavailable')
@@ -38,6 +39,45 @@ function newInboxSubscriptionId() {
   const bytes = new Uint8Array(16)
   crypto.getRandomValues(bytes)
   return `sub_${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`
+}
+
+type SubscriptionOperation = 'update' | 'deletion'
+
+function subscriptionFailure(operation: SubscriptionOperation, cause: unknown) {
+  if (cause instanceof InboxSubscriptionGatewayError) {
+    const status = cause.status === null ? '' : `, HTTP ${cause.status}`
+    return {
+      errorMessage: `Inbox Subscription ${operation} failed (${cause.code}${status})`,
+      gatewayErrorKind: cause.code,
+      gatewayErrorMessage: cause.message,
+      gatewayErrorStatus: cause.status,
+    }
+  }
+  return {
+    errorMessage: `Inbox Subscription ${operation} failed (unexpected error)`,
+    gatewayErrorKind: 'unexpected',
+    gatewayErrorMessage: 'Unexpected Inbox Subscription gateway error',
+    gatewayErrorStatus: null,
+  }
+}
+
+function recordSubscriptionFailure(
+  operation: SubscriptionOperation,
+  cause: unknown,
+  binding: { projectId: string; trigger: Trigger },
+  subscriptionId: string,
+) {
+  const diagnostic = subscriptionFailure(operation, cause)
+  logError('inbox-subscription.gateway-failed', cause, {
+    operation,
+    projectId: binding.projectId,
+    triggerId: binding.trigger.metadata.uid,
+    subscriptionId,
+    gatewayErrorKind: diagnostic.gatewayErrorKind,
+    gatewayErrorMessage: diagnostic.gatewayErrorMessage,
+    gatewayErrorStatus: diagnostic.gatewayErrorStatus,
+  })
+  return diagnostic.errorMessage
 }
 
 export async function initialInboxProvisioning(deps: Deps) {
@@ -87,7 +127,8 @@ export async function reconcileInboxSubscription(
         },
         timestamp,
       )
-    } catch {
+    } catch (cause) {
+      const errorMessage = recordSubscriptionFailure('deletion', cause, binding, subscriptionId)
       return repo.updateProvisioning(
         binding.projectId,
         trigger.metadata.uid,
@@ -97,7 +138,7 @@ export async function reconcileInboxSubscription(
           callbackTokenCiphertext: binding.callbackTokenCiphertext,
           etag: binding.subscriptionEtag,
           phase: 'error',
-          errorMessage: 'Inbox Subscription deletion failed',
+          errorMessage,
         },
         timestamp,
       )
@@ -121,7 +162,7 @@ export async function reconcileInboxSubscription(
   try {
     const result = await gateway.put({
       subscriptionId,
-      agentId: binding.remoteAgentId,
+      agentSubject: binding.agentSubject,
       callbackToken: token,
       etag: binding.subscriptionEtag,
     })
@@ -138,7 +179,8 @@ export async function reconcileInboxSubscription(
       },
       new Date().toISOString(),
     )
-  } catch {
+  } catch (cause) {
+    const errorMessage = recordSubscriptionFailure('update', cause, binding, subscriptionId)
     return repo.updateProvisioning(
       binding.projectId,
       trigger.metadata.uid,
@@ -148,7 +190,7 @@ export async function reconcileInboxSubscription(
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
         phase: 'error',
-        errorMessage: 'Inbox Subscription update failed',
+        errorMessage,
       },
       new Date().toISOString(),
     )
@@ -164,6 +206,7 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
   try {
     await subscriptionGateway(deps).delete({ subscriptionId, etag: binding.subscriptionEtag })
   } catch (cause) {
+    const errorMessage = recordSubscriptionFailure('deletion', cause, binding, subscriptionId)
     await repo.updateProvisioning(
       binding.projectId,
       trigger.metadata.uid,
@@ -173,11 +216,11 @@ export async function removeInboxSubscription(deps: Deps, trigger: Trigger) {
         callbackTokenCiphertext: binding.callbackTokenCiphertext,
         etag: binding.subscriptionEtag,
         phase: 'error',
-        errorMessage: 'Inbox Subscription deletion failed',
+        errorMessage,
       },
       new Date().toISOString(),
     )
-    throw new TriggerProvisioningError('Inbox Subscription deletion failed', { cause })
+    throw new TriggerProvisioningError(errorMessage, { cause })
   }
 }
 

@@ -3,8 +3,9 @@ import { env } from 'cloudflare:workers'
 import { createInboxActivationRepo } from '@server/adapters/repos/inbox-activations'
 import { createTriggerRepo } from '@server/adapters/repos/triggers'
 import { createDb } from '@server/db/client'
-import { inboxTokenHash, newInboxCallbackToken } from '@server/usecases/inbox-subscriptions'
-import { beforeEach, describe, expect, it } from 'vitest'
+import type { Deps } from '@server/usecases/deps'
+import { inboxTokenHash, newInboxCallbackToken, reconcileInboxSubscription } from '@server/usecases/inbox-subscriptions'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultClaims, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
 async function authenticatedFetch(path: string, authorization: string, init: RequestInit = {}) {
@@ -49,12 +50,13 @@ describe('[CF] Inbox notification receipts', () => {
     }>()
     if (!project) throw new Error('Expected signed-in project')
 
-    const remoteAgentId = '019ff41a-7da6-708f-8b05-49a4cc6d5300'
+    const identityAgentId = '01a05643-33a4-704f-8d6b-bec364657b5c'
+    const agentSubject = '01a05643-33a4-704f-8d6b-c30c04e18c6c'
     const identity = {
       identityId: 'identity_inbox_test',
-      agentId: remoteAgentId,
+      agentId: identityAgentId,
       issuer: 'https://id.realmroot.dev/api/auth',
-      subject: remoteAgentId,
+      subject: agentSubject,
       username: 'inbox-agent',
       runtime: 'ama',
       credentialRef: 'ama-managed:vaults/test/credentials/test/versions/test',
@@ -65,6 +67,7 @@ describe('[CF] Inbox notification receipts', () => {
 
     const token = newInboxCallbackToken()
     const db = createDb(env)
+    const routes = createInboxActivationRepo(db)
     const trigger = await createTriggerRepo(db).insert(
       {
         id: crypto.randomUUID(),
@@ -101,11 +104,28 @@ describe('[CF] Inbox notification receipts', () => {
       },
       new Date().toISOString(),
     )
+    const putSubscription = vi.fn(async () => ({ etag: '"subscription-v2"' }))
+    await reconcileInboxSubscription(
+      {
+        inboxActivations: routes,
+        inboxSubscriptions: { put: putSubscription, delete: vi.fn() },
+        inboxCallbackTokens: { open: vi.fn(async () => token), seal: vi.fn() },
+      } as Deps,
+      trigger,
+    )
+    expect(putSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentSubject,
+        callbackToken: token,
+      }),
+    )
+    expect(putSubscription).not.toHaveBeenCalledWith(expect.objectContaining({ agentSubject: identityAgentId }))
+
     const notification = {
       eventId: 'event_1',
       type: 'message.created',
       subscriptionId: 'sub_0123456789abcdef0123456789abcdef',
-      agentId: remoteAgentId,
+      agentId: agentSubject,
       messageId: 'message_1',
       routingKey: 'opaque-route',
       occurredAt: '2026-08-30T12:00:00.000Z',
@@ -131,13 +151,13 @@ describe('[CF] Inbox notification receipts', () => {
     const mismatch = await callback(token, {
       ...notification,
       eventId: 'event_mismatch',
-      agentId: '019ff41a-7da6-708f-8b05-49a4cc6d5301',
+      agentId: identityAgentId,
     })
     expect(mismatch.status).toBe(403)
 
-    const routes = createInboxActivationRepo(db)
     const binding = await routes.findSubscription(notification.subscriptionId)
     if (!binding) throw new Error('Expected Inbox Subscription binding')
+    expect(binding).toMatchObject({ agentSubject })
     const { routingKey: _, ...storedNotification } = notification
     const secondActivation = await routes.claimNotification(
       binding,

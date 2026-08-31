@@ -23,10 +23,11 @@ Feature: Triggers
 
   @triggers/inbox-provisioning @usecase
   Scenario: Maintain one Inbox Subscription for an Inbox trigger
-    Given a Realmroot-bound Agent and an Inbox trigger
+    Given a Realmroot-bound Agent whose internal Identity id differs from its stable OIDC subject
     When the trigger is created, paused, resumed, archived, or deleted
     Then Agency reconciles the Trigger-owned Inbox Subscription through its service identity
-    And provisioning state is visible without exposing the callback Bearer token
+    And the Subscription references the stable OIDC subject rather than the internal Identity id
+    And provisioning state includes safe gateway diagnostics without exposing the callback Bearer token
 
   @triggers/lifecycle @usecase
   Scenario: Update, archive, and restore a trigger
@@ -77,10 +78,10 @@ Feature: Triggers
 
   @triggers/inbox-callback @api
   Scenario: Reliably accept and deduplicate Inbox notifications
-    Given an active Inbox trigger with a registered callback token
+    Given an active Inbox trigger with a registered callback token and stable OIDC Agent subject
     When Inbox delivers the same subscription event more than once
     Then Agency durably accepts one Trigger Run before acknowledging delivery
-    And invalid tokens and mismatched Agent identities are rejected without creating a run
+    And invalid tokens, internal Identity ids, and mismatched Agent subjects are rejected without creating a run
 
   @triggers/inbox-routing @api
   Scenario: Route Inbox notifications into Sessions by an opaque routing key

@@ -28,14 +28,19 @@ async function serviceAccessToken(env: Env, resource: string) {
     throw new InboxSubscriptionGatewayError(
       discoveryResponse.status === 429 || discoveryResponse.status >= 500 ? 'unavailable' : 'invalid_response',
       'Inbox M2M discovery was rejected',
+      { status: discoveryResponse.status },
     )
   }
   if (discovery?.issuer !== issuer || !discovery.token_endpoint) {
-    throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox M2M discovery returned an invalid response')
+    throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox M2M discovery returned an invalid response', {
+      status: discoveryResponse.status,
+    })
   }
   const tokenEndpoint = new URL(discovery.token_endpoint)
   if (tokenEndpoint.protocol !== 'https:' || tokenEndpoint.origin !== new URL(issuer).origin) {
-    throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox M2M token endpoint crossed an origin boundary')
+    throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox M2M token endpoint crossed an origin boundary', {
+      status: discoveryResponse.status,
+    })
   }
 
   let response: Response
@@ -62,10 +67,13 @@ async function serviceAccessToken(env: Env, resource: string) {
     throw new InboxSubscriptionGatewayError(
       response.status === 429 || response.status >= 500 ? 'unavailable' : 'rejected',
       'Inbox M2M token request was rejected',
+      { status: response.status },
     )
   }
   if (!body?.access_token || body.token_type?.toLowerCase() !== 'bearer') {
-    throw new InboxSubscriptionGatewayError('rejected', 'Inbox M2M token request was rejected')
+    throw new InboxSubscriptionGatewayError('rejected', 'Inbox M2M token request was rejected', {
+      status: response.status,
+    })
   }
   return body.access_token
 }
@@ -106,7 +114,11 @@ export function createInboxSubscriptionGateway(env: Env): InboxSubscriptionGatew
 
   function responseEtag(response: Response) {
     const etag = response.headers.get('etag')
-    if (!etag) throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox Subscription response omitted ETag')
+    if (!etag) {
+      throw new InboxSubscriptionGatewayError('invalid_response', 'Inbox Subscription response omitted ETag', {
+        status: response.status,
+      })
+    }
     return etag
   }
 
@@ -117,6 +129,7 @@ export function createInboxSubscriptionGateway(env: Env): InboxSubscriptionGatew
       throw new InboxSubscriptionGatewayError(
         response.status === 429 || response.status >= 500 ? 'unavailable' : 'rejected',
         'Inbox Subscription read was rejected',
+        { status: response.status },
       )
     }
     return responseEtag(response)
@@ -127,7 +140,7 @@ export function createInboxSubscriptionGateway(env: Env): InboxSubscriptionGatew
       const resource = required(env.INBOX_RESOURCE, 'INBOX_RESOURCE')
       const accessToken = await serviceAccessToken(env, resource)
       const body = JSON.stringify({
-        agentId: input.agentId,
+        agentId: input.agentSubject,
         events: ['message.created'],
         delivery: {
           url: callbackUrl(env),
@@ -153,6 +166,7 @@ export function createInboxSubscriptionGateway(env: Env): InboxSubscriptionGatew
         throw new InboxSubscriptionGatewayError(
           response.status === 429 || response.status >= 500 ? 'unavailable' : 'rejected',
           'Inbox Subscription update was rejected',
+          { status: response.status },
         )
       }
       return { etag: responseEtag(response) }
@@ -179,6 +193,7 @@ export function createInboxSubscriptionGateway(env: Env): InboxSubscriptionGatew
         throw new InboxSubscriptionGatewayError(
           response.status === 429 || response.status >= 500 ? 'unavailable' : 'rejected',
           'Inbox Subscription deletion was rejected',
+          { status: response.status },
         )
       }
     },
