@@ -99,6 +99,24 @@ Foreground mode on Windows uses the same explicit command and stops with `Ctrl-C
 
 Node.js and the desired runtime CLIs (`codex`, `claude`, and/or `copilot`) must be installed on `PATH`. The runner resolves Windows `.exe` and `.cmd` launchers through `PATHEXT`.
 
+The runner accepts provider permission policy through host environment variables. `ak start` passes these values to `ama-runner`. Managed `ama-runner start` installations copy them into the native user service when the instance is created.
+
+| Variable | Allowed values | Default |
+| --- | --- | --- |
+| `AMA_CODEX_SANDBOX_MODE` | `read-only`, `workspace-write`, `danger-full-access` | `danger-full-access` |
+| `AMA_CODEX_APPROVAL_POLICY` | `never`, `on-request`, `on-failure`, `untrusted` | `never` |
+| `AMA_CLAUDE_CODE_PERMISSION_MODE` | `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto` | `bypassPermissions` |
+
+Codex enterprise users can keep the workspace sandbox and send escalations through their configured reviewer:
+
+```bash
+AMA_CODEX_SANDBOX_MODE=workspace-write \
+AMA_CODEX_APPROVAL_POLICY=on-request \
+ak start
+```
+
+Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For example, a runner can use Claude Code's model-reviewed permission mode with `AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values before provider execution. Session environment variables cannot change these settings because AMA reserves the `AMA_` prefix for runner-owned configuration.
+
 Timing defaults:
 
 - Lease duration: `60s`

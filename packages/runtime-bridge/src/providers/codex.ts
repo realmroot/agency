@@ -22,6 +22,7 @@ import {
   type RuntimeUsageWindow,
 } from '../protocol'
 import { hostHome, objectValue, sdkEnv } from './cli-host'
+import { codexPermissionPolicy } from './permission-policy'
 
 const CODEX_USAGE_API = 'https://chatgpt.com/backend-api/wham/usage'
 
@@ -659,8 +660,7 @@ export const codexProvider: RuntimeProvider = {
     const threadOptions = {
       workingDirectory: request.cwd,
       skipGitRepoCheck: true,
-      sandboxMode: 'danger-full-access' as const,
-      approvalPolicy: 'never' as const,
+      ...codexPermissionPolicy(),
       ...(model ? { model } : {}),
     }
     const thread =

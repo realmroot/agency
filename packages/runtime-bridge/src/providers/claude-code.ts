@@ -29,6 +29,7 @@ import {
   type RuntimeUsageWindow,
 } from '../protocol'
 import { hostHome, objectValue, sdkEnv } from './cli-host'
+import { claudeCodePermissionPolicy } from './permission-policy'
 
 const CLAUDE_USAGE_API = 'https://api.anthropic.com/api/oauth/usage'
 const CLAUDE_WINDOW_LABELS: Record<string, string> = {
@@ -371,8 +372,7 @@ export const claudeCodeProvider: RuntimeProvider = {
       env: claudeSdkEnv(request),
       ...(systemPrompt ? { systemPrompt } : {}),
       ...(request.model ? { model: request.model } : {}),
-      permissionMode: 'bypassPermissions' as const,
-      allowDangerouslySkipPermissions: true,
+      ...claudeCodePermissionPolicy(),
       ...(claudePath ? { pathToClaudeCodeExecutable: claudePath } : {}),
       abortController,
       includePartialMessages: true,
@@ -446,8 +446,7 @@ export const claudeCodeProvider: RuntimeProvider = {
       options: {
         cwd: process.cwd(),
         env: queryEnv,
-        permissionMode: 'bypassPermissions',
-        allowDangerouslySkipPermissions: true,
+        ...claudeCodePermissionPolicy(),
         ...(claudePath ? { pathToClaudeCodeExecutable: claudePath } : {}),
       },
     })
