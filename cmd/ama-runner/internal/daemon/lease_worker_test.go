@@ -451,7 +451,14 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 			daemon.startRelay(relayCtx)
 			waitForChannelWriteCount(t, channel, 1)
 
-			err := daemon.leaseWorker().RunAssigned(context.Background(), work.lease, work.workItem)
+			worker := daemon.leaseWorker()
+			worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+				return []runtime.RunnerRuntime{
+					{Runtime: "ama", State: runtime.RuntimeStateReady},
+					{Runtime: "codex", Models: []string{"gpt-5.3-codex"}, State: runtime.RuntimeStateReady},
+				}
+			}
+			err := worker.RunAssigned(context.Background(), work.lease, work.workItem)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("RunAssigned error = %v, wantErr %v", err, test.wantErr)
 			}
@@ -475,9 +482,20 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 // [spec: runners/ama-sandbox-channel]
 func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *testing.T) {
 	work := sessionStartLease()
+	runCtx, cancelRun := context.WithCancel(t.Context())
+	defer cancelRun()
+	waitCtx, cancelWait := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancelWait()
 	activeUpdateStarted := make(chan struct{})
 	releaseActiveUpdate := make(chan struct{})
-	activeUpdateReturned := make(chan struct{})
+	waitForSignal := func(ctx context.Context, signal <-chan struct{}, label string) error {
+		select {
+		case <-signal:
+			return nil
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for %s: %w", label, ctx.Err())
+		}
+	}
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		response := func(status int) *http.Response {
 			header := make(http.Header)
@@ -490,7 +508,9 @@ func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *te
 			}
 		}
 		if strings.HasSuffix(request.URL.Path, "/events") {
-			<-activeUpdateStarted
+			if err := waitForSignal(waitCtx, activeUpdateStarted, "active lease renewal to start"); err != nil {
+				return nil, err
+			}
 			result := response(http.StatusCreated)
 			result.Body = io.NopCloser(strings.NewReader(`{"accepted":1}`))
 			return result, nil
@@ -504,8 +524,9 @@ func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *te
 		}
 		if leaseState(update) == "active" {
 			close(activeUpdateStarted)
-			<-releaseActiveUpdate
-			close(activeUpdateReturned)
+			if err := waitForSignal(waitCtx, releaseActiveUpdate, "completed lease response to close"); err != nil {
+				return nil, err
+			}
 			return nil, errors.New("renew transport failed")
 		}
 		body, err := json.Marshal(work.lease)
@@ -517,9 +538,7 @@ func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *te
 			Reader: strings.NewReader(string(body)),
 			close: func() error {
 				close(releaseActiveUpdate)
-				<-activeUpdateReturned
-				time.Sleep(10 * time.Millisecond)
-				return nil
+				return waitForSignal(waitCtx, request.Context().Done(), "renewal failure to cancel the lease context")
 			},
 		}
 		return result, nil
@@ -538,8 +557,14 @@ func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *te
 	worker := daemon.leaseWorker()
 	worker.Client = client
 	worker.Relay = runnersession.NewRelay(&fakeAMAServer{}, "runner_1", workDir)
+	worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+		return []runtime.RunnerRuntime{{Runtime: "ama", State: runtime.RuntimeStateReady}}
+	}
 
-	err = worker.RunAssigned(context.Background(), work.lease, work.workItem)
+	err = worker.RunAssigned(runCtx, work.lease, work.workItem)
+	if waitCtx.Err() != nil {
+		t.Fatalf("renewal synchronization used the watchdog deadline: %v", waitCtx.Err())
+	}
 	if err == nil || !strings.Contains(err.Error(), "runner lease renewal failed") {
 		t.Fatalf("expected non-race renewal failure, got %v", err)
 	}
