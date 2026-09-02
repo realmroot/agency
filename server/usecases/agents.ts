@@ -6,8 +6,15 @@ import {
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
+import { creationDigest, creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
-import { AgentArchivedError, AgentValidationError, type AuthScope, IdentityAlreadyBoundError } from './ports'
+import {
+  AgentArchivedError,
+  AgentValidationError,
+  type AuthScope,
+  CreationIdempotencyConflictError,
+  IdentityAlreadyBoundError,
+} from './ports'
 
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
@@ -96,13 +103,54 @@ async function validateSubagentMcpConnectors(deps: Deps, projectId: string, suba
 export async function createAgent(
   deps: Deps,
   auth: AuthScope,
-  input: { name: string; description: string | null; spec: Omit<AgentSpec, 'identity'>; identityRef?: string | null },
+  input: {
+    name: string
+    description: string | null
+    spec: Omit<AgentSpec, 'identity'>
+    identityRef?: string | null
+    idempotencyKey?: string
+  },
 ): Promise<Agent> {
-  const spec: AgentSpec = { ...input.spec, identity: await selectedIdentity(deps, auth, input.identityRef ?? null) }
+  const requestFingerprint = input.idempotencyKey
+    ? await creationFingerprint({
+        name: input.name,
+        description: input.description,
+        spec: input.spec,
+        identityRef: input.identityRef ?? null,
+      })
+    : undefined
+  const keyHash = input.idempotencyKey ? await creationDigest(input.idempotencyKey) : undefined
+  if (keyHash && requestFingerprint) {
+    const replay = await deps.agents.findCreation(auth.project.id, keyHash)
+    if (replay) {
+      if (replay.fingerprint !== requestFingerprint) throw new CreationIdempotencyConflictError()
+      return replay.agent
+    }
+  }
+  let identity: AgentSpec['identity']
+  try {
+    identity = await selectedIdentity(deps, auth, input.identityRef ?? null)
+  } catch (error) {
+    if (error instanceof IdentityAlreadyBoundError && keyHash && requestFingerprint) {
+      const replay = await deps.agents.findCreation(auth.project.id, keyHash)
+      if (replay) {
+        if (replay.fingerprint !== requestFingerprint) throw new CreationIdempotencyConflictError()
+        return replay.agent
+      }
+    }
+    throw error
+  }
+  const spec: AgentSpec = { ...input.spec, identity }
   await validateConfig(deps, auth, spec)
   const createdAt = new Date().toISOString()
   const { agent, version } = await deps.agents.insertWithVersion(
-    { projectId: auth.project.id, name: input.name, description: input.description, spec },
+    {
+      projectId: auth.project.id,
+      name: input.name,
+      description: input.description,
+      spec,
+      ...(keyHash && requestFingerprint ? { creationKeyHash: keyHash, creationFingerprint: requestFingerprint } : {}),
+    },
     createdAt,
   )
   return {

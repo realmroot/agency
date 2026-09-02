@@ -17,10 +17,12 @@ type RunnerConnection = {
   scope: RunnerScope
   socket: WebSocket
   assigned: number
+  sessionsAdvertised: boolean
 }
 
 type PendingSandboxRequest = {
-  runnerId: string
+  connection: RunnerConnection
+  sessionId: string
   resolve: (result: Record<string, unknown>) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
@@ -37,16 +39,19 @@ type PendingCommandRequest = {
 }
 
 type PendingBackfillRequest = {
-  runnerId: string
+  connection: RunnerConnection
+  sessionId: string
   resolve: (events: RelayedRunnerEvent[]) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
 }
 
+const MAX_ADVERTISED_SESSIONS = 1_000
+
 export class RunnerPoolObject implements DurableObject {
   private readonly runners = new Map<string, RunnerConnection>()
-  private readonly sessionRunners = new Map<string, string>()
-  private readonly sessionBackfillRunners = new Map<string, string>()
+  private readonly sessionRunners = new Map<string, RunnerConnection>()
+  private readonly sessionBackfillRunners = new Map<string, RunnerConnection>()
   private readonly pendingCommandRequests = new Map<string, PendingCommandRequest>()
   private readonly pendingSandboxRequests = new Map<string, PendingSandboxRequest>()
   private readonly pendingBackfillRequests = new Map<string, PendingBackfillRequest>()
@@ -87,6 +92,7 @@ export class RunnerPoolObject implements DurableObject {
     const previous = this.runners.get(scope.runnerId)
     if (previous) {
       this.rejectPendingCommands(previous, 'runner channel superseded')
+      this.rejectPendingSandbox(previous, 'runner channel superseded')
     }
     if (previous?.socket.readyState === WebSocket.OPEN) {
       previous.socket.close(4000, 'Superseded runner channel')
@@ -94,7 +100,7 @@ export class RunnerPoolObject implements DurableObject {
     const pair = new WebSocketPair()
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
     server.accept()
-    const connection: RunnerConnection = { scope, socket: server, assigned: 0 }
+    const connection: RunnerConnection = { scope, socket: server, assigned: 0, sessionsAdvertised: false }
     this.runners.set(scope.runnerId, connection)
     server.send(
       JSON.stringify({ type: 'runner.channel.accepted', runnerId: scope.runnerId, environmentId: scope.environmentId }),
@@ -107,7 +113,7 @@ export class RunnerPoolObject implements DurableObject {
     })
     this.durableState.waitUntil(
       (async () => {
-        await this.restoreActiveSessions(scope)
+        await this.restoreActiveSessions(connection)
         await this.dispatchAvailableWork(scope)
       })(),
     )
@@ -116,35 +122,39 @@ export class RunnerPoolObject implements DurableObject {
 
   private closeRunner(connection: RunnerConnection) {
     this.rejectPendingCommands(connection, 'runner channel closed')
+    this.rejectPendingSandbox(connection, 'runner channel closed')
     if (this.runners.get(connection.scope.runnerId) !== connection) {
       return
     }
     this.runners.delete(connection.scope.runnerId)
-    for (const [sessionId, runnerId] of this.sessionRunners) {
-      if (runnerId === connection.scope.runnerId) {
+    for (const [sessionId, owner] of this.sessionRunners) {
+      if (owner === connection) {
         this.sessionRunners.delete(sessionId)
       }
     }
-    for (const [sessionId, runnerId] of this.sessionBackfillRunners) {
-      if (runnerId === connection.scope.runnerId) {
+    for (const [sessionId, owner] of this.sessionBackfillRunners) {
+      if (owner === connection) {
         this.sessionBackfillRunners.delete(sessionId)
       }
     }
-    for (const [requestId, pending] of this.pendingSandboxRequests) {
-      if (pending.runnerId !== connection.scope.runnerId) {
-        continue
-      }
-      pending.reject(new Error('runner channel closed'))
-      clearTimeout(pending.timer)
-      this.pendingSandboxRequests.delete(requestId)
-    }
     for (const [requestId, pending] of this.pendingBackfillRequests) {
-      if (pending.runnerId !== connection.scope.runnerId) {
+      if (pending.connection !== connection) {
         continue
       }
       pending.reject(new Error('runner channel closed'))
       clearTimeout(pending.timer)
       this.pendingBackfillRequests.delete(requestId)
+    }
+  }
+
+  private rejectPendingSandbox(connection: RunnerConnection, message: string) {
+    for (const [requestId, pending] of this.pendingSandboxRequests) {
+      if (pending.connection !== connection) {
+        continue
+      }
+      pending.reject(new Error(message))
+      clearTimeout(pending.timer)
+      this.pendingSandboxRequests.delete(requestId)
     }
   }
 
@@ -157,6 +167,11 @@ export class RunnerPoolObject implements DurableObject {
       clearTimeout(pending.timer)
       this.pendingCommandRequests.delete(requestId)
     }
+  }
+
+  private failRunnerConnection(connection: RunnerConnection, code: number, reason: string): void {
+    this.closeRunner(connection)
+    connection.socket.close(code, reason)
   }
 
   private status(body: { sessionId?: string }): Response {
@@ -194,7 +209,8 @@ export class RunnerPoolObject implements DurableObject {
     }
   }
 
-  private async restoreActiveSessions(scope: RunnerScope): Promise<void> {
+  private async restoreActiveSessions(connection: RunnerConnection): Promise<void> {
+    const { scope } = connection
     const deps = createDeps(this.env)
     const page = await deps.workItems.list({
       projectId: scope.projectId,
@@ -203,12 +219,18 @@ export class RunnerPoolObject implements DurableObject {
       limit: 100,
       cursor: null,
     })
+    if (this.runners.get(scope.runnerId) !== connection || connection.sessionsAdvertised) {
+      return
+    }
     for (const workItem of page.rows) {
       if (workItem.environmentId !== scope.environmentId || !workItem.sessionId) {
         continue
       }
-      this.sessionRunners.set(workItem.sessionId, scope.runnerId)
-      this.sessionBackfillRunners.set(workItem.sessionId, scope.runnerId)
+      const owner = this.sessionRunners.get(workItem.sessionId)
+      if (!owner || owner === connection) {
+        this.sessionRunners.set(workItem.sessionId, connection)
+        this.sessionBackfillRunners.set(workItem.sessionId, connection)
+      }
     }
   }
 
@@ -246,8 +268,8 @@ export class RunnerPoolObject implements DurableObject {
         this.sendAssignedWork(connection, lease, { ...workItem, payload })
         connection.assigned += 1
         if (workItem.sessionId) {
-          this.sessionRunners.set(workItem.sessionId, connection.scope.runnerId)
-          this.sessionBackfillRunners.set(workItem.sessionId, connection.scope.runnerId)
+          this.sessionRunners.set(workItem.sessionId, connection)
+          this.sessionBackfillRunners.set(workItem.sessionId, connection)
         }
         return { ok: true, runnerId: connection.scope.runnerId, leaseId: lease.id }
       } catch {}
@@ -379,7 +401,13 @@ export class RunnerPoolObject implements DurableObject {
         },
         Math.max(1, timeoutMs),
       )
-      this.pendingSandboxRequests.set(requestId, { runnerId: connection.scope.runnerId, resolve, reject, timer })
+      this.pendingSandboxRequests.set(requestId, {
+        connection,
+        sessionId,
+        resolve,
+        reject,
+        timer,
+      })
       connection.socket.send(
         JSON.stringify({
           type: 'sandbox.request',
@@ -447,7 +475,7 @@ export class RunnerPoolObject implements DurableObject {
         connection.scope.projectId === projectId &&
         connection.scope.environmentId === workItem.environmentId
       ) {
-        this.sessionBackfillRunners.set(sessionId, workItem.runnerId)
+        this.sessionBackfillRunners.set(sessionId, connection)
         return connection
       }
     }
@@ -468,7 +496,7 @@ export class RunnerPoolObject implements DurableObject {
         },
         Math.max(1, timeoutMs),
       )
-      this.pendingBackfillRequests.set(requestId, { runnerId: connection.scope.runnerId, resolve, reject, timer })
+      this.pendingBackfillRequests.set(requestId, { connection, sessionId, resolve, reject, timer })
       connection.socket.send(
         JSON.stringify({
           type: 'session.backfill_request',
@@ -481,19 +509,19 @@ export class RunnerPoolObject implements DurableObject {
   }
 
   private connectionForSession(sessionId: string): RunnerConnection | null {
-    const runnerId = this.sessionRunners.get(sessionId)
-    if (!runnerId) {
+    const connection = this.sessionRunners.get(sessionId)
+    if (!connection || this.runners.get(connection.scope.runnerId) !== connection) {
       return null
     }
-    return this.runners.get(runnerId) ?? null
+    return connection
   }
 
   private connectionForBackfill(sessionId: string): RunnerConnection | null {
-    const runnerId = this.sessionBackfillRunners.get(sessionId)
-    if (!runnerId) {
+    const connection = this.sessionBackfillRunners.get(sessionId)
+    if (!connection || this.runners.get(connection.scope.runnerId) !== connection) {
       return null
     }
-    return this.runners.get(runnerId) ?? null
+    return connection
   }
 
   private async handleRunnerMessage(connection: RunnerConnection, data: unknown) {
@@ -507,23 +535,40 @@ export class RunnerPoolObject implements DurableObject {
     } catch {
       return
     }
+    if (this.runners.get(connection.scope.runnerId) !== connection) {
+      return
+    }
     if (frame.type === 'session.command.result') {
       this.resolveCommandResponse(connection, frame)
       return
     }
     if (frame.type === 'sandbox.response') {
-      this.resolveSandboxResponse(frame)
+      this.resolveSandboxResponse(connection, frame)
       return
     }
     if (frame.type === 'session.backfill_response') {
-      this.resolveBackfillResponse(frame)
+      this.resolveBackfillResponse(connection, frame)
+      return
+    }
+    if (frame.type === 'runner.sessions.active') {
+      await this.replaceRunnerSessions(connection, frame)
+      return
+    }
+    if (frame.type === 'runner.session.inactive') {
+      this.retireRunnerSession(connection, frame)
       return
     }
     if (frame.type === 'work.completed' || frame.type === 'work.failed' || frame.type === 'work.cancelled') {
       connection.assigned = Math.max(0, connection.assigned - 1)
       const sessionId = typeof frame.sessionId === 'string' ? frame.sessionId : null
       if (sessionId) {
-        this.sessionRunners.delete(sessionId)
+        const owner = this.sessionRunners.get(sessionId)
+        if (frame.sessionActive === true && owner === connection) {
+          this.sessionRunners.set(sessionId, connection)
+          this.sessionBackfillRunners.set(sessionId, connection)
+        } else if (frame.sessionActive !== true && owner === connection) {
+          this.sessionRunners.delete(sessionId)
+        }
       }
       this.durableState.waitUntil(this.dispatchAvailableWork(connection.scope))
       return
@@ -531,7 +576,7 @@ export class RunnerPoolObject implements DurableObject {
     if (frame.type !== 'runner.event') {
       return
     }
-    await this.handleRunnerEvent(connection.scope, frame)
+    await this.handleRunnerEvent(connection, frame)
   }
 
   private resolveCommandResponse(connection: RunnerConnection, record: Record<string, unknown>): void {
@@ -556,13 +601,75 @@ export class RunnerPoolObject implements DurableObject {
     pending.resolve(record.accepted === true)
   }
 
-  private resolveSandboxResponse(record: Record<string, unknown>): void {
+  private async replaceRunnerSessions(connection: RunnerConnection, record: Record<string, unknown>): Promise<void> {
+    if (record.runnerId !== connection.scope.runnerId || !Array.isArray(record.sessionIds)) {
+      return
+    }
+    if (record.sessionIds.length > MAX_ADVERTISED_SESSIONS) {
+      this.failRunnerConnection(connection, 1009, 'Too many active sessions advertised')
+      return
+    }
+    const advertisedSessionIds = [
+      ...new Set(
+        record.sessionIds.filter(
+          (sessionId): sessionId is string => typeof sessionId === 'string' && sessionId.length > 0,
+        ),
+      ),
+    ]
+    connection.sessionsAdvertised = true
+    let assignments: WorkItemRecord[]
+    try {
+      assignments = await createDeps(this.env).workItems.findLatestBySessions(
+        connection.scope.projectId,
+        advertisedSessionIds,
+      )
+    } catch (error) {
+      if (this.runners.get(connection.scope.runnerId) === connection) {
+        connection.sessionsAdvertised = false
+        this.failRunnerConnection(connection, 1011, 'Session ownership validation failed')
+      }
+      throw error
+    }
+    if (this.runners.get(connection.scope.runnerId) !== connection) {
+      return
+    }
+    const validatedSessionIds = advertisedSessionIds.filter((sessionId) =>
+      assignments.some(
+        (assignment) =>
+          assignment.sessionId === sessionId &&
+          assignment.runnerId === connection.scope.runnerId &&
+          assignment.environmentId === connection.scope.environmentId,
+      ),
+    )
+    for (const [sessionId, owner] of this.sessionRunners) {
+      if (owner === connection) {
+        this.sessionRunners.delete(sessionId)
+      }
+    }
+    for (const sessionId of validatedSessionIds) {
+      this.sessionRunners.set(sessionId, connection)
+      this.sessionBackfillRunners.set(sessionId, connection)
+    }
+  }
+
+  private retireRunnerSession(connection: RunnerConnection, record: Record<string, unknown>): void {
+    const sessionId = typeof record.sessionId === 'string' ? record.sessionId : null
+    if (record.runnerId !== connection.scope.runnerId || !sessionId) {
+      return
+    }
+    if (this.sessionRunners.get(sessionId) === connection) {
+      this.sessionRunners.delete(sessionId)
+    }
+  }
+
+  private resolveSandboxResponse(connection: RunnerConnection, record: Record<string, unknown>): void {
     const requestId = typeof record.requestId === 'string' ? record.requestId : null
-    if (!requestId) {
+    const sessionId = typeof record.sessionId === 'string' ? record.sessionId : null
+    if (!requestId || !sessionId || record.runnerId !== connection.scope.runnerId) {
       return
     }
     const pending = this.pendingSandboxRequests.get(requestId)
-    if (!pending) {
+    if (!pending || pending.connection !== connection || pending.sessionId !== sessionId) {
       return
     }
     clearTimeout(pending.timer)
@@ -578,13 +685,14 @@ export class RunnerPoolObject implements DurableObject {
     )
   }
 
-  private resolveBackfillResponse(record: Record<string, unknown>): void {
+  private resolveBackfillResponse(connection: RunnerConnection, record: Record<string, unknown>): void {
     const requestId = typeof record.eventId === 'string' ? record.eventId : null
-    if (!requestId) {
+    const sessionId = typeof record.sessionId === 'string' ? record.sessionId : null
+    if (!requestId || !sessionId) {
       return
     }
     const pending = this.pendingBackfillRequests.get(requestId)
-    if (!pending) {
+    if (!pending || pending.connection !== connection || pending.sessionId !== sessionId) {
       return
     }
     clearTimeout(pending.timer)
@@ -596,23 +704,27 @@ export class RunnerPoolObject implements DurableObject {
     const events = Array.isArray(record.events)
       ? record.events.flatMap((value) => {
           const event = relayedRunnerEventFrom(value)
-          return event ? [event] : []
+          return event?.sessionId === sessionId ? [event] : []
         })
       : []
     pending.resolve(events)
   }
 
-  private async handleRunnerEvent(scope: RunnerScope, frame: Record<string, unknown>) {
+  private async handleRunnerEvent(connection: RunnerConnection, frame: Record<string, unknown>) {
     const sessionId = typeof frame.sessionId === 'string' ? frame.sessionId : null
-    if (!sessionId) {
+    if (!sessionId || this.sessionRunners.get(sessionId) !== connection) {
       return
     }
     const raw = relayedRunnerEventFrom(frame.record)
-    if (!raw) {
+    if (!raw || raw.sessionId !== sessionId) {
       return
     }
     await fanOutRelayedEvent(this.env, {
-      scope: { organizationId: scope.organizationId, projectId: scope.projectId, sessionId },
+      scope: {
+        organizationId: connection.scope.organizationId,
+        projectId: connection.scope.projectId,
+        sessionId,
+      },
       raw,
     })
   }

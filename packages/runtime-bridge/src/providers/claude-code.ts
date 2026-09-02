@@ -432,7 +432,7 @@ export const claudeCodeProvider: RuntimeProvider = {
   },
 
   // Enumerate the models the host Claude Code login can serve via the SDK's
-  // supportedModels() on an idle query (same path as the AK CLI reference).
+  // supportedModels() uses the runtime's idle-query path.
   async listModels({ env }): Promise<string[] | null> {
     const home = hostHome(env)
     const queryEnv = { ...(process.env as Record<string, string>) }

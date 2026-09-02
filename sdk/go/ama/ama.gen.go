@@ -2856,6 +2856,48 @@ func (e ListAgentsParamsArchived) Valid() bool {
 	}
 }
 
+// Defines values for ListAgentsParamsRuntime.
+const (
+	Ama        ListAgentsParamsRuntime = "ama"
+	ClaudeCode ListAgentsParamsRuntime = "claude-code"
+	Codex      ListAgentsParamsRuntime = "codex"
+	Copilot    ListAgentsParamsRuntime = "copilot"
+)
+
+// Valid indicates whether the value is a known member of the ListAgentsParamsRuntime enum.
+func (e ListAgentsParamsRuntime) Valid() bool {
+	switch e {
+	case Ama:
+		return true
+	case ClaudeCode:
+		return true
+	case Codex:
+		return true
+	case Copilot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListAgentsParamsSchedulable.
+const (
+	ListAgentsParamsSchedulableFalse ListAgentsParamsSchedulable = "false"
+	ListAgentsParamsSchedulableTrue  ListAgentsParamsSchedulable = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListAgentsParamsSchedulable enum.
+func (e ListAgentsParamsSchedulable) Valid() bool {
+	switch e {
+	case ListAgentsParamsSchedulableFalse:
+		return true
+	case ListAgentsParamsSchedulableTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListConnectorsParamsAvailability.
 const (
 	ListConnectorsParamsAvailabilityAvailable   ListConnectorsParamsAvailability = "available"
@@ -3194,16 +3236,16 @@ func (e ReadUsageSummaryParamsGroupBy) Valid() bool {
 
 // Defines values for ListVaultsParamsArchived.
 const (
-	False ListVaultsParamsArchived = "false"
-	True  ListVaultsParamsArchived = "true"
+	ListVaultsParamsArchivedFalse ListVaultsParamsArchived = "false"
+	ListVaultsParamsArchivedTrue  ListVaultsParamsArchived = "true"
 )
 
 // Valid indicates whether the value is a known member of the ListVaultsParamsArchived enum.
 func (e ListVaultsParamsArchived) Valid() bool {
 	switch e {
-	case False:
+	case ListVaultsParamsArchivedFalse:
 		return true
-	case True:
+	case ListVaultsParamsArchivedTrue:
 		return true
 	default:
 		return false
@@ -3305,7 +3347,10 @@ type AgentSpec struct {
 type AgentStatus struct {
 	CurrentVersionId *string       `json:"currentVersionId"`
 	Phase            ResourcePhase `json:"phase"`
-	Version          int           `json:"version"`
+
+	// Schedulable Whether an active Inbox Trigger can currently resolve a compatible execution environment.
+	Schedulable bool `json:"schedulable"`
+	Version     int  `json:"version"`
 }
 
 // AgentSubagent defines model for AgentSubagent.
@@ -6124,10 +6169,27 @@ type ListAgentsParams struct {
 
 	// IdentityAgentId Exact Realmroot Agent actor id bound through the Agent Identity.
 	IdentityAgentId *string `form:"identityAgentId,omitempty" json:"identityAgentId,omitempty"`
+
+	// Runtime Exact runtime of the bound Realmroot Identity.
+	Runtime *ListAgentsParamsRuntime `form:"runtime,omitempty" json:"runtime,omitempty"`
+
+	// Schedulable Filter by current Inbox scheduling readiness.
+	Schedulable *ListAgentsParamsSchedulable `form:"schedulable,omitempty" json:"schedulable,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
 type ListAgentsParamsArchived string
+
+// ListAgentsParamsRuntime defines parameters for ListAgents.
+type ListAgentsParamsRuntime string
+
+// ListAgentsParamsSchedulable defines parameters for ListAgents.
+type ListAgentsParamsSchedulable string
+
+// CreateAgentParams defines parameters for CreateAgent.
+type CreateAgentParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
 type ListAuditRecordsParams struct {
@@ -6175,6 +6237,11 @@ type ListEnvironmentsParams struct {
 
 // ListEnvironmentsParamsArchived defines parameters for ListEnvironments.
 type ListEnvironmentsParamsArchived string
+
+// CreateEnvironmentParams defines parameters for CreateEnvironment.
+type CreateEnvironmentParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+}
 
 // ListIdentitiesParams defines parameters for ListIdentities.
 type ListIdentitiesParams struct {
@@ -8969,9 +9036,9 @@ type ClientInterface interface {
 	ListAgents(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAgentWithBody request with any body
-	CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9031,9 +9098,9 @@ type ClientInterface interface {
 	ListEnvironments(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateEnvironmentWithBody request with any body
-	CreateEnvironmentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateEnvironmentWithBody(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateEnvironment(ctx context.Context, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadEnvironment request
 	ReadEnvironment(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9323,8 +9390,8 @@ func (c *APIClient) ListAgents(ctx context.Context, params *ListAgentsParams, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateAgentWithBody(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9335,8 +9402,8 @@ func (c *APIClient) CreateAgentWithBody(ctx context.Context, contentType string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateAgent(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateAgentRequest(c.Server, body)
+func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAgentRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9587,8 +9654,8 @@ func (c *APIClient) ListEnvironments(ctx context.Context, params *ListEnvironmen
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateEnvironmentWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateEnvironmentRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateEnvironmentWithBody(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateEnvironmentRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9599,8 +9666,8 @@ func (c *APIClient) CreateEnvironmentWithBody(ctx context.Context, contentType s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateEnvironment(ctx context.Context, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateEnvironmentRequest(c.Server, body)
+func (c *APIClient) CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateEnvironmentRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10935,6 +11002,30 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 
 		}
 
+		if params.Runtime != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "runtime", *params.Runtime, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Schedulable != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "schedulable", *params.Schedulable, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -10950,18 +11041,18 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 }
 
 // NewCreateAgentRequest calls the generic CreateAgent builder with application/json body
-func NewCreateAgentRequest(server string, body CreateAgentJSONRequestBody) (*http.Request, error) {
+func NewCreateAgentRequest(server string, params *CreateAgentParams, body CreateAgentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateAgentRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateAgentRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateAgentRequestWithBody generates requests for CreateAgent with any type of body
-func NewCreateAgentRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -10985,6 +11076,21 @@ func NewCreateAgentRequestWithBody(server string, contentType string, body io.Re
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("idempotency-key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -11906,18 +12012,18 @@ func NewListEnvironmentsRequest(server string, params *ListEnvironmentsParams) (
 }
 
 // NewCreateEnvironmentRequest calls the generic CreateEnvironment builder with application/json body
-func NewCreateEnvironmentRequest(server string, body CreateEnvironmentJSONRequestBody) (*http.Request, error) {
+func NewCreateEnvironmentRequest(server string, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateEnvironmentRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateEnvironmentRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateEnvironmentRequestWithBody generates requests for CreateEnvironment with any type of body
-func NewCreateEnvironmentRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -11941,6 +12047,21 @@ func NewCreateEnvironmentRequestWithBody(server string, contentType string, body
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("idempotency-key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -16150,9 +16271,9 @@ type ClientWithResponsesInterface interface {
 	ListAgentsWithResponse(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*ListAgentsResponse, error)
 
 	// CreateAgentWithBodyWithResponse request with any body
-	CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+	CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
-	CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
+	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
@@ -16212,9 +16333,9 @@ type ClientWithResponsesInterface interface {
 	ListEnvironmentsWithResponse(ctx context.Context, params *ListEnvironmentsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentsResponse, error)
 
 	// CreateEnvironmentWithBodyWithResponse request with any body
-	CreateEnvironmentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
+	CreateEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
-	CreateEnvironmentWithResponse(ctx context.Context, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
+	CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
 	// ReadEnvironmentWithResponse request
 	ReadEnvironmentWithResponse(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error)
@@ -17122,6 +17243,7 @@ type CreateEnvironmentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19614,16 +19736,16 @@ func (c *ClientWithResponses) ListAgentsWithResponse(ctx context.Context, params
 }
 
 // CreateAgentWithBodyWithResponse request with arbitrary body returning *CreateAgentResponse
-func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgentWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithBodyWithResponse(ctx context.Context, params *CreateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgentWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateAgentResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
-	rsp, err := c.CreateAgent(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error) {
+	rsp, err := c.CreateAgent(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19808,16 +19930,16 @@ func (c *ClientWithResponses) ListEnvironmentsWithResponse(ctx context.Context, 
 }
 
 // CreateEnvironmentWithBodyWithResponse request with arbitrary body returning *CreateEnvironmentResponse
-func (c *ClientWithResponses) CreateEnvironmentWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
-	rsp, err := c.CreateEnvironmentWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateEnvironmentWithBodyWithResponse(ctx context.Context, params *CreateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
+	rsp, err := c.CreateEnvironmentWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateEnvironmentResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
-	rsp, err := c.CreateEnvironment(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error) {
+	rsp, err := c.CreateEnvironment(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -21614,6 +21736,13 @@ func ParseCreateEnvironmentResponse(rsp *http.Response) (*CreateEnvironmentRespo
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 

@@ -36,7 +36,7 @@ class ExecutionSpecInput:
             agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
             environment_id (None | str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             runtime (RuntimeName | Unset):  Example: codex.
-            env (ExecutionEnv | Unset):  Example: {'AK_API_URL': 'https://ak.example.com'}.
+            env (ExecutionEnv | Unset):  Example: {'SERVICE_API_URL': 'https://service.example.com'}.
             env_from (list[EnvFromEntry] | Unset):
             volumes (list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume] | Unset):
             volume_mounts (list[VolumeMount] | Unset):

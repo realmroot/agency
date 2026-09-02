@@ -314,7 +314,11 @@ func (s AgentsService) List(ctx context.Context, params *ListAgentsParams) (*Age
 }
 
 func (s AgentsService) Create(ctx context.Context, body CreateAgentRequest) (*Agent, error) {
-	response, err := s.client.raw.CreateAgentWithResponse(ctx, body)
+	return s.CreateWithParams(ctx, nil, body)
+}
+
+func (s AgentsService) CreateWithParams(ctx context.Context, params *CreateAgentParams, body CreateAgentRequest) (*Agent, error) {
+	response, err := s.client.raw.CreateAgentWithResponse(ctx, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -402,11 +406,15 @@ func (s EnvironmentsService) List(ctx context.Context, params *ListEnvironmentsP
 }
 
 func (s EnvironmentsService) Create(ctx context.Context, body CreateEnvironmentRequest) (*Environment, error) {
-	response, err := s.client.raw.CreateEnvironmentWithResponse(ctx, body)
+	return s.CreateWithParams(ctx, nil, body)
+}
+
+func (s EnvironmentsService) CreateWithParams(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentRequest) (*Environment, error) {
+	response, err := s.client.raw.CreateEnvironmentWithResponse(ctx, params, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
 }
 
 func (s EnvironmentsService) Get(ctx context.Context, environmentID string) (*Environment, error) {

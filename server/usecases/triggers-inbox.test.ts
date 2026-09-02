@@ -62,7 +62,7 @@ function agent(bound: boolean): Agent {
           }
         : null,
     },
-    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1 },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, schedulable: false },
   }
 }
 

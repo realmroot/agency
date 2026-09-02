@@ -93,6 +93,12 @@ async function existingRouteSession(deps: Deps, projectId: string, sessionId: st
   return deps.sessions.findRuntimeRow(projectId, sessionId)
 }
 
+async function routeSessionNeedsReplacement(deps: Deps, session: RuntimeSessionHandle) {
+  if (session.state === 'error' || session.archivedAt !== null) return true
+  if (session.metadata.sandboxBackend !== 'runner-sandbox') return false
+  return !(await deps.runnerChannel.isAccepted(session.id))
+}
+
 async function dispatchExisting(
   deps: Deps,
   auth: AuthScope,
@@ -147,7 +153,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
     sessionId = reserved.sessionId
     routeOwned = reserved.owned
     let existing = await existingRouteSession(deps, activation.projectId, sessionId)
-    if (existing && (existing.state === 'error' || existing.archivedAt !== null)) {
+    if (existing && (await routeSessionNeedsReplacement(deps, existing))) {
       const replacement = await repo.replaceSessionRoute({
         projectId: activation.projectId,
         triggerId: trigger.metadata.uid,

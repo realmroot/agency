@@ -26,8 +26,8 @@ Feature: Auth
     Given Realmroot issued an at+jwt access token for the exact AMA resource
     When a direct Console client sends Bearer authentication or the browser sends its opaque AMA session cookie
     Then both credentials resolve through the same exact-scope authorization context without a proof-of-possession requirement
-    And an explicitly trusted Web application may present its own Bearer token for the exact AMA resource
-    And the runner client also uses Bearer authentication while the Realmroot CLI client requires a fresh DPoP proof whose key matches cnf.jkt
+    And any Realmroot client may present an ordinary Bearer token issued for the exact AMA resource without a local client allowlist
+    And sender-constrained tokens require DPoP while the runner uses Bearer and the Realmroot CLI Agent requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
 
   @auth/dpop @api

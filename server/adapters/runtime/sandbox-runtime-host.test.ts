@@ -536,8 +536,8 @@ describe('session-runtime', () => {
         environmentSnapshot: { runtimeConfig: { image: 'ama-tool-executor' } },
         mcpServers: { servers: [{ connectorId: 'github' }] },
         env: {
-          AK_API_URL: 'https://ak.example.com',
-          AK_AGENT_ID: 'agent_123',
+          DOWNSTREAM_API_URL: 'https://downstream.example.com',
+          DOWNSTREAM_AGENT_ID: 'agent_123',
           GH_TOKEN: 'platform-injected-token',
           HOME: '/workspace/.home',
         },
@@ -583,8 +583,8 @@ describe('session-runtime', () => {
 
     expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', { keepAlive: true, normalizeId: true })
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
-      AK_API_URL: 'https://ak.example.com',
-      AK_AGENT_ID: 'agent_123',
+      DOWNSTREAM_API_URL: 'https://downstream.example.com',
+      DOWNSTREAM_AGENT_ID: 'agent_123',
       GH_TOKEN: 'platform-injected-token',
       HOME: '/workspace/.home',
     })

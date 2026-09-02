@@ -253,14 +253,14 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 		WorkDir:   workDir,
 		SessionID: "session_1",
 		Manifest: workspaceManifest(memoryMount(false, description, protocol.WorkspaceFile{
-			Path:    "ak-maintainer-heartbeat.md",
+			Path:    "downstream-heartbeat.md",
 			Content: "initial heartbeat\n",
 		})),
 	})
 	if err != nil {
 		t.Fatalf("expected workspace preparation success, got %v", err)
 	}
-	memoryPath := filepath.Join(workspace.Root, ".ama", "memory-stores", "memstore_1", "ak-maintainer-heartbeat.md")
+	memoryPath := filepath.Join(workspace.Root, ".ama", "memory-stores", "memstore_1", "downstream-heartbeat.md")
 	data, err := os.ReadFile(memoryPath)
 	if err != nil || string(data) != "initial heartbeat\n" {
 		t.Fatalf("expected mounted memory content, got %q err=%v", string(data), err)
@@ -275,7 +275,7 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 	if len(snapshots) != 1 || snapshots[0].MemoryRef != "ama://memories/memstore_1" || len(snapshots[0].Memories) != 1 {
 		t.Fatalf("expected one memory store snapshot, got %#v", snapshots)
 	}
-	if got := snapshots[0].Memories[0]; got.Path != "ak-maintainer-heartbeat.md" || got.Content != "updated heartbeat\n" {
+	if got := snapshots[0].Memories[0]; got.Path != "downstream-heartbeat.md" || got.Content != "updated heartbeat\n" {
 		t.Fatalf("expected updated memory snapshot, got %#v", got)
 	}
 	if _, err := os.Stat(filepath.Join(workspace.Root, ".ama", "resources.json")); !os.IsNotExist(err) {
@@ -679,7 +679,7 @@ func TestCleanupWorkspaceRemovesReadOnlyMemoryStore(t *testing.T) {
 		WorkDir:   t.TempDir(),
 		SessionID: "session_1",
 		Manifest: workspaceManifest(memoryMount(true, "", protocol.WorkspaceFile{
-			Path:    "ak-maintainer-heartbeat.md",
+			Path:    "downstream-heartbeat.md",
 			Content: "initial heartbeat\n",
 		})),
 	})
@@ -819,7 +819,7 @@ func TestPrepareWorkspaceUsesCloneCredentialWithoutPersistingGitAuth(t *testing.
 		t.Fatalf("expected clone credential store to be removed after prepare, got err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(workspace.Dir, ".home", ".git-credentials")); !os.IsNotExist(err) {
-		t.Fatalf("expected no worker git credential store before ak auth git, got err=%v", err)
+		t.Fatalf("expected no worker git credential store before downstream auth git, got err=%v", err)
 	}
 	repoPath := filepath.Join(workspace.Root, "repos", "github.com", "saltbo", "zpan")
 	helperCheck := exec.Command("git", "config", "--worktree", "--get-all", "credential.helper")

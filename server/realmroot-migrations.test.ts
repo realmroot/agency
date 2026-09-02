@@ -43,6 +43,29 @@ function expectResolvableIdentitySnapshot(
   ).toEqual({ id: expected.credentialId })
 }
 
+describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
+  it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0034_creation_idempotency.sql')
+
+    for (const table of ['agents', 'environments']) {
+      const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+      expect(columns.map(({ name }) => name)).toEqual(
+        expect.arrayContaining(['creation_key_hash', 'creation_fingerprint', 'creation_name', 'creation_description']),
+      )
+      const indexes = db.prepare(`PRAGMA index_list(${table})`).all() as Array<{ name: string; unique: number }>
+      expect(indexes).toContainEqual({
+        name: `idx_${table}_project_creation_idempotency`,
+        unique: 1,
+        origin: 'c',
+        partial: 0,
+        seq: expect.any(Number),
+      })
+    }
+    db.close()
+  })
+})
+
 describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
   it('keeps browser authorization attempts free of D1 client-key rate-limit state', () => {
     const db = new DatabaseSync(':memory:')

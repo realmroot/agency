@@ -17,6 +17,8 @@ coverage-*/
 playwright-report/
 test-results/
 .DS_Store
+__pycache__/
+*.pyc
 
 # agent skills (managed by daemon)
 .claude/skills/

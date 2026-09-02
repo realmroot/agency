@@ -20,9 +20,9 @@ T = TypeVar("T", bound="SessionCreateMetadataLabels")
 
 @_attrs_define
 class SessionCreateMetadataLabels:
-    """ 
+    """
         Example:
-            {'app': 'agent-kanban'}
+            {'app': 'automation-service'}
 
      """
 
@@ -33,7 +33,7 @@ class SessionCreateMetadataLabels:
 
 
     def to_dict(self) -> dict[str, Any]:
-        
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
 

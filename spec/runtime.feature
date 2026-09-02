@@ -53,6 +53,7 @@ Feature: Runtime
     Given a tool is dispatched that violates the agent allow-list or fails to execute
     When the runtime executes the turn
     Then a structured tool-result error is recorded in the transcript so the Agent can correct the call
+    And failed shell commands preserve bounded standard output and standard error in that tool result
     And only an unrecoverable model, provider, policy, or runtime failure terminalizes the turn
 
   @runtime/large-bridge-events @usecase

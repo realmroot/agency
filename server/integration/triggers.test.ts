@@ -79,9 +79,9 @@ async function createRuntimeCredential(authorization: string) {
   const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
     method: 'POST',
     body: JSON.stringify({
-      name: 'AK agent routing key',
+      name: 'Downstream agent routing key',
       type: 'opaque',
-      secret: { stringData: { value: 'raw-ak-agent-key' } },
+      secret: { stringData: { value: 'raw-downstream-agent-key' } },
     }),
   })
   expect(credentialRes.status).toBe(201)
@@ -449,7 +449,7 @@ describe('[CF] /api/v1/triggers', () => {
               environmentId: environment.id,
               runtime: 'ama',
               promptTemplate: 'Should not persist either.',
-              env: { AK_API_TOKEN: 'raw-token-value' },
+              env: { DOWNSTREAM_API_TOKEN: 'raw-token-value' },
               envFrom: [],
               volumes: [],
               volumeMounts: [],
@@ -543,13 +543,15 @@ describe('[CF] /api/v1/triggers', () => {
               environmentId: environment.id,
               runtime: 'ama',
               promptTemplate: 'Research current Canadian banking bonus offers.',
-              volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
-              volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' }],
-              env: { AK_API_URL: 'http://localhost:8788', AK_WORKER: agent.id },
+              volumes: [
+                { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' },
+              ],
+              volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service' }],
+              env: { DOWNSTREAM_API_URL: 'http://localhost:8788', DOWNSTREAM_WORKER: agent.id },
               envFrom: [
                 {
                   type: 'secret',
-                  name: 'AK_AGENT_KEY',
+                  name: 'DOWNSTREAM_AGENT_KEY',
                   secretRef: credential.activeVersion.secretRef,
                 },
               ],
@@ -582,13 +584,15 @@ describe('[CF] /api/v1/triggers', () => {
         source: { schedule: { intervalSeconds: 3600 } },
         template: {
           spec: {
-            volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
-            volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' }],
-            env: { AK_API_URL: 'http://localhost:8788', AK_WORKER: agent.id },
+            volumes: [
+              { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' },
+            ],
+            volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service' }],
+            env: { DOWNSTREAM_API_URL: 'http://localhost:8788', DOWNSTREAM_WORKER: agent.id },
             envFrom: [
               {
                 type: 'secret',
-                name: 'AK_AGENT_KEY',
+                name: 'DOWNSTREAM_AGENT_KEY',
                 secretRef: credential.activeVersion.secretRef,
               },
             ],
@@ -986,8 +990,8 @@ describe('[CF] /api/v1/triggers', () => {
         ticket: { id: 'T-123' },
         source: 'portal',
         metadata: {
-          labels: { 'agent-kanban.dev/session-key': 'github:owner/repo:issue:123' },
-          annotations: { 'agent-kanban.dev/source-event': 'issues.opened' },
+          labels: { 'downstream.example/session-key': 'github:owner/repo:issue:123' },
+          annotations: { 'downstream.example/source-event': 'issues.opened' },
         },
       }),
     })
@@ -1008,8 +1012,8 @@ describe('[CF] /api/v1/triggers', () => {
         triggerId,
         scheduledFor: null,
         metadata: {
-          labels: { 'agent-kanban.dev/session-key': 'github:owner/repo:issue:123' },
-          annotations: { 'agent-kanban.dev/source-event': 'issues.opened' },
+          labels: { 'downstream.example/session-key': 'github:owner/repo:issue:123' },
+          annotations: { 'downstream.example/source-event': 'issues.opened' },
         },
       },
       status: { phase: 'dispatched', heartbeatAt: null, idempotencyKey: `http:${triggerId}:ticket-123` },

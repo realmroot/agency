@@ -771,6 +771,10 @@ export type AgentStatus = {
     phase: ResourcePhase;
     currentVersionId: string | null;
     version: number;
+    /**
+     * Whether an active Inbox Trigger can currently resolve a compatible execution environment.
+     */
+    schedulable: boolean;
 };
 
 export type ResourcePhase = 'active' | 'archived';
@@ -2330,6 +2334,14 @@ export type ListAgentsData = {
          * Exact Realmroot Agent actor id bound through the Agent Identity.
          */
         identityAgentId?: string;
+        /**
+         * Exact runtime of the bound Realmroot Identity.
+         */
+        runtime?: 'ama' | 'codex' | 'claude-code' | 'copilot';
+        /**
+         * Filter by current Inbox scheduling readiness.
+         */
+        schedulable?: 'true' | 'false';
     };
     url: '/api/v1/agents';
 };
@@ -2362,6 +2374,9 @@ export type ListAgentsResponse = ListAgentsResponses[keyof ListAgentsResponses];
 
 export type CreateAgentData = {
     body: CreateAgentRequest;
+    headers?: {
+        'idempotency-key'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/agents';
@@ -2595,6 +2610,9 @@ export type ListEnvironmentsResponse = ListEnvironmentsResponses[keyof ListEnvir
 
 export type CreateEnvironmentData = {
     body: CreateEnvironmentRequest;
+    headers?: {
+        'idempotency-key'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/environments';
@@ -2613,6 +2631,10 @@ export type CreateEnvironmentErrors = {
      * The Realmroot token lacks the scope required for this resource
      */
     403: ErrorResponse;
+    /**
+     * Idempotency conflict
+     */
+    409: ErrorResponse;
 };
 
 export type CreateEnvironmentError = CreateEnvironmentErrors[keyof CreateEnvironmentErrors];

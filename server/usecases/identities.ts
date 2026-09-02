@@ -149,8 +149,11 @@ export async function createIdentity(
       'Organization-owned Identities are not supported.',
     )
   }
-  if (auth.agentActor || auth.oidc?.runnerId)
-    throw new IdentityProvisioningError('user_principal_required', 'Only a Realmroot User can create an Identity.')
+  if (auth.oidc?.runnerId)
+    throw new IdentityProvisioningError(
+      'user_principal_required',
+      'Only a Realmroot User or an Agent acting for its controller can create an Identity.',
+    )
   const keyHash = await digest(input.idempotencyKey)
   const fingerprint = await digest(
     JSON.stringify({

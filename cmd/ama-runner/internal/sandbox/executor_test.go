@@ -386,13 +386,13 @@ func TestProcessAdapterExecReportsFailureAndTimeout(t *testing.T) {
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
 	result, err := adapter.Execute(context.Background(), ToolRequest{
 		ToolName: "bash",
-		Input:    map[string]any{"command": "printf err >&2; exit 7"},
+		Input:    map[string]any{"command": "printf out; printf err >&2; exit 7"},
 		WorkDir:  workDir,
 	})
-	if err == nil || !strings.Contains(err.Error(), "code 7") {
+	if err == nil || err.Error() != "command exited with code 7; output is available in the structured tool result" {
 		t.Fatalf("expected exit error, got %v", err)
 	}
-	if result.Output["exitCode"] != 7 || result.Output["stderr"] != "err" {
+	if result.Output["exitCode"] != 7 || result.Output["stdout"] != "out" || result.Output["stderr"] != "err" {
 		t.Fatalf("unexpected failed output %#v", result.Output)
 	}
 
@@ -403,6 +403,39 @@ func TestProcessAdapterExecReportsFailureAndTimeout(t *testing.T) {
 		WorkDir:  workDir,
 	}); err == nil {
 		t.Fatal("expected command timeout")
+	}
+}
+
+func TestProcessAdapterBoundsStructuredFailureOutputWithoutLeakingItInError(t *testing.T) {
+	requireProcessAdapter(t)
+	const (
+		limit          = 64 * 1024
+		stdoutSentinel = "stdout-sensitive-sentinel"
+		stderrSentinel = "stderr-sensitive-sentinel"
+	)
+	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
+	result, err := adapter.Execute(context.Background(), ToolRequest{
+		ToolName: "bash",
+		Input: map[string]any{"command": `
+			awk 'BEGIN { printf "discarded-stdout-prefix"; for (i = 0; i < 70000; i++) printf "o"; printf "stdout-sensitive-sentinel" }'
+			awk 'BEGIN { printf "discarded-stderr-prefix"; for (i = 0; i < 70000; i++) printf "e"; printf "stderr-sensitive-sentinel" }' >&2
+			exit 9
+		`},
+		WorkDir: t.TempDir(),
+	})
+	if err == nil || err.Error() != "command exited with code 9; output is available in the structured tool result" {
+		t.Fatalf("expected generic command error, got %v", err)
+	}
+	if strings.Contains(err.Error(), stdoutSentinel) || strings.Contains(err.Error(), stderrSentinel) {
+		t.Fatalf("generic error leaked structured output: %q", err)
+	}
+	stdout, _ := result.Output["stdout"].(string)
+	stderr, _ := result.Output["stderr"].(string)
+	if len(stdout) != limit || !strings.HasSuffix(stdout, stdoutSentinel) || strings.Contains(stdout, "discarded-stdout-prefix") {
+		t.Fatalf("stdout was not retained as a %d-byte tail: length=%d suffix=%q", limit, len(stdout), stdout[len(stdout)-len(stdoutSentinel):])
+	}
+	if len(stderr) != limit || !strings.HasSuffix(stderr, stderrSentinel) || strings.Contains(stderr, "discarded-stderr-prefix") {
+		t.Fatalf("stderr was not retained as a %d-byte tail: length=%d suffix=%q", limit, len(stderr), stderr[len(stderr)-len(stderrSentinel):])
 	}
 }
 

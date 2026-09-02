@@ -1,7 +1,6 @@
 package sandbox
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -95,10 +94,10 @@ func (a ProcessAdapter) command(ctx context.Context, request ToolRequest, comman
 	cmd := exec.CommandContext(commandCtx, "sh", "-lc", command)
 	cmd.Dir = request.WorkDir
 	cmd.Env = env
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := newBoundedBuffer(64 * 1024)
+	stderr := newBoundedBuffer(64 * 1024)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	process, err := processtree.Start(cmd)
 	if err != nil {
 		return ToolResult{}, err
@@ -132,9 +131,41 @@ func (a ProcessAdapter) command(ctx context.Context, request ToolRequest, comman
 		return ToolResult{Output: output}, commandCtx.Err()
 	}
 	if waitErr != nil {
-		return ToolResult{Output: output}, fmt.Errorf("command exited with code %d", exitCode)
+		return ToolResult{Output: output}, commandFailure(exitCode)
 	}
 	return ToolResult{Output: output}, nil
+}
+
+func commandFailure(exitCode int) error {
+	return fmt.Errorf("command exited with code %d; output is available in the structured tool result", exitCode)
+}
+
+type boundedBuffer struct {
+	bytes []byte
+	limit int
+}
+
+func newBoundedBuffer(limit int) *boundedBuffer {
+	return &boundedBuffer{limit: limit}
+}
+
+func (b *boundedBuffer) Write(value []byte) (int, error) {
+	written := len(value)
+	if written >= b.limit {
+		b.bytes = append(b.bytes[:0], value[written-b.limit:]...)
+		return written, nil
+	}
+	overflow := len(b.bytes) + written - b.limit
+	if overflow > 0 {
+		copy(b.bytes, b.bytes[overflow:])
+		b.bytes = b.bytes[:len(b.bytes)-overflow]
+	}
+	b.bytes = append(b.bytes, value...)
+	return written, nil
+}
+
+func (b *boundedBuffer) String() string {
+	return string(b.bytes)
 }
 
 func (a ProcessAdapter) read(request ToolRequest) (ToolResult, error) {

@@ -32,6 +32,12 @@ describe('deployment environment example', () => {
     ])
   })
 
+  it('does not configure a product-specific Bearer client allowlist', () => {
+    const wrangler = readFileSync('wrangler.toml', 'utf8')
+    expect(wrangler).not.toContain('OIDC_TRUSTED_BEARER_CLIENT_IDS')
+    expect(readFileSync('.env.example', 'utf8')).not.toContain('OIDC_TRUSTED_BEARER_CLIENT_IDS')
+  })
+
   it('documents the self-hosted runner as Bearer-only', () => {
     const guide = readFileSync('docs/infra/self-hosted-runner.md', 'utf8')
 

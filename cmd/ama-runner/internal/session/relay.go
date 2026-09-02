@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -112,7 +113,28 @@ func (h *Relay) connectAndServe(ctx context.Context) error {
 	slog.Info("runner relay channel connected", "runnerId", h.runnerID)
 	h.setConn(conn)
 	defer h.clearConn()
+	if err := h.advertiseActiveSessions(ctx, conn); err != nil {
+		return err
+	}
 	return h.readLoop(ctx, conn)
+}
+
+func (h *Relay) advertiseActiveSessions(ctx context.Context, conn Channel) error {
+	h.mu.Lock()
+	sessionIDs := make([]string, 0, len(h.sessions))
+	for sessionID := range h.sessions {
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+	h.mu.Unlock()
+	slices.Sort(sessionIDs)
+
+	h.writeMu.Lock()
+	defer h.writeMu.Unlock()
+	return conn.WriteJSON(ctx, ama.JSON{
+		"type":       "runner.sessions.active",
+		"runnerId":   h.runnerID,
+		"sessionIds": sessionIDs,
+	})
 }
 
 func (h *Relay) waitForChannelAccepted(ctx context.Context, conn Channel) error {
@@ -215,9 +237,27 @@ func (h *Relay) handleSandboxRequest(ctx context.Context, conn Channel, message 
 		} else {
 			response["ok"] = true
 			response["result"] = result
+			if protocol.SandboxRequestType(request) == "sandbox.stop" {
+				h.removeClosedSession(sessionID, router)
+			}
 		}
 	}
 	h.writeResponse(ctx, conn, response, "runner failed to write sandbox response", sessionID)
+	if response["ok"] == true && protocol.SandboxRequestType(request) == "sandbox.stop" {
+		h.writeResponse(ctx, conn, ama.JSON{
+			"type":      "runner.session.inactive",
+			"runnerId":  h.runnerID,
+			"sessionId": sessionID,
+		}, "runner failed to retire sandbox session route", sessionID)
+	}
+}
+
+func (h *Relay) removeClosedSession(sessionID string, expected Handle) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.sessions[sessionID] == expected {
+		delete(h.sessions, sessionID)
+	}
 }
 
 func (h *Relay) routeCommand(ctx context.Context, conn Channel, message protocol.RunnerChannelMessage) {
@@ -489,7 +529,7 @@ func (h *Relay) RelayEvent(ctx context.Context, sessionID string, event ama.JSON
 	}
 }
 
-func (h *Relay) NotifyWorkFinished(ctx context.Context, sessionID string, leaseID string, state string) {
+func (h *Relay) NotifyWorkFinished(ctx context.Context, sessionID string, leaseID string, state string, sessionActive bool) {
 	frameType := "work.completed"
 	switch state {
 	case "failed":
@@ -503,9 +543,10 @@ func (h *Relay) NotifyWorkFinished(ctx context.Context, sessionID string, leaseI
 		return
 	}
 	if err := h.conn.WriteJSON(ctx, ama.JSON{
-		"type":      frameType,
-		"sessionId": sessionID,
-		"leaseId":   leaseID,
+		"type":          frameType,
+		"sessionId":     sessionID,
+		"leaseId":       leaseID,
+		"sessionActive": sessionActive,
 	}); err != nil {
 		slog.Warn("runner failed to notify work completion", "sessionId", sessionID, "leaseId", leaseID, "error", err)
 	}

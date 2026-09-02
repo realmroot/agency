@@ -95,6 +95,8 @@ Feature: Triggers
     When Inbox delivers notifications with equal, different, and absent routing keys
     Then equal keys share one Session under an atomic route binding
     And a terminal or archived bound Session is atomically replaced without splitting concurrent deliveries
+    And a runner-sandbox Session whose live runner route was lost is atomically replaced while an accepted route is reused
+    And a cloudflare-sandbox Session is reused without runner-channel preflight
     And different keys use different Sessions
     And notifications without a key each create a new Session
 

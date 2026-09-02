@@ -315,7 +315,7 @@ export const copilotProvider: RuntimeProvider = {
   },
 
   // Enumerate the models the host Copilot login can serve via the SDK's
-  // listModels() (same path as the AK CLI reference).
+  // listModels() uses the same idle-query path as other clients.
   async listModels({ env }): Promise<string[] | null> {
     const home = hostHome(env)
     const clientEnv = { ...(process.env as Record<string, string>), ...(home ? { HOME: home } : {}) }

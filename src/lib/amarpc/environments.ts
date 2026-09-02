@@ -30,7 +30,8 @@ export const environmentsApi = {
     rpcRequest<ListResponse<Environment>>(v1.environments.$get(queryArg<typeof v1.environments.$get>(options))),
   readEnvironment: (id: string) =>
     rpcRequest<Environment>(v1.environments[':environmentId'].$get({ param: { environmentId: id } })),
-  createEnvironment: (input: EnvironmentInput) => rpcRequest<Environment>(v1.environments.$post({ json: input })),
+  createEnvironment: (input: EnvironmentInput) =>
+    rpcRequest<Environment>(v1.environments.$post({ json: input, header: { 'idempotency-key': crypto.randomUUID() } })),
   updateEnvironment: (id: string, input: Partial<EnvironmentInput> & { archived?: boolean }) =>
     rpcRequest<Environment>(
       v1.environments[':environmentId'].$patch({

@@ -60,7 +60,7 @@ function request(overrides: Partial<RuntimeProviderRequest> = {}): RuntimeProvid
     prompt: 'USER_TASK',
     agentSnapshot: {
       systemPrompt: 'SYSTEM_PROMPT',
-      skills: ['saltbo/agent-kanban@ak-maintainer'],
+      skills: ['saltbo/downstream-service@downstream-operator'],
       subagents: [{ name: 'reviewer', description: 'Reviews pull requests' }],
     },
     ...overrides,
@@ -282,7 +282,9 @@ describe('codexProvider', () => {
     const codexOptions = firstCall![0] as {
       config: { developer_instructions: string }
     }
-    expect(codexOptions.config.developer_instructions).toContain('Skills: saltbo/agent-kanban@ak-maintainer')
+    expect(codexOptions.config.developer_instructions).toContain(
+      'Skills: saltbo/downstream-service@downstream-operator',
+    )
     expect(codexOptions.config.developer_instructions).toContain(
       'Available subagents: @reviewer (Reviews pull requests)',
     )

@@ -63,6 +63,96 @@ describe('[CF] /api/v1/environments [spec: environments/api-crud]', () => {
     })
   })
 
+  it('[spec: environments/create-idempotency] replays Environment creation and rejects changed data', async () => {
+    const authorization = await signIn()
+    expect((await jsonFetch('/api/v1/environments', authorization)).status).toBe(200)
+    const body = createEnvironmentBody({ name: 'Idempotent Machine' }, { type: 'self_hosted' })
+    const create = () =>
+      jsonFetch('/api/v1/environments', authorization, {
+        method: 'POST',
+        headers: { 'idempotency-key': 'environment-create-idempotency-1' },
+        body: JSON.stringify(body),
+      })
+    const [first, replay] = await Promise.all([create(), create()])
+    expect(first.status).toBe(201)
+    const firstEnvironment = (await first.json()) as {
+      metadata: {
+        uid: string
+        name: string
+        description: string | null
+        createdAt: string
+        updatedAt: string
+        archivedAt: string | null
+      }
+      status: { version: number }
+    }
+    expect(firstEnvironment.status.version).toBe(1)
+    expect(replay.status).toBe(201)
+    await expect(replay.json()).resolves.toMatchObject({
+      metadata: { uid: firstEnvironment.metadata.uid },
+      status: { version: 1 },
+    })
+
+    const update = await jsonFetch(`/api/v1/environments/${firstEnvironment.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        metadata: { name: 'Renamed Environment', description: 'Updated description.' },
+        spec: { variables: { MODE: { description: 'Updated after creation.' } } },
+      }),
+    })
+    expect(update.status).toBe(200)
+    await expect(update.json()).resolves.toMatchObject({
+      metadata: { name: 'Renamed Environment', description: 'Updated description.' },
+      spec: { variables: { MODE: { description: 'Updated after creation.' } } },
+      status: { version: 2 },
+    })
+
+    const archive = await jsonFetch(`/api/v1/environments/${firstEnvironment.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: true }),
+    })
+    expect(archive.status).toBe(200)
+    await expect(archive.json()).resolves.toMatchObject({
+      metadata: { name: 'Renamed Environment', description: 'Updated description.', archivedAt: expect.any(String) },
+      status: { phase: 'archived', version: 2 },
+    })
+
+    const postUpdateReplay = await create()
+    expect(postUpdateReplay.status).toBe(201)
+    const replayedEnvironment = (await postUpdateReplay.json()) as {
+      metadata: {
+        uid: string
+        name: string
+        description: string | null
+        createdAt: string
+        updatedAt: string
+        archivedAt: string | null
+      }
+      spec: { type: string; variables: Record<string, unknown> }
+      status: { phase: string; version: number }
+    }
+    expect(replayedEnvironment).toMatchObject({
+      metadata: {
+        uid: firstEnvironment.metadata.uid,
+        name: 'Idempotent Machine',
+        description: null,
+        archivedAt: null,
+      },
+      spec: { type: 'self_hosted', variables: {} },
+      status: { phase: 'active', version: 1 },
+    })
+    expect(replayedEnvironment.metadata.updatedAt).toBe(replayedEnvironment.metadata.createdAt)
+    expect(replayedEnvironment.metadata.createdAt).toBe(firstEnvironment.metadata.createdAt)
+
+    const conflict = await jsonFetch('/api/v1/environments', authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'environment-create-idempotency-1' },
+      body: JSON.stringify(createEnvironmentBody({ name: 'Changed Machine' }, { type: 'self_hosted' })),
+    })
+    expect(conflict.status).toBe(409)
+    await expect(conflict.json()).resolves.toMatchObject({ error: { type: 'idempotency_conflict' } })
+  })
+
   it('rejects removed legacy fields (credentials, status)', async () => {
     const authorization = await signIn()
     for (const body of [

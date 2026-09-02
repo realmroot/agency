@@ -16,6 +16,7 @@ const pythonModules = collectPythonModules(path.join(ROOT, 'sdk/python/ama_sdk/a
 validateSpec()
 rewriteTypeScriptGeneratedAuthBoundary()
 rewritePythonAuthenticatedClient()
+rewritePythonUnsetImports(path.join(ROOT, 'sdk/python/ama_sdk/api'))
 writeFileSync(path.join(ROOT, 'sdk/typescript/src/client.ts'), generateTypeScriptClient())
 writeFileSync(path.join(ROOT, 'sdk/go/ama/client.go'), generateGoClient())
 writeFileSync(path.join(ROOT, 'sdk/python/ama_sdk/facade.py'), generatePythonFacade())
@@ -100,6 +101,25 @@ class AuthenticatedClient(Client):
         return self._async_client
 `
   writeFileSync(clientPath, `${source.slice(0, start)}${replacement}`)
+}
+
+function rewritePythonUnsetImports(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name)
+    if (entry.isDirectory()) {
+      rewritePythonUnsetImports(entryPath)
+      continue
+    }
+    if (!entry.name.endsWith('.py')) continue
+    const source = readFileSync(entryPath, 'utf8')
+    if (!source.includes('| Unset') || /from \.{2,}types import [^\n]*\bUnset\b/.test(source)) continue
+    const updated = source.replace(
+      /from (\.{2,}types) import ([^\n]+)/,
+      (_match, modulePath, imports) => `from ${modulePath} import ${imports}, Unset`,
+    )
+    if (updated === source) throw new Error(`Generated Python Unset import was not found in ${entryPath}`)
+    writeFileSync(entryPath, updated)
+  }
 }
 
 function normalizeFacades(document) {
@@ -594,6 +614,20 @@ function generateGoMethod(serviceName, method) {
   const success = operation.success.empty
     ? `return unwrapEmpty(response.StatusCode(), response.Body${errors ? `, ${errors}` : ''})`
     : `return unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})`
+  const optionalHeaderOnly =
+    operation.queryParams.length === 0 &&
+    operation.headerParams.length > 0 &&
+    operation.headerParams.every((param) => !param.required)
+  if (optionalHeaderOnly) {
+    const baseArgs = ['ctx context.Context', ...pathArgs, bodyArg].filter(Boolean).join(', ')
+    const baseCallArgs = [
+      'ctx',
+      ...operation.pathParams.map((param) => goParamName(param.name)),
+      'nil',
+      ...(operation.bodyType ? ['body'] : []),
+    ]
+    return `func (s ${serviceName}) ${pascal(method.name)}(${baseArgs}) ${returnType} {\n\treturn s.${pascal(method.name)}WithParams(${baseCallArgs.join(', ')})\n}\n\nfunc (s ${serviceName}) ${pascal(method.name)}WithParams(${args}) ${returnType} {\n\tresponse, err := s.client.raw.${rawName}(${rawArgs.join(', ')})\n\tif err != nil {\n\t\t${operation.success.empty ? 'return err' : 'return nil, err'}\n\t}\n\t${success}\n}\n`
+  }
   return `func (s ${serviceName}) ${pascal(method.name)}(${args}) ${returnType} {\n\tresponse, err := s.client.raw.${rawName}(${rawArgs.join(', ')})\n\tif err != nil {\n\t\t${operation.success.empty ? 'return err' : 'return nil, err'}\n\t}\n\t${success}\n}\n`
 }
 
@@ -674,11 +708,21 @@ function generatePythonMethod(method) {
   const callArgs = operation.pathParams.map((param) => `${pythonName(param.name)}=${pythonName(param.name)}`)
   callArgs.push('client=self._client')
   if (operation.bodyType) callArgs.push('body=body')
-  for (const param of operation.headerParams) {
+  for (const param of operation.headerParams.filter((item) => item.required)) {
     callArgs.push(`${pythonName(param.name)}=${pythonName(param.name)}`)
   }
+  const optionalHeaders = operation.headerParams.filter((param) => !param.required)
+  if (optionalHeaders.length > 0) callArgs.push('**header_kwargs')
   if (operation.queryParams.length > 0) callArgs.push('**query')
-  return `def ${pythonName(method.name)}(${args}) -> Any:\n    return _unwrap(${moduleAlias}.sync_detailed(${callArgs.join(', ')}))`
+  const headerSetup = optionalHeaders
+    .map(
+      (param) =>
+        `if ${pythonName(param.name)} is not None:\n        header_kwargs["${pythonName(param.name)}"] = ${pythonName(param.name)}`,
+    )
+    .join('\n    ')
+  return `def ${pythonName(method.name)}(${args}) -> Any:${
+    optionalHeaders.length > 0 ? `\n    header_kwargs: dict[str, str] = {}\n    ${headerSetup}` : ''
+  }\n    return _unwrap(${moduleAlias}.sync_detailed(${callArgs.join(', ')}))`
 }
 
 function isWebSocketOperation(operationId) {

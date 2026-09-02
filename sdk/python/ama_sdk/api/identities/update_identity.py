@@ -5,7 +5,7 @@ from urllib.parse import quote
 import httpx
 
 from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
+from ...types import Response, UNSET, Unset
 from ... import errors
 
 from ...models.error_response import ErrorResponse

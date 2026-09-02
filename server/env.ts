@@ -35,9 +35,6 @@ export interface Env {
   // management through the client_credentials grant.
   INBOX_CLIENT_ID?: string
   INBOX_CLIENT_SECRET?: string
-  // Additional confidential/public Web applications allowed to present
-  // Realmroot Bearer tokens for the exact AMA Resource.
-  OIDC_TRUSTED_BEARER_CLIENT_IDS?: string
   // Exact Realmroot protected-resource audience accepted by the API. Required
   // outside the explicit E2E test gate.
   OIDC_RESOURCE?: string

@@ -398,8 +398,11 @@ class _AgentsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_agents_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, agent_id: str) -> Any:
         return _unwrap(read_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
@@ -438,8 +441,11 @@ class _EnvironmentsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_environments_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_environment_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_environment_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, environment_id: str) -> Any:
         return _unwrap(read_environment_api.sync_detailed(environment_id=environment_id, client=self._client))

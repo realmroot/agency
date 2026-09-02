@@ -33,6 +33,7 @@ export interface AgentStatus {
   phase: ResourcePhase
   currentVersionId: string | null
   version: number
+  schedulable: boolean
 }
 
 export interface AgentVersion {
