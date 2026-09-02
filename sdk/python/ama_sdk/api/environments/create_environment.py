@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_environment_request import CreateEnvironmentRequest
 from ...models.environment import Environment
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,14 +19,18 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateEnvironmentRequest,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["idempotency-key"] = idempotency_key
 
 
-    
 
-    
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -70,6 +75,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -89,11 +101,13 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateEnvironmentRequest,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[Environment | ErrorResponse]:
     """ Create an environment
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateEnvironmentRequest):
 
     Raises:
@@ -107,6 +121,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -120,11 +135,13 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateEnvironmentRequest,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Environment | ErrorResponse | None:
     """ Create an environment
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateEnvironmentRequest):
 
     Raises:
@@ -139,6 +156,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -146,11 +164,13 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateEnvironmentRequest,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[Environment | ErrorResponse]:
     """ Create an environment
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateEnvironmentRequest):
 
     Raises:
@@ -164,6 +184,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -177,11 +198,13 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateEnvironmentRequest,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Environment | ErrorResponse | None:
     """ Create an environment
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateEnvironmentRequest):
 
     Raises:
@@ -196,5 +219,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

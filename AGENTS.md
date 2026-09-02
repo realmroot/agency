@@ -14,6 +14,7 @@
 - Realmroot owns authentication, stable Agent identity, users, and organizations. The AMA backend completes the browser authorization-code PKCE flow and issues an opaque HttpOnly session; direct protected requests use Realmroot-issued Bearer or DPoP-bound access tokens. Both paths enforce exact AMA scopes through the same authorization context.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
 - AMA owns the control plane: Realmroot-backed tenancy and scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
+- AMA is infrastructure for downstream products and must not depend on or recognize any one of them. Do not add downstream-product names, client IDs, environment variables, routes, query parameters, authorization branches, fixtures, or compatibility behavior to AMA; expose generic resource capabilities and let each consumer own its business binding.
 - AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.
 - Cloudflare Agents SDK is not the v1.0 runtime contract. It may be added later as an adapter, but v1.0 must not require `/agents/*` compatibility.
 - Command-line automation uses `realmroot toolbox` against the published protected-resource metadata and OpenAPI document. Do not expose raw token or Bearer-token workflows.

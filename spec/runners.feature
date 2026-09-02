@@ -116,6 +116,16 @@ Feature: Runners
     And the lease channel rejects non-upgrade requests and finished leases
     And a finished lease can no longer be renewed or completed
 
+  @runners/ama-sandbox-channel @api
+  Scenario: Keep an AMA sandbox channel after startup work completes
+    Given a self-hosted AMA session has completed its startup lease
+    When the AMA runtime executes a sandbox tool for that session
+    Then the runner pool routes the sandbox request through the live runner channel
+    And a reconnect advertises and restores every active AMA Session route
+    And only the current runner connection may replace or retire its routes
+    And stopping the sandbox retires live routing while preserving event backfill
+    And completed CLI runtime sessions remain unavailable for live sandbox requests
+
   @runners/lease-recovery @api
   Scenario: Recover interrupted or expired leases to available work
     Given a runner lease for self-hosted work is interrupted or expires before renewal

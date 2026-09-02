@@ -53,10 +53,14 @@ async function createBrowserSessionCookie(authorization: string) {
   return `__Host-ama_session=${sessionId}`
 }
 
-async function issueBrowserSocketTicket(sessionId: string, cookie: string) {
+async function issueBrowserSocketTicket(sessionId: string, cookie: string, projectId?: string) {
   const response = await SELF.fetch(`https://example.com/api/v1/sessions/${sessionId}/socket-tickets`, {
     method: 'POST',
-    headers: { cookie, Origin: 'https://example.com' },
+    headers: {
+      cookie,
+      Origin: 'https://example.com',
+      ...(projectId ? { 'X-AMA-Project-ID': projectId } : {}),
+    },
   })
   expect(response.status).toBe(201)
   const body = (await response.json()) as { ticket: string; expiresAt: string }
@@ -598,13 +602,13 @@ describe('[CF] /api/v1/sessions', () => {
         name: 'Ship the first task',
         prompt: 'Ship the first task',
         metadata: { annotations: { ticket: 'AMA-1' } },
-        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
-        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban', readOnly: true }],
-        env: { AK_API_URL: 'https://ak.example.com', AK_AGENT_ID: 'agent_123' },
+        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' }],
+        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service', readOnly: true }],
+        env: { DOWNSTREAM_API_URL: 'https://downstream.example.com', DOWNSTREAM_AGENT_ID: 'agent_123' },
         envFrom: [
           {
             type: 'secret',
-            name: 'AK_AGENT_KEY',
+            name: 'DOWNSTREAM_AGENT_KEY',
             secretRef: githubCredential.activeVersion.secretRef,
           },
         ],
@@ -645,16 +649,16 @@ describe('[CF] /api/v1/sessions', () => {
         annotations: { ticket: 'AMA-1' },
       },
       spec: {
-        env: { AK_API_URL: 'https://ak.example.com', AK_AGENT_ID: 'agent_123' },
+        env: { DOWNSTREAM_API_URL: 'https://downstream.example.com', DOWNSTREAM_AGENT_ID: 'agent_123' },
         envFrom: [
           {
             type: 'secret',
-            name: 'AK_AGENT_KEY',
+            name: 'DOWNSTREAM_AGENT_KEY',
             secretRef: githubCredential.activeVersion.secretRef,
           },
         ],
-        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git' }],
-        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' }],
+        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' }],
+        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service' }],
       },
       status: {
         phase: 'idle',
@@ -1008,17 +1012,22 @@ describe('[CF] /api/v1/sessions', () => {
         environmentId: environment.id,
         runtime: 'ama',
         volumes: [
-          { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git', ref: 'main' },
+          {
+            name: 'repo',
+            type: 'git_repository',
+            url: 'https://github.com/saltbo/downstream-service.git',
+            ref: 'main',
+          },
           { name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` },
         ],
         volumeMounts: [
-          { name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban' },
+          { name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service' },
           { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
         ],
         envFrom: [
           {
             type: 'secret',
-            name: 'AK_AGENT_KEY',
+            name: 'DOWNSTREAM_AGENT_KEY',
             secretRef: credential.activeVersion.secretRef,
           },
         ],
@@ -1055,7 +1064,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(created).toMatchObject({
       spec: {
-        envFrom: [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef }],
+        envFrom: [{ type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef }],
       },
       status: {
         phase: 'pending',
@@ -1101,7 +1110,7 @@ describe('[CF] /api/v1/sessions', () => {
       {
         name: 'repo',
         type: 'git_repository',
-        url: 'https://github.com/saltbo/agent-kanban.git',
+        url: 'https://github.com/saltbo/downstream-service.git',
         ref: 'main',
       },
       {
@@ -1111,20 +1120,20 @@ describe('[CF] /api/v1/sessions', () => {
       },
     ])
     expect(storedPayload.volumeMounts).toEqual([
-      { name: 'repo', mountPath: '/workspace/repos/saltbo/agent-kanban', readOnly: true },
+      { name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service', readOnly: true },
       { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
     ])
     expect(storedPayload.agentSnapshot.systemPrompt).toContain('Workspace layout:')
     expect(storedPayload.agentSnapshot.systemPrompt).toContain(
-      'https://github.com/saltbo/agent-kanban.git at repos/saltbo/agent-kanban',
+      'https://github.com/saltbo/downstream-service.git at repos/saltbo/downstream-service',
     )
     expect(storedPayload.agentSnapshot.systemPrompt).toContain('memory (writable)')
     expect(storedPayload.agentSnapshot.systemPrompt).toContain(`.ama/memory-stores/${memoryStoreId}`)
     expect(storedPayload.agentSnapshot.systemPrompt).not.toContain('Review for correctness first.')
     expect(storedPayload.provider).toBe('workers-ai')
-    expect(storedPayload.env).not.toHaveProperty('AK_AGENT_KEY')
+    expect(storedPayload.env).not.toHaveProperty('DOWNSTREAM_AGENT_KEY')
     expect(storedPayload.envFrom).toEqual([
-      { type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
+      { type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
     ])
 
     await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
@@ -1132,7 +1141,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(lease).toBeTruthy()
     const consoleWorkItem = await readWorkItem(authorization, lease!.workItemId)
     expect(consoleWorkItem.payload).toMatchObject({
-      envFrom: [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef }],
+      envFrom: [{ type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef }],
     })
     expect(JSON.stringify(consoleWorkItem)).not.toContain('raw-github-token')
     expect(JSON.stringify(consoleWorkItem)).not.toContain('Review for correctness first.')
@@ -1144,7 +1153,7 @@ describe('[CF] /api/v1/sessions', () => {
       workspaceManifest: { mounts: Array<Record<string, unknown>> }
     }
     // Lease materialization resolves the vault value into the runner env.
-    expect(payload.env.AK_AGENT_KEY).toBe('raw-github-token')
+    expect(payload.env.DOWNSTREAM_AGENT_KEY).toBe('raw-github-token')
     expect(payload.workspaceManifest.mounts).toContainEqual({
       type: 'memory',
       name: 'memory',
@@ -1403,7 +1412,7 @@ describe('[CF] /api/v1/sessions', () => {
         envFrom: [
           {
             type: 'secret',
-            name: 'AK_AGENT_KEY',
+            name: 'DOWNSTREAM_AGENT_KEY',
             secretRef: 'ama://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
           },
         ],
@@ -1427,7 +1436,7 @@ describe('[CF] /api/v1/sessions', () => {
         envFrom: [
           {
             type: 'secret',
-            name: 'AK_AGENT_KEY',
+            name: 'DOWNSTREAM_AGENT_KEY',
             secretRef: 'ama://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
           },
         ],
@@ -1449,8 +1458,8 @@ describe('[CF] /api/v1/sessions', () => {
         runtime: 'ama',
         prompt: 'Reject duplicate env secret names',
         envFrom: [
-          { type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
-          { type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
+          { type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
+          { type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
         ],
       }),
     })
@@ -1731,10 +1740,10 @@ describe('[CF] /api/v1/sessions', () => {
     expect(events.some((record) => record.type === 'turn.completed')).toBe(true)
   })
 
-  it('streams backfill history and live events over the browser WebSocket', async () => {
+  it('keeps self-hosted ama browser backfill in the Session DO without runner scope', async () => {
     const authorization = await signIn()
     await connectMcp(authorization, 'github')
-    const environment = await createEnvironment(authorization)
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
     const agent = await createAgent(authorization)
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
@@ -1826,7 +1835,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(replay.status).toBe(401)
   })
 
-  it('opens the browser WebSocket from session ownership without project scope', async () => {
+  it('opens the standard Session socket for its authenticated project without client-specific query parameters [spec: sessions/connection]', async () => {
     const authorization = await signIn()
     const projectId = await createProject(authorization)
     const environment = await createEnvironment(authorization, {}, projectId)
@@ -1849,7 +1858,7 @@ describe('[CF] /api/v1/sessions', () => {
 
     const socketPath = `/api/v1/sessions/${created.metadata.uid}/socket`
     const browserCookie = await createBrowserSessionCookie(authorization)
-    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
+    const ticket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie, projectId)
     const socketRes = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(ticket),
     })
@@ -1858,12 +1867,26 @@ describe('[CF] /api/v1/sessions', () => {
     ws.accept()
     ws.close()
 
+    const otherProjectId = await createProject(authorization)
+    const sameOrganizationOtherProject = await SELF.fetch(
+      `https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: browserCookie,
+          Origin: 'https://example.com',
+          'X-AMA-Project-ID': otherProjectId,
+        },
+      },
+    )
+    expect(sameOrganizationOtherProject.status).toBe(404)
+
     const consoleBypass = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: { authorization, Upgrade: 'websocket' },
     })
     expect(consoleBypass.status).toBe(403)
 
-    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie)
+    const wrongOriginTicket = await issueBrowserSocketTicket(created.metadata.uid, browserCookie, projectId)
     const wrongOrigin = await SELF.fetch(`https://example.com${socketPath}`, {
       headers: browserTicketUpgradeHeaders(wrongOriginTicket, 'https://evil.example.com'),
     })
@@ -1932,11 +1955,12 @@ describe('[CF] /api/v1/sessions', () => {
     expect(malformed.status).toBe(401)
 
     const otherAuthorization = await signInUser('socket-ticket-intruder')
-    const otherTicket = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/socket-tickets`, otherAuthorization, {
+    const otherBrowserCookie = await createBrowserSessionCookie(otherAuthorization)
+    const otherTicket = await SELF.fetch(`https://example.com/api/v1/sessions/${created.metadata.uid}/socket-tickets`, {
       method: 'POST',
-      headers: { Origin: 'https://example.com' },
+      headers: { cookie: otherBrowserCookie, Origin: 'https://example.com' },
     })
-    expect(otherTicket.status).toBe(403)
+    expect(otherTicket.status).toBe(404)
 
     const runnerTicket = await jsonFetch(
       `/api/v1/sessions/${created.metadata.uid}/socket-tickets`,
@@ -2276,7 +2300,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(filtered.data[0]?.metadata).toMatchObject({ labels: { maintainerId: 'maintainer_a' } })
   })
 
-  it('enforces auth and project tenancy for session lifecycle [spec: sessions/auth-tenancy]', async () => {
+  it('isolates standard Session GET and socket routes by the authenticated project [spec: sessions/auth-tenancy]', async () => {
     const unauthenticatedRes = await SELF.fetch('https://example.com/api/v1/sessions')
     expect(unauthenticatedRes.status).toBe(401)
 
@@ -2293,7 +2317,12 @@ describe('[CF] /api/v1/sessions', () => {
         prompt: 'Check tenancy',
       }),
     })
-    const created = (await createRes.json()) as { id: string }
+    expect(createRes.status).toBe(201)
+    const created = (await createRes.json()) as { metadata: { uid: string } }
+
+    const ownProjectRead = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization)
+    expect(ownProjectRead.status).toBe(200)
+    await expect(ownProjectRead.json()).resolves.toMatchObject({ metadata: { uid: created.metadata.uid } })
 
     const otherCookie = await signIn({
       ...defaultClaims(),

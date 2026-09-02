@@ -78,14 +78,14 @@ async function createSessionEnvFrom(authorization: string) {
   const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
     method: 'POST',
     body: JSON.stringify({
-      name: 'AK agent session key',
+      name: 'Downstream agent session key',
       type: 'opaque',
-      secret: { stringData: { value: 'raw-ak-agent-key' } },
+      secret: { stringData: { value: 'raw-downstream-agent-key' } },
     }),
   })
   expect(credentialRes.status).toBe(201)
   const credential = (await credentialRes.json()) as { status: { activeVersion: { spec: { secretRef: string } } } }
-  return [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
+  return [{ type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
 }
 
 async function createSelfHostedSession(
@@ -177,7 +177,7 @@ describe('[CF] /api/v1/leases', () => {
     const runner = await registerActiveRunner(authorization, environment.id)
     const envFrom = await createSessionEnvFrom(authorization)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      env: { AK_API_URL: 'https://ak.example.test' },
+      env: { DOWNSTREAM_API_URL: 'https://downstream.example.test' },
       envFrom,
     })
 
@@ -227,9 +227,9 @@ describe('[CF] /api/v1/leases', () => {
     expect(leasedWork).toMatchObject({ state: 'leased', attempts: 1, leaseId, runnerId: runner.id })
     // Console reads retain persisted secret references even while a runner
     // holds the active lease; only the bound runner identity may materialize.
-    expect(leasedWork.payload.env).toEqual({ AK_API_URL: 'https://ak.example.test' })
+    expect(leasedWork.payload.env).toEqual({ DOWNSTREAM_API_URL: 'https://downstream.example.test' })
     expect(leasedWork.payload.envFrom).toEqual(envFrom)
-    expect(JSON.stringify(leasedWork)).not.toContain('raw-ak-agent-key')
+    expect(JSON.stringify(leasedWork)).not.toContain('raw-downstream-agent-key')
 
     // The same item cannot be claimed twice.
     const conflictRes = await claimLease(authorization, workItem.id, runner.id)
@@ -291,7 +291,7 @@ describe('[CF] /api/v1/leases', () => {
     const memoryStoreId = memoryStore.metadata.uid
     const memoryRes = await jsonFetch(`/api/v1/memory-stores/${memoryStoreId}/memories`, authorization, {
       method: 'POST',
-      body: JSON.stringify({ path: 'ak-maintainer-heartbeat.md', content: 'initial heartbeat\n' }),
+      body: JSON.stringify({ path: 'downstream-operator-heartbeat.md', content: 'initial heartbeat\n' }),
     })
     expect(memoryRes.status).toBe(201)
     const runner = await registerActiveRunner(authorization, environment.id)
@@ -313,7 +313,7 @@ describe('[CF] /api/v1/leases', () => {
           memoryStores: [
             {
               memoryRef: `ama://memories/${memoryStoreId}`,
-              memories: [{ path: 'ak-maintainer-heartbeat.md', content: 'updated heartbeat\n' }],
+              memories: [{ path: 'downstream-operator-heartbeat.md', content: 'updated heartbeat\n' }],
             },
           ],
         },
@@ -326,7 +326,7 @@ describe('[CF] /api/v1/leases', () => {
     await expect(memoriesRes.json()).resolves.toMatchObject({
       data: [
         expect.objectContaining({
-          spec: expect.objectContaining({ path: 'ak-maintainer-heartbeat.md', content: 'updated heartbeat\n' }),
+          spec: expect.objectContaining({ path: 'downstream-operator-heartbeat.md', content: 'updated heartbeat\n' }),
         }),
       ],
     })
@@ -368,7 +368,7 @@ describe('[CF] /api/v1/leases', () => {
           memoryStores: [
             {
               memoryRef: `ama://memories/${memoryStoreId}`,
-              memories: [{ path: 'ak-maintainer-heartbeat.md', content: 'late heartbeat\n' }],
+              memories: [{ path: 'downstream-operator-heartbeat.md', content: 'late heartbeat\n' }],
             },
           ],
         },

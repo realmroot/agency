@@ -20,9 +20,9 @@ T = TypeVar("T", bound="ExecutionEnv")
 
 @_attrs_define
 class ExecutionEnv:
-    """ 
+    """
         Example:
-            {'AK_API_URL': 'https://ak.example.com'}
+            {'SERVICE_API_URL': 'https://service.example.com'}
 
      """
 
@@ -33,7 +33,7 @@ class ExecutionEnv:
 
 
     def to_dict(self) -> dict[str, Any]:
-        
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
 

@@ -101,6 +101,8 @@ export interface AgentListQuery {
   projectId: string
   archived: boolean
   identityAgentId?: string
+  runtime?: string
+  schedulable?: boolean
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -118,6 +120,8 @@ export interface CreateAgentInput {
   name: string
   description: string | null
   spec: AgentSpec
+  creationKeyHash?: string
+  creationFingerprint?: string
 }
 
 export interface UpdateAgentFields {
@@ -134,6 +138,7 @@ export interface UpdateAgentFields {
 export interface AgentRepo {
   list(query: AgentListQuery): Promise<AgentListPage>
   find(projectId: string, agentId: string): Promise<Agent | null>
+  findCreation(projectId: string, creationKeyHash: string): Promise<{ agent: Agent; fingerprint: string } | null>
   // Live (non-archived) agents in the project, newest first.
   liveAgents(projectId: string): Promise<Agent[]>
 
@@ -367,6 +372,15 @@ export class EnvironmentArchivedError extends Error {
   }
 }
 
+export class CreationIdempotencyConflictError extends Error {
+  readonly code = 'idempotency_conflict'
+
+  constructor(message = 'Idempotency-Key was already used for a different creation request.') {
+    super(message)
+    this.name = 'CreationIdempotencyConflictError'
+  }
+}
+
 export interface EnvironmentListQuery {
   projectId: string
   archived: boolean
@@ -387,6 +401,8 @@ export interface CreateEnvironmentInput {
   name: string
   description: string | null
   config: EnvironmentConfig
+  creationKeyHash?: string
+  creationFingerprint?: string
 }
 
 export interface UpdateEnvironmentFields {
@@ -403,13 +419,19 @@ export interface UpdateEnvironmentFields {
 export interface EnvironmentRepo {
   list(query: EnvironmentListQuery): Promise<EnvironmentListPage>
   find(projectId: string, environmentId: string): Promise<Environment | null>
+  findCreation(
+    projectId: string,
+    creationKeyHash: string,
+  ): Promise<{ environment: Environment; fingerprint: string } | null>
 
   insertVersion(environment: Environment, config: EnvironmentConfig, createdAt: string): Promise<EnvironmentVersion>
   listVersions(projectId: string, environmentId: string): Promise<EnvironmentVersion[]>
   findVersion(projectId: string, environmentId: string, version: number): Promise<EnvironmentVersion | null>
 
-  insert(input: CreateEnvironmentInput, createdAt: string): Promise<Environment>
-  setCurrentVersion(environmentId: string, versionId: string): Promise<void>
+  insertWithInitialVersion(
+    input: CreateEnvironmentInput,
+    createdAt: string,
+  ): Promise<{ environment: Environment; version: EnvironmentVersion }>
   update(projectId: string, environmentId: string, fields: UpdateEnvironmentFields, updatedAt: string): Promise<void>
   unarchive(projectId: string, environmentId: string, updatedAt: string): Promise<void>
 
@@ -1543,6 +1565,7 @@ export interface WorkItemListQuery {
 // runner currently holding a still-active lease on the work item, or null.
 export interface WorkItemRepo {
   list(query: WorkItemListQuery): Promise<ListPageResult<WorkItemRecord>>
+  findLatestBySessions(projectId: string, sessionIds: string[]): Promise<WorkItemRecord[]>
   find(projectId: string, workItemId: string): Promise<WorkItemRecord | null>
   rawPayload(projectId: string, workItemId: string): Promise<Record<string, unknown> | null>
   activeLeaseRunnerId(projectId: string, workItemId: string): Promise<string | null>
@@ -2144,7 +2167,6 @@ export interface RuntimeSessionHandle {
 export interface SessionRepo {
   list(query: SessionListQuery): Promise<SessionListPage>
   find(projectId: string, sessionId: string): Promise<Session | null>
-  findByOrganization(organizationId: string, sessionId: string): Promise<Session | null>
   findReusableHttpTriggerSession(
     projectId: string,
     triggerId: string,

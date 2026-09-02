@@ -23,7 +23,11 @@ import {
   parseListCursor,
 } from '../openapi'
 import { createEnvironment, type UpdateEnvironmentPatch, updateEnvironment } from '../usecases/environments'
-import { EnvironmentArchivedError, EnvironmentValidationError } from '../usecases/ports'
+import {
+  CreationIdempotencyConflictError,
+  EnvironmentArchivedError,
+  EnvironmentValidationError,
+} from '../usecases/ports'
 import { requestId } from './request-context'
 
 type EnvironmentRoutes = OpenAPIHono<DepsEnv>
@@ -166,11 +170,15 @@ const createEnvironmentRoute = createRoute({
   tags: ['Environments'],
   summary: 'Create an environment',
   ...AuthenticatedOperation,
-  request: { body: { required: true, content: { 'application/json': { schema: CreateEnvironmentSchema } } } },
+  request: {
+    headers: z.object({ 'idempotency-key': z.string().min(8).max(200).optional() }),
+    body: { required: true, content: { 'application/json': { schema: CreateEnvironmentSchema } } },
+  },
   responses: {
     201: { description: 'Created environment', content: { 'application/json': { schema: EnvironmentSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Idempotency conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -288,6 +296,7 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
     })
     .openapi(createEnvironmentRoute, async (c) => {
       const body = c.req.valid('json')
+      const headers = c.req.valid('header')
       const deps = c.get('deps')
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
@@ -298,6 +307,7 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
           name: body.metadata.name,
           description: body.metadata.description ?? null,
           config: configFromPayload(body),
+          ...(headers['idempotency-key'] ? { idempotencyKey: headers['idempotency-key'] } : {}),
         })
         return c.json(serializeResource(environment), 201)
       } catch (error) {
@@ -446,6 +456,9 @@ function notFound(c: Parameters<Parameters<EnvironmentRoutes['openapi']>[1]>[0])
 function validationOr(c: Parameters<Parameters<EnvironmentRoutes['openapi']>[1]>[0], error: unknown) {
   if (error instanceof EnvironmentValidationError) {
     return c.json(domainValidation(error.message, error.fields), 400)
+  }
+  if (error instanceof CreationIdempotencyConflictError) {
+    return c.json({ error: { type: error.code, message: error.message } }, 409)
   }
   throw error
 }

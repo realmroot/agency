@@ -17,6 +17,14 @@ Feature: Identities
     Then AMA resumes with the original Identity, key, Vault, and remote Agent
     And a different request using that key is rejected as an idempotency conflict
 
+  @identities/agent-provision @usecase
+  Scenario: A controlled Agent provisions another personal Agent identity
+    Given an authenticated Realmroot Agent acts for its active controller in that controller's personal project
+    When the Agent creates an Identity with its current Resource access token
+    Then AMA delegates that exact Agent authority to Realmroot and provisions the child Identity
+    And the new Identity remains owned and controlled by the same Realmroot User
+    And no browser approval or User-token substitution occurs
+
   @identities/installation-identifiers @usecase
   Scenario: Generate standard Realmroot installation identifiers
     Given AMA is initializing a new Realmroot Agent installation
@@ -26,7 +34,7 @@ Feature: Identities
 
   @identities/personal-only @api
   Scenario: Reject unsupported Identity owners
-    Given an organization project or a non-User principal requests an Identity
+    Given an organization project or a Runner principal requests an Identity
     When AMA evaluates the create request
     Then it returns a stable organization_identity_not_supported or forbidden error
     And no Identity, Vault, key, or remote Agent is created
@@ -50,6 +58,7 @@ Feature: Identities
     Given an Agent version snapshots an Identity and its immutable runtime
     When a Session or Trigger omits runtime
     Then AMA persists the Identity runtime before environment and runner checks
+    And Realmroot-bound Sessions expose their canonical AMA Session id to the runtime
     And an explicit different runtime is rejected with identity_runtime_mismatch
     And an Agent without Identity still requires an explicit runtime
 

@@ -11,12 +11,12 @@ import { defaultEnvironmentPackages } from '@server/domain/environment'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import { newPrimaryKey } from '@server/id'
 import type {
-  CreateEnvironmentInput,
   EnvironmentListPage,
   EnvironmentListQuery,
   EnvironmentRepo,
   UpdateEnvironmentFields,
 } from '@server/usecases/ports'
+import { CreationIdempotencyConflictError } from '@server/usecases/ports'
 import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { connectors, environments, environmentVersions } from '../../db/schema'
@@ -168,6 +168,45 @@ function versionRecordFrom(row: EnvironmentVersionRow): EnvironmentVersion {
   }
 }
 
+async function findCreation(db: Db, projectId: string, creationKeyHash: string) {
+  const row = await db
+    .select()
+    .from(environments)
+    .where(and(eq(environments.projectId, projectId), eq(environments.creationKeyHash, creationKeyHash)))
+    .get()
+  if (!row?.creationFingerprint) return null
+  const initialVersion = await db
+    .select()
+    .from(environmentVersions)
+    .where(and(eq(environmentVersions.environmentId, row.id), eq(environmentVersions.version, 1)))
+    .get()
+  if (!initialVersion) throw new Error('Idempotent Environment creation is missing its initial version')
+  const environment = environmentRecordFrom(
+    {
+      ...row,
+      name: row.creationName ?? row.name,
+      description: row.creationDescription,
+      archivedAt: null,
+      currentVersionId: initialVersion.id,
+      updatedAt: row.createdAt,
+    },
+    1,
+  )
+  return {
+    environment: {
+      ...environment,
+      spec: versionRecordFrom(initialVersion).spec,
+      status: {
+        ...environment.status,
+        phase: resourcePhase(null),
+        currentVersionId: initialVersion.id,
+        version: 1,
+      },
+    },
+    fingerprint: row.creationFingerprint,
+  }
+}
+
 export function createEnvironmentRepo(db: Db): EnvironmentRepo {
   return {
     async list(query: EnvironmentListQuery): Promise<EnvironmentListPage> {
@@ -208,6 +247,10 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
         return null
       }
       return environmentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))
+    },
+
+    async findCreation(projectId, creationKeyHash) {
+      return findCreation(db, projectId, creationKeyHash)
     },
 
     async insertVersion(environment, config, createdAt): Promise<EnvironmentVersion> {
@@ -254,24 +297,54 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
       return row ? versionRecordFrom(row) : null
     },
 
-    async insert(input: CreateEnvironmentInput, createdAt): Promise<Environment> {
-      const row = {
-        id: newPrimaryKey(),
+    async insertWithInitialVersion(input, createdAt) {
+      const environmentId = newPrimaryKey()
+      const versionId = newPrimaryKey()
+      const environmentRow = {
+        id: environmentId,
         projectId: input.projectId,
         name: input.name,
         description: input.description,
         archivedAt: null,
-        currentVersionId: null,
+        currentVersionId: versionId,
+        creationKeyHash: input.creationKeyHash ?? null,
+        creationFingerprint: input.creationFingerprint ?? null,
+        creationName: input.creationKeyHash ? input.name : null,
+        creationDescription: input.creationKeyHash ? input.description : null,
         createdAt,
         updatedAt: createdAt,
         ...configColumns(input.config),
       }
-      await db.insert(environments).values(row)
-      return environmentRecordFrom(row, 0)
-    },
-
-    async setCurrentVersion(environmentId, versionId) {
-      await db.update(environments).set({ currentVersionId: versionId }).where(eq(environments.id, environmentId))
+      const versionRow = {
+        id: versionId,
+        environmentId,
+        projectId: input.projectId,
+        version: 1,
+        createdAt,
+        ...configColumns(input.config),
+      }
+      try {
+        await db.batch([
+          db.insert(environments).values(environmentRow),
+          db.insert(environmentVersions).values(versionRow),
+        ])
+      } catch (error) {
+        if (input.creationKeyHash && input.creationFingerprint) {
+          const replay = await findCreation(db, input.projectId, input.creationKeyHash)
+          if (replay) {
+            if (replay.fingerprint !== input.creationFingerprint) throw new CreationIdempotencyConflictError()
+            const version = await db
+              .select()
+              .from(environmentVersions)
+              .where(eq(environmentVersions.id, replay.environment.status.currentVersionId ?? ''))
+              .get()
+            if (!version) throw new Error('Idempotent Environment creation is missing its initial version')
+            return { environment: replay.environment, version: versionRecordFrom(version) }
+          }
+        }
+        throw error
+      }
+      return { environment: environmentRecordFrom(environmentRow, 1), version: versionRecordFrom(versionRow) }
     },
 
     async update(projectId, environmentId, fields: UpdateEnvironmentFields, updatedAt) {

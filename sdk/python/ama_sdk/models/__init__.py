@@ -202,6 +202,8 @@ from .lease import Lease
 from .lease_list_response import LeaseListResponse
 from .lease_state import LeaseState
 from .list_agents_archived import ListAgentsArchived
+from .list_agents_runtime import ListAgentsRuntime
+from .list_agents_schedulable import ListAgentsSchedulable
 from .list_connectors_availability import ListConnectorsAvailability
 from .list_environments_archived import ListEnvironmentsArchived
 from .list_identities_archived import ListIdentitiesArchived
@@ -758,6 +760,8 @@ __all__ = (
     "LeaseListResponse",
     "LeaseState",
     "ListAgentsArchived",
+    "ListAgentsRuntime",
+    "ListAgentsSchedulable",
     "ListConnectorsAvailability",
     "ListEnvironmentsArchived",
     "ListIdentitiesArchived",

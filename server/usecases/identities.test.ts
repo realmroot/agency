@@ -592,12 +592,28 @@ describe('[spec: identities/provision] createIdentity', () => {
     expect(fx.initialize).not.toHaveBeenCalled()
   })
 
-  it.each([
-    { agentActor: { issuer: 'https://realmroot.example/api/auth', subject: 'agent_1' } },
-    { oidc: { issuer: 'https://realmroot.example/api/auth', runnerId: 'runner_1' } },
-  ])('[spec: identities/personal-only] requires a User principal', async (principal) => {
+  it('[spec: identities/agent-provision] delegates the exact Agent token for the controller-owned child Identity', async () => {
     const fx = fixture()
-    await expect(createIdentity(fx.deps, { ...auth, ...principal }, input)).rejects.toMatchObject({
+    const agentTokenInput = { ...input, subjectToken: 'agent-resource-token' }
+    const result = await createIdentity(
+      fx.deps,
+      { ...auth, agentActor: { issuer: 'https://realmroot.example/api/auth', subject: 'agent_1' } },
+      agentTokenInput,
+    )
+
+    expect(result.status.state).toBe('active')
+    expect(fx.exchange).toHaveBeenCalledWith({ subjectToken: 'agent-resource-token', subject: 'user_1' })
+  })
+
+  it('[spec: identities/personal-only] rejects a Runner principal', async () => {
+    const fx = fixture()
+    await expect(
+      createIdentity(
+        fx.deps,
+        { ...auth, oidc: { issuer: 'https://realmroot.example/api/auth', runnerId: 'runner_1' } },
+        input,
+      ),
+    ).rejects.toMatchObject({
       code: 'user_principal_required',
     })
   })

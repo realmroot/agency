@@ -75,14 +75,14 @@ async function createSessionEnvFrom(authorization: string) {
   const credentialRes = await jsonFetch(`/api/v1/vaults/${vault.metadata.uid}/credentials`, authorization, {
     method: 'POST',
     body: JSON.stringify({
-      name: 'AK agent session key',
+      name: 'Downstream agent session key',
       type: 'opaque',
-      secret: { stringData: { value: 'raw-ak-agent-key' } },
+      secret: { stringData: { value: 'raw-downstream-agent-key' } },
     }),
   })
   expect(credentialRes.status).toBe(201)
   const credential = (await credentialRes.json()) as { status: { activeVersion: { spec: { secretRef: string } } } }
-  return [{ type: 'secret', name: 'AK_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
+  return [{ type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.status.activeVersion.spec.secretRef }]
 }
 
 async function createSelfHostedSession(
@@ -150,7 +150,7 @@ describe('[CF] /api/v1/work-items', () => {
     const agent = await createAgent(authorization)
     const envFrom = await createSessionEnvFrom(authorization)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      env: { AK_API_URL: 'https://ak.example.test' },
+      env: { DOWNSTREAM_API_URL: 'https://downstream.example.test' },
       envFrom,
     })
     expect(session).toMatchObject({ state: 'pending', stateReason: 'waiting-for-runner' })
@@ -266,14 +266,14 @@ describe('[CF] /api/v1/work-items', () => {
     expect(consoleRead.status).toBe(200)
     const consoleWork = (await consoleRead.json()) as { payload: Record<string, unknown> }
     expect(consoleWork.payload).toMatchObject({ envFrom, env: { PUBLIC_VALUE: 'visible' } })
-    expect(JSON.stringify(consoleWork)).not.toContain('raw-ak-agent-key')
+    expect(JSON.stringify(consoleWork)).not.toContain('raw-downstream-agent-key')
 
     const runnerRead = await jsonFetch(`/api/v1/work-items/${workItemId}`, runnerAuthorization)
     expect(runnerRead.status).toBe(200)
     const runnerWork = (await runnerRead.json()) as { payload: Record<string, unknown> }
     expect(runnerWork.payload).not.toHaveProperty('envFrom')
     expect(runnerWork.payload).toMatchObject({
-      env: { PUBLIC_VALUE: 'visible', AK_AGENT_KEY: 'raw-ak-agent-key' },
+      env: { PUBLIC_VALUE: 'visible', DOWNSTREAM_AGENT_KEY: 'raw-downstream-agent-key' },
     })
   })
 })

@@ -2,18 +2,22 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
@@ -23,6 +27,21 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+type signalingReadCloser struct {
+	*strings.Reader
+	close func() error
+}
+
+func (r signalingReadCloser) Close() error {
+	return r.close()
+}
 
 func TestResumeTokenBox(t *testing.T) {
 	var nilBox *resumeTokenBox
@@ -371,6 +390,187 @@ func TestLeaseWorkerRunAssignedHandlesFailureAndCancellationStates(t *testing.T)
 	cancel()
 	if err := worker.RunAssigned(ctx, work.lease, work.workItem); err == nil {
 		t.Fatal("expected cancelled invalid assigned work error")
+	}
+}
+
+// [spec: runners/ama-sandbox-channel]
+func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *testing.T) {
+	tests := []struct {
+		name       string
+		work       func() *fakeWork
+		configure  func(*Daemon, *fakeAMAServer)
+		wantErr    bool
+		wantActive bool
+	}{
+		{
+			name:       "successful parsed AMA session start",
+			work:       sessionStartLease,
+			wantActive: true,
+		},
+		{
+			name: "successful external runtime session start",
+			work: func() *fakeWork { return codexSessionStartLease("complete the task") },
+			configure: func(daemon *Daemon, _ *fakeAMAServer) {
+				daemon.RuntimeAdapter = &fakeRuntimeAdapter{result: ama.JSON{"exitCode": 0}}
+			},
+		},
+		{
+			name: "successful non-session work",
+			work: approvedLease,
+		},
+		{
+			name: "malformed work payload",
+			work: func() *fakeWork {
+				work := approvedLease()
+				work.workItem.Payload = ama.JSON{"protocol": "bad"}
+				return work
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed AMA session start",
+			work: sessionStartLease,
+			configure: func(_ *Daemon, client *fakeAMAServer) {
+				client.eventErr = errors.New("runtime start event failed")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			work := test.work()
+			channel := newFakeSessionChannel(ama.JSON{"type": "runner.channel.accepted"})
+			client := &fakeAMAServer{lease: work, hubChannel: channel}
+			daemon := testDaemon(client, &fakeAdapter{result: sandbox.ToolResult{Output: map[string]any{"exitCode": 0}}})
+			if test.configure != nil {
+				test.configure(&daemon, client)
+			}
+			relayCtx, cancelRelay := context.WithCancel(context.Background())
+			defer cancelRelay()
+			daemon.startRelay(relayCtx)
+			waitForChannelWriteCount(t, channel, 1)
+
+			worker := daemon.leaseWorker()
+			worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+				return []runtime.RunnerRuntime{
+					{Runtime: "ama", State: runtime.RuntimeStateReady},
+					{Runtime: "codex", Models: []string{"gpt-5.3-codex"}, State: runtime.RuntimeStateReady},
+				}
+			}
+			err := worker.RunAssigned(context.Background(), work.lease, work.workItem)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("RunAssigned error = %v, wantErr %v", err, test.wantErr)
+			}
+
+			var completion ama.JSON
+			for _, message := range channel.writtenMessages() {
+				if typ, _ := message["type"].(string); strings.HasPrefix(typ, "work.") {
+					completion = message
+				}
+			}
+			if completion == nil {
+				t.Fatalf("expected work completion frame, got %v", channel.writtenMessages())
+			}
+			if completion["sessionActive"] != test.wantActive {
+				t.Fatalf("sessionActive = %v, want %v in %v", completion["sessionActive"], test.wantActive, completion)
+			}
+		})
+	}
+}
+
+// [spec: runners/ama-sandbox-channel]
+func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *testing.T) {
+	work := sessionStartLease()
+	runCtx, cancelRun := context.WithCancel(t.Context())
+	defer cancelRun()
+	waitCtx, cancelWait := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancelWait()
+	activeUpdateStarted := make(chan struct{})
+	releaseActiveUpdate := make(chan struct{})
+	waitForSignal := func(ctx context.Context, signal <-chan struct{}, label string) error {
+		select {
+		case <-signal:
+			return nil
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for %s: %w", label, ctx.Err())
+		}
+	}
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		response := func(status int) *http.Response {
+			header := make(http.Header)
+			header.Set("content-type", "application/json")
+			return &http.Response{
+				StatusCode: status,
+				Header:     header,
+				Body:       http.NoBody,
+				Request:    request,
+			}
+		}
+		if strings.HasSuffix(request.URL.Path, "/events") {
+			if err := waitForSignal(waitCtx, activeUpdateStarted, "active lease renewal to start"); err != nil {
+				return nil, err
+			}
+			result := response(http.StatusCreated)
+			result.Body = io.NopCloser(strings.NewReader(`{"accepted":1}`))
+			return result, nil
+		}
+		if request.Method != http.MethodPatch || !strings.HasPrefix(request.URL.Path, "/api/v1/leases/") {
+			return nil, fmt.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+		}
+		var update ama.UpdateLeaseRequest
+		if err := json.NewDecoder(request.Body).Decode(&update); err != nil {
+			return nil, err
+		}
+		if leaseState(update) == "active" {
+			close(activeUpdateStarted)
+			if err := waitForSignal(waitCtx, releaseActiveUpdate, "completed lease response to close"); err != nil {
+				return nil, err
+			}
+			return nil, errors.New("renew transport failed")
+		}
+		body, err := json.Marshal(work.lease)
+		if err != nil {
+			return nil, err
+		}
+		result := response(http.StatusOK)
+		result.Body = signalingReadCloser{
+			Reader: strings.NewReader(string(body)),
+			close: func() error {
+				close(releaseActiveUpdate)
+				return waitForSignal(waitCtx, request.Context().Done(), "renewal failure to cancel the lease context")
+			},
+		}
+		return result, nil
+	})
+	client, err := ama.NewRunner(ama.ClientConfig{
+		BaseURL:    "https://runner.test",
+		HTTPClient: &http.Client{Transport: transport},
+	})
+	if err != nil {
+		t.Fatalf("create runner client: %v", err)
+	}
+	workDir := t.TempDir()
+	daemon := testDaemon(&fakeAMAServer{}, &fakeAdapter{})
+	daemon.Config.WorkDir = workDir
+	daemon.Config.RenewInterval = time.Millisecond
+	worker := daemon.leaseWorker()
+	worker.Client = client
+	worker.Relay = runnersession.NewRelay(&fakeAMAServer{}, "runner_1", workDir)
+	worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
+		return []runtime.RunnerRuntime{{Runtime: "ama", State: runtime.RuntimeStateReady}}
+	}
+
+	err = worker.RunAssigned(runCtx, work.lease, work.workItem)
+	if waitCtx.Err() != nil {
+		t.Fatalf("renewal synchronization used the watchdog deadline: %v", waitCtx.Err())
+	}
+	if err == nil || !strings.Contains(err.Error(), "runner lease renewal failed") {
+		t.Fatalf("expected non-race renewal failure, got %v", err)
+	}
+	workspacePath := filepath.Join(workDir, workspace.SessionsDirName, "session_1", "workspace")
+	if _, statErr := os.Stat(workspacePath); !os.IsNotExist(statErr) {
+		t.Fatalf("expected failed AMA handle workspace to be cleaned, got %v", statErr)
 	}
 }
 

@@ -291,3 +291,80 @@ func TestIdentityFacadeForwardsRequiredIdempotencyKey(t *testing.T) {
 		t.Fatal("expected fixture response to stop after header capture")
 	}
 }
+
+func TestCreationFacadesHandleOptionalIdempotencyKey(t *testing.T) {
+	tests := []struct {
+		name           string
+		path           string
+		idempotencyKey string
+		invoke         func(context.Context, *Client, *string) error
+	}{
+		{
+			name: "agents legacy create omits header",
+			path: "/api/v1/agents",
+			invoke: func(ctx context.Context, client *Client, _ *string) error {
+				_, err := client.Agents.Create(ctx, CreateAgentRequest{})
+				return err
+			},
+		},
+		{
+			name:           "agents create with params forwards header",
+			path:           "/api/v1/agents",
+			idempotencyKey: "agent-idempotency-1",
+			invoke: func(ctx context.Context, client *Client, key *string) error {
+				_, err := client.Agents.CreateWithParams(ctx, &CreateAgentParams{IdempotencyKey: key}, CreateAgentRequest{})
+				return err
+			},
+		},
+		{
+			name: "environments legacy create omits header",
+			path: "/api/v1/environments",
+			invoke: func(ctx context.Context, client *Client, _ *string) error {
+				_, err := client.Environments.Create(ctx, CreateEnvironmentRequest{})
+				return err
+			},
+		},
+		{
+			name:           "environments create with params forwards header",
+			path:           "/api/v1/environments",
+			idempotencyKey: "environment-idempotency-1",
+			invoke: func(ctx context.Context, client *Client, key *string) error {
+				_, err := client.Environments.CreateWithParams(
+					ctx,
+					&CreateEnvironmentParams{IdempotencyKey: key},
+					CreateEnvironmentRequest{},
+				)
+				return err
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != test.path || r.Method != http.MethodPost {
+					t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+				}
+				if got := r.Header.Get("idempotency-key"); got != test.idempotencyKey {
+					t.Fatalf("expected idempotency key %q, got %q", test.idempotencyKey, got)
+				}
+				w.Header().Set("content-type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+				_, _ = w.Write([]byte(`{"error":{"type":"fixture_stop","message":"header captured"}}`))
+			}))
+			defer server.Close()
+
+			client, err := New(ClientConfig{BaseURL: server.URL})
+			if err != nil {
+				t.Fatalf("expected client, got %v", err)
+			}
+			var key *string
+			if test.idempotencyKey != "" {
+				key = &test.idempotencyKey
+			}
+			if err := test.invoke(context.Background(), client, key); err == nil {
+				t.Fatal("expected fixture response to stop after header capture")
+			}
+		})
+	}
+}

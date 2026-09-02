@@ -169,12 +169,12 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     })
   })
 
-  it('accepts a trusted Web application Bearer token for the exact AMA resource', async () => {
-    const issuer = 'https://id-trusted-web.test/api/auth'
+  it('accepts an unknown downstream client Bearer token for the exact AMA resource', async () => {
+    const issuer = 'https://id-downstream.test/api/auth'
     const { token, jwks } = await signedToken({
       issuer,
       claims: {
-        client_id: 'ak-web',
+        client_id: 'downstream-service',
         cnf: undefined,
       },
     })
@@ -182,36 +182,12 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
 
     await expect(
       getBearerClaims(
-        envFor(issuer, { OIDC_TRUSTED_BEARER_CLIENT_IDS: 'another-web, ak-web' }),
+        envFor(issuer),
         new Request('https://ama.example.com/api/v1/agents', {
           headers: { authorization: `Bearer ${token}` },
         }),
       ),
-    ).resolves.toMatchObject({ client_id: 'ak-web', sub: 'user_real' })
-  })
-
-  it('rejects a Web application that is not explicitly trusted', async () => {
-    const issuer = 'https://id-untrusted-web.test/api/auth'
-    const { token, jwks } = await signedToken({
-      issuer,
-      claims: {
-        client_id: 'unknown-web',
-        cnf: undefined,
-      },
-    })
-    stubJwks(jwks)
-
-    await expect(
-      getBearerClaims(
-        envFor(issuer, { OIDC_TRUSTED_BEARER_CLIENT_IDS: 'ak-web' }),
-        new Request('https://ama.example.com/api/v1/agents', {
-          headers: { authorization: `Bearer ${token}` },
-        }),
-      ),
-    ).rejects.toMatchObject({
-      name: 'OidcError',
-      message: 'Realmroot access token client is not allowed',
-    })
+    ).resolves.toMatchObject({ client_id: 'downstream-service', sub: 'user_real' })
   })
 
   it('rejects a sender-constrained Console JWT presented as Bearer', async () => {
@@ -278,6 +254,13 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
       .setIssuedAt()
       .sign(privateKey)
     const env = envFor(issuer, { DB: replayDb() })
+
+    await expect(
+      getBearerClaims(env, new Request(url, { headers: { authorization: `Bearer ${token}` } })),
+    ).rejects.toMatchObject({
+      name: 'OidcError',
+      message: 'Realmroot Agent clients require DPoP',
+    })
 
     await expect(
       getDpopClaims(env, new Request(url, { headers: { authorization: `DPoP ${token}`, dpop: proof } })),

@@ -1,5 +1,5 @@
 import type { ListPageResult, WorkItemListQuery, WorkItemRecord, WorkItemRepo } from '@server/usecases/ports'
-import { and, desc, eq, gte, like, lt, lte, or } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { leases, workItems } from '../../db/schema'
 
@@ -59,6 +59,32 @@ export function createWorkItemRepo(db: Db): WorkItemRepo {
         .limit(query.limit + 1)
       const hasMore = rows.length > query.limit
       return { rows: rows.slice(0, query.limit).map(recordFrom), hasMore }
+    },
+
+    async findLatestBySessions(projectId, sessionIds) {
+      if (sessionIds.length === 0) return []
+      const rows: WorkItemRow[] = []
+      for (let offset = 0; offset < sessionIds.length; offset += 90) {
+        rows.push(
+          ...(await db
+            .select()
+            .from(workItems)
+            .where(
+              and(
+                eq(workItems.projectId, projectId),
+                inArray(workItems.sessionId, sessionIds.slice(offset, offset + 90)),
+              ),
+            )
+            .orderBy(desc(workItems.createdAt), desc(workItems.id))),
+        )
+      }
+      const latestBySession = new Map<string, WorkItemRow>()
+      for (const row of rows) {
+        if (row.sessionId && !latestBySession.has(row.sessionId)) {
+          latestBySession.set(row.sessionId, row)
+        }
+      }
+      return [...latestBySession.values()].map(recordFrom)
     },
 
     async find(projectId, workItemId) {

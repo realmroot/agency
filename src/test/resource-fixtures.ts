@@ -68,6 +68,7 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       phase: overrides.archivedAt ? 'archived' : 'active',
       currentVersionId: overrides.currentVersionId === undefined ? 'agentver_1' : overrides.currentVersionId,
       version: overrides.version ?? 1,
+      schedulable: false,
     },
   }
 }

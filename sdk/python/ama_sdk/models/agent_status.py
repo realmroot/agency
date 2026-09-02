@@ -27,11 +27,14 @@ class AgentStatus:
             phase (ResourcePhase):
             current_version_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000003.
             version (int):  Example: 1.
+            schedulable (bool): Whether an active Inbox Trigger can currently resolve a compatible execution environment.
+                Example: True.
      """
 
     phase: ResourcePhase
     current_version_id: None | str
     version: int
+    schedulable: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -46,6 +49,8 @@ class AgentStatus:
 
         version = self.version
 
+        schedulable = self.schedulable
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -53,6 +58,7 @@ class AgentStatus:
             "phase": phase,
             "currentVersionId": current_version_id,
             "version": version,
+            "schedulable": schedulable,
         })
 
         return field_dict
@@ -77,10 +83,13 @@ class AgentStatus:
 
         version = d.pop("version")
 
+        schedulable = d.pop("schedulable")
+
         agent_status = cls(
             phase=phase,
             current_version_id=current_version_id,
             version=version,
+            schedulable=schedulable,
         )
 
 

@@ -3,7 +3,7 @@
 // A queue-consumer invocation owns at most ~15 minutes of wall clock; a cloud
 // session still "running" (turn) or "pending" (startup) past this window lost
 // its consumer and would otherwise stay stuck forever. Marking it as error lets
-// clients (and AK's reconcile sweep) recover the work.
+// clients and reconciliation sweeps recover the work.
 //
 // Deps-first: the store and cloud runtime lifecycle arrive as ports on `deps`;
 // the module is infra-free.

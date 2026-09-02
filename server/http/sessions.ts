@@ -133,7 +133,7 @@ const SessionCreateMetadataSchema = z
     labels: z
       .record(z.string(), z.string())
       .optional()
-      .openapi({ example: { app: 'agent-kanban' } }),
+      .openapi({ example: { app: 'automation-service' } }),
     annotations: z
       .record(z.string(), z.string())
       .optional()
@@ -1267,7 +1267,7 @@ async function createSessionSocketTicket(c: Context<DepsEnv>) {
   if (browserOrigin !== requestOrigin) {
     return errorResponse(c, 403, 'forbidden', 'Browser socket tickets require the same-origin Realmroot Console')
   }
-  const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
+  const session = await deps.sessions.find(auth.project.id, sessionId)
   if (!session) return errorResponse(c, 404, 'not_found', 'Session not found')
   const ticket = await issueSessionBrowserSocketTicket(
     c.env,
@@ -1277,7 +1277,9 @@ async function createSessionSocketTicket(c: Context<DepsEnv>) {
       organizationId: auth.organization.id,
       projectId: session.metadata.pid,
       userId: auth.user.id,
-      ...(session.status.placement?.hostingMode === 'self_hosted' && session.spec.environmentId
+      ...(session.spec.runtime !== 'ama' &&
+      session.status.placement?.hostingMode === 'self_hosted' &&
+      session.spec.environmentId
         ? { runnerEnvironmentId: session.spec.environmentId }
         : {}),
     },
@@ -1332,7 +1334,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      await markRuntimeExpiredPending(deps, auth)
       const {
         archived,
         state,
@@ -1351,6 +1352,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
           fields: { cursor: 'Cursor is invalid.' },
         })
       }
+      await markRuntimeExpiredPending(deps, auth)
       const page = await deps.sessions.list({
         projectId: auth.project.id,
         archived: archived === 'true',
@@ -1444,7 +1446,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
           'Realmroot Console sessions must exchange cookie authentication for a browser socket ticket',
         )
       }
-      const session = await deps.sessions.findByOrganization(auth.organization.id, sessionId)
+      const session = await deps.sessions.find(auth.project.id, sessionId)
       if (!session) {
         return errorResponse(c, 404, 'not_found', 'Session not found')
       }
@@ -1456,7 +1458,9 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         organizationId: auth.organization.id,
         projectId: session.metadata.pid,
         userId: auth.user.id,
-        ...(session.status.placement?.hostingMode === 'self_hosted' && session.spec.environmentId
+        ...(session.spec.runtime !== 'ama' &&
+        session.status.placement?.hostingMode === 'self_hosted' &&
+        session.spec.environmentId
           ? { runnerEnvironmentId: session.spec.environmentId }
           : {}),
       })

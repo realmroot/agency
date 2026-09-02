@@ -2,8 +2,15 @@ import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
 import { createAgent, updateAgent } from './agents'
+import { creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
-import { AgentArchivedError, AgentInboxIdentityConflictError, type AuditEntry, type AuthScope } from './ports'
+import {
+  AgentArchivedError,
+  AgentInboxIdentityConflictError,
+  type AuditEntry,
+  type AuthScope,
+  CreationIdempotencyConflictError,
+} from './ports'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -57,7 +64,7 @@ function agentRecord(
       ...overrides.metadata,
     },
     spec: { ...spec(), ...overrides.spec },
-    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, ...overrides.status },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, schedulable: false, ...overrides.status },
   }
 }
 
@@ -81,6 +88,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
   const repo: Deps['agents'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
+    findCreation: async () => null,
     liveAgents: async () => [],
     listVersions: async () => [],
     findVersion: async () => null,
@@ -159,6 +167,55 @@ describe('[spec: agents/create] createAgent', () => {
     const agent = await createAgent(fakeDeps(), auth, { name: 'Research', description: null, spec: spec() })
     expect(agent.status.currentVersionId).toBe('agentver_1')
     expect(agent.status.version).toBe(1)
+  })
+
+  it('replays an existing creation with the same idempotency key and request', async () => {
+    const input = { name: 'Research', description: null, spec: spec(), idempotencyKey: 'create-agent-once' }
+    const replay = agentRecord({ metadata: { uid: 'agent_replay' } })
+    const fingerprint = await creationFingerprint({
+      name: input.name,
+      description: input.description,
+      spec: input.spec,
+      identityRef: null,
+    })
+    const deps = fakeDeps({ repo: { findCreation: async () => ({ fingerprint, agent: replay }) } })
+
+    await expect(createAgent(deps, auth, input)).resolves.toBe(replay)
+  })
+
+  it('rejects reuse of an idempotency key for a different Agent request', async () => {
+    const deps = fakeDeps({
+      repo: { findCreation: async () => ({ fingerprint: 'different-request', agent: agentRecord() }) },
+    })
+
+    await expect(
+      createAgent(deps, auth, {
+        name: 'Research',
+        description: null,
+        spec: spec(),
+        idempotencyKey: 'reused-agent-key',
+      }),
+    ).rejects.toBeInstanceOf(CreationIdempotencyConflictError)
+  })
+
+  it('persists creation identity when an idempotent request has no replay', async () => {
+    const deps = fakeDeps()
+    const insert = deps.agents.insertWithVersion
+    let creationIdentity: { creationKeyHash?: string; creationFingerprint?: string } | undefined
+    deps.agents.insertWithVersion = async (input, createdAt) => {
+      creationIdentity = input
+      return insert(input, createdAt)
+    }
+
+    await createAgent(deps, auth, {
+      name: 'Research',
+      description: null,
+      spec: spec(),
+      idempotencyKey: 'new-agent-key',
+    })
+
+    expect(creationIdentity?.creationKeyHash).toMatch(/^[0-9a-f]{64}$/)
+    expect(creationIdentity?.creationFingerprint).toMatch(/^[0-9a-f]{64}$/)
   })
 
   it('rejects an empty system prompt', async () => {
@@ -296,6 +353,92 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
         identityRef: 'identity_1',
       }),
     ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError', code: 'identity_already_bound' })
+  })
+
+  it('replays a concurrent idempotent creation after the selected Identity becomes bound', async () => {
+    const input = {
+      name: 'Identity agent',
+      description: null,
+      spec: spec(),
+      identityRef: 'identity_1',
+      idempotencyKey: 'identity-agent-once',
+    }
+    const fingerprint = await creationFingerprint({
+      name: input.name,
+      description: input.description,
+      spec: input.spec,
+      identityRef: input.identityRef,
+    })
+    const replay = agentRecord({ metadata: { uid: 'agent_concurrent_replay' } })
+    let lookups = 0
+    const deps = withIdentity(
+      fakeDeps({
+        repo: {
+          findCreation: async () => {
+            lookups += 1
+            return lookups === 1 ? null : { fingerprint, agent: replay }
+          },
+        },
+      }),
+      'agent_other',
+    )
+
+    await expect(createAgent(deps, auth, input)).resolves.toBe(replay)
+    expect(lookups).toBe(2)
+  })
+
+  it('rejects a concurrent Identity-binding replay whose request fingerprint differs', async () => {
+    let lookups = 0
+    const deps = withIdentity(
+      fakeDeps({
+        repo: {
+          findCreation: async () => {
+            lookups += 1
+            return lookups === 1
+              ? null
+              : { fingerprint: 'different-request', agent: agentRecord({ metadata: { uid: 'agent_other' } }) }
+          },
+        },
+      }),
+      'agent_other',
+    )
+
+    await expect(
+      createAgent(deps, auth, {
+        name: 'Identity agent',
+        description: null,
+        spec: spec(),
+        identityRef: 'identity_1',
+        idempotencyKey: 'identity-agent-conflict',
+      }),
+    ).rejects.toBeInstanceOf(CreationIdempotencyConflictError)
+    expect(lookups).toBe(2)
+  })
+
+  it('preserves the Identity binding conflict when a concurrent creation has no replay', async () => {
+    let lookups = 0
+    const deps = withIdentity(
+      fakeDeps({
+        repo: {
+          findCreation: async () => {
+            lookups += 1
+            return null
+          },
+        },
+      }),
+      'agent_other',
+    )
+
+    await expect(
+      createAgent(deps, auth, {
+        name: 'Identity agent',
+        description: null,
+        spec: spec(),
+        identityRef: 'identity_1',
+        idempotencyKey: 'identity-agent-no-replay',
+      }),
+    ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError', code: 'identity_already_bound' })
+    expect(lookups).toBe(2)
   })
 
   it.each([

@@ -25,9 +25,9 @@ T = TypeVar("T", bound="CreateTriggerRequestSpecTemplateMetadata")
 
 @_attrs_define
 class CreateTriggerRequestSpecTemplateMetadata:
-    """ 
+    """
         Attributes:
-            labels (CreateTriggerRequestSpecTemplateMetadataLabels | Unset):  Example: {'app': 'agent-kanban'}.
+            labels (CreateTriggerRequestSpecTemplateMetadataLabels | Unset):  Example: {'app': 'automation-service'}.
             annotations (CreateTriggerRequestSpecTemplateMetadataAnnotations | Unset):  Example: {'owner': 'growth'}.
      """
 

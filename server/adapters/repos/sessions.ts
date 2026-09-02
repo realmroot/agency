@@ -353,15 +353,6 @@ export function createSessionRepo(db: Db): SessionRepo {
       return row ? serializeSession(row) : null
     },
 
-    async findByOrganization(organizationId, sessionId) {
-      const row = await db
-        .select()
-        .from(sessions)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.organizationId, organizationId)))
-        .get()
-      return row ? serializeSession(row) : null
-    },
-
     async findReusableHttpTriggerSession(projectId, triggerId, keyHash) {
       const row = await db
         .select()

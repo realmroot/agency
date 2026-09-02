@@ -20,9 +20,9 @@ T = TypeVar("T", bound="TriggerTemplateMetadataLabels")
 
 @_attrs_define
 class TriggerTemplateMetadataLabels:
-    """ 
+    """
         Example:
-            {'app': 'agent-kanban'}
+            {'app': 'automation-service'}
 
      """
 
@@ -33,7 +33,7 @@ class TriggerTemplateMetadataLabels:
 
 
     def to_dict(self) -> dict[str, Any]:
-        
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
 

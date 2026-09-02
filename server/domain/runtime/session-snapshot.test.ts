@@ -77,7 +77,12 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     const augmented = agentSnapshotWithWorkspaceContext(
       agentSnapshot(),
       [
-        { name: 'source', type: 'git_repository', url: 'https://github.com/saltbo/agent-kanban.git', ref: 'main' },
+        {
+          name: 'source',
+          type: 'git_repository',
+          url: 'https://github.com/saltbo/downstream-service.git',
+          ref: 'main',
+        },
         {
           name: 'Team memory',
           type: 'memory',
@@ -85,13 +90,15 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
         },
       ],
       [
-        { name: 'source', mountPath: '/workspace/repos/saltbo/agent-kanban' },
+        { name: 'source', mountPath: '/workspace/repos/saltbo/downstream-service' },
         { name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: false },
       ],
     )
     expect(augmented.systemPrompt).toContain('Base instructions.')
     expect(augmented.systemPrompt).toContain('Workspace layout:')
-    expect(augmented.systemPrompt).toContain('https://github.com/saltbo/agent-kanban.git at repos/saltbo/agent-kanban')
+    expect(augmented.systemPrompt).toContain(
+      'https://github.com/saltbo/downstream-service.git at repos/saltbo/downstream-service',
+    )
     expect(augmented.systemPrompt).toContain('Team memory')
     expect(augmented.systemPrompt).toContain('.ama/memory-stores/memstore_1')
   })

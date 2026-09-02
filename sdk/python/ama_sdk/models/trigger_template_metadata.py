@@ -24,9 +24,9 @@ T = TypeVar("T", bound="TriggerTemplateMetadata")
 
 @_attrs_define
 class TriggerTemplateMetadata:
-    """ 
+    """
         Attributes:
-            labels (TriggerTemplateMetadataLabels):  Example: {'app': 'agent-kanban'}.
+            labels (TriggerTemplateMetadataLabels):  Example: {'app': 'automation-service'}.
             annotations (TriggerTemplateMetadataAnnotations):  Example: {'owner': 'growth'}.
      """
 

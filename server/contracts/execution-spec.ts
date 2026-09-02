@@ -128,7 +128,7 @@ export const EnvFromEntrySchema = z
 
 export const ExecutionEnvSchema = z
   .record(z.string().min(1).max(120), z.string().max(16_000))
-  .openapi('ExecutionEnv', { example: { AK_API_URL: 'https://ak.example.com' } })
+  .openapi('ExecutionEnv', { example: { SERVICE_API_URL: 'https://service.example.com' } })
 
 export const ExecutionSpecSchema = z
   .object({

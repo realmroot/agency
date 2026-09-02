@@ -25,10 +25,10 @@ T = TypeVar("T", bound="SessionUpdateMetadata")
 
 @_attrs_define
 class SessionUpdateMetadata:
-    """ 
+    """
         Attributes:
             name (str | Unset):  Example: Implement billing export.
-            labels (SessionUpdateMetadataLabels | Unset):  Example: {'app': 'agent-kanban'}.
+            labels (SessionUpdateMetadataLabels | Unset):  Example: {'app': 'automation-service'}.
             annotations (SessionUpdateMetadataAnnotations | Unset):  Example: {'ticket': 'AMA-123'}.
      """
 
@@ -103,4 +103,3 @@ class SessionUpdateMetadata:
         )
 
         return session_update_metadata
-

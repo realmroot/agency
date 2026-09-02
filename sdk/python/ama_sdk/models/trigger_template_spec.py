@@ -35,7 +35,7 @@ class TriggerTemplateSpec:
             agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
             environment_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             runtime (RuntimeName):  Example: codex.
-            env (ExecutionEnv):  Example: {'AK_API_URL': 'https://ak.example.com'}.
+            env (ExecutionEnv):  Example: {'SERVICE_API_URL': 'https://service.example.com'}.
             env_from (list[EnvFromEntry]):
             volumes (list[EmptyDirVolume | GitRepositoryVolume | MemoryVolume | SecretVolume]):
             volume_mounts (list[VolumeMount]):

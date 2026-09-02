@@ -3005,12 +3005,18 @@
           "version": {
             "type": "integer",
             "example": 1
+          },
+          "schedulable": {
+            "type": "boolean",
+            "description": "Whether an active Inbox Trigger can currently resolve a compatible execution environment.",
+            "example": true
           }
         },
         "required": [
           "phase",
           "currentVersionId",
-          "version"
+          "version",
+          "schedulable"
         ]
       },
       "ResourcePhase": {
@@ -5829,7 +5835,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -5922,7 +5928,7 @@
           "maxLength": 16000
         },
         "example": {
-          "AK_API_URL": "https://ak.example.com"
+          "SERVICE_API_URL": "https://service.example.com"
         }
       },
       "EnvFromEntry": {
@@ -6364,7 +6370,7 @@
                           "type": "string"
                         },
                         "example": {
-                          "app": "agent-kanban"
+                          "app": "automation-service"
                         }
                       },
                       "annotations": {
@@ -6596,7 +6602,7 @@
                           "type": "string"
                         },
                         "example": {
-                          "app": "agent-kanban"
+                          "app": "automation-service"
                         }
                       },
                       "annotations": {
@@ -7382,7 +7388,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -7498,7 +7504,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -9232,6 +9238,38 @@
             "description": "Exact Realmroot Agent actor id bound through the Agent Identity.",
             "name": "identityAgentId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ama",
+                "codex",
+                "claude-code",
+                "copilot"
+              ],
+              "description": "Exact runtime of the bound Realmroot Identity.",
+              "example": "codex"
+            },
+            "required": false,
+            "description": "Exact runtime of the bound Realmroot Identity.",
+            "name": "runtime",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter by current Inbox scheduling readiness.",
+              "example": "true"
+            },
+            "required": false,
+            "description": "Filter by current Inbox scheduling readiness.",
+            "name": "schedulable",
+            "in": "query"
           }
         ],
         "responses": {
@@ -9288,6 +9326,18 @@
             "oidcAccessToken": [
               "agents:write"
             ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -9819,6 +9869,18 @@
             ]
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -9862,6 +9924,16 @@
           },
           "403": {
             "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency conflict",
             "content": {
               "application/json": {
                 "schema": {

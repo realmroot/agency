@@ -1,6 +1,6 @@
 Feature: Projects
   A project is the tenant scope for every AMA resource. External products such as
-  Agent Kanban own their own workflow but use AMA as the lower-level agent,
+  Downstream systems own their own workflow but use AMA as the lower-level agent,
   environment, session, runner, and event substrate through the OpenAPI SDK —
   storing only standard AMA fields and keeping product mappings in their own store.
 

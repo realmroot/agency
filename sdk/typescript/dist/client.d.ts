@@ -52,7 +52,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
     };
     agents: {
         list: (query?: types.ListAgentsData["query"]) => Promise<types.AgentListResponse>;
-        create: (body: types.CreateAgentRequest) => Promise<types.Agent>;
+        create: (body: types.CreateAgentRequest, idempotencyKey?: string) => Promise<types.Agent>;
         get: (agentId: string) => Promise<types.Agent>;
         update: (agentId: string, body: types.UpdateAgentRequest) => Promise<types.Agent>;
         listVersions: (agentId: string) => Promise<types.AgentVersionListResponse>;
@@ -66,7 +66,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
     };
     environments: {
         list: (query?: types.ListEnvironmentsData["query"]) => Promise<types.EnvironmentListResponse>;
-        create: (body: types.CreateEnvironmentRequest) => Promise<types.Environment>;
+        create: (body: types.CreateEnvironmentRequest, idempotencyKey?: string) => Promise<types.Environment>;
         get: (environmentId: string) => Promise<types.Environment>;
         update: (environmentId: string, body: types.UpdateEnvironmentRequest) => Promise<types.Environment>;
         listVersions: (environmentId: string) => Promise<types.EnvironmentVersionListResponse>;
