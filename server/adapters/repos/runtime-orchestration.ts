@@ -191,6 +191,29 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       return Boolean(updated)
     },
 
+    async updateSessionWhenStateAndSandbox(
+      projectId: string,
+      sessionId: string,
+      expectedState: string,
+      expectedSandboxId: string,
+      fields: SessionUpdate,
+    ): Promise<boolean> {
+      const updated = await db
+        .update(sessions)
+        .set(persistedSessionWrite(fields) as SessionUpdateColumns)
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            sessionStateGuard(expectedState),
+            eq(sessions.sandboxId, expectedSandboxId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
     async queueSessionWorkWhenState(
       projectId: string,
       sessionId: string,
@@ -748,14 +771,10 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
     },
 
     // ── watchdog: stalled cloud sessions + leaked sandboxes ──────────────────
-    async markStalledCloudSessions(threshold: string, timestamp: string): Promise<void> {
-      await db
-        .update(sessions)
-        .set({
-          state: 'error',
-          stateReason: 'Cloud session stalled: no completion within the wall-clock budget',
-          updatedAt: timestamp,
-        })
+    async markStalledCloudSessions(threshold: string, timestamp: string, limit: number) {
+      const candidates = db
+        .select({ id: sessions.id })
+        .from(sessions)
         .where(
           and(
             or(
@@ -766,11 +785,38 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             lt(sessions.updatedAt, threshold),
           ),
         )
+        .orderBy(asc(sessions.updatedAt), asc(sessions.id))
+        .limit(limit)
+      return await db
+        .update(sessions)
+        .set({
+          state: 'error',
+          stateReason: 'Cloud session stalled: no completion within the wall-clock budget',
+          updatedAt: timestamp,
+        })
+        .where(inArray(sessions.id, candidates))
+        .returning({ id: sessions.id, sandboxId: sessions.sandboxId, metadata: sessions.metadata })
+        .all()
     },
 
-    async markIdleTimedOutSessions(timestamp: string): Promise<void> {
+    async markIdleTimedOutSessions(timestamp: string, limit: number) {
       const timeoutSeconds = sql<number>`cast(json_extract(${sessions.metadata}, ${`$.annotations."${AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS}"`}) as integer)`
-      await db
+      const candidates = db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(
+          and(
+            isNull(sessions.archivedAt),
+            eq(sessions.state, 'idle'),
+            isNotNull(sessions.sandboxId),
+            notLike(sessions.metadata, '%"sandboxBackend":"runner-sandbox"%'),
+            sql`${timeoutSeconds} > 0`,
+            sql`strftime('%s', ${timestamp}) - strftime('%s', ${sessions.updatedAt}) >= ${timeoutSeconds}`,
+          ),
+        )
+        .orderBy(asc(sessions.updatedAt), asc(sessions.id))
+        .limit(limit)
+      return await db
         .update(sessions)
         .set({
           state: persistedSessionState('closed'),
@@ -778,14 +824,9 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           closedAt: timestamp,
           updatedAt: timestamp,
         })
-        .where(
-          and(
-            isNull(sessions.archivedAt),
-            eq(sessions.state, 'idle'),
-            sql`${timeoutSeconds} > 0`,
-            sql`strftime('%s', ${timestamp}) - strftime('%s', ${sessions.updatedAt}) >= ${timeoutSeconds}`,
-          ),
-        )
+        .where(inArray(sessions.id, candidates))
+        .returning({ id: sessions.id, sandboxId: sessions.sandboxId, metadata: sessions.metadata })
+        .all()
     },
 
     async leakedSandboxSessions(
@@ -806,14 +847,39 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
           ),
         )
+        .orderBy(asc(sessions.updatedAt), asc(sessions.id))
         .limit(limit)
     },
 
-    async stampSandboxDestroyed(sessionId: string, metadataJson: string): Promise<void> {
+    async stampSandboxDestroyed(sessionId: string, sandboxId: string, destroyedAt: string): Promise<void> {
       await db
         .update(sessions)
-        .set({ metadata: metadataJson, updatedAt: sql`updated_at` })
-        .where(eq(sessions.id, sessionId))
+        .set({
+          metadata: sql`json_set(${sessions.metadata}, '$.sandboxDestroyedAt', ${destroyedAt})`,
+          updatedAt: sql`updated_at`,
+        })
+        .where(and(eq(sessions.id, sessionId), eq(sessions.sandboxId, sandboxId)))
+    },
+
+    async finalizeCloudSessionClose(projectId: string, sessionId: string, sandboxId: string, closedAt: string) {
+      const finalized = await db
+        .update(sessions)
+        .set({
+          metadata: sql`json_set(${sessions.metadata}, '$.sandboxDestroyedAt', ${closedAt})`,
+          closedAt,
+          updatedAt: closedAt,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.state, persistedSessionState('closed')),
+            eq(sessions.sandboxId, sandboxId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(finalized)
     },
 
     // ── runner session channel (durable object) ──────────────────────────────

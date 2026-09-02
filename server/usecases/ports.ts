@@ -1962,6 +1962,13 @@ export interface SessionOrchestrationStore {
     expected: string | string[],
     fields: SessionUpdate,
   ): Promise<boolean>
+  updateSessionWhenStateAndSandbox(
+    projectId: string,
+    sessionId: string,
+    expectedState: string,
+    expectedSandboxId: string,
+    fields: SessionUpdate,
+  ): Promise<boolean>
   queueSessionWorkWhenState(
     projectId: string,
     sessionId: string,
@@ -2050,13 +2057,21 @@ export interface SessionOrchestrationStore {
   upsertApproval(row: SessionApprovalInsert, decidedAt: string): Promise<void>
 
   // ── watchdog: stalled cloud sessions + leaked sandboxes ──
-  markStalledCloudSessions(threshold: string, timestamp: string): Promise<void>
-  markIdleTimedOutSessions(timestamp: string): Promise<void>
+  markStalledCloudSessions(
+    threshold: string,
+    timestamp: string,
+    limit: number,
+  ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]>
+  markIdleTimedOutSessions(
+    timestamp: string,
+    limit: number,
+  ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]>
   leakedSandboxSessions(
     terminalStates: string[],
     limit: number,
   ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]>
-  stampSandboxDestroyed(sessionId: string, metadataJson: string): Promise<void>
+  stampSandboxDestroyed(sessionId: string, sandboxId: string, destroyedAt: string): Promise<void>
+  finalizeCloudSessionClose(projectId: string, sessionId: string, sandboxId: string, closedAt: string): Promise<boolean>
 
   // ── runner session channel (durable object) ──
   channelSession(
@@ -2186,6 +2201,13 @@ export interface SessionRepo {
     fields: { title?: string; metadata?: Record<string, unknown> },
     updatedAt: string,
   ): Promise<Session | null>
+  setMetadataAnnotationIfMissing(
+    projectId: string,
+    sessionId: string,
+    key: string,
+    value: string,
+    updatedAt: string,
+  ): Promise<boolean>
 
   listMessages(query: SessionMessageListQuery): Promise<SessionMessageListPage>
   findMessage(projectId: string, sessionId: string, messageId: string): Promise<SessionMessage | null>

@@ -145,6 +145,7 @@ function fakeDeps(
     findReusableHttpTriggerSession: async () => null,
     findRuntimeRow: async () => sessionRow(),
     updateFields: async () => sessionRecord(),
+    setMetadataAnnotationIfMissing: async () => true,
     listMessages: async () => ({ rows: [], hasMore: false }),
     findMessage: async () => null,
     insertMessage: async (record): Promise<SessionMessage> =>

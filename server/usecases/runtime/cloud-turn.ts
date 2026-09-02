@@ -147,13 +147,6 @@ export async function startSessionRuntimeForRow(
       RUNTIME_START_TIMEOUT_MS,
       'Session runtime startup timed out',
     )
-    const current = await store.findSession(auth.project.id, sessionId)
-    if (current?.state !== 'pending') {
-      if (current?.state !== 'idle') {
-        await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
-      }
-      return
-    }
     const startedAt = now()
     const existingMetadata = parseJson<Record<string, unknown>>(pending.metadata) ?? {}
     const metadata = {
@@ -178,12 +171,18 @@ export async function startSessionRuntimeForRow(
       closedAt: null,
       updatedAt: startedAt,
     }
-    const recorded = await store.updateSessionWhenState(auth.project.id, sessionId, 'pending', started)
+    const recorded = await store.updateSessionWhenStateAndSandbox(
+      auth.project.id,
+      sessionId,
+      'pending',
+      sandboxId,
+      started,
+    )
     if (!recorded) {
-      // The row left 'pending' between the re-read and this CAS (concurrent stop
-      // or a duplicate session.start). The just-provisioned sandbox is recorded
-      // on no row, so tear it down here — let a teardown error reach the catch.
-      await deps.cloudRuntime.stopCloudSession(sandboxId)
+      const current = await store.findSession(auth.project.id, sessionId)
+      if (current?.state !== 'idle' || current.sandboxId !== sandboxId) {
+        await deps.cloudRuntime.stopCloudSession(sandboxId)
+      }
       return
     }
     await deps.audit.record(auth, {
@@ -208,6 +207,25 @@ export async function startSessionRuntimeForRow(
     const safeError = safeRuntimeError(error)
     const failedAt = now()
     await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
+    const failed = {
+      state: 'error',
+      stateReason: safeError.message,
+      metadata: stringify({
+        ...(parseJson<Record<string, unknown>>(pending.metadata) ?? {}),
+        runtimeDriver: runtimeDriverName(runtimeName, 'cloud'),
+        runtimeBackend: driver.cloudBackend,
+        error: safeError,
+      }),
+      updatedAt: failedAt,
+    }
+    const recorded = await store.updateSessionWhenStateAndSandbox(
+      auth.project.id,
+      sessionId,
+      'pending',
+      sandboxId,
+      failed,
+    )
+    if (!recorded) return
     await appendRuntimeEvent(deps, {
       auth,
       sessionId,
@@ -220,18 +238,6 @@ export async function startSessionRuntimeForRow(
         },
       },
     })
-    const failed = {
-      state: 'error',
-      stateReason: safeError.message,
-      metadata: stringify({
-        ...(parseJson<Record<string, unknown>>(pending.metadata) ?? {}),
-        runtimeDriver: runtimeDriverName(runtimeName, 'cloud'),
-        runtimeBackend: driver.cloudBackend,
-        error: safeError,
-      }),
-      updatedAt: failedAt,
-    }
-    await store.updateSessionWhenState(auth.project.id, sessionId, 'pending', failed)
     await deps.audit.record(auth, {
       action: 'session.runtime.start',
       resourceType: 'session',

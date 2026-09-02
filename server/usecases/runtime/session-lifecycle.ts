@@ -26,6 +26,7 @@ import {
 } from '@server/domain/runtime/session-snapshot'
 import { now, RUNTIME_START_TIMEOUT_MS, requestIdFrom, stringify } from '@server/domain/runtime/util'
 import { sessionRuntimeConfig, sessionRuntimeFromMetadata } from '@server/domain/runtime-session'
+import { newPrimaryKey } from '@server/id'
 import { safeRuntimeError } from '@server/runtime-error'
 import type { AuthScope, RunnerChannel, RuntimeWorkspaceReader, SessionRow } from '../ports'
 import { type CloudTurnDeps, startSessionRuntimeForRow } from './cloud-turn'
@@ -75,7 +76,23 @@ async function closeSessionRow(
 
   const store = deps.sessionOrchestration
   const closingAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'closed', updatedAt: closingAt })
+  const closing = await store.updateSessionWhenStateAndSandbox(
+    auth.project.id,
+    session.id,
+    session.state,
+    session.sandboxId,
+    { state: 'closed', updatedAt: closingAt },
+  )
+  if (!closing) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Session runtime is no longer on the requested sandbox generation',
+      },
+    }
+  }
 
   try {
     await syncWritableMemoryStores(deps, auth, session)
@@ -83,11 +100,19 @@ async function closeSessionRow(
   } catch (error) {
     const safeError = safeRuntimeError(error)
     const failedAt = now()
-    await store.updateSession(auth.project.id, session.id, {
-      state: 'error',
-      stateReason: safeError.message,
-      updatedAt: failedAt,
-    })
+    const failed = await store.updateSessionWhenStateAndSandbox(
+      auth.project.id,
+      session.id,
+      'closed',
+      session.sandboxId,
+      {
+        state: 'error',
+        stateReason: safeError.message,
+        updatedAt: failedAt,
+      },
+    )
+    if (!failed)
+      return { ok: false, error: { status: 409, code: 'conflict', message: 'Session runtime close is stale' } }
     await deps.audit.record(auth, {
       action: 'session.close',
       resourceType: 'session',
@@ -109,7 +134,17 @@ async function closeSessionRow(
   }
 
   const closedAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'closed', closedAt, updatedAt: closedAt })
+  const finalized = await store.finalizeCloudSessionClose(auth.project.id, session.id, session.sandboxId, closedAt)
+  if (!finalized) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Session runtime close could not be finalized',
+      },
+    }
+  }
   await deps.audit.record(auth, {
     action: 'session.close',
     resourceType: 'session',
@@ -268,6 +303,17 @@ export async function reopenSession(
     })
   } else {
     const metadata = parseJson<Record<string, unknown>>(session.metadata) ?? {}
+    if (typeof metadata.sandboxDestroyedAt !== 'string') {
+      return {
+        ok: false,
+        error: {
+          status: 409,
+          code: 'conflict',
+          message: 'Session sandbox cleanup must complete before reopening',
+        },
+      }
+    }
+    delete metadata.sandboxDestroyedAt
     const agentSnapshot = parseAgentSnapshot(session.agentSnapshot)
     if (!agentSnapshot) {
       return {
@@ -275,12 +321,16 @@ export async function reopenSession(
         error: { status: 409, code: 'conflict', message: 'Session agent snapshot is required' },
       }
     }
-    const pending = await store.updateSessionWhenState(auth.project.id, session.id, 'closed', {
+    const sandboxId = newPrimaryKey().toLowerCase()
+    const pendingUpdate = {
       state: 'pending',
       stateReason: null,
+      sandboxId,
+      metadata: stringify(metadata),
       closedAt: null,
       updatedAt: reopenedAt,
-    })
+    } as const
+    const pending = await store.updateSessionWhenState(auth.project.id, session.id, 'closed', pendingUpdate)
     if (!pending) {
       return {
         ok: false,
@@ -288,7 +338,7 @@ export async function reopenSession(
       }
     }
     await startSessionRuntimeForRow(deps, auth, {
-      pending: { ...session, state: 'pending', stateReason: null, closedAt: null, updatedAt: reopenedAt },
+      pending: { ...session, ...pendingUpdate },
       agentSnapshot,
       environmentSnapshot: normalizeEnvironmentSnapshot(
         parseJson<ReturnType<typeof createEnvironmentSnapshot>>(session.environmentSnapshot),

@@ -103,6 +103,8 @@ function deps(
   const reserve = vi.fn(async () => overrides.reserve ?? { sessionId: 'session_reserved', owned: true })
   const replace = vi.fn(async () => ({ sessionId: 'session_replacement', owned: true }))
   const isAccepted = vi.fn(async () => overrides.runnerAccepted ?? true)
+  const updateFields = vi.fn(async () => session('session_updated'))
+  const setMetadataAnnotationIfMissing = vi.fn(async () => true)
   const value = {
     inboxActivations: {
       findActivation: vi.fn(async () =>
@@ -114,12 +116,16 @@ function deps(
       pendingActivationIds: vi.fn(async () => ['run_1', 'run_2']),
     },
     triggers: { find: vi.fn(async () => (overrides.trigger === undefined ? inboxTrigger() : overrides.trigger)) },
-    sessions: { findRuntimeRow: vi.fn(async () => overrides.existing ?? null) },
+    sessions: {
+      findRuntimeRow: vi.fn(async () => overrides.existing ?? null),
+      updateFields,
+      setMetadataAnnotationIfMissing,
+    },
     runnerChannel: { isAccepted },
     triggerDispatch: { markRunDispatched: marks.dispatched, markRunFailed: marks.failed },
     audit: { record: vi.fn() },
   } as unknown as Deps
-  return { value, marks, reserve, replace, isAccepted }
+  return { value, marks, reserve, replace, isAccepted, updateFields, setMetadataAnnotationIfMissing }
 }
 
 beforeEach(() => {
@@ -330,6 +336,37 @@ describe('[spec: triggers/inbox-callback] Inbox notification admission', () => {
 })
 
 describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () => {
+  it.each([
+    { templateAnnotations: {}, expectedIdleTimeout: '60' },
+    {
+      templateAnnotations: { 'ama.dev/idle-timeout-seconds': '0' },
+      expectedIdleTimeout: '0',
+    },
+  ])('defaults Inbox Session idle retention while preserving an explicit template timeout %#', async ({
+    templateAnnotations,
+    expectedIdleTimeout,
+  }) => {
+    const trigger = inboxTrigger()
+    trigger.spec.template.metadata.annotations = templateAnnotations
+    const fake = deps({ trigger })
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    expect(createSession).toHaveBeenCalledWith(
+      fake.value,
+      expect.anything(),
+      expect.objectContaining({
+        options: expect.objectContaining({
+          metadata: expect.objectContaining({
+            annotations: expect.objectContaining({
+              'ama.dev/idle-timeout-seconds': expectedIdleTimeout,
+            }),
+          }),
+        }),
+      }),
+    )
+  })
+
   it('owns the first atomic route reservation and creates the reserved Session', async () => {
     const fake = deps()
     await dispatchInboxActivation(fake.value, 'run_1')
@@ -375,6 +412,37 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
   })
 
   it.each([
+    { annotations: {}, expectedBackfill: true },
+    { annotations: { 'ama.dev/idle-timeout-seconds': '0' }, expectedBackfill: false },
+  ])('backfills default idle retention before reusing a pre-existing cloud Session while preserving explicit metadata %#', async ({
+    annotations,
+    expectedBackfill,
+  }) => {
+    const existing = {
+      ...runtimeSession('session_existing', 'cloudflare-sandbox'),
+      metadata: { sandboxBackend: 'cloudflare-sandbox', annotations },
+    }
+    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    if (expectedBackfill) {
+      expect(fake.setMetadataAnnotationIfMissing).toHaveBeenCalledWith(
+        'project_1',
+        existing.id,
+        'ama.dev/idle-timeout-seconds',
+        '60',
+        expect.any(String),
+      )
+    } else {
+      expect(fake.setMetadataAnnotationIfMissing).not.toHaveBeenCalled()
+    }
+    expect(fake.updateFields).not.toHaveBeenCalled()
+    expect(dispatchToReusableSession).toHaveBeenCalledOnce()
+    expect(createSession).not.toHaveBeenCalled()
+  })
+
+  it.each([
     { state: 'error' as const, archivedAt: null },
     { state: 'idle' as const, archivedAt: '2026-08-30T00:01:00.000Z' },
   ])('atomically replaces a terminal route target %#', async ({ state, archivedAt }) => {
@@ -397,6 +465,52 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       expect.objectContaining({ options: expect.objectContaining({ id: 'session_replacement' }) }),
     )
     expect(dispatchToReusableSession).not.toHaveBeenCalled()
+  })
+
+  it('atomically replaces a closed cloud route whose prior sandbox still awaits confirmed cleanup', async () => {
+    const existing = {
+      ...runtimeSession('session_cleanup_pending', 'cloudflare-sandbox'),
+      state: 'closed' as const,
+      metadata: { sandboxBackend: 'cloudflare-sandbox', annotations: {} },
+    }
+    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
+    vi.mocked(fake.value.sessions.findRuntimeRow).mockResolvedValueOnce(existing).mockResolvedValueOnce(null)
+    vi.mocked(createSession).mockResolvedValueOnce({ ok: true, value: session('session_replacement') })
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    expect(fake.replace).toHaveBeenCalledWith(expect.objectContaining({ expectedSessionId: existing.id }))
+    expect(createSession).toHaveBeenCalledWith(
+      fake.value,
+      expect.anything(),
+      expect.objectContaining({ options: expect.objectContaining({ id: 'session_replacement' }) }),
+    )
+    expect(dispatchToReusableSession).not.toHaveBeenCalled()
+  })
+
+  it('keeps the existing reopen path for a closed cloud route after sandbox cleanup is confirmed', async () => {
+    const existing = {
+      ...runtimeSession('session_cleanup_confirmed', 'cloudflare-sandbox'),
+      state: 'closed' as const,
+      metadata: {
+        sandboxBackend: 'cloudflare-sandbox',
+        sandboxDestroyedAt: '2026-09-02T00:00:00.000Z',
+        annotations: { 'ama.dev/idle-timeout-seconds': '60' },
+      },
+    }
+    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
+
+    await dispatchInboxActivation(fake.value, 'run_1')
+
+    expect(fake.replace).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
+    expect(dispatchToReusableSession).toHaveBeenCalledWith(
+      fake.value,
+      expect.anything(),
+      existing,
+      expect.any(String),
+      'inbox:event_1',
+    )
   })
 
   it('runner availability: replaces an inactive runner-sandbox route and creates a fresh Session', async () => {

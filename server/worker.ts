@@ -14,9 +14,8 @@ import type { CloudTurnQueueMessage, TriggerDispatchQueueMessage } from './useca
 import { refreshPlatformCatalog } from './usecases/providers'
 import {
   consumeCloudTurnQueueMessage,
+  maintainCloudSessionLifecycle,
   markCloudTurnDeadLettered,
-  markIdleTimedOutSessions,
-  markStalledCloudSessions,
 } from './usecases/runtime'
 
 export { Sandbox } from '@cloudflare/sandbox'
@@ -57,10 +56,9 @@ export default {
         scheduledAt,
       },
     )
-    waitUntilLogged(ctx, 'scheduled.stalled-sessions.failed', markStalledCloudSessions(createDeps(env)), {
+    waitUntilLogged(ctx, 'scheduled.cloud-session-maintenance.failed', maintainCloudSessionLifecycle(createDeps(env)), {
       scheduledAt,
     })
-    waitUntilLogged(ctx, 'scheduled.idle-timeouts.failed', markIdleTimedOutSessions(createDeps(env)), { scheduledAt })
     waitUntilLogged(ctx, 'scheduled.serial-http-triggers.failed', recoverSerialHttpTriggers(createDeps(env)), {
       scheduledAt,
     })

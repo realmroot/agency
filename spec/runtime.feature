@@ -22,6 +22,7 @@ Feature: Runtime
     When the runtime runs the turn
     Then model output is produced and tool calls are dispatched through the executor
     And the next turn context is reconstructed from persisted canonical events
+    And a stale startup completion or failure can tear down only its old sandbox generation without mutating or reporting against the current generation
 
   @runtime/self-hosted-ama-cloud-loop @usecase
   Scenario: Run self-hosted AMA through the cloud turn loop with a runner sandbox

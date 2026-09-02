@@ -419,6 +419,20 @@ export function createSessionRepo(db: Db): SessionRepo {
       return row ? serializeSession(row) : null
     },
 
+    async setMetadataAnnotationIfMissing(projectId, sessionId, key, value, updatedAt) {
+      const annotationPath = `$.annotations."${key}"`
+      const missing = sql`json_type(${sessions.metadata}, ${annotationPath}) is null`
+      const rows = await db
+        .update(sessions)
+        .set({
+          metadata: sql`case when ${missing} then json_set(${sessions.metadata}, ${annotationPath}, ${value}) else ${sessions.metadata} end`,
+          updatedAt: sql`case when ${missing} then ${updatedAt} else ${sessions.updatedAt} end`,
+        })
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .returning({ id: sessions.id })
+      return rows.length > 0
+    },
+
     async listMessages(query: SessionMessageListQuery): Promise<SessionMessageListPage> {
       const filters = [
         eq(sessionMessages.sessionId, query.sessionId),

@@ -30,6 +30,7 @@ const {
   findSessionMock,
   sessionEventStreamMock,
   updateSessionWhenStateMock,
+  updateSessionWhenStateAndSandboxMock,
   acquireTurnLeaseMock,
   renewTurnLeaseMock,
   releaseTurnLeaseMock,
@@ -51,6 +52,15 @@ const {
   sessionEventStreamMock: vi.fn(() => [] as unknown[]),
   updateSessionWhenStateMock: vi.fn<
     (projectId: string, sessionId: string, expected: string | string[], fields: Record<string, unknown>) => boolean
+  >(() => true),
+  updateSessionWhenStateAndSandboxMock: vi.fn<
+    (
+      projectId: string,
+      sessionId: string,
+      expectedState: string,
+      expectedSandboxId: string,
+      fields: Record<string, unknown>,
+    ) => boolean
   >(() => true),
   acquireTurnLeaseMock: vi.fn(async () => true),
   renewTurnLeaseMock: vi.fn(async () => true),
@@ -74,6 +84,7 @@ const store = {
   findSession: findSessionMock,
   sessionEventStream: sessionEventStreamMock,
   updateSessionWhenState: updateSessionWhenStateMock,
+  updateSessionWhenStateAndSandbox: updateSessionWhenStateAndSandboxMock,
   acquireTurnLease: acquireTurnLeaseMock,
   renewTurnLease: renewTurnLeaseMock,
   releaseTurnLease: releaseTurnLeaseMock,
@@ -430,13 +441,15 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
     findSessionMock.mockResolvedValue(pendingRow())
     updateSessionWhenStateMock.mockReset()
     updateSessionWhenStateMock.mockReturnValue(true)
+    updateSessionWhenStateAndSandboxMock.mockReset()
+    updateSessionWhenStateAndSandboxMock.mockReturnValue(true)
     ;(store as { mcpCatalogEntries?: unknown }).mcpCatalogEntries = vi.fn(async () => [])
   })
 
   it('tears down the provisioned sandbox and skips audit/initial-prompt when the pending→idle CAS no-ops', async () => {
     // Sandbox provisioned, row still reads 'pending' on the re-read, but the CAS
     // loses the row (concurrent stop / duplicate session.start redelivery).
-    updateSessionWhenStateMock.mockReturnValueOnce(false)
+    updateSessionWhenStateAndSandboxMock.mockReturnValueOnce(false)
 
     await startSessionRuntimeForRow(startupDeps, auth, {
       pending: pendingRow() as never,
@@ -458,11 +471,79 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       (call) => (call[1] as { outcome?: string }).outcome === 'success',
     )
     expect(successAudits).toHaveLength(0)
-    expect(updateSessionWhenStateMock).toHaveBeenCalledTimes(1)
+    expect(updateSessionWhenStateAndSandboxMock).toHaveBeenCalledWith(
+      'proj_1',
+      'session_1',
+      'pending',
+      'sandbox_1',
+      expect.objectContaining({ state: 'idle', sandboxId: 'sandbox_1' }),
+    )
+    expect(updateSessionWhenStateMock).not.toHaveBeenCalled()
+  })
+
+  it('[spec: runtime/turn] fences a stale startup completion from the current sandbox generation', async () => {
+    startSessionRuntimeMock.mockResolvedValue({
+      sandboxId: 'sandbox_generation_1',
+      metadata: { runtimeMode: 'test' },
+    })
+    findSessionMock.mockResolvedValue(
+      pendingRow({ sandboxId: 'sandbox_generation_2', metadata: JSON.stringify({ generation: 2 }) }),
+    )
+    updateSessionWhenStateAndSandboxMock.mockReturnValue(false)
+
+    await startSessionRuntimeForRow(startupDeps, auth, {
+      pending: pendingRow({ sandboxId: 'sandbox_generation_1', metadata: JSON.stringify({ generation: 1 }) }) as never,
+      agentSnapshot,
+      environmentSnapshot: null,
+      runtime: 'ama',
+      runtimeConfig: {},
+      env: {},
+      envFrom: [],
+      prompt: 'stale prompt',
+    })
+
+    expect(updateSessionWhenStateAndSandboxMock).toHaveBeenCalledWith(
+      'proj_1',
+      'session_1',
+      'pending',
+      'sandbox_generation_1',
+      expect.objectContaining({ state: 'idle', sandboxId: 'sandbox_generation_1' }),
+    )
+    expect(updateSessionWhenStateMock).not.toHaveBeenCalled()
+    expect(stopSessionRuntimeMock).toHaveBeenCalledWith(env, 'sandbox_generation_1')
+    expect(recordAuditMock).not.toHaveBeenCalled()
+    expect(appendEventMock).not.toHaveBeenCalled()
+  })
+
+  it('[spec: runtime/turn] fences a stale startup failure from the current sandbox generation', async () => {
+    startSessionRuntimeMock.mockRejectedValue(new Error('generation 1 startup failed late'))
+    updateSessionWhenStateAndSandboxMock.mockReturnValue(false)
+
+    await startSessionRuntimeForRow(startupDeps, auth, {
+      pending: pendingRow({ sandboxId: 'sandbox_generation_1', metadata: JSON.stringify({ generation: 1 }) }) as never,
+      agentSnapshot,
+      environmentSnapshot: null,
+      runtime: 'ama',
+      runtimeConfig: {},
+      env: {},
+      envFrom: [],
+    })
+
+    expect(updateSessionWhenStateAndSandboxMock).toHaveBeenCalledWith(
+      'proj_1',
+      'session_1',
+      'pending',
+      'sandbox_generation_1',
+      expect.objectContaining({ state: 'error' }),
+    )
+    expect(updateSessionWhenStateMock).not.toHaveBeenCalled()
+    expect(stopSessionRuntimeMock).toHaveBeenCalledWith(env, 'sandbox_generation_1')
+    expect(appendEventMock).not.toHaveBeenCalled()
+    expect(recordAuditMock).not.toHaveBeenCalled()
   })
 
   it('records the success audit and dispatches the initial prompt when the CAS succeeds', async () => {
-    updateSessionWhenStateMock.mockReturnValue(true)
+    updateSessionWhenStateAndSandboxMock.mockReturnValue(true)
 
     await startSessionRuntimeForRow(startupDeps, auth, {
       pending: pendingRow() as never,
@@ -481,8 +562,29 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       (call) => (call[1] as { outcome?: string }).outcome === 'success',
     )
     expect(successAudits.length).toBeGreaterThanOrEqual(1)
-    // The initial-prompt dispatch performs a second updateSessionWhenState CAS.
-    expect(updateSessionWhenStateMock.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(updateSessionWhenStateAndSandboxMock).toHaveBeenCalledOnce()
+    // The initial-prompt dispatch performs its own turn-state CAS after startup.
+    expect(updateSessionWhenStateMock).toHaveBeenCalled()
+  })
+
+  it('[spec: sessions/idle-timeout] starts the exact fresh sandbox generation selected while reopening', async () => {
+    await startSessionRuntimeForRow(startupDeps, auth, {
+      pending: pendingRow({
+        sandboxId: 'sandbox_generation_2',
+        metadata: JSON.stringify({ retained: 'value' }),
+      }) as never,
+      agentSnapshot,
+      environmentSnapshot: null,
+      runtime: 'ama',
+      runtimeConfig: {},
+      env: {},
+      envFrom: [],
+    })
+
+    expect(startSessionRuntimeMock).toHaveBeenCalledWith(
+      env,
+      expect.objectContaining({ sandboxId: 'sandbox_generation_2' }),
+    )
   })
 
   it('[spec: environments/cloud-packages] persists a safe runtime error event when package setup fails', async () => {
@@ -515,15 +617,17 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
         },
       },
     )
-    expect(updateSessionWhenStateMock).toHaveBeenCalledWith(
+    expect(updateSessionWhenStateAndSandboxMock).toHaveBeenCalledWith(
       'proj_1',
       'session_1',
       'pending',
+      'sandbox_1',
       expect.objectContaining({
         state: 'error',
         stateReason: 'Environment package installation failed at webi-install:realmroot@0.4.2',
       }),
     )
+    expect(updateSessionWhenStateMock).not.toHaveBeenCalled()
     expect(stopSessionRuntimeMock).toHaveBeenCalledWith(env, 'sandbox_1')
   })
 })
