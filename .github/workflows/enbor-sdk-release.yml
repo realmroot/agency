@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
   id-token: write
 
 jobs:
@@ -38,7 +37,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
+          registry-url: https://registry.npmjs.org
           scope: "@realmroot"
 
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
@@ -77,11 +76,9 @@ jobs:
           (cd sdk/go && go test ./...)
         working-directory: .
 
-      - name: Publish TypeScript SDK to GitHub Packages
+      - name: Publish TypeScript SDK to npm
         if: github.event_name == 'push'
-        run: pnpm --filter @realmroot/enbor-sdk publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @realmroot/enbor-sdk publish --no-git-checks --access public
 
       - name: Publish Python SDK to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
