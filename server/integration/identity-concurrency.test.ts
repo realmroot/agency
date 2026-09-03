@@ -24,7 +24,7 @@ async function scope(): Promise<AuthScope> {
   await env.DB.prepare(
     'INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
   )
-    .bind(projectId, organizationId, 'Personal Identity Project', timestamp, timestamp)
+    .bind(projectId, organizationId, `Personal Identity Project ${projectId}`, timestamp, timestamp)
     .run()
   return {
     authenticationMethod: 'bearer',

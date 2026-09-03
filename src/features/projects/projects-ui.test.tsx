@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AuthContext, Project } from '@/lib/amarpc'
-import { createCollection, resourceHandlers, server } from '@/test/msw'
+import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import { ConsoleContextProvider } from '../console/console-context'
 import { ProjectsPage } from './ProjectsPage'
 
@@ -13,7 +14,7 @@ function project(id: string, name: string): Project {
   return { id, name, createdAt: timestamp, updatedAt: timestamp }
 }
 
-function renderPage(projects: Project[]) {
+function renderPage(projects: Project[], activeProject: Project = project('project_default', 'Default')) {
   const collection = createCollection(projects)
   server.use(
     ...resourceHandlers('projects', collection, (body, index) =>
@@ -23,7 +24,7 @@ function renderPage(projects: Project[]) {
   const auth: AuthContext = {
     user: { id: 'user_1', email: 'user@example.com', name: 'User', avatarUrl: null },
     organization: { id: 'org_1', name: 'Organization' },
-    project: { id: 'project_default', name: 'Default' },
+    project: { id: activeProject.id, name: activeProject.name },
     roles: [],
     permissions: [],
   }
@@ -43,6 +44,15 @@ function renderPage(projects: Project[]) {
 }
 
 describe('[spec: web-console/project-management] ProjectsPage', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('renders the empty organization state', async () => {
+    renderPage([])
+
+    expect(await screen.findByText('No projects')).toBeTruthy()
+    expect(screen.getByText('Create a project from the project switcher.')).toBeTruthy()
+  })
+
   it('lists organization projects without rename or delete actions for Default', async () => {
     renderPage([project('project_default', 'Default'), project('project_workspace', 'Workspace')])
 
@@ -74,10 +84,9 @@ describe('[spec: web-console/project-management] ProjectsPage', () => {
   })
 
   it('renames through a secondary form and confirms deletion before refreshing the list', async () => {
-    const { collection } = renderPage([
-      project('project_default', 'Default'),
-      project('project_workspace', 'Workspace'),
-    ])
+    const defaultProject = project('project_default', 'Default')
+    const workspace = project('project_workspace', 'Workspace')
+    const { collection, selectProject } = renderPage([defaultProject, workspace], workspace)
     await screen.findByText('Workspace')
 
     fireEvent.click(screen.getByRole('button', { name: 'Rename Workspace' }))
@@ -96,6 +105,77 @@ describe('[spec: web-console/project-management] ProjectsPage', () => {
     fireEvent.click(confirmation)
 
     await waitFor(() => expect(collection.get('project_workspace')).toBeUndefined())
+    expect(selectProject).toHaveBeenCalledWith('project_default')
     await waitFor(() => expect(screen.queryByText('Renamed workspace')).toBeNull())
+  })
+
+  it('does not switch projects after deleting an inactive project', async () => {
+    const { selectProject } = renderPage([
+      project('project_default', 'Default'),
+      project('project_workspace', 'Workspace'),
+    ])
+    await screen.findByText('Workspace')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Workspace' }))
+    await waitFor(() => expect(screen.getByText('Delete project?')).toBeTruthy())
+    const confirmation = screen.getAllByRole('button', { name: 'Delete project', hidden: true }).at(-1)!
+    fireEvent.click(confirmation)
+
+    await waitFor(() => expect(screen.queryByText('Workspace')).toBeNull())
+    expect(selectProject).not.toHaveBeenCalled()
+  })
+
+  it('keeps the rename sheet open on a conflict and allows it to be closed', async () => {
+    const errorSpy = vi.spyOn(toast, 'error').mockImplementation(() => 'toast-id')
+    renderPage([project('project_default', 'Default'), project('project_workspace', 'Workspace')])
+    await screen.findByText('Workspace')
+    server.use(
+      http.patch('*/api/v1/projects/:projectId', () =>
+        HttpResponse.json(
+          {
+            error: {
+              type: 'conflict',
+              message: 'A project named "Existing" already exists in this organization',
+            },
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Workspace' }))
+    const renameSheet = await screen.findByRole('dialog')
+    fireEvent.change(within(renameSheet).getByLabelText('Name'), { target: { value: 'Existing' } })
+    fireEvent.click(within(renameSheet).getByRole('button', { name: 'Rename project' }))
+
+    await waitFor(() =>
+      expect(errorSpy).toHaveBeenCalledWith('A project named "Existing" already exists in this organization'),
+    )
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    fireEvent.click(within(renameSheet).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('reports delete failures without removing the project', async () => {
+    const errorSpy = vi.spyOn(toast, 'error').mockImplementation(() => 'toast-id')
+    const { collection } = renderPage([
+      project('project_default', 'Default'),
+      project('project_workspace', 'Workspace'),
+    ])
+    await screen.findByText('Workspace')
+    server.use(
+      http.delete('*/api/v1/projects/:projectId', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Project is not empty' } }, { status: 409 }),
+      ),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Workspace' }))
+    await waitFor(() => expect(screen.getByText('Delete project?')).toBeTruthy())
+    const confirmation = screen.getAllByRole('button', { name: 'Delete project', hidden: true }).at(-1)!
+    fireEvent.click(confirmation)
+
+    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith('Project is not empty'))
+    expect(collection.get('project_workspace')).toBeTruthy()
+    expect(screen.getByText('Workspace')).toBeTruthy()
   })
 })
