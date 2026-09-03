@@ -203,13 +203,13 @@ func applySavedLogin(config *runnerconfig.Config) error {
 		return err
 	}
 	if saved == nil {
-		return errors.New("AMA runner is not logged in; run ama-runner auth login")
+		return errors.New("Enbor Runner is not logged in; run enbor-runner auth login")
 	}
 	if strings.TrimSpace(config.APIServer) == "" {
 		config.APIServer = saved.APIServer
 	}
 	if !strings.EqualFold(strings.TrimSpace(saved.TokenType), "Bearer") {
-		return errors.New("saved AMA runner login is not a Realmroot Bearer credential; run ama-runner auth login again")
+		return errors.New("saved Enbor Runner login is not a Realmroot Bearer credential; run enbor-runner auth login again")
 	}
 	config.CredentialAccountID = saved.AccountID
 	return nil

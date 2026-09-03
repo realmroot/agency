@@ -74,7 +74,7 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 	query.Set("iss", fixture.URL())
 	callback.RawQuery = query.Encode()
 	status, body := getLoopback(t, callback)
-	if status != http.StatusOK || body != "AMA runner authentication complete. You may close this window.\n" {
+	if status != http.StatusOK || body != "Enbor Runner authentication complete. You may close this window.\n" {
 		t.Fatalf("unexpected callback response status=%d body=%q", status, body)
 	}
 

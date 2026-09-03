@@ -4,11 +4,11 @@ import "testing"
 
 func TestDefaultAndNormalizedVersionInfo(t *testing.T) {
 	info := Default()
-	if info.Name != "ama-runner" || info.Version == "" || info.Commit == "" || info.BuildDate == "" {
+	if info.Name != "enbor-runner" || info.Version == "" || info.Commit == "" || info.BuildDate == "" {
 		t.Fatalf("unexpected default version info: %#v", info)
 	}
 	normalized := (Info{}).Normalized()
-	if normalized.Name != "ama-runner" || normalized.Version == "" || normalized.Commit == "" || normalized.BuildDate == "" {
+	if normalized.Name != "enbor-runner" || normalized.Version == "" || normalized.Commit == "" || normalized.BuildDate == "" {
 		t.Fatalf("unexpected normalized empty info: %#v", normalized)
 	}
 	custom := (Info{Name: "runner", Version: "1", Commit: "abc", BuildDate: "today"}).Normalized()

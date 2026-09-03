@@ -33,8 +33,8 @@ func rootCommand(ctx context.Context, build version.Info, stdout io.Writer, stde
 	stdout = writerOrDiscard(stdout)
 	stderr = writerOrDiscard(stderr)
 	root := &cobra.Command{
-		Use:           "ama-runner",
-		Short:         "Manage AMA self-hosted Runner instances",
+		Use:           "enbor-runner",
+		Short:         "Manage Enbor self-hosted Runner instances",
 		Version:       build.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,

@@ -34,7 +34,7 @@ func NewTokenSource(config runnerconfig.Config, httpClient *http.Client) (*Token
 		return nil, err
 	}
 	if saved == nil || !strings.EqualFold(strings.TrimSpace(saved.TokenType), "Bearer") {
-		return nil, fmt.Errorf("AMA runner requires a Realmroot Bearer login; run ama-runner auth login")
+		return nil, fmt.Errorf("Enbor Runner requires a Realmroot Bearer login; run enbor-runner auth login")
 	}
 	source.saved = saved
 	return source, nil
@@ -44,11 +44,11 @@ func (s *TokenSource) AccessToken(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
+		return "", fmt.Errorf("Enbor Runner requires a Realmroot Bearer login")
 	}
 	if !s.needsRefresh(*s.saved) {
 		if strings.TrimSpace(s.saved.AccessToken) == "" {
-			return "", fmt.Errorf("saved AMA runner token is missing an access token")
+			return "", fmt.Errorf("saved Enbor Runner token is missing an access token")
 		}
 		return s.saved.AccessToken, nil
 	}
@@ -59,7 +59,7 @@ func (s *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
+		return "", fmt.Errorf("Enbor Runner requires a Realmroot Bearer login")
 	}
 	return s.refreshLocked(ctx, true)
 }
@@ -72,7 +72,7 @@ func (s *TokenSource) CanRefresh() bool {
 
 func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, error) {
 	if s.saved == nil {
-		return "", fmt.Errorf("AMA runner requires a Realmroot Bearer login")
+		return "", fmt.Errorf("Enbor Runner requires a Realmroot Bearer login")
 	}
 	previousAccessToken := s.saved.AccessToken
 	update := runnerconfig.UpdateCredentialProfile
@@ -87,7 +87,7 @@ func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, er
 		func(current runnerconfig.CredentialProfile) (runnerconfig.CredentialProfile, bool, error) {
 			if !force && !s.needsRefresh(current) {
 				if strings.TrimSpace(current.AccessToken) == "" {
-					return current, false, fmt.Errorf("saved AMA runner token is missing an access token")
+					return current, false, fmt.Errorf("saved Enbor Runner token is missing an access token")
 				}
 				return current, false, nil
 			}
@@ -95,7 +95,7 @@ func (s *TokenSource) refreshLocked(ctx context.Context, force bool) (string, er
 				return current, false, nil
 			}
 			if strings.TrimSpace(current.RefreshToken) == "" {
-				return current, false, fmt.Errorf("saved AMA runner token is expired; run ama-runner auth login again")
+				return current, false, fmt.Errorf("saved Enbor Runner token is expired; run enbor-runner auth login again")
 			}
 			refreshed, err := s.refreshCredentialProfile(ctx, current)
 			if err != nil {

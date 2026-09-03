@@ -5,14 +5,16 @@
 
 ## Context
 
-The Go `ama-runner` needs a stable object and package ownership model across
+The Go Enbor Runner binary needs a stable object and package ownership model across
 foreground execution, managed services, lease orchestration, session relays,
 runtime bridges, and host operating systems. Excess layers obscure the single
 lease lifecycle; too little separation leaks platform and protocol details.
 
 ## Decision
 
-The following structure fixes the target shape for the Go `ama-runner` implementation.
+The following structure fixes the target shape for the Go `enbor-runner`
+implementation. Its source module remains under `cmd/ama-runner` until the
+internal identifier migration is performed separately.
 The goal is to keep the runner boring: one process that registers itself,
 polls work, keeps a relay open, executes sandbox or external-runtime work, and
 reports lease state through the Go AMA SDK.

@@ -322,8 +322,8 @@ func (c *Controller) service(record instance.Record, program service.Interface) 
 	}
 	return c.newService(program, &service.Config{
 		Name:        serviceNamePrefix + strings.TrimPrefix(record.ID, "runner_"),
-		DisplayName: "AMA Runner " + record.ID,
-		Description: "Any Managed Agents runner for " + record.Config.EnvironmentID,
+		DisplayName: "Enbor Runner " + record.ID,
+		Description: "Enbor Runner for " + record.Config.EnvironmentID,
 		Executable:  c.Executable,
 		Arguments:   []string{"service-run", record.ID, "--registry-dir", c.Registry.Dir},
 		EnvVars:     environment,
@@ -353,7 +353,7 @@ func (c *Controller) waitReadyAfter(record instance.Record, after time.Time) err
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("runner instance %s did not become ready within %s; inspect ama-runner logs %s", record.ID, c.waitTimeout(), record.ID)
+	return fmt.Errorf("runner instance %s did not become ready within %s; inspect enbor-runner logs %s", record.ID, c.waitTimeout(), record.ID)
 }
 
 func (c *Controller) waitStopped(record instance.Record) error {

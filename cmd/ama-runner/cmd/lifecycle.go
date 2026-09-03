@@ -23,7 +23,7 @@ import (
 func runCommand(ctx context.Context, build version.Info) *cobra.Command {
 	command := &cobra.Command{
 		Use:           "run",
-		Short:         "Run one AMA Runner in the foreground",
+		Short:         "Run one Enbor Runner in the foreground",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -39,7 +39,7 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	var startAtLogin bool
 	command := &cobra.Command{
 		Use:           "start [instance-id]",
-		Short:         "Create or start a managed AMA Runner instance",
+		Short:         "Create or start a managed Enbor Runner instance",
 		Args:          cobra.MaximumNArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -49,7 +49,7 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 			var err error
 			if len(args) == 1 {
 				if command.Flags().Changed("start-at-login") {
-					return fmt.Errorf("use ama-runner configure %s --start-at-login=<true|false> to change login startup", args[0])
+					return fmt.Errorf("use enbor-runner configure %s --start-at-login=<true|false> to change login startup", args[0])
 				}
 				record, err = registry.Get(args[0])
 			} else {
@@ -64,7 +64,7 @@ func startCommand(build version.Info, stdout io.Writer) *cobra.Command {
 					switch {
 					case getErr == nil:
 						if existing.Config != record.Config || existing.StartAtLogin != record.StartAtLogin || existing.CredentialPath != record.CredentialPath || existing.AccountID != record.AccountID {
-							return fmt.Errorf("runner instance %s already exists with different configuration; use ama-runner configure %s", record.ID, record.ID)
+							return fmt.Errorf("runner instance %s already exists with different configuration; use enbor-runner configure %s", record.ID, record.ID)
 						}
 						record = existing
 					case errors.Is(getErr, instance.ErrNotFound):
@@ -97,7 +97,7 @@ func listCommand(ctx context.Context, build version.Info, stdout io.Writer) *cob
 	var output string
 	command := &cobra.Command{
 		Use:           "list",
-		Short:         "List local AMA Runner instances",
+		Short:         "List local Enbor Runner instances",
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -134,7 +134,7 @@ func statusCommand(ctx context.Context, build version.Info, stdout io.Writer) *c
 	var output string
 	command := &cobra.Command{
 		Use:           "status <instance-id>",
-		Short:         "Inspect one local AMA Runner instance",
+		Short:         "Inspect one local Enbor Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -161,7 +161,7 @@ func stopCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	var force bool
 	command := &cobra.Command{
 		Use:           "stop <instance-id>",
-		Short:         "Stop and disable one managed AMA Runner instance",
+		Short:         "Stop and disable one managed Enbor Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -189,7 +189,7 @@ func stopCommand(build version.Info, stdout io.Writer) *cobra.Command {
 func restartCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	return &cobra.Command{
 		Use:           "restart <instance-id>",
-		Short:         "Restart one managed AMA Runner instance",
+		Short:         "Restart one managed Enbor Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -216,7 +216,7 @@ func logsCommand(ctx context.Context, build version.Info, stdout io.Writer) *cob
 	var follow bool
 	command := &cobra.Command{
 		Use:           "logs <instance-id>",
-		Short:         "Read logs for one managed AMA Runner instance",
+		Short:         "Read logs for one managed Enbor Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -321,7 +321,7 @@ func removeCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	var purge bool
 	command := &cobra.Command{
 		Use:           "remove <instance-id>",
-		Short:         "Remove one managed AMA Runner instance",
+		Short:         "Remove one managed Enbor Runner instance",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,

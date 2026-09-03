@@ -1,0 +1,80 @@
+version: 2
+
+project_name: enbor-runner
+
+builds:
+  - id: enbor-runner
+    dir: cmd/ama-runner
+    main: .
+    binary: enbor-runner
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.runnerVersion={{ .Version }}
+      - -X main.runnerCommit={{ .FullCommit }}
+      - -X main.runnerBuildDate={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - ids:
+      - enbor-runner
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+snapshot:
+  version_template: "0.0.0-SNAPSHOT-{{ .ShortCommit }}"
+
+dockers_v2:
+  - id: enbor-runner
+    ids:
+      - enbor-runner
+    dockerfile: cmd/ama-runner/Dockerfile.goreleaser
+    images:
+      - ghcr.io/realmroot/enbor-runner
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.title: Enbor Runner
+      org.opencontainers.image.description: Self-hosted runtime runner for Enbor
+      org.opencontainers.image.source: https://github.com/realmroot/agency
+      org.opencontainers.image.licenses: Apache-2.0
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+    annotations:
+      org.opencontainers.image.title: Enbor Runner
+      org.opencontainers.image.description: Self-hosted runtime runner for Enbor
+      org.opencontainers.image.source: https://github.com/realmroot/agency
+      org.opencontainers.image.licenses: Apache-2.0
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+
+release:
+  prerelease: auto

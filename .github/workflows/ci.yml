@@ -96,8 +96,8 @@ jobs:
       # Coverage gate: unit + web (v8). Fails below 95% business / 90% else, per-file.
       - run: pnpm run test:coverage
 
-  ama-runner-coverage:
-    name: AMA Runner Coverage
+  enbor-runner-coverage:
+    name: Enbor Runner Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -140,8 +140,8 @@ jobs:
               sys.exit(1)
           PY
 
-  ama-runner-platforms:
-    name: AMA Runner (${{ matrix.os }})
+  enbor-runner-platforms:
+    name: Enbor Runner (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -163,35 +163,35 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run AMA runner tests
+      - name: Run Enbor Runner tests
         if: runner.os != 'Windows'
         working-directory: cmd/ama-runner
         run: go test -race ./...
-      - name: Run Windows AMA runner tests
+      - name: Run Windows Enbor Runner tests
         if: runner.os == 'Windows'
         working-directory: cmd/ama-runner
         run: go test ./...
-      - name: Smoke AMA runner binary
+      - name: Smoke Enbor Runner binary
         if: runner.os != 'Windows'
         working-directory: cmd/ama-runner
         shell: bash
         run: |
-          go build -o "$RUNNER_TEMP/ama-runner" .
-          "$RUNNER_TEMP/ama-runner" version --json
-      - name: Smoke Windows AMA runner binary
+          go build -o "$RUNNER_TEMP/enbor-runner" .
+          "$RUNNER_TEMP/enbor-runner" version --json
+      - name: Smoke Windows Enbor Runner binary
         if: runner.os == 'Windows'
         working-directory: cmd/ama-runner
         shell: pwsh
         run: |
-          go build -o "$env:RUNNER_TEMP/ama-runner.exe" .
-          & "$env:RUNNER_TEMP/ama-runner.exe" version --json
+          go build -o "$env:RUNNER_TEMP/enbor-runner.exe" .
+          & "$env:RUNNER_TEMP/enbor-runner.exe" version --json
       - name: Smoke runtime bridge and native CLI lookup
         run: |
           pnpm exec vitest run packages/runtime-bridge/src/host/cli.platform.test.ts
           pnpm run smoke:mock
 
-  ama-runner-cross-build:
-    name: AMA Runner Cross Build
+  enbor-runner-cross-build:
+    name: Enbor Runner Cross Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -210,8 +210,86 @@ jobs:
             arch="${target#*/}"
             suffix=""
             if [[ "$os" == "windows" ]]; then suffix=".exe"; fi
-            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -o "/tmp/ama-runner-${os}-${arch}${suffix}" .
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -o "/tmp/enbor-runner-${os}-${arch}${suffix}" .
           done
+
+  enbor-runner-packaging:
+    name: Enbor Runner Packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: cmd/ama-runner/go.sum
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          distribution: goreleaser
+          version: v2.18.0
+          install-only: true
+      - name: Validate GoReleaser configuration
+        run: goreleaser check
+      - name: Build and verify release archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          goreleaser release --snapshot --clean
+          linux_amd64_archive="$(find dist -maxdepth 1 -type f -name 'enbor-runner_*_linux_amd64.tar.gz' -print -quit)"
+          linux_arm64_archive="$(find dist -maxdepth 1 -type f -name 'enbor-runner_*_linux_arm64.tar.gz' -print -quit)"
+          windows_archive="$(find dist -maxdepth 1 -type f -name 'enbor-runner_*_windows_amd64.zip' -print -quit)"
+          test -n "$linux_amd64_archive"
+          test -n "$linux_arm64_archive"
+          test -n "$windows_archive"
+          tar -tzf "$linux_amd64_archive" | grep -Fxq enbor-runner
+          tar -tzf "$linux_arm64_archive" | grep -Fxq enbor-runner
+          unzip -Z1 "$windows_archive" | grep -Fxq enbor-runner.exe
+          grep -Eq '^[0-9a-f]{64}  enbor-runner_.*_linux_amd64.tar.gz$' dist/checksums.txt
+          grep -Eq '^[0-9a-f]{64}  enbor-runner_.*_linux_arm64.tar.gz$' dist/checksums.txt
+      - name: Build and smoke-test the Runner image
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$RUNNER_TEMP/enbor-runner-image"
+          mkdir -p "$context/linux/amd64" "$context/linux/arm64"
+          linux_amd64_archive="$(find dist -maxdepth 1 -type f -name 'enbor-runner_*_linux_amd64.tar.gz' -print -quit)"
+          linux_arm64_archive="$(find dist -maxdepth 1 -type f -name 'enbor-runner_*_linux_arm64.tar.gz' -print -quit)"
+          tar -xzf "$linux_amd64_archive" -C "$context/linux/amd64" enbor-runner
+          tar -xzf "$linux_arm64_archive" -C "$context/linux/arm64" enbor-runner
+          for platform in amd64 arm64; do
+            docker buildx build \
+              --platform "linux/$platform" \
+              --load \
+              --tag "enbor-runner:ci-$platform" \
+              --file cmd/ama-runner/Dockerfile.goreleaser \
+              "$context"
+            docker run --rm --platform "linux/$platform" "enbor-runner:ci-$platform" version --json | grep -Fq '"name":"enbor-runner"'
+          done
+          credential_dir="$RUNNER_TEMP/enbor-config"
+          state_dir="$RUNNER_TEMP/enbor-state"
+          workspace_dir="$RUNNER_TEMP/enbor-workspace"
+          mkdir -p "$credential_dir" "$state_dir" "$workspace_dir"
+          printf '{}\n' > "$credential_dir/credentials.json"
+          chmod 600 "$credential_dir/credentials.json"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --entrypoint sh \
+            --volume "$credential_dir:/enbor/config" \
+            --volume "$state_dir:/enbor/state" \
+            --volume "$workspace_dir:/workspace" \
+            enbor-runner:ci-amd64 \
+            -c 'test -r /enbor/config/credentials.json && touch /enbor/state/probe /workspace/probe'
+          auth_status="$(docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env HOME=/tmp \
+            --env AMA_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
+            --volume "$credential_dir:/enbor/config" \
+            enbor-runner:ci-amd64 auth status 2>&1 || true)"
+          grep -Fq 'not logged in' <<<"$auth_status"
 
   integration:
     name: Workerd Integration

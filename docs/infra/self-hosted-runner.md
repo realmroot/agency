@@ -1,4 +1,4 @@
-# Self-Hosted AMA Runner Operations
+# Self-Hosted Enbor Runner Operations
 
 This runbook covers installation and operation of `cmd/ama-runner`. It is not a
 product or API specification. Observable Runner behavior is specified in
@@ -17,7 +17,21 @@ The module uses the repository-local generated Go SDK. Node.js and any selected
 runtime CLIs (`codex`, `claude`, or `copilot`) must be available on `PATH`.
 
 Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64.
-Windows arm64 is compile-checked but is not a supported release target.
+Windows arm64 is compile-checked but is not a supported release target. Tags
+matching `v*` publish archives and `checksums.txt` through GoReleaser, plus a
+multi-architecture Linux image at `ghcr.io/realmroot/enbor-runner`.
+
+## Install
+
+Install the latest release with Homebrew on macOS or Linux:
+
+```bash
+brew install realmroot/tap/enbor-runner
+```
+
+The Formula installs the release archive for the current operating system and
+CPU architecture. It is updated automatically by the `realmroot/homebrew-tap`
+repository after a new Enbor Runner release is published.
 
 ## Authenticate
 
@@ -26,7 +40,7 @@ starting the daemon. Realmroot is the current provider. Select the personal or
 organization context that owns the AMA project.
 
 ```bash
-ama-runner auth login --api-server "https://ama.example.com"
+enbor-runner auth login --api-server "https://ama.example.com"
 ```
 
 The provider registration must allow the runner's fixed loopback redirect URI:
@@ -35,7 +49,7 @@ The provider registration must allow the runner's fixed loopback redirect URI:
 ## Managed instance
 
 ```bash
-ama-runner start \
+enbor-runner start \
   --api-server "https://ama.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
@@ -45,14 +59,15 @@ ama-runner start \
 Common operator commands:
 
 ```bash
-ama-runner list
-ama-runner status runner_...
-ama-runner stop runner_...
-ama-runner restart runner_...
-ama-runner logs --follow runner_...
-ama-runner configure runner_... --max-concurrent 10
-ama-runner configure runner_... --start-at-login=true
-ama-runner remove runner_...
+enbor-runner list
+enbor-runner status runner_...
+enbor-runner stop runner_...
+enbor-runner restart runner_...
+enbor-runner logs --follow runner_...
+enbor-runner configure runner_... --max-concurrent 10
+enbor-runner configure runner_... --start-at-login=true
+enbor-runner configure runner_... --start-at-login=false
+enbor-runner remove runner_...
 ```
 
 ## Foreground instance
@@ -61,7 +76,7 @@ Use foreground mode in containers, development shells, or when another service
 manager owns the process:
 
 ```bash
-ama-runner run \
+enbor-runner run \
   --api-server "https://ama.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
@@ -71,17 +86,54 @@ ama-runner run \
 On Windows:
 
 ```powershell
-.\ama-runner.exe run `
+.\enbor-runner.exe run `
   --api-server $env:AMA_API_SERVER `
   --project-id $env:AMA_PROJECT_ID `
   --environment-id $env:AMA_ENVIRONMENT_ID
 ```
 
+The Enbor name changes the executable but deliberately keeps the existing
+`AMA_RUNNER_*` environment variables, `ama-runner` state directories, managed
+service identifiers, Go module paths, and `ama-runner-work` protocol identifier.
+Existing Runner state therefore remains reusable and the control-plane protocol
+does not change as part of packaging.
+
+## Docker
+
+Authenticate once with the native binary, then mount its credential directory
+into the container. Pre-create host-owned state and workspace directories and
+run the container with the host UID/GID so the mode-`0600` credential remains
+readable and new files remain owned by the operator. Foreground `run` mode is
+required because native launchd/systemd management does not apply in a container:
+
+```bash
+mkdir -p "$HOME/.local/state/enbor-runner-container" "$PWD/.enbor-work"
+docker run --rm \
+  --name enbor-runner \
+  --user "$(id -u):$(id -g)" \
+  --env HOME=/tmp \
+  --env AMA_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
+  --volume "$HOME/.config/ama-runner:/enbor/config" \
+  --volume "$HOME/.local/state/enbor-runner-container:/enbor/state" \
+  --volume "$PWD/.enbor-work:/workspace" \
+  ghcr.io/realmroot/enbor-runner:latest run \
+  --api-server "https://ama.example.com" \
+  --project-id "project_..." \
+  --environment-id "env_..." \
+  --state-dir /enbor/state \
+  --work-dir /workspace \
+  --allow-unsafe-process
+```
+
+The image includes Node.js, Git, and an SSH client. It does not bundle provider
+CLIs. Build a derived image with pinned `codex`, `claude`, or `copilot` versions
+when that runtime should be advertised.
+
 ## Provider permission policy
 
 The runner accepts provider permission policy through host environment
-variables. Managed `ama-runner start` installations copy these values into the
-native user service when the instance is created; foreground `ama-runner run`
+variables. Managed `enbor-runner start` installations copy these values into the
+native user service when the instance is created; foreground `enbor-runner run`
 reads them from its process environment.
 
 | Variable | Allowed values | Default |
@@ -96,7 +148,7 @@ through their configured reviewer:
 ```bash
 AMA_CODEX_SANDBOX_MODE=workspace-write \
 AMA_CODEX_APPROVAL_POLICY=on-request \
-ama-runner start \
+enbor-runner start \
   --api-server "https://ama.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
@@ -143,8 +195,8 @@ outside agent workspaces.
 Start with:
 
 ```bash
-ama-runner status runner_...
-ama-runner logs --follow runner_...
+enbor-runner status runner_...
+enbor-runner logs --follow runner_...
 ```
 
 Verify the configured API Server, Environment, provider login, runtime CLI

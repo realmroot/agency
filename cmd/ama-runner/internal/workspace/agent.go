@@ -141,7 +141,7 @@ func readSkillsLock(cwd string) (string, bool, error) {
 }
 
 func ensureAgentSkillGitignore(cwd string) error {
-	return ensureGitignoreEntries(cwd, "# agent skills (managed by AMA runner)", []string{".claude/skills/", ".agents/", SkillsLockFileName})
+	return ensureGitignoreEntries(cwd, "# agent skills (managed by Enbor Runner)", []string{".claude/skills/", ".agents/", SkillsLockFileName})
 }
 
 func ensureGitignoreEntries(cwd string, comment string, entries []string) error {
