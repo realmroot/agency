@@ -21,6 +21,9 @@ export function SessionDetailView({
   onClose,
   onReopen,
   onDelete,
+  closePending = false,
+  reopenPending = false,
+  deletePending = false,
   onReconnectRuntime,
   chatMessage,
   setChatMessage,
@@ -34,6 +37,9 @@ export function SessionDetailView({
   onClose: (id: string) => void
   onReopen: (id: string) => void
   onDelete: (id: string) => void
+  closePending?: boolean
+  reopenPending?: boolean
+  deletePending?: boolean
   onReconnectRuntime: () => void
   chatMessage: string
   setChatMessage: (value: string) => void
@@ -50,6 +56,7 @@ export function SessionDetailView({
   const shortSessionId = `${sessionId.slice(0, 5)}...${sessionId.slice(-7)}`
   const duration = formatDuration(session.status.startedAt, session.status.closedAt)
   const isClosed = phase === 'closed'
+  const actionPending = closePending || reopenPending || deletePending
   const agentName = agentDisplayName || agentSnapshot.systemPrompt || session.spec.agentId
   const environmentName = String(environmentDisplayName ?? session.spec.environmentId ?? 'Environment')
   return (
@@ -67,7 +74,7 @@ export function SessionDetailView({
             <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" disabled={actionPending}>
                     Actions
                     <ChevronDown data-icon="inline-end" />
                   </Button>
@@ -241,6 +248,7 @@ export function SessionDetailView({
         description="Close the selected runtime session. In-flight work may be interrupted."
         confirmLabel="Close session"
         destructive
+        pending={closePending}
         open={pendingAction === 'close'}
         onOpenChange={(open) => !open && setPendingAction(null)}
         onConfirm={() => onClose(sessionId)}
@@ -249,6 +257,7 @@ export function SessionDetailView({
         title="Reopen session?"
         description="Restart the selected runtime session so it can accept new messages."
         confirmLabel="Reopen session"
+        pending={reopenPending}
         open={pendingAction === 'reopen'}
         onOpenChange={(open) => !open && setPendingAction(null)}
         onConfirm={() => onReopen(sessionId)}
@@ -258,6 +267,7 @@ export function SessionDetailView({
         description="Delete this session from the product while preserving persisted events. It cannot be restored."
         confirmLabel="Delete session"
         destructive
+        pending={deletePending}
         open={pendingAction === 'delete'}
         onOpenChange={(open) => !open && setPendingAction(null)}
         onConfirm={() => onDelete(sessionId)}

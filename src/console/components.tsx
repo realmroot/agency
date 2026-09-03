@@ -339,6 +339,7 @@ export function ConfirmAction({
   open,
   onOpenChange,
   destructive = false,
+  pending = false,
 }: {
   children?: ReactNode
   title: string
@@ -348,6 +349,7 @@ export function ConfirmAction({
   open?: boolean
   onOpenChange?: (open: boolean) => void
   destructive?: boolean
+  pending?: boolean
 }) {
   return (
     <AlertDialog {...(open === undefined ? {} : { open })} {...(onOpenChange === undefined ? {} : { onOpenChange })}>
@@ -359,7 +361,12 @@ export function ConfirmAction({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant={destructive ? 'destructive' : 'default'} onClick={onConfirm}>
+          <AlertDialogAction
+            variant={destructive ? 'destructive' : 'default'}
+            onClick={onConfirm}
+            disabled={pending}
+            aria-busy={pending}
+          >
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

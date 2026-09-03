@@ -565,10 +565,10 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
     await expect(dispatchInboxActivation(deps({ trigger: http }).value, 'run_1')).resolves.toBeUndefined()
   })
 
-  it.each([{ suspend: true }, { archived: true }])('fails inactive Trigger delivery for %#', async (state) => {
+  it.each([{ suspend: true }, { deleted: true }])('fails inactive Trigger delivery for %#', async (state) => {
     const inactive = inboxTrigger()
     inactive.spec.suspend = state.suspend ?? false
-    inactive.metadata.deletedAt = state.archived ? inactive.metadata.createdAt : null
+    inactive.metadata.deletedAt = state.deleted ? inactive.metadata.createdAt : null
     const fake = deps({ trigger: inactive })
     await dispatchInboxActivation(fake.value, 'run_1')
     expect(fake.marks.failed).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Inbox Trigger is inactive')

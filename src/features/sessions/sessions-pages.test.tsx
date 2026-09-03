@@ -770,6 +770,62 @@ describe('SessionDetailView', () => {
     expect(onDelete).toHaveBeenCalledWith('session_1')
   })
 
+  it('disables destructive actions and duplicate confirmation while a session mutation is pending', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+      value: vi.fn(() => false),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    const onDelete = vi.fn()
+    const session = buildSession()
+    const view = (deletePending: boolean) => (
+      <MemoryRouter>
+        <SessionDetailView
+          session={session}
+          agentName="Coding agent"
+          environmentName="Node workspace"
+          runtime={buildRuntimeState()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
+          onDelete={onDelete}
+          deletePending={deletePending}
+          onReconnectRuntime={vi.fn()}
+          chatMessage=""
+          setChatMessage={vi.fn()}
+          onSendMessage={vi.fn()}
+          onAbortRuntime={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+    const rendered = render(view(false))
+
+    const actionsButton = screen.getByRole('button', { name: 'Actions' })
+    fireEvent.pointerDown(actionsButton, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.mouseDown(actionsButton)
+    fireEvent.click(actionsButton)
+    fireEvent.click(await screen.findByText('Delete session'))
+    const confirmButton = await screen.findByRole('button', { name: 'Delete session' })
+
+    rendered.rerender(view(true))
+
+    expect(actionsButton).toBeDisabled()
+    expect(confirmButton).toBeDisabled()
+    expect(confirmButton).toHaveAttribute('aria-busy', 'true')
+    fireEvent.click(confirmButton)
+    expect(onDelete).not.toHaveBeenCalled()
+  })
+
   it('renders session without a name using session id in heading', () => {
     renderDetailView({ name: null })
     expect(screen.getAllByText('session_1').length).toBeGreaterThan(0)
