@@ -1,4 +1,4 @@
-FROM docker.io/cloudflare/sandbox:0.10.1
+FROM docker.io/cloudflare/sandbox:0.12.9
 
 # GitHub CLI: agents authenticate via the session's GH_TOKEN env (repo-scoped
 # App installation token) — no gh auth login required.

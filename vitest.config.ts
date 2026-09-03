@@ -124,9 +124,44 @@ export default defineConfig({
             const migrations = await readD1Migrations(migrationsPath)
 
             return {
-              wrangler: { configPath: './wrangler.test.toml' },
+              main: './server/worker.ts',
               miniflare: {
-                bindings: { TEST_MIGRATIONS: migrations },
+                compatibilityDate: '2026-05-07',
+                compatibilityFlags: ['nodejs_compat'],
+                bindings: {
+                  TEST_MIGRATIONS: migrations,
+                  SANDBOX_TRANSPORT: 'rpc',
+                  AMA_RUNTIME_MODE: 'test',
+                  OIDC_ISSUER: 'https://identity.alias.test/api/auth/',
+                  OIDC_CLIENT_ID: 'ama-test',
+                  OIDC_CLIENT_SECRET: 'test-confidential-client-secret',
+                  OIDC_RUNNER_CLIENT_ID: 'ama-runner-test',
+                  OIDC_RESOURCE: 'https://ama.tftt.cc/api',
+                  AMA_E2E_TEST_AUTH: 'true',
+                  AMA_ALLOWED_ORIGINS: 'https://example.com',
+                  AMA_VAULT_ENCRYPTION_KEY: 'test-vault-encryption-key-for-workers-suite-32-bytes',
+                  AMA_WEB_SESSION_ENCRYPTION_KEY: 'test-web-session-encryption-key-for-workers-suite',
+                },
+                serviceBindings: {
+                  ASSETS: async () => new Response('Not Found', { status: 404 }),
+                },
+                d1Databases: ['DB'],
+                r2Buckets: ['SESSION_EVENTS'],
+                ratelimits: {
+                  AUTH_CLIENT_RATE_LIMITER: {
+                    namespace_id: '89007',
+                    simple: { limit: 10, period: 60 },
+                  },
+                  AUTH_IP_RATE_LIMITER: {
+                    namespace_id: '89008',
+                    simple: { limit: 100, period: 60 },
+                  },
+                },
+                durableObjects: {
+                  SANDBOX: { className: 'Sandbox', useSQLite: true },
+                  SESSION: { className: 'SessionObject', useSQLite: true },
+                  RUNNER_POOL: { className: 'RunnerPoolObject', useSQLite: true },
+                },
               },
             }
           }),

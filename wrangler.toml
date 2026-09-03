@@ -17,6 +17,7 @@ run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 [vars]
 AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
 AMA_RUNTIME_MODE = "live"
+SANDBOX_TRANSPORT = "rpc"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_RESOURCE = "https://ama.tftt.cc/api"
@@ -142,6 +143,7 @@ routes = [
 
 [env.staging.vars]
 AMA_RUNTIME_MODE = "live"
+SANDBOX_TRANSPORT = "rpc"
 AMA_AI_GATEWAY_ID = "ama"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
 OIDC_RESOURCE = "https://ama-staging.tftt.cc/api"
@@ -222,6 +224,7 @@ max_instances = 20
 [env.e2e]
 
 [env.e2e.vars]
+SANDBOX_TRANSPORT = "rpc"
 OIDC_ISSUER = "https://oidc.test/api/auth"
 OIDC_CLIENT_ID = "ama-e2e"
 OIDC_RUNNER_CLIENT_ID = "ama-runner-e2e"

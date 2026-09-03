@@ -586,7 +586,11 @@ describe('session-runtime', () => {
       }),
     })
 
-    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({
       DOWNSTREAM_API_URL: 'https://downstream.example.com',
       DOWNSTREAM_AGENT_ID: 'agent_123',
@@ -1088,7 +1092,10 @@ describe('session-runtime', () => {
     const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
     await adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)
 
-    expect(getSandboxMock).toHaveBeenCalledWith(expect.anything(), 'sandbox_123', { normalizeId: true })
+    expect(getSandboxMock).toHaveBeenCalledWith(expect.anything(), 'sandbox_123', {
+      enableDefaultSession: false,
+      normalizeId: true,
+    })
     expect(calls).toEqual(['sleep:60s', 'keepalive:false'])
   })
 
@@ -1107,7 +1114,11 @@ describe('session-runtime', () => {
     })
 
     expect(getSandboxMock).toHaveBeenCalledOnce()
-    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
     expect(mockSandbox.exec).toHaveBeenCalledWith("test -f '/tmp/.ama-runtime-ready'")
     expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
     expect(mockSandbox.writeFile).not.toHaveBeenCalled()
@@ -1133,8 +1144,9 @@ describe('session-runtime', () => {
     })
 
     expect(getSandboxMock).toHaveBeenCalledTimes(2)
-    expect(getSandboxMock).toHaveBeenNthCalledWith(1, {}, 'sandbox_123', { keepAlive: true, normalizeId: true })
-    expect(getSandboxMock).toHaveBeenNthCalledWith(2, {}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    const sandboxOptions = { enableDefaultSession: false, keepAlive: true, normalizeId: true }
+    expect(getSandboxMock).toHaveBeenNthCalledWith(1, {}, 'sandbox_123', sandboxOptions)
+    expect(getSandboxMock).toHaveBeenNthCalledWith(2, {}, 'sandbox_123', sandboxOptions)
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({ TOKEN: 'resolved' })
     expect(mockSandbox.exec).toHaveBeenCalledWith("mkdir -p '/root'", undefined)
     expect(mockSandbox.writeFile).toHaveBeenCalledWith('/tmp/.ama-runtime-ready', 'ready', { encoding: 'utf-8' })
@@ -1148,6 +1160,25 @@ describe('session-runtime', () => {
 
     expect(mockSandbox.setSleepAfter).toHaveBeenCalledTimes(2)
     expect(mockSandbox.setKeepAlive).toHaveBeenCalledTimes(2)
+  })
+
+  it('reads runtime workspace state without enabling the SDK default session', async () => {
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+
+    await expect(
+      adapters.runtimeWorkspace.readMemoryStoreMemories({
+        sessionId: 'session_123',
+        sandboxId: 'sandbox_123',
+        volumes: [],
+        volumeMounts: [],
+      }),
+    ).resolves.toEqual([])
+
+    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
   })
 
   it('[spec: runtime/idle-retention] propagates idle failure after three complete attempts', async () => {
