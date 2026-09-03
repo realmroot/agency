@@ -32,6 +32,14 @@ Feature: API contracts
     And the Resource response links the live OpenAPI document with service-desc
     And every OpenAPI operation scope belongs to the published catalog
 
+  @api-contracts/agent-skills @api
+  Scenario: Publish installable Agent Skills
+    Given Enbor owns Agent-facing operating Skills
+    When Toolbox discovers Agent Skills at the Enbor Resource Server origin
+    Then Enbor publishes an Agent Skills Discovery version 0.2.0 index
+    And the index advertises every Enbor-owned Skill as a digest-verified archive
+    And each archive contains its Skill instructions and supporting files
+
   @api-contracts/error-envelope @api
   Scenario: Provide a consistent API error envelope
     When an API request fails validation, authentication, authorization, or a not-found check

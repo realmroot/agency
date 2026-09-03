@@ -7,8 +7,10 @@
   "packageManager": "pnpm@10.30.2",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:staging": "CLOUDFLARE_ENV=staging vite build",
+    "build": "pnpm run build:skills && vite build",
+    "build:staging": "pnpm run build:skills && CLOUDFLARE_ENV=staging vite build",
+    "build:skills": "node scripts/build-agent-skills.mjs",
+    "check:skills": "node scripts/build-agent-skills.mjs --check",
     "deploy": "pnpm run db:migrate:d1:prod && pnpm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate:d1": "wrangler d1 migrations apply enbor-db --local",
