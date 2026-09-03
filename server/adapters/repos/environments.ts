@@ -17,9 +17,9 @@ import type {
   UpdateEnvironmentFields,
 } from '@server/usecases/ports'
 import { CreationIdempotencyConflictError, ResourceDeletedDuringMutationError } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { and, desc, eq, exists, gt, gte, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { connectors, environments, environmentVersions } from '../../db/schema'
+import { connectors, environments, environmentVersions, leases, runners } from '../../db/schema'
 import { DEFAULT_CONNECTORS } from '../../domain/connector'
 import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
@@ -409,18 +409,77 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
     },
 
     async delete(projectId, environmentId, deletedAt) {
-      const rows = await db
-        .update(environments)
-        .set({ deletedAt, updatedAt: deletedAt })
+      const activeLease = exists(
+        db
+          .select({ id: leases.id })
+          .from(leases)
+          .where(and(eq(leases.runnerId, runners.id), eq(leases.projectId, projectId), eq(leases.state, 'active'))),
+      )
+      const busyRunner = db
+        .select({ id: runners.id })
+        .from(runners)
         .where(
           and(
-            eq(environments.id, environmentId),
-            eq(environments.projectId, projectId),
-            isNull(environments.deletedAt),
+            eq(runners.projectId, projectId),
+            eq(runners.environmentId, environmentId),
+            isNull(runners.deletedAt),
+            or(gt(runners.currentLoad, 0), activeLease),
           ),
         )
-        .returning({ id: environments.id })
-      return rows.length > 0
+      const environmentDeletedByThisBatch = exists(
+        db
+          .select({ id: environments.id })
+          .from(environments)
+          .where(
+            and(
+              eq(environments.id, environmentId),
+              eq(environments.projectId, projectId),
+              eq(environments.deletedAt, deletedAt),
+            ),
+          ),
+      )
+
+      const [deletedEnvironments, deletedRunners, liveEnvironments] = await db.batch([
+        db
+          .update(environments)
+          .set({ deletedAt, updatedAt: deletedAt })
+          .where(
+            and(
+              eq(environments.id, environmentId),
+              eq(environments.projectId, projectId),
+              isNull(environments.deletedAt),
+              notExists(busyRunner),
+            ),
+          )
+          .returning({ id: environments.id }),
+        db
+          .update(runners)
+          .set({ deletedAt, updatedAt: deletedAt, state: 'disabled' })
+          .where(
+            and(
+              eq(runners.projectId, projectId),
+              eq(runners.environmentId, environmentId),
+              isNull(runners.deletedAt),
+              environmentDeletedByThisBatch,
+            ),
+          )
+          .returning({ id: runners.id }),
+        db
+          .select({ id: environments.id })
+          .from(environments)
+          .where(
+            and(
+              eq(environments.id, environmentId),
+              eq(environments.projectId, projectId),
+              isNull(environments.deletedAt),
+            ),
+          ),
+      ])
+
+      if (deletedEnvironments.length > 0) {
+        return { status: 'deleted', runnerIds: deletedRunners.map(({ id }) => id) }
+      }
+      return liveEnvironments.length > 0 ? { status: 'conflict' } : { status: 'not_found' }
     },
 
     async connectorAvailable(connectorId) {

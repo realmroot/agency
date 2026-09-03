@@ -67,6 +67,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -91,7 +98,9 @@ def sync_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete an environment
 
-     Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+     Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones
+    cannot be restored through the API. Deletion is rejected while an associated Runner has load or an
+    active lease.
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
@@ -127,7 +136,9 @@ def sync(
 ) -> Any | ErrorResponse | None:
     """ Delete an environment
 
-     Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+     Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones
+    cannot be restored through the API. Deletion is rejected while an associated Runner has load or an
+    active lease.
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
@@ -158,7 +169,9 @@ async def asyncio_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete an environment
 
-     Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+     Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones
+    cannot be restored through the API. Deletion is rejected while an associated Runner has load or an
+    active lease.
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
@@ -194,7 +207,9 @@ async def asyncio(
 ) -> Any | ErrorResponse | None:
     """ Delete an environment
 
-     Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+     Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones
+    cannot be restored through the API. Deletion is rejected while an associated Runner has load or an
+    active lease.
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.

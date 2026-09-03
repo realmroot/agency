@@ -2523,6 +2523,10 @@ export type DeleteEnvironmentErrors = {
      * Environment not found
      */
     404: ErrorResponse;
+    /**
+     * An associated Runner is busy
+     */
+    409: ErrorResponse;
 };
 export type DeleteEnvironmentError = DeleteEnvironmentErrors[keyof DeleteEnvironmentErrors];
 export type DeleteEnvironmentResponses = {

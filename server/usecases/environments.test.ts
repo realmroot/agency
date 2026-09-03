@@ -106,7 +106,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['environments']> } = {}): Dep
       }
     },
     update: async () => {},
-    delete: async () => true,
+    delete: async () => ({ status: 'deleted', runnerIds: [] }),
     connectorAvailable: async () => true,
     ...overrides.repo,
   }

@@ -219,13 +219,18 @@ const deleteRoute = createRoute({
   operationId: 'deleteEnvironment',
   tags: ['Environments'],
   summary: 'Delete an environment',
-  description: 'Soft-deletes the environment. The retained tombstone cannot be restored through the API.',
+  description:
+    'Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones cannot be restored through the API. Deletion is rejected while an associated Runner has load or an active lease.',
   ...AuthenticatedOperation,
   request: { params: EnvironmentParamsSchema },
   responses: {
     204: { description: 'Environment deleted' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Environment not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'An associated Runner is busy',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -363,8 +368,11 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
       const { environmentId } = c.req.valid('param')
       const environment = await deps.environments.find(auth.project.id, environmentId)
       if (!environment) return notFound(c)
-      if (!(await deps.environments.delete(auth.project.id, environmentId, new Date().toISOString())))
-        return notFound(c)
+      const result = await deps.environments.delete(auth.project.id, environmentId, new Date().toISOString())
+      if (result.status === 'not_found') return notFound(c)
+      if (result.status === 'conflict') {
+        return c.json({ error: { type: 'conflict', message: 'Environment has a Runner with active work' } }, 409)
+      }
       await deps.audit.record(auth, {
         action: 'environment.delete',
         resourceType: 'environment',
@@ -372,6 +380,7 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
         outcome: 'success',
         requestId: requestId(c),
         before: environment,
+        metadata: { deletedRunnerIds: result.runnerIds },
       })
       return c.body(null, 204)
     })

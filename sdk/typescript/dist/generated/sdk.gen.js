@@ -142,7 +142,7 @@ export const createEnvironment = (options) => (options.client ?? client).post({
 /**
  * Delete an environment
  *
- * Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+ * Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones cannot be restored through the API. Deletion is rejected while an associated Runner has load or an active lease.
  */
 export const deleteEnvironment = (options) => (options.client ?? client).delete({
     url: '/api/v1/environments/{environmentId}',

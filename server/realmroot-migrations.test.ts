@@ -269,6 +269,85 @@ describe('irreversible resource soft-delete migration', () => {
   })
 })
 
+describe('environment Runner lifecycle migration', () => {
+  function legacyOrphanFixture(blocker?: 'busy' | 'leased') {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0038_soft_delete_resource_semantics.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+      VALUES ('project_runner_cleanup', 'org_runner_cleanup', 'Runner cleanup', '2026-01-01', '2026-01-01');
+      INSERT INTO environments (id, project_id, name, hosting_mode, created_at, updated_at)
+      VALUES ('environment_deleted', 'project_runner_cleanup', 'Deleted environment', 'self_hosted', '2026-01-01', '2026-01-01');
+      INSERT INTO runners (
+        id, organization_id, project_id, name, environment_id, state, current_load,
+        max_concurrent, runtimes, created_at, updated_at
+      ) VALUES ('runner_idle', 'org_runner_cleanup', 'project_runner_cleanup', 'Idle', 'environment_deleted', 'offline', 0, 1, '[]', '2026-01-01', '2026-01-02');
+      ${
+        blocker
+          ? `INSERT INTO runners (
+        id, organization_id, project_id, name, environment_id, state, current_load,
+        max_concurrent, runtimes, created_at, updated_at
+      ) VALUES ('runner_blocked', 'org_runner_cleanup', 'project_runner_cleanup', 'Blocked', 'environment_deleted', 'active', ${blocker === 'busy' ? 1 : 0}, 1, '[]', '2026-01-01', '2026-01-03');`
+          : ''
+      }
+      ${
+        blocker === 'leased'
+          ? `INSERT INTO work_items (
+        id, organization_id, project_id, environment_id, runner_id, type, state,
+        payload, available_at, created_at, updated_at
+      ) VALUES (
+        'legacy_work_item', 'org_runner_cleanup', 'project_runner_cleanup', 'environment_deleted',
+        'runner_blocked', 'session.run', 'leased', '{}', '2026-01-04', '2026-01-04', '2026-01-04'
+      );
+      INSERT INTO leases (
+        id, work_item_id, runner_id, organization_id, project_id, state, expires_at, created_at, updated_at
+      ) VALUES (
+        'lease_active', 'legacy_work_item', 'runner_blocked', 'org_runner_cleanup',
+        'project_runner_cleanup', 'active', '2026-02-01', '2026-01-04', '2026-01-04'
+      );`
+          : ''
+      }
+      UPDATE environments
+      SET deleted_at = '2026-01-10', updated_at = '2026-01-10'
+      WHERE id = 'environment_deleted';
+    `)
+    return db
+  }
+
+  it('tombstones a legacy idle Runner under a deleted Environment', () => {
+    const db = legacyOrphanFixture()
+    apply(db, '0039_environment_runner_lifecycle.sql')
+
+    expect(db.prepare("SELECT state, deleted_at, updated_at FROM runners WHERE id = 'runner_idle'").get()).toEqual({
+      state: 'disabled',
+      deleted_at: '2026-01-10',
+      updated_at: '2026-01-10',
+    })
+    db.close()
+  })
+
+  it.each([
+    'busy',
+    'leased',
+  ] as const)('fails without partial mutation when a legacy %s Runner remains under a deleted Environment', (blocker) => {
+    const db = legacyOrphanFixture(blocker)
+
+    expect(() => apply(db, '0039_environment_runner_lifecycle.sql')).toThrow(
+      /cannot migrate a busy runner under a deleted environment/,
+    )
+    expect(db.prepare('SELECT id, state, deleted_at, updated_at FROM runners ORDER BY id').all()).toEqual([
+      { id: 'runner_blocked', state: 'active', deleted_at: null, updated_at: '2026-01-03' },
+      { id: 'runner_idle', state: 'offline', deleted_at: null, updated_at: '2026-01-02' },
+    ])
+    expect(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = ?")
+        .get('trg_environment_runner_migration_guard'),
+    ).toBeUndefined()
+    db.close()
+  })
+})
+
 describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
   it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
     const db = new DatabaseSync(':memory:')
