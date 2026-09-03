@@ -12,7 +12,7 @@ import {
   StatusBadge,
   TableSurface,
 } from '@/console/components'
-import { archivedLabel, formatDate, isArchived } from '@/console/format'
+import { formatDate } from '@/console/format'
 import type { AuditRecord, Vault, VaultCredential } from '@/lib/amarpc'
 
 export function VaultDetailView({
@@ -41,7 +41,6 @@ export function VaultDetailView({
     )
   }
   if (!vault) return <EmptyState title="Vault not found" body="The requested vault is not in this project." />
-  const vaultActive = !isArchived(vault)
   return (
     <div className="grid gap-4">
       <DetailSection
@@ -49,7 +48,7 @@ export function VaultDetailView({
         description={vault.metadata.description ?? 'No description'}
         actions={
           <>
-            <StatusBadge value={archivedLabel(vault)} />
+            <StatusBadge value={vault.status.phase} />
             <StatusBadge value={vault.spec.scope} />
           </>
         }
@@ -57,7 +56,6 @@ export function VaultDetailView({
         <MetaGrid>
           <Meta label="Vault id" value={vault.metadata.uid} />
           <Meta label="Created" value={formatDate(vault.metadata.createdAt)} />
-          <Meta label="Archived" value={formatDate(vault.metadata.archivedAt)} />
         </MetaGrid>
       </DetailSection>
       <Tabs defaultValue="credentials">
@@ -70,27 +68,19 @@ export function VaultDetailView({
             title="Credential metadata"
             description="Raw secret values are not returned by the control plane."
             actions={
-              vaultActive ? (
-                <Button type="button" onClick={onAddCredential}>
-                  Add credential
-                </Button>
-              ) : null
+              <Button type="button" onClick={onAddCredential}>
+                Add credential
+              </Button>
             }
           >
             {credentials.length === 0 ? (
               <EmptyState
                 title="No credentials"
-                body={
-                  vaultActive
-                    ? 'Store a credential to track safe versioned secret references for runtime use.'
-                    : 'This vault is archived. Credential metadata stays readable for audit, but no credentials exist.'
-                }
+                body="Store a credential to track safe versioned secret references for runtime use."
                 action={
-                  vaultActive ? (
-                    <Button type="button" onClick={onAddCredential}>
-                      Add credential
-                    </Button>
-                  ) : undefined
+                  <Button type="button" onClick={onAddCredential}>
+                    Add credential
+                  </Button>
                 }
               />
             ) : (
@@ -103,7 +93,7 @@ export function VaultDetailView({
                     <TableHead>Version</TableHead>
                     <TableHead>Secret reference</TableHead>
                     <TableHead>Data keys</TableHead>
-                    {vaultActive ? <TableHead className="text-right">Actions</TableHead> : null}
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -123,36 +113,34 @@ export function VaultDetailView({
                       <TableCell className="max-w-72 truncate">
                         {credential.status.activeVersion?.spec.dataKeys.join(', ') || 'None'}
                       </TableCell>
-                      {vaultActive ? (
-                        <TableCell>
-                          <div className="flex justify-end gap-2">
-                            {credential.status.phase === 'active' ? (
-                              <>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  aria-label="Update credential secret"
-                                  onClick={() => onRotate(credential)}
-                                >
-                                  <RefreshCw data-icon="inline-start" />
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          {credential.status.phase === 'active' ? (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                aria-label="Update credential secret"
+                                onClick={() => onRotate(credential)}
+                              >
+                                <RefreshCw data-icon="inline-start" />
+                              </Button>
+                              <ConfirmAction
+                                title="Revoke credential?"
+                                description={`Revoke ${credential.metadata.name}. Future runtime resolution is blocked; version references stay auditable.`}
+                                confirmLabel="Revoke credential"
+                                destructive
+                                onConfirm={() => onRevoke(credential)}
+                              >
+                                <Button type="button" variant="outline" size="icon" aria-label="Revoke credential">
+                                  <ShieldOff data-icon="inline-start" />
                                 </Button>
-                                <ConfirmAction
-                                  title="Revoke credential?"
-                                  description={`Revoke ${credential.metadata.name}. Future runtime resolution is blocked; version references stay auditable.`}
-                                  confirmLabel="Revoke credential"
-                                  destructive
-                                  onConfirm={() => onRevoke(credential)}
-                                >
-                                  <Button type="button" variant="outline" size="icon" aria-label="Revoke credential">
-                                    <ShieldOff data-icon="inline-start" />
-                                  </Button>
-                                </ConfirmAction>
-                              </>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                      ) : null}
+                              </ConfirmAction>
+                            </>
+                          ) : null}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

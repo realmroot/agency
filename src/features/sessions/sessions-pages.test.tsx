@@ -1,7 +1,7 @@
 /**
  * Tests for SessionsPage, SessionDetailPage, CreateSessionSheet (component branches),
  * SessionDetailView (resource sheet / confirm-action branches), SessionsView (checkbox /
- * empty-state / archived branches), SessionRuntimePanel (connection-badge / canSend
+ * empty-state / delete branches), SessionRuntimePanel (connection-badge / canSend
  * branches), SessionToolTrace (empty / running / orphan branches).
  *
  * Uses MSW + the REAL api client. No vi.spyOn / vi.mock of @/lib/amarpc.
@@ -9,7 +9,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Agent, Environment, ListResponse, MemoryStore, Session, SessionEvent } from '@/lib/amarpc'
 import { ApiError } from '@/lib/amarpc'
 import { HttpResponse, http, server } from '@/test/msw'
@@ -211,12 +211,12 @@ function memoryStoresList(memoryStores: MemoryStore[] = []) {
   return http.get('*/api/v1/memory-stores', () => HttpResponse.json(listOf(memoryStores)))
 }
 
-function sessionPatch(session: Session) {
-  return http.patch(`*/api/v1/sessions/${session.metadata.uid}`, () => HttpResponse.json(session))
+function sessionDelete(sessionId = 'session_1') {
+  return http.delete(`*/api/v1/sessions/${sessionId}`, () => new HttpResponse(null, { status: 204 }))
 }
 
 // ---------------------------------------------------------------------------
-// SessionsView — empty state, archived rows, checkbox behaviour
+// SessionsView — empty state, delete actions, checkbox behaviour
 // ---------------------------------------------------------------------------
 
 describe('SessionsView', () => {
@@ -228,7 +228,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -236,24 +236,7 @@ describe('SessionsView', () => {
     expect(screen.getByText('No sessions')).toBeTruthy()
   })
 
-  it('does not show Archive button for archived sessions', () => {
-    const archivedSession = buildSession({ id: 'session_archived', archivedAt: now })
-    render(
-      <MemoryRouter>
-        <SessionsView
-          sessions={[archivedSession]}
-          pagination={buildPagination([archivedSession])}
-          selectedIds={[]}
-          setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull()
-  })
-
-  it('shows Archive button for non-archived sessions', () => {
+  it('shows Delete button for sessions', () => {
     const session = buildSession()
     render(
       <MemoryRouter>
@@ -262,12 +245,12 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('button', { name: 'Archive' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete session' })).toBeTruthy()
   })
 
   it('selects all sessions when select-all checkbox is clicked', () => {
@@ -280,7 +263,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={setSelectedIds}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -300,7 +283,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={['session_1']}
           setSelectedIds={setSelectedIds}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -320,7 +303,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={setSelectedIds}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -340,7 +323,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={['session_1']}
           setSelectedIds={setSelectedIds}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -359,7 +342,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -389,7 +372,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -397,7 +380,7 @@ describe('SessionsView', () => {
     expect(screen.getByText(/Self-hosted \/ ama/)).toBeTruthy()
   })
 
-  it('calls onArchive after confirming archive for a session', async () => {
+  it('calls onDelete after confirming delete for a session', async () => {
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
       configurable: true,
@@ -406,7 +389,7 @@ describe('SessionsView', () => {
       value: vi.fn(),
       configurable: true,
     })
-    const onArchive = vi.fn()
+    const onDelete = vi.fn()
     const session = buildSession()
     render(
       <MemoryRouter>
@@ -415,33 +398,15 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={onArchive}
+          onDelete={onDelete}
         />
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
-    const confirmButton = await screen.findByRole('button', { name: 'Archive session' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete session' }))
+    const confirmButton = await screen.findByRole('button', { name: 'Delete session' })
     fireEvent.click(confirmButton)
-    expect(onArchive).toHaveBeenCalledWith('session_1')
-  })
-
-  it('disables select-all checkbox when all sessions are archived', () => {
-    const archivedSession = buildSession({ id: 'session_archived', archivedAt: now })
-    render(
-      <MemoryRouter>
-        <SessionsView
-          sessions={[archivedSession]}
-          pagination={buildPagination([archivedSession])}
-          selectedIds={[]}
-          setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-
-    const selectAll = screen.getByRole('checkbox', { name: 'Select all sessions' })
-    expect(selectAll.hasAttribute('disabled')).toBe(true)
+    expect(onDelete).toHaveBeenCalledWith('session_1')
   })
 
   it('renders "None" for null model in agent provider column', () => {
@@ -470,7 +435,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -505,7 +470,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -525,7 +490,7 @@ describe('SessionsView', () => {
           pagination={buildPagination([session])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -550,7 +515,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState(runtimeOverrides)}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -591,7 +556,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState()}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -686,7 +651,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState()}
           onClose={onClose}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -735,7 +700,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState()}
           onClose={vi.fn()}
           onReopen={onReopen}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -756,7 +721,7 @@ describe('SessionDetailView', () => {
     expect(onReopen).toHaveBeenCalledWith('session_1')
   })
 
-  it('calls onArchive after archive action is confirmed', async () => {
+  it('calls onDelete after delete action is confirmed', async () => {
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
       configurable: true,
@@ -773,7 +738,7 @@ describe('SessionDetailView', () => {
       value: vi.fn(),
       configurable: true,
     })
-    const onArchive = vi.fn()
+    const onDelete = vi.fn()
     const session = buildSession()
     render(
       <MemoryRouter>
@@ -784,7 +749,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState()}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={onArchive}
+          onDelete={onDelete}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -798,11 +763,67 @@ describe('SessionDetailView', () => {
     fireEvent.pointerDown(actionsButton, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
     fireEvent.mouseDown(actionsButton)
     fireEvent.click(actionsButton)
-    const archiveItem = await screen.findByText('Archive session')
-    fireEvent.click(archiveItem)
-    const confirmButton = await screen.findByRole('button', { name: 'Archive session' })
+    const deleteItem = await screen.findByText('Delete session')
+    fireEvent.click(deleteItem)
+    const confirmButton = await screen.findByRole('button', { name: 'Delete session' })
     fireEvent.click(confirmButton)
-    expect(onArchive).toHaveBeenCalledWith('session_1')
+    expect(onDelete).toHaveBeenCalledWith('session_1')
+  })
+
+  it('disables destructive actions and duplicate confirmation while a session mutation is pending', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+      value: vi.fn(() => false),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      value: vi.fn(),
+      configurable: true,
+    })
+    const onDelete = vi.fn()
+    const session = buildSession()
+    const view = (deletePending: boolean) => (
+      <MemoryRouter>
+        <SessionDetailView
+          session={session}
+          agentName="Coding agent"
+          environmentName="Node workspace"
+          runtime={buildRuntimeState()}
+          onClose={vi.fn()}
+          onReopen={vi.fn()}
+          onDelete={onDelete}
+          deletePending={deletePending}
+          onReconnectRuntime={vi.fn()}
+          chatMessage=""
+          setChatMessage={vi.fn()}
+          onSendMessage={vi.fn()}
+          onAbortRuntime={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+    const rendered = render(view(false))
+
+    const actionsButton = screen.getByRole('button', { name: 'Actions' })
+    fireEvent.pointerDown(actionsButton, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.mouseDown(actionsButton)
+    fireEvent.click(actionsButton)
+    fireEvent.click(await screen.findByText('Delete session'))
+    const confirmButton = await screen.findByRole('button', { name: 'Delete session' })
+
+    rendered.rerender(view(true))
+
+    expect(actionsButton).toBeDisabled()
+    expect(confirmButton).toBeDisabled()
+    expect(confirmButton).toHaveAttribute('aria-busy', 'true')
+    fireEvent.click(confirmButton)
+    expect(onDelete).not.toHaveBeenCalled()
   })
 
   it('renders session without a name using session id in heading', () => {
@@ -837,7 +858,7 @@ describe('SessionDetailView', () => {
           runtime={buildRuntimeState()}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage="hello"
           setChatMessage={vi.fn()}
@@ -1594,10 +1615,13 @@ describe('CreateSessionSheet — formatCreateSessionError', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SessionsPage — loading / error / filter / sort / batch-archive
+// SessionsPage — loading / error / filter / sort / batch-delete
 // ---------------------------------------------------------------------------
 
 describe('SessionsPage', () => {
+  beforeEach(() => {
+    server.use(agentsList())
+  })
   function renderSessionsPage(initialEntries = ['/']) {
     const queryClient = makeQueryClient()
     render(
@@ -1678,19 +1702,19 @@ describe('SessionsPage', () => {
     await waitFor(() => expect(screen.getByText('Create Session')).toBeTruthy())
   })
 
-  it('Archive selected button is disabled when no sessions selected', async () => {
+  it('Delete selected button is disabled when no sessions selected', async () => {
     server.use(sessionsList([buildSession()]))
 
     renderSessionsPage()
 
     await waitFor(() => expect(screen.getByText('Test session')).toBeTruthy())
 
-    const archiveSelectedButton = screen.getByRole('button', { name: 'Archive selected' })
+    const archiveSelectedButton = screen.getByRole('button', { name: 'Delete selected' })
     expect(archiveSelectedButton.hasAttribute('disabled')).toBe(true)
   })
 
-  it('shows batch success outcome after archiving all selected sessions', async () => {
-    server.use(sessionsList([buildSession()]), sessionPatch(buildSession({ archivedAt: now })))
+  it('shows batch success outcome after deleting all selected sessions', async () => {
+    server.use(sessionsList([buildSession()]), sessionDelete())
 
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
@@ -1707,24 +1731,24 @@ describe('SessionsPage', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Test session' }))
 
-    const archiveBtn = screen.getByRole('button', { name: 'Archive selected' })
+    const archiveBtn = screen.getByRole('button', { name: 'Delete selected' })
     expect(archiveBtn.hasAttribute('disabled')).toBe(false)
     fireEvent.click(archiveBtn)
 
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive sessions' })
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete sessions' })
     fireEvent.click(confirmBtn)
 
-    await waitFor(() => expect(screen.getByText(/All selected sessions archived/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/All selected sessions deleted/)).toBeTruthy())
   })
 
-  it('shows batch failure outcome when archive call fails', async () => {
+  it('shows batch failure outcome when delete call fails', async () => {
     const sessions = [
       buildSession({ id: 'session_1', name: 'First session' }),
       buildSession({ id: 'session_2', name: 'Second session' }),
     ]
     server.use(
       sessionsList(sessions),
-      http.patch('*/api/v1/sessions/session_1', () =>
+      http.delete('*/api/v1/sessions/session_1', () =>
         HttpResponse.json({ error: { type: 'conflict', message: 'Conflict' } }, { status: 409 }),
       ),
     )
@@ -1745,8 +1769,8 @@ describe('SessionsPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select First session' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Second session' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive selected' }))
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive sessions' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected' }))
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete sessions' })
     fireEvent.click(confirmBtn)
 
     await waitFor(() => expect(screen.getByText(/Failed on "First session"/)).toBeTruthy())
@@ -1829,7 +1853,7 @@ describe('SessionsPage', () => {
     expect(screen.getByText('string error rejection')).toBeTruthy()
   })
 
-  it('shows batch outcome with archived count and failure message when some sessions succeed', async () => {
+  it('shows batch outcome with deleted count and failure message when some sessions succeed', async () => {
     const sessions = [
       buildSession({ id: 'session_1', name: 'First session' }),
       buildSession({ id: 'session_2', name: 'Second session' }),
@@ -1837,11 +1861,9 @@ describe('SessionsPage', () => {
     ]
     server.use(
       sessionsList(sessions),
-      http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json(buildSession({ id: 'session_1', archivedAt: now })),
-      ),
-      http.patch('*/api/v1/sessions/session_2', () =>
-        HttpResponse.json({ error: { type: 'conflict', message: 'Archive conflict' } }, { status: 409 }),
+      sessionDelete('session_1'),
+      http.delete('*/api/v1/sessions/session_2', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Delete conflict' } }, { status: 409 }),
       ),
     )
 
@@ -1861,11 +1883,11 @@ describe('SessionsPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select First session' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Second session' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive selected' }))
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive sessions' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected' }))
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete sessions' })
     fireEvent.click(confirmBtn)
 
-    await waitFor(() => expect(screen.getByText(/Archived 1 session\./)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Deleted 1 session\./)).toBeTruthy())
     expect(screen.getByText(/Failed on "Second session"/)).toBeTruthy()
   })
 
@@ -1874,15 +1896,7 @@ describe('SessionsPage', () => {
       buildSession({ id: 'session_1', name: 'First session' }),
       buildSession({ id: 'session_2', name: 'Second session' }),
     ]
-    server.use(
-      sessionsList(sessions),
-      http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json(buildSession({ id: 'session_1', archivedAt: now })),
-      ),
-      http.patch('*/api/v1/sessions/session_2', () =>
-        HttpResponse.json(buildSession({ id: 'session_2', archivedAt: now })),
-      ),
-    )
+    server.use(sessionsList(sessions), sessionDelete('session_1'), sessionDelete('session_2'))
 
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
@@ -1900,11 +1914,11 @@ describe('SessionsPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select First session' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Second session' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive selected' }))
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive sessions' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected' }))
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete sessions' })
     fireEvent.click(confirmBtn)
 
-    await waitFor(() => expect(screen.getByText(/All selected sessions archived/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/All selected sessions deleted/)).toBeTruthy())
   })
 
   it('sorts sessions by started-asc when startedAt is null (falls back to createdAt)', async () => {
@@ -1933,12 +1947,12 @@ describe('SessionsPage', () => {
     expect(olderIndex).toBeLessThan(newerIndex)
   })
 
-  it('shows error message from api when archive call returns 4xx with error body', async () => {
+  it('shows error message from api when delete call returns 4xx with error body', async () => {
     const sessions = [buildSession({ id: 'session_1', name: 'Only session' })]
     server.use(
       sessionsList(sessions),
-      http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json({ error: { type: 'conflict', message: 'archive-rejected' } }, { status: 409 }),
+      http.delete('*/api/v1/sessions/session_1', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'delete-rejected' } }, { status: 409 }),
       ),
     )
 
@@ -1956,11 +1970,11 @@ describe('SessionsPage', () => {
     await waitFor(() => expect(screen.getByText('Only session')).toBeTruthy())
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Only session' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Archive selected' }))
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive sessions' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected' }))
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete sessions' })
     fireEvent.click(confirmBtn)
 
-    await waitFor(() => expect(screen.getByText(/archive-rejected/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/delete-rejected/)).toBeTruthy())
   })
 })
 

@@ -9,7 +9,7 @@ import {
   TableEmpty,
   TableSurface,
 } from '@/console/components'
-import { archivedLabel, formatDate } from '@/console/format'
+import { formatDate } from '@/console/format'
 import type { Agent, Session } from '@/lib/amarpc'
 
 function isAgent(item: Agent | Session): item is Agent {
@@ -66,7 +66,7 @@ export function RelatedResourcesTable({
                     <DescriptionCell value={agent ? item.metadata.description : null} />
                   </TableCell>
                   <TableCell>
-                    <StatusBadge value={agent ? archivedLabel(item) : item.status.phase} />
+                    <StatusBadge value={item.status.phase} />
                   </TableCell>
                   <TableCell className="hidden min-w-0 md:table-cell">
                     <span className="block truncate">{updated}</span>

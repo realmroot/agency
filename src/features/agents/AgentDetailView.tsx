@@ -1,10 +1,10 @@
-import { Archive } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmAction, DetailSection, EmptyState, Meta, MetaGrid, StatusBadge } from '@/console/components'
-import { archivedLabel, formatDate, isArchived } from '@/console/format'
+import { formatDate } from '@/console/format'
 import { RelatedResourcesTable } from '@/features/console/related-resources-table'
 import type { Agent, AgentVersion, Session } from '@/lib/amarpc'
 
@@ -12,12 +12,12 @@ export function AgentDetailView({
   agent,
   versions,
   sessions,
-  onArchive,
+  onDelete,
 }: {
   agent: Agent | null
   versions: AgentVersion[]
   sessions: Session[]
-  onArchive?: (id: string) => void
+  onDelete?: (id: string) => void
 }) {
   if (!agent) return <EmptyState title="Agent not found" body="The requested agent is not in the current project." />
   return (
@@ -25,7 +25,7 @@ export function AgentDetailView({
       agent={agent}
       versions={versions}
       sessions={sessions}
-      {...(onArchive !== undefined ? { onArchive } : {})}
+      {...(onDelete !== undefined ? { onDelete } : {})}
     />
   )
 }
@@ -34,12 +34,12 @@ function AgentDetailContent({
   agent,
   versions,
   sessions,
-  onArchive,
+  onDelete,
 }: {
   agent: Agent
   versions: AgentVersion[]
   sessions: Session[]
-  onArchive?: (id: string) => void
+  onDelete?: (id: string) => void
 }) {
   const [selectedVersionId, setSelectedVersionId] = useState('')
 
@@ -68,7 +68,7 @@ function AgentDetailContent({
             description="Provider, model, instructions, and tool policy captured by the selected immutable version."
             actions={
               <>
-                <StatusBadge value={archivedLabel(agent)} />
+                <StatusBadge value={agent.status.phase} />
                 {versions.length > 0 ? (
                   <Select value={currentVersion?.metadata.uid ?? ''} onValueChange={setSelectedVersionId}>
                     <SelectTrigger className="w-44">
@@ -85,17 +85,17 @@ function AgentDetailContent({
                     </SelectContent>
                   </Select>
                 ) : null}
-                {onArchive && !isArchived(agent) ? (
+                {onDelete ? (
                   <ConfirmAction
-                    title="Archive agent?"
-                    description={`Archive ${agent.metadata.name}. Existing sessions are not deleted, but this agent will no longer accept new sessions.`}
-                    confirmLabel="Archive agent"
+                    title="Delete agent?"
+                    description={`Delete ${agent.metadata.name}. It cannot be restored; existing session history is retained.`}
+                    confirmLabel="Delete agent"
                     destructive
-                    onConfirm={() => onArchive(agent.metadata.uid)}
+                    onConfirm={() => onDelete(agent.metadata.uid)}
                   >
                     <Button type="button" variant="outline">
-                      <Archive data-icon="inline-start" />
-                      Archive
+                      <Trash2 data-icon="inline-start" />
+                      Delete
                     </Button>
                   </ConfirmAction>
                 ) : null}

@@ -1,7 +1,6 @@
 import type { Identity } from '@/lib/amarpc'
 
 export function identityStatusLabel(identity: Identity) {
-  if (identity.metadata.archivedAt) return 'Archived'
   switch (identity.status.state) {
     case 'provisioning':
       return 'Creating'

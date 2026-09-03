@@ -22,7 +22,7 @@ export function VaultDetailPage() {
     enabled: Boolean(vaultId),
   })
   const credentialsQuery = useQuery({
-    queryKey: queryKeys.vaults.credentials(vaultId ?? '', true),
+    queryKey: queryKeys.vaults.credentials(vaultId ?? ''),
     queryFn: () => api.listVaultCredentials(vaultId as string),
     enabled: Boolean(vaultId),
   })

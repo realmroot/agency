@@ -1,4 +1,4 @@
-import { Archive, Boxes, ChevronDown, CircleStop, Cloud, GitBranch, RotateCcw, Timer } from 'lucide-react'
+import { Boxes, ChevronDown, CircleStop, Cloud, GitBranch, RotateCcw, Timer, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -20,7 +20,10 @@ export function SessionDetailView({
   runtime,
   onClose,
   onReopen,
-  onArchive,
+  onDelete,
+  closePending = false,
+  reopenPending = false,
+  deletePending = false,
   onReconnectRuntime,
   chatMessage,
   setChatMessage,
@@ -33,14 +36,17 @@ export function SessionDetailView({
   runtime: SessionRuntimeState
   onClose: (id: string) => void
   onReopen: (id: string) => void
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
+  closePending?: boolean
+  reopenPending?: boolean
+  deletePending?: boolean
   onReconnectRuntime: () => void
   chatMessage: string
   setChatMessage: (value: string) => void
   onSendMessage: (message: string) => void
   onAbortRuntime: () => void
 }) {
-  const [pendingAction, setPendingAction] = useState<'close' | 'reopen' | 'archive' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'close' | 'reopen' | 'delete' | null>(null)
   const [activeSheet, setActiveSheet] = useState<'agent' | 'environment' | 'volumes' | null>(null)
   const sessionId = session.metadata.uid
   const phase = session.status.phase
@@ -50,6 +56,7 @@ export function SessionDetailView({
   const shortSessionId = `${sessionId.slice(0, 5)}...${sessionId.slice(-7)}`
   const duration = formatDuration(session.status.startedAt, session.status.closedAt)
   const isClosed = phase === 'closed'
+  const actionPending = closePending || reopenPending || deletePending
   const agentName = agentDisplayName || agentSnapshot.systemPrompt || session.spec.agentId
   const environmentName = String(environmentDisplayName ?? session.spec.environmentId ?? 'Environment')
   return (
@@ -67,7 +74,7 @@ export function SessionDetailView({
             <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" disabled={actionPending}>
                     Actions
                     <ChevronDown data-icon="inline-end" />
                   </Button>
@@ -84,9 +91,9 @@ export function SessionDetailView({
                       Close session
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onSelect={() => setPendingAction('archive')}>
-                    <Archive />
-                    Archive session
+                  <DropdownMenuItem onSelect={() => setPendingAction('delete')} variant="destructive">
+                    <Trash2 />
+                    Delete session
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -241,6 +248,7 @@ export function SessionDetailView({
         description="Close the selected runtime session. In-flight work may be interrupted."
         confirmLabel="Close session"
         destructive
+        pending={closePending}
         open={pendingAction === 'close'}
         onOpenChange={(open) => !open && setPendingAction(null)}
         onConfirm={() => onClose(sessionId)}
@@ -249,18 +257,20 @@ export function SessionDetailView({
         title="Reopen session?"
         description="Restart the selected runtime session so it can accept new messages."
         confirmLabel="Reopen session"
+        pending={reopenPending}
         open={pendingAction === 'reopen'}
         onOpenChange={(open) => !open && setPendingAction(null)}
         onConfirm={() => onReopen(sessionId)}
       />
       <ConfirmAction
-        title="Archive session?"
-        description="Archive this session from active operations while preserving persisted events."
-        confirmLabel="Archive session"
+        title="Delete session?"
+        description="Delete this session from the product while preserving persisted events. It cannot be restored."
+        confirmLabel="Delete session"
         destructive
-        open={pendingAction === 'archive'}
+        pending={deletePending}
+        open={pendingAction === 'delete'}
         onOpenChange={(open) => !open && setPendingAction(null)}
-        onConfirm={() => onArchive(sessionId)}
+        onConfirm={() => onDelete(sessionId)}
       />
     </div>
   )

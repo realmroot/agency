@@ -1,4 +1,4 @@
-import { Archive } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -18,11 +18,11 @@ import { identityAssignmentLabel, identityStatusLabel } from './identity-display
 export function IdentitiesView({
   identities,
   pagination,
-  onArchive,
+  onDelete,
 }: {
   identities: Identity[]
   pagination: ClientPagination<Identity>
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   if (identities.length === 0)
     return (
@@ -62,27 +62,22 @@ export function IdentitiesView({
               <StatusBadge value={identity.spec.runtime} />
             </TableCell>
             <TableCell>
-              <StatusBadge
-                value={identity.metadata.archivedAt ? 'archived' : identity.status.state}
-                label={identityStatusLabel(identity)}
-              />
+              <StatusBadge value={identity.status.state} label={identityStatusLabel(identity)} />
             </TableCell>
             <TableCell className="hidden lg:table-cell">{identityAssignmentLabel(identity)}</TableCell>
             <TableCell className="hidden lg:table-cell">{formatDate(identity.metadata.updatedAt)}</TableCell>
             <TableCell className="text-right">
-              {!identity.metadata.archivedAt ? (
-                <ConfirmAction
-                  title="Archive Identity?"
-                  description="Archived identities can no longer be selected. Existing session history is retained."
-                  confirmLabel="Archive identity"
-                  destructive
-                  onConfirm={() => onArchive(identity.metadata.uid)}
-                >
-                  <Button type="button" variant="outline" size="icon" aria-label="Archive identity">
-                    <Archive />
-                  </Button>
-                </ConfirmAction>
-              ) : null}
+              <ConfirmAction
+                title="Delete identity?"
+                description="This identity will disappear from the product and cannot be restored. Database history is retained."
+                confirmLabel="Delete identity"
+                destructive
+                onConfirm={() => onDelete(identity.metadata.uid)}
+              >
+                <Button type="button" variant="outline" size="icon" aria-label="Delete identity">
+                  <Trash2 />
+                </Button>
+              </ConfirmAction>
             </TableCell>
           </TableRow>
         ))}

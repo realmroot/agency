@@ -32,7 +32,7 @@ export async function markStalledCloudSessions(deps: WatchdogDeps): Promise<void
 // hard cap) when teardown was skipped — e.g. a close while an exec was hung.
 // Destroy them and stamp the session so each sandbox is cleaned exactly once.
 async function destroyLeakedSandboxes(deps: WatchdogDeps, closingBefore: string): Promise<void> {
-  // archived is lifecycle (archivedAt), not a state value
+  // deletedAt is a tombstone, not a state value
   const rows = await deps.sessionOrchestration.leakedSandboxSessions(ENDED_RUNTIME_STATES, 20, closingBefore)
   const failures: Error[] = []
   for (const row of rows) {

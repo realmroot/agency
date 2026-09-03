@@ -93,6 +93,8 @@ def sync_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete a memory
 
+     Soft-deletes the memory. The retained tombstone cannot be restored through the API.
+
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
@@ -130,6 +132,8 @@ def sync(
 ) -> Any | ErrorResponse | None:
     """ Delete a memory
 
+     Soft-deletes the memory. The retained tombstone cannot be restored through the API.
+
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
@@ -161,6 +165,8 @@ async def asyncio_detailed(
 
 ) -> Response[Any | ErrorResponse]:
     """ Delete a memory
+
+     Soft-deletes the memory. The retained tombstone cannot be restored through the API.
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
@@ -198,6 +204,8 @@ async def asyncio(
 
 ) -> Any | ErrorResponse | None:
     """ Delete a memory
+
+     Soft-deletes the memory. The retained tombstone cannot be restored through the API.
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.

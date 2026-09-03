@@ -1,4 +1,4 @@
-import { Archive } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -11,7 +11,7 @@ import {
   TableSurface,
   TruncatedTooltipText,
 } from '@/console/components'
-import { archivedLabel, formatDate } from '@/console/format'
+import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Environment } from '@/lib/amarpc'
 
@@ -32,11 +32,11 @@ function packageSummary(environment: Environment) {
 export function EnvironmentsView({
   environments,
   pagination,
-  onArchive,
+  onDelete,
 }: {
   environments: Environment[]
   pagination: ClientPagination<Environment>
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   if (environments.length === 0) {
     return <EmptyState title="No environments" body="Create an execution environment before creating an agent." />
@@ -84,7 +84,7 @@ export function EnvironmentsView({
             </TableCell>
             <TableCell>
               <div className="flex gap-1">
-                <StatusBadge value={archivedLabel(environment)} />
+                <StatusBadge value={environment.status.phase} />
                 <StatusBadge value={`v${environment.status.version}`} />
               </div>
             </TableCell>
@@ -99,14 +99,14 @@ export function EnvironmentsView({
             <TableCell>
               <div className="flex justify-end">
                 <ConfirmAction
-                  title="Archive environment?"
-                  description={`Archive ${environment.metadata.name}. Agents can no longer start new sessions with this environment.`}
-                  confirmLabel="Archive environment"
+                  title="Delete environment?"
+                  description={`Delete ${environment.metadata.name}. It will disappear from the product and cannot be restored.`}
+                  confirmLabel="Delete environment"
                   destructive
-                  onConfirm={() => onArchive(environment.metadata.uid)}
+                  onConfirm={() => onDelete(environment.metadata.uid)}
                 >
-                  <Button type="button" variant="outline" size="icon" aria-label="Archive environment">
-                    <Archive data-icon="inline-start" />
+                  <Button type="button" variant="outline" size="icon" aria-label="Delete environment">
+                    <Trash2 data-icon="inline-start" />
                   </Button>
                 </ConfirmAction>
               </div>

@@ -21,6 +21,7 @@ import {
 import { dispatchHttpTrigger } from '../usecases/dispatch-triggers'
 import {
   type EnvFromEntry,
+  ResourceDeletedDuringMutationError,
   TriggerConflictError,
   TriggerProvisioningError,
   TriggerValidationError,
@@ -208,11 +209,10 @@ const UpdateTriggerSchema = z
       })
       .strict()
       .optional(),
-    archived: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.spec !== undefined || body.archived !== undefined, {
-    message: 'Provide metadata, spec, or archived.',
+  .refine((body) => body.metadata !== undefined || body.spec !== undefined, {
+    message: 'Provide metadata or spec.',
   })
   .openapi('UpdateTriggerRequest')
 
@@ -244,7 +244,7 @@ const runStateQuery = z
   })
 
 const ListQuerySchema = listQuerySchema().extend({ suspend: suspendQuery })
-const RunsQuerySchema = listQuerySchema().omit({ archived: true }).extend({ state: runStateQuery })
+const RunsQuerySchema = listQuerySchema().extend({ state: runStateQuery })
 const TriggerListResponseSchema = listResponseSchema('TriggerListResponse', TriggerSchema)
 const TriggerRunListResponseSchema = listResponseSchema('TriggerRunListResponse', TriggerRunSchema)
 const CreateHttpTriggerRunRequestSchema = JsonObjectSchema.openapi('CreateHttpTriggerRunRequest', {
@@ -333,9 +333,7 @@ const updateRouteDefinition = createRoute({
   path: '/{triggerId}',
   operationId: 'updateTrigger',
   tags: ['Triggers'],
-  summary: 'Update, pause, or archive a trigger',
-  description:
-    'Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.',
+  summary: 'Update or pause a trigger',
   ...AuthenticatedOperation,
   request: {
     params: TriggerParamsSchema,
@@ -360,7 +358,7 @@ const deleteRouteDefinition = createRoute({
   operationId: 'deleteTrigger',
   tags: ['Triggers'],
   summary: 'Delete a trigger',
-  description: 'Permanently deletes the trigger and its run history.',
+  description: 'Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.',
   ...AuthenticatedOperation,
   request: { params: TriggerParamsSchema },
   responses: {
@@ -497,7 +495,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const { archived, suspend, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
+      const { suspend, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -509,7 +507,6 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
       }
       const page = await deps.triggers.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(suspend !== undefined ? { enabled: suspend !== 'true' } : {}),
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
@@ -553,7 +550,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
       try {
         const result = await updateTrigger(deps, scope, trigger, patchFromBody(body))
         await deps.audit.record(scope, {
-          action: result.archived ? 'trigger.archive' : 'trigger.update',
+          action: 'trigger.update',
           resourceType: 'trigger',
           resourceId: trigger.metadata.uid,
           outcome: 'success',
@@ -744,7 +741,6 @@ function patchFromBody(body: z.infer<typeof UpdateTriggerSchema>): UpdateTrigger
           },
         }
       : {}),
-    ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
 
@@ -777,6 +773,9 @@ function conflictOrValidation(c: Parameters<Parameters<TriggerRoutes['openapi']>
 }
 
 function triggerMutationError(c: Parameters<Parameters<TriggerRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof ResourceDeletedDuringMutationError) {
+    return c.json(errorBody('not_found', 'Trigger not found'), 404)
+  }
   if (error instanceof TriggerProvisioningError) {
     return c.json(errorBody(error.code, error.message), error.status)
   }

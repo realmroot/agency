@@ -1,4 +1,4 @@
-import { Archive } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -11,18 +11,18 @@ import {
   TableSurface,
   TruncatedTooltipText,
 } from '@/console/components'
-import { archivedLabel, formatDate } from '@/console/format'
+import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Vault } from '@/lib/amarpc'
 
 export function VaultsView({
   vaults,
   pagination,
-  onArchive,
+  onDelete,
 }: {
   vaults: Vault[]
   pagination: ClientPagination<Vault>
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   if (vaults.length === 0) {
     return <EmptyState title="No vaults" body="Create a vault to track safe secret references for providers and MCP." />
@@ -69,7 +69,7 @@ export function VaultsView({
               <DescriptionCell value={vault.metadata.description} />
             </TableCell>
             <TableCell>
-              <StatusBadge value={archivedLabel(vault)} />
+              <StatusBadge value={vault.status.phase} />
             </TableCell>
             <TableCell className="hidden md:table-cell">
               <StatusBadge value={vault.spec.scope} />
@@ -82,14 +82,14 @@ export function VaultsView({
             <TableCell>
               <div className="flex justify-end">
                 <ConfirmAction
-                  title="Archive vault?"
-                  description={`Archive ${vault.metadata.name}. Existing secret references remain auditable.`}
-                  confirmLabel="Archive vault"
+                  title="Delete vault?"
+                  description={`Delete ${vault.metadata.name}. It cannot be restored; credential history remains in the database.`}
+                  confirmLabel="Delete vault"
                   destructive
-                  onConfirm={() => onArchive(vault.metadata.uid)}
+                  onConfirm={() => onDelete(vault.metadata.uid)}
                 >
-                  <Button type="button" variant="outline" size="icon" aria-label="Archive vault">
-                    <Archive data-icon="inline-start" />
+                  <Button type="button" variant="outline" size="icon" aria-label="Delete vault">
+                    <Trash2 data-icon="inline-start" />
                   </Button>
                 </ConfirmAction>
               </div>

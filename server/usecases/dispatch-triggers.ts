@@ -349,8 +349,8 @@ export async function dispatchHttpTrigger(
   if (trigger.spec.source.type !== 'http') {
     throw new TriggerConflictError('Only HTTP triggers can create runs from requests')
   }
-  if (trigger.metadata.archivedAt !== null) {
-    throw new TriggerConflictError('Archived triggers cannot be dispatched')
+  if (trigger.metadata.deletedAt !== null) {
+    throw new TriggerConflictError('Deleted triggers cannot be dispatched')
   }
   if (trigger.spec.suspend) {
     throw new TriggerConflictError('Suspended triggers cannot be dispatched')
@@ -711,7 +711,7 @@ export async function dispatchNextSerialHttpTrigger(
   if (trigger?.spec.source.type !== 'http') {
     return { pending: false, blocked: false }
   }
-  if (trigger.metadata.archivedAt !== null || trigger.spec.suspend) {
+  if (trigger.metadata.deletedAt !== null || trigger.spec.suspend) {
     return { pending: await repo.hasPendingHttpRuns(triggerId), blocked: true }
   }
   const claimed = await repo.claimNextHttpRun(triggerId)

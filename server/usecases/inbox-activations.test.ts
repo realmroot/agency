@@ -84,7 +84,7 @@ function runtimeSession(id: string, sandboxBackend?: 'runner-sandbox' | 'cloudfl
     projectId: 'project_1',
     organizationId: 'org_1',
     state: 'idle',
-    archivedAt: null,
+    deletedAt: null,
     sandboxId: 'sandbox_1',
     metadata: sandboxBackend ? { sandboxBackend } : {},
   }
@@ -443,10 +443,10 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
   })
 
   it.each([
-    { state: 'error' as const, archivedAt: null },
-    { state: 'idle' as const, archivedAt: '2026-08-30T00:01:00.000Z' },
-  ])('atomically replaces a terminal route target %#', async ({ state, archivedAt }) => {
-    const existing = { ...runtimeSession('session_terminal'), state, archivedAt }
+    { state: 'error' as const, deletedAt: null },
+    { state: 'idle' as const, deletedAt: '2026-08-30T00:01:00.000Z' },
+  ])('atomically replaces a terminal route target %#', async ({ state, deletedAt }) => {
+    const existing = { ...runtimeSession('session_terminal'), state, deletedAt }
     const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
     vi.mocked(fake.value.sessions.findRuntimeRow).mockResolvedValueOnce(existing).mockResolvedValueOnce(null)
     vi.mocked(createSession).mockResolvedValueOnce({ ok: true, value: session('session_replacement') })
@@ -565,10 +565,10 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
     await expect(dispatchInboxActivation(deps({ trigger: http }).value, 'run_1')).resolves.toBeUndefined()
   })
 
-  it.each([{ suspend: true }, { archived: true }])('fails inactive Trigger delivery for %#', async (state) => {
+  it.each([{ suspend: true }, { deleted: true }])('fails inactive Trigger delivery for %#', async (state) => {
     const inactive = inboxTrigger()
     inactive.spec.suspend = state.suspend ?? false
-    inactive.metadata.archivedAt = state.archived ? inactive.metadata.createdAt : null
+    inactive.metadata.deletedAt = state.deleted ? inactive.metadata.createdAt : null
     const fake = deps({ trigger: inactive })
     await dispatchInboxActivation(fake.value, 'run_1')
     expect(fake.marks.failed).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Inbox Trigger is inactive')

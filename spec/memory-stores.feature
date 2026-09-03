@@ -18,7 +18,7 @@ Feature: Memory Stores
     Then the session stores the memory reference in the volume and readOnly setting in the volumeMount
     And runtime materialization mounts the current memory store contents
     And callers cannot provide a memory store mount path
-    And archived or cross-project stores are rejected before runtime allocation
+    And deleted or cross-project stores are rejected before runtime allocation
 
   @memory-stores/console @web
   Scenario: Manage and attach memory stores in the console

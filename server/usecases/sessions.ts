@@ -3,11 +3,12 @@ import type { Deps } from './deps'
 import {
   type AuthScope,
   type PromptDispatchResult,
+  ResourceDeletedDuringMutationError,
   type RuntimeSessionHandle,
   type SessionRuntimeError,
   SessionValidationError,
 } from './ports'
-import { archiveSession, closeSession, dispatchPrompt, reopenSession, unarchiveSession } from './runtime/sessions'
+import { closeSession, deleteSession, dispatchPrompt, reopenSession } from './runtime/sessions'
 
 export type SessionWriteOutcome<T> = { ok: true; value: T } | { ok: false; error: SessionRuntimeError }
 
@@ -15,13 +16,9 @@ export interface UpdateSessionPatch {
   name?: string | null
   metadata?: Record<string, unknown>
   state?: 'closed' | 'idle'
-  archived?: boolean
 }
 
-// Orchestrates the session PATCH decision tree: archived sessions only accept
-// an unarchive; otherwise apply name/metadata edits, then close/reopen transitions,
-// then archiving — in that order, since a close+archive request must close the
-// live runtime before lifecycle archiving.
+// Orchestrates mutable fields and close/reopen transitions for a live session.
 export async function updateSession(
   deps: Deps,
   auth: AuthScope,
@@ -29,19 +26,6 @@ export async function updateSession(
   patch: UpdateSessionPatch,
   requestId: string | null,
 ): Promise<SessionWriteOutcome<Session>> {
-  if (session.archivedAt) {
-    if (
-      patch.archived === false &&
-      patch.name === undefined &&
-      patch.metadata === undefined &&
-      patch.state === undefined
-    ) {
-      const restored = await unarchiveSession(deps, auth, session, requestId)
-      return { ok: true, value: restored }
-    }
-    return { ok: false, error: { status: 409, code: 'conflict', message: 'Archived sessions cannot be updated' } }
-  }
-
   let current = session
   if (patch.name !== undefined || patch.metadata !== undefined) {
     if (hasSecretMaterial(patch.metadata)) {
@@ -62,25 +46,17 @@ export async function updateSession(
       timestamp,
     )
     if (!updated) {
-      throw new Error('Updated session row is required')
+      throw new ResourceDeletedDuringMutationError('Session')
     }
     const reread = await deps.sessions.findRuntimeRow(auth.project.id, session.id)
     if (!reread) {
-      throw new Error('Updated session row is required')
+      throw new ResourceDeletedDuringMutationError('Session')
     }
     current = reread
   }
 
   if (patch.state === 'closed') {
-    const closed = await closeSession(deps, auth, current, requestId)
-    if (!closed.ok || patch.archived !== true) {
-      return closed
-    }
-    const reread = await deps.sessions.findRuntimeRow(auth.project.id, session.id)
-    if (!reread) {
-      throw new Error('Closed session row is required')
-    }
-    current = reread
+    return closeSession(deps, auth, current, requestId)
   }
 
   if (patch.state === 'idle') {
@@ -95,15 +71,21 @@ export async function updateSession(
     current = reread
   }
 
-  if (patch.archived === true) {
-    return await archiveSession(deps, auth, current, requestId)
-  }
-
   const record = await deps.sessions.find(auth.project.id, session.id)
   if (!record) {
-    throw new Error('Updated session row is required')
+    throw new ResourceDeletedDuringMutationError('Session')
   }
   return { ok: true, value: record }
+}
+
+export async function deleteSessionResource(
+  deps: Deps,
+  auth: AuthScope,
+  session: RuntimeSessionHandle,
+  requestId: string | null,
+): Promise<SessionRuntimeError | null> {
+  const outcome = await deleteSession(deps, auth, session, requestId)
+  return outcome.ok ? null : outcome.error
 }
 
 export type SendMessageOutcome =
@@ -113,16 +95,16 @@ export type SendMessageOutcome =
 // Sends a prompt to a live session: the runtime prompt usecase dispatches it
 // (live to a runner channel, an inline cloud turn, or the cloud/self-hosted
 // queue) and a message record is persisted with the resulting delivery/state.
-// An archived session cannot accept messages.
+// A deleted session cannot accept messages.
 export async function sendSessionMessage(
   deps: Deps,
   auth: AuthScope,
   session: RuntimeSessionHandle,
   content: string,
   requestId?: string | null,
-): Promise<SendMessageOutcome | { ok: false; status: 409; message: string; archived: true }> {
-  if (session.archivedAt) {
-    return { ok: false, status: 409, message: 'Archived sessions cannot accept messages', archived: true }
+): Promise<SendMessageOutcome | { ok: false; status: 409; message: string; deleted: true }> {
+  if (session.deletedAt) {
+    return { ok: false, status: 409, message: 'Deleted sessions cannot accept messages', deleted: true }
   }
   const dispatch: PromptDispatchResult = await dispatchPrompt(deps, auth, session, content, requestId)
   if (!dispatch.ok) {

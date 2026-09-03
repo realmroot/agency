@@ -13,7 +13,7 @@ import {
 import { type InboxActivationRepo, type InboxSubscriptionBinding, InboxSubscriptionGatewayError } from './ports'
 
 function trigger(
-  overrides: { inbox?: boolean; subscription?: boolean; suspend?: boolean; archived?: boolean } = {},
+  overrides: { inbox?: boolean; subscription?: boolean; suspend?: boolean; deleted?: boolean } = {},
 ): Trigger {
   const timestamp = '2026-08-30T00:00:00.000Z'
   const inbox = overrides.inbox ?? true
@@ -24,7 +24,7 @@ function trigger(
       name: 'Inbox trigger',
       createdAt: timestamp,
       updatedAt: timestamp,
-      archivedAt: overrides.archived ? timestamp : null,
+      deletedAt: overrides.deleted ? timestamp : null,
     }),
     spec: {
       source: inbox ? { type: 'inbox' } : { type: 'http' },
@@ -158,7 +158,7 @@ describe('[spec: triggers/inbox-provisioning] Inbox Subscription lifecycle', () 
 
   it.each([
     { suspend: true },
-    { archived: true },
+    { deleted: true },
   ])('deletes and marks an inactive Subscription for %#', async (state) => {
     const fake = fakeDeps()
     await reconcileInboxSubscription(fake.deps, trigger(state))

@@ -120,10 +120,7 @@ def sync_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
-    """ Update, pause, or archive a trigger
-
-     Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived:
-    true`; restore with `archived: false`.
+    """ Update or pause a trigger
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -160,10 +157,7 @@ def sync(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
-    """ Update, pause, or archive a trigger
-
-     Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived:
-    true`; restore with `archived: false`.
+    """ Update or pause a trigger
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -195,10 +189,7 @@ async def asyncio_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
-    """ Update, pause, or archive a trigger
-
-     Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived:
-    true`; restore with `archived: false`.
+    """ Update or pause a trigger
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -235,10 +226,7 @@ async def asyncio(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
-    """ Update, pause, or archive a trigger
-
-     Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived:
-    true`; restore with `archived: false`.
+    """ Update or pause a trigger
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.

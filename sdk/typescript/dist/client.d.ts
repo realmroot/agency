@@ -49,12 +49,15 @@ export declare function createAmaClient(config: AmaClientConfig): {
         list: (query?: types.ListProjectsData["query"]) => Promise<types.ProjectListResponse>;
         create: (body: types.CreateProjectRequest) => Promise<types.Project>;
         get: (projectId: string) => Promise<types.Project>;
+        update: (projectId: string, body: types.UpdateProjectRequest) => Promise<types.Project>;
+        delete: (projectId: string) => Promise<void>;
     };
     agents: {
         list: (query?: types.ListAgentsData["query"]) => Promise<types.AgentListResponse>;
         create: (body: types.CreateAgentRequest, idempotencyKey?: string) => Promise<types.Agent>;
         get: (agentId: string) => Promise<types.Agent>;
         update: (agentId: string, body: types.UpdateAgentRequest) => Promise<types.Agent>;
+        delete: (agentId: string) => Promise<void>;
         listVersions: (agentId: string) => Promise<types.AgentVersionListResponse>;
         getVersion: (agentId: string, version: number) => Promise<types.AgentVersion>;
     };
@@ -62,13 +65,14 @@ export declare function createAmaClient(config: AmaClientConfig): {
         list: (query?: types.ListIdentitiesData["query"]) => Promise<types.IdentityListResponse>;
         create: (body: types.CreateIdentityRequest, idempotencyKey: string) => Promise<types.Identity>;
         get: (identityId: string) => Promise<types.Identity>;
-        archive: (identityId: string, body: types.UpdateIdentityRequest) => Promise<types.Identity>;
+        delete: (identityId: string) => Promise<void>;
     };
     environments: {
         list: (query?: types.ListEnvironmentsData["query"]) => Promise<types.EnvironmentListResponse>;
         create: (body: types.CreateEnvironmentRequest, idempotencyKey?: string) => Promise<types.Environment>;
         get: (environmentId: string) => Promise<types.Environment>;
         update: (environmentId: string, body: types.UpdateEnvironmentRequest) => Promise<types.Environment>;
+        delete: (environmentId: string) => Promise<void>;
         listVersions: (environmentId: string) => Promise<types.EnvironmentVersionListResponse>;
         getVersion: (environmentId: string, version: number) => Promise<types.EnvironmentVersion>;
     };
@@ -84,6 +88,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateRunnerRequest) => Promise<types.Runner>;
         get: (runnerId: string) => Promise<types.Runner>;
         update: (runnerId: string, body: types.UpdateRunnerRequest) => Promise<types.Runner>;
+        delete: (runnerId: string) => Promise<void>;
     };
     budgets: {
         list: () => Promise<types.BudgetListResponse>;
@@ -117,6 +122,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateSessionRequest) => Promise<types.Session>;
         get: (sessionId: string) => Promise<types.Session>;
         update: (sessionId: string, body: types.UpdateSessionRequest) => Promise<types.Session>;
+        delete: (sessionId: string) => Promise<void>;
         stream: (sessionId: string) => Promise<SessionStream>;
         listMessages: (sessionId: string, query?: types.ListSessionMessagesData["query"]) => Promise<types.SessionMessageListResponse>;
         createMessage: (sessionId: string, body: types.CreateSessionMessageRequest) => Promise<types.SessionMessage>;
@@ -131,6 +137,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateMemoryStoreRequest) => Promise<types.MemoryStore>;
         get: (storeId: string) => Promise<types.MemoryStore>;
         update: (storeId: string, body: types.UpdateMemoryStoreRequest) => Promise<types.MemoryStore>;
+        delete: (storeId: string) => Promise<void>;
         listMemories: (storeId: string, query?: types.ListMemoryStoreMemoriesData["query"]) => Promise<types.MemoryStoreMemoryListResponse>;
         createMemory: (storeId: string, body: types.CreateMemoryStoreMemoryRequest) => Promise<types.MemoryStoreMemory>;
         updateMemory: (storeId: string, memoryId: string, body: types.UpdateMemoryStoreMemoryRequest) => Promise<types.MemoryStoreMemory>;
@@ -141,6 +148,7 @@ export declare function createAmaClient(config: AmaClientConfig): {
         create: (body: types.CreateVaultRequest) => Promise<types.Vault>;
         get: (vaultId: string) => Promise<types.Vault>;
         update: (vaultId: string, body: types.UpdateVaultRequest) => Promise<types.Vault>;
+        delete: (vaultId: string) => Promise<void>;
         listCredentials: (vaultId: string, query?: types.ListVaultCredentialsData["query"]) => Promise<types.VaultCredentialListResponse>;
         createCredential: (vaultId: string, body: types.CreateVaultCredentialRequest) => Promise<types.VaultCredential>;
         getCredential: (vaultId: string, credentialId: string) => Promise<types.VaultCredential>;
@@ -170,6 +178,7 @@ export declare function createAmaRunnerClient(config: AmaRunnerClientConfig): {
         create: (body: types.CreateRunnerRequest) => Promise<types.Runner>;
         get: (runnerId: string) => Promise<types.Runner>;
         update: (runnerId: string, body: types.UpdateRunnerRequest) => Promise<types.Runner>;
+        delete: (runnerId: string) => Promise<void>;
         channel: (runnerId: string) => Promise<RunnerChannel>;
         getHeartbeat: (runnerId: string) => Promise<types.RunnerHeartbeat>;
         putHeartbeat: (runnerId: string, body: types.PutRunnerHeartbeatRequest) => Promise<types.RunnerHeartbeat>;

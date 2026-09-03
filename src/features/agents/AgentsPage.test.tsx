@@ -157,25 +157,6 @@ describe('[spec: agents/console-list] AgentsPage', () => {
     expect(screen.getByText('Anthropic Agent')).toBeInTheDocument()
   })
 
-  it('filters by active status when status filter is changed', async () => {
-    stubPointerCapture()
-    const agent1 = buildAgent({ id: 'agent_1', name: 'Active Agent', archivedAt: null })
-    const agentsColl = createCollection([agent1])
-    server.use(
-      ...resourceHandlers('agents', agentsColl, (body, i) => buildAgent({ id: `agent_new_${i}`, ...body })),
-      http.get('*/api/v1/environments', () => HttpResponse.json(emptyList)),
-    )
-    renderAgentsPage()
-    await waitFor(() => expect(screen.getByText('Active Agent')).toBeInTheDocument())
-    const statusSelect = screen.getByRole('combobox', { name: 'Filter by status' })
-    statusSelect.focus()
-    fireEvent.pointerDown(statusSelect, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
-    fireEvent.mouseDown(statusSelect)
-    const activeOption = await screen.findByRole('option', { name: 'active' })
-    fireEvent.click(activeOption)
-    await waitFor(() => expect(screen.getByText('Active Agent')).toBeInTheDocument())
-  })
-
   it('opens CreateSessionSheet when Create session button is clicked on a loaded agent', async () => {
     const agent = buildAgent()
     const env = buildEnvironment()
@@ -208,7 +189,7 @@ describe('[spec: agents/console-list] AgentsPage', () => {
     await waitFor(() => expect(screen.queryByText('Create Session')).toBeNull())
   })
 
-  it('calls archiveAgent and invalidates queries on success', async () => {
+  it('deletes the agent and removes it from the refreshed list', async () => {
     stubPointerCapture()
     const agent = buildAgent()
     const agentsColl = createCollection([agent])
@@ -218,34 +199,31 @@ describe('[spec: agents/console-list] AgentsPage', () => {
     )
     renderAgentsPage()
     await waitFor(() => expect(screen.getByText('Coding agent')).toBeInTheDocument())
-    const archiveBtn = screen.getByRole('button', { name: 'Archive agent' })
-    fireEvent.click(archiveBtn)
-    const confirmBtns = await screen.findAllByRole('button', { name: 'Archive agent' })
+    const deleteButton = screen.getByRole('button', { name: 'Delete agent' })
+    fireEvent.click(deleteButton)
+    const confirmBtns = await screen.findAllByRole('button', { name: 'Delete agent' })
     fireEvent.click(confirmBtns[confirmBtns.length - 1]!)
-    // Archive mutation via PATCH :id → MSW will apply it
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Coding agent')).toBeNull())
   })
 
-  it('handles archiveAgent error gracefully via use-agent-actions onError', async () => {
+  it('keeps the agent visible when delete fails', async () => {
     stubPointerCapture()
     const agent = buildAgent()
-    // Register list handler but make PATCH fail
     server.use(
       http.get('*/api/v1/agents', () =>
         HttpResponse.json({ data: [agent], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
       ),
       http.get('*/api/v1/environments', () => HttpResponse.json(emptyList)),
-      http.patch('*/api/v1/agents/:agentId', () =>
-        HttpResponse.json({ error: { type: 'server_error', message: 'Archive failed' } }, { status: 500 }),
+      http.delete('*/api/v1/agents/:agentId', () =>
+        HttpResponse.json({ error: { type: 'server_error', message: 'Delete failed' } }, { status: 500 }),
       ),
     )
     renderAgentsPage()
     await waitFor(() => expect(screen.getByText('Coding agent')).toBeInTheDocument())
-    const archiveBtn = screen.getByRole('button', { name: 'Archive agent' })
-    fireEvent.click(archiveBtn)
-    const confirmBtns = await screen.findAllByRole('button', { name: 'Archive agent' })
+    const deleteButton = screen.getByRole('button', { name: 'Delete agent' })
+    fireEvent.click(deleteButton)
+    const confirmBtns = await screen.findAllByRole('button', { name: 'Delete agent' })
     fireEvent.click(confirmBtns[confirmBtns.length - 1]!)
-    // onError fires — agent page stays intact after error
     await waitFor(() => expect(screen.getByText('Coding agent')).toBeInTheDocument())
   })
 })

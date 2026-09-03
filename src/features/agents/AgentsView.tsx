@@ -1,4 +1,4 @@
-import { Archive, Play } from 'lucide-react'
+import { Play, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -11,7 +11,7 @@ import {
   TableSurface,
   TruncatedTooltipText,
 } from '@/console/components'
-import { archivedLabel, formatDate } from '@/console/format'
+import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import type { Agent } from '@/lib/amarpc'
 
@@ -19,12 +19,12 @@ export function AgentsView({
   agents,
   pagination,
   onCreateSession,
-  onArchive,
+  onDelete,
 }: {
   agents: Agent[]
   pagination: ClientPagination<Agent>
   onCreateSession: (id: string) => void
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   if (agents.length === 0) {
     return <EmptyState title="No agents" body="Create an agent, then create a session from this list." />
@@ -72,7 +72,7 @@ export function AgentsView({
             </TableCell>
             <TableCell>
               <div className="flex gap-1">
-                <StatusBadge value={archivedLabel(agent)} />
+                <StatusBadge value={agent.status.phase} />
                 <StatusBadge value={`v${agent.status.version}`} />
               </div>
             </TableCell>
@@ -98,14 +98,14 @@ export function AgentsView({
                   <Play data-icon="inline-start" />
                 </Button>
                 <ConfirmAction
-                  title="Archive agent?"
-                  description={`Archive ${agent.metadata.name}. Existing active sessions are not deleted, but this agent will leave the active list.`}
-                  confirmLabel="Archive agent"
+                  title="Delete agent?"
+                  description={`Delete ${agent.metadata.name}. It will disappear from the product and cannot be restored; existing session history is retained.`}
+                  confirmLabel="Delete agent"
                   destructive
-                  onConfirm={() => onArchive(agent.metadata.uid)}
+                  onConfirm={() => onDelete(agent.metadata.uid)}
                 >
-                  <Button type="button" variant="outline" size="icon" aria-label="Archive agent">
-                    <Archive data-icon="inline-start" />
+                  <Button type="button" variant="outline" size="icon" aria-label="Delete agent">
+                    <Trash2 data-icon="inline-start" />
                   </Button>
                 </ConfirmAction>
               </div>

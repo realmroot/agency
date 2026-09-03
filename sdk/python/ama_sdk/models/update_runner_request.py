@@ -25,20 +25,18 @@ T = TypeVar("T", bound="UpdateRunnerRequest")
 
 @_attrs_define
 class UpdateRunnerRequest:
-    """ 
+    """
         Attributes:
             name (str | Unset):
             state (UpdateRunnerRequestState | Unset):
             max_concurrent (int | Unset):
             metadata (UpdateRunnerRequestMetadata | Unset):
-            archived (bool | Unset):
      """
 
     name: str | Unset = UNSET
     state: UpdateRunnerRequestState | Unset = UNSET
     max_concurrent: int | Unset = UNSET
     metadata: UpdateRunnerRequestMetadata | Unset = UNSET
-    archived: bool | Unset = UNSET
 
 
 
@@ -59,8 +57,6 @@ class UpdateRunnerRequest:
         if not isinstance(self.metadata, Unset):
             metadata = self.metadata.to_dict()
 
-        archived = self.archived
-
 
         field_dict: dict[str, Any] = {}
 
@@ -74,8 +70,6 @@ class UpdateRunnerRequest:
             field_dict["maxConcurrent"] = max_concurrent
         if metadata is not UNSET:
             field_dict["metadata"] = metadata
-        if archived is not UNSET:
-            field_dict["archived"] = archived
 
         return field_dict
 
@@ -109,15 +103,11 @@ class UpdateRunnerRequest:
 
 
 
-        archived = d.pop("archived", UNSET)
-
         update_runner_request = cls(
             name=name,
             state=state,
             max_concurrent=max_concurrent,
             metadata=metadata,
-            archived=archived,
         )
 
         return update_runner_request
-

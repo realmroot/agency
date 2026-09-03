@@ -48,7 +48,7 @@ function rejectSecretMaterial(input: {
 // The referenced agent must be live for the trigger to dispatch, and a pinned
 // environment must be live too. A null environment is left to per-dispatch
 // resolution and skips the environment check. A missing reference is a 404; an
-// archived/unavailable one is a 409.
+// deleted/unavailable one is a 409.
 async function assertReferencesUsable(deps: Deps, projectId: string, agentId: string, environmentId: string | null) {
   const agentError = await deps.triggers.agentUsable(projectId, agentId)
   if (agentError) {
@@ -154,7 +154,6 @@ export interface UpdateTriggerPatch {
     metadata?: Partial<TriggerSessionTemplate['metadata']>
     spec?: Partial<TriggerSessionTemplate['spec']>
   }
-  archived?: boolean
   nextDueAt?: string
 }
 
@@ -236,22 +235,16 @@ function mergeSource(trigger: Trigger, patch: UpdateTriggerPatch): Pick<TriggerC
 
 export interface UpdateTriggerResult {
   trigger: Trigger
-  archived: boolean
 }
 
-// Orchestrates a PATCH: archive lifecycle (archive/restore), secret-material
-// rejection, agent/environment reference re-validation when changed, field
-// merge. Throws TriggerConflictError when field updates target an archived
-// trigger.
+// Orchestrates a PATCH with secret-material rejection, reference validation,
+// and an atomic field merge.
 export async function updateTrigger(
   deps: Deps,
   auth: AuthScope,
   trigger: Trigger,
   patch: UpdateTriggerPatch,
 ): Promise<UpdateTriggerResult> {
-  if (trigger.metadata.archivedAt !== null && patch.archived !== false) {
-    throw new TriggerConflictError('Archived triggers cannot be updated')
-  }
   let template = mergeTemplate(trigger, patch)
   rejectSecretMaterial({
     templateMetadata: patch.template?.metadata,
@@ -289,12 +282,6 @@ export async function updateTrigger(
   }
 
   const timestamp = new Date().toISOString()
-  const archivedAt =
-    patch.archived === true
-      ? (trigger.metadata.archivedAt ?? timestamp)
-      : patch.archived === false
-        ? null
-        : trigger.metadata.archivedAt
   const config: TriggerConfig = {
     name: patch.name ?? trigger.metadata.name,
     source: timing.source,
@@ -311,7 +298,6 @@ export async function updateTrigger(
     trigger.metadata.uid,
     {
       config,
-      archivedAt,
       ...(leavingInbox
         ? { inboxProvisioning: null }
         : enteringInbox
@@ -323,11 +309,10 @@ export async function updateTrigger(
   if (updated.spec.source.type === 'inbox') {
     updated = await reconcileInboxSubscription(deps, updated, inbox?.token)
   }
-  return { trigger: updated, archived: patch.archived === true && trigger.metadata.archivedAt === null }
+  return { trigger: updated }
 }
 
-// Hard-deletes the trigger and its runs, tenant-scoped. Returns false when no
-// matching trigger exists in the project so the http layer can answer 404.
+// Soft-deletes the trigger while retaining its runs for audit history.
 export async function deleteTrigger(deps: Deps, auth: AuthScope, triggerId: string): Promise<boolean> {
   const trigger = await deps.triggers.find(auth.project.id, triggerId)
   if (trigger) await removeInboxSubscription(deps, trigger)

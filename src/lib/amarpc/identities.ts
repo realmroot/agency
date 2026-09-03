@@ -20,6 +20,5 @@ export const identitiesApi = {
   readIdentity: (id: string) => rpcRequest<Identity>(v1.identities[':identityId'].$get({ param: { identityId: id } })),
   createIdentity: (input: IdentityInput, idempotencyKey: string) =>
     rpcRequest<Identity>(v1.identities.$post({ header: { 'idempotency-key': idempotencyKey }, json: input })),
-  archiveIdentity: (id: string) =>
-    rpcRequest<Identity>(v1.identities[':identityId'].$patch({ param: { identityId: id }, json: { archived: true } })),
+  deleteIdentity: (id: string) => rpcRequest<void>(v1.identities[':identityId'].$delete({ param: { identityId: id } })),
 }

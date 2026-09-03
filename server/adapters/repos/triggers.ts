@@ -10,9 +10,11 @@ import type {
   TriggerRunListQuery,
   UpdateTriggerFields,
 } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, desc, eq, gte, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, environments, triggerRuns, triggers } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type TriggerRow = typeof triggers.$inferSelect
@@ -49,7 +51,7 @@ function recordFrom(row: TriggerRow): Trigger {
       createdBy: row.createdByUserId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     }),
     spec: {
       source:
@@ -72,7 +74,7 @@ function recordFrom(row: TriggerRow): Trigger {
       template,
     },
     status: {
-      phase: resourcePhase(row.archivedAt),
+      phase: resourcePhase(row.deletedAt),
       nextDueAt: row.nextDueAt,
       lastDispatchedAt: row.lastDispatchedAt,
       lastRunId: row.lastRunId,
@@ -145,7 +147,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
     async list(query: TriggerListQuery): Promise<ListPageResult<Trigger>> {
       const filters = [
         eq(triggers.projectId, query.projectId),
-        query.archived ? isNotNull(triggers.archivedAt) : isNull(triggers.archivedAt),
+        isNull(triggers.deletedAt),
         query.enabled !== undefined ? eq(triggers.enabled, query.enabled) : undefined,
         query.search ? like(triggers.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(triggers.createdAt, query.createdFrom) : undefined,
@@ -171,7 +173,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
       const row = await db
         .select()
         .from(triggers)
-        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId)))
+        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId), isNull(triggers.deletedAt)))
         .get()
       return row ? recordFrom(row) : null
     },
@@ -184,7 +186,7 @@ export function createTriggerRepo(db: Db): TriggerRepo {
         lastDispatchedAt: null,
         lastRunId: null,
         createdByUserId: input.createdByUserId,
-        archivedAt: null,
+        deletedAt: null,
         inboxSubscriptionId: input.inboxProvisioning?.subscriptionId ?? null,
         inboxCallbackTokenHash: input.inboxProvisioning?.callbackTokenHash ?? null,
         inboxCallbackTokenCiphertext: input.inboxProvisioning?.callbackTokenCiphertext ?? null,
@@ -197,7 +199,12 @@ export function createTriggerRepo(db: Db): TriggerRepo {
         updatedAt: timestamp,
         ...configColumns(input.config),
       }
-      await db.insert(triggers).values(row)
+      try {
+        await db.insert(triggers).values(row)
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Trigger')
+        throw error
+      }
       return recordFrom(row)
     },
 
@@ -205,7 +212,6 @@ export function createTriggerRepo(db: Db): TriggerRepo {
       const row = await db
         .update(triggers)
         .set({
-          archivedAt: fields.archivedAt,
           updatedAt,
           ...(fields.inboxProvisioning !== undefined
             ? {
@@ -221,29 +227,21 @@ export function createTriggerRepo(db: Db): TriggerRepo {
             : {}),
           ...configColumns(fields.config),
         })
-        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId)))
+        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId), isNull(triggers.deletedAt)))
         .returning()
         .get()
+      if (!row) throw new ResourceDeletedDuringMutationError('Trigger')
       return recordFrom(row)
     },
 
     async delete(projectId, triggerId) {
-      const existing = await db
-        .select({ id: triggers.id })
-        .from(triggers)
-        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId)))
-        .get()
-      if (!existing) {
-        return false
-      }
-      // trigger_runs.trigger_id is the only FK to triggers.id; delete the runs
-      // first so the trigger row delete never violates it. One D1 batch keeps
-      // both statements atomic.
-      await db.batch([
-        db.delete(triggerRuns).where(and(eq(triggerRuns.triggerId, triggerId), eq(triggerRuns.projectId, projectId))),
-        db.delete(triggers).where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId))),
-      ])
-      return true
+      const deletedAt = new Date().toISOString()
+      const rows = await db
+        .update(triggers)
+        .set({ deletedAt, updatedAt: deletedAt, enabled: false })
+        .where(and(eq(triggers.id, triggerId), eq(triggers.projectId, projectId), isNull(triggers.deletedAt)))
+        .returning({ id: triggers.id })
+      return rows.length > 0
     },
 
     async listRuns(query: TriggerRunListQuery): Promise<ListPageResult<TriggerRun>> {
@@ -284,27 +282,27 @@ export function createTriggerRepo(db: Db): TriggerRepo {
 
     async agentUsable(projectId, agentId) {
       const agent = await db
-        .select({ archivedAt: agents.archivedAt })
+        .select({ deletedAt: agents.deletedAt })
         .from(agents)
         .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
         .get()
       if (!agent) {
         return { status: 404, message: 'Agent not found' }
       }
-      if (agent.archivedAt !== null) {
-        return { status: 409, message: 'Archived agents cannot be scheduled' }
+      if (agent.deletedAt !== null) {
+        return { status: 409, message: 'Deleted agents cannot be scheduled' }
       }
       return null
     },
 
     async environmentUsable(projectId, environmentId) {
       const environment = await db
-        .select({ archivedAt: environments.archivedAt, currentVersionId: environments.currentVersionId })
+        .select({ deletedAt: environments.deletedAt, currentVersionId: environments.currentVersionId })
         .from(environments)
         .where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId)))
         .get()
-      if (!environment || environment.archivedAt !== null || !environment.currentVersionId) {
-        return { status: 409, message: 'Selected environment is archived or unavailable' }
+      if (!environment || environment.deletedAt !== null || !environment.currentVersionId) {
+        return { status: 409, message: 'Selected environment is deleted or unavailable' }
       }
       return null
     },

@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { emptySession } from '@/console/defaults'
-import { isArchived } from '@/console/format'
 import { SessionForm } from '@/console/forms'
 import type { SessionFormState } from '@/console/types'
 import { ApiError, api, type Session } from '@/lib/amarpc'
@@ -28,12 +27,12 @@ export function CreateSessionSheet({
   const queryClient = useQueryClient()
   const [form, setForm] = useState<SessionFormState>(emptySession)
   const agentsQuery = useQuery({
-    queryKey: queryKeys.agents.list(false),
+    queryKey: queryKeys.agents.list(),
     queryFn: () => api.listAgents(),
     enabled: open,
   })
   const environmentsQuery = useQuery({
-    queryKey: queryKeys.environments.list(false),
+    queryKey: queryKeys.environments.list(),
     queryFn: () => api.listEnvironments(),
     enabled: open,
   })
@@ -43,12 +42,12 @@ export function CreateSessionSheet({
     enabled: open,
   })
   const memoryStoresQuery = useQuery({
-    queryKey: queryKeys.memoryStores.list(false),
+    queryKey: queryKeys.memoryStores.list(),
     queryFn: () => api.listMemoryStores(),
     enabled: open,
   })
   const vaultsQuery = useQuery({
-    queryKey: queryKeys.vaults.list(false),
+    queryKey: queryKeys.vaults.list(),
     queryFn: () => api.listVaults(),
     enabled: open,
   })
@@ -97,8 +96,8 @@ export function CreateSessionSheet({
 
   useEffect(() => {
     if (!open) return
-    const activeAgent = agents.find((agent) => !isArchived(agent))
-    const activeEnvironment = environments.find((environment) => !isArchived(environment))
+    const activeAgent = agents[0]
+    const activeEnvironment = environments[0]
     setForm((current) => {
       const nextAgentId = agentId || current.agentId || activeAgent?.metadata.uid || ''
       const nextEnvironmentId = environments.some((environment) => environment.metadata.uid === current.environmentId)

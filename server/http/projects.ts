@@ -137,7 +137,9 @@ const deleteProjectRoute = createRoute({
   path: '/{projectId}',
   operationId: 'deleteProject',
   tags: ['Projects'],
-  summary: 'Delete an empty project',
+  summary: 'Delete a project with no live resources',
+  description:
+    'Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and history do not block deletion.',
   ...AuthenticatedOperation,
   request: { params: ProjectParamsSchema },
   responses: {
@@ -266,7 +268,7 @@ export function registerProjectRoutes(routes: ProjectRoutes) {
         return c.json(errorBody('not_found', 'Project not found'), 404)
       }
       if (result === 'not_empty') {
-        return c.json(errorBody('conflict', 'Project is not empty'), 409)
+        return c.json(errorBody('conflict', 'Project still contains live resources'), 409)
       }
       if (result === 'default_project') {
         return c.json(errorBody('conflict', 'Default project cannot be deleted'), 409)

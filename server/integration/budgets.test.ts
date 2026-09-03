@@ -69,6 +69,14 @@ describe('[CF] v1 budgets', () => {
 
     const goneRes = await jsonFetch(`/api/v1/budgets/${created.id}`, authorization)
     expect(goneRes.status).toBe(404)
+    expect(
+      (
+        await jsonFetch(`/api/v1/budgets/${created.id}`, authorization, {
+          method: 'PATCH',
+          body: JSON.stringify({ limitValue: 1 }),
+        })
+      ).status,
+    ).toBe(404)
   })
 
   it('requires providerId and modelId for provider- and model-scoped budgets', async () => {

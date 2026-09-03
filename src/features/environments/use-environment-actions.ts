@@ -6,10 +6,10 @@ import { queryKeys } from '@/lib/query-keys'
 
 export function useEnvironmentActions() {
   const queryClient = useQueryClient()
-  const archiveEnvironment = useMutation({
-    mutationFn: api.archiveEnvironment,
+  const deleteEnvironment = useMutation({
+    mutationFn: api.deleteEnvironment,
     onSuccess: () => {
-      toast.success('Environment archived')
+      toast.success('Environment deleted')
       void queryClient.invalidateQueries({ queryKey: queryKeys.environments.all })
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
     },
@@ -17,7 +17,7 @@ export function useEnvironmentActions() {
   })
 
   return {
-    archiveEnvironment: (id: string) => archiveEnvironment.mutate(id),
-    archiveEnvironmentPending: archiveEnvironment.isPending,
+    deleteEnvironment: (id: string) => deleteEnvironment.mutate(id),
+    deleteEnvironmentPending: deleteEnvironment.isPending,
   }
 }

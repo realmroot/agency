@@ -1,6 +1,6 @@
 /**
  * Tests for use-session-actions hook — covers the mutation callbacks (onSuccess,
- * onError) for closeSession and archiveSession.
+ * onError) for closeSession and deleteSession.
  *
  * Uses MSW + the REAL api client. No vi.spyOn / vi.mock of @/lib/amarpc.
  */
@@ -25,16 +25,6 @@ function buildClosedSession() {
   })
 }
 
-function buildArchivedSession() {
-  return buildTestSession({
-    id: 'session_1',
-    phase: 'idle',
-    closedAt: null,
-    archivedAt: '2026-05-23T00:00:02.000Z',
-    updatedAt: '2026-05-23T00:00:02.000Z',
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Test harness
 // ---------------------------------------------------------------------------
@@ -52,15 +42,15 @@ function ActionsHarness() {
       <button type="button" onClick={() => actions.closeSession('session_1')}>
         Close
       </button>
-      <button type="button" onClick={() => actions.archiveSession('session_1')}>
-        Archive
+      <button type="button" onClick={() => actions.deleteSession('session_1')}>
+        Delete
       </button>
       <button type="button" onClick={() => actions.reopenSession('session_1')}>
         Reopen
       </button>
       {actions.closeSessionPending && <span>close-pending</span>}
       {actions.reopenSessionPending && <span>reopen-pending</span>}
-      {actions.archiveSessionPending && <span>archive-pending</span>}
+      {actions.deleteSessionPending && <span>delete-pending</span>}
     </div>
   )
 }
@@ -123,44 +113,29 @@ describe('useSessionActions — reopenSession', () => {
 })
 
 // ---------------------------------------------------------------------------
-// archiveSession
+// deleteSession
 // ---------------------------------------------------------------------------
 
-describe('useSessionActions — archiveSession', () => {
-  it('calls PATCH /api/v1/sessions/:id and resolves with archived session (covers onSuccess)', async () => {
-    // The onSuccess callback calls toast.success and invalidateQueries.
-    // Providing a valid 200 response causes onSuccess to fire.
-    server.use(http.patch('*/api/v1/sessions/session_1', () => HttpResponse.json(buildArchivedSession())))
+describe('useSessionActions — deleteSession', () => {
+  it('calls DELETE /api/v1/sessions/:id and handles 204 success', async () => {
+    server.use(http.delete('*/api/v1/sessions/session_1', () => new HttpResponse(null, { status: 204 })))
 
     renderHarness()
-    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
-    await waitFor(() => expect(screen.queryByText('archive-pending')).toBeNull(), { timeout: 3000 })
+    await waitFor(() => expect(screen.queryByText('delete-pending')).toBeNull(), { timeout: 3000 })
   })
 
-  it('does not crash when PATCH /sessions/:id returns 500 for archive', async () => {
+  it('does not crash when DELETE /sessions/:id returns 500', async () => {
     server.use(
-      http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json({ error: { type: 'internal', message: 'Archive failed' } }, { status: 500 }),
+      http.delete('*/api/v1/sessions/session_1', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'Delete failed' } }, { status: 500 }),
       ),
     )
 
     renderHarness()
-    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
-    await waitFor(() => expect(screen.queryByText('archive-pending')).toBeNull(), { timeout: 3000 })
-  })
-
-  it('does not crash when PATCH /sessions/:id returns 409 for archive', async () => {
-    server.use(
-      http.patch('*/api/v1/sessions/session_1', () =>
-        HttpResponse.json({ error: { type: 'conflict', message: 'Already archived' } }, { status: 409 }),
-      ),
-    )
-
-    renderHarness()
-    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
-
-    await waitFor(() => expect(screen.queryByText('archive-pending')).toBeNull(), { timeout: 3000 })
+    await waitFor(() => expect(screen.queryByText('delete-pending')).toBeNull(), { timeout: 3000 })
   })
 })

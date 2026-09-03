@@ -25,16 +25,14 @@ T = TypeVar("T", bound="UpdateEnvironmentRequest")
 
 @_attrs_define
 class UpdateEnvironmentRequest:
-    """ 
+    """
         Attributes:
             metadata (ResourceUpdateMetadata | Unset):
             spec (UpdateEnvironmentRequestSpec | Unset):
-            archived (bool | Unset): Lifecycle transition: true archives the environment, false unarchives it.
      """
 
     metadata: ResourceUpdateMetadata | Unset = UNSET
     spec: UpdateEnvironmentRequestSpec | Unset = UNSET
-    archived: bool | Unset = UNSET
 
 
 
@@ -51,8 +49,6 @@ class UpdateEnvironmentRequest:
         if not isinstance(self.spec, Unset):
             spec = self.spec.to_dict()
 
-        archived = self.archived
-
 
         field_dict: dict[str, Any] = {}
 
@@ -62,8 +58,6 @@ class UpdateEnvironmentRequest:
             field_dict["metadata"] = metadata
         if spec is not UNSET:
             field_dict["spec"] = spec
-        if archived is not UNSET:
-            field_dict["archived"] = archived
 
         return field_dict
 
@@ -94,13 +88,9 @@ class UpdateEnvironmentRequest:
 
 
 
-        archived = d.pop("archived", UNSET)
-
         update_environment_request = cls(
             metadata=metadata,
             spec=spec,
-            archived=archived,
         )
 
         return update_environment_request
-

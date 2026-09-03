@@ -52,7 +52,6 @@ export type RpcJson<T> = RpcArg<T> extends { json: infer J } ? J : never
 export type RpcQuery<T> = RpcArg<T> extends { query: infer Q } ? Q : never
 
 export interface ListOptions {
-  archived?: boolean
   search?: string
   createdFrom?: string
   createdTo?: string

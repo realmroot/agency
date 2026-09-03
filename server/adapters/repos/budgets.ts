@@ -1,9 +1,11 @@
 import type { BudgetScope } from '@server/domain/policy'
 import { newPrimaryKey } from '@server/id'
 import type { BudgetRecord, BudgetRepo, CreateBudgetInput, UpdateBudgetFields } from '@server/usecases/ports'
-import { and, eq } from 'drizzle-orm'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { budgets } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type BudgetRow = typeof budgets.$inferSelect
@@ -31,7 +33,10 @@ function recordFrom(row: BudgetRow): BudgetRecord {
 export function createBudgetRepo(db: Db): BudgetRepo {
   return {
     async list(projectId) {
-      const rows = await db.select().from(budgets).where(eq(budgets.projectId, projectId))
+      const rows = await db
+        .select()
+        .from(budgets)
+        .where(and(eq(budgets.projectId, projectId), isNull(budgets.deletedAt)))
       return rows.map(recordFrom)
     },
 
@@ -39,7 +44,7 @@ export function createBudgetRepo(db: Db): BudgetRepo {
       const rows = await db
         .select()
         .from(budgets)
-        .where(and(eq(budgets.projectId, projectId), eq(budgets.enabled, true)))
+        .where(and(eq(budgets.projectId, projectId), eq(budgets.enabled, true), isNull(budgets.deletedAt)))
       return rows.map(recordFrom)
     },
 
@@ -47,7 +52,7 @@ export function createBudgetRepo(db: Db): BudgetRepo {
       const row = await db
         .select()
         .from(budgets)
-        .where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId)))
+        .where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId), isNull(budgets.deletedAt)))
         .get()
       return row ? recordFrom(row) : null
     },
@@ -65,10 +70,16 @@ export function createBudgetRepo(db: Db): BudgetRepo {
         window: input.window,
         enabled: input.enabled,
         metadata: JSON.stringify(input.metadata),
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       }
-      await db.insert(budgets).values(row)
+      try {
+        await db.insert(budgets).values(row)
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Budget')
+        throw error
+      }
       return recordFrom(row)
     },
 
@@ -82,14 +93,18 @@ export function createBudgetRepo(db: Db): BudgetRepo {
           metadata: JSON.stringify(fields.metadata),
           updatedAt,
         })
-        .where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId)))
+        .where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId), isNull(budgets.deletedAt)))
         .returning()
         .get()
+      if (!row) throw new ResourceDeletedDuringMutationError('Budget')
       return recordFrom(row)
     },
 
-    async delete(projectId, budgetId) {
-      await db.delete(budgets).where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId)))
+    async delete(projectId, budgetId, deletedAt) {
+      await db
+        .update(budgets)
+        .set({ deletedAt, updatedAt: deletedAt })
+        .where(and(eq(budgets.id, budgetId), eq(budgets.projectId, projectId), isNull(budgets.deletedAt)))
     },
   }
 }

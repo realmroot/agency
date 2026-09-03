@@ -63,8 +63,6 @@ export function buildTestSession(overrides: TestSessionOverrides = {}): Session 
   const reason = overrides.reason ?? overrides.status?.reason ?? null
   const startedAt = overrides.startedAt !== undefined ? overrides.startedAt : (overrides.status?.startedAt ?? now)
   const closedAt = overrides.closedAt !== undefined ? overrides.closedAt : (overrides.status?.closedAt ?? null)
-  const archivedAt =
-    overrides.archivedAt !== undefined ? overrides.archivedAt : (overrides.metadata?.archivedAt ?? null)
   const createdAt = overrides.createdAt ?? overrides.metadata?.createdAt ?? now
   const updatedAt = overrides.updatedAt ?? overrides.metadata?.updatedAt ?? now
   const name = overrides.name !== undefined ? overrides.name : (overrides.metadata?.name ?? 'Test session')
@@ -114,7 +112,6 @@ export function buildTestSession(overrides: TestSessionOverrides = {}): Session 
       createdBy: 'user_1',
       createdAt,
       updatedAt,
-      archivedAt,
       ...overrides.metadata,
     },
     spec: {

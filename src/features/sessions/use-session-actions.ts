@@ -25,10 +25,10 @@ export function useSessionActions() {
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
-  const archiveSession = useMutation({
-    mutationFn: api.archiveSession,
+  const deleteSession = useMutation({
+    mutationFn: api.deleteSession,
     onSuccess: () => {
-      toast.success('Session archived')
+      toast.success('Session deleted')
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -37,9 +37,9 @@ export function useSessionActions() {
   return {
     closeSession: (id: string) => closeSession.mutate(id),
     reopenSession: (id: string) => reopenSession.mutate(id),
-    archiveSession: (id: string) => archiveSession.mutate(id),
+    deleteSession: (id: string) => deleteSession.mutate(id),
     closeSessionPending: closeSession.isPending,
     reopenSessionPending: reopenSession.isPending,
-    archiveSessionPending: archiveSession.isPending,
+    deleteSessionPending: deleteSession.isPending,
   }
 }

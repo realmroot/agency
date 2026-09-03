@@ -13,7 +13,7 @@ import type {
   WorkItemClaimCandidate,
 } from '@server/usecases/ports'
 import { RunnerConflictError } from '@server/usecases/ports'
-import { and, desc, eq, gt, gte, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
+import { and, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import {
   leases,
@@ -90,7 +90,7 @@ async function replaceMemoryStoreSnapshots(
         and(
           eq(memoryStores.id, snapshot.storeId),
           eq(memoryStores.projectId, projectId),
-          isNull(memoryStores.archivedAt),
+          isNull(memoryStores.deletedAt),
         ),
       )
       .get()
@@ -99,8 +99,15 @@ async function replaceMemoryStoreSnapshots(
     }
     await db.batch([
       db
-        .delete(memoryStoreMemories)
-        .where(and(eq(memoryStoreMemories.projectId, projectId), eq(memoryStoreMemories.storeId, snapshot.storeId))),
+        .update(memoryStoreMemories)
+        .set({ deletedAt: updatedAt, updatedAt })
+        .where(
+          and(
+            eq(memoryStoreMemories.projectId, projectId),
+            eq(memoryStoreMemories.storeId, snapshot.storeId),
+            isNull(memoryStoreMemories.deletedAt),
+          ),
+        ),
       ...snapshot.memories.map((memory) =>
         db.insert(memoryStoreMemories).values({
           id: newPrimaryKey(),
@@ -109,6 +116,7 @@ async function replaceMemoryStoreSnapshots(
           path: memory.path,
           content: memory.content,
           metadata: '{}',
+          deletedAt: null,
           createdAt: updatedAt,
           updatedAt,
         }),
@@ -242,7 +250,12 @@ async function bindSessionResumeToken(
     .update(sessions)
     .set({ resumeToken, updatedAt: timestamp })
     .where(
-      and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, input.projectId), isNull(sessions.resumeToken)),
+      and(
+        eq(sessions.id, workItem.sessionId),
+        eq(sessions.projectId, input.projectId),
+        isNull(sessions.deletedAt),
+        isNull(sessions.resumeToken),
+      ),
     )
     .returning({ resumeToken: sessions.resumeToken })
     .get()
@@ -252,7 +265,9 @@ async function bindSessionResumeToken(
   const existing = await db
     .select({ resumeToken: sessions.resumeToken })
     .from(sessions)
-    .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, input.projectId)))
+    .where(
+      and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, input.projectId), isNull(sessions.deletedAt)),
+    )
     .get()
   if (existing?.resumeToken === resumeToken) {
     return
@@ -308,7 +323,7 @@ async function requeueWorkItemForRecovery(
       await db
         .update(sessions)
         .set({ state: 'error', stateReason: 'runner-lease-expired', updatedAt: timestamp })
-        .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
     }
     return 'failed'
   }
@@ -351,7 +366,7 @@ async function requeueWorkItemForRecovery(
         stateReason: runnerStarted ? 'waiting-for-runner-recovery' : 'waiting-for-runner',
         updatedAt: timestamp,
       })
-      .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, projectId)))
+      .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
   }
   return 'requeued'
 }
@@ -474,6 +489,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           and(
             eq(runners.id, input.runnerId),
             eq(runners.projectId, input.projectId),
+            isNull(runners.deletedAt),
             eq(runners.state, 'active'),
             gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
             lt(runners.currentLoad, runners.maxConcurrent),
@@ -497,45 +513,130 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         createdAt: timestamp,
         updatedAt: timestamp,
       } satisfies typeof leases.$inferInsert
-      const claimed = await db
-        .update(workItems)
-        .set({
-          state: 'leased',
-          runnerId: input.runnerId,
-          leaseId: lease.id,
-          attempts: sql`${workItems.attempts} + 1`,
-          updatedAt: timestamp,
-        })
-        .where(
-          and(
-            eq(workItems.id, input.workItemId),
-            eq(workItems.projectId, input.projectId),
-            eq(workItems.state, 'available'),
-            lte(workItems.availableAt, timestamp),
-          ),
-        )
-        .returning({ id: workItems.id, sessionId: workItems.sessionId })
-        .get()
-      if (!claimed) {
-        await releaseRunnerLoad(db, input.projectId, input.runnerId, timestamp)
-        return 'work_item_lost'
-      }
-      await db.insert(leases).values(lease)
-      if (claimed.sessionId) {
-        await db
+      const liveSession = or(
+        isNull(workItems.sessionId),
+        exists(
+          db
+            .select({ id: sessions.id })
+            .from(sessions)
+            .where(
+              and(
+                eq(sessions.id, workItems.sessionId),
+                eq(sessions.projectId, input.projectId),
+                isNull(sessions.deletedAt),
+                eq(sessions.state, 'pending'),
+                or(
+                  eq(sessions.stateReason, 'waiting-for-runner'),
+                  eq(sessions.stateReason, 'waiting-for-runner-recovery'),
+                ),
+              ),
+            ),
+        ),
+      )
+      const claimedSessionIsRunning = or(
+        isNull(workItems.sessionId),
+        exists(
+          db
+            .select({ id: sessions.id })
+            .from(sessions)
+            .where(
+              and(
+                eq(sessions.id, workItems.sessionId),
+                eq(sessions.projectId, input.projectId),
+                isNull(sessions.deletedAt),
+                eq(sessions.state, 'running'),
+              ),
+            ),
+        ),
+      )
+      const [claimedRows, _startedSessions, insertedLeases] = await db.batch([
+        db
+          .update(workItems)
+          .set({
+            state: 'leased',
+            runnerId: input.runnerId,
+            leaseId: lease.id,
+            attempts: sql`${workItems.attempts} + 1`,
+            updatedAt: timestamp,
+          })
+          .where(
+            and(
+              eq(workItems.id, input.workItemId),
+              eq(workItems.projectId, input.projectId),
+              eq(workItems.state, 'available'),
+              lte(workItems.availableAt, timestamp),
+              liveSession,
+            ),
+          )
+          .returning({ id: workItems.id, sessionId: workItems.sessionId }),
+        db
           .update(sessions)
           .set({ state: 'running', stateReason: null, startedAt: timestamp, updatedAt: timestamp })
           .where(
             and(
-              eq(sessions.id, claimed.sessionId),
               eq(sessions.projectId, input.projectId),
+              isNull(sessions.deletedAt),
               eq(sessions.state, 'pending'),
               or(
                 eq(sessions.stateReason, 'waiting-for-runner'),
                 eq(sessions.stateReason, 'waiting-for-runner-recovery'),
               ),
+              exists(
+                db
+                  .select({ id: workItems.id })
+                  .from(workItems)
+                  .where(
+                    and(
+                      eq(workItems.id, input.workItemId),
+                      eq(workItems.projectId, input.projectId),
+                      eq(workItems.sessionId, sessions.id),
+                      eq(workItems.state, 'leased'),
+                      eq(workItems.runnerId, input.runnerId),
+                      eq(workItems.leaseId, lease.id),
+                    ),
+                  ),
+              ),
             ),
+          ),
+        db
+          .insert(leases)
+          .select(
+            db
+              .select({
+                id: sql<string>`${lease.id}`.as('id'),
+                workItemId: sql<string>`${lease.workItemId}`.as('work_item_id'),
+                runnerId: sql<string>`${lease.runnerId}`.as('runner_id'),
+                organizationId: sql<string>`${lease.organizationId}`.as('organization_id'),
+                projectId: sql<string>`${lease.projectId}`.as('project_id'),
+                state: sql<string>`${lease.state}`.as('state'),
+                expiresAt: sql<string>`${lease.expiresAt}`.as('expires_at'),
+                renewedAt: sql<string | null>`${lease.renewedAt}`.as('renewed_at'),
+                resumeToken: sql<string | null>`${lease.resumeToken}`.as('resume_token'),
+                createdAt: sql<string>`${lease.createdAt}`.as('created_at'),
+                updatedAt: sql<string>`${lease.updatedAt}`.as('updated_at'),
+              })
+              .from(workItems)
+              .where(
+                and(
+                  eq(workItems.id, input.workItemId),
+                  eq(workItems.projectId, input.projectId),
+                  eq(workItems.state, 'leased'),
+                  eq(workItems.runnerId, input.runnerId),
+                  eq(workItems.leaseId, lease.id),
+                  claimedSessionIsRunning,
+                ),
+              ),
           )
+          .returning({ id: leases.id }),
+      ])
+      const claimed = claimedRows[0]
+      if (!claimed) {
+        await releaseRunnerLoad(db, input.projectId, input.runnerId, timestamp)
+        return 'work_item_lost'
+      }
+      if (insertedLeases.length === 0) {
+        await releaseRunnerLoad(db, input.projectId, input.runnerId, timestamp)
+        throw new Error('Claimed work item did not create its lease')
       }
       return { lease: recordFrom(lease as LeaseRow), sessionId: claimed.sessionId }
     },
@@ -557,7 +658,9 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         await db
           .update(sessions)
           .set({ state: 'error', stateReason: input.reason, updatedAt: failedAt })
-          .where(and(eq(sessions.id, input.sessionId), eq(sessions.projectId, input.projectId)))
+          .where(
+            and(eq(sessions.id, input.sessionId), eq(sessions.projectId, input.projectId), isNull(sessions.deletedAt)),
+          )
       }
       await releaseRunnerLoad(db, input.projectId, input.runnerId, failedAt)
     },
@@ -726,6 +829,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
               and(
                 eq(sessions.id, workItem.sessionId),
                 eq(sessions.projectId, input.projectId),
+                isNull(sessions.deletedAt),
                 activeChannel
                   ? or(eq(sessions.state, 'running'), pendingRecoveryForAcceptedChannel)
                   : or(eq(sessions.state, 'running'), pendingWithoutAcceptedChannel),
@@ -753,7 +857,9 @@ export function createLeaseRepo(db: Db): LeaseRepo {
       const waitingSession = await db
         .select({ id: sessions.id, state: sessions.state, stateReason: sessions.stateReason })
         .from(sessions)
-        .where(and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, scope.projectId)))
+        .where(
+          and(eq(sessions.id, workItem.sessionId), eq(sessions.projectId, scope.projectId), isNull(sessions.deletedAt)),
+        )
         .get()
       if (
         !(
@@ -804,6 +910,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
           and(
             eq(sessions.id, workItem.sessionId),
             eq(sessions.projectId, scope.projectId),
+            isNull(sessions.deletedAt),
             or(
               and(
                 eq(sessions.state, 'pending'),
@@ -833,7 +940,14 @@ export function createLeaseRepo(db: Db): LeaseRepo {
       await db
         .update(sessions)
         .set({ state: 'pending', stateReason: 'waiting-for-runner-recovery', updatedAt: timestamp })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), eq(sessions.state, 'running')))
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
+            eq(sessions.state, 'running'),
+          ),
+        )
     },
   }
 }

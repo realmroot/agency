@@ -1010,6 +1010,26 @@ describe('[CF] projects v1', () => {
     expect(deleted.status).toBe(204)
     expect(await deleted.text()).toBe('')
     expect((await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA)).status).toBe(404)
+    expect(
+      ((await (await jsonFetch('/api/v1/projects', tenantA)).json()) as { data: Array<{ id: string }> }).data.some(
+        ({ id }) => id === emptyProject.id,
+      ),
+    ).toBe(false)
+    expect(
+      (
+        await env.DB.prepare('SELECT deleted_at FROM projects WHERE id = ?').bind(emptyProject.id).first<{
+          deleted_at: string | null
+        }>()
+      )?.deleted_at,
+    ).toEqual(expect.any(String))
+    expect(
+      (
+        await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA, {
+          method: 'PATCH',
+          body: { name: 'Cannot restore a tombstone' },
+        })
+      ).status,
+    ).toBe(404)
     expect((await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA, { method: 'DELETE' })).status).toBe(404)
 
     const occupiedCreate = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Occupied workspace' } })
@@ -1024,8 +1044,34 @@ describe('[CF] projects v1', () => {
     const occupiedDelete = await jsonFetch(`/api/v1/projects/${occupiedProject.id}`, tenantA, { method: 'DELETE' })
     expect(occupiedDelete.status).toBe(409)
     await expect(occupiedDelete.json()).resolves.toMatchObject({
-      error: { type: 'conflict', message: 'Project is not empty' },
+      error: { type: 'conflict', message: 'Project still contains live resources' },
     })
+
+    await env.DB.prepare('UPDATE agents SET deleted_at = ? WHERE id = ?').bind(now, 'agent_project_delete_guard').run()
+    await env.DB.prepare(`INSERT INTO vaults (
+      id, organization_id, project_id, name, scope, managed_by, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, 'project', 'identity', ?, ?)`)
+      .bind(
+        'vault_identity_managed_history',
+        'org_project_delete_tenant_a',
+        occupiedProject.id,
+        'Identity internals',
+        now,
+        now,
+      )
+      .run()
+    expect((await jsonFetch(`/api/v1/projects/${occupiedProject.id}`, tenantA, { method: 'DELETE' })).status).toBe(204)
+
+    const publicVaultCreate = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Public vault project' } })
+    const publicVaultProject = (await publicVaultCreate.json()) as { id: string }
+    await env.DB.prepare(`INSERT INTO vaults (
+      id, organization_id, project_id, name, scope, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, 'project', ?, ?)`)
+      .bind('vault_public_delete_guard', 'org_project_delete_tenant_a', publicVaultProject.id, 'Public vault', now, now)
+      .run()
+    expect((await jsonFetch(`/api/v1/projects/${publicVaultProject.id}`, tenantA, { method: 'DELETE' })).status).toBe(
+      409,
+    )
 
     const tenantB = await signInUser('project_delete_tenant_b')
     expect((await jsonFetch(`/api/v1/projects/${occupiedProject.id}`, tenantB, { method: 'DELETE' })).status).toBe(404)

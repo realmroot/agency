@@ -57,6 +57,7 @@ import type {
   SessionUpdate,
   WorkItemInsert,
 } from '../ports'
+import { ResourceDeletedDuringMutationError } from '../ports'
 import type { CloudTurnDeps } from './cloud-turn'
 import { startSessionRuntimeForRow } from './cloud-turn'
 import { validateRuntimeProviderModel } from './provisioning'
@@ -613,8 +614,8 @@ export async function createSessionForAgent(
   if (!agent) {
     return { ok: false, error: { status: 404, code: 'not_found', message: 'Agent not found' } }
   }
-  if (agent.archivedAt) {
-    return { ok: false, error: { status: 409, code: 'conflict', message: 'Archived agents cannot create sessions' } }
+  if (agent.deletedAt) {
+    return { ok: false, error: { status: 409, code: 'conflict', message: 'Deleted agents cannot create sessions' } }
   }
 
   const agentVersion = await currentAgentVersion(store, agent)
@@ -735,14 +736,14 @@ export async function createSessionForAgent(
   if (!environment?.currentVersionId) {
     return {
       ok: false,
-      error: { status: 409, code: 'conflict', message: 'Selected environment is archived or unavailable' },
+      error: { status: 409, code: 'conflict', message: 'Selected environment is deleted or unavailable' },
     }
   }
   const environmentVersion = await store.findEnvironmentVersion(auth.project.id, environment.currentVersionId)
   if (!environmentVersion) {
     return {
       ok: false,
-      error: { status: 409, code: 'conflict', message: 'Selected environment is archived or unavailable' },
+      error: { status: 409, code: 'conflict', message: 'Selected environment is deleted or unavailable' },
     }
   }
   const resolvedWorkspaceVolumes = await resolveMemoryVolumes(store, auth, realmrootInputs.volumes)
@@ -922,11 +923,21 @@ export async function createSessionForAgent(
     }),
     startedAt: null,
     closedAt: null,
-    archivedAt: null,
+    deletedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   } satisfies SessionRow
-  await store.insertSession(pending)
+  try {
+    await store.insertSession(pending)
+  } catch (error) {
+    if (error instanceof ResourceDeletedDuringMutationError) {
+      return {
+        ok: false,
+        error: { status: 409, code: 'conflict', message: 'Project was deleted while Session creation was in progress' },
+      }
+    }
+    throw error
+  }
   await audit.record(auth, {
     action: 'session.create',
     resourceType: 'session',

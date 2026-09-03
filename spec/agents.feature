@@ -8,7 +8,7 @@ Feature: Agents
   Scenario: Create an agent definition
     Given a signed-in user with access to a project
     When the user creates an agent with instructions, provider, model, skills, tools, MCP connectors, and metadata
-    Then the agent is stored with a current version, project id, timestamps, and archive state
+    Then the agent is stored with a current version, project id, timestamps, and deletion tombstone
     And the first version snapshots the normalized runtime configuration
     And an unselected provider and model remain null without synthetic platform defaults
 
@@ -59,10 +59,10 @@ Feature: Agents
   # ── API contract (api: assembled server, OpenAPI, tenancy, pagination) ──
 
   @agents/api-crud @api
-  Scenario: Create, read, update, version, archive, and list agents over the API
+  Scenario: Create, read, update, version, delete, and list agents over the API
     Given a signed-in user with access to a project
     When the user drives the agents API end to end
-    Then create, read, update, version history, archive, and list are supported
+    Then create, read, update, version history, soft deletion, and list are supported
     And the API enforces auth, project tenancy, model policy, and tool policy
     And normal agent responses never expose sandbox policy
 
@@ -85,14 +85,14 @@ Feature: Agents
     Given an active agent is bound to a Realmroot Identity in a project
     When the user filters agents by the exact Realmroot actor id
     Then the bound agent is returned without exposing agents from another project
-    And missing, archived, and malformed identity filters follow the collection contract
+    And missing, deleted, and malformed identity filters follow the collection contract
 
   @agents/api-pagination @api
   Scenario: List agents with pagination, filters, and tenant scope
-	    Given a project has active and archived agents created across dates
+	    Given a project has live and soft-deleted agents created across dates
 	    When the user lists agents with a page size
 	    Then the response includes data and cursor pagination metadata
-	    And archived agents are hidden unless archived filtering is requested
+	    And deleted agents are never returned by product APIs
     And created-date filters and project scope are respected
 
   @agents/api-schedulability @api
@@ -102,17 +102,17 @@ Feature: Agents
     Then each Agent reports whether an active Inbox Trigger can resolve a compatible live execution environment
     And runtime filtering uses the exact runtime of the bound Identity
     And scheduling ignores task ownership, workload, and any accepting-tasks flag
-    And archived Agents, Identities, Triggers, Environments, and Runners never make an Agent schedulable
+    And deleted Agents, Identities, Triggers, Environments, and Runners never make an Agent schedulable
 
-  @agents/api-archive @api
-  Scenario: Archive an agent safely
+  @agents/api-delete @api
+  Scenario: Soft-delete an agent without a restore path
     Given an agent exists with existing sessions
-    When the user archives the agent
+    When the user deletes the agent
     Then it is hidden from default lists and creation flows
-    And an archive-only request does not revalidate legacy runtime configuration
+    And deletion does not revalidate legacy runtime configuration
     And a legacy sub-agent configuration is normalized to the current response contract
     And new sessions cannot be created from it while existing sessions stay readable
-    And the archive operation records an audit event
+    And the delete operation records an audit event
 
   # ── Web console (web: list and detail in jsdom) ──
 

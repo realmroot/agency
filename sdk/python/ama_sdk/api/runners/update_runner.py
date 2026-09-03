@@ -113,7 +113,7 @@ def sync_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Runner]:
-    """ Update or archive a self-hosted runner
+    """ Update a self-hosted runner
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
@@ -150,7 +150,7 @@ def sync(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Runner | None:
-    """ Update or archive a self-hosted runner
+    """ Update a self-hosted runner
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
@@ -182,7 +182,7 @@ async def asyncio_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Runner]:
-    """ Update or archive a self-hosted runner
+    """ Update a self-hosted runner
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
@@ -219,7 +219,7 @@ async def asyncio(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Runner | None:
-    """ Update or archive a self-hosted runner
+    """ Update a self-hosted runner
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.

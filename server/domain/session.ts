@@ -48,7 +48,7 @@ export interface SessionMetadata {
   createdBy: string | null
   createdAt: string
   updatedAt: string
-  archivedAt: string | null
+  deletedAt: string | null
 }
 
 export interface SessionSpec {

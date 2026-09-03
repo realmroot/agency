@@ -99,7 +99,6 @@ describe('[CF] /api/v1/runners', () => {
       runtimes: [],
       secretRef: credential.activeVersion.secretRef,
       maxConcurrent: 2,
-      archivedAt: null,
       lastHeartbeatAt: null,
     })
     expect(runner.organizationId).toBeUndefined()
@@ -187,7 +186,7 @@ describe('[CF] /api/v1/runners', () => {
     })
   })
 
-  it('updates runner management fields and archives via PATCH', async () => {
+  it('updates runner management fields and deletes via DELETE', async () => {
     const authorization = await signIn()
     const runnerAuthorization = asRunnerAuthorization(authorization)
     const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
@@ -211,33 +210,25 @@ describe('[CF] /api/v1/runners', () => {
       name: 'Renamed runner',
       state: 'draining',
       maxConcurrent: 4,
-      archivedAt: null,
     })
 
-    const archiveRes = await jsonFetch(`/api/v1/runners/${runner.id}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    const archived = (await archiveRes.json()) as { archivedAt: string | null }
-    expect(archived.archivedAt).toEqual(expect.any(String))
+    const deleteRes = await jsonFetch(`/api/v1/runners/${runner.id}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
 
     const liveListRes = await jsonFetch('/api/v1/runners', authorization)
     expect(liveListRes.status).toBe(200)
     const liveList = (await liveListRes.json()) as { data: Array<{ id: string }> }
     expect(liveList.data.map((entry) => entry.id)).not.toContain(runner.id)
 
-    const archivedListRes = await jsonFetch('/api/v1/runners?archived=true', authorization)
-    expect(archivedListRes.status).toBe(200)
-    const archivedList = (await archivedListRes.json()) as { data: Array<{ id: string }> }
-    expect(archivedList.data.map((entry) => entry.id)).toContain(runner.id)
-
-    const restoreRes = await jsonFetch(`/api/v1/runners/${runner.id}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: false }),
-    })
-    expect(restoreRes.status).toBe(200)
-    await expect(restoreRes.json()).resolves.toMatchObject({ id: runner.id, archivedAt: null })
+    expect((await jsonFetch(`/api/v1/runners/${runner.id}`, authorization)).status).toBe(404)
+    expect(
+      (
+        await jsonFetch(`/api/v1/runners/${runner.id}`, authorization, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: 'Cannot revive a deleted runner' }),
+        })
+      ).status,
+    ).toBe(404)
   })
 
   it('filters runner lists by state and environment', async () => {

@@ -16,12 +16,14 @@ Feature: Projects
     And an explicitly created project is inserted in the caller organization
 
   @projects/delete-empty @api
-  Scenario: Delete an empty project without deleting project resources
-    Given a caller has an empty project in the current organization
+  Scenario: Delete a project after all of its resources are deleted
+    Given a caller has an ordinary project in the current organization
     When the caller deletes that project
-    Then the project is removed and repeated deletion reports not found
+    Then the project is soft-deleted and repeated deletion reports not found
     And the system-owned default project is immutable and rejected as a conflict
-    And a project with any associated resource is rejected as a conflict
+    And a project with any live resource is rejected as a conflict
+    And retained tombstones and history belonging to deleted resources do not block project deletion
+    And a deleted project cannot be listed, read, edited, restored, or selected
     And a project in another organization remains concealed
 
   @projects/rename @api

@@ -133,7 +133,7 @@ describe('[spec: vaults/console-list] VaultsView', () => {
   it('shows the empty-state create affordance when no vaults exist', () => {
     render(
       <MemoryRouter>
-        <VaultsView vaults={[]} pagination={pagination<Vault>([])} onArchive={vi.fn()} />
+        <VaultsView vaults={[]} pagination={pagination<Vault>([])} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -145,7 +145,7 @@ describe('[spec: vaults/console-list] VaultsView', () => {
     const vaults = [vault()]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -154,33 +154,22 @@ describe('[spec: vaults/console-list] VaultsView', () => {
     expect(screen.getByText('1-1 of 1')).toBeInTheDocument()
   })
 
-  it('shows active badge when vault is not archived', () => {
+  it('shows active badge when vault is not deleted', () => {
     const vaults = [vault()]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
     expect(screen.getByText('active')).toBeInTheDocument()
   })
 
-  it('shows archived badge when vault is archived', () => {
-    const vaults = [vault({ archivedAt: '2026-05-24T00:00:00.000Z' })]
-    render(
-      <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByText('archived')).toBeInTheDocument()
-  })
-
   it('falls back to vault id when description is null', () => {
     const vaults = [vault({ description: null })]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -191,7 +180,7 @@ describe('[spec: vaults/console-list] VaultsView', () => {
     const vaults = [vault({ scope: 'organization' })]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -202,29 +191,29 @@ describe('[spec: vaults/console-list] VaultsView', () => {
     const vaults = [vault({ projectId: null })]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={vi.fn()} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
     expect(screen.getByText('Organization')).toBeInTheDocument()
   })
 
-  it('calls onArchive when archive confirm is submitted', async () => {
+  it('calls onDelete when delete confirm is submitted', async () => {
     stubPointerCapture()
 
-    const onArchive = vi.fn()
+    const onDelete = vi.fn()
     const vaults = [vault()]
     render(
       <MemoryRouter>
-        <VaultsView vaults={vaults} pagination={pagination(vaults)} onArchive={onArchive} />
+        <VaultsView vaults={vaults} pagination={pagination(vaults)} onDelete={onDelete} />
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive vault' }))
-    await waitFor(() => expect(screen.getByText('Archive vault?')).toBeInTheDocument())
-    const confirmBtns = screen.getAllByRole('button', { name: 'Archive vault', hidden: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete vault' }))
+    await waitFor(() => expect(screen.getByText('Delete vault?')).toBeInTheDocument())
+    const confirmBtns = screen.getAllByRole('button', { name: 'Delete vault', hidden: true })
     fireEvent.click(confirmBtns[confirmBtns.length - 1] as HTMLElement)
-    await waitFor(() => expect(onArchive).toHaveBeenCalledWith('vault_1'))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('vault_1'))
   })
 
   it('paginates correctly with multiple vaults', () => {
@@ -234,7 +223,7 @@ describe('[spec: vaults/console-list] VaultsView', () => {
       const pag = useClientPagination(vaults)
       return (
         <MemoryRouter>
-          <VaultsView vaults={pag.items} pagination={pag} onArchive={vi.fn()} />
+          <VaultsView vaults={pag.items} pagination={pag} onDelete={vi.fn()} />
         </MemoryRouter>
       )
     }
@@ -364,45 +353,6 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
 
     expect(screen.getByText('No credentials')).toBeInTheDocument()
     expect(screen.getByText(/Store a credential to track safe versioned secret references/)).toBeInTheDocument()
-  })
-
-  it('shows archived vault empty state for archived vault with no credentials', () => {
-    render(
-      <MemoryRouter>
-        <VaultDetailView
-          vault={vault({ archivedAt: '2026-05-24T00:00:00.000Z' })}
-          credentials={[]}
-          auditRecords={[]}
-          loading={false}
-          onAddCredential={vi.fn()}
-          onRotate={vi.fn()}
-          onRevoke={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByText('No credentials')).toBeInTheDocument()
-    expect(screen.getByText(/This vault is archived/)).toBeInTheDocument()
-  })
-
-  it('hides Add credential button and actions column for archived vault', () => {
-    render(
-      <MemoryRouter>
-        <VaultDetailView
-          vault={vault({ archivedAt: '2026-05-24T00:00:00.000Z' })}
-          credentials={[credential()]}
-          auditRecords={[]}
-          loading={false}
-          onAddCredential={vi.fn()}
-          onRotate={vi.fn()}
-          onRevoke={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-
-    expect(screen.queryByRole('button', { name: 'Add credential' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Update credential secret' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Revoke credential' })).toBeNull()
   })
 
   it('shows Add credential button for active vault', () => {
@@ -1613,9 +1563,9 @@ describe('[spec: vaults/actions] useVaultActions', () => {
     )
   }
 
-  it('exposes archiveVault function and archiveVaultPending boolean', () => {
+  it('exposes deleteVault function and deleteVaultPending boolean', () => {
     server.use(
-      http.patch('*/api/v1/vaults/:vaultId', () => HttpResponse.json(vault({ archivedAt: new Date().toISOString() }))),
+      http.delete('*/api/v1/vaults/:vaultId', () => new HttpResponse(null, { status: 204 })),
       http.get('*/api/v1/vaults', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
       ),
@@ -1626,17 +1576,17 @@ describe('[spec: vaults/actions] useVaultActions', () => {
       capturedActions = a
     })
 
-    expect(typeof capturedActions!.archiveVault).toBe('function')
-    expect(typeof capturedActions!.archiveVaultPending).toBe('boolean')
-    expect(capturedActions!.archiveVaultPending).toBe(false)
+    expect(typeof capturedActions!.deleteVault).toBe('function')
+    expect(typeof capturedActions!.deleteVaultPending).toBe('boolean')
+    expect(capturedActions!.deleteVaultPending).toBe(false)
   })
 
-  it('calls PATCH /api/v1/vaults/:vaultId with archived:true', async () => {
+  it('calls DELETE /api/v1/vaults/:vaultId', async () => {
     let capturedParams: unknown
     server.use(
-      http.patch('*/api/v1/vaults/:vaultId', ({ params }) => {
+      http.delete('*/api/v1/vaults/:vaultId', ({ params }) => {
         capturedParams = params.vaultId
-        return HttpResponse.json(vault({ id: String(params.vaultId), archivedAt: new Date().toISOString() }))
+        return new HttpResponse(null, { status: 204 })
       }),
       http.get('*/api/v1/vaults', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
@@ -1648,13 +1598,13 @@ describe('[spec: vaults/actions] useVaultActions', () => {
       capturedActions = a
     })
 
-    capturedActions!.archiveVault('vault_42')
+    capturedActions!.deleteVault('vault_42')
     await waitFor(() => expect(capturedParams).toBe('vault_42'))
   })
 
-  it('handles PATCH /api/v1/vaults/:vaultId returning 500', async () => {
+  it('handles DELETE /api/v1/vaults/:vaultId returning 500', async () => {
     server.use(
-      http.patch('*/api/v1/vaults/:vaultId', () => HttpResponse.json({ error: 'Network failure' }, { status: 500 })),
+      http.delete('*/api/v1/vaults/:vaultId', () => HttpResponse.json({ error: 'Network failure' }, { status: 500 })),
     )
 
     let capturedActions: ReturnType<typeof useVaultActions> | null = null
@@ -1662,7 +1612,7 @@ describe('[spec: vaults/actions] useVaultActions', () => {
       capturedActions = a
     })
 
-    capturedActions!.archiveVault('vault_fail')
-    await waitFor(() => expect(capturedActions!.archiveVaultPending).toBe(false))
+    capturedActions!.deleteVault('vault_fail')
+    await waitFor(() => expect(capturedActions!.deleteVaultPending).toBe(false))
   })
 })

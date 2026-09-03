@@ -32,17 +32,15 @@ export const environmentsApi = {
     rpcRequest<Environment>(v1.environments[':environmentId'].$get({ param: { environmentId: id } })),
   createEnvironment: (input: EnvironmentInput) =>
     rpcRequest<Environment>(v1.environments.$post({ json: input, header: { 'idempotency-key': crypto.randomUUID() } })),
-  updateEnvironment: (id: string, input: Partial<EnvironmentInput> & { archived?: boolean }) =>
+  updateEnvironment: (id: string, input: Partial<EnvironmentInput>) =>
     rpcRequest<Environment>(
       v1.environments[':environmentId'].$patch({
         param: { environmentId: id },
         json: input as RpcJson<(typeof v1.environments)[':environmentId']['$patch']>,
       }),
     ),
-  archiveEnvironment: (id: string) =>
-    rpcRequest<Environment>(
-      v1.environments[':environmentId'].$patch({ param: { environmentId: id }, json: { archived: true } }),
-    ),
+  deleteEnvironment: (id: string) =>
+    rpcRequest<void>(v1.environments[':environmentId'].$delete({ param: { environmentId: id } })),
   listEnvironmentVersions: (id: string) =>
     rpcRequest<ListResponse<EnvironmentVersion>>(
       v1.environments[':environmentId'].versions.$get({ param: { environmentId: id } }),

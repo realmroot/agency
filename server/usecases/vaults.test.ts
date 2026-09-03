@@ -104,6 +104,7 @@ function fakeDeps(
     findIdentityManaged: async () => null,
     insert: async () => vault(),
     update: async () => {},
+    delete: async () => true,
     hasCredentials: async () => false,
     listCredentials: async () => ({ rows: [], hasMore: false }),
     findCredential: async () => null,

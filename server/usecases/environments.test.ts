@@ -1,15 +1,10 @@
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
 import { resourceMetadata } from '@server/domain/resource'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import { createEnvironment, updateEnvironment } from './environments'
-import {
-  type AuthScope,
-  CreationIdempotencyConflictError,
-  EnvironmentArchivedError,
-  EnvironmentValidationError,
-} from './ports'
+import { type AuthScope, CreationIdempotencyConflictError, EnvironmentValidationError } from './ports'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -111,7 +106,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['environments']> } = {}): Dep
       }
     },
     update: async () => {},
-    unarchive: async () => {},
+    delete: async () => true,
     connectorAvailable: async () => true,
     ...overrides.repo,
   }
@@ -188,6 +183,26 @@ describe('[spec: environments/create] createEnvironment', () => {
     const deps = fakeDeps({ repo: { findCreation: async () => ({ fingerprint, environment: replay }) } })
 
     await expect(createEnvironment(deps, auth, input)).resolves.toBe(replay)
+  })
+
+  it('stores creation idempotency metadata for a new keyed Environment', async () => {
+    const insert = vi.fn(fakeDeps().environments.insertWithInitialVersion)
+    const deps = fakeDeps({ repo: { insertWithInitialVersion: insert } })
+
+    await createEnvironment(deps, auth, {
+      name: 'Keyed Node',
+      description: null,
+      config: config(),
+      idempotencyKey: 'new-environment-key',
+    })
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creationKeyHash: expect.any(String),
+        creationFingerprint: expect.any(String),
+      }),
+      expect.any(String),
+    )
   })
 
   it('rejects reuse of an idempotency key for a different Environment request', async () => {
@@ -297,7 +312,7 @@ describe('[spec: environments/update] updateEnvironment', () => {
     ).rejects.toMatchObject({ fields: { packages: expect.stringContaining('already provided') } })
   })
 
-  it('allows metadata updates and archive for an environment with an unchanged legacy Realmroot declaration', async () => {
+  it('allows metadata updates for an environment with an unchanged legacy Realmroot declaration', async () => {
     const legacy = environmentRecord({
       spec: {
         packages: {
@@ -315,9 +330,6 @@ describe('[spec: environments/update] updateEnvironment', () => {
 
     const renamed = await updateEnvironment(fakeDeps(), auth, legacy, { name: 'Renamed legacy environment' })
     expect(renamed.environment.metadata.name).toBe('Renamed legacy environment')
-
-    const archived = await updateEnvironment(fakeDeps(), auth, legacy, { archived: true })
-    expect(archived.environment.metadata.archivedAt).toEqual(expect.any(String))
   })
 
   it('allows an explicitly unchanged legacy package declaration', async () => {
@@ -352,59 +364,6 @@ describe('[spec: environments/update] updateEnvironment', () => {
     expect(versioned).toBe(false)
     expect(result.environment.status.version).toBe(1)
     expect(result.environment.metadata.name).toBe('Renamed')
-  })
-
-  it('archives via {archived:true} and reports the transition', async () => {
-    const result = await updateEnvironment(fakeDeps(), auth, environmentRecord(), { archived: true })
-    expect(result.archived).toBe(true)
-    expect(result.environment.metadata.archivedAt).toEqual(expect.any(String))
-  })
-
-  it('rejects field updates on an archived environment', async () => {
-    await expect(
-      updateEnvironment(
-        fakeDeps(),
-        auth,
-        environmentRecord({ metadata: { archivedAt: '2026-01-02T00:00:00.000Z' }, status: { phase: 'archived' } }),
-        {
-          packages: { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: ['x'], pip: [], webi: [] },
-        },
-      ),
-    ).rejects.toBeInstanceOf(EnvironmentArchivedError)
-  })
-
-  it('unarchives an archived environment via {archived:false}', async () => {
-    const result = await updateEnvironment(
-      fakeDeps(),
-      auth,
-      environmentRecord({ metadata: { archivedAt: '2026-01-02T00:00:00.000Z' }, status: { phase: 'archived' } }),
-      {
-        archived: false,
-      },
-    )
-    expect(result.environment.metadata.archivedAt).toBeNull()
-    expect(result.unarchived).toBe(true)
-  })
-
-  it('is a no-op when patching an archived environment with archived:true', async () => {
-    const archived = environmentRecord({
-      metadata: { archivedAt: '2026-01-02T00:00:00.000Z' },
-      status: { phase: 'archived' },
-    })
-    const result = await updateEnvironment(fakeDeps(), auth, archived, { archived: true })
-    expect(result.environment.metadata.archivedAt).toBe('2026-01-02T00:00:00.000Z')
-    expect(result.archived).toBe(false)
-    expect(result.unarchived).toBe(false)
-  })
-
-  it('is a no-op when patching an archived environment with an empty patch', async () => {
-    const archived = environmentRecord({
-      metadata: { archivedAt: '2026-01-02T00:00:00.000Z' },
-      status: { phase: 'archived' },
-    })
-    const result = await updateEnvironment(fakeDeps(), auth, archived, {})
-    expect(result.environment.metadata.archivedAt).toBe('2026-01-02T00:00:00.000Z')
-    expect(result.unarchived).toBe(false)
   })
 })
 

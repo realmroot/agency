@@ -2,9 +2,9 @@ import { sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 // API v1 schema. Observable conventions live in spec/api-contracts.feature:
-// - `state` = operational state machine; `archivedAt` = lifecycle (null = live).
+// - `state` = operational state machine; `deletedAt` = deletion tombstone (null = live).
 // - `enabled` boolean = operational toggle. Enum values never contain
-//   archived/deleted/paused.
+//   deleted/paused.
 // - Credentials are always secret references (credential_id + optional
 //   credential_version_id); no raw secret ref strings.
 // - organization_id stays in the DB for tenancy but is never exposed in API
@@ -16,10 +16,15 @@ export const projects = sqliteTable(
     id: text('id').primaryKey(),
     organizationId: text('organization_id').notNull(),
     name: text('name').notNull(),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [uniqueIndex('idx_projects_unique_name_per_organization').on(table.organizationId, table.name)],
+  (table) => [
+    uniqueIndex('idx_projects_unique_live_name_per_organization')
+      .on(table.organizationId, table.name)
+      .where(sql`${table.deletedAt} is null`),
+  ],
 )
 
 // Browser login state and sessions are server-owned. Cookies contain only
@@ -133,7 +138,7 @@ export const identities = sqliteTable(
     requestFingerprint: text('request_fingerprint').notNull(),
     provisioningOwner: text('provisioning_owner'),
     provisioningLeaseExpiresAt: text('provisioning_lease_expires_at'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -173,7 +178,7 @@ export const agents = sqliteTable(
     creationFingerprint: text('creation_fingerprint'),
     creationName: text('creation_name'),
     creationDescription: text('creation_description'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
     // maintained by the repo in the same atomic batch as each version write; a
@@ -232,7 +237,7 @@ export const memoryStores = sqliteTable(
       .references(() => projects.id),
     name: text('name').notNull(),
     description: text('description'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -252,11 +257,14 @@ export const memoryStoreMemories = sqliteTable(
     path: text('path').notNull(),
     content: text('content').notNull(),
     metadata: text('metadata').notNull().default('{}'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    uniqueIndex('idx_memory_store_memories_store_path').on(table.storeId, table.path),
+    uniqueIndex('idx_memory_store_memories_unique_live_store_path')
+      .on(table.storeId, table.path)
+      .where(sql`${table.deletedAt} is null`),
     index('idx_memory_store_memories_store_created').on(table.storeId, table.createdAt, table.id),
   ],
 )
@@ -286,7 +294,7 @@ export const environments = sqliteTable(
     creationFingerprint: text('creation_fingerprint'),
     creationName: text('creation_name'),
     creationDescription: text('creation_description'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     // Intentionally NOT a FK to environment_versions: the circular reference
     // (environment_versions.environment_id -> environments.id) would make inserts
     // un-orderable. The repo writes the initial pointer and version atomically;
@@ -350,7 +358,7 @@ export const vaults = sqliteTable(
       .notNull()
       .default('project'),
     managedBy: text('managed_by', { enum: ['identity'] }),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -504,7 +512,7 @@ export const sessions = sqliteTable(
     metadata: text('metadata').notNull().default('{}'),
     startedAt: text('started_at'),
     closedAt: text('closed_at'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -661,7 +669,7 @@ export const triggers = sqliteTable(
     // Nullable audit pointer with no FK — there is no users table in this D1 schema.
     // Realmroot identity references survive user-record deletion.
     createdByUserId: text('created_by_user_id'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -811,7 +819,7 @@ export const runners = sqliteTable(
     runtimes: text('runtimes').notNull().default('[]'),
     metadata: text('metadata').notNull().default('{}'),
     lastHeartbeatAt: text('last_heartbeat_at'),
-    archivedAt: text('archived_at'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -986,6 +994,7 @@ export const budgets = sqliteTable(
     window: text('window', { enum: ['day', 'month'] }).notNull(),
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
     metadata: text('metadata').notNull().default('{}'),
+    deletedAt: text('deleted_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

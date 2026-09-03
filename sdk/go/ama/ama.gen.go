@@ -1325,16 +1325,13 @@ func (e ReasoningContentBlockType) Valid() bool {
 
 // Defines values for ResourcePhase.
 const (
-	ResourcePhaseActive   ResourcePhase = "active"
-	ResourcePhaseArchived ResourcePhase = "archived"
+	ResourcePhaseActive ResourcePhase = "active"
 )
 
 // Valid indicates whether the value is a known member of the ResourcePhase enum.
 func (e ResourcePhase) Valid() bool {
 	switch e {
 	case ResourcePhaseActive:
-		return true
-	case ResourcePhaseArchived:
 		return true
 	default:
 		return false
@@ -2445,21 +2442,6 @@ func (e UpdateBudgetRequestWindow) Valid() bool {
 	}
 }
 
-// Defines values for UpdateIdentityRequestArchived.
-const (
-	UpdateIdentityRequestArchivedTrue UpdateIdentityRequestArchived = true
-)
-
-// Valid indicates whether the value is a known member of the UpdateIdentityRequestArchived enum.
-func (e UpdateIdentityRequestArchived) Valid() bool {
-	switch e {
-	case UpdateIdentityRequestArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for UpdateLeaseRequestState.
 const (
 	UpdateLeaseRequestStateActive      UpdateLeaseRequestState = "active"
@@ -2838,24 +2820,6 @@ func (e WorkItemState) Valid() bool {
 	}
 }
 
-// Defines values for ListAgentsParamsArchived.
-const (
-	ListAgentsParamsArchivedFalse ListAgentsParamsArchived = "false"
-	ListAgentsParamsArchivedTrue  ListAgentsParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListAgentsParamsArchived enum.
-func (e ListAgentsParamsArchived) Valid() bool {
-	switch e {
-	case ListAgentsParamsArchivedFalse:
-		return true
-	case ListAgentsParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListAgentsParamsRuntime.
 const (
 	Ama        ListAgentsParamsRuntime = "ama"
@@ -2916,42 +2880,6 @@ func (e ListConnectorsParamsAvailability) Valid() bool {
 	}
 }
 
-// Defines values for ListEnvironmentsParamsArchived.
-const (
-	ListEnvironmentsParamsArchivedFalse ListEnvironmentsParamsArchived = "false"
-	ListEnvironmentsParamsArchivedTrue  ListEnvironmentsParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListEnvironmentsParamsArchived enum.
-func (e ListEnvironmentsParamsArchived) Valid() bool {
-	switch e {
-	case ListEnvironmentsParamsArchivedFalse:
-		return true
-	case ListEnvironmentsParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListIdentitiesParamsArchived.
-const (
-	ListIdentitiesParamsArchivedFalse ListIdentitiesParamsArchived = "false"
-	ListIdentitiesParamsArchivedTrue  ListIdentitiesParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListIdentitiesParamsArchived enum.
-func (e ListIdentitiesParamsArchived) Valid() bool {
-	switch e {
-	case ListIdentitiesParamsArchivedFalse:
-		return true
-	case ListIdentitiesParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListLeasesParamsState.
 const (
 	ListLeasesParamsStateActive    ListLeasesParamsState = "active"
@@ -2979,42 +2907,6 @@ func (e ListLeasesParamsState) Valid() bool {
 	}
 }
 
-// Defines values for ListMemoryStoresParamsArchived.
-const (
-	ListMemoryStoresParamsArchivedFalse ListMemoryStoresParamsArchived = "false"
-	ListMemoryStoresParamsArchivedTrue  ListMemoryStoresParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListMemoryStoresParamsArchived enum.
-func (e ListMemoryStoresParamsArchived) Valid() bool {
-	switch e {
-	case ListMemoryStoresParamsArchivedFalse:
-		return true
-	case ListMemoryStoresParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListRunnersParamsArchived.
-const (
-	ListRunnersParamsArchivedFalse ListRunnersParamsArchived = "false"
-	ListRunnersParamsArchivedTrue  ListRunnersParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListRunnersParamsArchived enum.
-func (e ListRunnersParamsArchived) Valid() bool {
-	switch e {
-	case ListRunnersParamsArchivedFalse:
-		return true
-	case ListRunnersParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListRunnersParamsState.
 const (
 	ListRunnersParamsStateActive   ListRunnersParamsState = "active"
@@ -3033,24 +2925,6 @@ func (e ListRunnersParamsState) Valid() bool {
 	case ListRunnersParamsStateDraining:
 		return true
 	case ListRunnersParamsStateOffline:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListSessionsParamsArchived.
-const (
-	ListSessionsParamsArchivedFalse ListSessionsParamsArchived = "false"
-	ListSessionsParamsArchivedTrue  ListSessionsParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListSessionsParamsArchived enum.
-func (e ListSessionsParamsArchived) Valid() bool {
-	switch e {
-	case ListSessionsParamsArchivedFalse:
-		return true
-	case ListSessionsParamsArchivedTrue:
 		return true
 	default:
 		return false
@@ -3150,36 +3024,18 @@ func (e ListSessionEventsParamsType) Valid() bool {
 	}
 }
 
-// Defines values for ListTriggersParamsArchived.
-const (
-	ListTriggersParamsArchivedFalse ListTriggersParamsArchived = "false"
-	ListTriggersParamsArchivedTrue  ListTriggersParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListTriggersParamsArchived enum.
-func (e ListTriggersParamsArchived) Valid() bool {
-	switch e {
-	case ListTriggersParamsArchivedFalse:
-		return true
-	case ListTriggersParamsArchivedTrue:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListTriggersParamsSuspend.
 const (
-	ListTriggersParamsSuspendFalse ListTriggersParamsSuspend = "false"
-	ListTriggersParamsSuspendTrue  ListTriggersParamsSuspend = "true"
+	False ListTriggersParamsSuspend = "false"
+	True  ListTriggersParamsSuspend = "true"
 )
 
 // Valid indicates whether the value is a known member of the ListTriggersParamsSuspend enum.
 func (e ListTriggersParamsSuspend) Valid() bool {
 	switch e {
-	case ListTriggersParamsSuspendFalse:
+	case False:
 		return true
-	case ListTriggersParamsSuspendTrue:
+	case True:
 		return true
 	default:
 		return false
@@ -3228,24 +3084,6 @@ func (e ReadUsageSummaryParamsGroupBy) Valid() bool {
 	case ReadUsageSummaryParamsGroupByModel:
 		return true
 	case ReadUsageSummaryParamsGroupByProvider:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListVaultsParamsArchived.
-const (
-	ListVaultsParamsArchivedFalse ListVaultsParamsArchived = "false"
-	ListVaultsParamsArchivedTrue  ListVaultsParamsArchived = "true"
-)
-
-// Valid indicates whether the value is a known member of the ListVaultsParamsArchived enum.
-func (e ListVaultsParamsArchived) Valid() bool {
-	switch e {
-	case ListVaultsParamsArchivedFalse:
-		return true
-	case ListVaultsParamsArchivedTrue:
 		return true
 	default:
 		return false
@@ -4614,7 +4452,6 @@ type ResourceCreateMetadata struct {
 // ResourceMetadata defines model for ResourceMetadata.
 type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations"`
-	ArchivedAt  *time.Time        `json:"archivedAt"`
 	CreatedAt   time.Time         `json:"createdAt"`
 	CreatedBy   *string           `json:"createdBy"`
 	Description *string           `json:"description"`
@@ -4636,7 +4473,6 @@ type ResourceUpdateMetadata struct {
 
 // Runner defines model for Runner.
 type Runner struct {
-	ArchivedAt      *time.Time             `json:"archivedAt"`
 	AuthMode        RunnerAuthMode         `json:"authMode"`
 	CreatedAt       time.Time              `json:"createdAt"`
 	CurrentLoad     int                    `json:"currentLoad"`
@@ -5351,7 +5187,6 @@ type SessionMessageListResponse struct {
 // SessionMetadata defines model for SessionMetadata.
 type SessionMetadata struct {
 	Annotations map[string]string `json:"annotations"`
-	ArchivedAt  *time.Time        `json:"archivedAt"`
 	CreatedAt   time.Time         `json:"createdAt"`
 	CreatedBy   *string           `json:"createdBy"`
 	Description *string           `json:"description"`
@@ -5707,8 +5542,6 @@ type TurnPayload struct {
 
 // UpdateAgentRequest defines model for UpdateAgentRequest.
 type UpdateAgentRequest struct {
-	// Archived Lifecycle transition: true archives the agent, false unarchives it.
-	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
 		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
@@ -5735,8 +5568,6 @@ type UpdateBudgetRequestWindow string
 
 // UpdateEnvironmentRequest defines model for UpdateEnvironmentRequest.
 type UpdateEnvironmentRequest struct {
-	// Archived Lifecycle transition: true archives the environment, false unarchives it.
-	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
 		Networking *EnvironmentNetworking `json:"networking,omitempty"`
@@ -5749,14 +5580,6 @@ type UpdateEnvironmentRequest struct {
 		} `json:"variables,omitempty"`
 	} `json:"spec,omitempty"`
 }
-
-// UpdateIdentityRequest defines model for UpdateIdentityRequest.
-type UpdateIdentityRequest struct {
-	Archived UpdateIdentityRequestArchived `json:"archived"`
-}
-
-// UpdateIdentityRequestArchived defines model for UpdateIdentityRequest.Archived.
-type UpdateIdentityRequestArchived bool
 
 // UpdateLeaseRequest defines model for UpdateLeaseRequest.
 type UpdateLeaseRequest struct {
@@ -5782,7 +5605,6 @@ type UpdateMemoryStoreMemoryRequest struct {
 
 // UpdateMemoryStoreRequest defines model for UpdateMemoryStoreRequest.
 type UpdateMemoryStoreRequest struct {
-	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *map[string]interface{} `json:"spec,omitempty"`
 }
@@ -5794,7 +5616,6 @@ type UpdateProjectRequest struct {
 
 // UpdateRunnerRequest defines model for UpdateRunnerRequest.
 type UpdateRunnerRequest struct {
-	Archived      *bool                     `json:"archived,omitempty"`
 	MaxConcurrent *int                      `json:"maxConcurrent,omitempty"`
 	Metadata      *map[string]interface{}   `json:"metadata,omitempty"`
 	Name          *string                   `json:"name,omitempty"`
@@ -5806,7 +5627,6 @@ type UpdateRunnerRequestState string
 
 // UpdateSessionRequest defines model for UpdateSessionRequest.
 type UpdateSessionRequest struct {
-	Archived *bool                      `json:"archived,omitempty"`
 	Metadata *SessionUpdateMetadata     `json:"metadata,omitempty"`
 	State    *UpdateSessionRequestState `json:"state,omitempty"`
 }
@@ -5816,7 +5636,6 @@ type UpdateSessionRequestState string
 
 // UpdateTriggerRequest defines model for UpdateTriggerRequest.
 type UpdateTriggerRequest struct {
-	Archived *bool                  `json:"archived,omitempty"`
 	Metadata *TriggerUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
 		NextDueAt *time.Time                        `json:"nextDueAt,omitempty"`
@@ -5898,7 +5717,6 @@ type UpdateVaultCredentialSecretRequest struct {
 
 // UpdateVaultRequest defines model for UpdateVaultRequest.
 type UpdateVaultRequest struct {
-	Archived *bool                   `json:"archived,omitempty"`
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
 		Scope *UpdateVaultRequestSpecScope `json:"scope,omitempty"`
@@ -6167,13 +5985,11 @@ type sessionSocketTicketContextKey string
 
 // ListAgentsParams defines parameters for ListAgents.
 type ListAgentsParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListAgentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                   `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// IdentityAgentId Exact Realmroot Agent actor id bound through the Agent Identity.
 	IdentityAgentId *string `form:"identityAgentId,omitempty" json:"identityAgentId,omitempty"`
@@ -6188,9 +6004,6 @@ type ListAgentsParams struct {
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// ListAgentsParamsArchived defines parameters for ListAgents.
-type ListAgentsParamsArchived string
-
 // ListAgentsParamsRuntime defines parameters for ListAgents.
 type ListAgentsParamsRuntime string
 
@@ -6201,6 +6014,12 @@ type ListAgentsParamsSchedulable string
 type CreateAgentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteAgentParams defines parameters for DeleteAgent.
+type DeleteAgentParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6294,25 +6113,26 @@ type ListConnectorsParamsAvailability string
 
 // ListEnvironmentsParams defines parameters for ListEnvironments.
 type ListEnvironmentsParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListEnvironmentsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                         `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                      `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                      `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                            `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// ListEnvironmentsParamsArchived defines parameters for ListEnvironments.
-type ListEnvironmentsParamsArchived string
-
 // CreateEnvironmentParams defines parameters for CreateEnvironment.
 type CreateEnvironmentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteEnvironmentParams defines parameters for DeleteEnvironment.
+type DeleteEnvironmentParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6343,20 +6163,15 @@ type ReadEnvironmentVersionParams struct {
 
 // ListIdentitiesParams defines parameters for ListIdentities.
 type ListIdentitiesParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListIdentitiesParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                       `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                    `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                          `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                       `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
-
-// ListIdentitiesParamsArchived defines parameters for ListIdentities.
-type ListIdentitiesParamsArchived string
 
 // CreateIdentityParams defines parameters for CreateIdentity.
 type CreateIdentityParams struct {
@@ -6366,14 +6181,14 @@ type CreateIdentityParams struct {
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// ReadIdentityParams defines parameters for ReadIdentity.
-type ReadIdentityParams struct {
+// DeleteIdentityParams defines parameters for DeleteIdentity.
+type DeleteIdentityParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// UpdateIdentityParams defines parameters for UpdateIdentity.
-type UpdateIdentityParams struct {
+// ReadIdentityParams defines parameters for ReadIdentity.
+type ReadIdentityParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6412,23 +6227,24 @@ type UpdateLeaseParams struct {
 
 // ListMemoryStoresParams defines parameters for ListMemoryStores.
 type ListMemoryStoresParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListMemoryStoresParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                         `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                      `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                      `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                            `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// ListMemoryStoresParamsArchived defines parameters for ListMemoryStores.
-type ListMemoryStoresParamsArchived string
-
 // CreateMemoryStoreParams defines parameters for CreateMemoryStore.
 type CreateMemoryStoreParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteMemoryStoreParams defines parameters for DeleteMemoryStore.
+type DeleteMemoryStoreParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6480,28 +6296,29 @@ type ListProjectsParams struct {
 
 // ListRunnersParams defines parameters for ListRunners.
 type ListRunnersParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived      *ListRunnersParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search        *string                    `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom   *time.Time                 `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo     *time.Time                 `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit         *int                       `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor        *string                    `form:"cursor,omitempty" json:"cursor,omitempty"`
-	State         *ListRunnersParamsState    `form:"state,omitempty" json:"state,omitempty"`
-	EnvironmentId *string                    `form:"environmentId,omitempty" json:"environmentId,omitempty"`
+	Search        *string                 `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom   *time.Time              `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo     *time.Time              `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit         *int                    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string                 `form:"cursor,omitempty" json:"cursor,omitempty"`
+	State         *ListRunnersParamsState `form:"state,omitempty" json:"state,omitempty"`
+	EnvironmentId *string                 `form:"environmentId,omitempty" json:"environmentId,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
-
-// ListRunnersParamsArchived defines parameters for ListRunners.
-type ListRunnersParamsArchived string
 
 // ListRunnersParamsState defines parameters for ListRunners.
 type ListRunnersParamsState string
 
 // CreateRunnerParams defines parameters for CreateRunner.
 type CreateRunnerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteRunnerParams defines parameters for DeleteRunner.
+type DeleteRunnerParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6538,28 +6355,29 @@ type PutRunnerHeartbeatParams struct {
 
 // ListSessionsParams defines parameters for ListSessions.
 type ListSessionsParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived      *ListSessionsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search        *string                     `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom   *time.Time                  `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo     *time.Time                  `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit         *int                        `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor        *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
-	State         *ListSessionsParamsState    `form:"state,omitempty" json:"state,omitempty"`
-	LabelSelector *string                     `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	Search        *string                  `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom   *time.Time               `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo     *time.Time               `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit         *int                     `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string                  `form:"cursor,omitempty" json:"cursor,omitempty"`
+	State         *ListSessionsParamsState `form:"state,omitempty" json:"state,omitempty"`
+	LabelSelector *string                  `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
-
-// ListSessionsParamsArchived defines parameters for ListSessions.
-type ListSessionsParamsArchived string
 
 // ListSessionsParamsState defines parameters for ListSessions.
 type ListSessionsParamsState string
 
 // CreateSessionParams defines parameters for CreateSession.
 type CreateSessionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteSessionParams defines parameters for DeleteSession.
+type DeleteSessionParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6648,13 +6466,11 @@ type ConnectSessionSocketParams struct {
 
 // ListTriggersParams defines parameters for ListTriggers.
 type ListTriggersParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListTriggersParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                     `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                  `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                  `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                        `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Suspend Filter by the operational toggle.
 	Suspend *ListTriggersParamsSuspend `form:"suspend,omitempty" json:"suspend,omitempty"`
@@ -6662,9 +6478,6 @@ type ListTriggersParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
-
-// ListTriggersParamsArchived defines parameters for ListTriggers.
-type ListTriggersParamsArchived string
 
 // ListTriggersParamsSuspend defines parameters for ListTriggers.
 type ListTriggersParamsSuspend string
@@ -6757,23 +6570,24 @@ type ReadUsageSummaryParamsGroupBy string
 
 // ListVaultsParams defines parameters for ListVaults.
 type ListVaultsParams struct {
-	// Archived Filter by lifecycle. Defaults to false (live resources only).
-	Archived    *ListVaultsParamsArchived `form:"archived,omitempty" json:"archived,omitempty"`
-	Search      *string                   `form:"search,omitempty" json:"search,omitempty"`
-	CreatedFrom *time.Time                `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
-	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
-	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Search      *string    `form:"search,omitempty" json:"search,omitempty"`
+	CreatedFrom *time.Time `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
+	CreatedTo   *time.Time `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
-// ListVaultsParamsArchived defines parameters for ListVaults.
-type ListVaultsParamsArchived string
-
 // CreateVaultParams defines parameters for CreateVault.
 type CreateVaultParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteVaultParams defines parameters for DeleteVault.
+type DeleteVaultParams struct {
 	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
 	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
@@ -6895,12 +6709,6 @@ type UpdateEnvironmentJSONRequestBody = UpdateEnvironmentRequest
 
 // CreateIdentityJSONRequestBody defines body for CreateIdentity for application/json ContentType.
 type CreateIdentityJSONRequestBody = CreateIdentityRequest
-
-// UpdateIdentityJSONRequestBody defines body for UpdateIdentity for application/json ContentType.
-type UpdateIdentityJSONRequestBody = UpdateIdentityRequest
-
-// UpdateIdentityApplicationMergePatchPlusJSONRequestBody defines body for UpdateIdentity for application/merge-patch+json ContentType.
-type UpdateIdentityApplicationMergePatchPlusJSONRequestBody = UpdateIdentityRequest
 
 // CreateInboxNotificationJSONRequestBody defines body for CreateInboxNotification for application/json ContentType.
 type CreateInboxNotificationJSONRequestBody = InboxNotification
@@ -9450,6 +9258,9 @@ type ClientInterface interface {
 
 	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteAgent request
+	DeleteAgent(ctx context.Context, agentId string, params *DeleteAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadAgent request
 	ReadAgent(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -9512,6 +9323,9 @@ type ClientInterface interface {
 
 	CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteEnvironment request
+	DeleteEnvironment(ctx context.Context, environmentId string, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadEnvironment request
 	ReadEnvironment(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -9534,15 +9348,11 @@ type ClientInterface interface {
 
 	CreateIdentity(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteIdentity request
+	DeleteIdentity(ctx context.Context, identityId string, params *DeleteIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadIdentity request
 	ReadIdentity(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateIdentityWithBody request with any body
-	UpdateIdentityWithBody(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UpdateIdentity(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateInboxNotificationWithBody request with any body
 	CreateInboxNotificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9572,6 +9382,9 @@ type ClientInterface interface {
 	CreateMemoryStoreWithBody(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	CreateMemoryStore(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteMemoryStore request
+	DeleteMemoryStore(ctx context.Context, storeId string, params *DeleteMemoryStoreParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadMemoryStore request
 	ReadMemoryStore(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9639,6 +9452,9 @@ type ClientInterface interface {
 
 	CreateRunner(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteRunner request
+	DeleteRunner(ctx context.Context, runnerId string, params *DeleteRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadRunner request
 	ReadRunner(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -9665,6 +9481,9 @@ type ClientInterface interface {
 	CreateSessionWithBody(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	CreateSession(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteSession request
+	DeleteSession(ctx context.Context, sessionId string, params *DeleteSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadSession request
 	ReadSession(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9754,6 +9573,9 @@ type ClientInterface interface {
 
 	CreateVault(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteVault request
+	DeleteVault(ctx context.Context, vaultId string, params *DeleteVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadVault request
 	ReadVault(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -9822,6 +9644,18 @@ func (c *APIClient) CreateAgentWithBody(ctx context.Context, params *CreateAgent
 
 func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateAgentRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) DeleteAgent(ctx context.Context, agentId string, params *DeleteAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAgentRequest(c.Server, agentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10096,6 +9930,18 @@ func (c *APIClient) CreateEnvironment(ctx context.Context, params *CreateEnviron
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) DeleteEnvironment(ctx context.Context, environmentId string, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteEnvironmentRequest(c.Server, environmentId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadEnvironment(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadEnvironmentRequest(c.Server, environmentId, params)
 	if err != nil {
@@ -10192,44 +10038,20 @@ func (c *APIClient) CreateIdentity(ctx context.Context, params *CreateIdentityPa
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) DeleteIdentity(ctx context.Context, identityId string, params *DeleteIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteIdentityRequest(c.Server, identityId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadIdentity(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadIdentityRequest(c.Server, identityId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) UpdateIdentityWithBody(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequestWithBody(c.Server, identityId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequest(c.Server, identityId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *APIClient) UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(c.Server, identityId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10362,6 +10184,18 @@ func (c *APIClient) CreateMemoryStoreWithBody(ctx context.Context, params *Creat
 
 func (c *APIClient) CreateMemoryStore(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateMemoryStoreRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) DeleteMemoryStore(ctx context.Context, storeId string, params *DeleteMemoryStoreParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteMemoryStoreRequest(c.Server, storeId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10660,6 +10494,18 @@ func (c *APIClient) CreateRunner(ctx context.Context, params *CreateRunnerParams
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) DeleteRunner(ctx context.Context, runnerId string, params *DeleteRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteRunnerRequest(c.Server, runnerId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadRunner(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadRunnerRequest(c.Server, runnerId, params)
 	if err != nil {
@@ -10770,6 +10616,18 @@ func (c *APIClient) CreateSessionWithBody(ctx context.Context, params *CreateSes
 
 func (c *APIClient) CreateSession(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateSessionRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) DeleteSession(ctx context.Context, sessionId string, params *DeleteSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteSessionRequest(c.Server, sessionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -11164,6 +11022,18 @@ func (c *APIClient) CreateVault(ctx context.Context, params *CreateVaultParams, 
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) DeleteVault(ctx context.Context, vaultId string, params *DeleteVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteVaultRequest(c.Server, vaultId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadVault(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadVaultRequest(c.Server, vaultId, params)
 	if err != nil {
@@ -11372,18 +11242,6 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -11568,6 +11426,55 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 			}
 
 			req.Header.Set("X-AMA-Project-ID", headerParam1)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteAgentRequest generates requests for DeleteAgent
+func NewDeleteAgentRequest(server string, agentId string, params *DeleteAgentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "agentId", agentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/agents/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
 		}
 
 	}
@@ -12540,18 +12447,6 @@ func NewListEnvironmentsRequest(server string, params *ListEnvironmentsParams) (
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -12700,6 +12595,55 @@ func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmen
 			}
 
 			req.Header.Set("X-AMA-Project-ID", headerParam1)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteEnvironmentRequest generates requests for DeleteEnvironment
+func NewDeleteEnvironmentRequest(server string, environmentId string, params *DeleteEnvironmentParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "environmentId", environmentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/environments/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
 		}
 
 	}
@@ -12951,18 +12895,6 @@ func NewListIdentitiesRequest(server string, params *ListIdentitiesParams) (*htt
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -13116,6 +13048,55 @@ func NewCreateIdentityRequestWithBody(server string, params *CreateIdentityParam
 	return req, nil
 }
 
+// NewDeleteIdentityRequest generates requests for DeleteIdentity
+func NewDeleteIdentityRequest(server string, identityId string, params *DeleteIdentityParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "identityId", identityId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/identities/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 // NewReadIdentityRequest generates requests for ReadIdentity
 func NewReadIdentityRequest(server string, identityId string, params *ReadIdentityParams) (*http.Request, error) {
 	var err error
@@ -13146,79 +13127,6 @@ func NewReadIdentityRequest(server string, identityId string, params *ReadIdenti
 	if err != nil {
 		return nil, err
 	}
-
-	if params != nil {
-
-		if params.XAMAProjectID != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewUpdateIdentityRequest calls the generic UpdateIdentity builder with application/json body
-func NewUpdateIdentityRequest(server string, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateIdentityRequestWithBody(server, identityId, params, "application/json", bodyReader)
-}
-
-// NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody calls the generic UpdateIdentity builder with application/merge-patch+json body
-func NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(server string, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateIdentityRequestWithBody(server, identityId, params, "application/merge-patch+json", bodyReader)
-}
-
-// NewUpdateIdentityRequestWithBody generates requests for UpdateIdentity with any type of body
-func NewUpdateIdentityRequestWithBody(server string, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "identityId", identityId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/identities/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	if params != nil {
 
@@ -13577,18 +13485,6 @@ func NewListMemoryStoresRequest(server string, params *ListMemoryStoresParams) (
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -13714,6 +13610,55 @@ func NewCreateMemoryStoreRequestWithBody(server string, params *CreateMemoryStor
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteMemoryStoreRequest generates requests for DeleteMemoryStore
+func NewDeleteMemoryStoreRequest(server string, storeId string, params *DeleteMemoryStoreParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "storeId", storeId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/memory-stores/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -14517,18 +14462,6 @@ func NewListRunnersRequest(server string, params *ListRunnersParams) (*http.Requ
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -14678,6 +14611,55 @@ func NewCreateRunnerRequestWithBody(server string, params *CreateRunnerParams, c
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteRunnerRequest generates requests for DeleteRunner
+func NewDeleteRunnerRequest(server string, runnerId string, params *DeleteRunnerParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "runnerId", runnerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/runners/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -14996,18 +14978,6 @@ func NewListSessionsRequest(server string, params *ListSessionsParams) (*http.Re
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -15157,6 +15127,55 @@ func NewCreateSessionRequestWithBody(server string, params *CreateSessionParams,
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteSessionRequest generates requests for DeleteSession
+func NewDeleteSessionRequest(server string, sessionId string, params *DeleteSessionParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sessionId", sessionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/sessions/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -15941,18 +15960,6 @@ func NewListTriggersRequest(server string, params *ListTriggersParams) (*http.Re
 		// styled parameters, preserving literal commas as delimiters
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
-
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
 
 		if params.Search != nil {
 
@@ -16847,18 +16854,6 @@ func NewListVaultsRequest(server string, params *ListVaultsParams) (*http.Reques
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Archived != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "archived", *params.Archived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
 		if params.Search != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -16984,6 +16979,55 @@ func NewCreateVaultRequestWithBody(server string, params *CreateVaultParams, con
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewDeleteVaultRequest generates requests for DeleteVault
+func NewDeleteVaultRequest(server string, vaultId string, params *DeleteVaultParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "vaultId", vaultId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/vaults/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	if params != nil {
 
@@ -17953,6 +17997,9 @@ type ClientWithResponsesInterface interface {
 
 	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
+	// DeleteAgentWithResponse request
+	DeleteAgentWithResponse(ctx context.Context, agentId string, params *DeleteAgentParams, reqEditors ...RequestEditorFn) (*DeleteAgentResponse, error)
+
 	// ReadAgentWithResponse request
 	ReadAgentWithResponse(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
 
@@ -18015,6 +18062,9 @@ type ClientWithResponsesInterface interface {
 
 	CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
+	// DeleteEnvironmentWithResponse request
+	DeleteEnvironmentWithResponse(ctx context.Context, environmentId string, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentResponse, error)
+
 	// ReadEnvironmentWithResponse request
 	ReadEnvironmentWithResponse(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error)
 
@@ -18037,15 +18087,11 @@ type ClientWithResponsesInterface interface {
 
 	CreateIdentityWithResponse(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error)
 
+	// DeleteIdentityWithResponse request
+	DeleteIdentityWithResponse(ctx context.Context, identityId string, params *DeleteIdentityParams, reqEditors ...RequestEditorFn) (*DeleteIdentityResponse, error)
+
 	// ReadIdentityWithResponse request
 	ReadIdentityWithResponse(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error)
-
-	// UpdateIdentityWithBodyWithResponse request with any body
-	UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
-
-	UpdateIdentityWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
-
-	UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
 
 	// CreateInboxNotificationWithBodyWithResponse request with any body
 	CreateInboxNotificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error)
@@ -18075,6 +18121,9 @@ type ClientWithResponsesInterface interface {
 	CreateMemoryStoreWithBodyWithResponse(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
 
 	CreateMemoryStoreWithResponse(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
+
+	// DeleteMemoryStoreWithResponse request
+	DeleteMemoryStoreWithResponse(ctx context.Context, storeId string, params *DeleteMemoryStoreParams, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreResponse, error)
 
 	// ReadMemoryStoreWithResponse request
 	ReadMemoryStoreWithResponse(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*ReadMemoryStoreResponse, error)
@@ -18142,6 +18191,9 @@ type ClientWithResponsesInterface interface {
 
 	CreateRunnerWithResponse(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error)
 
+	// DeleteRunnerWithResponse request
+	DeleteRunnerWithResponse(ctx context.Context, runnerId string, params *DeleteRunnerParams, reqEditors ...RequestEditorFn) (*DeleteRunnerResponse, error)
+
 	// ReadRunnerWithResponse request
 	ReadRunnerWithResponse(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error)
 
@@ -18168,6 +18220,9 @@ type ClientWithResponsesInterface interface {
 	CreateSessionWithBodyWithResponse(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
 
 	CreateSessionWithResponse(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
+
+	// DeleteSessionWithResponse request
+	DeleteSessionWithResponse(ctx context.Context, sessionId string, params *DeleteSessionParams, reqEditors ...RequestEditorFn) (*DeleteSessionResponse, error)
 
 	// ReadSessionWithResponse request
 	ReadSessionWithResponse(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*ReadSessionResponse, error)
@@ -18256,6 +18311,9 @@ type ClientWithResponsesInterface interface {
 	CreateVaultWithBodyWithResponse(ctx context.Context, params *CreateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
 
 	CreateVaultWithResponse(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
+
+	// DeleteVaultWithResponse request
+	DeleteVaultWithResponse(ctx context.Context, vaultId string, params *DeleteVaultParams, reqEditors ...RequestEditorFn) (*DeleteVaultResponse, error)
 
 	// ReadVaultWithResponse request
 	ReadVaultWithResponse(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error)
@@ -18362,6 +18420,38 @@ func (r CreateAgentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateAgentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteAgentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteAgentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteAgentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteAgentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18672,6 +18762,7 @@ type CreateBudgetResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18962,6 +19053,38 @@ func (r CreateEnvironmentResponse) ContentType() string {
 	return ""
 }
 
+type DeleteEnvironmentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteEnvironmentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteEnvironmentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteEnvironmentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ReadEnvironmentResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19003,7 +19126,6 @@ type UpdateEnvironmentResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19167,6 +19289,39 @@ func (r CreateIdentityResponse) ContentType() string {
 	return ""
 }
 
+type DeleteIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteIdentityResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ReadIdentityResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19194,40 +19349,6 @@ func (r ReadIdentityResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadIdentityResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UpdateIdentityResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Identity
-	JSON401      *ErrorResponse
-	JSON403      *ErrorResponse
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateIdentityResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateIdentityResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateIdentityResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -19446,6 +19567,7 @@ type CreateMemoryStoreResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19466,6 +19588,38 @@ func (r CreateMemoryStoreResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateMemoryStoreResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteMemoryStoreResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteMemoryStoreResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteMemoryStoreResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteMemoryStoreResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -20073,6 +20227,39 @@ func (r CreateRunnerResponse) ContentType() string {
 	return ""
 }
 
+type DeleteRunnerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteRunnerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteRunnerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteRunnerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ReadRunnerResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -20080,6 +20267,7 @@ type ReadRunnerResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -20306,6 +20494,39 @@ func (r CreateSessionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateSessionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteSessionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteSessionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteSessionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteSessionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -21101,6 +21322,7 @@ type CreateVaultResponse struct {
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
 	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -21121,6 +21343,38 @@ func (r CreateVaultResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateVaultResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteVaultResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteVaultResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteVaultResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteVaultResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -21527,6 +21781,15 @@ func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, param
 	return ParseCreateAgentResponse(rsp)
 }
 
+// DeleteAgentWithResponse request returning *DeleteAgentResponse
+func (c *ClientWithResponses) DeleteAgentWithResponse(ctx context.Context, agentId string, params *DeleteAgentParams, reqEditors ...RequestEditorFn) (*DeleteAgentResponse, error) {
+	rsp, err := c.DeleteAgent(ctx, agentId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteAgentResponse(rsp)
+}
+
 // ReadAgentWithResponse request returning *ReadAgentResponse
 func (c *ClientWithResponses) ReadAgentWithResponse(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error) {
 	rsp, err := c.ReadAgent(ctx, agentId, params, reqEditors...)
@@ -21721,6 +21984,15 @@ func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context,
 	return ParseCreateEnvironmentResponse(rsp)
 }
 
+// DeleteEnvironmentWithResponse request returning *DeleteEnvironmentResponse
+func (c *ClientWithResponses) DeleteEnvironmentWithResponse(ctx context.Context, environmentId string, params *DeleteEnvironmentParams, reqEditors ...RequestEditorFn) (*DeleteEnvironmentResponse, error) {
+	rsp, err := c.DeleteEnvironment(ctx, environmentId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteEnvironmentResponse(rsp)
+}
+
 // ReadEnvironmentWithResponse request returning *ReadEnvironmentResponse
 func (c *ClientWithResponses) ReadEnvironmentWithResponse(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error) {
 	rsp, err := c.ReadEnvironment(ctx, environmentId, params, reqEditors...)
@@ -21791,6 +22063,15 @@ func (c *ClientWithResponses) CreateIdentityWithResponse(ctx context.Context, pa
 	return ParseCreateIdentityResponse(rsp)
 }
 
+// DeleteIdentityWithResponse request returning *DeleteIdentityResponse
+func (c *ClientWithResponses) DeleteIdentityWithResponse(ctx context.Context, identityId string, params *DeleteIdentityParams, reqEditors ...RequestEditorFn) (*DeleteIdentityResponse, error) {
+	rsp, err := c.DeleteIdentity(ctx, identityId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteIdentityResponse(rsp)
+}
+
 // ReadIdentityWithResponse request returning *ReadIdentityResponse
 func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error) {
 	rsp, err := c.ReadIdentity(ctx, identityId, params, reqEditors...)
@@ -21798,31 +22079,6 @@ func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, iden
 		return nil, err
 	}
 	return ParseReadIdentityResponse(rsp)
-}
-
-// UpdateIdentityWithBodyWithResponse request with arbitrary body returning *UpdateIdentityResponse
-func (c *ClientWithResponses) UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentityWithBody(ctx, identityId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateIdentityResponse(rsp)
-}
-
-func (c *ClientWithResponses) UpdateIdentityWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentity(ctx, identityId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateIdentityResponse(rsp)
-}
-
-func (c *ClientWithResponses) UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx, identityId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateIdentityResponse(rsp)
 }
 
 // CreateInboxNotificationWithBodyWithResponse request with arbitrary body returning *CreateInboxNotificationResponse
@@ -21918,6 +22174,15 @@ func (c *ClientWithResponses) CreateMemoryStoreWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseCreateMemoryStoreResponse(rsp)
+}
+
+// DeleteMemoryStoreWithResponse request returning *DeleteMemoryStoreResponse
+func (c *ClientWithResponses) DeleteMemoryStoreWithResponse(ctx context.Context, storeId string, params *DeleteMemoryStoreParams, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreResponse, error) {
+	rsp, err := c.DeleteMemoryStore(ctx, storeId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteMemoryStoreResponse(rsp)
 }
 
 // ReadMemoryStoreWithResponse request returning *ReadMemoryStoreResponse
@@ -22130,6 +22395,15 @@ func (c *ClientWithResponses) CreateRunnerWithResponse(ctx context.Context, para
 	return ParseCreateRunnerResponse(rsp)
 }
 
+// DeleteRunnerWithResponse request returning *DeleteRunnerResponse
+func (c *ClientWithResponses) DeleteRunnerWithResponse(ctx context.Context, runnerId string, params *DeleteRunnerParams, reqEditors ...RequestEditorFn) (*DeleteRunnerResponse, error) {
+	rsp, err := c.DeleteRunner(ctx, runnerId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteRunnerResponse(rsp)
+}
+
 // ReadRunnerWithResponse request returning *ReadRunnerResponse
 func (c *ClientWithResponses) ReadRunnerWithResponse(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error) {
 	rsp, err := c.ReadRunner(ctx, runnerId, params, reqEditors...)
@@ -22215,6 +22489,15 @@ func (c *ClientWithResponses) CreateSessionWithResponse(ctx context.Context, par
 		return nil, err
 	}
 	return ParseCreateSessionResponse(rsp)
+}
+
+// DeleteSessionWithResponse request returning *DeleteSessionResponse
+func (c *ClientWithResponses) DeleteSessionWithResponse(ctx context.Context, sessionId string, params *DeleteSessionParams, reqEditors ...RequestEditorFn) (*DeleteSessionResponse, error) {
+	rsp, err := c.DeleteSession(ctx, sessionId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteSessionResponse(rsp)
 }
 
 // ReadSessionWithResponse request returning *ReadSessionResponse
@@ -22497,6 +22780,15 @@ func (c *ClientWithResponses) CreateVaultWithResponse(ctx context.Context, param
 	return ParseCreateVaultResponse(rsp)
 }
 
+// DeleteVaultWithResponse request returning *DeleteVaultResponse
+func (c *ClientWithResponses) DeleteVaultWithResponse(ctx context.Context, vaultId string, params *DeleteVaultParams, reqEditors ...RequestEditorFn) (*DeleteVaultResponse, error) {
+	rsp, err := c.DeleteVault(ctx, vaultId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteVaultResponse(rsp)
+}
+
 // ReadVaultWithResponse request returning *ReadVaultResponse
 func (c *ClientWithResponses) ReadVaultWithResponse(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error) {
 	rsp, err := c.ReadVault(ctx, vaultId, params, reqEditors...)
@@ -22737,6 +23029,46 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteAgentResponse parses an HTTP response from a DeleteAgentWithResponse call
+func ParseDeleteAgentResponse(rsp *http.Response) (*DeleteAgentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteAgentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -23211,6 +23543,13 @@ func ParseCreateBudgetResponse(rsp *http.Response) (*CreateBudgetResponse, error
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -23592,6 +23931,46 @@ func ParseCreateEnvironmentResponse(rsp *http.Response) (*CreateEnvironmentRespo
 	return response, nil
 }
 
+// ParseDeleteEnvironmentResponse parses an HTTP response from a DeleteEnvironmentWithResponse call
+func ParseDeleteEnvironmentResponse(rsp *http.Response) (*DeleteEnvironmentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteEnvironmentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReadEnvironmentResponse parses an HTTP response from a ReadEnvironmentWithResponse call
 func ParseReadEnvironmentResponse(rsp *http.Response) (*ReadEnvironmentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -23687,13 +24066,6 @@ func ParseUpdateEnvironmentResponse(rsp *http.Response) (*UpdateEnvironmentRespo
 			return nil, err
 		}
 		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
 
 	}
 
@@ -23923,6 +24295,53 @@ func ParseCreateIdentityResponse(rsp *http.Response) (*CreateIdentityResponse, e
 	return response, nil
 }
 
+// ParseDeleteIdentityResponse parses an HTTP response from a DeleteIdentityWithResponse call
+func ParseDeleteIdentityResponse(rsp *http.Response) (*DeleteIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReadIdentityResponse parses an HTTP response from a ReadIdentityWithResponse call
 func ParseReadIdentityResponse(rsp *http.Response) (*ReadIdentityResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -23964,60 +24383,6 @@ func ParseReadIdentityResponse(rsp *http.Response) (*ReadIdentityResponse, error
 			return nil, err
 		}
 		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateIdentityResponse parses an HTTP response from a UpdateIdentityWithResponse call
-func ParseUpdateIdentityResponse(rsp *http.Response) (*UpdateIdentityResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateIdentityResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Identity
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
 
 	}
 
@@ -24376,6 +24741,53 @@ func ParseCreateMemoryStoreResponse(rsp *http.Response) (*CreateMemoryStoreRespo
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteMemoryStoreResponse parses an HTTP response from a DeleteMemoryStoreWithResponse call
+func ParseDeleteMemoryStoreResponse(rsp *http.Response) (*DeleteMemoryStoreResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteMemoryStoreResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -25297,6 +25709,53 @@ func ParseCreateRunnerResponse(rsp *http.Response) (*CreateRunnerResponse, error
 	return response, nil
 }
 
+// ParseDeleteRunnerResponse parses an HTTP response from a DeleteRunnerWithResponse call
+func ParseDeleteRunnerResponse(rsp *http.Response) (*DeleteRunnerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteRunnerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReadRunnerResponse parses an HTTP response from a ReadRunnerWithResponse call
 func ParseReadRunnerResponse(rsp *http.Response) (*ReadRunnerResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -25338,6 +25797,13 @@ func ParseReadRunnerResponse(rsp *http.Response) (*ReadRunnerResponse, error) {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -25649,6 +26115,53 @@ func ParseCreateSessionResponse(rsp *http.Response) (*CreateSessionResponse, err
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteSessionResponse parses an HTTP response from a DeleteSessionWithResponse call
+func ParseDeleteSessionResponse(rsp *http.Response) (*DeleteSessionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteSessionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -26951,6 +27464,53 @@ func ParseCreateVaultResponse(rsp *http.Response) (*CreateVaultResponse, error) 
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteVaultResponse parses an HTTP response from a DeleteVaultWithResponse call
+func ParseDeleteVaultResponse(rsp *http.Response) (*DeleteVaultResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteVaultResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

@@ -53,15 +53,6 @@ export class AgentValidationError extends Error {
   }
 }
 
-// Agent thrown when an archived agent receives field updates. The http layer
-// maps it to 409.
-export class AgentArchivedError extends Error {
-  constructor(message = 'Archived agents cannot be updated') {
-    super(message)
-    this.name = 'AgentArchivedError'
-  }
-}
-
 export class IdentityAlreadyBoundError extends Error {
   readonly code = 'identity_already_bound'
   constructor() {
@@ -99,7 +90,6 @@ export type OrgScope = Pick<AuthScope, 'organization'>
 
 export interface AgentListQuery {
   projectId: string
-  archived: boolean
   identityAgentId?: string
   runtime?: string
   schedulable?: boolean
@@ -128,7 +118,6 @@ export interface UpdateAgentFields {
   name: string
   description: string | null
   spec: AgentSpec
-  archivedAt: string | null
   currentVersionId: string | null
 }
 
@@ -139,7 +128,7 @@ export interface AgentRepo {
   list(query: AgentListQuery): Promise<AgentListPage>
   find(projectId: string, agentId: string): Promise<Agent | null>
   findCreation(projectId: string, creationKeyHash: string): Promise<{ agent: Agent; fingerprint: string } | null>
-  // Live (non-archived) agents in the project, newest first.
+  // Live agents in the project, newest first.
   liveAgents(projectId: string): Promise<Agent[]>
 
   listVersions(projectId: string, agentId: string): Promise<AgentVersion[]>
@@ -153,7 +142,7 @@ export interface AgentRepo {
     updatedAt: string,
   ): Promise<AgentVersion>
   update(projectId: string, agentId: string, fields: UpdateAgentFields, updatedAt: string): Promise<void>
-  unarchive(projectId: string, agentId: string, updatedAt: string): Promise<void>
+  delete(projectId: string, agentId: string, deletedAt: string): Promise<boolean>
 
   // Reference validation against sibling resources.
   providerEnabled(projectId: string, providerId: string): Promise<boolean>
@@ -162,7 +151,6 @@ export interface AgentRepo {
 
 export interface IdentityListQuery {
   projectId: string
-  archived: boolean
   search?: string
   limit: number
   cursor: { createdAt: string; id: string } | null
@@ -213,7 +201,7 @@ export interface IdentityRepo {
     timestamp: string,
   ): Promise<Identity>
   fail(identityId: string, owner: string, failureCode: string, timestamp: string): Promise<void>
-  archive(projectId: string, identityId: string, timestamp: string): Promise<boolean>
+  delete(projectId: string, identityId: string, timestamp: string): Promise<boolean>
 }
 
 export interface RealmrootManagementCredential {
@@ -363,15 +351,6 @@ export class EnvironmentValidationError extends Error {
   }
 }
 
-// Thrown when an archived environment receives field updates. The http layer
-// maps it to 409.
-export class EnvironmentArchivedError extends Error {
-  constructor(message = 'Archived environments cannot be updated') {
-    super(message)
-    this.name = 'EnvironmentArchivedError'
-  }
-}
-
 export class CreationIdempotencyConflictError extends Error {
   readonly code = 'idempotency_conflict'
 
@@ -381,9 +360,15 @@ export class CreationIdempotencyConflictError extends Error {
   }
 }
 
+export class ResourceDeletedDuringMutationError extends Error {
+  constructor(readonly resourceType: string) {
+    super(`${resourceType} was deleted while the mutation was in progress`)
+    this.name = 'ResourceDeletedDuringMutationError'
+  }
+}
+
 export interface EnvironmentListQuery {
   projectId: string
-  archived: boolean
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -409,7 +394,6 @@ export interface UpdateEnvironmentFields {
   name: string
   description: string | null
   config: EnvironmentConfig
-  archivedAt: string | null
   currentVersionId: string | null
 }
 
@@ -433,7 +417,7 @@ export interface EnvironmentRepo {
     createdAt: string,
   ): Promise<{ environment: Environment; version: EnvironmentVersion }>
   update(projectId: string, environmentId: string, fields: UpdateEnvironmentFields, updatedAt: string): Promise<void>
-  unarchive(projectId: string, environmentId: string, updatedAt: string): Promise<void>
+  delete(projectId: string, environmentId: string, deletedAt: string): Promise<boolean>
 
   connectorAvailable(connectorId: string): Promise<boolean>
 }
@@ -534,7 +518,6 @@ export class VaultSecretError extends Error {
 export interface VaultListQuery {
   organizationId: string
   projectId: string
-  archived: boolean
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -577,7 +560,6 @@ export interface ResolvedMemoryStoreResource {
 
 export interface MemoryStoreListQuery {
   projectId: string
-  archived: boolean
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -601,7 +583,6 @@ export interface CreateMemoryStoreInput {
 export interface UpdateMemoryStoreFields {
   name: string
   description: string | null
-  archivedAt: string | null
 }
 
 export interface CreateMemoryStoreMemoryInput {
@@ -623,6 +604,7 @@ export interface MemoryStoreRepo {
   find(projectId: string, storeId: string): Promise<MemoryStore | null>
   insert(input: CreateMemoryStoreInput, createdAt: string): Promise<MemoryStore>
   update(projectId: string, storeId: string, fields: UpdateMemoryStoreFields, updatedAt: string): Promise<void>
+  delete(projectId: string, storeId: string, deletedAt: string): Promise<boolean>
   listMemories(query: MemoryStoreMemoryListQuery): Promise<ListPageResult<Memory>>
   findMemory(projectId: string, storeId: string, memoryId: string): Promise<Memory | null>
   insertMemory(input: CreateMemoryStoreMemoryInput, createdAt: string): Promise<Memory>
@@ -633,7 +615,7 @@ export interface MemoryStoreRepo {
     fields: UpdateMemoryStoreMemoryFields,
     updatedAt: string,
   ): Promise<void>
-  deleteMemory(projectId: string, storeId: string, memoryId: string): Promise<void>
+  deleteMemory(projectId: string, storeId: string, memoryId: string, deletedAt: string): Promise<void>
 }
 
 export interface VaultVisibility {
@@ -656,7 +638,6 @@ export interface UpdateVaultFields {
   description: string | null
   scope: VaultScope
   projectId: string | null
-  archivedAt: string | null
 }
 
 export interface CreateCredentialInput {
@@ -688,6 +669,7 @@ export interface VaultRepo {
   findIdentityManaged?(vaultId: string, visibility: VaultVisibility): Promise<Vault | null>
   insert(input: CreateVaultInput, createdAt: string): Promise<Vault>
   update(vaultId: string, fields: UpdateVaultFields, updatedAt: string): Promise<void>
+  delete(vaultId: string, visibility: VaultVisibility, deletedAt: string): Promise<boolean>
   hasCredentials(vaultId: string): Promise<boolean>
 
   listCredentials(query: CredentialListQuery): Promise<ListPageResult<Credential>>
@@ -875,7 +857,7 @@ export interface BudgetRepo {
   find(projectId: string, budgetId: string): Promise<BudgetRecord | null>
   insert(input: CreateBudgetInput, timestamp: string): Promise<BudgetRecord>
   update(projectId: string, budgetId: string, fields: UpdateBudgetFields, updatedAt: string): Promise<BudgetRecord>
-  delete(projectId: string, budgetId: string): Promise<void>
+  delete(projectId: string, budgetId: string, deletedAt: string): Promise<void>
 }
 
 // The merged effective governance policy (org → team → project) the
@@ -1040,8 +1022,8 @@ export class TriggerValidationError extends Error {
   }
 }
 
-// Thrown when an archived trigger receives field updates, or when the
-// referenced agent/environment is archived/unavailable. `status` selects the
+// Thrown when a trigger cannot receive field updates, or when the
+// referenced agent/environment is unavailable. `status` selects the
 // http mapping (404 missing, 409 conflict).
 export class TriggerConflictError extends Error {
   readonly status: 404 | 409
@@ -1066,7 +1048,6 @@ export interface TriggerConfig {
 
 export interface TriggerListQuery {
   projectId: string
-  archived: boolean
   enabled?: boolean
   search?: string
   createdFrom?: string
@@ -1097,7 +1078,6 @@ export interface CreateTriggerInput {
 
 export interface UpdateTriggerFields {
   config: TriggerConfig
-  archivedAt: string | null
   inboxProvisioning?: InboxProvisioningFields | null
 }
 
@@ -1449,7 +1429,7 @@ export interface RunnerRecord {
   runtimes: RunnerRuntime[]
   metadata: Record<string, unknown>
   lastHeartbeatAt: string | null
-  archivedAt: string | null
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -1465,7 +1445,6 @@ export interface RunnerAuthRecord extends RunnerRecord {
 
 export interface RunnerListQuery {
   projectId: string
-  archived: boolean
   state?: string
   environmentId?: string
   search?: string
@@ -1497,7 +1476,6 @@ export interface UpdateRunnerFields {
   state: string
   maxConcurrent: number
   metadata: Record<string, unknown>
-  archivedAt: string | null
 }
 
 export interface RunnerHeartbeatFields {
@@ -1531,6 +1509,7 @@ export interface RunnerRepo {
     timestamp: string,
   ): Promise<RunnerAuthRecord>
   update(projectId: string, runnerId: string, fields: UpdateRunnerFields, timestamp: string): Promise<RunnerAuthRecord>
+  delete(projectId: string, runnerId: string, deletedAt: string): Promise<boolean>
   heartbeat(
     projectId: string,
     runnerId: string,
@@ -2180,7 +2159,6 @@ export interface SessionOrchestrationStore {
 
 export interface SessionListQuery {
   projectId: string
-  archived: boolean
   state?: string
   search?: string
   labelSelector?: string
@@ -2245,7 +2223,7 @@ export interface RuntimeSessionHandle {
   projectId: string | null
   organizationId: string | null
   state: SessionState
-  archivedAt: string | null
+  deletedAt: string | null
   sandboxId: string | null
   metadata: Record<string, unknown>
 }

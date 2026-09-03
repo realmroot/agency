@@ -2,7 +2,7 @@ import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { requireAuth } from '../auth/session'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema, listResponseSchema } from '../openapi'
 import { type CreateBudgetInputDto, createBudget, type UpdateBudgetPatch, updateBudget } from '../usecases/budgets'
-import { type BudgetRecord, GovernanceValidationError } from '../usecases/ports'
+import { type BudgetRecord, GovernanceValidationError, ResourceDeletedDuringMutationError } from '../usecases/ports'
 import { requestId } from './request-context'
 
 type BudgetRoutes = OpenAPIHono<DepsEnv>
@@ -102,6 +102,7 @@ const createBudgetRoute = createRoute({
     201: { description: 'Created budget', content: { 'application/json': { schema: BudgetSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Project deletion conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -145,6 +146,7 @@ const deleteRoute = createRoute({
   operationId: 'deleteBudget',
   tags: ['Governance'],
   summary: 'Delete a budget',
+  description: 'Soft-deletes the budget. The retained tombstone cannot be restored through the API.',
   ...AuthenticatedOperation,
   request: { params: BudgetParamsSchema },
   responses: {
@@ -223,7 +225,15 @@ export function registerBudgetRoutes(routes: BudgetRoutes) {
         return c.json(errorBody('not_found', 'Budget not found'), 404)
       }
       const scope = auth
-      const budget = await updateBudget(deps, scope, existing, patchFromBody(body))
+      let budget: Awaited<ReturnType<typeof updateBudget>>
+      try {
+        budget = await updateBudget(deps, scope, existing, patchFromBody(body))
+      } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return c.json(errorBody('not_found', 'Budget not found'), 404)
+        }
+        throw error
+      }
       await deps.audit.record(scope, {
         action: 'budget.update',
         resourceType: 'budget',
@@ -247,7 +257,7 @@ export function registerBudgetRoutes(routes: BudgetRoutes) {
         return c.json(errorBody('not_found', 'Budget not found'), 404)
       }
       const scope = auth
-      await deps.budgets.delete(auth.project.id, budgetId)
+      await deps.budgets.delete(auth.project.id, budgetId, new Date().toISOString())
       await deps.audit.record(scope, {
         action: 'budget.delete',
         resourceType: 'budget',
@@ -285,6 +295,9 @@ function patchFromBody(body: z.infer<typeof UpdateBudgetSchema>): UpdateBudgetPa
 }
 
 function validationOr(c: Parameters<Parameters<BudgetRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof ResourceDeletedDuringMutationError) {
+    return c.json(errorBody('conflict', 'Project was deleted while Budget creation was in progress'), 409)
+  }
   if (error instanceof GovernanceValidationError) {
     return c.json(errorBody('validation_error', error.message, { fields: error.fields }), 400)
   }

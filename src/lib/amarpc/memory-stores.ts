@@ -39,10 +39,8 @@ export const memoryStoresApi = {
         json: input as RpcJson<(typeof v1)['memory-stores'][':storeId']['$patch']>,
       }),
     ),
-  archiveMemoryStore: (id: string) =>
-    rpcRequest<MemoryStore>(
-      v1['memory-stores'][':storeId'].$patch({ param: { storeId: id }, json: { archived: true } }),
-    ),
+  deleteMemoryStore: (id: string) =>
+    rpcRequest<void>(v1['memory-stores'][':storeId'].$delete({ param: { storeId: id } })),
   listMemoryStoreMemories: (storeId: string, options: ListOptions = {}) =>
     rpcRequest<ListResponse<MemoryStoreMemory>>(
       v1['memory-stores'][':storeId'].memories.$get(

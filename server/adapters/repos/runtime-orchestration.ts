@@ -39,6 +39,7 @@ import {
 import { domainSessionState, persistedSessionState, persistedSessionStates } from '../../db/session-state'
 import { type ConnectorCatalogEntry, DEFAULT_CONNECTORS } from '../../domain/connector'
 import { amaMemoryRef, memoryStoreMountPath } from '../../domain/memory-store'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 
@@ -137,7 +138,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select()
           .from(sessions)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
           .get()) ?? null,
       )
     },
@@ -147,7 +148,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select({ state: sessions.state })
           .from(sessions)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
           .get()) ?? null
       return row ? { state: domainSessionState(row.state) } : null
     },
@@ -157,21 +158,26 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select({ metadata: sessions.metadata })
           .from(sessions)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
           .get()) ?? null
       )
     },
 
     // ── session writes ────────────────────────────────────────────────────
     async insertSession(row: SessionInsert): Promise<void> {
-      await db.insert(sessions).values(persistedSessionWrite(row) as SessionInsertColumns)
+      try {
+        await db.insert(sessions).values(persistedSessionWrite(row) as SessionInsertColumns)
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Session')
+        throw error
+      }
     },
 
     async updateSession(projectId: string, sessionId: string, fields: SessionUpdate): Promise<void> {
       await db
         .update(sessions)
         .set(persistedSessionWrite(fields) as SessionUpdateColumns)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
     },
 
     // Conditional state transition; returns true when the guarded row matched.
@@ -185,7 +191,9 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const updated = await db
         .update(sessions)
         .set(persistedSessionWrite(fields) as SessionUpdateColumns)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), stateGuard))
+        .where(
+          and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt), stateGuard),
+        )
         .returning({ id: sessions.id })
         .get()
       return Boolean(updated)
@@ -199,6 +207,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
             expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
@@ -221,6 +230,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
             expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
             eq(sessions.activeTurnId, startupId),
@@ -243,6 +253,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
             expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
             eq(sessions.activeTurnId, startupId),
@@ -268,6 +279,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.sandboxId, sandboxId),
             ne(sessions.state, persistedSessionState('closed') as SessionStateColumn),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
@@ -293,6 +305,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.sandboxId, sandboxId),
             eq(sessions.activeTurnId, cleanupId),
             eq(sessions.state, persistedSessionState('closed') as SessionStateColumn),
@@ -319,6 +332,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.sandboxId, sandboxId),
             eq(sessions.activeTurnId, cleanupId),
           ),
@@ -343,6 +357,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.sandboxId, sandboxId),
             eq(sessions.state, persistedSessionState('closed') as SessionStateColumn),
             isNotNull(sessions.closedAt),
@@ -369,7 +384,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         db
           .update(sessions)
           .set(persistedSessionWrite(fields) as SessionUpdateColumns)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), sessionStateGuard(expected)))
+          .where(
+            and(
+              eq(sessions.id, sessionId),
+              eq(sessions.projectId, projectId),
+              isNull(sessions.deletedAt),
+              sessionStateGuard(expected),
+            ),
+          )
           .returning({ id: sessions.id }),
         db
           .insert(workItems)
@@ -400,6 +422,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
                 and(
                   eq(sessions.id, sessionId),
                   eq(sessions.projectId, projectId),
+                  isNull(sessions.deletedAt),
                   eq(sessions.state, persistedSessionState(fields.state) as SessionStateColumn),
                   eq(sessions.updatedAt, fields.updatedAt),
                 ),
@@ -431,6 +454,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, 'running'),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, now)),
           ),
@@ -455,6 +479,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, persistedSessionState('idle') as SessionStateColumn),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, now)),
           ),
@@ -475,7 +500,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const updated = await db
         .update(sessions)
         .set({ turnLeaseExpiresAt: leaseExpiresAt })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), eq(sessions.activeTurnId, turnId)))
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
+            eq(sessions.activeTurnId, turnId),
+          ),
+        )
         .returning({ id: sessions.id })
         .get()
       return Boolean(updated)
@@ -491,7 +523,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const updated = await db
         .update(sessions)
         .set({ ...persistedSessionWrite(fields), activeTurnId: null, turnLeaseExpiresAt: null } as SessionUpdateColumns)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), eq(sessions.activeTurnId, turnId)))
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
+            eq(sessions.activeTurnId, turnId),
+          ),
+        )
         .returning({ id: sessions.id })
         .get()
       return Boolean(updated)
@@ -503,7 +542,14 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const updated = await db
         .update(sessions)
         .set({ continuationDepth: sql`${sessions.continuationDepth} + 1` })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), eq(sessions.activeTurnId, turnId)))
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
+            eq(sessions.activeTurnId, turnId),
+          ),
+        )
         .returning({ continuationDepth: sessions.continuationDepth })
         .get()
       return updated?.continuationDepth ?? 0
@@ -515,7 +561,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select()
           .from(agents)
-          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNull(agents.deletedAt)))
           .get()) ?? null
       )
     },
@@ -534,9 +580,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const store = await db
         .select()
         .from(memoryStores)
-        .where(
-          and(eq(memoryStores.id, storeId), eq(memoryStores.projectId, projectId), isNull(memoryStores.archivedAt)),
-        )
+        .where(and(eq(memoryStores.id, storeId), eq(memoryStores.projectId, projectId), isNull(memoryStores.deletedAt)))
         .get()
       if (!store) {
         return null
@@ -544,7 +588,13 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const memories = await db
         .select({ path: memoryStoreMemories.path, content: memoryStoreMemories.content })
         .from(memoryStoreMemories)
-        .where(and(eq(memoryStoreMemories.storeId, storeId), eq(memoryStoreMemories.projectId, projectId)))
+        .where(
+          and(
+            eq(memoryStoreMemories.storeId, storeId),
+            eq(memoryStoreMemories.projectId, projectId),
+            isNull(memoryStoreMemories.deletedAt),
+          ),
+        )
         .orderBy(asc(memoryStoreMemories.path))
       return {
         type: 'memory',
@@ -560,9 +610,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       const store = await db
         .select({ id: memoryStores.id })
         .from(memoryStores)
-        .where(
-          and(eq(memoryStores.id, storeId), eq(memoryStores.projectId, projectId), isNull(memoryStores.archivedAt)),
-        )
+        .where(and(eq(memoryStores.id, storeId), eq(memoryStores.projectId, projectId), isNull(memoryStores.deletedAt)))
         .get()
       return Boolean(store)
     },
@@ -570,8 +618,15 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
     async replaceMemoryStoreMemories(projectId, storeId, memories, updatedAt) {
       await db.batch([
         db
-          .delete(memoryStoreMemories)
-          .where(and(eq(memoryStoreMemories.projectId, projectId), eq(memoryStoreMemories.storeId, storeId))),
+          .update(memoryStoreMemories)
+          .set({ deletedAt: updatedAt, updatedAt })
+          .where(
+            and(
+              eq(memoryStoreMemories.projectId, projectId),
+              eq(memoryStoreMemories.storeId, storeId),
+              isNull(memoryStoreMemories.deletedAt),
+            ),
+          ),
         ...memories.map((memory) =>
           db.insert(memoryStoreMemories).values({
             id: newPrimaryKey(),
@@ -580,6 +635,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             path: memory.path,
             content: memory.content,
             metadata: '{}',
+            deletedAt: null,
             createdAt: updatedAt,
             updatedAt,
           }),
@@ -600,7 +656,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             and(
               eq(environments.id, environmentId),
               eq(environments.projectId, projectId),
-              isNull(environments.archivedAt),
+              isNull(environments.deletedAt),
             ),
           )
           .get()) ?? null
@@ -634,7 +690,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
     },
 
     async resolveEnvironmentForRuntime(projectId, runtime, model): Promise<string | null> {
-      // Candidate = an active, non-archived runner bound to a usable environment
+      // Candidate = an active, non-deleted runner bound to a usable environment
       // (live + has a current version). The join plus isNotNull drops unbound
       // runners (environment_id null) since the session needs a concrete
       // environment. Least-loaded first so the capacity preference below is
@@ -653,9 +709,9 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             eq(runners.projectId, projectId),
             eq(runners.state, 'active'),
             gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
-            isNull(runners.archivedAt),
+            isNull(runners.deletedAt),
             isNotNull(runners.environmentId),
-            isNull(environments.archivedAt),
+            isNull(environments.deletedAt),
             isNotNull(environments.currentVersionId),
           ),
         )
@@ -888,6 +944,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         .where(
           and(
             eq(sessions.projectId, projectId),
+            isNull(sessions.deletedAt),
             eq(sessions.state, 'pending'),
             or(
               isNull(sessions.stateReason),
@@ -947,6 +1004,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         })
         .where(
           and(
+            isNull(sessions.deletedAt),
             or(
               and(eq(sessions.state, 'running'), isNotNull(sessions.sandboxId)),
               and(eq(sessions.state, 'pending'), isNull(sessions.stateReason)),
@@ -965,7 +1023,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
           and(
             or(
               inArray(sessions.state, persistedSessionStates(terminalStates) as SessionStateColumn[]),
-              isNotNull(sessions.archivedAt),
+              isNotNull(sessions.deletedAt),
             ),
             isNotNull(sessions.sandboxId),
             notLike(sessions.metadata, '%"sandboxBackend":"runner-sandbox"%'),
@@ -990,7 +1048,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             eq(sessions.sandboxId, sandboxId),
             or(
               inArray(sessions.state, persistedSessionStates(TERMINAL_RUNTIME_STATES) as SessionStateColumn[]),
-              isNotNull(sessions.archivedAt),
+              isNotNull(sessions.deletedAt),
             ),
             notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
@@ -1029,7 +1087,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             eq(sessions.activeTurnId, cleanupId),
             or(
               inArray(sessions.state, persistedSessionStates(TERMINAL_RUNTIME_STATES) as SessionStateColumn[]),
-              isNotNull(sessions.archivedAt),
+              isNotNull(sessions.deletedAt),
             ),
             notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
           ),
@@ -1052,7 +1110,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             environmentSnapshot: sessions.environmentSnapshot,
           })
           .from(sessions)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
           .get()) ?? null
       )
     },
@@ -1065,7 +1123,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         (await db
           .select({ state: sessions.state, stateReason: sessions.stateReason })
           .from(sessions)
-          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+          .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
           .get()) ?? null
       return row ? { state: domainSessionState(row.state), stateReason: row.stateReason } : null
     },
@@ -1153,7 +1211,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       await db
         .update(sessions)
         .set({ state: 'pending', stateReason: 'waiting-for-runner-recovery', updatedAt: timestamp })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
     },
   }
 }

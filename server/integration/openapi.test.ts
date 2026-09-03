@@ -259,6 +259,13 @@ describe('[CF] OpenAPI documentation', () => {
     expect(doc.paths['/api/v1/memory-stores'].post.operationId).toBe('createMemoryStore')
     expect(doc.paths['/api/v1/memory-stores/{storeId}'].get.operationId).toBe('readMemoryStore')
     expect(doc.paths['/api/v1/memory-stores/{storeId}'].patch.operationId).toBe('updateMemoryStore')
+    expect(doc.paths['/api/v1/agents/{agentId}'].delete.operationId).toBe('deleteAgent')
+    expect(doc.paths['/api/v1/environments/{environmentId}'].delete.operationId).toBe('deleteEnvironment')
+    expect(doc.paths['/api/v1/identities/{identityId}'].delete.operationId).toBe('deleteIdentity')
+    expect(doc.paths['/api/v1/memory-stores/{storeId}'].delete.operationId).toBe('deleteMemoryStore')
+    expect(doc.paths['/api/v1/runners/{runnerId}'].delete.operationId).toBe('deleteRunner')
+    expect(doc.paths['/api/v1/sessions/{sessionId}'].delete.operationId).toBe('deleteSession')
+    expect(doc.paths['/api/v1/vaults/{vaultId}'].delete.operationId).toBe('deleteVault')
     expect(doc.paths['/api/v1/providers'].get.operationId).toBe('listProviders')
     expect(doc.paths['/api/v1/connectors'].get.operationId).toBe('listConnectors')
     expect(doc.paths['/api/v1/usage-summary'].get.operationId).toBe('readUsageSummary')
@@ -284,7 +291,6 @@ describe('[CF] OpenAPI documentation', () => {
       doc.paths['/api/v1/agents'].get.parameters?.map((parameter) => (parameter as { name?: string }).name),
     ).toEqual(
       expect.arrayContaining([
-        'archived',
         'search',
         'createdFrom',
         'createdTo',
@@ -453,9 +459,9 @@ describe('[CF] OpenAPI documentation', () => {
         'createdBy',
         'createdAt',
         'updatedAt',
-        'archivedAt',
       ]),
     )
+    expect(resourceMetadataProperties).not.toContain('archivedAt')
     for (const schemaName of [
       'Agent',
       'AgentVersion',
@@ -753,7 +759,7 @@ describe('[CF] OpenAPI documentation', () => {
       readConfigz: 'config',
       readCurrentAuthSession: 'whoami',
       refreshCatalog: 'refresh-model-catalog',
-      updateIdentity: 'archive-identity',
+      deleteIdentity: 'delete-identity',
       createAgent: 'create-agent',
       deleteProject: 'delete-project',
       listSessionEvents: 'list-session-events',

@@ -50,10 +50,10 @@ Feature: Identities
     Then AMA atomically records that Agent as its permanent owner
     And another Agent cannot select it after the first Agent changes or removes Identity
 
-  @identities/archive @api
-  Scenario: Archive an unused Identity without deleting its remote Agent
+  @identities/delete @api
+  Scenario: Soft-delete an unused Identity without deleting its remote Agent
     Given an active Identity is not currently selected by its bound Agent
-    When the user archives the Identity
+    When the user deletes the Identity
     Then AMA hides it from the default list without calling Realmroot deletion
     And an Identity currently selected by its Agent is rejected with identity_in_use
 

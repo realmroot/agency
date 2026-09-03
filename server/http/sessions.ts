@@ -34,13 +34,13 @@ import {
   parseListCursor,
 } from '../openapi'
 import { wakeSerialHttpTriggerForSettledSession } from '../usecases/dispatch-triggers'
-import { type SessionRuntimeError, SessionValidationError } from '../usecases/ports'
+import { ResourceDeletedDuringMutationError, type SessionRuntimeError, SessionValidationError } from '../usecases/ports'
 import {
   createSession as createRuntimeSession,
   decideApproval as decideRuntimeApproval,
   markExpiredPending as markRuntimeExpiredPending,
 } from '../usecases/runtime/sessions'
-import { sendSessionMessage, type UpdateSessionPatch, updateSession } from '../usecases/sessions'
+import { deleteSessionResource, sendSessionMessage, type UpdateSessionPatch, updateSession } from '../usecases/sessions'
 import { requestId } from './request-context'
 
 type SessionRoutes = OpenAPIHono<DepsEnv>
@@ -566,11 +566,10 @@ const UpdateSessionSchema = z
   .object({
     metadata: SessionUpdateMetadataSchema.optional(),
     state: z.enum(['closed', 'idle']).optional().openapi({ example: 'closed' }),
-    archived: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.state !== undefined || body.archived !== undefined, {
-    message: 'Provide at least one of metadata, state, or archived.',
+  .refine((body) => body.metadata !== undefined || body.state !== undefined, {
+    message: 'Provide metadata or state.',
   })
   .openapi('UpdateSessionRequest')
 
@@ -760,7 +759,6 @@ function serializeSessionMetadata(metadata: Session['metadata']): z.infer<typeof
     createdBy: metadata.createdBy,
     createdAt: metadata.createdAt,
     updatedAt: metadata.updatedAt,
-    archivedAt: metadata.archivedAt,
   }
 }
 
@@ -1050,8 +1048,7 @@ const updateSessionRoute = createRoute({
   operationId: 'updateSession',
   tags: ['Sessions'],
   summary: 'Update a session',
-  description:
-    'Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).',
+  description: 'Partial update: name and metadata edits, plus close/reopen transitions (state: "closed"|"idle").',
   ...AuthenticatedOperation,
   request: {
     params: ParamsSchema,
@@ -1063,6 +1060,27 @@ const updateSessionRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Session not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteSessionRoute = createRoute({
+  method: 'delete',
+  path: '/{sessionId}',
+  operationId: 'deleteSession',
+  tags: ['Sessions'],
+  summary: 'Delete a session',
+  description:
+    'Stops any live runtime and soft-deletes the session while retaining its history. It cannot be restored.',
+  ...AuthenticatedOperation,
+  request: { params: ParamsSchema },
+  responses: {
+    204: { description: 'Session deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Session not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Runtime could not be stopped',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -1335,16 +1353,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const {
-        archived,
-        state,
-        search,
-        labelSelector,
-        createdFrom,
-        createdTo,
-        limit = 50,
-        cursor,
-      } = c.req.valid('query')
+      const { state, search, labelSelector, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: ReturnType<typeof parseListCursor> | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -1356,7 +1365,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
       await markRuntimeExpiredPending(deps, auth)
       const page = await deps.sessions.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(state ? { state } : {}),
         ...(search ? { search } : {}),
         ...(labelSelector ? { labelSelector } : {}),
@@ -1411,7 +1419,6 @@ export function registerSessionRoutes(routes: SessionRoutes) {
             }
           : {}),
         ...(body.state !== undefined ? { state: body.state } : {}),
-        ...(body.archived !== undefined ? { archived: body.archived } : {}),
       }
       try {
         const outcome = await updateSession(deps, auth as never, session, patch, requestId(c))
@@ -1423,8 +1430,23 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         }
         return c.json(serializeSession(outcome.value), 200)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return errorResponse(c, 404, 'not_found', 'Session not found')
+        }
         return sessionValidationOr(c, error)
       }
+    })
+    .openapi(deleteSessionRoute, async (c) => {
+      const { sessionId } = c.req.valid('param')
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const session = await deps.sessions.findRuntimeRow(auth.project.id, sessionId)
+      if (!session) return errorResponse(c, 404, 'not_found', 'Session not found')
+      const error = await deleteSessionResource(deps, auth, session, requestId(c))
+      if (error) return runtimeErrorResponse(c, error) as never
+      await wakeSerialHttpTriggerForSettledSession(deps, auth.project.id, sessionId)
+      return c.body(null, 204)
     })
     .openapi(connectSessionSocketRoute, async (c) => {
       // Console browsers authenticate through a single-use ticket. DPoP-native

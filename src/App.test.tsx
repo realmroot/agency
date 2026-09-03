@@ -511,13 +511,12 @@ function mockConsoleApi(seed?: {
       const sessionId = path.split('/')[4]
       return jsonResponse({ data: state.events.filter((item) => item.sessionId === sessionId) })
     }
+    if (path === '/api/v1/sessions/session_1' && method === 'DELETE') {
+      state.sessions = []
+      return new Response(null, { status: 204 })
+    }
     if (path === '/api/v1/sessions/session_1' && method === 'PATCH') {
-      const body = JSON.parse(String(init?.body ?? '{}')) as { state?: string; archived?: boolean }
-      if (body.archived) {
-        const archived = session({ archivedAt: now })
-        state.sessions = [archived]
-        return jsonResponse(archived)
-      }
+      const body = JSON.parse(String(init?.body ?? '{}')) as { state?: string }
       if (body.state === 'idle') {
         const reopened = session({ phase: 'idle', closedAt: null })
         state.sessions = [reopened]
@@ -730,12 +729,6 @@ describe('App', () => {
           name: 'session_stale',
         }),
         session({
-          id: 'session_archived',
-          name: 'session_archived',
-          phase: 'closed',
-          archivedAt: now,
-        }),
-        session({
           id: 'session_self_hosted',
           name: 'session_self_hosted',
           phase: 'pending',
@@ -787,14 +780,6 @@ describe('App', () => {
     expect(sentCommands).toContainEqual(expect.objectContaining({ type: 'prompt', content: 'Resume stale' }))
 
     staleRoute.unmount()
-    window.history.pushState({}, '', '/sessions/session_archived')
-    const archivedRoute = render(<App />)
-
-    expect(await screen.findByRole('tab', { name: 'Transcript' })).toBeTruthy()
-    expect(await screen.findByRole('heading', { name: 'session_archived' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Send' }).hasAttribute('disabled')).toBe(true)
-
-    archivedRoute.unmount()
     const socketsBeforeSelfHosted = socketUrls.length
     window.history.pushState({}, '', '/sessions/session_self_hosted')
     const selfHostedRoute = render(<App />)
@@ -843,14 +828,13 @@ describe('App', () => {
     ])
   })
 
-  it('shows error, closed, and archived session states [spec: web-console/destructive-ops]', async () => {
+  it('shows error and closed session states and deletes a session [spec: web-console/destructive-ops]', async () => {
     mockConsoleApi({
       environments: [environment()],
       agents: [agent()],
       sessions: [
         session({ name: 'First run workflow', phase: 'error', reason: 'Runtime crashed' }),
         session({ id: 'session_stopped', name: 'Closed workflow', phase: 'closed', closedAt: now }),
-        session({ id: 'session_archived', name: 'Archived workflow', phase: 'closed', archivedAt: now }),
       ],
       events: [event({ type: 'runtime.error', payload: { message: 'Runtime crashed' } })],
     })
@@ -864,9 +848,7 @@ describe('App', () => {
     expect(await screen.findByLabelText('error: Runtime crashed')).toBeTruthy()
     expect(screen.queryByText('Runtime crashed')).toBeNull()
     expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
-    // Archived sessions render their persisted state but expose no Archive action,
-    // unlike the active error/closed rows which each keep one.
-    expect(screen.getAllByRole('button', { name: 'Archive' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Delete session' })).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('link', { name: 'First run workflow' }))
     expect(await screen.findByRole('tab', { name: 'Transcript' })).toBeTruthy()
@@ -874,8 +856,8 @@ describe('App', () => {
     expectToast(await screen.findByText('Session closed'))
     expect(screen.getAllByText('closed').length).toBeGreaterThan(0)
 
-    await confirmAction('Archive session')
-    expectToast(await screen.findByText('Session archived'))
+    await confirmAction('Delete session')
+    expectToast(await screen.findByText('Session deleted'))
   }, 10_000)
 
   it('surfaces load failures after the loading state', async () => {

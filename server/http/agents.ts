@@ -23,13 +23,13 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import { createAgent, type UpdateAgentPatch, updateAgent } from '../usecases/agents'
+import { createAgent, deleteAgent, type UpdateAgentPatch, updateAgent } from '../usecases/agents'
 import {
-  AgentArchivedError,
   AgentInboxIdentityConflictError,
   AgentValidationError,
   CreationIdempotencyConflictError,
   IdentityAlreadyBoundError,
+  ResourceDeletedDuringMutationError,
 } from '../usecases/ports'
 import { requestId } from './request-context'
 
@@ -210,14 +210,10 @@ const UpdateAgentSchema = z
   .object({
     metadata: ResourceUpdateMetadataSchema.optional(),
     spec: AgentPayloadSchema.shape.spec.partial().optional(),
-    archived: z.boolean().optional().openapi({
-      description: 'Lifecycle transition: true archives the agent, false unarchives it.',
-      example: false,
-    }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.spec !== undefined || body.archived !== undefined, {
-    message: 'Provide metadata, spec, or archived.',
+  .refine((body) => body.metadata !== undefined || body.spec !== undefined, {
+    message: 'Provide metadata or spec.',
   })
   .openapi('UpdateAgentRequest')
 
@@ -324,8 +320,7 @@ const updateAgentRoute = createRoute({
   operationId: 'updateAgent',
   tags: ['Agents'],
   summary: 'Update an agent',
-  description:
-    'Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.',
+  description: 'Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.',
   ...AuthenticatedOperation,
   request: {
     params: AgentParamsSchema,
@@ -337,9 +332,25 @@ const updateAgentRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'Archived Agent or live Inbox Trigger prevents the requested update',
+      description: 'A live Inbox Trigger prevents the requested update',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
+  },
+})
+
+const deleteAgentRoute = createRoute({
+  method: 'delete',
+  path: '/{agentId}',
+  operationId: 'deleteAgent',
+  tags: ['Agents'],
+  summary: 'Delete an agent',
+  description: 'Soft-deletes the agent. The retained tombstone cannot be restored through the API.',
+  ...AuthenticatedOperation,
+  request: { params: AgentParamsSchema },
+  responses: {
+    204: { description: 'Agent deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -391,7 +402,6 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         return auth
       }
       const {
-        archived,
         search,
         createdFrom,
         createdTo,
@@ -409,7 +419,6 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       }
       const page = await deps.agents.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(identityAgentId ? { identityAgentId } : {}),
         ...(runtime ? { runtime } : {}),
         ...(schedulable ? { schedulable: schedulable === 'true' } : {}),
@@ -477,40 +486,34 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         return notFound(c)
       }
       const scope = auth
-      const before = agent
       try {
         const result = await updateAgent(deps, scope, agent, patchFromBody(body))
-        if (result.archived) {
-          await deps.audit.record(scope, {
-            action: 'agent.archive',
-            resourceType: 'agent',
-            resourceId: agentId,
-            outcome: 'success',
-            requestId: requestId(c),
-            before,
-            after: { archivedAt: result.agent.metadata.archivedAt },
-          })
-        } else if (before.metadata.archivedAt && result.agent.metadata.archivedAt === null) {
-          await deps.audit.record(scope, {
-            action: 'agent.unarchive',
-            resourceType: 'agent',
-            resourceId: agentId,
-            outcome: 'success',
-            requestId: requestId(c),
-            before: { archivedAt: before.metadata.archivedAt },
-            after: { archivedAt: null },
-          })
-        }
         return c.json(serializeAgent(result.agent), 200)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) return notFound(c)
         if (error instanceof AgentInboxIdentityConflictError) {
           return c.json({ error: { type: error.code, message: error.message } }, 409)
         }
-        if (error instanceof AgentArchivedError) {
-          return c.json({ error: { type: 'conflict', message: error.message } }, 409)
-        }
         return validationOr(c, error)
       }
+    })
+    .openapi(deleteAgentRoute, async (c) => {
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const { agentId } = c.req.valid('param')
+      const agent = await deps.agents.find(auth.project.id, agentId)
+      if (!agent) return notFound(c)
+      if (!(await deleteAgent(deps, auth, agentId))) return notFound(c)
+      await deps.audit.record(auth, {
+        action: 'agent.delete',
+        resourceType: 'agent',
+        resourceId: agentId,
+        outcome: 'success',
+        requestId: requestId(c),
+        before: agent,
+      })
+      return c.body(null, 204)
     })
     .openapi(listAgentVersionsRoute, async (c) => {
       const { agentId } = c.req.valid('param')
@@ -568,7 +571,6 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
     ...(spec?.allowedTools !== undefined ? { allowedTools: spec.allowedTools } : {}),
     ...(spec?.mcpConnectors !== undefined ? { mcpConnectors: spec.mcpConnectors } : {}),
     ...(spec?.identityRef !== undefined ? { identityRef: spec.identityRef } : {}),
-    ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
 
@@ -653,6 +655,12 @@ function notFound(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0]) {
 }
 
 function validationOr(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof ResourceDeletedDuringMutationError) {
+    return c.json(
+      { error: { type: 'conflict', message: 'Project was deleted while Agent creation was in progress' } },
+      409,
+    )
+  }
   if (error instanceof AgentValidationError) {
     return c.json(domainValidation(error.message, error.fields), 400)
   }

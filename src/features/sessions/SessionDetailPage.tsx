@@ -70,7 +70,10 @@ export function SessionDetailPage() {
         runtime={runtime.state}
         onClose={actions.closeSession}
         onReopen={actions.reopenSession}
-        onArchive={actions.archiveSession}
+        onDelete={actions.deleteSession}
+        closePending={actions.closeSessionPending}
+        reopenPending={actions.reopenSessionPending}
+        deletePending={actions.deleteSessionPending}
         onReconnectRuntime={runtime.reconnect}
         chatMessage={message}
         setChatMessage={setMessage}

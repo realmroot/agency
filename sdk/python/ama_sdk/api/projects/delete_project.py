@@ -87,7 +87,10 @@ def sync_detailed(
     client: AuthenticatedClient,
 
 ) -> Response[Any | ErrorResponse]:
-    """ Delete an empty project
+    """ Delete a project with no live resources
+
+     Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and
+    history do not block deletion.
 
     Args:
         project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
@@ -118,7 +121,10 @@ def sync(
     client: AuthenticatedClient,
 
 ) -> Any | ErrorResponse | None:
-    """ Delete an empty project
+    """ Delete a project with no live resources
+
+     Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and
+    history do not block deletion.
 
     Args:
         project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
@@ -144,7 +150,10 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
 
 ) -> Response[Any | ErrorResponse]:
-    """ Delete an empty project
+    """ Delete a project with no live resources
+
+     Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and
+    history do not block deletion.
 
     Args:
         project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
@@ -175,7 +184,10 @@ async def asyncio(
     client: AuthenticatedClient,
 
 ) -> Any | ErrorResponse | None:
-    """ Delete an empty project
+    """ Delete a project with no live resources
+
+     Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and
+    history do not block deletion.
 
     Args:
         project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.

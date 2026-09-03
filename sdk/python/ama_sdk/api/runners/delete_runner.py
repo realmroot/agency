@@ -9,17 +9,14 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...models.identity import Identity
-from ...models.update_identity_request import UpdateIdentityRequest
 from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
-    identity_id: str,
+    runner_id: str,
     *,
-    body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
@@ -34,31 +31,20 @@ def _get_kwargs(
 
 
     _kwargs: dict[str, Any] = {
-        "method": "patch",
-        "url": "/api/v1/identities/{identity_id}".format(identity_id=quote(str(identity_id), safe=""),),
+        "method": "delete",
+        "url": "/api/v1/runners/{runner_id}".format(runner_id=quote(str(runner_id), safe=""),),
     }
 
-    if isinstance(body, UpdateIdentityRequest):
-        _kwargs["json"] = body.to_dict()
-
-        headers["Content-Type"] = "application/merge-patch+json"
-    if isinstance(body, UpdateIdentityRequest):
-        _kwargs["json"] = body.to_dict()
-
-        headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
     return _kwargs
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | Identity | None:
-    if response.status_code == 200:
-        response_200 = Identity.from_dict(response.json())
-
-
-
-        return response_200
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | ErrorResponse | None:
+    if response.status_code == 204:
+        response_204 = cast(Any, None)
+        return response_204
 
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
@@ -94,7 +80,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | Identity]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | ErrorResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -104,33 +90,31 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
 def sync_detailed(
-    identity_id: str,
+    runner_id: str,
     *,
     client: AuthenticatedClient,
-    body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
     x_ama_project_id: str | Unset = UNSET,
 
-) -> Response[ErrorResponse | Identity]:
-    """ Archive an identity
+) -> Response[Any | ErrorResponse]:
+    """ Delete a self-hosted runner
+
+     Soft-deletes the runner. The retained tombstone cannot be restored through the API.
 
     Args:
-        identity_id (str):
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         x_ama_project_id (str | Unset):
-        body (UpdateIdentityRequest):
-        body (UpdateIdentityRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | Identity]
+        Response[Any | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        identity_id=identity_id,
-body=body,
+        runner_id=runner_id,
 x_ama_project_id=x_ama_project_id,
 
     )
@@ -142,66 +126,62 @@ x_ama_project_id=x_ama_project_id,
     return _build_response(client=client, response=response)
 
 def sync(
-    identity_id: str,
+    runner_id: str,
     *,
     client: AuthenticatedClient,
-    body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
     x_ama_project_id: str | Unset = UNSET,
 
-) -> ErrorResponse | Identity | None:
-    """ Archive an identity
+) -> Any | ErrorResponse | None:
+    """ Delete a self-hosted runner
+
+     Soft-deletes the runner. The retained tombstone cannot be restored through the API.
 
     Args:
-        identity_id (str):
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         x_ama_project_id (str | Unset):
-        body (UpdateIdentityRequest):
-        body (UpdateIdentityRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | Identity
+        Any | ErrorResponse
      """
 
 
     return sync_detailed(
-        identity_id=identity_id,
+        runner_id=runner_id,
 client=client,
-body=body,
 x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
 async def asyncio_detailed(
-    identity_id: str,
+    runner_id: str,
     *,
     client: AuthenticatedClient,
-    body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
     x_ama_project_id: str | Unset = UNSET,
 
-) -> Response[ErrorResponse | Identity]:
-    """ Archive an identity
+) -> Response[Any | ErrorResponse]:
+    """ Delete a self-hosted runner
+
+     Soft-deletes the runner. The retained tombstone cannot be restored through the API.
 
     Args:
-        identity_id (str):
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         x_ama_project_id (str | Unset):
-        body (UpdateIdentityRequest):
-        body (UpdateIdentityRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | Identity]
+        Response[Any | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        identity_id=identity_id,
-body=body,
+        runner_id=runner_id,
 x_ama_project_id=x_ama_project_id,
 
     )
@@ -213,34 +193,32 @@ x_ama_project_id=x_ama_project_id,
     return _build_response(client=client, response=response)
 
 async def asyncio(
-    identity_id: str,
+    runner_id: str,
     *,
     client: AuthenticatedClient,
-    body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
     x_ama_project_id: str | Unset = UNSET,
 
-) -> ErrorResponse | Identity | None:
-    """ Archive an identity
+) -> Any | ErrorResponse | None:
+    """ Delete a self-hosted runner
+
+     Soft-deletes the runner. The retained tombstone cannot be restored through the API.
 
     Args:
-        identity_id (str):
+        runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
         x_ama_project_id (str | Unset):
-        body (UpdateIdentityRequest):
-        body (UpdateIdentityRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | Identity
+        Any | ErrorResponse
      """
 
 
     return (await asyncio_detailed(
-        identity_id=identity_id,
+        runner_id=runner_id,
 client=client,
-body=body,
 x_ama_project_id=x_ama_project_id,
 
     )).parsed

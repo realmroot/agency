@@ -25,8 +25,8 @@ import {
 import { createEnvironment, type UpdateEnvironmentPatch, updateEnvironment } from '../usecases/environments'
 import {
   CreationIdempotencyConflictError,
-  EnvironmentArchivedError,
   EnvironmentValidationError,
+  ResourceDeletedDuringMutationError,
 } from '../usecases/ports'
 import { requestId } from './request-context'
 
@@ -107,14 +107,10 @@ const UpdateEnvironmentSchema = z
   .object({
     metadata: ResourceUpdateMetadataSchema.optional(),
     spec: EnvironmentPayloadSchema.shape.spec.partial().optional(),
-    archived: z.boolean().optional().openapi({
-      description: 'Lifecycle transition: true archives the environment, false unarchives it.',
-      example: false,
-    }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.spec !== undefined || body.archived !== undefined, {
-    message: 'Provide metadata, spec, or archived.',
+  .refine((body) => body.metadata !== undefined || body.spec !== undefined, {
+    message: 'Provide metadata or spec.',
   })
   .openapi('UpdateEnvironmentRequest')
 
@@ -203,8 +199,7 @@ const updateRoute = createRoute({
   operationId: 'updateEnvironment',
   tags: ['Environments'],
   summary: 'Update an environment',
-  description:
-    'Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.',
+  description: 'Partially updates a live environment.',
   ...AuthenticatedOperation,
   request: {
     params: EnvironmentParamsSchema,
@@ -215,7 +210,22 @@ const updateRoute = createRoute({
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Environment not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: { description: 'Archived environment', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteRoute = createRoute({
+  method: 'delete',
+  path: '/{environmentId}',
+  operationId: 'deleteEnvironment',
+  tags: ['Environments'],
+  summary: 'Delete an environment',
+  description: 'Soft-deletes the environment. The retained tombstone cannot be restored through the API.',
+  ...AuthenticatedOperation,
+  request: { params: EnvironmentParamsSchema },
+  responses: {
+    204: { description: 'Environment deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Environment not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -267,7 +277,7 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const { archived, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
+      const { search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -276,7 +286,6 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
       }
       const page = await deps.environments.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
@@ -311,7 +320,7 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
         })
         return c.json(serializeResource(environment), 201)
       } catch (error) {
-        return validationOr(c, error)
+        return createValidationOr(c, error)
       }
     })
     .openapi(readRoute, async (c) => {
@@ -340,37 +349,31 @@ export function registerEnvironmentRoutes(routes: EnvironmentRoutes) {
         return notFound(c)
       }
       const scope = auth
-      const before = environment
       try {
         const result = await updateEnvironment(deps, scope, environment, patchFromBody(body))
-        if (result.archived) {
-          await deps.audit.record(scope, {
-            action: 'environment.archive',
-            resourceType: 'environment',
-            resourceId: environmentId,
-            outcome: 'success',
-            requestId: requestId(c),
-            before,
-            after: { archivedAt: result.environment.metadata.archivedAt },
-          })
-        } else if (result.unarchived) {
-          await deps.audit.record(scope, {
-            action: 'environment.unarchive',
-            resourceType: 'environment',
-            resourceId: environmentId,
-            outcome: 'success',
-            requestId: requestId(c),
-            before: { archivedAt: before.metadata.archivedAt },
-            after: { archivedAt: null },
-          })
-        }
         return c.json(serializeResource(result.environment), 200)
       } catch (error) {
-        if (error instanceof EnvironmentArchivedError) {
-          return c.json({ error: { type: 'conflict', message: error.message } }, 409)
-        }
         return validationOr(c, error)
       }
+    })
+    .openapi(deleteRoute, async (c) => {
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const { environmentId } = c.req.valid('param')
+      const environment = await deps.environments.find(auth.project.id, environmentId)
+      if (!environment) return notFound(c)
+      if (!(await deps.environments.delete(auth.project.id, environmentId, new Date().toISOString())))
+        return notFound(c)
+      await deps.audit.record(auth, {
+        action: 'environment.delete',
+        resourceType: 'environment',
+        resourceId: environmentId,
+        outcome: 'success',
+        requestId: requestId(c),
+        before: environment,
+      })
+      return c.body(null, 204)
     })
     .openapi(versionsRoute, async (c) => {
       const { environmentId } = c.req.valid('param')
@@ -445,7 +448,6 @@ function patchFromBody(body: z.infer<typeof UpdateEnvironmentSchema>): UpdateEnv
     ...(spec?.networking !== undefined ? { networking: spec.networking } : {}),
     ...(spec?.packages !== undefined ? { packages: spec.packages } : {}),
     ...(spec?.variables !== undefined ? { variables: spec.variables } : {}),
-    ...(body.archived !== undefined ? { archived: body.archived } : {}),
   }
 }
 
@@ -454,6 +456,20 @@ function notFound(c: Parameters<Parameters<EnvironmentRoutes['openapi']>[1]>[0])
 }
 
 function validationOr(c: Parameters<Parameters<EnvironmentRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof ResourceDeletedDuringMutationError) return notFound(c)
+  if (error instanceof EnvironmentValidationError) {
+    return c.json(domainValidation(error.message, error.fields), 400)
+  }
+  throw error
+}
+
+function createValidationOr(c: Parameters<Parameters<EnvironmentRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof ResourceDeletedDuringMutationError) {
+    return c.json(
+      { error: { type: 'conflict', message: 'Project was deleted while Environment creation was in progress' } },
+      409,
+    )
+  }
   if (error instanceof EnvironmentValidationError) {
     return c.json(domainValidation(error.message, error.fields), 400)
   }

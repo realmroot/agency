@@ -10,6 +10,7 @@ import websockets
 
 from .client import Client
 from .api.agents import create_agent as create_agent_api
+from .api.agents import delete_agent as delete_agent_api
 from .api.agents import list_agent_versions as list_agent_versions_api
 from .api.agents import list_agents as list_agents_api
 from .api.agents import read_agent as read_agent_api
@@ -23,6 +24,7 @@ from .api.config import read_configz as read_configz_api
 from .api.connectors import list_connectors as list_connectors_api
 from .api.connectors import read_connector as read_connector_api
 from .api.environments import create_environment as create_environment_api
+from .api.environments import delete_environment as delete_environment_api
 from .api.environments import list_environment_versions as list_environment_versions_api
 from .api.environments import list_environments as list_environments_api
 from .api.environments import read_environment as read_environment_api
@@ -34,15 +36,16 @@ from .api.governance import list_budgets as list_budgets_api
 from .api.governance import read_budget as read_budget_api
 from .api.governance import update_budget as update_budget_api
 from .api.identities import create_identity as create_identity_api
+from .api.identities import delete_identity as delete_identity_api
 from .api.identities import list_identities as list_identities_api
 from .api.identities import read_identity as read_identity_api
-from .api.identities import update_identity as update_identity_api
 from .api.leases import create_lease as create_lease_api
 from .api.leases import list_leases as list_leases_api
 from .api.leases import read_lease as read_lease_api
 from .api.leases import update_lease as update_lease_api
 from .api.memory_stores import create_memory_store as create_memory_store_api
 from .api.memory_stores import create_memory_store_memory as create_memory_store_memory_api
+from .api.memory_stores import delete_memory_store as delete_memory_store_api
 from .api.memory_stores import delete_memory_store_memory as delete_memory_store_memory_api
 from .api.memory_stores import list_memory_store_memories as list_memory_store_memories_api
 from .api.memory_stores import list_memory_stores as list_memory_stores_api
@@ -60,6 +63,7 @@ from .api.providers import list_providers as list_providers_api
 from .api.providers import read_provider as read_provider_api
 from .api.providers import refresh_catalog as refresh_catalog_api
 from .api.runners import create_runner as create_runner_api
+from .api.runners import delete_runner as delete_runner_api
 from .api.runners import list_runners as list_runners_api
 from .api.runners import put_runner_heartbeat as put_runner_heartbeat_api
 from .api.runners import read_runner as read_runner_api
@@ -69,6 +73,7 @@ from .api.sessions import create_session as create_session_api
 from .api.sessions import create_session_events as create_session_events_api
 from .api.sessions import create_session_message as create_session_message_api
 from .api.sessions import decide_session_approval as decide_session_approval_api
+from .api.sessions import delete_session as delete_session_api
 from .api.sessions import list_session_approvals as list_session_approvals_api
 from .api.sessions import list_session_events as list_session_events_api
 from .api.sessions import list_session_messages as list_session_messages_api
@@ -90,6 +95,7 @@ from .api.usage import read_usage_record as read_usage_record_api
 from .api.usage import read_usage_summary as read_usage_summary_api
 from .api.vaults import create_vault as create_vault_api
 from .api.vaults import create_vault_credential as create_vault_credential_api
+from .api.vaults import delete_vault as delete_vault_api
 from .api.vaults import list_vault_credential_versions as list_vault_credential_versions_api
 from .api.vaults import list_vault_credentials as list_vault_credentials_api
 from .api.vaults import list_vaults as list_vaults_api
@@ -418,6 +424,9 @@ class _AgentsResource:
     def update(self, agent_id: str, body: Any) -> Any:
         return _unwrap(update_agent_api.sync_detailed(agent_id=agent_id, client=self._client, body=body))
 
+    def delete(self, agent_id: str) -> Any:
+        return _unwrap(delete_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
+
     def list_versions(self, agent_id: str) -> Any:
         return _unwrap(list_agent_versions_api.sync_detailed(agent_id=agent_id, client=self._client))
 
@@ -438,8 +447,8 @@ class _IdentitiesResource:
     def get(self, identity_id: str) -> Any:
         return _unwrap(read_identity_api.sync_detailed(identity_id=identity_id, client=self._client))
 
-    def archive(self, identity_id: str, body: Any) -> Any:
-        return _unwrap(update_identity_api.sync_detailed(identity_id=identity_id, client=self._client, body=body))
+    def delete(self, identity_id: str) -> Any:
+        return _unwrap(delete_identity_api.sync_detailed(identity_id=identity_id, client=self._client))
 
 class _EnvironmentsResource:
     def __init__(self, owner: _ClientCore) -> None:
@@ -460,6 +469,9 @@ class _EnvironmentsResource:
 
     def update(self, environment_id: str, body: Any) -> Any:
         return _unwrap(update_environment_api.sync_detailed(environment_id=environment_id, client=self._client, body=body))
+
+    def delete(self, environment_id: str) -> Any:
+        return _unwrap(delete_environment_api.sync_detailed(environment_id=environment_id, client=self._client))
 
     def list_versions(self, environment_id: str) -> Any:
         return _unwrap(list_environment_versions_api.sync_detailed(environment_id=environment_id, client=self._client))
@@ -503,6 +515,9 @@ class _RunnersResource:
 
     def update(self, runner_id: str, body: Any) -> Any:
         return _unwrap(update_runner_api.sync_detailed(runner_id=runner_id, client=self._client, body=body))
+
+    def delete(self, runner_id: str) -> Any:
+        return _unwrap(delete_runner_api.sync_detailed(runner_id=runner_id, client=self._client))
 
 class _BudgetsResource:
     def __init__(self, owner: _ClientCore) -> None:
@@ -592,6 +607,9 @@ class _SessionsResource:
     def update(self, session_id: str, body: Any) -> Any:
         return _unwrap(update_session_api.sync_detailed(session_id=session_id, client=self._client, body=body))
 
+    def delete(self, session_id: str) -> Any:
+        return _unwrap(delete_session_api.sync_detailed(session_id=session_id, client=self._client))
+
     def stream(self, session_id: str) -> SessionStream:
         url = _websocket_url(self._owner.base_url, f"/api/v1/sessions/{quote(session_id)}/socket")
         return SessionStream(url, _dpop_websocket_headers(self._owner, url))
@@ -634,6 +652,9 @@ class _MemoryStoresResource:
     def update(self, store_id: str, body: Any) -> Any:
         return _unwrap(update_memory_store_api.sync_detailed(store_id=store_id, client=self._client, body=body))
 
+    def delete(self, store_id: str) -> Any:
+        return _unwrap(delete_memory_store_api.sync_detailed(store_id=store_id, client=self._client))
+
     def list_memories(self, store_id: str, **query: Any) -> Any:
         return _unwrap(list_memory_store_memories_api.sync_detailed(store_id=store_id, client=self._client, **query))
 
@@ -662,6 +683,9 @@ class _VaultsResource:
 
     def update(self, vault_id: str, body: Any) -> Any:
         return _unwrap(update_vault_api.sync_detailed(vault_id=vault_id, client=self._client, body=body))
+
+    def delete(self, vault_id: str) -> Any:
+        return _unwrap(delete_vault_api.sync_detailed(vault_id=vault_id, client=self._client))
 
     def list_credentials(self, vault_id: str, **query: Any) -> Any:
         return _unwrap(list_vault_credentials_api.sync_detailed(vault_id=vault_id, client=self._client, **query))
@@ -722,6 +746,9 @@ class _RunnerRunnersResource:
 
     def update(self, runner_id: str, body: Any) -> Any:
         return _unwrap(update_runner_api.sync_detailed(runner_id=runner_id, client=self._client, body=body))
+
+    def delete(self, runner_id: str) -> Any:
+        return _unwrap(delete_runner_api.sync_detailed(runner_id=runner_id, client=self._client))
 
     def channel(self, runner_id: str) -> RunnerChannel:
         url = _websocket_url(self._owner.base_url, f"/api/v1/runners/{quote(runner_id)}/channel")

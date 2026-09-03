@@ -1,7 +1,7 @@
 Feature: Sessions
   A session is a tenant-scoped run of an agent version in a selected runtime.
   It snapshots its agent and environment, owns canonical events, and exposes a
-  lifecycle (create, prompt, close, reopen, archive) behind AMA endpoints only.
+  lifecycle (create, prompt, close, reopen, delete) behind AMA endpoints only.
 
   # ── State rules (domain: pure, no runtime) ──
 
@@ -86,7 +86,7 @@ Feature: Sessions
 
   @sessions/reject-dependencies @api
   Scenario: Reject unavailable or unsupported session dependencies
-    When a session is created against an archived agent or environment, a disabled provider, a blocked sandbox policy, or an unsupported runtime/provider/model
+    When a session is created against a deleted agent or environment, a disabled provider, a blocked sandbox policy, or an unsupported runtime/provider/model
     Then the request fails before any workspace, sandbox, or runner allocation
     And the error envelope identifies the unavailable or unsupported dependency
     And no session record is left in an active state
@@ -120,13 +120,13 @@ Feature: Sessions
     And reopening atomically removes the destruction marker, starts a new generation epoch, and accepts follow-up work
     And no successful completion events are written after cancellation
 
-  @sessions/archive @api
-  Scenario: Archive and read sessions safely
+  @sessions/delete @api
+  Scenario: Soft-delete sessions safely
     Given a session exists
-    When the user archives the session
-    Then it is hidden from default lists but returned by archived filtering
-    And archived sessions reject edits but can be restored
-    And events and immutable snapshots remain readable
+    When the user deletes the session
+    Then it is absent from every product Session API
+    And deleted sessions cannot be restored
+    And events and immutable snapshots remain retained only as database or cold R2 history
 
   @sessions/list @api
   Scenario: List sessions with pagination, state, search, label selector, and date filters
@@ -188,7 +188,7 @@ Feature: Sessions
     Given sessions exist with agent and environment snapshots
     When the user opens the sessions list and a session detail
     Then rows and detail facts come from agent provider/model, hosting snapshots, and session runtime
-    And error, closed, and archived states are surfaced without leaking detail onto table rows
+    And error and closed states are surfaced without leaking detail onto table rows
 
   @sessions/console-transcript @web
   Scenario: Render canonical events as transcript, debug, and tool trace

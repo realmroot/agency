@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateIdentityData, CreateIdentityErrors, CreateIdentityResponses, CreateInboxNotificationData, CreateInboxNotificationErrors, CreateInboxNotificationResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListIdentitiesData, ListIdentitiesErrors, ListIdentitiesResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadIdentityData, ReadIdentityErrors, ReadIdentityResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateIdentityData, UpdateIdentityErrors, UpdateIdentityResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateProjectData, UpdateProjectErrors, UpdateProjectResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
+import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateIdentityData, CreateIdentityErrors, CreateIdentityResponses, CreateInboxNotificationData, CreateInboxNotificationErrors, CreateInboxNotificationResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteAgentData, DeleteAgentErrors, DeleteAgentResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteEnvironmentData, DeleteEnvironmentErrors, DeleteEnvironmentResponses, DeleteIdentityData, DeleteIdentityErrors, DeleteIdentityResponses, DeleteMemoryStoreData, DeleteMemoryStoreErrors, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DeleteRunnerData, DeleteRunnerErrors, DeleteRunnerResponses, DeleteSessionData, DeleteSessionErrors, DeleteSessionResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, DeleteVaultData, DeleteVaultErrors, DeleteVaultResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListIdentitiesData, ListIdentitiesErrors, ListIdentitiesResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadIdentityData, ReadIdentityErrors, ReadIdentityResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateProjectData, UpdateProjectErrors, UpdateProjectResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -57,7 +57,9 @@ export const createProject = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * Delete an empty project
+ * Delete a project with no live resources
+ *
+ * Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and history do not block deletion.
  */
 export const deleteProject = <ThrowOnError extends boolean = false>(options: Options<DeleteProjectData, ThrowOnError>): RequestResult<DeleteProjectResponses, DeleteProjectErrors, ThrowOnError> => (options.client ?? client).delete<DeleteProjectResponses, DeleteProjectErrors, ThrowOnError>({
     url: '/api/v1/projects/{projectId}',
@@ -105,6 +107,16 @@ export const createAgent = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * Delete an agent
+ *
+ * Soft-deletes the agent. The retained tombstone cannot be restored through the API.
+ */
+export const deleteAgent = <ThrowOnError extends boolean = false>(options: Options<DeleteAgentData, ThrowOnError>): RequestResult<DeleteAgentResponses, DeleteAgentErrors, ThrowOnError> => (options.client ?? client).delete<DeleteAgentResponses, DeleteAgentErrors, ThrowOnError>({
+    url: '/api/v1/agents/{agentId}',
+    ...options
+});
+
+/**
  * Read an agent
  */
 export const readAgent = <ThrowOnError extends boolean = false>(options: Options<ReadAgentData, ThrowOnError>): RequestResult<ReadAgentResponses, ReadAgentErrors, ThrowOnError> => (options.client ?? client).get<ReadAgentResponses, ReadAgentErrors, ThrowOnError>({
@@ -115,7 +127,7 @@ export const readAgent = <ThrowOnError extends boolean = false>(options: Options
 /**
  * Update an agent
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.
+ * Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
  */
 export const updateAgent = <ThrowOnError extends boolean = false>(options: Options<UpdateAgentData, ThrowOnError>): RequestResult<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError>({
     url: '/api/v1/agents/{agentId}',
@@ -163,6 +175,16 @@ export const createEnvironment = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
+ * Delete an environment
+ *
+ * Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+ */
+export const deleteEnvironment = <ThrowOnError extends boolean = false>(options: Options<DeleteEnvironmentData, ThrowOnError>): RequestResult<DeleteEnvironmentResponses, DeleteEnvironmentErrors, ThrowOnError> => (options.client ?? client).delete<DeleteEnvironmentResponses, DeleteEnvironmentErrors, ThrowOnError>({
+    url: '/api/v1/environments/{environmentId}',
+    ...options
+});
+
+/**
  * Read an environment
  */
 export const readEnvironment = <ThrowOnError extends boolean = false>(options: Options<ReadEnvironmentData, ThrowOnError>): RequestResult<ReadEnvironmentResponses, ReadEnvironmentErrors, ThrowOnError> => (options.client ?? client).get<ReadEnvironmentResponses, ReadEnvironmentErrors, ThrowOnError>({
@@ -173,7 +195,7 @@ export const readEnvironment = <ThrowOnError extends boolean = false>(options: O
 /**
  * Update an environment
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.
+ * Partially updates a live environment.
  */
 export const updateEnvironment = <ThrowOnError extends boolean = false>(options: Options<UpdateEnvironmentData, ThrowOnError>): RequestResult<UpdateEnvironmentResponses, UpdateEnvironmentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateEnvironmentResponses, UpdateEnvironmentErrors, ThrowOnError>({
     url: '/api/v1/environments/{environmentId}',
@@ -221,23 +243,21 @@ export const createIdentity = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Read an identity
+ * Delete an identity
+ *
+ * Soft-deletes the identity. The retained tombstone cannot be restored through the API.
  */
-export const readIdentity = <ThrowOnError extends boolean = false>(options: Options<ReadIdentityData, ThrowOnError>): RequestResult<ReadIdentityResponses, ReadIdentityErrors, ThrowOnError> => (options.client ?? client).get<ReadIdentityResponses, ReadIdentityErrors, ThrowOnError>({
+export const deleteIdentity = <ThrowOnError extends boolean = false>(options: Options<DeleteIdentityData, ThrowOnError>): RequestResult<DeleteIdentityResponses, DeleteIdentityErrors, ThrowOnError> => (options.client ?? client).delete<DeleteIdentityResponses, DeleteIdentityErrors, ThrowOnError>({
     url: '/api/v1/identities/{identityId}',
     ...options
 });
 
 /**
- * Archive an identity
+ * Read an identity
  */
-export const updateIdentity = <ThrowOnError extends boolean = false>(options: Options<UpdateIdentityData, ThrowOnError>): RequestResult<UpdateIdentityResponses, UpdateIdentityErrors, ThrowOnError> => (options.client ?? client).patch<UpdateIdentityResponses, UpdateIdentityErrors, ThrowOnError>({
+export const readIdentity = <ThrowOnError extends boolean = false>(options: Options<ReadIdentityData, ThrowOnError>): RequestResult<ReadIdentityResponses, ReadIdentityErrors, ThrowOnError> => (options.client ?? client).get<ReadIdentityResponses, ReadIdentityErrors, ThrowOnError>({
     url: '/api/v1/identities/{identityId}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/merge-patch+json',
-        ...options.headers
-    }
+    ...options
 });
 
 /**
@@ -317,6 +337,16 @@ export const createRunner = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * Delete a self-hosted runner
+ *
+ * Soft-deletes the runner. The retained tombstone cannot be restored through the API.
+ */
+export const deleteRunner = <ThrowOnError extends boolean = false>(options: Options<DeleteRunnerData, ThrowOnError>): RequestResult<DeleteRunnerResponses, DeleteRunnerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteRunnerResponses, DeleteRunnerErrors, ThrowOnError>({
+    url: '/api/v1/runners/{runnerId}',
+    ...options
+});
+
+/**
  * Read a self-hosted runner
  */
 export const readRunner = <ThrowOnError extends boolean = false>(options: Options<ReadRunnerData, ThrowOnError>): RequestResult<ReadRunnerResponses, ReadRunnerErrors, ThrowOnError> => (options.client ?? client).get<ReadRunnerResponses, ReadRunnerErrors, ThrowOnError>({
@@ -325,7 +355,7 @@ export const readRunner = <ThrowOnError extends boolean = false>(options: Option
 });
 
 /**
- * Update or archive a self-hosted runner
+ * Update a self-hosted runner
  */
 export const updateRunner = <ThrowOnError extends boolean = false>(options: Options<UpdateRunnerData, ThrowOnError>): RequestResult<UpdateRunnerResponses, UpdateRunnerErrors, ThrowOnError> => (options.client ?? client).patch<UpdateRunnerResponses, UpdateRunnerErrors, ThrowOnError>({
     url: '/api/v1/runners/{runnerId}',
@@ -442,6 +472,8 @@ export const createBudget = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Delete a budget
+ *
+ * Soft-deletes the budget. The retained tombstone cannot be restored through the API.
  */
 export const deleteBudget = <ThrowOnError extends boolean = false>(options: Options<DeleteBudgetData, ThrowOnError>): RequestResult<DeleteBudgetResponses, DeleteBudgetErrors, ThrowOnError> => (options.client ?? client).delete<DeleteBudgetResponses, DeleteBudgetErrors, ThrowOnError>({
     url: '/api/v1/budgets/{budgetId}',
@@ -553,7 +585,7 @@ export const createTrigger = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Delete a trigger
  *
- * Permanently deletes the trigger and its run history.
+ * Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
  */
 export const deleteTrigger = <ThrowOnError extends boolean = false>(options: Options<DeleteTriggerData, ThrowOnError>): RequestResult<DeleteTriggerResponses, DeleteTriggerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteTriggerResponses, DeleteTriggerErrors, ThrowOnError>({
     url: '/api/v1/triggers/{triggerId}',
@@ -569,9 +601,7 @@ export const readTrigger = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Update, pause, or archive a trigger
- *
- * Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.
+ * Update or pause a trigger
  */
 export const updateTrigger = <ThrowOnError extends boolean = false>(options: Options<UpdateTriggerData, ThrowOnError>): RequestResult<UpdateTriggerResponses, UpdateTriggerErrors, ThrowOnError> => (options.client ?? client).patch<UpdateTriggerResponses, UpdateTriggerErrors, ThrowOnError>({
     url: '/api/v1/triggers/{triggerId}',
@@ -633,6 +663,16 @@ export const createSession = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * Delete a session
+ *
+ * Stops any live runtime and soft-deletes the session while retaining its history. It cannot be restored.
+ */
+export const deleteSession = <ThrowOnError extends boolean = false>(options: Options<DeleteSessionData, ThrowOnError>): RequestResult<DeleteSessionResponses, DeleteSessionErrors, ThrowOnError> => (options.client ?? client).delete<DeleteSessionResponses, DeleteSessionErrors, ThrowOnError>({
+    url: '/api/v1/sessions/{sessionId}',
+    ...options
+});
+
+/**
  * Read a session
  */
 export const readSession = <ThrowOnError extends boolean = false>(options: Options<ReadSessionData, ThrowOnError>): RequestResult<ReadSessionResponses, ReadSessionErrors, ThrowOnError> => (options.client ?? client).get<ReadSessionResponses, ReadSessionErrors, ThrowOnError>({
@@ -643,7 +683,7 @@ export const readSession = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, plus close/reopen transitions (state: "closed"|"idle").
  */
 export const updateSession = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionData, ThrowOnError>): RequestResult<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError>({
     url: '/api/v1/sessions/{sessionId}',
@@ -765,6 +805,16 @@ export const createMemoryStore = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
+ * Delete a memory store
+ *
+ * Soft-deletes the memory store and its memories. Database history remains and cannot be restored.
+ */
+export const deleteMemoryStore = <ThrowOnError extends boolean = false>(options: Options<DeleteMemoryStoreData, ThrowOnError>): RequestResult<DeleteMemoryStoreResponses, DeleteMemoryStoreErrors, ThrowOnError> => (options.client ?? client).delete<DeleteMemoryStoreResponses, DeleteMemoryStoreErrors, ThrowOnError>({
+    url: '/api/v1/memory-stores/{storeId}',
+    ...options
+});
+
+/**
  * Read a memory store
  */
 export const readMemoryStore = <ThrowOnError extends boolean = false>(options: Options<ReadMemoryStoreData, ThrowOnError>): RequestResult<ReadMemoryStoreResponses, ReadMemoryStoreErrors, ThrowOnError> => (options.client ?? client).get<ReadMemoryStoreResponses, ReadMemoryStoreErrors, ThrowOnError>({
@@ -773,7 +823,7 @@ export const readMemoryStore = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * Update or archive a memory store
+ * Update a memory store
  */
 export const updateMemoryStore = <ThrowOnError extends boolean = false>(options: Options<UpdateMemoryStoreData, ThrowOnError>): RequestResult<UpdateMemoryStoreResponses, UpdateMemoryStoreErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemoryStoreResponses, UpdateMemoryStoreErrors, ThrowOnError>({
     url: '/api/v1/memory-stores/{storeId}',
@@ -806,6 +856,8 @@ export const createMemoryStoreMemory = <ThrowOnError extends boolean = false>(op
 
 /**
  * Delete a memory
+ *
+ * Soft-deletes the memory. The retained tombstone cannot be restored through the API.
  */
 export const deleteMemoryStoreMemory = <ThrowOnError extends boolean = false>(options: Options<DeleteMemoryStoreMemoryData, ThrowOnError>): RequestResult<DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreMemoryErrors, ThrowOnError> => (options.client ?? client).delete<DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreMemoryErrors, ThrowOnError>({
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
@@ -845,6 +897,16 @@ export const createVault = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * Delete a vault
+ *
+ * Soft-deletes the vault while retaining credential history. The vault cannot be restored.
+ */
+export const deleteVault = <ThrowOnError extends boolean = false>(options: Options<DeleteVaultData, ThrowOnError>): RequestResult<DeleteVaultResponses, DeleteVaultErrors, ThrowOnError> => (options.client ?? client).delete<DeleteVaultResponses, DeleteVaultErrors, ThrowOnError>({
+    url: '/api/v1/vaults/{vaultId}',
+    ...options
+});
+
+/**
  * Read a vault
  */
 export const readVault = <ThrowOnError extends boolean = false>(options: Options<ReadVaultData, ThrowOnError>): RequestResult<ReadVaultResponses, ReadVaultErrors, ThrowOnError> => (options.client ?? client).get<ReadVaultResponses, ReadVaultErrors, ThrowOnError>({
@@ -853,9 +915,7 @@ export const readVault = <ThrowOnError extends boolean = false>(options: Options
 });
 
 /**
- * Update or archive a vault
- *
- * Partial update. Archive with `archived: true`; restore with `archived: false`.
+ * Update a vault
  */
 export const updateVault = <ThrowOnError extends boolean = false>(options: Options<UpdateVaultData, ThrowOnError>): RequestResult<UpdateVaultResponses, UpdateVaultErrors, ThrowOnError> => (options.client ?? client).patch<UpdateVaultResponses, UpdateVaultErrors, ThrowOnError>({
     url: '/api/v1/vaults/{vaultId}',

@@ -1,7 +1,7 @@
 // Session runtime usecases — deps-first.
 //
 // These thin wrappers run a mutating runtime orchestration op (create / close /
-// reopen / archive / unarchive / prompt / approval) and then re-read the affected row
+// reopen / delete / prompt / approval) and then re-read the affected row
 // through the REST SessionRepo (deps.sessions) so the DTO crossing the boundary
 // is the one canonical serialization the read endpoints produce. The callers
 // (http/sessions, dispatch-triggers, usecases/sessions) invoke these directly;
@@ -22,11 +22,10 @@ import type {
 import { decideSessionApproval } from './session-approval'
 import { createSessionForAgent } from './session-create'
 import {
-  archiveSession as archiveSessionRuntime,
   closeSession as closeSessionRuntime,
+  deleteSession as deleteSessionRuntime,
   markExpiredPendingSessions,
   reopenSession as reopenSessionRuntime,
-  unarchiveSession as unarchiveSessionRuntime,
 } from './session-lifecycle'
 import { dispatchSessionPrompt } from './session-prompt'
 
@@ -93,27 +92,17 @@ export async function reopenSession(
   return { ok: true, value: await reread(deps, auth.project.id, session.id) }
 }
 
-export async function archiveSession(
+export async function deleteSession(
   deps: Deps,
   auth: AuthScope,
   session: RuntimeSessionHandle,
   requestId: string | null,
-): Promise<SessionRuntimeOutcome<Session>> {
-  const result = await archiveSessionRuntime(deps, auth, session.id, requestId)
+): Promise<SessionRuntimeOutcome<void>> {
+  const result = await deleteSessionRuntime(deps, auth, session.id, requestId)
   if (!result.ok) {
     return result
   }
-  return { ok: true, value: await reread(deps, auth.project.id, session.id) }
-}
-
-export async function unarchiveSession(
-  deps: Deps,
-  auth: AuthScope,
-  session: RuntimeSessionHandle,
-  requestId: string | null,
-): Promise<Session> {
-  await unarchiveSessionRuntime(deps, auth, session.id, requestId)
-  return await reread(deps, auth.project.id, session.id)
+  return { ok: true, value: undefined }
 }
 
 export async function dispatchPrompt(

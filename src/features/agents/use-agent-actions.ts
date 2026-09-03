@@ -6,10 +6,10 @@ import { queryKeys } from '@/lib/query-keys'
 
 export function useAgentActions() {
   const queryClient = useQueryClient()
-  const archiveAgent = useMutation({
-    mutationFn: api.archiveAgent,
+  const deleteAgent = useMutation({
+    mutationFn: api.deleteAgent,
     onSuccess: () => {
-      toast.success('Agent archived')
+      toast.success('Agent deleted')
       void queryClient.invalidateQueries({ queryKey: queryKeys.agents.all })
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
     },
@@ -17,7 +17,7 @@ export function useAgentActions() {
   })
 
   return {
-    archiveAgent: (id: string) => archiveAgent.mutate(id),
-    archiveAgentPending: archiveAgent.isPending,
+    deleteAgent: (id: string) => deleteAgent.mutate(id),
+    deleteAgentPending: deleteAgent.isPending,
   }
 }

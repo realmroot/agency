@@ -5,7 +5,7 @@ import { useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { PageHeader, StatusBadge } from '@/console/components'
-import { archivedLabel, formatDate, isArchived, parseTools, providerPatch } from '@/console/format'
+import { formatDate, parseTools, providerPatch } from '@/console/format'
 import { AgentForm } from '@/console/forms'
 import type { AgentFormState } from '@/console/types'
 import { CreateSessionSheet } from '@/features/sessions/CreateSessionSheet'
@@ -31,9 +31,9 @@ export function AgentDetailPage() {
     queryFn: () => api.listAgentVersions(agentId as string),
     enabled: Boolean(agentId),
   })
-  const identitiesQuery = useQuery({ queryKey: queryKeys.identities.list(false), queryFn: () => api.listIdentities() })
+  const identitiesQuery = useQuery({ queryKey: queryKeys.identities.list(), queryFn: () => api.listIdentities() })
   const sessionsQuery = useQuery({
-    queryKey: queryKeys.sessions.list(false),
+    queryKey: queryKeys.sessions.list(),
     queryFn: () => api.listSessions(),
   })
   const agent = agentQuery.data ?? null
@@ -73,7 +73,7 @@ export function AgentDetailPage() {
       <PageHeader
         eyebrow="Agent"
         title={agent?.metadata.name ?? 'Agent detail'}
-        titleAccessory={agent ? <StatusBadge value={archivedLabel(agent)} /> : null}
+        titleAccessory={agent ? <StatusBadge value={agent.status.phase} /> : null}
         description={
           agent
             ? `${agent.metadata.description ?? 'No description'} · Created ${formatDate(agent.metadata.createdAt)} · Updated ${formatDate(agent.metadata.updatedAt)}`
@@ -86,11 +86,9 @@ export function AgentDetailPage() {
                 <Pencil data-icon="inline-start" />
                 Edit agent
               </Button>
-              {!isArchived(agent) ? (
-                <Button type="button" onClick={() => setCreatingSession(true)}>
-                  Create session
-                </Button>
-              ) : null}
+              <Button type="button" onClick={() => setCreatingSession(true)}>
+                Create session
+              </Button>
             </div>
           ) : null
         }
@@ -99,7 +97,7 @@ export function AgentDetailPage() {
         agent={agent}
         versions={versionsQuery.data?.data ?? []}
         sessions={sessionsQuery.data?.data ?? []}
-        onArchive={agentActions.archiveAgent}
+        onDelete={agentActions.deleteAgent}
       />
       <CreateSessionSheet
         open={creatingSession}

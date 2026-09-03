@@ -1,11 +1,10 @@
 import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
-import { describe, expect, it } from 'vitest'
-import { createAgent, updateAgent } from './agents'
+import { describe, expect, it, vi } from 'vitest'
+import { createAgent, deleteAgent, updateAgent } from './agents'
 import { creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import {
-  AgentArchivedError,
   AgentInboxIdentityConflictError,
   type AuditEntry,
   type AuthScope,
@@ -122,7 +121,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     updateWithVersion: async (_projectId, agent, fields, createdAt): Promise<AgentVersion> =>
       agentVersion(agent, fields.spec, createdAt),
     update: async () => {},
-    unarchive: async () => {},
+    delete: async () => true,
     providerEnabled: async () => true,
     connectorAvailable: async () => true,
     ...overrides.repo,
@@ -443,10 +442,10 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
 
   it.each([
     null,
-    { archivedAt: '2026-01-02T00:00:00.000Z', state: 'active', descriptor: identityDescriptor },
-    { archivedAt: null, state: 'provisioning', descriptor: identityDescriptor },
-    { archivedAt: null, state: 'active', descriptor: null },
-  ])('rejects a missing, archived, provisioning, or descriptor-less Identity %#', async (condition) => {
+    { deletedAt: '2026-01-02T00:00:00.000Z', state: 'active', descriptor: identityDescriptor },
+    { deletedAt: null, state: 'provisioning', descriptor: identityDescriptor },
+    { deletedAt: null, state: 'active', descriptor: null },
+  ])('rejects a missing, deleted, provisioning, or descriptor-less Identity %#', async (condition) => {
     const deps = fakeDeps()
     deps.identities = {
       find: async () =>
@@ -458,11 +457,11 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
                 name: 'Invalid',
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
-                archivedAt: condition.archivedAt,
+                deletedAt: condition.deletedAt,
               }),
               spec: { username: 'reviewer', runtime: 'codex' },
               status: {
-                phase: condition.archivedAt ? 'archived' : 'active',
+                phase: 'active',
                 state: condition.state,
                 failureCode: null,
                 boundAgentId: null,
@@ -629,63 +628,11 @@ describe('[spec: agents/update] updateAgent', () => {
     expect(result.agent.spec.allowedTools).toEqual(['read'])
   })
 
-  it('archives via { archived: true } and reports the transition', async () => {
-    const result = await updateAgent(fakeDeps(), auth, agentRecord(), { archived: true })
-    expect(result.archived).toBe(true)
-    expect(result.agent.metadata.archivedAt).toEqual(expect.any(String))
-  })
+  it('[spec: agents/api-delete] soft-deletes without revalidating legacy runtime configuration', async () => {
+    const remove = vi.fn(async () => true)
+    const result = await deleteAgent(fakeDeps({ repo: { delete: remove } }), auth, 'agent_legacy')
 
-  it('[spec: agents/api-archive] archives without revalidating legacy runtime configuration', async () => {
-    const legacyAgent = agentRecord({
-      spec: {
-        subagents: [
-          {
-            name: 'Maya Lin',
-            description: 'Legacy persisted sub-agent name.',
-            systemPrompt: 'Review the work.',
-            model: null,
-            allowedTools: [],
-            skills: [],
-            mcpConnectors: [],
-          },
-        ],
-      },
-    })
-
-    await expect(updateAgent(fakeDeps(), auth, legacyAgent, { archived: true })).resolves.toMatchObject({
-      archived: true,
-      agent: { metadata: { archivedAt: expect.any(String) }, status: { phase: 'archived' } },
-    })
-  })
-
-  it('rejects field updates on an archived agent', async () => {
-    await expect(
-      updateAgent(
-        fakeDeps(),
-        auth,
-        agentRecord({ metadata: { archivedAt: '2026-01-02T00:00:00.000Z' }, status: { phase: 'archived' } }),
-        { description: 'x' },
-      ),
-    ).rejects.toBeInstanceOf(AgentArchivedError)
-  })
-
-  it('unarchives an archived agent via { archived: false }', async () => {
-    const result = await updateAgent(
-      fakeDeps(),
-      auth,
-      agentRecord({ metadata: { archivedAt: '2026-01-02T00:00:00.000Z' }, status: { phase: 'archived' } }),
-      { archived: false },
-    )
-    expect(result.agent.metadata.archivedAt).toBeNull()
-  })
-
-  it('is a no-op when patching an archived agent with archived:true', async () => {
-    const archived = agentRecord({
-      metadata: { archivedAt: '2026-01-02T00:00:00.000Z' },
-      status: { phase: 'archived' },
-    })
-    const result = await updateAgent(fakeDeps(), auth, archived, { archived: true })
-    expect(result.agent.metadata.archivedAt).toBe('2026-01-02T00:00:00.000Z')
-    expect(result.archived).toBe(false)
+    expect(result).toBe(true)
+    expect(remove).toHaveBeenCalledWith('project_1', 'agent_legacy', expect.any(String))
   })
 })

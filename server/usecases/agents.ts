@@ -9,7 +9,6 @@ import {
 import { creationDigest, creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import {
-  AgentArchivedError,
   AgentValidationError,
   type AuthScope,
   CreationIdempotencyConflictError,
@@ -52,7 +51,7 @@ async function selectedIdentity(deps: Deps, auth: AuthScope, identityRef: string
   if (!identityRef) return null
   if (!deps.identities) throw new Error('Identity dependencies are not configured')
   const identity = await deps.identities.find(auth.project.id, identityRef)
-  if (!identity || identity.metadata.archivedAt || identity.status.state !== 'active' || !identity.status.descriptor) {
+  if (!identity || identity.metadata.deletedAt || identity.status.state !== 'active' || !identity.status.descriptor) {
     throw new AgentValidationError('Invalid agent configuration', {
       identityRef: 'Identity must be active in the selected project.',
     })
@@ -183,46 +182,21 @@ export interface UpdateAgentPatch {
   allowedTools?: string[]
   mcpConnectors?: string[]
   identityRef?: string | null
-  archived?: boolean
 }
 
 export interface UpdateAgentResult {
   agent: Agent
-  archived: boolean
 }
 
-// Orchestrates a PATCH: archive lifecycle transitions, field merge, config
-// validation, and version snapshot creation. Returns the updated record plus
-// whether an archive transition happened (so the route can audit). Throws
-// AgentArchivedError when field updates target an archived agent.
+// Orchestrates a PATCH: field merge, config validation, and version snapshots.
 export async function updateAgent(
   deps: Deps,
   auth: AuthScope,
   agent: Agent,
   patch: UpdateAgentPatch,
 ): Promise<UpdateAgentResult> {
-  const { archived, ...fields } = patch
+  const fields = patch
   const hasFieldUpdates = Object.keys(fields).length > 0
-
-  if (agent.metadata.archivedAt) {
-    if (hasFieldUpdates) {
-      throw new AgentArchivedError()
-    }
-    if (archived === false) {
-      const updatedAt = new Date().toISOString()
-      await deps.agents.unarchive(auth.project.id, agent.metadata.uid, updatedAt)
-      return {
-        agent: {
-          ...agent,
-          metadata: { ...agent.metadata, archivedAt: null, updatedAt },
-          status: { ...agent.status, phase: 'active' },
-        },
-        archived: false,
-      }
-    }
-    // archived: true (idempotent) or empty patch — no change.
-    return { agent, archived: false }
-  }
 
   const nextIdentity =
     fields.identityRef !== undefined
@@ -246,16 +220,10 @@ export async function updateAgent(
   const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => fields[field] !== undefined)
   // A runtime change snapshots a new immutable version; otherwise the current
   // version (id + number) is retained.
-  const archivedAt = archived === true ? updatedAt : agent.metadata.archivedAt
   const name = fields.name ?? agent.metadata.name
   const description = fields.description !== undefined ? fields.description : agent.metadata.description
   const version = runtimeChanged
-    ? await deps.agents.updateWithVersion(
-        auth.project.id,
-        agent,
-        { name, description, spec: next, archivedAt },
-        updatedAt,
-      )
+    ? await deps.agents.updateWithVersion(auth.project.id, agent, { name, description, spec: next }, updatedAt)
     : null
   const currentVersionId = version?.metadata.uid ?? agent.status.currentVersionId
 
@@ -263,21 +231,25 @@ export async function updateAgent(
     await deps.agents.update(
       auth.project.id,
       agent.metadata.uid,
-      { name, description, spec: next, archivedAt, currentVersionId },
+      { name, description, spec: next, currentVersionId },
       updatedAt,
     )
   }
 
   const updated: Agent = {
     ...agent,
-    metadata: { ...agent.metadata, name, description, archivedAt, updatedAt },
+    metadata: { ...agent.metadata, name, description, updatedAt },
     spec: next,
     status: {
       ...agent.status,
-      phase: archivedAt ? 'archived' : 'active',
+      phase: 'active',
       currentVersionId,
       version: version?.status.version ?? agent.status.version,
     },
   }
-  return { agent: updated, archived: archived === true }
+  return { agent: updated }
+}
+
+export async function deleteAgent(deps: Deps, auth: AuthScope, agentId: string): Promise<boolean> {
+  return deps.agents.delete(auth.project.id, agentId, new Date().toISOString())
 }

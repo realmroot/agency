@@ -15,25 +15,12 @@ import {
   AgentInboxIdentityConflictError,
   CreationIdempotencyConflictError,
   IdentityAlreadyBoundError,
+  ResourceDeletedDuringMutationError,
 } from '@server/usecases/ports'
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  like,
-  lt,
-  lte,
-  notExists,
-  or,
-  sql,
-} from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, gte, inArray, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, agentVersions, connectors, identities, providers, triggers } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type AgentRow = typeof agents.$inferSelect
@@ -104,11 +91,11 @@ function agentRecordFrom(row: AgentRow, version: number, schedulable = false): A
       description: row.description,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     }),
     spec: specFromRow(row),
     status: {
-      phase: resourcePhase(row.archivedAt),
+      phase: resourcePhase(row.deletedAt),
       currentVersionId: row.currentVersionId,
       version,
       schedulable,
@@ -120,7 +107,7 @@ function schedulableExpression() {
   const agentId = sql.raw('"agents"."id"')
   const projectId = sql.raw('"agents"."project_id"')
   const identityId = sql.raw('"agents"."identity_id"')
-  const archivedAt = sql.raw('"agents"."archived_at"')
+  const deletedAt = sql.raw('"agents"."deleted_at"')
   const providerId = sql.raw('"agents"."provider_id"')
   const model = sql.raw('"agents"."model"')
   const selectedModel = sql`case
@@ -128,7 +115,7 @@ function schedulableExpression() {
       then substr(${model}, length(${providerId}) + 2)
     else ${model}
   end`
-  return sql<number>`case when ${archivedAt} is null and exists (
+  return sql<number>`case when ${deletedAt} is null and exists (
     select 1
     from identities scheduling_identity
     join triggers scheduling_trigger
@@ -137,11 +124,11 @@ function schedulableExpression() {
     where scheduling_identity.id = ${identityId}
       and scheduling_identity.project_id = ${projectId}
       and scheduling_identity.state = 'active'
-      and scheduling_identity.archived_at is null
+      and scheduling_identity.deleted_at is null
       and scheduling_identity.bound_agent_id = ${agentId}
       and scheduling_trigger.trigger_type = 'inbox'
       and scheduling_trigger.enabled = 1
-      and scheduling_trigger.archived_at is null
+      and scheduling_trigger.deleted_at is null
       and scheduling_trigger.inbox_provisioning_state = 'active'
       and scheduling_trigger.inbox_registered_agent_subject = scheduling_identity.subject
       and scheduling_trigger.runtime = scheduling_identity.runtime
@@ -151,7 +138,7 @@ function schedulableExpression() {
           from environments cloud_environment
           where cloud_environment.id = scheduling_trigger.environment_id
             and cloud_environment.project_id = ${projectId}
-            and cloud_environment.archived_at is null
+            and cloud_environment.deleted_at is null
             and cloud_environment.current_version_id is not null
             and cloud_environment.hosting_mode = 'cloud'
             and scheduling_trigger.runtime = 'ama'
@@ -165,9 +152,9 @@ function schedulableExpression() {
           join json_each(scheduling_runner.runtimes) scheduling_runtime
           where scheduling_runner.project_id = ${projectId}
             and scheduling_runner.state = 'active'
-            and scheduling_runner.archived_at is null
+            and scheduling_runner.deleted_at is null
             and scheduling_runner.last_heartbeat_at >= ${runnerHeartbeatStaleBefore()}
-            and runner_environment.archived_at is null
+            and runner_environment.deleted_at is null
             and runner_environment.current_version_id is not null
             and runner_environment.hosting_mode = 'self_hosted'
             and (scheduling_trigger.environment_id is null or scheduling_trigger.environment_id = scheduling_runner.environment_id)
@@ -212,6 +199,7 @@ async function findCreation(db: Db, projectId: string, creationKeyHash: string) 
     .where(and(eq(agents.projectId, projectId), eq(agents.creationKeyHash, creationKeyHash)))
     .get()
   if (!row?.creationFingerprint) return null
+  if (row.deletedAt) throw new CreationIdempotencyConflictError('Idempotency-Key belongs to a deleted Agent')
   const initialVersion = await db
     .select()
     .from(agentVersions)
@@ -223,7 +211,7 @@ async function findCreation(db: Db, projectId: string, creationKeyHash: string) 
       ...row,
       name: row.creationName ?? row.name,
       description: row.creationDescription,
-      archivedAt: null,
+      deletedAt: null,
       currentVersionId: initialVersion.id,
       updatedAt: row.createdAt,
     },
@@ -259,7 +247,7 @@ export function createAgentRepo(db: Db): AgentRepo {
                 eq(identities.projectId, query.projectId),
                 eq(identities.remoteAgentId, query.identityAgentId),
                 eq(identities.state, 'active'),
-                isNull(identities.archivedAt),
+                isNull(identities.deletedAt),
               ),
             )
             .get()
@@ -269,7 +257,7 @@ export function createAgentRepo(db: Db): AgentRepo {
       }
       const filters = [
         eq(agents.projectId, query.projectId),
-        query.archived ? isNotNull(agents.archivedAt) : isNull(agents.archivedAt),
+        isNull(agents.deletedAt),
         identity?.boundAgentId ? eq(agents.id, identity.boundAgentId) : undefined,
         identity ? eq(agents.identityId, identity.id) : undefined,
         query.runtime
@@ -307,7 +295,7 @@ export function createAgentRepo(db: Db): AgentRepo {
       const row = await db
         .select({ ...getTableColumns(agents), schedulable })
         .from(agents)
-        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNull(agents.deletedAt)))
         .get()
       if (!row) {
         return null
@@ -324,7 +312,7 @@ export function createAgentRepo(db: Db): AgentRepo {
       const rows = await db
         .select({ ...getTableColumns(agents), schedulable })
         .from(agents)
-        .where(and(eq(agents.projectId, projectId), isNull(agents.archivedAt)))
+        .where(and(eq(agents.projectId, projectId), isNull(agents.deletedAt)))
         .orderBy(desc(agents.createdAt), desc(agents.id))
       return Promise.all(
         rows.map(async (row) =>
@@ -365,7 +353,7 @@ export function createAgentRepo(db: Db): AgentRepo {
         projectId: input.projectId,
         name: input.name,
         description: input.description,
-        archivedAt: null,
+        deletedAt: null,
         currentVersionId: versionId,
         createdAt,
         updatedAt: createdAt,
@@ -386,6 +374,7 @@ export function createAgentRepo(db: Db): AgentRepo {
       try {
         await db.batch([db.insert(agents).values(row), db.insert(agentVersions).values(versionRow)])
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Agent')
         if (input.creationKeyHash && input.creationFingerprint) {
           const replay = await findCreation(db, input.projectId, input.creationKeyHash)
           if (replay) {
@@ -424,7 +413,6 @@ export function createAgentRepo(db: Db): AgentRepo {
             .set({
               name: fields.name,
               description: fields.description,
-              archivedAt: fields.archivedAt,
               currentVersionId: versionId,
               updatedAt,
               ...specColumns(fields.spec),
@@ -433,6 +421,7 @@ export function createAgentRepo(db: Db): AgentRepo {
               and(
                 eq(agents.id, agent.metadata.uid),
                 eq(agents.projectId, projectId),
+                isNull(agents.deletedAt),
                 identityChanged
                   ? notExists(
                       db
@@ -444,7 +433,7 @@ export function createAgentRepo(db: Db): AgentRepo {
                             eq(triggers.agentId, agent.metadata.uid),
                             eq(triggers.triggerType, 'inbox'),
                             eq(triggers.enabled, true),
-                            isNull(triggers.archivedAt),
+                            isNull(triggers.deletedAt),
                             inArray(triggers.inboxProvisioningState, ['pending', 'active', 'error']),
                           ),
                         ),
@@ -485,6 +474,12 @@ export function createAgentRepo(db: Db): AgentRepo {
             .returning({ id: agentVersions.id }),
         ])
         if (updated.length === 0) {
+          const live = await db
+            .select({ id: agents.id })
+            .from(agents)
+            .where(and(eq(agents.id, agent.metadata.uid), eq(agents.projectId, projectId), isNull(agents.deletedAt)))
+            .get()
+          if (!live) throw new ResourceDeletedDuringMutationError('Agent')
           if (identityChanged) throw new AgentInboxIdentityConflictError()
           throw new Error('Agent update affected no rows')
         }
@@ -499,28 +494,31 @@ export function createAgentRepo(db: Db): AgentRepo {
 
     async update(projectId, agentId, fields: UpdateAgentFields, updatedAt) {
       try {
-        await db
+        const updated = await db
           .update(agents)
           .set({
             name: fields.name,
             description: fields.description,
-            archivedAt: fields.archivedAt,
             currentVersionId: fields.currentVersionId,
             updatedAt,
             ...specColumns(fields.spec),
           })
-          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+          .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNull(agents.deletedAt)))
+          .returning({ id: agents.id })
+        if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Agent')
       } catch (error) {
         if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
         throw error
       }
     },
 
-    async unarchive(projectId, agentId, updatedAt) {
-      await db
+    async delete(projectId, agentId, deletedAt) {
+      const rows = await db
         .update(agents)
-        .set({ archivedAt: null, updatedAt })
-        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
+        .set({ deletedAt, updatedAt: deletedAt })
+        .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId), isNull(agents.deletedAt)))
+        .returning({ id: agents.id })
+      return rows.length > 0
     },
 
     async providerEnabled(_projectId, providerId) {

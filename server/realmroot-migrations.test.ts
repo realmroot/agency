@@ -144,6 +144,131 @@ describe('[spec: projects/name-uniqueness] project name uniqueness migration', (
   })
 })
 
+describe('irreversible resource soft-delete migration', () => {
+  it('enforces irreversible tombstones and makes project and memory uniqueness live-only', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0037_unique_project_names_per_organization.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+      VALUES ('project_deleted', 'org_soft_delete', 'Reusable', '2026-01-01', '2026-01-01');
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+      VALUES ('project_live', 'org_soft_delete', 'Live', '2026-01-01', '2026-01-01');
+      INSERT INTO memory_stores (id, project_id, name, archived_at, created_at, updated_at)
+      VALUES ('store_deleted', 'project_deleted', 'Old store', '2026-02-01', '2026-01-01', '2026-02-01');
+      INSERT INTO memory_stores (id, project_id, name, archived_at, created_at, updated_at)
+      VALUES ('store_live', 'project_live', 'Live store', NULL, '2026-01-01', '2026-01-01');
+      INSERT INTO memory_store_memories (id, store_id, project_id, path, content, metadata, created_at, updated_at)
+      VALUES ('memory_deleted', 'store_deleted', 'project_deleted', 'facts.md', 'old', '{}', '2026-01-01', '2026-03-01');
+      INSERT INTO memory_store_memories (id, store_id, project_id, path, content, metadata, created_at, updated_at)
+      VALUES ('memory_live', 'store_live', 'project_live', 'facts.md', 'old', '{}', '2026-01-01', '2026-01-01');
+    `)
+
+    apply(db, '0038_soft_delete_resource_semantics.sql')
+
+    for (const table of [
+      'identities',
+      'agents',
+      'memory_stores',
+      'environments',
+      'vaults',
+      'sessions',
+      'triggers',
+      'runners',
+      'projects',
+      'budgets',
+      'memory_store_memories',
+    ]) {
+      const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+      expect(columns.map(({ name }) => name)).toContain('deleted_at')
+      expect(columns.map(({ name }) => name)).not.toContain('archived_at')
+    }
+    expect(db.prepare("SELECT deleted_at FROM memory_stores WHERE id = 'store_deleted'").get()).toEqual({
+      deleted_at: '2026-02-01',
+    })
+    expect(
+      db.prepare("SELECT deleted_at, updated_at FROM memory_store_memories WHERE id = 'memory_deleted'").get(),
+    ).toEqual({ deleted_at: '2026-02-01', updated_at: '2026-03-01' })
+
+    db.exec("UPDATE projects SET deleted_at = '2026-02-02' WHERE id = 'project_deleted'")
+    expect(() =>
+      db.exec(`INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_reused', 'org_soft_delete', 'Reusable', '2026-02-03', '2026-02-03')`),
+    ).not.toThrow()
+    expect(() =>
+      db.exec(`INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_conflict', 'org_soft_delete', 'Reusable', '2026-02-04', '2026-02-04')`),
+    ).toThrow(/UNIQUE constraint failed/)
+
+    expect(() =>
+      db.exec(`INSERT INTO agents
+        (id, project_id, name, system_prompt, created_at, updated_at)
+        VALUES ('agent_rejected', 'project_deleted', 'Rejected', 'Work', '2026-02-03', '2026-02-03')`),
+    ).toThrow(/cannot attach a live resource to a deleted project/)
+    expect(() =>
+      db.exec(`INSERT INTO memory_store_memories
+        (id, store_id, project_id, path, content, metadata, created_at, updated_at)
+        VALUES ('memory_rejected', 'store_deleted', 'project_deleted', 'new.md', 'new', '{}', '2026-02-03', '2026-02-03')`),
+    ).toThrow(/cannot attach a live memory to a deleted memory store/)
+    expect(() =>
+      db.exec("UPDATE memory_store_memories SET deleted_at = NULL, content = 'changed' WHERE id = 'memory_deleted'"),
+    ).toThrow(/deleted resources cannot be restored/)
+
+    db.exec("UPDATE memory_store_memories SET deleted_at = '2026-02-02' WHERE id = 'memory_live'")
+    expect(() =>
+      db.exec(`INSERT INTO memory_store_memories
+        (id, store_id, project_id, path, content, metadata, created_at, updated_at)
+        VALUES ('memory_reused', 'store_live', 'project_live', 'facts.md', 'new', '{}', '2026-02-03', '2026-02-03')`),
+    ).not.toThrow()
+    expect(() =>
+      db.exec(`INSERT INTO memory_store_memories
+        (id, store_id, project_id, path, content, metadata, created_at, updated_at)
+        VALUES ('memory_conflict', 'store_live', 'project_live', 'facts.md', 'newer', '{}', '2026-02-04', '2026-02-04')`),
+    ).toThrow(/UNIQUE constraint failed/)
+
+    expect(() => db.exec("UPDATE projects SET deleted_at = NULL WHERE id = 'project_deleted'")).toThrow(
+      /deleted resources cannot be restored/,
+    )
+    expect(() => db.exec("UPDATE memory_stores SET deleted_at = NULL WHERE id = 'store_deleted'")).toThrow(
+      /deleted resources cannot be restored/,
+    )
+    expect(() => db.exec("UPDATE memory_store_memories SET deleted_at = NULL WHERE id = 'memory_live'")).toThrow(
+      /deleted resources cannot be restored/,
+    )
+
+    expect(db.prepare('PRAGMA index_list(projects)').all()).toContainEqual(
+      expect.objectContaining({ name: 'idx_projects_unique_live_name_per_organization', unique: 1, partial: 1 }),
+    )
+    expect(db.prepare('PRAGMA index_list(memory_store_memories)').all()).toContainEqual(
+      expect.objectContaining({ name: 'idx_memory_store_memories_unique_live_store_path', unique: 1, partial: 1 }),
+    )
+    const installedTriggers = (
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE '%reject_restore'")
+        .all() as Array<{
+        name: string
+      }>
+    ).map(({ name }) => name)
+    expect(installedTriggers).toEqual(
+      expect.arrayContaining(
+        [
+          'projects',
+          'agents',
+          'budgets',
+          'environments',
+          'identities',
+          'memory_stores',
+          'memory_store_memories',
+          'runners',
+          'sessions',
+          'triggers',
+          'vaults',
+        ].map((table) => `trg_${table}_reject_restore`),
+      ),
+    )
+    db.close()
+  })
+})
+
 describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
   it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
     const db = new DatabaseSync(':memory:')

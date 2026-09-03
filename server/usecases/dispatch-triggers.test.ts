@@ -182,7 +182,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
       createdBy: 'user_1',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      archivedAt: null,
+      deletedAt: null,
     },
     spec: {
       agentId: 'agent_1',
@@ -255,7 +255,7 @@ function runtimeSession(overrides: Partial<RuntimeSessionHandle> = {}): RuntimeS
     projectId: 'project_1',
     organizationId: 'org_1',
     state: 'idle',
-    archivedAt: null,
+    deletedAt: null,
     sandboxId: 'sandbox_1',
     metadata: {
       source: 'http-trigger',
@@ -1454,8 +1454,8 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     await expect(
       dispatchHttpTrigger(fakeDeps(), auth, {
         trigger: httpTrigger({
-          metadata: { archivedAt: '2026-01-02T00:00:00.000Z' },
-          status: { phase: 'archived' },
+          metadata: { deletedAt: '2026-01-02T00:00:00.000Z' },
+          status: { phase: 'active' },
         }),
         context: { body: { source: 'portal' }, header: {} },
       }),

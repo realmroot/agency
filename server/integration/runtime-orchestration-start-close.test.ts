@@ -40,6 +40,60 @@ async function seedPendingSession(metadata: Record<string, unknown>) {
 }
 
 describe('[CF] cloud Session startup and close claims', () => {
+  it('rejects runtime reads, CAS, startup leases, and runner recovery writes after Session deletion', async () => {
+    const seeded = await seedPendingSession({ retained: true })
+    await env.DB.prepare('UPDATE sessions SET deleted_at = ? WHERE id = ?').bind(timestamp, seeded.sessionId).run()
+
+    await expect(seeded.repo.findSession(seeded.projectId, seeded.sessionId)).resolves.toBeNull()
+    await expect(seeded.repo.sessionState(seeded.projectId, seeded.sessionId)).resolves.toBeNull()
+    await expect(seeded.repo.sessionMetadata(seeded.projectId, seeded.sessionId)).resolves.toBeNull()
+    await seeded.repo.updateSession(seeded.projectId, seeded.sessionId, {
+      state: 'running',
+      metadata: JSON.stringify({ revived: true }),
+      updatedAt: '2026-09-03T00:01:00.000Z',
+    })
+    await expect(
+      seeded.repo.updateSessionWhenState(seeded.projectId, seeded.sessionId, 'pending', {
+        state: 'running',
+        updatedAt: '2026-09-03T00:01:00.000Z',
+      }),
+    ).resolves.toBe(false)
+    await expect(
+      seeded.repo.acquirePendingStartupLease(
+        seeded.projectId,
+        seeded.sessionId,
+        null,
+        id('startup'),
+        '2026-09-03T00:05:00.000Z',
+        timestamp,
+      ),
+    ).resolves.toBe(false)
+    await expect(
+      seeded.repo.acquireTurnLease(
+        seeded.projectId,
+        seeded.sessionId,
+        id('turn'),
+        '2026-09-03T00:05:00.000Z',
+        timestamp,
+      ),
+    ).resolves.toBe(false)
+    await expect(
+      seeded.repo.claimSessionClose(
+        seeded.projectId,
+        seeded.sessionId,
+        seeded.sandboxId,
+        id('cleanup'),
+        '2026-09-03T00:05:00.000Z',
+        timestamp,
+      ),
+    ).resolves.toBe(false)
+    await seeded.repo.requeueSessionForRunnerRecovery(seeded.projectId, seeded.sessionId, timestamp)
+
+    await expect(
+      env.DB.prepare('SELECT state, metadata, deleted_at FROM sessions WHERE id = ?').bind(seeded.sessionId).first(),
+    ).resolves.toEqual({ state: 'pending', metadata: '{"retained":true}', deleted_at: timestamp })
+  })
+
   it('[spec: runtime/idle-retention] atomically patches runtime metadata over a concurrent Inbox backfill', async () => {
     const seeded = await seedPendingSession({ beforeStartup: true })
     const startupId = id('startup')

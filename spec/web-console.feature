@@ -58,10 +58,10 @@ Feature: Web console
 
   @web-console/destructive-ops @web
   Scenario: Confirm destructive actions through the shared dialog
-    Given a session can be closed and archived
-    When the user triggers a close or archive from the console
+    Given a session can be closed and deleted
+    When the user triggers a close or delete from the console
     Then a confirmation dialog names the resource and consequence before the action runs
-    And archived resources expose no further destructive action
+    And deleted resources disappear and expose no restore action
     And the pending operation disables duplicate submission and reports completion through shared feedback
 
   # ── Shared API client (web: single Hono RPC client) ──

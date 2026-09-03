@@ -76,7 +76,6 @@ const CLI_OPERATION_NAME_OVERRIDES: Readonly<Record<string, string>> = {
   readConfigz: 'config',
   readCurrentAuthSession: 'whoami',
   refreshCatalog: 'refresh-model-catalog',
-  updateIdentity: 'archive-identity',
 }
 
 function cliOperationName(operationId: string) {
@@ -258,20 +257,10 @@ const createdToQuery = z
     example: '2026-05-31T23:59:59.999Z',
   })
 
-const archivedQuery = z
-  .enum(['true', 'false'])
-  .optional()
-  .openapi({
-    param: { name: 'archived', in: 'query' },
-    description: 'Filter by lifecycle. Defaults to false (live resources only).',
-    example: 'false',
-  })
-
-// Standard list query for archivable resources. Domains with an operational
-// state machine add their own `state` filter on top.
+// Standard list query for live resources. Soft-deleted resources are retained
+// only as database tombstones and are never exposed through product APIs.
 export function listQuerySchema() {
   return z.object({
-    archived: archivedQuery,
     search: searchQuery,
     createdFrom: createdFromQuery,
     createdTo: createdToQuery,

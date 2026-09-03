@@ -91,7 +91,7 @@ export interface Deps {
   sessionOrchestration: SessionOrchestrationStore
   sessions: SessionRepo
   // "Storage follows the loop": cloud-loop (ama) events live in the Session DO,
-  // everything else on D1. Routes append/read/stream/archive per session.
+  // everything else on D1. Routes append/read/stream and cold-store events per session.
   sessionEventStore: EventStore
   createApprovalGate: CreateApprovalGate
   // Mirrors the legacy AMA_RUNTIME_MODE === 'test' branch: in test mode the

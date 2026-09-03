@@ -25,16 +25,14 @@ T = TypeVar("T", bound="UpdateTriggerRequest")
 
 @_attrs_define
 class UpdateTriggerRequest:
-    """ 
+    """
         Attributes:
             metadata (TriggerUpdateMetadata | Unset):
             spec (UpdateTriggerRequestSpec | Unset):
-            archived (bool | Unset):  Example: True.
      """
 
     metadata: TriggerUpdateMetadata | Unset = UNSET
     spec: UpdateTriggerRequestSpec | Unset = UNSET
-    archived: bool | Unset = UNSET
 
 
 
@@ -51,8 +49,6 @@ class UpdateTriggerRequest:
         if not isinstance(self.spec, Unset):
             spec = self.spec.to_dict()
 
-        archived = self.archived
-
 
         field_dict: dict[str, Any] = {}
 
@@ -62,8 +58,6 @@ class UpdateTriggerRequest:
             field_dict["metadata"] = metadata
         if spec is not UNSET:
             field_dict["spec"] = spec
-        if archived is not UNSET:
-            field_dict["archived"] = archived
 
         return field_dict
 
@@ -94,13 +88,9 @@ class UpdateTriggerRequest:
 
 
 
-        archived = d.pop("archived", UNSET)
-
         update_trigger_request = cls(
             metadata=metadata,
             spec=spec,
-            archived=archived,
         )
 
         return update_trigger_request
-

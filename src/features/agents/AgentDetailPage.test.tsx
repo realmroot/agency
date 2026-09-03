@@ -1,7 +1,7 @@
 /**
  * AgentDetailPage — integration tests via MSW + real api client.
  * Fetches: GET /api/v1/agents/:id, GET /api/v1/agents/:id/versions,
- *           GET /api/v1/sessions, PATCH /api/v1/agents/:id (update/archive)
+ *           GET /api/v1/sessions, PATCH/DELETE /api/v1/agents/:id
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -79,17 +79,10 @@ describe('[spec: agents/console-detail] AgentDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Edit agent' })).toBeInTheDocument()
   })
 
-  it('shows Create session button for non-archived agent', async () => {
+  it('shows Create session button for a live agent', async () => {
     setupAgentHandlers(buildAgent())
     renderDetailPage()
     expect(await screen.findByRole('button', { name: 'Create session' })).toBeInTheDocument()
-  })
-
-  it('does not show Create session button for archived agent', async () => {
-    setupAgentHandlers(buildAgent({ archivedAt: now }))
-    renderDetailPage()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit agent' })).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: 'Create session' })).toBeNull()
   })
 
   it('renders fallback title when agent is loading', () => {

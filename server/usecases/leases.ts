@@ -30,7 +30,7 @@ export async function claimLease(
   request: ClaimLeaseRequest,
 ): Promise<LeaseRecord> {
   await deps.leases.expireStale(auth.project.id)
-  if (runner.archivedAt || runner.state !== 'active') {
+  if (runner.deletedAt || runner.state !== 'active') {
     throw new RunnerConflictError('Runner is not active')
   }
   const candidate = await deps.leases.claimCandidate(auth.project.id, request.workItemId)

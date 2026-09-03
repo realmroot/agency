@@ -12,7 +12,7 @@ Feature: Triggers
     Given a signed-in user with an active agent and environment
     When the user creates a scheduled trigger with a prompt template and schedule
     Then the trigger is stored active with a derived next-due time when omitted
-    And a missing agent or archived environment is rejected before storing
+    And a missing agent or deleted environment is rejected before storing
 
   @triggers/http-create @usecase
   Scenario: Create an HTTP trigger from usable references
@@ -24,7 +24,7 @@ Feature: Triggers
   @triggers/inbox-provisioning @usecase
   Scenario: Maintain one Inbox Subscription for an Inbox trigger
     Given a provider-bound Agent whose internal Identity id differs from its stable OIDC subject
-    When the trigger is created, paused, resumed, archived, or deleted
+    When the trigger is created, paused, resumed, or deleted
     Then Agency reconciles exactly one Trigger-owned Inbox Subscription through a dedicated OAuth service client
     And provisioning creates, reads, and deletes the Subscription conditionally with its current ETag
     And the Subscription references the stable OIDC subject rather than the internal Identity id
@@ -34,11 +34,11 @@ Feature: Triggers
     And provisioning state includes safe gateway diagnostics without exposing the callback Bearer token
 
   @triggers/lifecycle @usecase
-  Scenario: Update, archive, and restore a trigger
+  Scenario: Update and soft-delete a trigger
     Given a trigger exists
-    When the user updates fields, archives, or restores it
+    When the user updates fields or deletes it
     Then schedule changes are snapshotted and the transition is reported
-    And archived triggers reject field updates until restored
+    And deleted triggers disappear from product APIs and cannot be restored
     And reference changes are re-validated when the agent or environment changes
 
   @triggers/validation @usecase
@@ -48,21 +48,23 @@ Feature: Triggers
     And no secret-bearing trigger config is persisted
 
   @triggers/delete @usecase
-  Scenario: Permanently delete a trigger and its runs
+  Scenario: Soft-delete a trigger while retaining its run history
     Given a trigger with run history exists
     When the user deletes the trigger
-    Then the trigger and all of its runs are removed and the delete is audited
+    Then the trigger is absent from every product API and the delete is audited
+    And its database tombstone and existing run history remain retained
+    And no new run can be created for the deleted trigger
     And deleting a missing or foreign-project trigger is rejected as not found
 
   # ── API contract (api: assembled server, real D1, pagination, audit) ──
 
   @triggers/api-crud @api
-  Scenario: Create, list, read, update, pause, archive, restore, and audit triggers over the API
-	    Given a signed-in user with an active agent and environment
-	    When the user drives the triggers API end to end
-	    Then create, paginated list, search, suspend filter, read, update, archive, and restore are supported
-	    And trigger create, update, and archive actions are recorded in audit history
-	    And triggers expose safe metadata, spec, and status without raw tenancy fields
+  Scenario: Create, list, read, update, pause, delete, and audit triggers over the API
+    Given a signed-in user with an active agent and environment
+    When the user drives the triggers API end to end
+    Then create, paginated list, search, suspend filter, read, update, and soft deletion are supported
+    And trigger create, update, and delete actions are recorded in audit history
+    And triggers expose safe metadata, spec, and status without raw tenancy fields
 
   @triggers/dispatch @api
   Scenario: Heartbeat dispatch creates one scheduled session per due occurrence
@@ -77,7 +79,7 @@ Feature: Triggers
     Given a signed-in user with an active HTTP trigger
     When the user posts JSON to the trigger runs collection
     Then one run creates a session with a prompt rendered from body, query, and allowed headers
-    And later posts with the same routing key reuse the same non-archived session instead of creating another one
+    And later posts with the same routing key reuse the same live session instead of creating another one
     And missing template variables fail the run request without creating a session
 
   @triggers/inbox-callback @api
@@ -98,7 +100,7 @@ Feature: Triggers
     Given an active Inbox trigger for a provider-bound Agent
     When Inbox delivers notifications with equal, different, and absent routing keys
     Then equal keys share one Session under an atomic route binding
-    And a terminal or archived bound Session is atomically replaced without splitting concurrent deliveries
+    And a terminal or deleted bound Session is atomically replaced without splitting concurrent deliveries
     And a runner-sandbox Session whose live runner route was lost is atomically replaced while an accepted route is reused
     And a cloudflare-sandbox Session is reused without runner-channel preflight
     And different keys use different Sessions
@@ -125,7 +127,7 @@ Feature: Triggers
 
   @triggers/inactive @api
   Scenario: Inactive triggers do not dispatch
-    Given a project has paused and archived triggers
+    Given a project has paused and deleted triggers
     When the heartbeat dispatcher runs
     Then no sessions are created and the inactive triggers have no run history
 

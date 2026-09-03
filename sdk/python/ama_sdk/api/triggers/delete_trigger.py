@@ -98,7 +98,7 @@ def sync_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete a trigger
 
-     Permanently deletes the trigger and its run history.
+     Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -134,7 +134,7 @@ def sync(
 ) -> Any | ErrorResponse | None:
     """ Delete a trigger
 
-     Permanently deletes the trigger and its run history.
+     Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -165,7 +165,7 @@ async def asyncio_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete a trigger
 
-     Permanently deletes the trigger and its run history.
+     Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
@@ -201,7 +201,7 @@ async def asyncio(
 ) -> Any | ErrorResponse | None:
     """ Delete a trigger
 
-     Permanently deletes the trigger and its run history.
+     Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.

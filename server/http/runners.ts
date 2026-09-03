@@ -15,7 +15,12 @@ import {
   parseListCursor,
   SecretRefSchema,
 } from '../openapi'
-import { type RunnerAuthRecord, RunnerConflictError, RunnerValidationError } from '../usecases/ports'
+import {
+  ResourceDeletedDuringMutationError,
+  type RunnerAuthRecord,
+  RunnerConflictError,
+  RunnerValidationError,
+} from '../usecases/ports'
 import { recordRunnerHeartbeat, registerRunner, updateRunner } from '../usecases/runners'
 import { requestId } from './request-context'
 import { runnerForbidden, runnerOidcContext, runnerOperationAuthorized, runnerRuntimeAuthorized } from './runner-auth'
@@ -72,7 +77,6 @@ const RunnerSchema = z
     runtimes: z.array(RunnerRuntimeSchema).openapi({ example: [] }),
     metadata: JsonObjectSchema.openapi({ example: { pool: 'default' } }),
     lastHeartbeatAt: z.string().datetime().nullable(),
-    archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
@@ -108,7 +112,6 @@ const UpdateRunnerSchema = z
     state: z.enum(['active', 'draining', 'disabled']).optional(),
     maxConcurrent: z.number().int().min(1).max(100).optional(),
     metadata: JsonObjectSchema.optional(),
-    archived: z.boolean().optional(),
   })
   .strict()
   .openapi('UpdateRunnerRequest')
@@ -184,7 +187,6 @@ function serializeRunner(runner: RunnerAuthRecord) {
     runtimes: serializeRuntimes(runner.runtimes),
     metadata: runner.metadata,
     lastHeartbeatAt: runner.lastHeartbeatAt,
-    archivedAt: runner.archivedAt,
     createdAt: runner.createdAt,
     updatedAt: runner.updatedAt,
   }
@@ -250,6 +252,7 @@ const readRunnerRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     403: { description: 'Forbidden', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Runner not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Runner has active work', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -258,7 +261,7 @@ const updateRunnerRoute = createRoute({
   path: '/{runnerId}',
   operationId: 'updateRunner',
   tags: ['Runners'],
-  summary: 'Update or archive a self-hosted runner',
+  summary: 'Update a self-hosted runner',
   ...AuthenticatedOperation,
   request: {
     params: ParamsSchema,
@@ -271,6 +274,24 @@ const updateRunnerRoute = createRoute({
     403: { description: 'Forbidden', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Runner not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteRunnerRoute = createRoute({
+  method: 'delete',
+  path: '/{runnerId}',
+  operationId: 'deleteRunner',
+  tags: ['Runners'],
+  summary: 'Delete a self-hosted runner',
+  description: 'Soft-deletes the runner. The retained tombstone cannot be restored through the API.',
+  ...AuthenticatedOperation,
+  request: { params: ParamsSchema },
+  responses: {
+    204: { description: 'Runner deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    403: { description: 'Forbidden', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Runner not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Runner has active work', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -453,6 +474,14 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
         })
         return c.json(serializeRunner(runner), 201)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return errorResponse(
+            c,
+            409,
+            'conflict',
+            'Runner was deleted during registration; retry to create a new runner',
+          )
+        }
         return validationOr(c, error)
       }
     })
@@ -462,16 +491,7 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const {
-        archived,
-        state,
-        search,
-        createdFrom,
-        createdTo,
-        limit = 50,
-        cursor,
-        environmentId,
-      } = c.req.valid('query')
+      const { state, search, createdFrom, createdTo, limit = 50, cursor, environmentId } = c.req.valid('query')
       const runnerToken = isRunnerOidcAuth(c.env, auth)
       if (runnerToken && !auth.oidc.runnerId && !auth.oidc.clientId) {
         return errorResponse(c, 403, 'forbidden', 'Runner token is not authorized for this resource')
@@ -486,7 +506,6 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
       }
       const page = await deps.runners.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(state ? { state } : {}),
         ...(environmentId ? { environmentId } : {}),
         ...(search ? { search } : {}),
@@ -543,12 +562,39 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
           ...(body.state !== undefined ? { state: body.state } : {}),
           ...(body.maxConcurrent !== undefined ? { maxConcurrent: body.maxConcurrent } : {}),
           ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
-          ...(body.archived !== undefined ? { archived: body.archived } : {}),
         })
         return c.json(serializeRunner(result), 200)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return errorResponse(c, 404, 'not_found', 'Runner not found')
+        }
         return validationOr(c, error)
       }
+    })
+    .openapi(deleteRunnerRoute, async (c) => {
+      const { runnerId } = c.req.valid('param')
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const runner = await deps.runners.find(auth.project.id, runnerId)
+      if (!runner) return errorResponse(c, 404, 'not_found', 'Runner not found')
+      if (!runnerOperationAuthorized(c.env, auth, runner)) return runnerForbidden(c)
+      if (runner.currentLoad > 0) return errorResponse(c, 409, 'conflict', 'Runner has active work')
+      if (!(await deps.runners.delete(auth.project.id, runnerId, new Date().toISOString()))) {
+        if (await deps.runners.find(auth.project.id, runnerId)) {
+          return errorResponse(c, 409, 'conflict', 'Runner acquired active work while deletion was in progress')
+        }
+        return errorResponse(c, 404, 'not_found', 'Runner not found')
+      }
+      await deps.audit.record(auth, {
+        action: 'runner.delete',
+        resourceType: 'runner',
+        resourceId: runnerId,
+        outcome: 'success',
+        requestId: requestId(c),
+        before: runner,
+      })
+      return c.body(null, 204)
     })
     .openapi(readHeartbeatRoute, async (c) => {
       const { runnerId } = c.req.valid('param')
@@ -590,6 +636,9 @@ export function registerRunnerRoutes(routes: RunnerRoutes) {
         })
         return c.json(serializeHeartbeat(updated), 200)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return errorResponse(c, 404, 'not_found', 'Runner not found')
+        }
         return validationOr(c, error)
       }
     })

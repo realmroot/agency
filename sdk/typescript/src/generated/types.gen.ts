@@ -732,7 +732,6 @@ export type ResourceMetadata = {
     createdBy: string | null;
     createdAt: string;
     updatedAt: string;
-    archivedAt: string | null;
 };
 
 export type AgentSpec = {
@@ -781,7 +780,7 @@ export type AgentStatus = {
     schedulable: boolean;
 };
 
-export type ResourcePhase = 'active' | 'archived';
+export type ResourcePhase = 'active';
 
 export type CreateAgentRequest = {
     metadata: ResourceCreateMetadata;
@@ -824,10 +823,6 @@ export type UpdateAgentRequest = {
         mcpConnectors?: Array<string>;
         identityRef?: string | null;
     };
-    /**
-     * Lifecycle transition: true archives the agent, false unarchives it.
-     */
-    archived?: boolean;
 };
 
 export type ResourceUpdateMetadata = {
@@ -933,10 +928,6 @@ export type UpdateEnvironmentRequest = {
             };
         };
     };
-    /**
-     * Lifecycle transition: true archives the environment, false unarchives it.
-     */
-    archived?: boolean;
 };
 
 export type EnvironmentVersionListResponse = {
@@ -981,10 +972,6 @@ export type CreateIdentityRequest = {
         username: string;
         runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
     };
-};
-
-export type UpdateIdentityRequest = {
-    archived: true;
 };
 
 export type InboxNotificationReceipt = {
@@ -1090,7 +1077,6 @@ export type Runner = {
         [key: string]: unknown;
     };
     lastHeartbeatAt: string | null;
-    archivedAt: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -1139,7 +1125,6 @@ export type UpdateRunnerRequest = {
     metadata?: {
         [key: string]: unknown;
     };
-    archived?: boolean;
 };
 
 export type RunnerHeartbeat = {
@@ -1621,7 +1606,6 @@ export type UpdateTriggerRequest = {
         };
         nextDueAt?: string;
     };
-    archived?: boolean;
 };
 
 export type TriggerUpdateMetadata = {
@@ -1681,7 +1665,6 @@ export type SessionMetadata = {
     createdBy: string | null;
     createdAt: string;
     updatedAt: string;
-    archivedAt: string | null;
 };
 
 export type SessionSpec = {
@@ -1825,7 +1808,6 @@ export type SessionListResponse = {
 export type UpdateSessionRequest = {
     metadata?: SessionUpdateMetadata;
     state?: 'closed' | 'idle';
-    archived?: boolean;
 };
 
 export type SessionUpdateMetadata = {
@@ -1982,7 +1964,6 @@ export type UpdateMemoryStoreRequest = {
     spec?: {
         [key: string]: never;
     };
-    archived?: boolean;
 };
 
 export type MemoryStoreMemoryListResponse = {
@@ -2057,7 +2038,6 @@ export type UpdateVaultRequest = {
     spec?: {
         scope?: 'project' | 'organization';
     };
-    archived?: boolean;
 };
 
 export type VaultCredentialListResponse = {
@@ -2422,10 +2402,6 @@ export type ListAgentsData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -2525,6 +2501,47 @@ export type CreateAgentResponses = {
 
 export type CreateAgentResponse = CreateAgentResponses[keyof CreateAgentResponses];
 
+export type DeleteAgentData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        agentId: string;
+    };
+    query?: never;
+    url: '/api/v1/agents/{agentId}';
+};
+
+export type DeleteAgentErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Agent not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteAgentError = DeleteAgentErrors[keyof DeleteAgentErrors];
+
+export type DeleteAgentResponses = {
+    /**
+     * Agent deleted
+     */
+    204: void;
+};
+
+export type DeleteAgentResponse = DeleteAgentResponses[keyof DeleteAgentResponses];
+
 export type ReadAgentData = {
     body?: never;
     headers?: {
@@ -2599,7 +2616,7 @@ export type UpdateAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Archived Agent or live Inbox Trigger prevents the requested update
+     * A live Inbox Trigger prevents the requested update
      */
     409: ErrorResponse;
 };
@@ -2712,10 +2729,6 @@ export type ListEnvironmentsData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -2803,6 +2816,47 @@ export type CreateEnvironmentResponses = {
 
 export type CreateEnvironmentResponse = CreateEnvironmentResponses[keyof CreateEnvironmentResponses];
 
+export type DeleteEnvironmentData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        environmentId: string;
+    };
+    query?: never;
+    url: '/api/v1/environments/{environmentId}';
+};
+
+export type DeleteEnvironmentErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Environment not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteEnvironmentError = DeleteEnvironmentErrors[keyof DeleteEnvironmentErrors];
+
+export type DeleteEnvironmentResponses = {
+    /**
+     * Environment deleted
+     */
+    204: void;
+};
+
+export type DeleteEnvironmentResponse = DeleteEnvironmentResponses[keyof DeleteEnvironmentResponses];
+
 export type ReadEnvironmentData = {
     body?: never;
     headers?: {
@@ -2876,10 +2930,6 @@ export type UpdateEnvironmentErrors = {
      * Environment not found
      */
     404: ErrorResponse;
-    /**
-     * Archived environment
-     */
-    409: ErrorResponse;
 };
 
 export type UpdateEnvironmentError = UpdateEnvironmentErrors[keyof UpdateEnvironmentErrors];
@@ -2990,10 +3040,6 @@ export type ListIdentitiesData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -3085,6 +3131,51 @@ export type CreateIdentityResponses = {
 
 export type CreateIdentityResponse = CreateIdentityResponses[keyof CreateIdentityResponses];
 
+export type DeleteIdentityData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        identityId: string;
+    };
+    query?: never;
+    url: '/api/v1/identities/{identityId}';
+};
+
+export type DeleteIdentityErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Not found
+     */
+    404: ErrorResponse;
+    /**
+     * Identity is in use
+     */
+    409: ErrorResponse;
+};
+
+export type DeleteIdentityError = DeleteIdentityErrors[keyof DeleteIdentityErrors];
+
+export type DeleteIdentityResponses = {
+    /**
+     * Identity deleted
+     */
+    204: void;
+};
+
+export type DeleteIdentityResponse = DeleteIdentityResponses[keyof DeleteIdentityResponses];
+
 export type ReadIdentityData = {
     body?: never;
     headers?: {
@@ -3125,51 +3216,6 @@ export type ReadIdentityResponses = {
 };
 
 export type ReadIdentityResponse = ReadIdentityResponses[keyof ReadIdentityResponses];
-
-export type UpdateIdentityData = {
-    body: UpdateIdentityRequest;
-    headers?: {
-        /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
-         */
-        'X-AMA-Project-ID'?: string;
-    };
-    path: {
-        identityId: string;
-    };
-    query?: never;
-    url: '/api/v1/identities/{identityId}';
-};
-
-export type UpdateIdentityErrors = {
-    /**
-     * Authentication required
-     */
-    401: ErrorResponse;
-    /**
-     * The Realmroot token lacks the scope required for this resource
-     */
-    403: ErrorResponse;
-    /**
-     * Not found
-     */
-    404: ErrorResponse;
-    /**
-     * Identity is in use
-     */
-    409: ErrorResponse;
-};
-
-export type UpdateIdentityError = UpdateIdentityErrors[keyof UpdateIdentityErrors];
-
-export type UpdateIdentityResponses = {
-    /**
-     * Archived identity
-     */
-    200: Identity;
-};
-
-export type UpdateIdentityResponse = UpdateIdentityResponses[keyof UpdateIdentityResponses];
 
 export type CreateInboxNotificationData = {
     body: InboxNotification;
@@ -3371,10 +3417,6 @@ export type ListRunnersData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -3463,6 +3505,51 @@ export type CreateRunnerResponses = {
 
 export type CreateRunnerResponse = CreateRunnerResponses[keyof CreateRunnerResponses];
 
+export type DeleteRunnerData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        runnerId: string;
+    };
+    query?: never;
+    url: '/api/v1/runners/{runnerId}';
+};
+
+export type DeleteRunnerErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Runner not found
+     */
+    404: ErrorResponse;
+    /**
+     * Runner has active work
+     */
+    409: ErrorResponse;
+};
+
+export type DeleteRunnerError = DeleteRunnerErrors[keyof DeleteRunnerErrors];
+
+export type DeleteRunnerResponses = {
+    /**
+     * Runner deleted
+     */
+    204: void;
+};
+
+export type DeleteRunnerResponse = DeleteRunnerResponses[keyof DeleteRunnerResponses];
+
 export type ReadRunnerData = {
     body?: never;
     headers?: {
@@ -3491,6 +3578,10 @@ export type ReadRunnerErrors = {
      * Runner not found
      */
     404: ErrorResponse;
+    /**
+     * Runner has active work
+     */
+    409: ErrorResponse;
 };
 
 export type ReadRunnerError = ReadRunnerErrors[keyof ReadRunnerErrors];
@@ -4039,6 +4130,10 @@ export type CreateBudgetErrors = {
      * The selected AMA project does not exist in the authenticated organization
      */
     404: ErrorResponse;
+    /**
+     * Project deletion conflict
+     */
+    409: ErrorResponse;
 };
 
 export type CreateBudgetError = CreateBudgetErrors[keyof CreateBudgetErrors];
@@ -4484,10 +4579,6 @@ export type ListTriggersData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -4874,10 +4965,6 @@ export type ListSessionsData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -4965,6 +5052,51 @@ export type CreateSessionResponses = {
 };
 
 export type CreateSessionResponse = CreateSessionResponses[keyof CreateSessionResponses];
+
+export type DeleteSessionData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/api/v1/sessions/{sessionId}';
+};
+
+export type DeleteSessionErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Session not found
+     */
+    404: ErrorResponse;
+    /**
+     * Runtime could not be stopped
+     */
+    409: ErrorResponse;
+};
+
+export type DeleteSessionError = DeleteSessionErrors[keyof DeleteSessionErrors];
+
+export type DeleteSessionResponses = {
+    /**
+     * Session deleted
+     */
+    204: void;
+};
+
+export type DeleteSessionResponse = DeleteSessionResponses[keyof DeleteSessionResponses];
 
 export type ReadSessionData = {
     body?: never;
@@ -5471,10 +5603,6 @@ export type ListMemoryStoresData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -5544,6 +5672,10 @@ export type CreateMemoryStoreErrors = {
      * The selected AMA project does not exist in the authenticated organization
      */
     404: ErrorResponse;
+    /**
+     * Project deletion conflict
+     */
+    409: ErrorResponse;
 };
 
 export type CreateMemoryStoreError = CreateMemoryStoreErrors[keyof CreateMemoryStoreErrors];
@@ -5556,6 +5688,47 @@ export type CreateMemoryStoreResponses = {
 };
 
 export type CreateMemoryStoreResponse = CreateMemoryStoreResponses[keyof CreateMemoryStoreResponses];
+
+export type DeleteMemoryStoreData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        storeId: string;
+    };
+    query?: never;
+    url: '/api/v1/memory-stores/{storeId}';
+};
+
+export type DeleteMemoryStoreErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Memory store not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteMemoryStoreError = DeleteMemoryStoreErrors[keyof DeleteMemoryStoreErrors];
+
+export type DeleteMemoryStoreResponses = {
+    /**
+     * Memory store deleted
+     */
+    204: void;
+};
+
+export type DeleteMemoryStoreResponse = DeleteMemoryStoreResponses[keyof DeleteMemoryStoreResponses];
 
 export type ReadMemoryStoreData = {
     body?: never;
@@ -5842,10 +6015,6 @@ export type ListVaultsData = {
     };
     path?: never;
     query?: {
-        /**
-         * Filter by lifecycle. Defaults to false (live resources only).
-         */
-        archived?: 'true' | 'false';
         search?: string;
         createdFrom?: string;
         createdTo?: string;
@@ -5915,6 +6084,10 @@ export type CreateVaultErrors = {
      * The selected AMA project does not exist in the authenticated organization
      */
     404: ErrorResponse;
+    /**
+     * Project deletion conflict
+     */
+    409: ErrorResponse;
 };
 
 export type CreateVaultError = CreateVaultErrors[keyof CreateVaultErrors];
@@ -5927,6 +6100,47 @@ export type CreateVaultResponses = {
 };
 
 export type CreateVaultResponse = CreateVaultResponses[keyof CreateVaultResponses];
+
+export type DeleteVaultData = {
+    body?: never;
+    headers?: {
+        /**
+         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         */
+        'X-AMA-Project-ID'?: string;
+    };
+    path: {
+        vaultId: string;
+    };
+    query?: never;
+    url: '/api/v1/vaults/{vaultId}';
+};
+
+export type DeleteVaultErrors = {
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Vault not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteVaultError = DeleteVaultErrors[keyof DeleteVaultErrors];
+
+export type DeleteVaultResponses = {
+    /**
+     * Vault deleted
+     */
+    204: void;
+};
+
+export type DeleteVaultResponse = DeleteVaultResponses[keyof DeleteVaultResponses];
 
 export type ReadVaultData = {
     body?: never;
@@ -6103,7 +6317,7 @@ export type CreateVaultCredentialErrors = {
      */
     404: ErrorResponse;
     /**
-     * Vault archived
+     * Vault unavailable
      */
     409: ErrorResponse;
 };

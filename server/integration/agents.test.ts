@@ -115,7 +115,7 @@ describe('[CF] /api/v1/agents', () => {
     await expect(readRes.json()).resolves.toMatchObject({ metadata: { uid: legacyId } })
   })
 
-  it('creates, reads, updates, versions, and archives project-scoped agents [spec: agents/api-crud] [spec: agents/api-archive]', async () => {
+  it('creates, reads, updates, versions, and deletes project-scoped agents [spec: agents/api-crud] [spec: agents/api-delete]', async () => {
     const authorization = await signIn()
 
     const createRes = await jsonFetch('/api/v1/agents', authorization, {
@@ -139,7 +139,7 @@ describe('[CF] /api/v1/agents', () => {
     })
     expect(createRes.status).toBe(201)
     const created = (await createRes.json()) as {
-      metadata: { uid: string; archivedAt: string | null; description: string | null }
+      metadata: { uid: string; description: string | null }
       spec: {
         provider: string | null
         systemPrompt: string
@@ -153,14 +153,13 @@ describe('[CF] /api/v1/agents', () => {
     const createdId = created.metadata.uid
     expect(created.status.version).toBe(1)
     expect(created.spec.provider).toBeNull()
-    expect(created.metadata.archivedAt).toBeNull()
     expect(created.status.phase).toBe('active')
     expect(created.spec.allowedTools).toEqual(['read', 'fetch'])
 
     const readRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization)
     expect(readRes.status).toBe(200)
     await expect(readRes.json()).resolves.toMatchObject({
-      metadata: { uid: createdId, archivedAt: null },
+      metadata: { uid: createdId },
       spec: {
         provider: null,
         systemPrompt: 'Answer with citations.',
@@ -245,17 +244,8 @@ describe('[CF] /api/v1/agents', () => {
     const invalidVersionRes = await jsonFetch(`/api/v1/agents/${createdId}/versions/not-a-number`, authorization)
     expect(invalidVersionRes.status).toBe(400)
 
-    // Archive = PATCH {archived: true}; DELETE no longer exists.
     const deleteRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, { method: 'DELETE' })
-    expect(deleteRes.status).toBe(404)
-
-    const archiveRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    const archivedAgent = (await archiveRes.json()) as { metadata: { archivedAt: string | null } }
-    expect(archivedAgent.metadata.archivedAt).toEqual(expect.any(String))
+    expect(deleteRes.status).toBe(204)
 
     const listRes = await jsonFetch('/api/v1/agents', authorization)
     expect(listRes.status).toBe(200)
@@ -268,59 +258,40 @@ describe('[CF] /api/v1/agents', () => {
     )
     expect(list.pagination.hasMore).toBe(false)
 
-    const archivedListRes = await jsonFetch('/api/v1/agents?archived=true', authorization)
-    expect(archivedListRes.status).toBe(200)
-    const archivedList = (await archivedListRes.json()) as {
-      data: Array<{ metadata: { uid: string; archivedAt: string | null } }>
-    }
-    expect(archivedList.data).toContainEqual(
-      expect.objectContaining({
-        metadata: expect.objectContaining({ uid: createdId, archivedAt: expect.any(String) }),
-      }),
-    )
-
-    const archivedReadRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization)
-    expect(archivedReadRes.status).toBe(200)
-    await expect(archivedReadRes.json()).resolves.toMatchObject({ metadata: { archivedAt: expect.any(String) } })
-
-    const auditRes = await jsonFetch('/api/v1/audit-records?action=agent.archive', authorization)
-    expect(auditRes.status).toBe(200)
-    await expect(auditRes.json()).resolves.toMatchObject({
-      data: [expect.objectContaining({ resourceId: createdId, outcome: 'success' })],
-    })
-
-    const archivedUpdateRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
+    const deletedReadRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization)
+    expect(deletedReadRes.status).toBe(404)
+    const deletedUpdateRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ metadata: { description: 'Cannot update archived agents' } }),
+      body: JSON.stringify({ metadata: { description: 'Cannot update deleted agents' } }),
     })
-    expect(archivedUpdateRes.status).toBe(409)
+    expect(deletedUpdateRes.status).toBe(404)
+    expect((await jsonFetch(`/api/v1/agents/${createdId}`, authorization, { method: 'DELETE' })).status).toBe(404)
+    expect(
+      (
+        await env.DB.prepare('SELECT deleted_at FROM agents WHERE id = ?')
+          .bind(createdId)
+          .first<{ deleted_at: string }>()
+      )?.deleted_at,
+    ).toEqual(expect.any(String))
 
-    // Archiving an archived agent is idempotent.
-    const reArchiveRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
+    const project = await env.DB.prepare('SELECT project_id FROM agents WHERE id = ?')
+      .bind(createdId)
+      .first<{ project_id: string }>()
+    await env.DB.prepare('UPDATE projects SET deleted_at = ? WHERE id = ?')
+      .bind(new Date().toISOString(), project!.project_id)
+      .run()
+    const deletedProjectCreateRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Cannot attach to deleted project')),
     })
-    expect(reArchiveRes.status).toBe(200)
-
-    const unarchiveRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: false }),
-    })
-    expect(unarchiveRes.status).toBe(200)
-    await expect(unarchiveRes.json()).resolves.toMatchObject({ metadata: { archivedAt: null } })
-
-    const unarchivedUpdateRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ metadata: { description: 'Updatable again' } }),
-    })
-    expect(unarchivedUpdateRes.status).toBe(200)
+    expect(deletedProjectCreateRes.status).toBe(409)
   })
 
-  it('[spec: agents/api-archive] archives a persisted legacy agent without validating its runtime fields', async () => {
+  it('[spec: agents/api-delete] deletes a persisted legacy agent without validating its runtime fields', async () => {
     const authorization = await signIn()
     const createdRes = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
-      body: JSON.stringify(agentBody('Legacy archive target')),
+      body: JSON.stringify(agentBody('Legacy delete target')),
     })
     const created = (await createdRes.json()) as { metadata: { uid: string } }
     await env.DB.prepare('UPDATE agents SET subagents = ? WHERE id = ?')
@@ -337,46 +308,12 @@ describe('[CF] /api/v1/agents', () => {
       )
       .run()
 
-    const archiveRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-
-    expect(archiveRes.status).toBe(200)
-    const archived = (await archiveRes.json()) as {
-      metadata: Record<string, unknown>
-      spec: { subagents: Array<Record<string, unknown>> }
-      status: Record<string, unknown>
-    }
-    expect(archived).toMatchObject({
-      metadata: { uid: created.metadata.uid, archivedAt: expect.any(String) },
-      spec: {
-        subagents: [
-          {
-            name: 'Maya Lin',
-            description: 'Legacy persisted sub-agent.',
-            systemPrompt: 'Review the work.',
-            model: null,
-            allowedTools: [],
-            skills: [],
-            mcpConnectors: [],
-          },
-        ],
-      },
-      status: { phase: 'archived' },
-    })
-    expect(Object.keys(archived.spec.subagents[0])).toEqual([
-      'name',
-      'description',
-      'systemPrompt',
-      'model',
-      'allowedTools',
-      'skills',
-      'mcpConnectors',
-    ])
+    const deleteRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
+    expect((await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization)).status).toBe(404)
   })
 
-  it('lists agents with pagination, search, archived, and date filters within the project [spec: agents/api-pagination] [spec: api-contracts/pagination] [spec: api-contracts/date-filters]', async () => {
+  it('lists agents with pagination, search, and date filters within the project [spec: agents/api-pagination] [spec: api-contracts/pagination] [spec: api-contracts/date-filters]', async () => {
     const authorization = await signIn()
     const createAlphaRes = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
@@ -390,33 +327,20 @@ describe('[CF] /api/v1/agents', () => {
     })
     const beta = (await createBetaRes.json()) as { metadata: { uid: string; createdAt: string } }
     const betaId = beta.metadata.uid
-    await jsonFetch(`/api/v1/agents/${alphaId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
+    await jsonFetch(`/api/v1/agents/${alphaId}`, authorization, { method: 'DELETE' })
 
     const defaultListRes = await jsonFetch('/api/v1/agents?limit=1', authorization)
     expect(defaultListRes.status).toBe(200)
     const defaultList = (await defaultListRes.json()) as {
-      data: Array<{ metadata: { uid: string; archivedAt: string | null } }>
+      data: Array<{ metadata: { uid: string } }>
       pagination: { limit: number; hasMore: boolean; nextCursor: string | null }
     }
-    expect(defaultList.data).toEqual([
-      expect.objectContaining({ metadata: expect.objectContaining({ uid: betaId, archivedAt: null }) }),
-    ])
+    expect(defaultList.data).toEqual([expect.objectContaining({ metadata: expect.objectContaining({ uid: betaId }) })])
     expect(defaultList.pagination).toMatchObject({ limit: 1, hasMore: false, nextCursor: null })
 
-    const archivedListRes = await jsonFetch('/api/v1/agents?archived=true', authorization)
-    const archivedList = (await archivedListRes.json()) as {
-      data: Array<{ metadata: { uid: string; archivedAt: string | null } }>
-    }
-    expect(archivedList.data).toEqual([
-      expect.objectContaining({ metadata: expect.objectContaining({ uid: alphaId, archivedAt: expect.any(String) }) }),
-    ])
-
-    const searchRes = await jsonFetch('/api/v1/agents?archived=true&search=Alpha', authorization)
+    const searchRes = await jsonFetch('/api/v1/agents?search=Alpha', authorization)
     const searchList = (await searchRes.json()) as { data: Array<{ metadata: { uid: string } }> }
-    expect(searchList.data).toEqual([expect.objectContaining({ metadata: expect.objectContaining({ uid: alphaId }) })])
+    expect(searchList.data).toEqual([])
 
     const noMatchSearchRes = await jsonFetch('/api/v1/agents?search=Alpha', authorization)
     const noMatchSearch = (await noMatchSearchRes.json()) as { data: Array<{ metadata: { uid: string } }> }
@@ -537,24 +461,13 @@ describe('[CF] /api/v1/agents', () => {
     expect(concealedRes.status).toBe(200)
     await expect(concealedRes.json()).resolves.toMatchObject({ data: [] })
 
-    const archiveRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    const defaultArchivedLookup = await jsonFetch(
+    const deleteRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
+    const deletedLookup = await jsonFetch(
       `/api/v1/agents?identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
       authorization,
     )
-    await expect(defaultArchivedLookup.json()).resolves.toMatchObject({ data: [] })
-    const archivedLookup = await jsonFetch(
-      `/api/v1/agents?archived=true&identityAgentId=${encodeURIComponent(realmrootAgentId)}`,
-      authorization,
-    )
-    expect(archivedLookup.status).toBe(200)
-    await expect(archivedLookup.json()).resolves.toMatchObject({
-      data: [{ metadata: { uid: created.metadata.uid, archivedAt: expect.any(String) } }],
-    })
+    await expect(deletedLookup.json()).resolves.toMatchObject({ data: [] })
 
     const emptyRes = await jsonFetch('/api/v1/agents?identityAgentId=', authorization)
     expect(emptyRes.status).toBe(400)
@@ -744,7 +657,6 @@ describe('[CF] /api/v1/agents', () => {
         description: string | null
         createdAt: string
         updatedAt: string
-        archivedAt: string | null
       }
     }
     expect(replay.status).toBe(201)
@@ -770,42 +682,12 @@ describe('[CF] /api/v1/agents', () => {
       status: { version: 2 },
     })
 
-    const archive = await jsonFetch(`/api/v1/agents/${firstAgent.metadata.uid}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archive.status).toBe(200)
-    await expect(archive.json()).resolves.toMatchObject({
-      metadata: { name: 'Renamed Agent', description: 'Updated description.', archivedAt: expect.any(String) },
-      status: { phase: 'archived', version: 2 },
-    })
+    const deleted = await jsonFetch(`/api/v1/agents/${firstAgent.metadata.uid}`, authorization, { method: 'DELETE' })
+    expect(deleted.status).toBe(204)
 
     const postUpdateReplay = await create()
-    expect(postUpdateReplay.status).toBe(201)
-    const replayedAgent = (await postUpdateReplay.json()) as {
-      metadata: {
-        uid: string
-        name: string
-        description: string | null
-        createdAt: string
-        updatedAt: string
-        archivedAt: string | null
-      }
-      spec: { systemPrompt: string }
-      status: { phase: string; version: number }
-    }
-    expect(replayedAgent).toMatchObject({
-      metadata: {
-        uid: firstAgent.metadata.uid,
-        name: 'Idempotent Agent',
-        description: null,
-        archivedAt: null,
-      },
-      spec: { systemPrompt: 'Idempotent Agent system prompt.' },
-      status: { phase: 'active', version: 1 },
-    })
-    expect(replayedAgent.metadata.updatedAt).toBe(replayedAgent.metadata.createdAt)
-    expect(replayedAgent.metadata.createdAt).toBe(firstAgent.metadata.createdAt)
+    expect(postUpdateReplay.status).toBe(409)
+    await expect(postUpdateReplay.json()).resolves.toMatchObject({ error: { type: 'idempotency_conflict' } })
 
     const conflict = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',

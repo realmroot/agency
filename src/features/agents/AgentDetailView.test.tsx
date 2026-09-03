@@ -139,39 +139,29 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
     expect(screen.getByText('v3')).toBeInTheDocument()
   })
 
-  it('renders archive button when onArchive is provided and agent is not archived', async () => {
-    const onArchive = vi.fn()
+  it('renders delete button when onDelete is provided', async () => {
+    const onDelete = vi.fn()
     const agent = buildAgent()
     render(
       <MemoryRouter>
-        <AgentDetailView agent={agent} versions={[]} sessions={[]} onArchive={onArchive} />
+        <AgentDetailView agent={agent} versions={[]} sessions={[]} onDelete={onDelete} />
       </MemoryRouter>,
     )
-    const archiveBtn = screen.getByRole('button', { name: 'Archive' })
-    fireEvent.click(archiveBtn)
-    const confirmBtn = await screen.findByRole('button', { name: 'Archive agent' })
+    const deleteButton = screen.getByRole('button', { name: 'Delete' })
+    fireEvent.click(deleteButton)
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete agent' })
     fireEvent.click(confirmBtn)
-    expect(onArchive).toHaveBeenCalledWith('agent_1')
+    expect(onDelete).toHaveBeenCalledWith('agent_1')
   })
 
-  it('does not render archive button when agent is already archived', () => {
-    const agent = buildAgent({ archivedAt: now })
-    render(
-      <MemoryRouter>
-        <AgentDetailView agent={agent} versions={[]} sessions={[]} onArchive={vi.fn()} />
-      </MemoryRouter>,
-    )
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull()
-  })
-
-  it('does not render archive button when onArchive is not provided', () => {
+  it('does not render delete button when onDelete is not provided', () => {
     const agent = buildAgent()
     render(
       <MemoryRouter>
         <AgentDetailView agent={agent} versions={[]} sessions={[]} />
       </MemoryRouter>,
     )
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
   })
 
   it('renders None for skills, allowed tools, and connectors when all are empty', () => {

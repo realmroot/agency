@@ -116,7 +116,7 @@ export async function reconcileInboxSubscription(
     throw new TriggerProvisioningError('Inbox Trigger has no valid Realmroot Agent binding')
   }
   const subscriptionId = trigger.status.subscription.id
-  const enabled = trigger.metadata.archivedAt === null && !trigger.spec.suspend
+  const enabled = trigger.metadata.deletedAt === null && !trigger.spec.suspend
   const timestamp = new Date().toISOString()
   if (!enabled) {
     try {

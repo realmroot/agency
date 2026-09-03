@@ -6,7 +6,7 @@ const now = '2026-08-29T00:00:00.000Z'
 
 function identity(
   state: 'provisioning' | 'active' | 'error',
-  overrides: { archivedAt?: string | null; boundAgentId?: string | null } = {},
+  overrides: { boundAgentId?: string | null } = {},
 ): Identity {
   const fixture: Identity = {
     metadata: {
@@ -19,7 +19,6 @@ function identity(
       createdBy: 'user_1',
       createdAt: now,
       updatedAt: now,
-      archivedAt: overrides.archivedAt ?? null,
     },
     spec: { username: 'operator', runtime: 'codex' },
     status: {
@@ -45,10 +44,6 @@ describe('identity display labels', () => {
     ['error', 'Needs attention'],
   ] as const)('maps %s state to %s', (state, expected) => {
     expect(identityStatusLabel(identity(state))).toBe(expected)
-  })
-
-  it('gives archived identities precedence over their provisioning state', () => {
-    expect(identityStatusLabel(identity('provisioning', { archivedAt: now }))).toBe('Archived')
   })
 
   it('exposes assignment state without exposing the bound agent id', () => {
