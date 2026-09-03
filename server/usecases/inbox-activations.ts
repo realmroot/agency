@@ -98,14 +98,6 @@ async function existingRouteSession(deps: Deps, projectId: string, sessionId: st
 
 async function routeSessionNeedsReplacement(deps: Deps, session: RuntimeSessionHandle) {
   if (session.state === 'error' || session.archivedAt !== null) return true
-  if (
-    session.state === 'closed' &&
-    session.metadata.sandboxBackend !== 'runner-sandbox' &&
-    session.sandboxId !== null &&
-    typeof session.metadata.sandboxDestroyedAt !== 'string'
-  ) {
-    return true
-  }
   if (session.metadata.sandboxBackend !== 'runner-sandbox') return false
   return !(await deps.runnerChannel.isAccepted(session.id))
 }

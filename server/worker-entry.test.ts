@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const scheduledMocks = vi.hoisted(() => ({
-  maintainCloudSessionLifecycle: vi.fn(async () => undefined),
+  markStalledCloudSessions: vi.fn(async () => undefined),
   reconcileInboxSubscriptions: vi.fn(async () => undefined),
 }))
 
@@ -21,8 +21,8 @@ vi.mock('./usecases/inbox-subscriptions', () => scheduledMocks)
 vi.mock('./usecases/providers', () => ({ refreshPlatformCatalog: vi.fn(async () => undefined) }))
 vi.mock('./usecases/runtime', () => ({
   consumeCloudTurnQueueMessage: vi.fn(),
-  maintainCloudSessionLifecycle: scheduledMocks.maintainCloudSessionLifecycle,
   markCloudTurnDeadLettered: vi.fn(),
+  markStalledCloudSessions: scheduledMocks.markStalledCloudSessions,
 }))
 
 import worker from './worker'
@@ -31,7 +31,7 @@ describe('Worker scheduled entry', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.restoreAllMocks())
 
-  it('[spec: sessions/idle-timeout] schedules one unified cloud Session lifecycle maintenance pass', async () => {
+  it('[spec: runtime/idle-retention] schedules stalled-session recovery without an idle-session closer', async () => {
     const pending: Promise<unknown>[] = []
     const ctx = { waitUntil: (promise: Promise<unknown>) => void pending.push(promise) } as ExecutionContext
 
@@ -42,7 +42,7 @@ describe('Worker scheduled entry', () => {
     )
     await Promise.all(pending)
 
-    expect(scheduledMocks.maintainCloudSessionLifecycle).toHaveBeenCalledOnce()
+    expect(scheduledMocks.markStalledCloudSessions).toHaveBeenCalledOnce()
   })
 
   it('redacts callback and Basic credentials from scheduled failure logs', async () => {

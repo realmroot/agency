@@ -12,11 +12,7 @@ import { recoverInboxActivations } from './usecases/inbox-activations'
 import { reconcileInboxSubscriptions } from './usecases/inbox-subscriptions'
 import type { CloudTurnQueueMessage, TriggerDispatchQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
-import {
-  consumeCloudTurnQueueMessage,
-  maintainCloudSessionLifecycle,
-  markCloudTurnDeadLettered,
-} from './usecases/runtime'
+import { consumeCloudTurnQueueMessage, markCloudTurnDeadLettered, markStalledCloudSessions } from './usecases/runtime'
 
 export { Sandbox } from '@cloudflare/sandbox'
 export { RunnerPoolObject } from './worker/runner-pool-object'
@@ -56,7 +52,7 @@ export default {
         scheduledAt,
       },
     )
-    waitUntilLogged(ctx, 'scheduled.cloud-session-maintenance.failed', maintainCloudSessionLifecycle(createDeps(env)), {
+    waitUntilLogged(ctx, 'scheduled.stalled-sessions.failed', markStalledCloudSessions(createDeps(env)), {
       scheduledAt,
     })
     waitUntilLogged(ctx, 'scheduled.serial-http-triggers.failed', recoverSerialHttpTriggers(createDeps(env)), {

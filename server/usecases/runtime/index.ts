@@ -65,4 +65,4 @@ export {
   buildSessionTurnCallbacks,
   type SessionTurnCallbacks,
 } from './turn-callbacks'
-export { maintainCloudSessionLifecycle, markIdleTimedOutSessions, markStalledCloudSessions } from './watchdog'
+export { markStalledCloudSessions } from './watchdog'

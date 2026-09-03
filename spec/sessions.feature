@@ -110,19 +110,13 @@ Feature: Sessions
     Given a session is running
     When the user closes the session
     Then cloud-owned runtime work is cancelled and no new work starts after the cancellation boundary
+    And close atomically claims the same sandbox with cleanup ownership lasting beyond one Worker invocation only when no live turn or cleanup lease exists
+    And a claimed cloud close remains marked closing and cannot be reopened until exact-owner teardown is atomically finalized
     And the status becomes closed with close lifecycle and audit records
-    And a successfully destroyed cloud sandbox and close time are recorded atomically only while the Session remains closed on that exact generation
-    And a stale close attempt cannot stop, finalize, or report failure against a newer sandbox generation
-    And the user can reopen the same session without a prompt only after cloud sandbox destruction is confirmed and send follow-up work
+    And failed terminal sandbox cleanup releases ownership unstamped so a later maintenance pass can retry it
+    And leaked cleanup skips live owners, can take over stale closing work, and stamps only its exact sandbox ownership
+    And reopening atomically removes the destruction marker, starts a new generation epoch, and accepts follow-up work
     And no successful completion events are written after cancellation
-
-  @sessions/idle-timeout @usecase
-  Scenario: Reclaim an idle cloud Session after its retention period
-    Given idle cloud Sessions whose configured retention periods have elapsed while older ended sandboxes await cleanup
-    When scheduled Session lifecycle maintenance runs
-    Then the oldest bounded batch is closed and its exact sandboxes are destroyed directly in the same maintenance pass
-    And older ended sandboxes are reclaimed through bounded retryable sweeps without stamping a failed destruction
-    And starting a reopened Session clears the prior sandbox destruction marker so each new sandbox generation remains reclaimable
 
   @sessions/archive @api
   Scenario: Archive and read sessions safely

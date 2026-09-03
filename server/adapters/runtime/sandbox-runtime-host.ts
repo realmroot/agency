@@ -179,6 +179,8 @@ export function workspaceVolumeManifest(manifest: WorkspaceManifest = { root: '/
 }
 
 const GIT_CLONE_TIMEOUT_MS = 120_000
+const RUNTIME_READY_MARKER = '/tmp/.ama-runtime-ready'
+const IDLE_LIFECYCLE_ATTEMPTS = 3
 
 type CloudWorkspaceSandbox = {
   exec(
@@ -502,6 +504,7 @@ export async function startSessionRuntime(
       manifest: input.workspaceManifest ?? { root: '/workspace', mounts: [] },
       env: sessionEnv,
     })
+    await sandbox.writeFile(RUNTIME_READY_MARKER, 'ready', { encoding: 'utf-8' })
   }
 
   return {
@@ -518,8 +521,32 @@ export async function startSessionRuntime(
   }
 }
 
+export async function activateSessionRuntime(env: Env, input: SessionRuntimeStartInput) {
+  if (env.AMA_RUNTIME_MODE === 'test') return
+  const getSandbox = await getSandboxBinding()
+  const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
+  const marker = await sandbox.exec(`test -f ${shellQuote(RUNTIME_READY_MARKER)}`)
+  if (marker.exitCode === 0) return
+  await startSessionRuntime(env, input)
+}
+
 export async function stopSessionRuntime(env: Env, sandboxId: string) {
   await toolExecutor(env).stop?.(sandboxId)
+}
+
+export async function idleSessionRuntime(env: Env, sandboxId: string, sleepAfterSeconds: number) {
+  if (env.AMA_RUNTIME_MODE === 'test') return
+  const getSandbox = await getSandboxBinding()
+  const sandbox = getSandbox(env.SANDBOX, sandboxId, { normalizeId: true })
+  for (let attempt = 1; attempt <= IDLE_LIFECYCLE_ATTEMPTS; attempt += 1) {
+    try {
+      await sandbox.setSleepAfter(`${sleepAfterSeconds}s`)
+      await sandbox.setKeepAlive(false)
+      return
+    } catch (error) {
+      if (attempt === IDLE_LIFECYCLE_ATTEMPTS) throw error
+    }
+  }
 }
 
 export async function readMemoryStoreMemories(
@@ -697,6 +724,12 @@ export function createRuntimeExecutionAdapters(
     cloudRuntime: {
       startCloudSession(input) {
         return startSessionRuntime(env, input)
+      },
+      activateCloudSession(input) {
+        return activateSessionRuntime(env, input)
+      },
+      idleCloudSession(sandboxId, sleepAfterSeconds) {
+        return idleSessionRuntime(env, sandboxId, sleepAfterSeconds)
       },
       stopCloudSession(sandboxId) {
         return stopSessionRuntime(env, sandboxId)

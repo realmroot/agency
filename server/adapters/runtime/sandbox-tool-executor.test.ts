@@ -237,7 +237,7 @@ describe('tool-executor', () => {
     expect(sandboxMock.destroy).toHaveBeenCalledTimes(1)
   })
 
-  it('propagates destroy failure to the lifecycle owner so cleanup remains retryable', async () => {
+  it('propagates destroy failure to the lifecycle owner', async () => {
     const failure = new Error('sandbox destroy unavailable')
     sandboxMock.destroy.mockRejectedValue(failure)
     const executor = new CloudflareSandboxToolExecutor({ SANDBOX: {} } as Env)

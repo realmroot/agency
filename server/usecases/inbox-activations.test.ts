@@ -467,52 +467,6 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
     expect(dispatchToReusableSession).not.toHaveBeenCalled()
   })
 
-  it('atomically replaces a closed cloud route whose prior sandbox still awaits confirmed cleanup', async () => {
-    const existing = {
-      ...runtimeSession('session_cleanup_pending', 'cloudflare-sandbox'),
-      state: 'closed' as const,
-      metadata: { sandboxBackend: 'cloudflare-sandbox', annotations: {} },
-    }
-    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
-    vi.mocked(fake.value.sessions.findRuntimeRow).mockResolvedValueOnce(existing).mockResolvedValueOnce(null)
-    vi.mocked(createSession).mockResolvedValueOnce({ ok: true, value: session('session_replacement') })
-
-    await dispatchInboxActivation(fake.value, 'run_1')
-
-    expect(fake.replace).toHaveBeenCalledWith(expect.objectContaining({ expectedSessionId: existing.id }))
-    expect(createSession).toHaveBeenCalledWith(
-      fake.value,
-      expect.anything(),
-      expect.objectContaining({ options: expect.objectContaining({ id: 'session_replacement' }) }),
-    )
-    expect(dispatchToReusableSession).not.toHaveBeenCalled()
-  })
-
-  it('keeps the existing reopen path for a closed cloud route after sandbox cleanup is confirmed', async () => {
-    const existing = {
-      ...runtimeSession('session_cleanup_confirmed', 'cloudflare-sandbox'),
-      state: 'closed' as const,
-      metadata: {
-        sandboxBackend: 'cloudflare-sandbox',
-        sandboxDestroyedAt: '2026-09-02T00:00:00.000Z',
-        annotations: { 'ama.dev/idle-timeout-seconds': '60' },
-      },
-    }
-    const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing })
-
-    await dispatchInboxActivation(fake.value, 'run_1')
-
-    expect(fake.replace).not.toHaveBeenCalled()
-    expect(createSession).not.toHaveBeenCalled()
-    expect(dispatchToReusableSession).toHaveBeenCalledWith(
-      fake.value,
-      expect.anything(),
-      existing,
-      expect.any(String),
-      'inbox:event_1',
-    )
-  })
-
   it('runner availability: replaces an inactive runner-sandbox route and creates a fresh Session', async () => {
     const existing = runtimeSession('session_inactive_runner', 'runner-sandbox')
     const fake = deps({ reserve: { sessionId: existing.id, owned: false }, existing, runnerAccepted: false })
