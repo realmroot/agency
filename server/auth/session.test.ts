@@ -182,7 +182,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     expect((await request('/api/v1/agents/agent_1', { permissions })).status).toBe(403)
   })
 
-  it('rejects before creating or resolving a Default project', async () => {
+  it('rejects before creating or resolving the default Project', async () => {
     const response = await request('/api/v1/agents/agent_1', { permissions: [] })
 
     expect(response.status).toBe(403)

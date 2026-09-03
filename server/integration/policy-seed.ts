@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers'
+import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Env } from '../env'
 
 type PolicyScope =
@@ -105,10 +106,10 @@ async function resolveProjectId(db: Env['DB'], organizationId: string) {
   await db
     .prepare(
       `INSERT INTO projects (id, organization_id, name, created_at, updated_at)
-     VALUES (?, ?, 'Default project', ?, ?)
+     VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(id) DO NOTHING`,
     )
-    .bind(projectId, organizationId, timestamp, timestamp)
+    .bind(projectId, organizationId, DEFAULT_PROJECT_NAME, timestamp, timestamp)
     .run()
   return projectId
 }

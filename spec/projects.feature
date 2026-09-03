@@ -10,7 +10,7 @@ Feature: Projects
   Scenario: Materialize and create projects in the caller organization
     Given a caller signs in to an organization
     When the caller lists projects on a first empty page or creates a project
-    Then a default project is lazily created on the first empty page only
+    Then a project named "Default" is lazily created on the first empty page only
     And an explicitly created project is inserted in the caller organization
 
   # ── External product as substrate (e2e: real SDK + Worker + D1) ──

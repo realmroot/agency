@@ -64,7 +64,7 @@ const AuthOrganizationSchema = z
 const AuthProjectSchema = z
   .object({
     id: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000001' }),
-    name: z.string().openapi({ example: 'Default project' }),
+    name: z.string().openapi({ example: 'Default' }),
   })
   .openapi('AuthProject')
 

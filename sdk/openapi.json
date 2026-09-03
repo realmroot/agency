@@ -2564,7 +2564,7 @@
           },
           "name": {
             "type": "string",
-            "example": "Default project"
+            "example": "Default"
           }
         },
         "required": [

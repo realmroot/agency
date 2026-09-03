@@ -1,3 +1,4 @@
+import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Deps } from './deps'
 import type { OrgScope, ProjectListQuery, ProjectRecord } from './ports'
 
@@ -10,7 +11,7 @@ export async function listProjects(
 ): Promise<{ rows: ProjectRecord[]; hasMore: boolean }> {
   const page = await deps.projects.list({ organizationId: auth.organization.id, ...query })
   if (page.rows.length === 0 && !query.cursor) {
-    const created = await deps.projects.insert(auth.organization.id, 'Default project', new Date().toISOString())
+    const created = await deps.projects.insert(auth.organization.id, DEFAULT_PROJECT_NAME, new Date().toISOString())
     return { rows: [created], hasMore: false }
   }
   return page

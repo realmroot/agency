@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { createRemoteJWKSet, customFetch, type JWKSCacheInput, type JWTPayload, jwksCache, jwtVerify } from 'jose'
 import { projects } from '../db/schema'
+import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Env } from '../env'
 import { newPrimaryKey } from '../id'
 import { verifyDpopCredential } from './dpop'
@@ -189,7 +190,7 @@ export async function upsertProjectForClaims(
   requestedProjectId?: string,
 ) {
   const organizationId = organizationIdForClaims(claims)
-  const projectName = 'Default project'
+  const projectName = DEFAULT_PROJECT_NAME
 
   if (requestedProjectId) {
     const requestedProject = await db
