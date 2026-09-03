@@ -56,7 +56,7 @@ func TestClientFacadeConfiguresHeadersAndCallsGeneratedOperation(t *testing.T) {
 		if got := r.Header.Get("dpop"); got != "proof_1" {
 			t.Fatalf("expected DPoP proof header, got %q", got)
 		}
-		if got := r.Header.Get("x-ama-project-id"); got != "project_1" {
+		if got := r.Header.Get("x-enbor-project-id"); got != "project_1" {
 			t.Fatalf("expected project header, got %q", got)
 		}
 		var body CreateRunnerRequest
@@ -117,7 +117,7 @@ func TestRunnerClientFacadeUsesBearerForHTTP(t *testing.T) {
 		if got := r.Header.Get("dpop"); got != "" {
 			t.Fatalf("runner HTTP request must not include DPoP proof, got %q", got)
 		}
-		if got := r.Header.Get("x-ama-project-id"); got != "project_runner" {
+		if got := r.Header.Get("x-enbor-project-id"); got != "project_runner" {
 			t.Fatalf("expected project header, got %q", got)
 		}
 		w.Header().Set("content-type", "application/json")
@@ -171,7 +171,7 @@ func TestRunnerClientFacadeOpensRunnerWebSocketChannel(t *testing.T) {
 		if got := r.Header.Get("dpop"); got != "" {
 			t.Fatalf("runner WebSocket must not include DPoP proof, got %q", got)
 		}
-		if got := r.Header.Get("x-ama-project-id"); got != "project_ws" {
+		if got := r.Header.Get("x-enbor-project-id"); got != "project_ws" {
 			t.Fatalf("expected project header, got %q", got)
 		}
 		conn, err := websocket.Accept(w, r, nil)

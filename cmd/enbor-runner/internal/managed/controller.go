@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	serviceNamePrefix  = "ama-runner-"
+	serviceNamePrefix  = "enbor-runner-"
 	runtimeStateFile   = "runtime.json"
 	serviceLogFile     = "runner.log"
 	defaultWaitTimeout = 30 * time.Second
@@ -308,9 +308,9 @@ func (c *Controller) service(record instance.Record, program service.Interface) 
 	for _, name := range []string{
 		"PATH",
 		"XDG_STATE_HOME",
-		"AMA_CODEX_SANDBOX_MODE",
-		"AMA_CODEX_APPROVAL_POLICY",
-		"AMA_CLAUDE_CODE_PERMISSION_MODE",
+		"ENBOR_CODEX_SANDBOX_MODE",
+		"ENBOR_CODEX_APPROVAL_POLICY",
+		"ENBOR_CLAUDE_CODE_PERMISSION_MODE",
 	} {
 		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 			environment[name] = value

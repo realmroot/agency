@@ -355,7 +355,7 @@ func appendRequestEnvironment(env []string, requestEnv map[string]string) ([]str
 }
 
 func isReservedEnvKey(key string) bool {
-	return len(key) >= len("AMA_") && strings.EqualFold(key[:len("AMA_")], "AMA_")
+	return len(key) >= len("ENBOR_") && strings.EqualFold(key[:len("ENBOR_")], "ENBOR_")
 }
 
 func ProcessCommandEnvironment(workDir string) ([]string, error) {
@@ -379,7 +379,7 @@ func ProcessCommandEnvironment(workDir string) ([]string, error) {
 
 	env := []string{
 		"HOME=" + homeDir,
-		"AMA_WORKSPACE_HOME=" + homeDir,
+		"ENBOR_WORKSPACE_HOME=" + homeDir,
 		"GH_CONFIG_DIR=" + filepath.Join(homeDir, ".config", "gh"),
 		"GIT_CONFIG_GLOBAL=" + filepath.Join(homeDir, ".gitconfig"),
 		"GIT_CONFIG_NOSYSTEM=1",

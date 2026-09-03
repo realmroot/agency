@@ -44,7 +44,7 @@ const SubagentSchema = z
     systemPrompt: z.string().openapi({ example: 'Review the proposed changes and report risks.' }),
     model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
     allowedTools: z.array(z.string()).openapi({ example: ['read', 'grep'] }),
-    skills: z.array(z.string()).openapi({ example: ['ama@code-review'] }),
+    skills: z.array(z.string()).openapi({ example: ['enbor@code-review'] }),
     mcpConnectors: z.array(z.string()).openapi({ example: ['github'] }),
   })
   .strict()
@@ -69,7 +69,7 @@ const SubagentInputSchema = z
       .array(z.string().min(1).max(256))
       .max(100)
       .optional()
-      .openapi({ example: ['ama@code-review'] }),
+      .openapi({ example: ['enbor@code-review'] }),
     mcpConnectors: z
       .array(z.string().min(1).max(120))
       .max(50)
@@ -110,7 +110,7 @@ const AgentSpecSchema = z
     systemPrompt: z.string().openapi({ example: 'Answer with citations.' }),
     provider: z.string().nullable().openapi({ example: 'workers-ai' }),
     model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
-    skills: z.array(z.string()).openapi({ example: ['ama@code-review'] }),
+    skills: z.array(z.string()).openapi({ example: ['enbor@code-review'] }),
     subagents: z.array(SubagentSchema).openapi({
       example: [
         {
@@ -119,7 +119,7 @@ const AgentSpecSchema = z
           systemPrompt: 'Review the proposed changes and report risks.',
           model: null,
           allowedTools: ['read', 'grep'],
-          skills: ['ama@code-review'],
+          skills: ['enbor@code-review'],
           mcpConnectors: ['github'],
         },
       ],
@@ -175,7 +175,7 @@ const AgentPayloadSchema = z
           .array(z.string().min(1).max(256))
           .max(100)
           .optional()
-          .openapi({ example: ['ama@code-review'] }),
+          .openapi({ example: ['enbor@code-review'] }),
         subagents: z
           .array(SubagentInputSchema)
           .max(50)
@@ -244,7 +244,7 @@ const ListQuerySchema = listQuerySchema().extend({
     example: '019ff41a-7da6-708f-8b05-44d4d0373685',
   }),
   runtime: z
-    .enum(['ama', 'codex', 'claude-code', 'copilot'])
+    .enum(['enbor', 'codex', 'claude-code', 'copilot'])
     .optional()
     .openapi({
       param: { name: 'runtime', in: 'query' },

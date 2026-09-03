@@ -17,7 +17,7 @@ await import('./enborrpc/core')
 
 describe('Enbor RPC transport input normalization', () => {
   beforeEach(() => {
-    window.localStorage.setItem('ama:e2e-access-token', 'e2e:core-transport')
+    window.localStorage.setItem('enbor:e2e-access-token', 'e2e:core-transport')
   })
 
   afterEach(() => {
@@ -30,7 +30,7 @@ describe('Enbor RPC transport input normalization', () => {
       return new Response('{}', { headers: { 'content-type': 'application/json' } })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const input = new URL('https://ama.example.test/api/v1/agents?archived=true#fragment')
+    const input = new URL('https://enbor.example.test/api/v1/agents?archived=true#fragment')
 
     await capturedClientOptions.fetch!(input)
 
@@ -45,7 +45,7 @@ describe('Enbor RPC transport input normalization', () => {
       return new Response('{}', { headers: { 'content-type': 'application/json' } })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const input = new Request('https://ama.example.test/api/v1/agents/agent_1', {
+    const input = new Request('https://enbor.example.test/api/v1/agents/agent_1', {
       method: 'PATCH',
       headers: { 'x-request-header': 'request' },
     })

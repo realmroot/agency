@@ -78,13 +78,13 @@ function authError() {
 
 function makeEnv(aiRun: ReturnType<typeof vi.fn>): Env {
   return {
-    AMA_RUNTIME_MODE: 'live',
+    RUNTIME_MODE: 'live',
     AI: { run: aiRun },
   } as unknown as Env
 }
 
 function testEnv(): Env {
-  return { AMA_RUNTIME_MODE: 'test', AI: { run: vi.fn() } } as unknown as Env
+  return { RUNTIME_MODE: 'test', AI: { run: vi.fn() } } as unknown as Env
 }
 
 function ctx(...prompts: string[]): Context {
@@ -551,7 +551,7 @@ describe('workersAiModelClient — tool_call edge cases', () => {
     const aiRun = vi.fn().mockResolvedValue({
       choices: [{ message: { role: 'assistant', content: 'text', tool_calls: [null] } }],
     })
-    const env = { AMA_RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
+    const env = { RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
     const result = await client.complete(model, context)
@@ -572,7 +572,7 @@ describe('workersAiModelClient — tool_call edge cases', () => {
         },
       ],
     })
-    const env = { AMA_RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
+    const env = { RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
     const result = await client.complete(model, context)
@@ -593,7 +593,7 @@ describe('workersAiModelClient — tool_call edge cases', () => {
         },
       ],
     })
-    const env = { AMA_RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
+    const env = { RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
     const result = await client.complete(model, context)
@@ -613,7 +613,7 @@ describe('workersAiModelClient — tool_call edge cases', () => {
         },
       ],
     })
-    const env = { AMA_RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
+    const env = { RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
     const result = await client.complete(model, context)
@@ -674,7 +674,7 @@ describe('workersAiModelClient — textContent edge cases', () => {
 describe('workersAiModelClient — test mode bypass', () => {
   it('returns a deterministic assistant message without calling AI.run', async () => {
     const aiRun = vi.fn()
-    const env = { AMA_RUNTIME_MODE: 'test', AI: { run: aiRun } } as unknown as Env
+    const env = { RUNTIME_MODE: 'test', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
     const result = await client.complete(model, context)
@@ -888,15 +888,15 @@ describe('workersAiModelClient — test mode bypass', () => {
 describe('workersAiModelClient — AI gateway routing (live mode)', () => {
   const thirdPartyModel: Model<string> = { ...model, id: 'anthropic/claude-sonnet-4' }
 
-  it('routes a third-party model through the default "ama" gateway', async () => {
+  it('routes a third-party model through the default "enbor" gateway', async () => {
     const aiRun = vi.fn().mockResolvedValue(successResponse())
     await workersAiModelClient(makeEnv(aiRun)).complete(thirdPartyModel, context)
-    expect(aiRun).toHaveBeenCalledWith('anthropic/claude-sonnet-4', expect.anything(), { gateway: { id: 'ama' } })
+    expect(aiRun).toHaveBeenCalledWith('anthropic/claude-sonnet-4', expect.anything(), { gateway: { id: 'enbor' } })
   })
 
-  it('honors AMA_AI_GATEWAY_ID for third-party models', async () => {
+  it('honors AI_GATEWAY_ID for third-party models', async () => {
     const aiRun = vi.fn().mockResolvedValue(successResponse())
-    const env = { AMA_RUNTIME_MODE: 'live', AI: { run: aiRun }, AMA_AI_GATEWAY_ID: 'custom-gw' } as unknown as Env
+    const env = { RUNTIME_MODE: 'live', AI: { run: aiRun }, AI_GATEWAY_ID: 'custom-gw' } as unknown as Env
     await workersAiModelClient(env).complete(thirdPartyModel, context)
     expect(aiRun).toHaveBeenCalledWith('anthropic/claude-sonnet-4', expect.anything(), { gateway: { id: 'custom-gw' } })
   })

@@ -28,7 +28,7 @@ class AgentSubagent:
             system_prompt (str):  Example: Review the proposed changes and report risks..
             model (None | str):  Example: @cf/moonshotai/kimi-k2.6.
             allowed_tools (list[str]):  Example: ['read', 'grep'].
-            skills (list[str]):  Example: ['ama@code-review'].
+            skills (list[str]):  Example: ['enbor@code-review'].
             mcp_connectors (list[str]):  Example: ['github'].
      """
 

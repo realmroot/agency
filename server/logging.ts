@@ -135,6 +135,6 @@ export function requestLogContext(request: Request, requestId: string): LogConte
     query: url.search || null,
     cfRay: request.headers.get('cf-ray'),
     userAgent: optionalString(request.headers.get('user-agent')),
-    enborProjectId: optionalString(request.headers.get('x-ama-project-id')),
+    enborProjectId: optionalString(request.headers.get('x-enbor-project-id')),
   }
 }

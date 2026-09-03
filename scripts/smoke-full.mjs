@@ -20,11 +20,11 @@ import WebSocket from 'ws'
 
 const ROOT = process.cwd()
 const RUNTIME = 'codex'
-const DONE_MARKER = 'AMA_FULL_SMOKE_DONE'
-const RESULT_MARKER = 'AMA_FULL_SMOKE_RUNTIME_OK'
+const DONE_MARKER = 'ENBOR_FULL_SMOKE_DONE'
+const RESULT_MARKER = 'ENBOR_FULL_SMOKE_RUNTIME_OK'
 const SUBAGENT_RESULT = '4'
 const BACKFILL_REQUEST_ID = 'full_smoke_backfill'
-const timeoutMs = Number(process.env.AMA_FULL_SMOKE_TIMEOUT_MS ?? 5 * 60 * 1000)
+const timeoutMs = Number(process.env.ENBOR_FULL_SMOKE_TIMEOUT_MS ?? 5 * 60 * 1000)
 
 const packages = {
   type: 'packages',
@@ -68,7 +68,7 @@ function commandExists(binary) {
 }
 
 function tempRoot() {
-  return mkdtempSync(join(tmpdir(), 'ama-full-smoke-'))
+  return mkdtempSync(join(tmpdir(), 'enbor-full-smoke-'))
 }
 
 function removeTempRoot(path) {
@@ -189,7 +189,7 @@ async function api(origin, token, path, options = {}) {
   const method = options.method ?? (options.body === undefined ? 'GET' : 'POST')
   const headers = {
     authorization: `Bearer ${token.accessToken}`,
-    'x-ama-project-id': token.projectId,
+    'x-enbor-project-id': token.projectId,
     ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...(options.headers ?? {}),
   }
@@ -250,14 +250,14 @@ function managedRunnerEnvironment(temp, credentialPath) {
     ...process.env,
     XDG_CONFIG_HOME: join(temp, 'managed-config'),
     XDG_STATE_HOME: join(temp, 'managed-state'),
-    AMA_RUNNER_CREDENTIALS: credentialPath,
-    AMA_RUNNER_HEARTBEAT_INTERVAL: '5s',
-    AMA_RUNNER_LEASE_SECONDS: '30',
-    AMA_RUNNER_RENEW_INTERVAL: '10s',
-    AMA_RUNNER_COMMAND_TIMEOUT: '4m',
-    AMA_RUNNER_SHUTDOWN_GRACE: '5s',
-    AMA_RUNNER_MAX_SESSION_DURATION: '4m',
-    AMA_RUNTIME_BRIDGE_HOST_HOME: process.env.AMA_RUNTIME_BRIDGE_HOST_HOME ?? process.env.HOME ?? '',
+    ENBOR_RUNNER_CREDENTIALS: credentialPath,
+    ENBOR_RUNNER_HEARTBEAT_INTERVAL: '5s',
+    ENBOR_RUNNER_LEASE_SECONDS: '30',
+    ENBOR_RUNNER_RENEW_INTERVAL: '10s',
+    ENBOR_RUNNER_COMMAND_TIMEOUT: '4m',
+    ENBOR_RUNNER_SHUTDOWN_GRACE: '5s',
+    ENBOR_RUNNER_MAX_SESSION_DURATION: '4m',
+    ENBOR_RUNTIME_BRIDGE_HOST_HOME: process.env.ENBOR_RUNTIME_BRIDGE_HOST_HOME ?? process.env.HOME ?? '',
   }
 }
 
@@ -360,7 +360,7 @@ function socketURL(origin, sessionId) {
 function openSocket(url, ticket) {
   return new Promise((resolve, reject) => {
     const origin = url.replace(/^ws/, 'http').replace(/\/api\/v1\/.*$/, '')
-    const socket = new WebSocket(url, ['ama-ticket', `ama-ticket.${ticket}`], { origin })
+    const socket = new WebSocket(url, ['enbor-ticket', `enbor-ticket.${ticket}`], { origin })
     const timer = setTimeout(() => {
       socket.close()
       reject(new Error(`socket open timed out: ${url}`))
@@ -500,7 +500,7 @@ function workspacePaths(workDir, sessionId) {
     sessionDir,
     workspace: join(sessionDir, 'workspace'),
     eventLog: join(sessionDir, 'events.jsonl'),
-    resultFile: join(sessionDir, 'workspace', 'ama-full-smoke-result.txt'),
+    resultFile: join(sessionDir, 'workspace', 'enbor-full-smoke-result.txt'),
   }
 }
 
@@ -542,7 +542,7 @@ function assertWorkspace(workDir, sessionId, identity) {
   assertToolEvents('runner local event log', eventLog)
   const issuerDir = Buffer.from(identity.status.descriptor.issuer).toString('base64url')
   const runtimeFile = `${Buffer.from(identity.spec.runtime).toString('base64url')}.json`
-  const statePath = join(paths.workspace, '.ama', 'realmroot-state', 'identities', issuerDir, runtimeFile)
+  const statePath = join(paths.workspace, '.enbor', 'realmroot-state', 'identities', issuerDir, runtimeFile)
   const state = JSON.parse(readFileSync(statePath, 'utf8'))
   const stableAgentId = state.identity?.id ?? state.agent_id
   if (state.runtime !== identity.spec.runtime || stableAgentId !== identity.status.descriptor.agentId) {
@@ -592,7 +592,7 @@ async function main() {
 
     info(`starting local e2e server on ${origin}`)
     server = startProcess('pnpm', ['run', 'e2e:server'], {
-      env: { ...process.env, E2E_PORT: String(port), AMA_E2E_FAKE_REALMROOT_ENROLLMENT: 'true' },
+      env: { ...process.env, E2E_PORT: String(port), E2E_FAKE_REALMROOT_ENROLLMENT: 'true' },
     })
     await waitForReady(origin)
     token = await e2eToken(origin, runId)
@@ -658,7 +658,7 @@ async function main() {
             'Before using any file or shell tool, you MUST call the spawn_agent collaboration tool exactly once with the arithmetic-checker agent and ask it to reply only 4 for 2+2.',
             'You MUST call wait for that child and receive 4 before continuing. If the child result is unavailable, fail instead of completing the task.',
             'After the child returns 4, use the shell tool to run pwd exactly once.',
-            `Write exactly "${RESULT_MARKER}\\n" to ama-full-smoke-result.txt in the workspace root.`,
+            `Write exactly "${RESULT_MARKER}\\n" to enbor-full-smoke-result.txt in the workspace root.`,
             `When done, reply exactly "${DONE_MARKER}".`,
           ].join('\n'),
           skills: [],
@@ -696,7 +696,7 @@ async function main() {
           `Before any other tool call, you MUST call spawn_agent exactly once with subagent type arithmetic-checker and prompt it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
           `Then you MUST call wait for that child and receive "${SUBAGENT_RESULT}" before using file or shell tools.`,
           'After the child returns 4, use the shell tool to run pwd exactly once.',
-          `Ensure ama-full-smoke-result.txt contains exactly "${RESULT_MARKER}\\n".`,
+          `Ensure enbor-full-smoke-result.txt contains exactly "${RESULT_MARKER}\\n".`,
           `Reply exactly "${DONE_MARKER}" and nothing else.`,
         ].join('\n'),
       },
@@ -857,7 +857,7 @@ async function main() {
       }
     }
     await stopProcess(server?.child)
-    if (process.env.AMA_FULL_SMOKE_KEEP_TEMP === 'true') {
+    if (process.env.ENBOR_FULL_SMOKE_KEEP_TEMP === 'true') {
       info(`retained smoke temp directory by request: ${temp}`)
     } else if (!managedRunnerRemoved) {
       info(`retained smoke temp directory after managed Runner cleanup failure: ${temp}`)

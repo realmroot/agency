@@ -65,11 +65,8 @@ export function requireOidcConfig(env: Env) {
   }
 }
 
-export function oidcAudience(
-  env: Pick<Env, 'OIDC_RESOURCE' | 'AMA_RUNTIME_MODE' | 'AMA_E2E_TEST_AUTH'>,
-  requestUrl?: string,
-) {
-  const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
+export function oidcAudience(env: Pick<Env, 'OIDC_RESOURCE' | 'RUNTIME_MODE' | 'E2E_TEST_AUTH'>, requestUrl?: string) {
+  const e2eTestMode = env.RUNTIME_MODE === 'test' && env.E2E_TEST_AUTH === 'true'
   if (!env.OIDC_RESOURCE?.trim() && !e2eTestMode) {
     throw new OidcError('OIDC_RESOURCE is required outside the explicit e2e test runtime')
   }
@@ -115,7 +112,7 @@ async function verifyAccessToken(
   audience: string,
   credentialMode?: 'bearer' | 'dpop',
 ): Promise<JWTPayload & { sub: string }> {
-  const e2eTestMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
+  const e2eTestMode = env.RUNTIME_MODE === 'test' && env.E2E_TEST_AUTH === 'true'
   if (e2eTestMode && accessToken.startsWith('e2e:')) {
     const payload = e2eClaims(env, accessToken.slice('e2e:'.length), env.OIDC_CLIENT_ID)
     validateRealmrootClient(env, payload, credentialMode)
@@ -298,7 +295,7 @@ function actorClaim(value: unknown, nativeAgentClient: boolean): Pick<UserInfoCl
     : {}
 }
 
-// E2E claim synthesis (gated to AMA_E2E_TEST_AUTH). The token payload after
+// E2E claim synthesis (gated to E2E_TEST_AUTH). The token payload after
 // the `e2e:`/`e2e-runner:` prefix is `<runId>[;org=<orgRunId>][;teams=a,b][;roles=r1,r2]`:
 // `org` joins the synthesized user into another run's organization, and
 // `teams`/`roles` populate the corresponding OIDC claims so team-scoped

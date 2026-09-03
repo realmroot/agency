@@ -66,7 +66,7 @@ const scope: TicketScope = {
   userId: 'user_1',
 }
 
-async function issue(object: SessionObject, value: TicketScope = scope, origin = 'https://ama.example.com') {
+async function issue(object: SessionObject, value: TicketScope = scope, origin = 'https://enbor.example.com') {
   const response = await object.fetch(
     new Request('https://session-object/browser-tickets', {
       method: 'POST',
@@ -101,7 +101,7 @@ describe('[spec: sessions/socket-ticket] SessionObject browser tickets', () => {
       expect(key).toMatch(/^browser-ticket:[A-Za-z0-9_-]{43}$/)
       expect(key).not.toContain(first.ticket)
       expect(key).not.toContain(second.ticket)
-      expect(record).toMatchObject({ scope, origin: 'https://ama.example.com' })
+      expect(record).toMatchObject({ scope, origin: 'https://enbor.example.com' })
     }
   })
 
@@ -110,16 +110,16 @@ describe('[spec: sessions/socket-ticket] SessionObject browser tickets', () => {
     const { ticket } = await issue(subject.object)
 
     await expect(
-      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://enbor.example.com'),
     ).resolves.toEqual(scope)
     await expect(
-      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://enbor.example.com'),
     ).resolves.toBeNull()
     expect(subject.values.size).toBe(0)
   })
 
   it.each([
-    ['wrong session', 'session_other', 'https://ama.example.com'],
+    ['wrong session', 'session_other', 'https://enbor.example.com'],
     ['wrong Origin', scope.sessionId, 'https://evil.example.com'],
   ])('rejects a ticket with %s without consuming its valid binding', async (_case, sessionId, origin) => {
     const subject = fixture()
@@ -127,10 +127,10 @@ describe('[spec: sessions/socket-ticket] SessionObject browser tickets', () => {
 
     await expect(subject.privateObject.consumeBrowserTicket(ticket, sessionId, origin)).resolves.toBeNull()
     await expect(
-      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://enbor.example.com'),
     ).resolves.toEqual(scope)
     await expect(
-      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(ticket, scope.sessionId, 'https://enbor.example.com'),
     ).resolves.toBeNull()
   })
 
@@ -147,24 +147,24 @@ describe('[spec: sessions/socket-ticket] SessionObject browser tickets', () => {
     expect(subject.values.size).toBe(1)
     expect(subject.alarm()).toBe(Date.parse(second.expiresAt))
     await expect(
-      subject.privateObject.consumeBrowserTicket(first.ticket, scope.sessionId, 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(first.ticket, scope.sessionId, 'https://enbor.example.com'),
     ).resolves.toBeNull()
 
     vi.advanceTimersByTime(10_000)
     await expect(
-      subject.privateObject.consumeBrowserTicket(second.ticket, 'session_2', 'https://ama.example.com'),
+      subject.privateObject.consumeBrowserTicket(second.ticket, 'session_2', 'https://enbor.example.com'),
     ).resolves.toBeNull()
     expect(subject.values.size).toBe(0)
   })
 
-  it('rejects a malformed ama-ticket protocol with 401 instead of entering the trusted-scope path', async () => {
+  it('rejects a malformed enbor-ticket protocol with 401 instead of entering the trusted-scope path', async () => {
     const subject = fixture()
     const response = await subject.object.fetch(
       new Request('https://session-object/browser?sessionId=session_1', {
         headers: {
           upgrade: 'websocket',
-          origin: 'https://ama.example.com',
-          'sec-websocket-protocol': 'ama-ticket.not-a-valid-ticket',
+          origin: 'https://enbor.example.com',
+          'sec-websocket-protocol': 'enbor-ticket.not-a-valid-ticket',
         },
       }),
     )

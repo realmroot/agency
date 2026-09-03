@@ -29,7 +29,7 @@ class AgentSubagentInput:
             system_prompt (str):  Example: Review the proposed changes and report risks..
             model (None | str | Unset):  Example: @cf/moonshotai/kimi-k2.6.
             allowed_tools (list[str] | Unset):  Example: ['read', 'grep'].
-            skills (list[str] | Unset):  Example: ['ama@code-review'].
+            skills (list[str] | Unset):  Example: ['enbor@code-review'].
             mcp_connectors (list[str] | Unset):  Example: ['github'].
      """
 

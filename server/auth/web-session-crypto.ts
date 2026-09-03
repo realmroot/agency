@@ -76,16 +76,16 @@ async function webSessionKey(env: Env) {
 }
 
 async function derivedKey(env: Env, purpose: string, algorithm: 'AES-GCM' | 'HMAC') {
-  const secret = env.AMA_WEB_SESSION_ENCRYPTION_KEY
+  const secret = env.WEB_SESSION_ENCRYPTION_KEY
   if (!secret || secret.length < 32) {
-    throw new Error('AMA_WEB_SESSION_ENCRYPTION_KEY with at least 32 characters is required for browser sessions')
+    throw new Error('WEB_SESSION_ENCRYPTION_KEY with at least 32 characters is required for browser sessions')
   }
   const master = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'HKDF', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
     {
       name: 'HKDF',
       hash: 'SHA-256',
-      salt: new TextEncoder().encode('ama-web-session-v1'),
+      salt: new TextEncoder().encode('enbor-web-session-v1'),
       info: new TextEncoder().encode(purpose),
     },
     master,

@@ -165,7 +165,7 @@ export class SessionObject implements DurableObject {
     // — events never travel over HTTP. Live events follow via fanOutToBrowsers.
     this.durableState.waitUntil(this.sendBackfill(server, scope.sessionId, { order: 'asc', limit: 200 }))
     const protocols = request.headers.get('sec-websocket-protocol') ?? ''
-    const selectedProtocol = ticket ? 'ama-ticket' : protocols.includes('ama-dpop') ? 'ama-dpop' : null
+    const selectedProtocol = ticket ? 'enbor-ticket' : protocols.includes('enbor-dpop') ? 'enbor-dpop' : null
     const headers = selectedProtocol ? { 'Sec-WebSocket-Protocol': selectedProtocol } : undefined
     return new Response(null, { status: 101, webSocket: client, ...(headers ? { headers } : {}) })
   }
@@ -400,11 +400,11 @@ function browserTicketProtocol(request: Request) {
   return (request.headers.get('sec-websocket-protocol') ?? '')
     .split(',')
     .map((value) => value.trim())
-    .find((value) => value.startsWith('ama-ticket.'))
+    .find((value) => value.startsWith('enbor-ticket.'))
 }
 
 function browserTicketFromProtocol(protocol: string | undefined) {
-  const ticket = protocol?.slice('ama-ticket.'.length)
+  const ticket = protocol?.slice('enbor-ticket.'.length)
   return ticket && /^[A-Za-z0-9_-]{43}$/.test(ticket) ? ticket : null
 }
 

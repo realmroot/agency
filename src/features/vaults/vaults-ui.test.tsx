@@ -55,8 +55,8 @@ function credential(overrides: VaultCredentialOverrides = {}): VaultCredential {
     activeVersion: vaultCredentialVersion({
       id: 'vaultver_1',
       version: 2,
-      secretRef: 'ama://vaults/vault_1/credentials/vaultcred_1/versions/vaultver_2',
-      referenceName: 'AMA_VAULTCRED_1_V2',
+      secretRef: 'enbor://vaults/vault_1/credentials/vaultcred_1/versions/vaultver_2',
+      referenceName: 'ENBOR_VAULTCRED_1_V2',
       createdAt: '2026-05-23T00:00:00.000Z',
     }),
     createdAt: '2026-05-23T00:00:00.000Z',
@@ -259,7 +259,7 @@ describe('[spec: vaults/console-list] VaultDetailView', () => {
     expect(screen.getByText('Raw secret values are not returned by the control plane.')).toBeInTheDocument()
     expect(screen.getByText('OpenAI key')).toBeInTheDocument()
     expect(screen.getByText('v2')).toBeInTheDocument()
-    expect(screen.getByText('AMA_VAULTCRED_1_V2')).toBeInTheDocument()
+    expect(screen.getByText('ENBOR_VAULTCRED_1_V2')).toBeInTheDocument()
   })
 
   it('shows loading skeleton when loading is true', () => {
@@ -978,7 +978,7 @@ describe('[spec: vaults/add-credential-sheet] AddCredentialSheet', () => {
     await waitFor(() =>
       expect(capturedBody).toEqual({
         name: 'Git credentials',
-        type: 'ama.dev/basic-auth',
+        type: 'enbor.dev/basic-auth',
         metadata: {},
         secret: { stringData: { username: 'git-user', password: 'git-password' } },
       }),
@@ -1029,13 +1029,13 @@ describe('[spec: vaults/add-credential-sheet] AddCredentialSheet', () => {
   }> = [
     {
       label: 'SSH auth',
-      type: 'ama.dev/ssh-auth',
+      type: 'enbor.dev/ssh-auth',
       fields: [['SSH private key', '-----BEGIN OPENSSH PRIVATE KEY-----']],
       stringData: { 'ssh-privatekey': '-----BEGIN OPENSSH PRIVATE KEY-----' },
     },
     {
       label: 'TLS',
-      type: 'ama.dev/tls',
+      type: 'enbor.dev/tls',
       fields: [
         ['TLS certificate', '-----BEGIN CERTIFICATE-----'],
         ['TLS private key', '-----BEGIN PRIVATE KEY-----'],
@@ -1044,7 +1044,7 @@ describe('[spec: vaults/add-credential-sheet] AddCredentialSheet', () => {
     },
     {
       label: 'Private key JWK',
-      type: 'ama.dev/private-key-jwk',
+      type: 'enbor.dev/private-key-jwk',
       fields: [['JWK', '{"kty":"OKP"}']],
       stringData: { jwk: '{"kty":"OKP"}' },
     },
@@ -1128,7 +1128,7 @@ describe('[spec: vaults/add-credential-sheet] AddCredentialSheet', () => {
     await waitFor(() =>
       expect(capturedBody).toEqual({
         name: 'OAuth token',
-        type: 'ama.dev/oauth-token',
+        type: 'enbor.dev/oauth-token',
         metadata: {},
         secret: {
           stringData: {

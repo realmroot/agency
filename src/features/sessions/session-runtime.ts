@@ -107,7 +107,7 @@ export async function sessionSocketConnection(socketPath: string) {
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return {
     url: url.toString(),
-    protocols: ['ama-ticket', `ama-ticket.${ticket}`],
+    protocols: ['enbor-ticket', `enbor-ticket.${ticket}`],
   }
 }
 

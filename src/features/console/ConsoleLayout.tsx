@@ -28,8 +28,8 @@ export function ConsoleLayout() {
     function handleProjectChange() {
       setSelectedProjectState(getSelectedProjectId())
     }
-    window.addEventListener('ama:selected-project-changed', handleProjectChange)
-    return () => window.removeEventListener('ama:selected-project-changed', handleProjectChange)
+    window.addEventListener('enbor:selected-project-changed', handleProjectChange)
+    return () => window.removeEventListener('enbor:selected-project-changed', handleProjectChange)
   }, [])
 
   const projects = projectsQuery.data?.data ?? []

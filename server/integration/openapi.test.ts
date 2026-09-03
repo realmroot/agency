@@ -85,7 +85,7 @@ describe('[CF] OpenAPI documentation', () => {
     expect(identityRuntime).not.toHaveProperty('enum')
 
     expect(doc.openapi).toBe('3.0.0')
-    expect(doc.servers).toEqual([{ url: 'https://ama.tftt.cc' }])
+    expect(doc.servers).toEqual([{ url: 'https://enbor.realmroot.dev' }])
     expect(doc.components?.securitySchemes).toMatchObject({
       oidcAccessToken: {
         openIdConnectUrl: 'https://identity.alias.test/api/auth/.well-known/openid-configuration',
@@ -685,7 +685,7 @@ describe('[CF] OpenAPI documentation', () => {
     ])
 
     expect(doc.components?.parameters?.EnborProjectId).toMatchObject({
-      name: 'X-AMA-Project-ID',
+      name: 'X-Enbor-Project-ID',
       in: 'header',
       required: false,
       'x-cli-name': 'project-id',

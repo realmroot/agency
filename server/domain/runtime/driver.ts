@@ -29,11 +29,12 @@ export type RuntimeDriver = {
 const SELF_HOSTED_ONLY_DRIVERS = ['claude-code', 'codex', 'copilot'] as const
 
 const ENBOR_DRIVER: RuntimeDriver = {
-  runtime: 'ama',
-  cloudBackend: 'ama-cloud',
-  cloudProtocol: 'ama-runtime-rpc',
-  supportsHostingMode: (hostingMode) => runtimeSupportsHostingMode(hostingMode, 'ama'),
-  supportsCloudProviderModel: (provider, model) => runtimeCatalogSupportsProviderModel('cloud', 'ama', provider, model),
+  runtime: 'enbor',
+  cloudBackend: 'enbor-cloud',
+  cloudProtocol: 'enbor-runtime-rpc',
+  supportsHostingMode: (hostingMode) => runtimeSupportsHostingMode(hostingMode, 'enbor'),
+  supportsCloudProviderModel: (provider, model) =>
+    runtimeCatalogSupportsProviderModel('cloud', 'enbor', provider, model),
   supportsCloudStartup: true,
 }
 
@@ -71,8 +72,8 @@ export function runtimeDriver(runtime: RuntimeName) {
 }
 
 export function runtimeDriverName(runtime: RuntimeName, hostingMode: RuntimeHostingMode) {
-  if (runtime === 'ama') {
-    return 'ama-cloud'
+  if (runtime === 'enbor') {
+    return 'enbor-cloud'
   }
   return hostingMode === 'cloud' ? runtimeDriver(runtime).cloudBackend : `${runtime}-self-hosted`
 }
@@ -94,7 +95,7 @@ export function runtimePlacement(values: {
   const runtimeBackend =
     typeof metadata.runtimeBackend === 'string'
       ? metadata.runtimeBackend
-      : values.runtime === 'ama' || values.hostingMode === 'cloud'
+      : values.runtime === 'enbor' || values.hostingMode === 'cloud'
         ? driver.cloudBackend
         : null
   const runtimeProtocol =
@@ -102,7 +103,7 @@ export function runtimePlacement(values: {
       ? metadata.runtimeProtocol
       : typeof metadata.runnerProtocol === 'string'
         ? metadata.runnerProtocol
-        : values.runtime === 'ama' || values.hostingMode === 'cloud'
+        : values.runtime === 'enbor' || values.hostingMode === 'cloud'
           ? driver.cloudProtocol
           : null
   return {

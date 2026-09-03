@@ -90,11 +90,11 @@ export interface Deps {
   enborTurnExecutor: EnborTurnExecutor
   sessionOrchestration: SessionOrchestrationStore
   sessions: SessionRepo
-  // "Storage follows the loop": cloud-loop (ama) events live in the Session DO,
+  // "Storage follows the loop": cloud-loop (enbor) events live in the Session DO,
   // everything else on D1. Routes append/read/stream and cold-store events per session.
   sessionEventStore: EventStore
   createApprovalGate: CreateApprovalGate
-  // Mirrors the legacy AMA_RUNTIME_MODE === 'test' branch: in test mode the
+  // Mirrors the legacy RUNTIME_MODE === 'test' branch: in test mode the
   // inline cloud launch runs synchronously so the create flow re-reads the
   // started row; in production the launch is fire-and-forget.
   rereadStartedSession: boolean

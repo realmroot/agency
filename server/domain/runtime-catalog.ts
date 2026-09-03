@@ -1,5 +1,5 @@
 export type RuntimeHostingMode = 'cloud' | 'self_hosted'
-export type RuntimeName = 'ama' | 'claude-code' | 'codex' | 'copilot'
+export type RuntimeName = 'enbor' | 'claude-code' | 'codex' | 'copilot'
 export type RunnerRuntimeState = 'ready' | 'missing' | 'unauthenticated' | 'unauthorized' | 'limited' | 'unhealthy'
 
 export type RuntimeRequirement = {
@@ -25,12 +25,12 @@ type RuntimeCatalogEntry = {
 // claude-code) at session creation. Cloud stays pinned to platform models.
 export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
   {
-    runtime: 'ama',
+    runtime: 'enbor',
     hostingModes: ['cloud', 'self_hosted'],
     // Models are no longer hardcoded here. Cloud validates the provider/model
     // against the GLOBAL catalog (server/domain/model-catalog.ts populated by
     // discovery), and self-hosted gates on the runner's reported runtimes —
-    // so ama declares a wildcard like the other runtimes.
+    // so enbor declares a wildcard like the other runtimes.
     providerModels: [{ provider: '*', model: '*' }],
   },
   {
@@ -52,8 +52,8 @@ export const RUNTIME_CATALOG: readonly RuntimeCatalogEntry[] = [
 
 // Runtimes whose active bridge handle accepts mid-run prompt injection over the
 // runner session channel. The CLI-backed runtime bridge implements `send` for
-// claude-code, codex, and copilot, while ama owns continuation turns natively.
-const LIVE_PROMPT_RUNTIMES: ReadonlySet<RuntimeName> = new Set(['ama', 'claude-code', 'codex', 'copilot'])
+// claude-code, codex, and copilot, while enbor owns continuation turns natively.
+const LIVE_PROMPT_RUNTIMES: ReadonlySet<RuntimeName> = new Set(['enbor', 'claude-code', 'codex', 'copilot'])
 
 export function runtimeSupportsLivePrompts(runtime: RuntimeName) {
   return LIVE_PROMPT_RUNTIMES.has(runtime)
@@ -62,7 +62,7 @@ export function runtimeSupportsLivePrompts(runtime: RuntimeName) {
 export function runtimeRequirement(runtime: RuntimeName, model?: string | null): RuntimeRequirement {
   return {
     runtime,
-    ...(runtime !== 'ama' && model ? { model } : {}),
+    ...(runtime !== 'enbor' && model ? { model } : {}),
   }
 }
 
@@ -78,7 +78,7 @@ export function runtimesSupport(runtimes: RuntimeSupport, runtime: RuntimeName, 
     (entry) =>
       entry.runtime === runtime &&
       entry.state === 'ready' &&
-      (!model || runtime === 'ama' || entry.models.includes(model)),
+      (!model || runtime === 'enbor' || entry.models.includes(model)),
   )
 }
 
@@ -115,10 +115,10 @@ export function runtimeSupportsHostingMode(hostingMode: RuntimeHostingMode, runt
   return RUNTIME_CATALOG.some((entry) => entry.runtime === runtime && entry.hostingModes.includes(hostingMode))
 }
 
-export const DEFAULT_AI_GATEWAY_ID = 'ama'
+export const DEFAULT_AI_GATEWAY_ID = 'enbor'
 
 // Pure cloud-model routing rule. Third-party ({vendor}/{model}) cloud models
-// bill through AI Gateway and must name a gateway (configurable, default 'ama').
+// bill through AI Gateway and must name a gateway (configurable, default 'enbor').
 // '@cf/' models stay gateway-free: they run on the free Workers AI allocation,
 // and forcing a not-yet-created named gateway returns 400 for them too. The
 // effectful env read stays at the adapter egress; this seam only decides which

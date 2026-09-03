@@ -34,7 +34,7 @@ class RunnerWorkspaceMount:
             url (str | Unset):  Example: https://github.com/realmroot/enbor.git.
             ref (str | Unset):  Example: main.
             credential (RunnerGitCredential | Unset):
-            memory_ref (str | Unset):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
+            memory_ref (str | Unset):  Example: enbor://memories/0195f5d6-7c20-7000-8000-00000000000a.
             description (None | str | Unset):
             read_only (bool | Unset):
             files (list[RunnerWorkspaceFile] | Unset):

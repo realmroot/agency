@@ -113,7 +113,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
         value={{
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
+          runtime: 'enbor',
           prompt: 'Run session',
           credentialVaultIds: [],
           resources: [],
@@ -139,7 +139,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
         details: {
           resourceType: 'runtime_catalog',
           hostingMode: 'cloud',
-          runtime: 'ama',
+          runtime: 'enbor',
           provider: 'workers-ai',
           model: '@cf/moonshotai/kimi-k2.6',
         },
@@ -147,7 +147,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
     })
 
     expect(formatCreateSessionError(error)).toBe(
-      'Unsupported capability: Cloud session runtime ama cannot run Agent provider workers-ai with model @cf/moonshotai/kimi-k2.6.',
+      'Unsupported capability: Cloud session runtime enbor cannot run Agent provider workers-ai with model @cf/moonshotai/kimi-k2.6.',
     )
   })
 
@@ -337,10 +337,12 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           {
             type: 'memory',
             name: 'Team memory',
-            memoryRef: 'ama://memories/memstore_1',
+            memoryRef: 'enbor://memories/memstore_1',
           },
         ],
-        volumeMounts: [{ name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: false }],
+        volumeMounts: [
+          { name: 'Team memory', mountPath: '/workspace/.enbor/memory-stores/memstore_1', readOnly: false },
+        ],
       },
     })
 

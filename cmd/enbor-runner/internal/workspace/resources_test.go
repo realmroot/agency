@@ -322,20 +322,20 @@ func TestMaterializeMemoryAndSecretMountsPropagateFilesystemConflicts(t *testing
 	}{
 		{
 			name:      "memory mount is a file",
-			mountPath: filepath.Join(".ama", "memory-stores", "store_1"),
+			mountPath: filepath.Join(".enbor", "memory-stores", "store_1"),
 			prepare:   prepareMountFile,
 			materialize: func(root string) error {
-				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "enbor://memories/store_1"})
 				return err
 			},
 		},
 		{
 			name:      "memory seed parent is a file",
-			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "blocked"),
+			mountPath: filepath.Join(".enbor", "memory-stores", "store_1", "blocked"),
 			prepare:   prepareMountFile,
 			materialize: func(root string) error {
 				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-					MemoryRef: "ama://memories/store_1",
+					MemoryRef: "enbor://memories/store_1",
 					Files:     []protocol.WorkspaceFile{{Path: "blocked/plan.md", Content: "ship"}},
 				})
 				return err
@@ -343,11 +343,11 @@ func TestMaterializeMemoryAndSecretMountsPropagateFilesystemConflicts(t *testing
 		},
 		{
 			name:      "memory seed target is a directory",
-			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "plan.md"),
+			mountPath: filepath.Join(".enbor", "memory-stores", "store_1", "plan.md"),
 			prepare:   prepareMountDirectory,
 			materialize: func(root string) error {
 				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-					MemoryRef: "ama://memories/store_1",
+					MemoryRef: "enbor://memories/store_1",
 					Files:     []protocol.WorkspaceFile{{Path: "plan.md", Content: "ship"}},
 				})
 				return err
@@ -459,13 +459,13 @@ func TestMaterializeMemoryStoreRejectsInvalidRefsAndPaths(t *testing.T) {
 		t.Fatal("expected invalid memory ref error")
 	}
 	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-		MemoryRef: "ama://memories/store_1",
+		MemoryRef: "enbor://memories/store_1",
 		Files:     []protocol.WorkspaceFile{{Path: "/absolute.md", Content: "bad"}},
 	}); err == nil {
 		t.Fatal("expected invalid memory path error")
 	}
 	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-		MemoryRef: "ama://memories/store_1",
+		MemoryRef: "enbor://memories/store_1",
 		MountPath: "/outside",
 	}); err == nil {
 		t.Fatal("expected unsafe memory mount path error")
@@ -475,7 +475,7 @@ func TestMaterializeMemoryStoreRejectsInvalidRefsAndPaths(t *testing.T) {
 func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 	root := t.TempDir()
 	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-		MemoryRef: "ama://memories/store_1",
+		MemoryRef: "enbor://memories/store_1",
 		ReadOnly:  true,
 		Files:     []protocol.WorkspaceFile{{Path: "notes/plan.md", Content: "ship"}},
 	})
@@ -504,7 +504,7 @@ func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
 func TestMaterializeMemoryStoreWritableUsesCustomMountPath(t *testing.T) {
 	root := t.TempDir()
 	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
-		MemoryRef: "ama://memories/store_1",
+		MemoryRef: "enbor://memories/store_1",
 		MountPath: "/workspace/shared/notes",
 		Files:     []protocol.WorkspaceFile{{Path: "daily/plan.md", Content: "ship"}},
 	})
@@ -560,20 +560,20 @@ func TestDefaultMountPathHelpers(t *testing.T) {
 	if _, err := defaultGitMountPath(protocol.WorkspaceMount{URL: "ssh://github.com/saltbo/slink.git"}); err == nil {
 		t.Fatal("expected unsafe git URL error")
 	}
-	memoryPath, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
-	if err != nil || memoryPath != path.Join(".ama", "memory-stores", "store_1") {
+	memoryPath, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "enbor://memories/store_1"})
+	if err != nil || memoryPath != path.Join(".enbor", "memory-stores", "store_1") {
 		t.Fatalf("unexpected memory mount path %q err=%v", memoryPath, err)
 	}
 	if coalesce(" value ", "fallback") != " value " || coalesce(" ", "fallback") != "fallback" {
 		t.Fatal("unexpected coalesce behavior")
 	}
-	if _, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "ama://memories/"}); err == nil {
+	if _, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "enbor://memories/"}); err == nil {
 		t.Fatal("expected empty memory store id to fail")
 	}
 	for _, memoryRef := range []string{
-		"ama://vaults/store_1",
-		"ama://memories/store_1/nested",
-		"ama://memories/%2F",
+		"enbor://vaults/store_1",
+		"enbor://memories/store_1/nested",
+		"enbor://memories/%2F",
 	} {
 		if _, err := memoryStoreIDFromRef(memoryRef); err == nil {
 			t.Fatalf("expected invalid memory ref %q to fail", memoryRef)

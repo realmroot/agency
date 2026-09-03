@@ -321,7 +321,7 @@ async function assertFilesCurrent(files: GeneratedTextFile[]) {
 }
 
 async function assertGeneratedGoCurrent(configPath: string, specPath: string, targetPath: string) {
-  const dir = await mkdtemp(path.join(tmpdir(), 'ama-contract-check-'))
+  const dir = await mkdtemp(path.join(tmpdir(), 'enbor-contract-check-'))
   try {
     const tempOutput = path.join(dir, path.basename(targetPath))
     const tempConfig = path.join(dir, 'oapi-codegen.config.yaml')

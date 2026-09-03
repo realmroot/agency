@@ -1,5 +1,5 @@
 export type ClientOptions = {
-    baseUrl: 'https://ama.tftt.cc' | (string & {});
+    baseUrl: 'https://enbor.realmroot.dev' | (string & {});
 };
 export type SessionSocketEventMessage = {
     type: 'event';
@@ -428,7 +428,7 @@ export type RunnerToolCall = {
     approved?: boolean;
 };
 export type RunnerWorkPayload = {
-    protocol?: 'ama-runner-work';
+    protocol?: 'enbor-runner-work';
     type?: string;
     sessionId?: string;
     hostingMode?: string;
@@ -462,7 +462,7 @@ export type RunnerWorkPayload = {
     toolCall?: RunnerToolCall;
 };
 export type RunnerRuntimeRequirement = {
-    runtime: 'ama' | 'claude-code' | 'codex' | 'copilot';
+    runtime: 'enbor' | 'claude-code' | 'codex' | 'copilot';
     model?: string;
 };
 export type RunnerRuntimeToolCall = {
@@ -1284,7 +1284,7 @@ export type TriggerTemplateSpec = {
     volumeMounts: Array<VolumeMount>;
     promptTemplate: string;
 };
-export type RuntimeName = 'ama' | 'claude-code' | 'codex' | 'copilot';
+export type RuntimeName = 'enbor' | 'claude-code' | 'codex' | 'copilot';
 export type ExecutionEnv = {
     [key: string]: string;
 };
@@ -1830,7 +1830,7 @@ export type VaultCredential = {
 export type VaultCredentialSpec = {
     vaultId: string;
     organizationId: string;
-    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token' | 'ama.dev/realmroot-agent-state';
+    type: 'opaque' | 'enbor.dev/basic-auth' | 'enbor.dev/ssh-auth' | 'enbor.dev/tls' | 'enbor.dev/private-key-jwk' | 'enbor.dev/oauth-token' | 'enbor.dev/realmroot-agent-state';
     metadata: {
         [key: string]: unknown;
     };
@@ -1853,7 +1853,7 @@ export type VaultCredentialVersionSpec = {
     vaultId: string;
     organizationId: string;
     version: number;
-    provider: 'ama';
+    provider: 'enbor';
     secretRef: string;
     referenceName: string;
     hasSecret: boolean;
@@ -1870,7 +1870,7 @@ export type VaultCredentialVersionStatus = {
 };
 export type CreateVaultCredentialRequest = {
     name: string;
-    type: 'opaque' | 'ama.dev/basic-auth' | 'ama.dev/ssh-auth' | 'ama.dev/tls' | 'ama.dev/private-key-jwk' | 'ama.dev/oauth-token' | 'ama.dev/realmroot-agent-state';
+    type: 'opaque' | 'enbor.dev/basic-auth' | 'enbor.dev/ssh-auth' | 'enbor.dev/tls' | 'enbor.dev/private-key-jwk' | 'enbor.dev/oauth-token' | 'enbor.dev/realmroot-agent-state';
     metadata?: {
         [key: string]: unknown;
     };
@@ -2127,7 +2127,7 @@ export type ListAgentsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -2143,7 +2143,7 @@ export type ListAgentsData = {
         /**
          * Exact runtime of the bound Realmroot Identity.
          */
-        runtime?: 'ama' | 'codex' | 'claude-code' | 'copilot';
+        runtime?: 'enbor' | 'codex' | 'claude-code' | 'copilot';
         /**
          * Filter by current Inbox scheduling readiness.
          */
@@ -2184,7 +2184,7 @@ export type CreateAgentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -2226,7 +2226,7 @@ export type DeleteAgentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         agentId: string;
@@ -2262,7 +2262,7 @@ export type ReadAgentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         agentId: string;
@@ -2298,7 +2298,7 @@ export type UpdateAgentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         agentId: string;
@@ -2342,7 +2342,7 @@ export type ListAgentVersionsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         agentId: string;
@@ -2378,7 +2378,7 @@ export type ReadAgentVersionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         agentId: string;
@@ -2419,7 +2419,7 @@ export type ListEnvironmentsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -2464,7 +2464,7 @@ export type CreateEnvironmentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -2506,7 +2506,7 @@ export type DeleteEnvironmentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         environmentId: string;
@@ -2546,7 +2546,7 @@ export type ReadEnvironmentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         environmentId: string;
@@ -2582,7 +2582,7 @@ export type UpdateEnvironmentData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         environmentId: string;
@@ -2622,7 +2622,7 @@ export type ListEnvironmentVersionsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         environmentId: string;
@@ -2658,7 +2658,7 @@ export type ReadEnvironmentVersionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         environmentId: string;
@@ -2699,7 +2699,7 @@ export type ListIdentitiesData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -2744,7 +2744,7 @@ export type CreateIdentityData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -2790,7 +2790,7 @@ export type DeleteIdentityData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         identityId: string;
@@ -2830,7 +2830,7 @@ export type ReadIdentityData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         identityId: string;
@@ -3026,7 +3026,7 @@ export type ListRunnersData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -3072,7 +3072,7 @@ export type CreateRunnerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -3114,7 +3114,7 @@ export type DeleteRunnerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3154,7 +3154,7 @@ export type ReadRunnerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3194,7 +3194,7 @@ export type UpdateRunnerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3238,7 +3238,7 @@ export type ReadRunnerHeartbeatData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3274,7 +3274,7 @@ export type PutRunnerHeartbeatData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3318,7 +3318,7 @@ export type ConnectRunnerChannelData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         runnerId: string;
@@ -3358,7 +3358,7 @@ export type ListWorkItemsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -3405,7 +3405,7 @@ export type ReadWorkItemData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         workItemId: string;
@@ -3445,7 +3445,7 @@ export type ListLeasesData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -3488,7 +3488,7 @@ export type CreateLeaseData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -3530,7 +3530,7 @@ export type ReadLeaseData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         leaseId: string;
@@ -3566,7 +3566,7 @@ export type UpdateLeaseData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         leaseId: string;
@@ -3610,7 +3610,7 @@ export type ListBudgetsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -3644,7 +3644,7 @@ export type CreateBudgetData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -3686,7 +3686,7 @@ export type DeleteBudgetData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         budgetId: string;
@@ -3722,7 +3722,7 @@ export type ReadBudgetData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         budgetId: string;
@@ -3758,7 +3758,7 @@ export type UpdateBudgetData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         budgetId: string;
@@ -3864,7 +3864,7 @@ export type ListUsageRecordsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -3911,7 +3911,7 @@ export type ReadUsageRecordData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         recordId: string;
@@ -3947,7 +3947,7 @@ export type ReadUsageSummaryData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -4058,7 +4058,7 @@ export type ListTriggersData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -4106,7 +4106,7 @@ export type CreateTriggerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -4152,7 +4152,7 @@ export type DeleteTriggerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4192,7 +4192,7 @@ export type ReadTriggerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4228,7 +4228,7 @@ export type UpdateTriggerData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4276,7 +4276,7 @@ export type ListTriggerRunsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4323,7 +4323,7 @@ export type CreateTriggerRunData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4367,7 +4367,7 @@ export type ReadTriggerRunData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         triggerId: string;
@@ -4404,7 +4404,7 @@ export type ListSessionsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -4450,7 +4450,7 @@ export type CreateSessionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -4492,7 +4492,7 @@ export type DeleteSessionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4532,7 +4532,7 @@ export type ReadSessionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4568,7 +4568,7 @@ export type UpdateSessionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4612,7 +4612,7 @@ export type ConnectSessionSocketData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4645,7 +4645,7 @@ export type ListSessionMessagesData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4688,7 +4688,7 @@ export type CreateSessionMessageData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4736,7 +4736,7 @@ export type ReadSessionMessageData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4773,7 +4773,7 @@ export type ListSessionEventsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4820,7 +4820,7 @@ export type CreateSessionEventsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4860,7 +4860,7 @@ export type ListSessionApprovalsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4896,7 +4896,7 @@ export type ReadSessionApprovalData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4933,7 +4933,7 @@ export type DecideSessionApprovalData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         sessionId: string;
@@ -4974,7 +4974,7 @@ export type ListMemoryStoresData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -5018,7 +5018,7 @@ export type CreateMemoryStoreData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -5060,7 +5060,7 @@ export type DeleteMemoryStoreData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5096,7 +5096,7 @@ export type ReadMemoryStoreData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5132,7 +5132,7 @@ export type UpdateMemoryStoreData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5172,7 +5172,7 @@ export type ListMemoryStoreMemoriesData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5215,7 +5215,7 @@ export type CreateMemoryStoreMemoryData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5259,7 +5259,7 @@ export type DeleteMemoryStoreMemoryData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5296,7 +5296,7 @@ export type UpdateMemoryStoreMemoryData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         storeId: string;
@@ -5341,7 +5341,7 @@ export type ListVaultsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: {
@@ -5385,7 +5385,7 @@ export type CreateVaultData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path?: never;
     query?: never;
@@ -5427,7 +5427,7 @@ export type DeleteVaultData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5463,7 +5463,7 @@ export type ReadVaultData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5499,7 +5499,7 @@ export type UpdateVaultData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5543,7 +5543,7 @@ export type ListVaultCredentialsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5590,7 +5590,7 @@ export type CreateVaultCredentialData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5634,7 +5634,7 @@ export type ReadVaultCredentialData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5671,7 +5671,7 @@ export type UpdateVaultCredentialData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5712,7 +5712,7 @@ export type UpdateVaultCredentialSecretData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5757,7 +5757,7 @@ export type ListVaultCredentialVersionsData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;
@@ -5804,7 +5804,7 @@ export type ReadVaultCredentialVersionData = {
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
-        'X-AMA-Project-ID'?: string;
+        'X-Enbor-Project-ID'?: string;
     };
     path: {
         vaultId: string;

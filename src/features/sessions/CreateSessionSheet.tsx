@@ -59,7 +59,7 @@ export function CreateSessionSheet({
   const environments = identityRuntime
     ? allEnvironments.filter((environment) =>
         environment.spec.type === 'cloud'
-          ? identityRuntime === 'ama'
+          ? identityRuntime === 'enbor'
           : runners.some(
               (runner) =>
                 runner.environmentId === environment.metadata.uid &&

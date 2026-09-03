@@ -9,8 +9,8 @@ import (
 
 func TestWindowsCLIOnlyConfigDoesNotRequireUnsafeAdapter(t *testing.T) {
 	config := Config{
-		APIServer:             "https://ama.example.test",
-		CredentialPath:        `C:\Users\runner\AppData\Roaming\ama-runner\credentials.json`,
+		APIServer:             "https://enbor.example.test",
+		CredentialPath:        `C:\Users\runner\AppData\Roaming\enbor-runner\credentials.json`,
 		EnvironmentID:         "env_1",
 		StateDir:              t.TempDir(),
 		WorkDir:               t.TempDir(),

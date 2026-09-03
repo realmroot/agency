@@ -3,7 +3,7 @@ import { environmentHostingMode, sessionRuntimeConfig, sessionRuntimeFromMetadat
 
 describe('runtime-session domain rules [spec: sessions/runtime-metadata]', () => {
   it('reads the runtime from session metadata', () => {
-    expect(sessionRuntimeFromMetadata({ runtime: 'ama' })).toBe('ama')
+    expect(sessionRuntimeFromMetadata({ runtime: 'enbor' })).toBe('enbor')
     expect(sessionRuntimeFromMetadata({ runtime: 'claude-code' })).toBe('claude-code')
   })
 

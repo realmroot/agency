@@ -16,15 +16,15 @@ function environmentChoice<const Values extends readonly string[]>(
 
 export function codexPermissionPolicy(env: NodeJS.ProcessEnv = process.env) {
   return {
-    sandboxMode: environmentChoice(env, 'AMA_CODEX_SANDBOX_MODE', CODEX_SANDBOX_MODES, 'danger-full-access'),
-    approvalPolicy: environmentChoice(env, 'AMA_CODEX_APPROVAL_POLICY', CODEX_APPROVAL_POLICIES, 'never'),
+    sandboxMode: environmentChoice(env, 'ENBOR_CODEX_SANDBOX_MODE', CODEX_SANDBOX_MODES, 'danger-full-access'),
+    approvalPolicy: environmentChoice(env, 'ENBOR_CODEX_APPROVAL_POLICY', CODEX_APPROVAL_POLICIES, 'never'),
   }
 }
 
 export function claudeCodePermissionPolicy(env: NodeJS.ProcessEnv = process.env) {
   const permissionMode = environmentChoice(
     env,
-    'AMA_CLAUDE_CODE_PERMISSION_MODE',
+    'ENBOR_CLAUDE_CODE_PERMISSION_MODE',
     CLAUDE_CODE_PERMISSION_MODES,
     'bypassPermissions',
   )

@@ -19,11 +19,11 @@ func TestUpdateLaunchAgentPlistEditsLoginStartupKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plistPath := filepath.Join(t.TempDir(), "ama-runner-test.plist")
+	plistPath := filepath.Join(t.TempDir(), "enbor-runner-test.plist")
 	plist := `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>Label</key><string>ama-runner-test</string>
+<key>Label</key><string>enbor-runner-test</string>
 <key>RunAtLoad</key><false/>
 <key>KeepAlive</key><false/>
 </dict></plist>`
@@ -56,7 +56,7 @@ func TestUpdateServiceStartAtLoginRejectsMissingLaunchAgent(t *testing.T) {
 	if _, err := rand.Read(randomSuffix); err != nil {
 		t.Fatal(err)
 	}
-	serviceName := "ama-runner-test-missing-" + hex.EncodeToString(randomSuffix)
+	serviceName := "enbor-runner-test-missing-" + hex.EncodeToString(randomSuffix)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatal(err)
@@ -76,10 +76,10 @@ func TestUpdateServiceStartAtLoginRejectsMissingLaunchAgent(t *testing.T) {
 }
 
 func TestDarwinLoginStartupNoOps(t *testing.T) {
-	if err := syncServiceStartAtLogin("ama-runner-test", true); err != nil {
+	if err := syncServiceStartAtLogin("enbor-runner-test", true); err != nil {
 		t.Fatal(err)
 	}
-	if err := startServiceNow("ama-runner-test", true); err != nil {
+	if err := startServiceNow("enbor-runner-test", true); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -164,11 +164,11 @@ fi
 
 func writeLaunchAgentPlist(t *testing.T, runAtLoad bool, keepAlive bool) string {
 	t.Helper()
-	plistPath := filepath.Join(t.TempDir(), "ama-runner-test.plist")
+	plistPath := filepath.Join(t.TempDir(), "enbor-runner-test.plist")
 	plist := `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>Label</key><string>ama-runner-test</string>
+<key>Label</key><string>enbor-runner-test</string>
 <key>RunAtLoad</key><` + plistBoolElement(runAtLoad) + `/>
 <key>KeepAlive</key><` + plistBoolElement(keepAlive) + `/>
 </dict></plist>`

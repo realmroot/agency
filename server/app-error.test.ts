@@ -14,10 +14,10 @@ describe('app error handling', () => {
         headers: {
           authorization: 'Bearer e2e:logging_error',
           'x-request-id': 'req_logging_error',
-          'x-ama-project-id': 'project_logging',
+          'x-enbor-project-id': 'project_logging',
         },
       }),
-      { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
+      { RUNTIME_MODE: 'test', E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'enbor-test' } as Env,
     )
 
     expect(response.status).toBe(500)
@@ -55,9 +55,9 @@ describe('app error handling', () => {
         headers: { authorization: 'Bearer e2e:http_boundary_redaction' },
       }),
       {
-        AMA_RUNTIME_MODE: 'test',
-        AMA_E2E_TEST_AUTH: 'true',
-        OIDC_CLIENT_ID: 'ama-test',
+        RUNTIME_MODE: 'test',
+        E2E_TEST_AUTH: 'true',
+        OIDC_CLIENT_ID: 'enbor-test',
         DB: {
           prepare() {
             throw new Error(`upstream body ${callbackToken}; authorization ${basicCredential}`)
@@ -81,9 +81,9 @@ describe('app error handling', () => {
   ])('fails closed for canonical resource endpoint %s when OIDC_RESOURCE is missing', async (path) => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const response = await createApp().fetch(new Request(`https://hostile.example${path}`), {
-      AMA_RUNTIME_MODE: 'live',
+      RUNTIME_MODE: 'live',
       OIDC_ISSUER: 'https://id.example.test/api/auth',
-      OIDC_CLIENT_ID: 'ama-test',
+      OIDC_CLIENT_ID: 'enbor-test',
     } as Env)
 
     expect(response.status).toBe(500)
@@ -95,9 +95,9 @@ describe('app error handling', () => {
   it('fails closed when OpenAPI identity-provider discovery has no OIDC_ISSUER', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const response = await createApp().fetch(new Request('https://hostile.example/api/v1/openapi.json'), {
-      AMA_RUNTIME_MODE: 'live',
-      OIDC_CLIENT_ID: 'ama-test',
-      OIDC_RESOURCE: 'https://ama.tftt.cc/api',
+      RUNTIME_MODE: 'live',
+      OIDC_CLIENT_ID: 'enbor-test',
+      OIDC_RESOURCE: 'https://enbor.realmroot.dev/api',
     } as Env)
 
     expect(response.status).toBe(500)

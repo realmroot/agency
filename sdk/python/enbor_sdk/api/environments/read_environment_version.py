@@ -19,12 +19,12 @@ def _get_kwargs(
     environment_id: str,
     version: int,
     *,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -99,7 +99,7 @@ def sync_detailed(
     version: int,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[EnvironmentVersion | ErrorResponse]:
     """ Read an environment version
@@ -107,7 +107,7 @@ def sync_detailed(
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -121,7 +121,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         environment_id=environment_id,
 version=version,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -136,7 +136,7 @@ def sync(
     version: int,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> EnvironmentVersion | ErrorResponse | None:
     """ Read an environment version
@@ -144,7 +144,7 @@ def sync(
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,7 +159,7 @@ def sync(
         environment_id=environment_id,
 version=version,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -168,7 +168,7 @@ async def asyncio_detailed(
     version: int,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[EnvironmentVersion | ErrorResponse]:
     """ Read an environment version
@@ -176,7 +176,7 @@ async def asyncio_detailed(
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -190,7 +190,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         environment_id=environment_id,
 version=version,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -205,7 +205,7 @@ async def asyncio(
     version: int,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> EnvironmentVersion | ErrorResponse | None:
     """ Read an environment version
@@ -213,7 +213,7 @@ async def asyncio(
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
         version (int):  Example: 1.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -228,6 +228,6 @@ async def asyncio(
         environment_id=environment_id,
 version=version,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

@@ -57,8 +57,8 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.EnvironmentID) == "" {
 		return fmt.Errorf("Enbor environment id is required")
 	}
-	if host.SupportsAMARuntime() && !c.AllowUnsafeProcess {
-		return fmt.Errorf("process-unsafe adapter requires AMA_RUNNER_ALLOW_UNSAFE_PROCESS=true or --allow-unsafe-process")
+	if host.SupportsEnborRuntime() && !c.AllowUnsafeProcess {
+		return fmt.Errorf("process-unsafe adapter requires ENBOR_RUNNER_ALLOW_UNSAFE_PROCESS=true or --allow-unsafe-process")
 	}
 	if strings.TrimSpace(c.WorkDir) == "" {
 		return fmt.Errorf("work dir is required")

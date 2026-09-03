@@ -580,7 +580,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
           spec: {
             agentId: 'agent_1',
             environmentId: 'env_1',
-            runtime: 'ama',
+            runtime: 'enbor',
             promptTemplate: 'Research the latest offers.',
           },
         },
@@ -805,7 +805,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
               issuer: 'https://id.realmroot.dev/api/auth',
               subject: 'agent:019ff41a-7da6-708f-8b05-49a4cc6d5300',
               username: 'inbox-operator',
-              runtime: 'ama',
+              runtime: 'enbor',
             },
           }),
         ],
@@ -826,7 +826,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
       metadata: { name: 'Inbox triage' },
       spec: {
         source: { type: 'inbox' },
-        template: { spec: { runtime: 'ama', promptTemplate: 'Triage the referenced Message.' } },
+        template: { spec: { runtime: 'enbor', promptTemplate: 'Triage the referenced Message.' } },
       },
     })
   })

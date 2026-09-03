@@ -14,9 +14,9 @@ import {
   randomOpaqueValue,
 } from './web-session-crypto'
 
-const SESSION_COOKIE = 'ama_session'
-const ATTEMPT_COOKIE = 'ama_login'
-const AUTH_CLIENT_COOKIE = 'ama_auth_client'
+const SESSION_COOKIE = 'enbor_session'
+const ATTEMPT_COOKIE = 'enbor_login'
+const AUTH_CLIENT_COOKIE = 'enbor_auth_client'
 const ATTEMPT_TTL_MS = 10 * 60 * 1000
 const AUTH_CLIENT_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const SESSION_MAX_TTL_MS = 8 * 60 * 60 * 1000
@@ -176,7 +176,7 @@ export async function completeAuthorizationResponse<E extends HonoEnv>(c: WebCon
 }
 
 export async function createE2eWebSession<E extends HonoEnv>(c: WebContext<E>, accessToken: string) {
-  if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+  if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
     throw new Error('E2E browser sessions are unavailable')
   }
   const claims = await getAccessTokenClaims(c.env, accessToken, oidcAudience(c.env, c.req.url))
@@ -263,8 +263,8 @@ export async function deleteWebSession<E extends HonoEnv>(c: WebContext<E>) {
 export function requireWebOidcConfig(env: Env) {
   const { clientId } = requireOidcConfig(env)
   if (!env.OIDC_CLIENT_SECRET) throw new Error('OIDC_CLIENT_SECRET is required for browser sign-in')
-  if (!env.AMA_WEB_SESSION_ENCRYPTION_KEY || env.AMA_WEB_SESSION_ENCRYPTION_KEY.length < 32) {
-    throw new Error('AMA_WEB_SESSION_ENCRYPTION_KEY with at least 32 characters is required for browser sign-in')
+  if (!env.WEB_SESSION_ENCRYPTION_KEY || env.WEB_SESSION_ENCRYPTION_KEY.length < 32) {
+    throw new Error('WEB_SESSION_ENCRYPTION_KEY with at least 32 characters is required for browser sign-in')
   }
   return { clientId, clientSecret: env.OIDC_CLIENT_SECRET }
 }

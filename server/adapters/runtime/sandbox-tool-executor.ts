@@ -361,7 +361,7 @@ export class CloudflareSandboxToolExecutor implements ToolExecutor {
   }
 }
 
-// Per-sandbox simulated filesystem for AMA_RUNTIME_MODE=test: writes are
+// Per-sandbox simulated filesystem for RUNTIME_MODE=test: writes are
 // readable back within the same sandbox, and stopping the sandbox destroys
 // its state — mirroring the one-sandbox-per-session lifecycle.
 const simulatedSandboxFiles = new Map<string, Map<string, string>>()
@@ -526,5 +526,5 @@ export class TestToolExecutor implements ToolExecutor {
 }
 
 export function toolExecutor(env: Env): ToolExecutor {
-  return env.AMA_RUNTIME_MODE === 'test' ? new TestToolExecutor() : new CloudflareSandboxToolExecutor(env)
+  return env.RUNTIME_MODE === 'test' ? new TestToolExecutor() : new CloudflareSandboxToolExecutor(env)
 }

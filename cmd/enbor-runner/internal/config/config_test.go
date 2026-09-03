@@ -12,7 +12,7 @@ import (
 
 func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 	valid := Config{
-		APIServer:             "https://ama.example.test",
+		APIServer:             "https://enbor.example.test",
 		EnvironmentID:         "env_1",
 		AllowUnsafeProcess:    true,
 		StateDir:              t.TempDir(),
@@ -41,7 +41,7 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 		{"timeout", func(c *Config) { c.CommandTimeout = 0 }, "command timeout"},
 		{"maxSession", func(c *Config) { c.MaxSessionDuration = -time.Second }, "max session duration"},
 	}
-	if host.SupportsAMARuntime() {
+	if host.SupportsEnborRuntime() {
 		cases = append(cases, struct {
 			name   string
 			mutate func(*Config)
@@ -62,7 +62,7 @@ func TestConfigValidateRejectsInvalidBoundaries(t *testing.T) {
 
 func TestValidateAPIServerURLAllowsHTTPSAndLoopbackHTTPOnly(t *testing.T) {
 	for _, value := range []string{
-		"https://ama.example.test",
+		"https://enbor.example.test",
 		"http://localhost:8787",
 		"http://127.0.0.1:8787",
 		"http://[::1]:8787",
@@ -75,11 +75,11 @@ func TestValidateAPIServerURLAllowsHTTPSAndLoopbackHTTPOnly(t *testing.T) {
 		value string
 		want  string
 	}{
-		{value: "http://ama.example.test", want: "HTTPS"},
-		{value: "ftp://ama.example.test", want: "HTTPS"},
-		{value: "https://user:secret@ama.example.test", want: "userinfo"},
-		{value: "https://ama.example.test?token=secret", want: "query"},
-		{value: "https://ama.example.test#fragment", want: "fragment"},
+		{value: "http://enbor.example.test", want: "HTTPS"},
+		{value: "ftp://enbor.example.test", want: "HTTPS"},
+		{value: "https://user:secret@enbor.example.test", want: "userinfo"},
+		{value: "https://enbor.example.test?token=secret", want: "query"},
+		{value: "https://enbor.example.test#fragment", want: "fragment"},
 	} {
 		if err := ValidateAPIServerURL(tc.value); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Fatalf("expected %q to fail with %q, got %v", tc.value, tc.want, err)
@@ -112,15 +112,15 @@ func TestDefaultPathsUseNativeUserDirectories(t *testing.T) {
 }
 
 func TestInstanceIDIsStableForServerAndEnvironment(t *testing.T) {
-	first, err := InstanceID("https://AMA.example.test/", "env_1")
+	first, err := InstanceID("https://Enbor.example.test/", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	normalized, err := InstanceID("https://ama.example.test", "env_1")
+	normalized, err := InstanceID("https://enbor.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	otherEnvironment, err := InstanceID("https://ama.example.test", "env_2")
+	otherEnvironment, err := InstanceID("https://enbor.example.test", "env_2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestInstanceIDIsStableForServerAndEnvironment(t *testing.T) {
 	if _, err := InstanceID("://bad", "env_1"); err == nil {
 		t.Fatal("invalid API Server must fail")
 	}
-	if _, err := InstanceID("https://ama.example.test", ""); err == nil {
+	if _, err := InstanceID("https://enbor.example.test", ""); err == nil {
 		t.Fatal("empty Environment must fail")
 	}
 }
@@ -141,15 +141,15 @@ func TestDefaultInstancePathsAreStableAndIsolated(t *testing.T) {
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
 
-	first, err := DefaultStateDirForInstance("https://AMA.example.test/", "env_1")
+	first, err := DefaultStateDirForInstance("https://Enbor.example.test/", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	normalized, err := DefaultStateDirForInstance("https://ama.example.test", "env_1")
+	normalized, err := DefaultStateDirForInstance("https://enbor.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := DefaultStateDirForInstance("https://ama-staging.example.test", "env_1")
+	second, err := DefaultStateDirForInstance("https://enbor-staging.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestDefaultInstancePathsAreStableAndIsolated(t *testing.T) {
 	if first == second {
 		t.Fatalf("different API Servers must not share a directory: %q", first)
 	}
-	otherEnvironment, err := DefaultStateDirForInstance("https://ama.example.test", "env_2")
+	otherEnvironment, err := DefaultStateDirForInstance("https://enbor.example.test", "env_2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestDefaultInstancePathsAreStableAndIsolated(t *testing.T) {
 	if _, err := DefaultStateDirForInstance("://invalid", "env_1"); err == nil {
 		t.Fatal("invalid API Server must not produce a storage directory")
 	}
-	if _, err := DefaultStateDirForInstance("https://ama.example.test", ""); err == nil {
+	if _, err := DefaultStateDirForInstance("https://enbor.example.test", ""); err == nil {
 		t.Fatal("empty Environment must not produce a storage directory")
 	}
 }
@@ -199,8 +199,8 @@ func TestDefaultInstancePathsAreStableAndIsolated(t *testing.T) {
 func TestCredentialStoreSwitchesAccountsAndProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	profiles := []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", Email: "one@example.test", AccessToken: "token-1", TokenType: "Bearer"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test", Email: "two@example.test", AccessToken: "token-2", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://enbor.example.test", Email: "one@example.test", AccessToken: "token-1", TokenType: "Bearer"},
+		{AccountID: "acct_2", APIServer: "https://enbor.example.test", Email: "two@example.test", AccessToken: "token-2", TokenType: "Bearer"},
 		{AccountID: "acct_other", APIServer: "https://other.example.test", Email: "other@example.test", AccessToken: "token-other", TokenType: "Bearer"},
 	}
 	for _, profile := range profiles {
@@ -209,14 +209,14 @@ func TestCredentialStoreSwitchesAccountsAndProfiles(t *testing.T) {
 		}
 	}
 
-	selected, err := SwitchCredentialProfile(credentialPath, "https://ama.example.test", "two@example.test")
+	selected, err := SwitchCredentialProfile(credentialPath, "https://enbor.example.test", "two@example.test")
 	if err != nil {
 		t.Fatalf("expected account switch, got %v", err)
 	}
 	if selected.AccountID != "acct_2" {
 		t.Fatalf("expected second account, got %#v", selected)
 	}
-	active, err := LoadCredentialProfile(credentialPath, "https://ama.example.test")
+	active, err := LoadCredentialProfile(credentialPath, "https://enbor.example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,10 +232,10 @@ func TestCredentialStoreSwitchesAccountsAndProfiles(t *testing.T) {
 		t.Fatalf("expected other profile, got %#v", selected)
 	}
 
-	if _, err := SwitchCredentialProfile(credentialPath, "https://ama.example.test", ""); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
+	if _, err := SwitchCredentialProfile(credentialPath, "https://enbor.example.test", ""); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
 		t.Fatalf("expected ambiguous account error, got %v", err)
 	}
-	if _, err := SwitchCredentialProfile(credentialPath, "https://ama.example.test", "missing@example.test"); err == nil || !strings.Contains(err.Error(), "no saved auth account") {
+	if _, err := SwitchCredentialProfile(credentialPath, "https://enbor.example.test", "missing@example.test"); err == nil || !strings.Contains(err.Error(), "no saved auth account") {
 		t.Fatalf("expected missing account error, got %v", err)
 	}
 	if _, err := SwitchCredentialProfile(credentialPath, "https://missing.example.test", ""); err == nil || !strings.Contains(err.Error(), "no saved auth profile") {
@@ -262,7 +262,7 @@ func TestCredentialStoreLoadsAndLogsOutProfiles(t *testing.T) {
 	}
 	profile := CredentialProfile{
 		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test/",
+		APIServer:   "https://enbor.example.test/",
 		Email:       "runner@example.test",
 		AccessToken: "token",
 		TokenType:   "Bearer",
@@ -275,7 +275,7 @@ func TestCredentialStoreLoadsAndLogsOutProfiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if active == nil || active.APIServer != "https://ama.example.test" {
+	if active == nil || active.APIServer != "https://enbor.example.test" {
 		t.Fatalf("expected normalized active profile, got %#v", active)
 	}
 	if err := LogoutCredentialProfile(credentialPath, ""); err != nil {
@@ -295,8 +295,8 @@ func TestCredentialStoreLoadsAndLogsOutProfiles(t *testing.T) {
 
 func TestCredentialStoreUpdatesAndReassignsActiveProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	first := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"}
-	updated := CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test/", Email: "updated@example.test", AccessToken: "token-updated", TokenType: "Bearer"}
+	first := CredentialProfile{AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "token-1", TokenType: "Bearer"}
+	updated := CredentialProfile{AccountID: "acct_1", APIServer: "https://enbor.example.test/", Email: "updated@example.test", AccessToken: "token-updated", TokenType: "Bearer"}
 	otherServer := CredentialProfile{AccountID: "acct_2", APIServer: "https://other.example.test", AccessToken: "token-2", TokenType: "Bearer"}
 	if err := SaveCredentialProfile(credentialPath, first); err != nil {
 		t.Fatal(err)
@@ -328,7 +328,7 @@ func TestCredentialStoreUpdatesAndReassignsActiveProfiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if active == nil || active.AccessToken != "token-updated" || active.APIServer != "https://ama.example.test" {
+	if active == nil || active.AccessToken != "token-updated" || active.APIServer != "https://enbor.example.test" {
 		t.Fatalf("expected remaining profile to become active, got %#v", active)
 	}
 }
@@ -336,8 +336,8 @@ func TestCredentialStoreUpdatesAndReassignsActiveProfiles(t *testing.T) {
 func TestCredentialStoreLoadProfileSelection(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	for _, profile := range []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "token-2", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "token-1", TokenType: "Bearer"},
+		{AccountID: "acct_2", APIServer: "https://enbor.example.test", AccessToken: "token-2", TokenType: "Bearer"},
 		{AccountID: "acct_3", APIServer: "https://other.example.test", AccessToken: "token-3", TokenType: "Bearer"},
 	} {
 		if err := SaveCredentialProfile(credentialPath, profile); err != nil {
@@ -347,7 +347,7 @@ func TestCredentialStoreLoadProfileSelection(t *testing.T) {
 	if got, err := LoadCredentialProfile(credentialPath, "https://missing.example.test"); err != nil || got != nil {
 		t.Fatalf("expected no profile for missing server, got %#v err=%v", got, err)
 	}
-	if _, err := LoadCredentialProfile(credentialPath, "https://ama.example.test"); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
+	if _, err := LoadCredentialProfile(credentialPath, "https://enbor.example.test"); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
 		t.Fatalf("expected ambiguous profile error, got %v", err)
 	}
 	if got, err := LoadCredentialProfile(credentialPath, "https://other.example.test"); err != nil || got == nil || got.AccountID != "acct_3" {
@@ -360,24 +360,24 @@ func TestCredentialStoreLoadProfileSelection(t *testing.T) {
 
 func TestCredentialStoreRejectsInvalidProfilesAndFiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	if err := SaveCredentialProfile("", CredentialProfile{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token", TokenType: "Bearer"}); err == nil {
+	if err := SaveCredentialProfile("", CredentialProfile{AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "token", TokenType: "Bearer"}); err == nil {
 		t.Fatal("expected empty credential path to fail")
 	}
 	for _, profile := range []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", TokenType: "Bearer"},
-		{APIServer: "https://ama.example.test", AccessToken: "token", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://enbor.example.test", TokenType: "Bearer"},
+		{APIServer: "https://enbor.example.test", AccessToken: "token", TokenType: "Bearer"},
 	} {
 		if err := SaveCredentialProfile(credentialPath, profile); err == nil {
 			t.Fatalf("expected invalid profile error for %#v", profile)
 		}
 	}
-	if err := os.WriteFile(credentialPath, []byte(`{"active":"https://ama.example.test#acct_1","profiles":[{"accountId":"acct_1","apiServer":"https://ama.example.test","accessToken":"token","tokenType":"Bearer","expiresAt":"not-time"}]}`), 0o600); err != nil {
+	if err := os.WriteFile(credentialPath, []byte(`{"active":"https://enbor.example.test#acct_1","profiles":[{"accountId":"acct_1","apiServer":"https://enbor.example.test","accessToken":"token","tokenType":"Bearer","expiresAt":"not-time"}]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LoadActiveCredentialProfile(credentialPath); err == nil {
 		t.Fatal("expected malformed expiry error")
 	}
-	if err := os.WriteFile(credentialPath, []byte(`{"active":"https://ama.example.test#acct_1","profiles":[{"accountId":"acct_1","apiServer":"https://ama.example.test","accessToken":"token","tokenType":"Bearer","expiresAt":"2000-01-01T00:00:00Z"}]}`), 0o600); err != nil {
+	if err := os.WriteFile(credentialPath, []byte(`{"active":"https://enbor.example.test#acct_1","profiles":[{"accountId":"acct_1","apiServer":"https://enbor.example.test","accessToken":"token","tokenType":"Bearer","expiresAt":"2000-01-01T00:00:00Z"}]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LoadActiveCredentialProfile(credentialPath); err == nil || !strings.Contains(err.Error(), "expired") {

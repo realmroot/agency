@@ -40,7 +40,7 @@ Enbor owns:
 - **Execution configuration**: reusable cloud or self-hosted environments, workspace setup, network policy, resource limits, and safe secret references.
 - **Session lifecycle**: immutable agent and environment snapshots, runtime selection, dispatch, persisted events, transcripts, approvals, usage, and audit records.
 - **Developer interfaces**: an OpenAPI-backed control plane, generated SDKs, standards-based protected-resource discovery, and an operational console.
-- **Runtime portability**: a canonical session surface across the first-party `ama` runtime and runner-managed integrations such as `claude-code`, `codex`, and `copilot`.
+- **Runtime portability**: a canonical session surface across the first-party `enbor` runtime and runner-managed integrations such as `claude-code`, `codex`, and `copilot`.
 
 Enbor does not own:
 

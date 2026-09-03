@@ -140,7 +140,9 @@ export async function resolveAuthContext<E extends HonoEnv>(
   // addressed by a globally unique resource id should derive project ownership
   // from the resource after authenticating the caller.
   const requestedProjectId =
-    c.req.raw.headers.get('x-ama-project-id') ?? new URL(c.req.url).searchParams.get('x-ama-project-id') ?? undefined
+    c.req.raw.headers.get('x-enbor-project-id') ??
+    new URL(c.req.url).searchParams.get('x-enbor-project-id') ??
+    undefined
 
   const directMethod = directAuthenticationMethod(c.req.raw)
   const claims = directMethod
@@ -346,8 +348,8 @@ function requestClaims(env: Env, request: Request, audience: string) {
 function dpopRequest(request: Request) {
   if (!hasSocketCredential(request)) return request
   const protocols = (request.headers.get('sec-websocket-protocol') ?? '').split(',').map((value) => value.trim())
-  const access = protocols.find((value) => value.startsWith('ama-access.'))?.slice('ama-access.'.length)
-  const proof = protocols.find((value) => value.startsWith('ama-proof.'))?.slice('ama-proof.'.length)
+  const access = protocols.find((value) => value.startsWith('enbor-access.'))?.slice('enbor-access.'.length)
+  const proof = protocols.find((value) => value.startsWith('enbor-proof.'))?.slice('enbor-proof.'.length)
   if (!access || !proof) return request
   const headers = new Headers(request.headers)
   headers.set('authorization', `DPoP ${decodeSocketCredential(access)}`)
@@ -356,7 +358,7 @@ function dpopRequest(request: Request) {
 }
 
 function hasSocketCredential(request: Request) {
-  return (request.headers.get('sec-websocket-protocol') ?? '').split(',').some((value) => value.trim() === 'ama-dpop')
+  return (request.headers.get('sec-websocket-protocol') ?? '').split(',').some((value) => value.trim() === 'enbor-dpop')
 }
 
 function decodeSocketCredential(value: string) {

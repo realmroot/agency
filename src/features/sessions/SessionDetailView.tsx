@@ -231,7 +231,7 @@ export function SessionDetailView({
                       memoryStoreVolumes(session).length === 0 ? 'None' : String(memoryStoreVolumes(session).length)
                     }
                   />
-                  <Meta label="Workspace manifest" value="/workspace/.ama/resources.json" />
+                  <Meta label="Workspace manifest" value="/workspace/.enbor/resources.json" />
                   <Meta label="Setup status" value="Declared for runtime executor setup" />
                 </MetaGrid>
               }

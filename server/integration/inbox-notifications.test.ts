@@ -59,8 +59,8 @@ describe('[CF] Inbox notification receipts', () => {
       issuer: 'https://id.realmroot.dev/api/auth',
       subject: agentSubject,
       username: 'inbox-agent',
-      runtime: 'ama',
-      credentialRef: 'ama-managed:vaults/test/credentials/test/versions/test',
+      runtime: 'enbor',
+      credentialRef: 'enbor-managed:vaults/test/credentials/test/versions/test',
     }
     await env.DB.prepare('UPDATE agents SET identity_snapshot = ? WHERE id = ?')
       .bind(JSON.stringify(identity), agent.metadata.uid)
@@ -84,7 +84,7 @@ describe('[CF] Inbox notification receipts', () => {
             spec: {
               agentId: agent.metadata.uid,
               environmentId: null,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Triage the referenced message.',
               env: {},
               envFrom: [],

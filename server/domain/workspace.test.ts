@@ -9,17 +9,17 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
         {
           name: 'memory',
           type: 'memory',
-          memoryRef: 'ama://memories/store_1',
+          memoryRef: 'enbor://memories/store_1',
         },
       ],
       [
         { name: 'repo', mountPath: '/workspace/src' },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: false },
+        { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1', readOnly: false },
       ],
     )
     const block = workspaceSystemPromptBlock(spec)
     expect(block).toContain('https://github.com/saltbo/slink.git at src')
-    expect(block).toContain('memory (writable) at .ama/memory-stores/store_1')
+    expect(block).toContain('memory (writable) at .enbor/memory-stores/store_1')
   })
 
   it('returns null when no prompt-visible volumes are present', () => {
@@ -31,7 +31,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       workspaceSpec(
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
+          { name: 'memory', type: 'memory', memoryRef: 'enbor://memories/store_1' },
         ],
         [
           { name: 'repo', mountPath: '/workspace' },
@@ -48,13 +48,13 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       workspaceSpec(
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: '', type: 'memory', memoryRef: 'ama://memories/store_1' },
+          { name: '', type: 'memory', memoryRef: 'enbor://memories/store_1' },
         ],
         [],
       ),
     )
     expect(block).toContain('https://github.com/saltbo/slink.git at repos/github.com/saltbo/slink')
-    expect(block).toContain('store_1 (readOnly) at .ama/memory-stores/store_1')
+    expect(block).toContain('store_1 (readOnly) at .enbor/memory-stores/store_1')
   })
 
   it('builds prompt context for repository-only and memory-only workspaces', () => {
@@ -71,12 +71,12 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
     const memoryBlock = workspaceSystemPromptBlock(
       workspaceSpec(
         [{ name: 'memory', type: 'memory', memoryRef: undefined as never }],
-        [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/fallback', readOnly: true }],
+        [{ name: 'memory', mountPath: '/workspace/.enbor/memory-stores/fallback', readOnly: true }],
       ),
     )
     expect(memoryBlock).not.toContain('- Repositories:')
     expect(memoryBlock).toContain('- Memory stores:')
-    expect(memoryBlock).toContain('memory (readOnly) at .ama/memory-stores/fallback')
+    expect(memoryBlock).toContain('memory (readOnly) at .enbor/memory-stores/fallback')
   })
 
   it('normalizes valid git and memory volumes', () => {
@@ -88,12 +88,12 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
             type: 'git_repository',
             url: 'https://github.com/saltbo/slink.git?ignored=1',
             ref: 'main',
-            secretRef: 'ama://vaults/v/credentials/c/versions/ver',
+            secretRef: 'enbor://vaults/v/credentials/c/versions/ver',
           },
           JSON.parse(`{
             "name": "memory",
             "type": "memory",
-            "memoryRef": "ama://memories/store_1",
+            "memoryRef": "enbor://memories/store_1",
             "storeName": "Store",
             "description": "Notes",
             "memories": [{ "path": "notes.md", "content": "hello" }]
@@ -101,7 +101,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
         ],
         [
           { name: 'repo', mountPath: 'src' },
-          { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
+          { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1', readOnly: true },
         ],
       ),
     )
@@ -112,17 +112,17 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
           type: 'git_repository',
           url: 'https://github.com/saltbo/slink.git',
           ref: 'main',
-          secretRef: 'ama://vaults/v/credentials/c/versions/ver',
+          secretRef: 'enbor://vaults/v/credentials/c/versions/ver',
         },
         {
           name: 'memory',
           type: 'memory',
-          memoryRef: 'ama://memories/store_1',
+          memoryRef: 'enbor://memories/store_1',
         },
       ],
       volumeMounts: [
         { name: 'repo', mountPath: '/workspace/src', readOnly: true },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
+        { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1', readOnly: true },
       ],
     })
   })
@@ -133,22 +133,22 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
         workspaceSpec(
           [
             { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-            { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
+            { name: 'memory', type: 'memory', memoryRef: 'enbor://memories/store_1' },
           ],
           [
             { name: 'repo', mountPath: '/workspace/repo' },
-            { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1' },
+            { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1' },
           ],
         ),
       ),
     ).toEqual({
       volumes: [
         { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-        { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
+        { name: 'memory', type: 'memory', memoryRef: 'enbor://memories/store_1' },
       ],
       volumeMounts: [
         { name: 'repo', mountPath: '/workspace/repo', readOnly: true },
-        { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: true },
+        { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1', readOnly: true },
       ],
     })
   })
@@ -160,7 +160,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       seedFrom: [
         {
           type: 'secret' as const,
-          secretRef: 'ama://vaults/v/credentials/c',
+          secretRef: 'enbor://vaults/v/credentials/c',
           items: [{ key: 'state.json', path: 'identities/issuer/runtime.json' }],
         },
       ],
@@ -169,12 +169,12 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [volume],
-          [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+          [{ name: 'runtime-state', mountPath: '/workspace/.enbor/runtime-state', readOnly: false }],
         ),
       ),
     ).toEqual({
       volumes: [volume],
-      volumeMounts: [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+      volumeMounts: [{ name: 'runtime-state', mountPath: '/workspace/.enbor/runtime-state', readOnly: false }],
     })
   })
 
@@ -186,8 +186,8 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [
-            { name: 'dup', type: 'secret', secretRef: 'ama://vaults/v' },
-            { name: 'dup', type: 'secret', secretRef: 'ama://vaults/v2' },
+            { name: 'dup', type: 'secret', secretRef: 'enbor://vaults/v' },
+            { name: 'dup', type: 'secret', secretRef: 'enbor://vaults/v2' },
           ],
           [],
         ),
@@ -199,13 +199,13 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       fields: { 'volumes.0.url': 'Use a safe HTTPS Git repository URL.' },
     })
     expect(normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'bad' }], []))).toEqual({
-      fields: { 'volumes.0.memoryRef': 'Memory reference must use ama://memories/{storeId}.' },
+      fields: { 'volumes.0.memoryRef': 'Memory reference must use enbor://memories/{storeId}.' },
     })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }],
-          [JSON.parse('{ "name": "memory", "mountPath": "/workspace/.ama/memory-stores/m", "readOnly": "bad" }')],
+          [{ name: 'memory', type: 'memory', memoryRef: 'enbor://memories/m' }],
+          [JSON.parse('{ "name": "memory", "mountPath": "/workspace/.enbor/memory-stores/m", "readOnly": "bad" }')],
         ),
       ),
     ).toEqual({ fields: { 'volumeMounts.0.readOnly': 'Use a boolean readOnly value.' } })
@@ -220,7 +220,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
     })
     expect(
       normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 1 as never }], [])),
-    ).toEqual({ fields: { 'volumes.0.memoryRef': 'Memory reference must use ama://memories/{storeId}.' } })
+    ).toEqual({ fields: { 'volumes.0.memoryRef': 'Memory reference must use enbor://memories/{storeId}.' } })
   })
 
   it('rejects missing or conflicting mounts', () => {
@@ -231,7 +231,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [{ name: 'state', type: 'empty_dir' }],
-          [{ name: 'state', mountPath: '/workspace/.ama/state', readOnly: true }],
+          [{ name: 'state', mountPath: '/workspace/.enbor/state', readOnly: true }],
         ),
       ),
     ).toEqual({ fields: { 'volumeMounts.0.readOnly': 'Empty directory volumes must be writable.' } })
@@ -241,28 +241,28 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       ),
     ).toEqual({ fields: { 'volumes.0.name': 'Repository volume must have a matching volume mount.' } })
     expect(
-      normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }], [])),
+      normalizeWorkspaceSpec(workspaceSpec([{ name: 'memory', type: 'memory', memoryRef: 'enbor://memories/m' }], [])),
     ).toEqual({ fields: { 'volumes.0.name': 'Memory store volume must have a matching volume mount.' } })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/m' }],
+          [{ name: 'memory', type: 'memory', memoryRef: 'enbor://memories/m' }],
           [{ name: 'memory', mountPath: '/workspace/memory' }],
         ),
       ),
     ).toEqual({
-      fields: { 'volumeMounts.0.mountPath': 'Memory store mounts must stay under /workspace/.ama/memory-stores.' },
+      fields: { 'volumeMounts.0.mountPath': 'Memory store mounts must stay under /workspace/.enbor/memory-stores.' },
     })
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
           [
-            { name: 'memory1', type: 'memory', memoryRef: 'ama://memories/m1' },
-            { name: 'memory2', type: 'memory', memoryRef: 'ama://memories/m2' },
+            { name: 'memory1', type: 'memory', memoryRef: 'enbor://memories/m1' },
+            { name: 'memory2', type: 'memory', memoryRef: 'enbor://memories/m2' },
           ],
           [
-            { name: 'memory1', mountPath: '/workspace/.ama/memory-stores/shared' },
-            { name: 'memory2', mountPath: '/workspace/.ama/memory-stores/shared' },
+            { name: 'memory1', mountPath: '/workspace/.enbor/memory-stores/shared' },
+            { name: 'memory2', mountPath: '/workspace/.enbor/memory-stores/shared' },
           ],
         ),
       ),
@@ -271,12 +271,12 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' }],
-          [{ name: 'repo', mountPath: '/workspace/.ama/repo' }],
+          [{ name: 'repo', mountPath: '/workspace/.enbor/repo' }],
         ),
       ),
     ).toEqual({
       fields: {
-        'volumeMounts.0.mountPath': 'Repository mount path must stay under /workspace outside /workspace/.ama.',
+        'volumeMounts.0.mountPath': 'Repository mount path must stay under /workspace outside /workspace/.enbor.',
       },
     })
     expect(
@@ -296,7 +296,7 @@ describe('[spec: sessions/workspace-volumes] workspace domain helpers', () => {
   })
 
   it('keeps non-git non-memory volumes and resolves mount fallbacks', () => {
-    const volume = { name: 'secret', type: 'secret', secretRef: 'ama://vaults/v' } as const
+    const volume = { name: 'secret', type: 'secret', secretRef: 'enbor://vaults/v' } as const
     expect(normalizeWorkspaceSpec(workspaceSpec([volume], []))).toEqual({ volumes: [volume], volumeMounts: [] })
     expect(workspaceMountPath('missing', [], '/workspace/default')).toBe('/workspace/default')
     expect(workspaceMountPath('repo', [{ name: 'repo', mountPath: '/workspace/src' }], '/workspace/default')).toBe(

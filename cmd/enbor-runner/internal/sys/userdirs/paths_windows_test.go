@@ -12,10 +12,10 @@ func TestWindowsUsesNativeUserDirectories(t *testing.T) {
 	localAppData := filepath.Join(t.TempDir(), "Local Profile")
 	t.Setenv("APPDATA", appData)
 	t.Setenv("LOCALAPPDATA", localAppData)
-	if got := ConfigFile("ama-runner", "config.json"); got != filepath.Join(appData, "ama-runner", "config.json") {
+	if got := ConfigFile("enbor-runner", "config.json"); got != filepath.Join(appData, "enbor-runner", "config.json") {
 		t.Fatalf("unexpected config path %q", got)
 	}
-	if got := StateDir("ama-runner"); got != filepath.Join(localAppData, "ama-runner") {
+	if got := StateDir("enbor-runner"); got != filepath.Join(localAppData, "enbor-runner") {
 		t.Fatalf("unexpected state path %q", got)
 	}
 }

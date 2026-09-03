@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerconfig "github.com/realmroot/enbor/cmd/enbor-runner/internal/config"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/protocol"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/runtime"
@@ -23,7 +23,7 @@ import (
 
 type LeaseWorker struct {
 	Config          runnerconfig.Config
-	Client          *ama.RunnerClient
+	Client          *enbor.RunnerClient
 	SandboxAdapter  sandbox.SandboxAdapter
 	RuntimeAdapter  runtime.Adapter
 	RuntimeBridge   runtime.Bridge
@@ -78,7 +78,7 @@ func (r LeaseWorker) RunOne(ctx context.Context) error {
 	return nil
 }
 
-func (r LeaseWorker) RunAssigned(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem) error {
+func (r LeaseWorker) RunAssigned(ctx context.Context, lease *enbor.Lease, workItem *enbor.WorkItem) error {
 	sessionID := workItemSessionID(workItem)
 	payload, payloadErr := protocol.ParseWorkPayload(workItem.Payload)
 	err := r.runClaimedWork(ctx, lease, workItem)
@@ -91,7 +91,7 @@ func (r LeaseWorker) RunAssigned(ctx context.Context, lease *ama.Lease, workItem
 				state = "failed"
 			}
 		}
-		sessionActive := err == nil && payloadErr == nil && payload.Type == "session.start" && payload.Runtime == "ama"
+		sessionActive := err == nil && payloadErr == nil && payload.Type == "session.start" && payload.Runtime == "enbor"
 		r.Relay.NotifyWorkFinished(context.Background(), sessionID, lease.Id, state, sessionActive)
 	}
 	if err != nil {
@@ -101,14 +101,14 @@ func (r LeaseWorker) RunAssigned(ctx context.Context, lease *ama.Lease, workItem
 	return nil
 }
 
-func (r LeaseWorker) claimLease(ctx context.Context) (*ama.Lease, *ama.WorkItem, error) {
-	state := ama.ListWorkItemsParamsStateAvailable
-	workItems, err := r.Client.WorkItems.List(ctx, &ama.ListWorkItemsParams{State: &state})
+func (r LeaseWorker) claimLease(ctx context.Context) (*enbor.Lease, *enbor.WorkItem, error) {
+	state := enbor.ListWorkItemsParamsStateAvailable
+	workItems, err := r.Client.WorkItems.List(ctx, &enbor.ListWorkItemsParams{State: &state})
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, candidate := range workItems.Data {
-		lease, err := r.Client.Leases.Create(ctx, ama.CreateLeaseRequest{
+		lease, err := r.Client.Leases.Create(ctx, enbor.CreateLeaseRequest{
 			WorkItemId:           candidate.Id,
 			RunnerId:             r.RunnerID,
 			LeaseDurationSeconds: lo.ToPtr(r.Config.LeaseDurationSeconds),
@@ -128,7 +128,7 @@ func (r LeaseWorker) claimLease(ctx context.Context) (*ama.Lease, *ama.WorkItem,
 	return nil, nil, nil
 }
 
-func (r LeaseWorker) runClaimedWork(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem) error {
+func (r LeaseWorker) runClaimedWork(ctx context.Context, lease *enbor.Lease, workItem *enbor.WorkItem) error {
 	payload, err := protocol.ParseWorkPayload(workItem.Payload)
 	if err != nil {
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
@@ -168,7 +168,7 @@ func (r LeaseWorker) supportsRuntimeRequirement(required *protocol.RuntimeRequir
 	return false
 }
 
-func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem, payload protocol.WorkPayload) error {
+func (r LeaseWorker) runTool(ctx context.Context, lease *enbor.Lease, workItem *enbor.WorkItem, payload protocol.WorkPayload) error {
 	if r.SandboxAdapter == nil {
 		err := fmt.Errorf("runner sandbox adapter is not configured")
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
@@ -214,14 +214,14 @@ func (r LeaseWorker) runTool(ctx context.Context, lease *ama.Lease, workItem *am
 	if err := r.uploadSessionEvent(ctx, sessionID, runnerEvent(string(sessionevent.EventTypeMessageCompleted), toolResultMessagePayload(payload, result.Output, nil))); err != nil {
 		return err
 	}
-	return r.completeLease(ctx, lease, ama.JSON{
+	return r.completeLease(ctx, lease, enbor.JSON{
 		"toolCallId": payload.ToolCallID,
 		"toolName":   payload.ToolName,
 		"output":     result.Output,
 	})
 }
 
-func (r LeaseWorker) runSessionStart(ctx context.Context, lease *ama.Lease, payload protocol.WorkPayload) error {
+func (r LeaseWorker) runSessionStart(ctx context.Context, lease *enbor.Lease, payload protocol.WorkPayload) error {
 	if !isSupportedSessionRuntime(payload.Runtime) {
 		err := fmt.Errorf("unsupported session runtime %q", payload.Runtime)
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
@@ -229,8 +229,8 @@ func (r LeaseWorker) runSessionStart(ctx context.Context, lease *ama.Lease, payl
 		}
 		return err
 	}
-	if payload.Runtime == "ama" {
-		return r.runAMASandboxSession(ctx, lease, payload)
+	if payload.Runtime == "enbor" {
+		return r.runEnborSandboxSession(ctx, lease, payload)
 	}
 	return r.runRuntimeSession(ctx, lease, payload)
 }
@@ -239,7 +239,7 @@ func isSupportedSessionRuntime(runtimeName string) bool {
 	return runtimeName != ""
 }
 
-func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease, payload protocol.WorkPayload) error {
+func (r LeaseWorker) runEnborSandboxSession(ctx context.Context, lease *enbor.Lease, payload protocol.WorkPayload) error {
 	relay := r.Relay
 	if relay == nil {
 		err := fmt.Errorf("runner relay channel is not started")
@@ -270,14 +270,14 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 	runtimeEnv := workspace.RuntimeEnv(payload.Env)
 	handle := runnersession.NewSandboxHandle(payload.SessionID, workspace, r.SandboxAdapter, runtimeEnv)
 	relay.Register(payload.SessionID, handle)
-	if err := r.uploadSessionEvent(leaseCtx, payload.SessionID, runnerEvent(string(sessionevent.EventTypeRuntimeStarted), ama.JSON{})); err != nil {
+	if err := r.uploadSessionEvent(leaseCtx, payload.SessionID, runnerEvent(string(sessionevent.EventTypeRuntimeStarted), enbor.JSON{})); err != nil {
 		relay.Unregister(payload.SessionID)
 		if finishErr := r.failLease(ctx, lease, err, nil); finishErr != nil {
 			return finishErr
 		}
 		return err
 	}
-	err = r.completeLease(leaseCtx, lease, ama.JSON{
+	err = r.completeLease(leaseCtx, lease, enbor.JSON{
 		"sessionId":    payload.SessionID,
 		"runtime":      payload.Runtime,
 		"sandboxReady": true,
@@ -295,7 +295,7 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 	return nil
 }
 
-func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, payload protocol.WorkPayload) error {
+func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *enbor.Lease, payload protocol.WorkPayload) error {
 	relay := r.Relay
 	if relay == nil {
 		err := fmt.Errorf("runner relay channel is not started")
@@ -312,7 +312,7 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 		}
 		return err
 	}
-	relayEvent := func(relayCtx context.Context, event ama.JSON, stamp *runnersession.RelayStamp) error {
+	relayEvent := func(relayCtx context.Context, event enbor.JSON, stamp *runnersession.RelayStamp) error {
 		relay.RelayEvent(relayCtx, payload.SessionID, event, stamp)
 		return nil
 	}
@@ -339,7 +339,7 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 	workspace, agentReport, workspaceErr := r.prepareWorkspace(leaseCtx, payload)
 	if workspaceErr != nil {
 		result := runtime.Result{Err: workspaceErr}
-		writeRuntimeError := func(errPayload ama.JSON) {
+		writeRuntimeError := func(errPayload enbor.JSON) {
 			_ = r.relayStoredEvent(context.Background(), store, relayEvent, runnerEvent(string(sessionevent.EventTypeRuntimeError), errPayload))
 		}
 		finalizeErr := r.finalizeRuntimeSession(leaseCtx, ctx, lease, resumeTokens, result, writeRuntimeError)
@@ -376,17 +376,17 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 			return r.persistResumeToken(leaseCtx, lease, resumeTokens, leaseUpdates, resumeToken)
 		},
 		OnProviderEvent: func(runtimeName string, event runtime.JSON) error {
-			_, err := runnersession.AppendProviderEvent(sessionDir, runtimeName, ama.JSON(event))
+			_, err := runnersession.AppendProviderEvent(sessionDir, runtimeName, enbor.JSON(event))
 			return err
 		},
 		RegisterControlSender: handle.RegisterControlSender,
 	}, func(event runtime.JSON) error {
 		writeMu.Lock()
 		defer writeMu.Unlock()
-		return r.relayStoredEvent(leaseCtx, store, relayEvent, ama.JSON(event))
+		return r.relayStoredEvent(leaseCtx, store, relayEvent, enbor.JSON(event))
 	})
 	result = r.attachMemoryStores(workspace, result)
-	writeRuntimeError := func(errPayload ama.JSON) {
+	writeRuntimeError := func(errPayload enbor.JSON) {
 		_ = r.relayStoredEvent(context.Background(), store, relayEvent, runnerEvent(string(sessionevent.EventTypeRuntimeError), errPayload))
 	}
 	finalizeErr := r.finalizeRuntimeSession(leaseCtx, ctx, lease, resumeTokens, result, writeRuntimeError)
@@ -403,10 +403,10 @@ func (r LeaseWorker) runRuntimeSession(ctx context.Context, lease *ama.Lease, pa
 func (r LeaseWorker) finalizeRuntimeSession(
 	ctx context.Context,
 	requestCtx context.Context,
-	lease *ama.Lease,
+	lease *enbor.Lease,
 	resumeTokens *resumeTokenBox,
 	result runtime.Result,
-	writeRuntimeError func(payload ama.JSON),
+	writeRuntimeError func(payload enbor.JSON),
 ) error {
 	if result.Err == nil {
 		return r.completeLease(ctx, lease, result.Output)
@@ -418,7 +418,7 @@ func (r LeaseWorker) finalizeRuntimeSession(
 	}
 	if result.TimedOut {
 		timeoutErr := fmt.Errorf("session exceeded max duration %s", r.Config.MaxSessionDuration)
-		writeRuntimeError(ama.JSON{"message": timeoutErr.Error(), "code": "session_timeout"})
+		writeRuntimeError(enbor.JSON{"message": timeoutErr.Error(), "code": "session_timeout"})
 		if finishErr := r.failLease(context.Background(), lease, timeoutErr, result.Output); finishErr != nil {
 			return finishErr
 		}
@@ -430,7 +430,7 @@ func (r LeaseWorker) finalizeRuntimeSession(
 		}
 		return result.Err
 	}
-	writeRuntimeError(ama.JSON{"message": result.Err.Error(), "code": "runtime_failed"})
+	writeRuntimeError(enbor.JSON{"message": result.Err.Error(), "code": "runtime_failed"})
 	if finishErr := r.failLease(context.Background(), lease, result.Err, result.Output); finishErr != nil {
 		return finishErr
 	}
@@ -467,17 +467,17 @@ func (r LeaseWorker) attachMemoryStores(prepared *workspace.Workspace, result ru
 		return result
 	}
 	if result.Output == nil {
-		result.Output = ama.JSON{}
+		result.Output = enbor.JSON{}
 	}
 	result.Output["memoryStores"] = memoryStores
 	return result
 }
 
-func cloneResult(value ama.JSON) ama.JSON {
-	return lo.Assign(ama.JSON{}, value)
+func cloneResult(value enbor.JSON) enbor.JSON {
+	return lo.Assign(enbor.JSON{}, value)
 }
 
-func successfulRuntimeResult(result ama.JSON) bool {
+func successfulRuntimeResult(result enbor.JSON) bool {
 	if result == nil {
 		return false
 	}
@@ -487,7 +487,7 @@ func successfulRuntimeResult(result ama.JSON) bool {
 	if output, ok := result["output"].(map[string]any); ok && exitCodeValue(output["exitCode"]) == 0 {
 		return true
 	}
-	if output, ok := result["output"].(ama.JSON); ok && exitCodeValue(output["exitCode"]) == 0 {
+	if output, ok := result["output"].(enbor.JSON); ok && exitCodeValue(output["exitCode"]) == 0 {
 		return true
 	}
 	return false
@@ -525,7 +525,7 @@ func promptWithSkillRefresh(prompt string, report workspace.AgentPrepareReport) 
 	return strings.Join(lines, "\n")
 }
 
-func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel context.CancelFunc, errors chan<- error, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex) {
+func (r LeaseWorker) renewLease(ctx context.Context, lease *enbor.Lease, cancel context.CancelFunc, errors chan<- error, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex) {
 	ticker := time.NewTicker(r.Config.RenewInterval)
 	defer ticker.Stop()
 	for {
@@ -536,8 +536,8 @@ func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel co
 			if leaseUpdates != nil {
 				leaseUpdates.Lock()
 			}
-			_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
-				State:                lo.ToPtr(ama.UpdateLeaseRequestStateActive),
+			_, err := r.Client.Leases.Update(ctx, lease.Id, enbor.UpdateLeaseRequest{
+				State:                lo.ToPtr(enbor.UpdateLeaseRequestStateActive),
 				LeaseDurationSeconds: lo.ToPtr(r.Config.LeaseDurationSeconds),
 				ResumeToken:          lo.EmptyableToPtr(resumeTokenValue(resumeTokens)),
 			})
@@ -556,14 +556,14 @@ func (r LeaseWorker) renewLease(ctx context.Context, lease *ama.Lease, cancel co
 	}
 }
 
-func (r LeaseWorker) persistResumeToken(ctx context.Context, lease *ama.Lease, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex, resumeToken string) error {
+func (r LeaseWorker) persistResumeToken(ctx context.Context, lease *enbor.Lease, resumeTokens *resumeTokenBox, leaseUpdates *sync.Mutex, resumeToken string) error {
 	if !resumeTokens.SetIfChanged(resumeToken) {
 		return nil
 	}
 	leaseUpdates.Lock()
 	defer leaseUpdates.Unlock()
-	_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
-		State:                lo.ToPtr(ama.UpdateLeaseRequestStateActive),
+	_, err := r.Client.Leases.Update(ctx, lease.Id, enbor.UpdateLeaseRequest{
+		State:                lo.ToPtr(enbor.UpdateLeaseRequestStateActive),
 		LeaseDurationSeconds: lo.ToPtr(r.Config.LeaseDurationSeconds),
 		ResumeToken:          lo.ToPtr(resumeToken),
 	})
@@ -573,53 +573,53 @@ func (r LeaseWorker) persistResumeToken(ctx context.Context, lease *ama.Lease, r
 	return nil
 }
 
-func (r LeaseWorker) uploadSessionEvent(ctx context.Context, sessionID string, event ama.JSON) error {
+func (r LeaseWorker) uploadSessionEvent(ctx context.Context, sessionID string, event enbor.JSON) error {
 	if sessionID == "" {
 		return nil
 	}
-	_, err := r.Client.Sessions.CreateRawEvents(ctx, sessionID, []ama.JSON{event})
+	_, err := r.Client.Sessions.CreateRawEvents(ctx, sessionID, []enbor.JSON{event})
 	return err
 }
 
-func (r LeaseWorker) completeLease(ctx context.Context, lease *ama.Lease, result ama.JSON) error {
-	_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
-		State:  lo.ToPtr(ama.UpdateLeaseRequestStateCompleted),
+func (r LeaseWorker) completeLease(ctx context.Context, lease *enbor.Lease, result enbor.JSON) error {
+	_, err := r.Client.Leases.Update(ctx, lease.Id, enbor.UpdateLeaseRequest{
+		State:  lo.ToPtr(enbor.UpdateLeaseRequestStateCompleted),
 		Result: &result,
 	})
 	return err
 }
 
-func (r LeaseWorker) cancelLease(ctx context.Context, lease *ama.Lease, cause error) error {
-	_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
-		State: lo.ToPtr(ama.UpdateLeaseRequestStateCancelled),
-		Error: lo.ToPtr(ama.JSON{"message": cause.Error()}),
+func (r LeaseWorker) cancelLease(ctx context.Context, lease *enbor.Lease, cause error) error {
+	_, err := r.Client.Leases.Update(ctx, lease.Id, enbor.UpdateLeaseRequest{
+		State: lo.ToPtr(enbor.UpdateLeaseRequestStateCancelled),
+		Error: lo.ToPtr(enbor.JSON{"message": cause.Error()}),
 	})
 	return err
 }
 
-func (r LeaseWorker) failLease(ctx context.Context, lease *ama.Lease, failure error, output ama.JSON) error {
-	body := ama.UpdateLeaseRequest{
-		State: lo.ToPtr(ama.UpdateLeaseRequestStateFailed),
-		Error: lo.ToPtr(ama.JSON{"message": failure.Error()}),
+func (r LeaseWorker) failLease(ctx context.Context, lease *enbor.Lease, failure error, output enbor.JSON) error {
+	body := enbor.UpdateLeaseRequest{
+		State: lo.ToPtr(enbor.UpdateLeaseRequestStateFailed),
+		Error: lo.ToPtr(enbor.JSON{"message": failure.Error()}),
 	}
 	if output != nil {
-		body.Result = lo.ToPtr(ama.JSON{"output": output})
+		body.Result = lo.ToPtr(enbor.JSON{"output": output})
 	}
 	_, err := r.Client.Leases.Update(ctx, lease.Id, body)
 	return err
 }
 
-func (r LeaseWorker) interruptLease(ctx context.Context, lease *ama.Lease, resumeTokens *resumeTokenBox) error {
-	_, err := r.Client.Leases.Update(ctx, lease.Id, ama.UpdateLeaseRequest{
-		State:       lo.ToPtr(ama.UpdateLeaseRequestStateInterrupted),
+func (r LeaseWorker) interruptLease(ctx context.Context, lease *enbor.Lease, resumeTokens *resumeTokenBox) error {
+	_, err := r.Client.Leases.Update(ctx, lease.Id, enbor.UpdateLeaseRequest{
+		State:       lo.ToPtr(enbor.UpdateLeaseRequestStateInterrupted),
 		ResumeToken: lo.EmptyableToPtr(resumeTokenValue(resumeTokens)),
 	})
 	return err
 }
 
-type relaySink func(ctx context.Context, event ama.JSON, relay *runnersession.RelayStamp) error
+type relaySink func(ctx context.Context, event enbor.JSON, relay *runnersession.RelayStamp) error
 
-func (r LeaseWorker) relayStoredEvent(ctx context.Context, store *runnersession.EventLog, relay relaySink, event ama.JSON) error {
+func (r LeaseWorker) relayStoredEvent(ctx context.Context, store *runnersession.EventLog, relay relaySink, event enbor.JSON) error {
 	stored, err := store.Append(event)
 	if err != nil {
 		return err
@@ -627,19 +627,19 @@ func (r LeaseWorker) relayStoredEvent(ctx context.Context, store *runnersession.
 	return relay(ctx, stored.EnborEvent(), &runnersession.RelayStamp{Sequence: stored.Sequence, ID: stored.ID, CreatedAt: stored.CreatedAt})
 }
 
-func runnerEvent(eventType string, payload ama.JSON) ama.JSON {
-	return ama.JSON{"type": eventType, "payload": payload}
+func runnerEvent(eventType string, payload enbor.JSON) enbor.JSON {
+	return enbor.JSON{"type": eventType, "payload": payload}
 }
 
-func toolCallMessagePayload(payload protocol.WorkPayload) ama.JSON {
-	return ama.JSON{
-		"message": ama.JSON{
+func toolCallMessagePayload(payload protocol.WorkPayload) enbor.JSON {
+	return enbor.JSON{
+		"message": enbor.JSON{
 			"id":   "msg_" + uuid.NewString(),
 			"role": "assistant",
-			"content": []ama.JSON{
+			"content": []enbor.JSON{
 				{
 					"type": "tool_call",
-					"toolCall": ama.JSON{
+					"toolCall": enbor.JSON{
 						"id":    payload.ToolCallID,
 						"name":  payload.ToolName,
 						"input": payload.Input,
@@ -650,37 +650,37 @@ func toolCallMessagePayload(payload protocol.WorkPayload) ama.JSON {
 	}
 }
 
-func toolResultMessagePayload(payload protocol.WorkPayload, output ama.JSON, execErr error) ama.JSON {
-	result := ama.JSON{
+func toolResultMessagePayload(payload protocol.WorkPayload, output enbor.JSON, execErr error) enbor.JSON {
+	result := enbor.JSON{
 		"content":           toolResultContent(output),
 		"structuredContent": output,
 	}
-	block := ama.JSON{
+	block := enbor.JSON{
 		"type":       "tool_result",
 		"toolCallId": payload.ToolCallID,
 		"result":     result,
 	}
 	if execErr != nil {
-		block["error"] = ama.JSON{"message": execErr.Error()}
+		block["error"] = enbor.JSON{"message": execErr.Error()}
 	}
-	return ama.JSON{
-		"message": ama.JSON{
+	return enbor.JSON{
+		"message": enbor.JSON{
 			"id":               "msg_" + uuid.NewString(),
 			"role":             "tool",
 			"parentToolCallId": payload.ToolCallID,
-			"content":          []ama.JSON{block},
+			"content":          []enbor.JSON{block},
 		},
 	}
 }
 
-func toolResultContent(output ama.JSON) []ama.JSON {
+func toolResultContent(output enbor.JSON) []enbor.JSON {
 	if text := toolResultText(output); text != "" {
-		return []ama.JSON{{"type": "text", "text": text}}
+		return []enbor.JSON{{"type": "text", "text": text}}
 	}
-	return []ama.JSON{{"type": "json", "value": output}}
+	return []enbor.JSON{{"type": "json", "value": output}}
 }
 
-func toolResultText(output ama.JSON) string {
+func toolResultText(output enbor.JSON) string {
 	if output == nil {
 		return ""
 	}
@@ -696,12 +696,12 @@ func toolResultText(output ama.JSON) string {
 	return string(encoded)
 }
 
-func userPromptEventPayload(message string) ama.JSON {
-	return ama.JSON{
-		"message": ama.JSON{
+func userPromptEventPayload(message string) enbor.JSON {
+	return enbor.JSON{
+		"message": enbor.JSON{
 			"id":   "msg_" + uuid.NewString(),
 			"role": "user",
-			"content": []ama.JSON{
+			"content": []enbor.JSON{
 				{"type": "text", "text": message},
 			},
 		},

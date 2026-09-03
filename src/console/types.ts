@@ -35,7 +35,7 @@ export interface AgentFormState {
 export interface SessionFormState {
   agentId: string
   environmentId: string
-  runtime: 'ama' | 'claude-code' | 'codex' | 'copilot'
+  runtime: 'enbor' | 'claude-code' | 'codex' | 'copilot'
   prompt: string
   credentialVaultIds: string[]
   resources: SessionResourceFormEntry[]

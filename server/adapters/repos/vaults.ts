@@ -279,7 +279,7 @@ export function createVaultRepo(db: Db): VaultRepo {
             eq(vaultCredentials.vaultId, vaultId),
             sql`json_extract(${vaultCredentials.metadata}, '$.managedBy') = 'identity'`,
             sql`json_extract(${vaultCredentials.metadata}, '$.identityId') = ${identityId}`,
-            sql`coalesce(json_extract(${vaultCredentials.metadata}, '$.purpose'), case when ${vaultCredentials.type} = 'ama.dev/realmroot-agent-state' then 'agent-state' end) = ${purpose}`,
+            sql`coalesce(json_extract(${vaultCredentials.metadata}, '$.purpose'), case when ${vaultCredentials.type} = 'enbor.dev/realmroot-agent-state' then 'agent-state' end) = ${purpose}`,
           ),
         )
         .get()

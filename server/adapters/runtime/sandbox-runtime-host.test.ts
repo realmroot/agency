@@ -74,7 +74,7 @@ describe('session-runtime', () => {
       durationMs: 42,
     })
 
-    const results = await executeRuntimeToolCalls({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    const results = await executeRuntimeToolCalls({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       body: {
@@ -110,7 +110,7 @@ describe('session-runtime', () => {
 
   it('rejects a missing Enbor cloud model instead of applying a platform default', async () => {
     await expect(
-      runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+      runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
         sessionId: 'session_123',
         sandboxId: 'sandbox_123',
         provider: 'workers-ai',
@@ -124,7 +124,7 @@ describe('session-runtime', () => {
 
   it('rejects cloud sandbox startup without an explicitly pinned model', async () => {
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'test' } as Env, {
         sessionId: 'session_123',
         sandboxId: 'sandbox_123',
         provider: 'workers-ai',
@@ -137,21 +137,21 @@ describe('session-runtime', () => {
 
   it('returns cloud-owned runtime metadata in test mode', async () => {
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'test' } as Env, {
         sessionId: 'session_123',
         sandboxId: 'sandbox_123',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
         agentSnapshot: { systemPrompt: 'Test runtime' },
-        environmentSnapshot: { runtimeConfig: { image: 'ama-tool-executor' } },
+        environmentSnapshot: { runtimeConfig: { image: 'enbor-tool-executor' } },
       }),
     ).resolves.toMatchObject({
       sandboxId: 'sandbox_123',
       metadata: expect.objectContaining({
         runtimeMode: 'test',
-        runtimeDriver: 'ama-cloud',
-        runtimeBackend: 'ama-cloud',
-        runtimeProtocol: 'ama-runtime-rpc',
+        runtimeDriver: 'enbor-cloud',
+        runtimeBackend: 'enbor-cloud',
+        runtimeProtocol: 'enbor-runtime-rpc',
         loop: 'cloud-session-runtime',
         executor: 'cloudflare-sandbox',
         piCorePackage: '@earendil-works/pi-agent-core',
@@ -185,22 +185,22 @@ describe('session-runtime', () => {
           {
             name: 'token',
             type: 'secret',
-            mountPath: '/workspace/.ama/secrets/token',
+            mountPath: '/workspace/.enbor/secrets/token',
             readOnly: true,
             files: [{ path: 'value', content: 'secret-value' }],
           },
           {
             name: 'memory',
             type: 'memory',
-            mountPath: '/workspace/.ama/memory-stores/store_1',
-            memoryRef: 'ama://memories/store_1',
+            mountPath: '/workspace/.enbor/memory-stores/store_1',
+            memoryRef: 'enbor://memories/store_1',
             readOnly: false,
             files: [{ path: 'notes.md', content: 'keep this out of the volume manifest' }],
           },
           {
             name: 'runtime-state',
             type: 'empty_dir',
-            mountPath: '/workspace/.ama/runtime-state',
+            mountPath: '/workspace/.enbor/runtime-state',
             readOnly: false,
             files: [{ path: 'state.json', content: 'keep this out of the volume manifest' }],
           },
@@ -212,22 +212,22 @@ describe('session-runtime', () => {
       volumes: [
         {
           type: 'memory',
-          memoryRef: 'ama://memories/store_1',
+          memoryRef: 'enbor://memories/store_1',
           name: 'memory',
-          mountPath: '/workspace/.ama/memory-stores/store_1',
+          mountPath: '/workspace/.enbor/memory-stores/store_1',
           status: 'declared',
         },
         {
           type: 'empty_dir',
           name: 'runtime-state',
-          mountPath: '/workspace/.ama/runtime-state',
+          mountPath: '/workspace/.enbor/runtime-state',
           files: [{ path: 'state.json' }],
           status: 'declared',
         },
         {
           type: 'secret',
           name: 'token',
-          mountPath: '/workspace/.ama/secrets/token',
+          mountPath: '/workspace/.enbor/secrets/token',
           files: [{ path: 'value' }],
           status: 'declared',
         },
@@ -261,7 +261,7 @@ describe('session-runtime', () => {
     })
     const events: Record<string, unknown>[] = []
 
-    await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -296,7 +296,7 @@ describe('session-runtime', () => {
 
   it('reconstructs the next turn context from persisted Pi Core events', async () => {
     const firstTurnEvents: Record<string, unknown>[] = []
-    await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -309,7 +309,7 @@ describe('session-runtime', () => {
     })
 
     const secondTurnEvents: Record<string, unknown>[] = []
-    await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -335,7 +335,7 @@ describe('session-runtime', () => {
     })
 
     const firstEvents: Record<string, unknown>[] = []
-    const first = await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    const first = await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -355,7 +355,7 @@ describe('session-runtime', () => {
     expect(JSON.stringify(firstEvents)).not.toContain('Tool result observed')
 
     const secondEvents: Record<string, unknown>[] = []
-    const second = await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    const second = await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -422,7 +422,7 @@ describe('session-runtime', () => {
     const aiRun = vi.fn().mockResolvedValue({ response: 'continued' })
     const events: Record<string, unknown>[] = []
 
-    await runSessionTurn({ AMA_RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env, {
+    await runSessionTurn({ RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -454,7 +454,7 @@ describe('session-runtime', () => {
     const events: Record<string, unknown>[] = []
     let active = true
 
-    const result = await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    const result = await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -483,7 +483,7 @@ describe('session-runtime', () => {
     const events: Record<string, unknown>[] = []
 
     await expect(
-      runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+      runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
         sessionId: 'session_123',
         sandboxId: 'sandbox_123',
         provider: 'workers-ai',
@@ -517,7 +517,7 @@ describe('session-runtime', () => {
       durationMs: 5,
     })
 
-    await runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
+    await runSessionTurn({ RUNTIME_MODE: 'test' } as Env, {
       sessionId: 'session_123',
       sandboxId: 'sandbox_123',
       provider: 'workers-ai',
@@ -532,13 +532,13 @@ describe('session-runtime', () => {
 
   it('initializes sandbox workspace metadata in live mode without starting a Pi process [spec: runtime/workspace-contract]', async () => {
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_123',
         sandboxId: 'sandbox_123',
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
         agentSnapshot: { systemPrompt: 'Test runtime' },
-        environmentSnapshot: { runtimeConfig: { image: 'ama-tool-executor' } },
+        environmentSnapshot: { runtimeConfig: { image: 'enbor-tool-executor' } },
         mcpServers: { servers: [{ connectorId: 'github' }] },
         env: {
           DOWNSTREAM_API_URL: 'https://downstream.example.com',
@@ -552,23 +552,23 @@ describe('session-runtime', () => {
             {
               name: 'source',
               type: 'git_repository',
-              mountPath: '/workspace/repos/saltbo/any-managed-agents',
-              url: 'https://github.com/saltbo/any-managed-agents.git',
+              mountPath: '/workspace/repos/saltbo/enbor',
+              url: 'https://github.com/saltbo/enbor.git',
               ref: 'main',
               credential: { username: 'git-user', password: 'git-password' },
             },
             {
               name: 'memory',
               type: 'memory',
-              mountPath: '/workspace/.ama/memory-stores/memstore_1',
-              memoryRef: 'ama://memories/memstore_1',
+              mountPath: '/workspace/.enbor/memory-stores/memstore_1',
+              memoryRef: 'enbor://memories/memstore_1',
               readOnly: true,
               files: [{ path: 'guides/review.md', content: 'Review carefully.' }],
             },
             {
               name: 'api-token',
               type: 'secret',
-              mountPath: '/workspace/.ama/secrets/api',
+              mountPath: '/workspace/.enbor/secrets/api',
               readOnly: true,
               files: [{ path: 'token', content: 'secret-token' }],
             },
@@ -579,9 +579,9 @@ describe('session-runtime', () => {
       sandboxId: 'sandbox_123',
       metadata: expect.objectContaining({
         runtimeMode: 'live',
-        runtimeDriver: 'ama-cloud',
-        runtimeBackend: 'ama-cloud',
-        runtimeProtocol: 'ama-runtime-rpc',
+        runtimeDriver: 'enbor-cloud',
+        runtimeBackend: 'enbor-cloud',
+        runtimeProtocol: 'enbor-runtime-rpc',
         loop: 'cloud-session-runtime',
       }),
     })
@@ -599,13 +599,10 @@ describe('session-runtime', () => {
     })
     expect(mockSandbox.exec).toHaveBeenCalledWith("mkdir -p '/workspace/.home'", undefined)
     expect(mockSandbox.exec).toHaveBeenCalledWith(
-      "git -c credential.helper= -c credential.helper='store --file /workspace/.home/.git-clone-credentials' clone 'https://github.com/saltbo/any-managed-agents.git' '/workspace/repos/saltbo/any-managed-agents'",
+      "git -c credential.helper= -c credential.helper='store --file /workspace/.home/.git-clone-credentials' clone 'https://github.com/saltbo/enbor.git' '/workspace/repos/saltbo/enbor'",
       { timeout: 120_000 },
     )
-    expect(mockSandbox.exec).toHaveBeenCalledWith(
-      "git -C '/workspace/repos/saltbo/any-managed-agents' checkout 'main'",
-      undefined,
-    )
+    expect(mockSandbox.exec).toHaveBeenCalledWith("git -C '/workspace/repos/saltbo/enbor' checkout 'main'", undefined)
     expect(mockSandbox.exec).toHaveBeenCalledWith("rm -f '/workspace/.home/.git-clone-credentials'", undefined)
     expect(mockSandbox.exec).not.toHaveBeenCalledWith('git config --global credential.helper store', undefined)
     expect(mockSandbox.writeFile).toHaveBeenCalledWith(
@@ -620,24 +617,25 @@ describe('session-runtime', () => {
       (_, index) => mockSandbox.exec.mock.calls[index]?.[0] === "mkdir -p '/workspace/.home'",
     )
     const cloneOrder = mockSandbox.exec.mock.invocationCallOrder.find((_, index) =>
-      String(mockSandbox.exec.mock.calls[index]?.[0]).includes(
-        " clone 'https://github.com/saltbo/any-managed-agents.git'",
-      ),
+      String(mockSandbox.exec.mock.calls[index]?.[0]).includes(" clone 'https://github.com/saltbo/enbor.git'"),
     )
     expect(setEnvOrder).toBeLessThan(mkdirOrder!)
     expect(setEnvOrder).toBeLessThan(cloneOrder!)
     expect(mockSandbox.writeFile).toHaveBeenCalledWith(
-      '/workspace/.ama/memory-stores/memstore_1/guides/review.md',
+      '/workspace/.enbor/memory-stores/memstore_1/guides/review.md',
       'Review carefully.',
       { encoding: 'utf-8' },
     )
-    expect(mockSandbox.exec).toHaveBeenCalledWith("chmod -R a-w '/workspace/.ama/memory-stores/memstore_1'", undefined)
-    expect(mockSandbox.writeFile).toHaveBeenCalledWith('/workspace/.ama/secrets/api/token', 'secret-token', {
+    expect(mockSandbox.exec).toHaveBeenCalledWith(
+      "chmod -R a-w '/workspace/.enbor/memory-stores/memstore_1'",
+      undefined,
+    )
+    expect(mockSandbox.writeFile).toHaveBeenCalledWith('/workspace/.enbor/secrets/api/token', 'secret-token', {
       encoding: 'utf-8',
     })
-    expect(mockSandbox.exec).toHaveBeenCalledWith("chmod -R a-w '/workspace/.ama/secrets/api'", undefined)
+    expect(mockSandbox.exec).toHaveBeenCalledWith("chmod -R a-w '/workspace/.enbor/secrets/api'", undefined)
     expect(mockSandbox.writeFile).not.toHaveBeenCalledWith(
-      expect.stringMatching(/^\/workspace\/\.ama\/(session|resources|runtime-env)\.json$/),
+      expect.stringMatching(/^\/workspace\/\.enbor\/(session|resources|runtime-env)\.json$/),
       expect.anything(),
       expect.anything(),
     )
@@ -650,7 +648,7 @@ describe('session-runtime', () => {
       stderr: '',
     }))
 
-    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+    await startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
       sessionId: 'session_packages',
       sandboxId: 'sandbox_packages',
       provider: 'workers-ai',
@@ -673,7 +671,7 @@ describe('session-runtime', () => {
       stderr: '',
     }))
 
-    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+    await startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
       sessionId: 'session_webi',
       sandboxId: 'sandbox_webi',
       provider: 'workers-ai',
@@ -688,7 +686,7 @@ describe('session-runtime', () => {
 
   it('rejects a legacy Realmroot package declaration that differs from the image pin', async () => {
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_realmroot_mismatch',
         sandboxId: 'sandbox_realmroot_mismatch',
         provider: 'workers-ai',
@@ -714,7 +712,7 @@ describe('session-runtime', () => {
     )
 
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_webi_missing',
         sandboxId: 'sandbox_webi_missing',
         provider: 'workers-ai',
@@ -738,7 +736,7 @@ describe('session-runtime', () => {
     )
 
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_packages_error',
         sandboxId: 'sandbox_packages_error',
         provider: 'workers-ai',
@@ -751,7 +749,7 @@ describe('session-runtime', () => {
   })
 
   it.each([
-    'ama',
+    'enbor',
     'codex',
     'claude-code',
     'copilot',
@@ -777,21 +775,21 @@ describe('session-runtime', () => {
       },
     })
     mockSandbox.exec.mockImplementation(async (command: string) => {
-      if (command.includes("] && [ -d '/workspace/.ama/realmroot-state' ]")) {
+      if (command.includes("] && [ -d '/workspace/.enbor/realmroot-state' ]")) {
         return { exitCode: 1, stdout: '', stderr: 'missing' }
       }
-      if (command.startsWith("[ -e '/workspace/.ama/realmroot-state' ]")) {
+      if (command.startsWith("[ -e '/workspace/.enbor/realmroot-state' ]")) {
         return { exitCode: 1, stdout: '', stderr: 'missing' }
       }
       if (command.startsWith('mv -T -n ')) return { exitCode: 0, stdout: '', stderr: '' }
-      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+      if (command.startsWith("[ -d '/workspace/.enbor/.enbor-empty-dir-")) {
         return { exitCode: 1, stdout: '', stderr: 'published' }
       }
       return { exitCode: 0, stdout: '', stderr: '' }
     })
 
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_realmroot',
         sandboxId: 'sandbox_realmroot',
         provider: 'workers-ai',
@@ -806,7 +804,7 @@ describe('session-runtime', () => {
             subject: 'rr_agent_1',
             username: 'reviewer',
             runtime,
-            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+            credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
           },
         },
         environmentSnapshot: { runtimeConfig: {} },
@@ -816,7 +814,7 @@ describe('session-runtime', () => {
             {
               name: 'realmroot-agent-state',
               type: 'empty_dir',
-              mountPath: '/workspace/.ama/realmroot-state',
+              mountPath: '/workspace/.enbor/realmroot-state',
               readOnly: false,
               files: [
                 {
@@ -832,10 +830,10 @@ describe('session-runtime', () => {
 
     const runtimeFile = `${Buffer.from(runtime).toString('base64url')}.json`
     const stateWrite = mockSandbox.writeFile.mock.calls.find(
-      ([path]) => String(path).includes('/.ama-empty-dir-') && String(path).endsWith(`/${runtimeFile}`),
+      ([path]) => String(path).includes('/.enbor-empty-dir-') && String(path).endsWith(`/${runtimeFile}`),
     )
-    expect(stateWrite).toEqual([expect.stringContaining('/.ama/.ama-empty-dir-'), state, { encoding: 'utf-8' }])
-    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
+    expect(stateWrite).toEqual([expect.stringContaining('/.enbor/.enbor-empty-dir-'), state, { encoding: 'utf-8' }])
+    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/enbor.json'))).toBe(false)
     expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).toContain('mv -T -n ')
     expect(mockSandbox.exec.mock.calls.map(([command]) => command).join('\n')).not.toContain('command -v realmroot')
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({ AGENT: runtime })
@@ -844,7 +842,7 @@ describe('session-runtime', () => {
   it('[spec: sessions/identity-materialization] does not interpret Realmroot-specific state in the cloud host', async () => {
     const issuer = 'https://realmroot.example.com/api/auth'
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_realmroot',
         sandboxId: 'sandbox_realmroot',
         provider: 'workers-ai',
@@ -857,8 +855,8 @@ describe('session-runtime', () => {
             issuer,
             subject: 'rr_agent_1',
             username: 'reviewer',
-            runtime: 'ama',
-            credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+            runtime: 'enbor',
+            credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
           },
         },
         environmentSnapshot: { runtimeConfig: {} },
@@ -868,7 +866,7 @@ describe('session-runtime', () => {
             {
               name: 'realmroot-agent-state',
               type: 'empty_dir',
-              mountPath: '/workspace/.ama/realmroot-state',
+              mountPath: '/workspace/.enbor/realmroot-state',
               readOnly: false,
               files: [
                 {
@@ -889,7 +887,7 @@ describe('session-runtime', () => {
       agent_id: 'installation_agent_1',
       origin: 'https://realmroot.example.com',
       issuer: 'https://realmroot.example.com/api/auth',
-      runtime: 'ama',
+      runtime: 'enbor',
       host_id: 'host_1',
       agent_key_id: 'key_1',
       agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
@@ -900,19 +898,19 @@ describe('session-runtime', () => {
         subject: 'rr_agent_1',
         username: 'reviewer',
         name: 'Reviewer',
-        runtime: 'ama',
+        runtime: 'enbor',
       },
     })
     let volumeExists = false
     mockSandbox.exec.mockImplementation(async (command: string) => {
-      if (command.includes("] && [ -d '/workspace/.ama/realmroot-state' ]")) {
+      if (command.includes("] && [ -d '/workspace/.enbor/realmroot-state' ]")) {
         return volumeExists ? { exitCode: 0, stdout: '', stderr: '' } : { exitCode: 1, stdout: '', stderr: 'missing' }
       }
-      if (command.startsWith("[ -e '/workspace/.ama/realmroot-state' ]")) {
+      if (command.startsWith("[ -e '/workspace/.enbor/realmroot-state' ]")) {
         return { exitCode: 1, stdout: '', stderr: 'missing' }
       }
       if (command.startsWith('mv -T -n ')) volumeExists = true
-      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+      if (command.startsWith("[ -d '/workspace/.enbor/.enbor-empty-dir-")) {
         return { exitCode: 1, stdout: '', stderr: 'published' }
       }
       return { exitCode: 0, stdout: '', stderr: '' }
@@ -930,8 +928,8 @@ describe('session-runtime', () => {
           issuer: 'https://realmroot.example.com/api/auth',
           subject: 'rr_agent_1',
           username: 'reviewer',
-          runtime: 'ama' as const,
-          credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+          runtime: 'enbor' as const,
+          credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
         },
       },
       environmentSnapshot: { runtimeConfig: {} },
@@ -941,7 +939,7 @@ describe('session-runtime', () => {
           {
             name: 'realmroot-agent-state',
             type: 'empty_dir' as const,
-            mountPath: '/workspace/.ama/realmroot-state',
+            mountPath: '/workspace/.enbor/realmroot-state',
             readOnly: false as const,
             files: [
               {
@@ -954,26 +952,26 @@ describe('session-runtime', () => {
       },
     }
 
-    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
-    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
+    await startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
+    await startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input)
 
     const targetWrites = mockSandbox.writeFile.mock.calls.filter(
-      ([path]) => String(path).includes('/.ama-empty-dir-') && String(path).endsWith('/YW1h.json'),
+      ([path]) => String(path).includes('/.enbor-empty-dir-') && String(path).endsWith('/YW1h.json'),
     )
     expect(targetWrites).toHaveLength(1)
-    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/ama.json'))).toBe(false)
+    expect(mockSandbox.writeFile.mock.calls.some(([path]) => String(path).endsWith('/enbor.json'))).toBe(false)
     expect(volumeExists).toBe(true)
   })
 
   it('[spec: sessions/identity-materialization] rejects a cloud emptyDir mount through a symbolic link', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) =>
-      command.includes("[ ! -L '/workspace/.ama/realmroot-state' ]")
+      command.includes("[ ! -L '/workspace/.enbor/realmroot-state' ]")
         ? { exitCode: 1, stdout: '', stderr: 'symbolic link' }
         : { exitCode: 0, stdout: '', stderr: '' },
     )
 
     await expect(
-      startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+      startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
         sessionId: 'session_symlink',
         sandboxId: 'sandbox_symlink',
         provider: 'workers-ai',
@@ -986,7 +984,7 @@ describe('session-runtime', () => {
             {
               name: 'runtime-state',
               type: 'empty_dir',
-              mountPath: '/workspace/.ama/realmroot-state',
+              mountPath: '/workspace/.enbor/realmroot-state',
               readOnly: false,
               files: [{ path: 'state.json', content: 'secret' }],
             },
@@ -1005,10 +1003,10 @@ describe('session-runtime', () => {
       resolve: (value: { exitCode: number; stdout: string; stderr: string }) => void
     }> = []
     mockSandbox.exec.mockImplementation(async (command: string) => {
-      if (command.includes("] && [ -d '/workspace/.ama/runtime-state' ]")) {
+      if (command.includes("] && [ -d '/workspace/.enbor/runtime-state' ]")) {
         return volumeExists ? { exitCode: 0, stdout: '', stderr: '' } : { exitCode: 1, stdout: '', stderr: 'missing' }
       }
-      if (command.startsWith("[ -e '/workspace/.ama/runtime-state' ]")) {
+      if (command.startsWith("[ -e '/workspace/.enbor/runtime-state' ]")) {
         return { exitCode: 1, stdout: '', stderr: 'missing' }
       }
       if (command.startsWith('mv -T -n ')) {
@@ -1022,13 +1020,13 @@ describe('session-runtime', () => {
           for (const waiter of publishWaiters) waiter.resolve({ exitCode: 0, stdout: '', stderr: '' })
         })
       }
-      if (command.startsWith("[ -d '/workspace/.ama/.ama-empty-dir-")) {
+      if (command.startsWith("[ -d '/workspace/.enbor/.enbor-empty-dir-")) {
         const staging = command.match(/^\[ -d '([^']+)'/)?.[1]
         return staging && remainingStaging.has(staging)
           ? { exitCode: 0, stdout: '', stderr: '' }
           : { exitCode: 1, stdout: '', stderr: 'published' }
       }
-      if (command.startsWith("rm -rf '/workspace/.ama/.ama-empty-dir-")) {
+      if (command.startsWith("rm -rf '/workspace/.enbor/.enbor-empty-dir-")) {
         const staging = command.match(/^rm -rf '([^']+)'/)?.[1]
         if (staging) remainingStaging.delete(staging)
       }
@@ -1047,7 +1045,7 @@ describe('session-runtime', () => {
           {
             name: 'runtime-state',
             type: 'empty_dir' as const,
-            mountPath: '/workspace/.ama/runtime-state',
+            mountPath: '/workspace/.enbor/runtime-state',
             readOnly: false as const,
             files: [{ path: 'state.json', content: 'secret' }],
           },
@@ -1055,7 +1053,7 @@ describe('session-runtime', () => {
       },
     }
 
-    await startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
+    await startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, {
       ...input,
       sessionId: 'session_import_warmup',
       sandboxId: 'sandbox_import_warmup',
@@ -1064,17 +1062,17 @@ describe('session-runtime', () => {
 
     await expect(
       Promise.all([
-        startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
-        startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
+        startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
+        startSessionRuntime({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
       ]),
     ).resolves.toHaveLength(2)
-    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path !== '/tmp/.ama-runtime-ready')).toHaveLength(2)
-    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path === '/tmp/.ama-runtime-ready')).toHaveLength(3)
+    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path !== '/tmp/.enbor-runtime-ready')).toHaveLength(2)
+    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path === '/tmp/.enbor-runtime-ready')).toHaveLength(3)
     expect(remainingStaging.size).toBe(0)
   })
 
   it('stops the configured executor backend for a sandbox', async () => {
-    await stopSessionRuntime({ AMA_RUNTIME_MODE: 'test' } as Env, 'sandbox_123')
+    await stopSessionRuntime({ RUNTIME_MODE: 'test' } as Env, 'sandbox_123')
 
     expect(toolExecutorMock).toHaveBeenCalledTimes(1)
     expect(mockExecutor.stop).toHaveBeenCalledWith('sandbox_123')
@@ -1089,7 +1087,7 @@ describe('session-runtime', () => {
       calls.push(`keepalive:${keepAlive}`)
     })
 
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
     await adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)
 
     expect(getSandboxMock).toHaveBeenCalledWith(expect.anything(), 'sandbox_123', {
@@ -1100,7 +1098,7 @@ describe('session-runtime', () => {
   })
 
   it('[spec: runtime/idle-retention] reuses a ready sandbox without rebuilding its runtime workspace', async () => {
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
 
     await adapters.cloudRuntime.activateCloudSession({
       sessionId: 'session_123',
@@ -1119,18 +1117,18 @@ describe('session-runtime', () => {
       keepAlive: true,
       normalizeId: true,
     })
-    expect(mockSandbox.exec).toHaveBeenCalledWith("test -f '/tmp/.ama-runtime-ready'")
+    expect(mockSandbox.exec).toHaveBeenCalledWith("test -f '/tmp/.enbor-runtime-ready'")
     expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
     expect(mockSandbox.writeFile).not.toHaveBeenCalled()
   })
 
   it('[spec: runtime/idle-retention] rebuilds a missing runtime in the same sandbox and writes its ready marker', async () => {
     mockSandbox.exec.mockImplementation(async (command: string) => ({
-      exitCode: command === "test -f '/tmp/.ama-runtime-ready'" ? 1 : 0,
+      exitCode: command === "test -f '/tmp/.enbor-runtime-ready'" ? 1 : 0,
       stdout: '',
       stderr: '',
     }))
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
 
     await adapters.cloudRuntime.activateCloudSession({
       sessionId: 'session_123',
@@ -1149,12 +1147,12 @@ describe('session-runtime', () => {
     expect(getSandboxMock).toHaveBeenNthCalledWith(2, {}, 'sandbox_123', sandboxOptions)
     expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({ TOKEN: 'resolved' })
     expect(mockSandbox.exec).toHaveBeenCalledWith("mkdir -p '/root'", undefined)
-    expect(mockSandbox.writeFile).toHaveBeenCalledWith('/tmp/.ama-runtime-ready', 'ready', { encoding: 'utf-8' })
+    expect(mockSandbox.writeFile).toHaveBeenCalledWith('/tmp/.enbor-runtime-ready', 'ready', { encoding: 'utf-8' })
   })
 
   it('[spec: runtime/idle-retention] retries the complete idle operation after a transient keepalive failure', async () => {
     mockSandbox.setKeepAlive.mockRejectedValueOnce(new Error('transient')).mockResolvedValueOnce(undefined)
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
 
     await adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)
 
@@ -1163,7 +1161,7 @@ describe('session-runtime', () => {
   })
 
   it('reads runtime workspace state without enabling the SDK default session', async () => {
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
 
     await expect(
       adapters.runtimeWorkspace.readMemoryStoreMemories({
@@ -1184,7 +1182,7 @@ describe('session-runtime', () => {
   it('[spec: runtime/idle-retention] propagates idle failure after three complete attempts', async () => {
     const failure = new Error('keepalive unavailable')
     mockSandbox.setKeepAlive.mockRejectedValue(failure)
-    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    const adapters = createRuntimeExecutionAdapters({ RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
 
     await expect(adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)).rejects.toBe(failure)
 

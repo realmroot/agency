@@ -19,12 +19,12 @@ def _get_kwargs(
     vault_id: str,
     credential_id: str,
     *,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -92,7 +92,7 @@ def sync_detailed(
     credential_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Read vault credential metadata
@@ -100,7 +100,7 @@ def sync_detailed(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -114,7 +114,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         vault_id=vault_id,
 credential_id=credential_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -129,7 +129,7 @@ def sync(
     credential_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | VaultCredential | None:
     """ Read vault credential metadata
@@ -137,7 +137,7 @@ def sync(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -152,7 +152,7 @@ def sync(
         vault_id=vault_id,
 credential_id=credential_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -161,7 +161,7 @@ async def asyncio_detailed(
     credential_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Read vault credential metadata
@@ -169,7 +169,7 @@ async def asyncio_detailed(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -183,7 +183,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         vault_id=vault_id,
 credential_id=credential_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -198,7 +198,7 @@ async def asyncio(
     credential_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | VaultCredential | None:
     """ Read vault credential metadata
@@ -206,7 +206,7 @@ async def asyncio(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -221,6 +221,6 @@ async def asyncio(
         vault_id=vault_id,
 credential_id=credential_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

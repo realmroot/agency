@@ -21,12 +21,12 @@ vi.mock('../../vault-crypto', () => ({
 
 const { createRuntimeSecretGateway } = await import('./runtime-secrets')
 
-const env = { AMA_VAULT_ENCRYPTION_KEY: 'x'.repeat(32) } as unknown as Env
+const env = { VAULT_ENCRYPTION_KEY: 'x'.repeat(32) } as unknown as Env
 const fakeDb = {} as Parameters<typeof createRuntimeSecretGateway>[1]
 
 const scope = { organizationId: 'org_1', projectId: 'project_1' }
 const items: EnvFromEntry[] = [
-  { type: 'secret', name: 'API_KEY', secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1' },
+  { type: 'secret', name: 'API_KEY', secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1' },
 ]
 
 describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
@@ -47,7 +47,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     secretVersionForResolutionMock.mockResolvedValueOnce({
       state: 'active',
       metadata: JSON.stringify({ encryptedSecretData: { value: 'cipher' } }),
-      secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+      secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
     })
     decryptSecretValueMock.mockResolvedValueOnce('secret-value')
     const gateway = createRuntimeSecretGateway(env, fakeDb)
@@ -196,10 +196,10 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
       .mockResolvedValueOnce('secret-config')
     findActiveMemoryStoreResourceMock.mockResolvedValueOnce({
       type: 'memory',
-      memoryRef: 'ama://memories/store_1',
+      memoryRef: 'enbor://memories/store_1',
       name: 'Memory',
       description: 'Notes',
-      mountPath: '/workspace/.ama/memory-stores/store_1',
+      mountPath: '/workspace/.enbor/memory-stores/store_1',
       memories: [{ path: 'notes.md', content: 'hello' }],
     })
     const gateway = createRuntimeSecretGateway(env, fakeDb)
@@ -221,7 +221,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
           {
             name: 'memory',
             type: 'memory',
-            memoryRef: 'ama://memories/store_1',
+            memoryRef: 'enbor://memories/store_1',
           },
           {
             name: 'secret',
@@ -232,8 +232,8 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         ],
         [
           { name: 'repo', mountPath: '/workspace/repo' },
-          { name: 'memory', mountPath: '/workspace/.ama/memory-stores/store_1', readOnly: false },
-          { name: 'secret', mountPath: '/workspace/.ama/secrets/custom' },
+          { name: 'memory', mountPath: '/workspace/.enbor/memory-stores/store_1', readOnly: false },
+          { name: 'secret', mountPath: '/workspace/.enbor/secrets/custom' },
         ],
       ),
     ).resolves.toEqual({
@@ -250,15 +250,15 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         {
           type: 'memory',
           name: 'memory',
-          mountPath: '/workspace/.ama/memory-stores/store_1',
-          memoryRef: 'ama://memories/store_1',
+          mountPath: '/workspace/.enbor/memory-stores/store_1',
+          memoryRef: 'enbor://memories/store_1',
           readOnly: false,
           files: [{ path: 'notes.md', content: 'hello' }],
         },
         {
           type: 'secret',
           name: 'secret',
-          mountPath: '/workspace/.ama/secrets/custom',
+          mountPath: '/workspace/.enbor/secrets/custom',
           readOnly: true,
           files: [{ path: 'config.json', content: 'secret-config' }],
         },
@@ -288,7 +288,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         scope,
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git', secretRef: 'git-ref' },
-          { name: 'vault', type: 'secret', secretRef: 'ama://vaults/vault_1' },
+          { name: 'vault', type: 'secret', secretRef: 'enbor://vaults/vault_1' },
         ],
         [],
       ),
@@ -305,7 +305,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         {
           type: 'secret',
           name: 'vault',
-          mountPath: '/workspace/.ama/secrets/vault',
+          mountPath: '/workspace/.enbor/secrets/vault',
           readOnly: true,
           files: [{ path: 'api/value', content: 'api-secret' }],
         },
@@ -316,10 +316,10 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
   it('materializes public git repositories and memory files', async () => {
     findActiveMemoryStoreResourceMock.mockResolvedValueOnce({
       type: 'memory',
-      memoryRef: 'ama://memories/store_1',
+      memoryRef: 'enbor://memories/store_1',
       name: 'Memory',
       description: null,
-      mountPath: '/workspace/.ama/memory-stores/store_1',
+      mountPath: '/workspace/.enbor/memory-stores/store_1',
       memories: [],
     })
     const gateway = createRuntimeSecretGateway(env, fakeDb)
@@ -328,7 +328,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         scope,
         [
           { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/slink.git' },
-          { name: 'memory', type: 'memory', memoryRef: 'ama://memories/store_1' },
+          { name: 'memory', type: 'memory', memoryRef: 'enbor://memories/store_1' },
         ],
         [],
       ),
@@ -344,8 +344,8 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         {
           type: 'memory',
           name: 'memory',
-          mountPath: '/workspace/.ama/memory-stores/store_1',
-          memoryRef: 'ama://memories/store_1',
+          mountPath: '/workspace/.enbor/memory-stores/store_1',
+          memoryRef: 'enbor://memories/store_1',
           readOnly: true,
           files: [],
         },
@@ -378,7 +378,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
             ],
           },
         ],
-        [{ name: 'runtime-state', mountPath: '/workspace/.ama/runtime-state', readOnly: false }],
+        [{ name: 'runtime-state', mountPath: '/workspace/.enbor/runtime-state', readOnly: false }],
       ),
     ).resolves.toEqual({
       root: '/workspace',
@@ -386,7 +386,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
         {
           type: 'empty_dir',
           name: 'runtime-state',
-          mountPath: '/workspace/.ama/runtime-state',
+          mountPath: '/workspace/.enbor/runtime-state',
           readOnly: false,
           files: [{ path: 'identities/issuer/runtime.json', content: 'private-state' }],
         },

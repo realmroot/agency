@@ -14,12 +14,12 @@ var bundle []byte
 
 func Materialize() (string, error) {
 	hash := sha256.Sum256(bundle)
-	name := "ama-runtime-bridge-" + hex.EncodeToString(hash[:8]) + ".mjs"
+	name := "enbor-runtime-bridge-" + hex.EncodeToString(hash[:8]) + ".mjs"
 	root, err := os.UserCacheDir()
 	if err != nil {
 		root = os.TempDir()
 	}
-	dir := filepath.Join(root, "ama-runner")
+	dir := filepath.Join(root, "enbor-runner")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}

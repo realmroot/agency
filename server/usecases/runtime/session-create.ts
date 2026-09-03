@@ -67,7 +67,7 @@ const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
 const REALMROOT_STATE_VOLUME = 'realmroot-agent-state'
-const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
+const REALMROOT_STATE_DIR = '/workspace/.enbor/realmroot-state'
 const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'AGENT_SESSION_ID', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
 
 function pathsOverlap(left: string, right: string) {
@@ -78,7 +78,7 @@ function pathsOverlap(left: string, right: string) {
 // so it needs the full CloudTurnDeps. The self-hosted / queued paths use the
 // store, audit, policy, queue, and runtime input ports directly.
 //
-// rereadStartedSession mirrors the legacy AMA_RUNTIME_MODE === 'test' branch: in
+// rereadStartedSession mirrors the legacy RUNTIME_MODE === 'test' branch: in
 // test mode the inline cloud launch ran synchronously so the row is re-read to
 // surface the started session; in production the launch is fire-and-forget and
 // the pending row is returned as-is.
@@ -109,7 +109,7 @@ async function resolveMemoryVolumes(
     }
     const storeId = typeof volume.memoryRef === 'string' ? memoryStoreIdFromRef(volume.memoryRef) : null
     if (!storeId) {
-      return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use ama://memories/{storeId}.' } }
+      return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use enbor://memories/{storeId}.' } }
     }
     if (!(await store.activeMemoryStoreExists(auth.project.id, storeId))) {
       return { fields: { [`volumes.${index}.memoryRef`]: 'Memory store must exist and be active.' } }
@@ -485,7 +485,7 @@ function selfHostedSessionWorkItem(
 ): WorkItemInsert {
   const runnerModel = selfHostedRuntimeModel(values.agentSnapshot.provider, values.agentSnapshot.model)
   const payload = {
-    protocol: 'ama-runner-work',
+    protocol: 'enbor-runner-work',
     type: 'session.start',
     sessionId: values.session.id,
     hostingMode: values.environmentSnapshot?.type ?? 'self_hosted',
@@ -806,7 +806,7 @@ export async function createSessionForAgent(
   const runtimeConfig = options.runtimeConfig ?? {}
   const environmentSnapshot = baseEnvironmentSnapshot
   const hostingMode = environmentHostingMode(environmentSnapshot)
-  const usesCloudLoop = runtime === 'ama'
+  const usesCloudLoop = runtime === 'enbor'
   if (
     !(await validateRuntimeProviderModel(
       deps,
@@ -911,8 +911,8 @@ export async function createSessionForAgent(
       runtimeDriver: runtimeDriverName(runtime, hostingMode),
       ...(usesCloudLoop
         ? {
-            runtimeBackend: 'ama-cloud',
-            runtimeProtocol: 'ama-runtime-rpc',
+            runtimeBackend: 'enbor-cloud',
+            runtimeProtocol: 'enbor-runtime-rpc',
             eventStore: SESSION_DO_EVENT_STORE,
             loop: 'cloud-session-runtime',
             sandboxBackend: hostingMode === 'self_hosted' ? 'runner-sandbox' : 'cloudflare-sandbox',
@@ -921,8 +921,8 @@ export async function createSessionForAgent(
       ...(hostingMode === 'self_hosted'
         ? {
             runnerState: 'queued',
-            runnerProtocol: 'ama-runner-work',
-            runnerWorkKind: runtime === 'ama' ? 'sandbox-tool-executor' : 'runtime-bridge',
+            runnerProtocol: 'enbor-runner-work',
+            runnerWorkKind: runtime === 'enbor' ? 'sandbox-tool-executor' : 'runtime-bridge',
           }
         : {}),
     }),

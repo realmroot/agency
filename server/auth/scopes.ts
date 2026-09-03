@@ -1,4 +1,4 @@
-export const ENBOR_CANONICAL_RESOURCE = 'https://ama.tftt.cc/api'
+export const ENBOR_CANONICAL_RESOURCE = 'https://enbor.realmroot.dev/api'
 export const ENBOR_RESOURCE_NAME = 'Enbor API'
 export const ENBOR_RESOURCE_DESCRIPTION =
   'Realmroot-protected control plane for managed Agents, environments, sessions, runners, governance, usage, and audit.'

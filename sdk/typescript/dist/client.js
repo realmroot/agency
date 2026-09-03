@@ -26,7 +26,7 @@ function websocketURL(config, path) {
     const url = new URL(path, config.baseUrl);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     if (config.projectId) {
-        url.searchParams.set('x-ama-project-id', config.projectId);
+        url.searchParams.set('x-enbor-project-id', config.projectId);
     }
     return url;
 }
@@ -43,9 +43,9 @@ async function authenticatedWebSocket(config, path) {
     const url = websocketURL(config, path);
     const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET');
     return new WebSocket(url.toString(), [
-        'ama-dpop',
-        `ama-access.${base64Url(authorization.accessToken)}`,
-        `ama-proof.${base64Url(authorization.dpopProof)}`,
+        'enbor-dpop',
+        `enbor-access.${base64Url(authorization.accessToken)}`,
+        `enbor-proof.${base64Url(authorization.dpopProof)}`,
     ]);
 }
 async function runnerWebSocket(config, path) {
@@ -57,7 +57,7 @@ async function runnerWebSocket(config, path) {
         throw new Error('Runner WebSocket requires an Authorization: Bearer header');
     }
     if (config.projectId)
-        headers['x-ama-project-id'] = config.projectId;
+        headers['x-enbor-project-id'] = config.projectId;
     return config.webSocketFactory(websocketURL(config, path).toString(), headers);
 }
 async function createSessionStream(config, sessionId) {
@@ -197,7 +197,7 @@ function createConfiguredClient(config) {
         baseUrl: config.baseUrl,
         fetch: authenticatedFetch,
         headers: {
-            ...(config.projectId ? { 'x-ama-project-id': config.projectId } : {}),
+            ...(config.projectId ? { 'x-enbor-project-id': config.projectId } : {}),
             ...config.headers,
         },
     }));

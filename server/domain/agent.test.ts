@@ -49,15 +49,15 @@ describe('[spec: agents/tool-contract] validateAllowedTools', () => {
 describe('[spec: agents/validation] validateSkills', () => {
   it('requires a stable source@skill reference', () => {
     expect(validateSkills(['missing-style'])).toMatchObject({ skills: expect.stringContaining('stable') })
-    expect(validateSkills(['ama@code review'])).toMatchObject({ skills: expect.any(String) })
-    expect(validateSkills(['ama@code-review'])).toBeNull()
-    expect(validateSkills(['saltbo/downstream-service#codex/ama-runtime-integration@downstream-operator'])).toBeNull()
-    expect(validateSkills(['ama#@code-review'])).toMatchObject({ skills: expect.any(String) })
-    expect(validateSkills(['ama#bad ref@code-review'])).toMatchObject({ skills: expect.any(String) })
+    expect(validateSkills(['enbor@code review'])).toMatchObject({ skills: expect.any(String) })
+    expect(validateSkills(['enbor@code-review'])).toBeNull()
+    expect(validateSkills(['saltbo/downstream-service#codex/enbor-runtime-integration@downstream-operator'])).toBeNull()
+    expect(validateSkills(['enbor#@code-review'])).toMatchObject({ skills: expect.any(String) })
+    expect(validateSkills(['enbor#bad ref@code-review'])).toMatchObject({ skills: expect.any(String) })
   })
 
   it('rejects secret-looking skills', () => {
-    expect(validateSkills(['ama@raw-secret-token'])).toEqual({
+    expect(validateSkills(['enbor@raw-secret-token'])).toEqual({
       skills: 'Secret material must be stored in a vault.',
     })
   })

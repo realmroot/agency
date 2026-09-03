@@ -12,7 +12,7 @@ import {
 
 describe('runtimeSupportsLivePrompts', () => {
   it('returns true for all runtimes with bridge-level prompt injection', () => {
-    expect(runtimeSupportsLivePrompts('ama')).toBe(true)
+    expect(runtimeSupportsLivePrompts('enbor')).toBe(true)
     expect(runtimeSupportsLivePrompts('claude-code')).toBe(true)
     expect(runtimeSupportsLivePrompts('copilot')).toBe(true)
     expect(runtimeSupportsLivePrompts('codex')).toBe(true)
@@ -29,7 +29,7 @@ describe('runtimeRequirement', () => {
   })
 
   it('leaves Enbor model routing to the control plane catalog', () => {
-    expect(runtimeRequirement('ama', '@cf/moonshotai/kimi-k2.6')).toEqual({ runtime: 'ama' })
+    expect(runtimeRequirement('enbor', '@cf/moonshotai/kimi-k2.6')).toEqual({ runtime: 'enbor' })
   })
 })
 
@@ -83,11 +83,11 @@ describe('runtimeCatalogSupportsProviderModel', () => {
     expect(runtimeCatalogSupportsProviderModel('cloud', 'claude-code', 'anthropic', 'claude-opus-4')).toBe(false)
   })
 
-  it('accepts any provider/model on ama cloud (catalog is wildcard; the global catalog validates)', () => {
-    // ama no longer pins models here — the loose catalog filter accepts anything,
+  it('accepts any provider/model on enbor cloud (catalog is wildcard; the global catalog validates)', () => {
+    // enbor no longer pins models here — the loose catalog filter accepts anything,
     // and provisioning validates cloud provider/model against the global catalog.
-    expect(runtimeCatalogSupportsProviderModel('cloud', 'ama', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(true)
-    expect(runtimeCatalogSupportsProviderModel('cloud', 'ama', 'anthropic', 'anthropic/claude-opus-4')).toBe(true)
+    expect(runtimeCatalogSupportsProviderModel('cloud', 'enbor', 'workers-ai', '@cf/moonshotai/kimi-k2.6')).toBe(true)
+    expect(runtimeCatalogSupportsProviderModel('cloud', 'enbor', 'anthropic', 'anthropic/claude-opus-4')).toBe(true)
   })
 
   it('returns true for any provider/model on a wildcard-model self-hosted runtime', () => {
@@ -97,7 +97,7 @@ describe('runtimeCatalogSupportsProviderModel', () => {
   })
 
   it('accepts any provider on a wildcard runtime even when no model is given', () => {
-    expect(runtimeCatalogSupportsProviderModel('cloud', 'ama', 'anthropic')).toBe(true)
+    expect(runtimeCatalogSupportsProviderModel('cloud', 'enbor', 'anthropic')).toBe(true)
     expect(runtimeCatalogSupportsProviderModel('self_hosted', 'claude-code', 'anthropic')).toBe(true)
   })
 
@@ -109,8 +109,8 @@ describe('runtimeCatalogSupportsProviderModel', () => {
 
 describe('runtimeSupportsHostingMode', () => {
   it('returns true when the runtime supports the hosting mode', () => {
-    expect(runtimeSupportsHostingMode('cloud', 'ama')).toBe(true)
-    expect(runtimeSupportsHostingMode('self_hosted', 'ama')).toBe(true)
+    expect(runtimeSupportsHostingMode('cloud', 'enbor')).toBe(true)
+    expect(runtimeSupportsHostingMode('self_hosted', 'enbor')).toBe(true)
     expect(runtimeSupportsHostingMode('self_hosted', 'claude-code')).toBe(true)
   })
 
@@ -129,7 +129,7 @@ describe('runtimeSupportsHostingMode', () => {
 describe('RUNTIME_CATALOG integrity', () => {
   it('contains the expected four runtimes', () => {
     const runtimes = RUNTIME_CATALOG.map((entry) => entry.runtime)
-    expect(runtimes).toContain('ama')
+    expect(runtimes).toContain('enbor')
     expect(runtimes).toContain('claude-code')
     expect(runtimes).toContain('codex')
     expect(runtimes).toContain('copilot')

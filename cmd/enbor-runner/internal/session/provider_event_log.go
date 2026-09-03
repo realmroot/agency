@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 // ProviderEvent is the runner's durable copy of one raw provider SDK stream
@@ -23,14 +23,14 @@ type ProviderEvent struct {
 	Sequence  int64    `json:"sequence"`
 	CreatedAt string   `json:"createdAt"`
 	Runtime   string   `json:"runtime"`
-	Event     ama.JSON `json:"event"`
+	Event     enbor.JSON `json:"event"`
 }
 
 func ProviderEventLogPath(sessionDir string) string {
 	return filepath.Join(sessionDir, "provider-events.jsonl")
 }
 
-func AppendProviderEvent(sessionDir string, runtimeName string, event ama.JSON) (ProviderEvent, error) {
+func AppendProviderEvent(sessionDir string, runtimeName string, event enbor.JSON) (ProviderEvent, error) {
 	if runtimeName == "" {
 		return ProviderEvent{}, fmt.Errorf("provider event runtime is required")
 	}

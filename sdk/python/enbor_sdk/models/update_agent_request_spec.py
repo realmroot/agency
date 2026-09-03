@@ -29,7 +29,7 @@ class UpdateAgentRequestSpec:
             system_prompt (str | Unset):  Example: Answer with citations..
             provider (None | str | Unset):  Example: workers-ai.
             model (None | str | Unset):  Example: @cf/moonshotai/kimi-k2.6.
-            skills (list[str] | Unset):  Example: ['ama@code-review'].
+            skills (list[str] | Unset):  Example: ['enbor@code-review'].
             subagents (list[AgentSubagentInput] | Unset):  Example: [{'name': 'reviewer', 'description': 'Reviews proposed
                 changes for correctness and risk.', 'systemPrompt': 'Review the proposed changes and report risks.',
                 'allowedTools': ['read', 'grep']}].

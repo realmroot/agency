@@ -5,8 +5,8 @@ import { createRealmrootManagementAuthority } from './realmroot-management'
 function env(overrides: Record<string, unknown> = {}) {
   return {
     OIDC_ISSUER: 'https://realmroot.example/api/auth',
-    OIDC_CLIENT_ID: 'ama-client',
-    OIDC_CLIENT_SECRET: 'ama-secret',
+    OIDC_CLIENT_ID: 'enbor-client',
+    OIDC_CLIENT_SECRET: 'enbor-secret',
     ...overrides,
   } as Env
 }
@@ -16,11 +16,11 @@ afterEach(() => vi.unstubAllGlobals())
 describe('Realmroot management authority', () => {
   it('returns the deterministic E2E management credential', async () => {
     const authority = createRealmrootManagementAuthority(
-      env({ AMA_E2E_TEST_AUTH: 'true', AMA_E2E_FAKE_REALMROOT_ENROLLMENT: 'true' }),
+      env({ E2E_TEST_AUTH: 'true', E2E_FAKE_REALMROOT_ENROLLMENT: 'true' }),
     )
     const credential = await authority.exchange({ subject: 'user_1', subjectToken: 'ignored' })
     await expect(credential.headers('POST', 'https://realmroot.example/api/agents')).resolves.toEqual({
-      authorization: 'Bearer ama-e2e-fixture:user_1',
+      authorization: 'Bearer enbor-e2e-fixture:user_1',
     })
   })
 
@@ -51,7 +51,7 @@ describe('Realmroot management authority', () => {
     expect(tokenRequest?.init?.headers).toMatchObject({
       accept: 'application/json',
       'content-type': 'application/x-www-form-urlencoded',
-      authorization: `Basic ${btoa('ama-client:ama-secret')}`,
+      authorization: `Basic ${btoa('enbor-client:enbor-secret')}`,
     })
     const body = new URLSearchParams(String(tokenRequest?.init?.body))
     expect(body.get('subject_token')).toBe('user-token')

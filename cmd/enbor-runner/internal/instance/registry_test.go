@@ -20,8 +20,8 @@ func TestRegistryKeepsOneRecordPerAPIServerAndEnvironment(t *testing.T) {
 	t.Setenv("APPDATA", configRoot)
 
 	registry := DefaultRegistry()
-	first := newTestRecord(t, "https://ama.example.test", "env_1")
-	second := newTestRecord(t, "https://ama.example.test", "env_2")
+	first := newTestRecord(t, "https://enbor.example.test", "env_1")
+	second := newTestRecord(t, "https://enbor.example.test", "env_2")
 	if first.ID == second.ID || first.Config.StateDir == second.Config.StateDir {
 		t.Fatalf("instances are not isolated: first=%#v second=%#v", first, second)
 	}
@@ -70,7 +70,7 @@ func TestRegistryKeepsOneRecordPerAPIServerAndEnvironment(t *testing.T) {
 
 func TestRegistryRejectsTamperedAndUnsafeRecords(t *testing.T) {
 	registry := Registry{Dir: t.TempDir()}
-	record := newTestRecord(t, "https://ama.example.test", "env_1")
+	record := newTestRecord(t, "https://enbor.example.test", "env_1")
 	record.ID = "runner_0000000000000000"
 	if err := registry.Create(record); err == nil {
 		t.Fatal("tampered instance id must fail")
@@ -90,28 +90,28 @@ func TestRegistryRejectsTamperedAndUnsafeRecords(t *testing.T) {
 	if _, err := registry.Get("runner_broken"); err == nil {
 		t.Fatal("malformed record must fail")
 	}
-	if err := (Registry{}).Create(newTestRecord(t, "https://ama.example.test", "env_2")); err == nil {
+	if err := (Registry{}).Create(newTestRecord(t, "https://enbor.example.test", "env_2")); err == nil {
 		t.Fatal("empty registry directory must fail")
 	}
 	if err := registry.Remove("runner_missing"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing remove must return ErrNotFound, got %v", err)
 	}
-	badVersion := newTestRecord(t, "https://ama.example.test", "env_3")
+	badVersion := newTestRecord(t, "https://enbor.example.test", "env_3")
 	badVersion.Version = 1
 	if err := registry.Create(badVersion); err == nil {
 		t.Fatal("unsupported instance schema must fail")
 	}
-	missingCredential := newTestRecord(t, "https://ama.example.test", "env_4")
+	missingCredential := newTestRecord(t, "https://enbor.example.test", "env_4")
 	missingCredential.CredentialPath = ""
 	if err := registry.Create(missingCredential); err == nil {
 		t.Fatal("missing credential reference must fail")
 	}
-	missingAccount := newTestRecord(t, "https://ama.example.test", "env_6")
+	missingAccount := newTestRecord(t, "https://enbor.example.test", "env_6")
 	missingAccount.AccountID = ""
 	if err := registry.Create(missingAccount); err == nil {
 		t.Fatal("missing account reference must fail")
 	}
-	customStorage := newTestRecord(t, "https://ama.example.test", "env_5")
+	customStorage := newTestRecord(t, "https://enbor.example.test", "env_5")
 	customStorage.Config.StateDir = t.TempDir()
 	customStorage.Config.WorkDir = filepath.Join(customStorage.Config.StateDir, "work")
 	if err := registry.Create(customStorage); err == nil {
@@ -120,15 +120,15 @@ func TestRegistryRejectsTamperedAndUnsafeRecords(t *testing.T) {
 }
 
 func TestInstanceIDNormalizesServerAndIncludesEnvironment(t *testing.T) {
-	first, err := runnerconfig.InstanceID("https://AMA.example.test/", "env_1")
+	first, err := runnerconfig.InstanceID("https://Enbor.example.test/", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	normalized, err := runnerconfig.InstanceID("https://ama.example.test", "env_1")
+	normalized, err := runnerconfig.InstanceID("https://enbor.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := runnerconfig.InstanceID("https://ama.example.test", "env_2")
+	other, err := runnerconfig.InstanceID("https://enbor.example.test", "env_2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestInstanceIDNormalizesServerAndIncludesEnvironment(t *testing.T) {
 	if _, err := runnerconfig.InstanceID("://bad", "env_1"); err == nil {
 		t.Fatal("invalid API Server must fail")
 	}
-	if _, err := runnerconfig.InstanceID("https://ama.example.test", ""); err == nil {
+	if _, err := runnerconfig.InstanceID("https://enbor.example.test", ""); err == nil {
 		t.Fatal("empty Environment must fail")
 	}
 }

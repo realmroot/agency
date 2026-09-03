@@ -253,7 +253,7 @@ async function prove(
 }
 
 export function createRealmrootEnrollmentGateway(env?: Env): RealmrootEnrollmentGateway {
-  const fake = env?.AMA_E2E_TEST_AUTH === 'true' && env.AMA_E2E_FAKE_REALMROOT_ENROLLMENT === 'true'
+  const fake = env?.E2E_TEST_AUTH === 'true' && env.E2E_FAKE_REALMROOT_ENROLLMENT === 'true'
   return {
     async initialize(input) {
       const state = await initializeState(input)

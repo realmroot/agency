@@ -256,7 +256,7 @@ export async function startSessionRuntimeForRow(
       runtimeBackend: driver.cloudBackend,
       runtimeProtocol: driver.cloudProtocol,
       mcpConnectors: mcpConnectorIds(mcpServers),
-      // "Storage follows the loop": the cloud ama loop owns this session's events,
+      // "Storage follows the loop": the cloud enbor loop owns this session's events,
       // so route its firehose to the Session DO (the event-store router reads
       // this stamp). Self-hosted CLI sessions never reach this path.
       eventStore: SESSION_DO_EVENT_STORE,

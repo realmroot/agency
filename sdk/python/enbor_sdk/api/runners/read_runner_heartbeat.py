@@ -18,12 +18,12 @@ from typing import cast
 def _get_kwargs(
     runner_id: str,
     *,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -90,14 +90,14 @@ def sync_detailed(
     runner_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RunnerHeartbeat]:
     """ Read the current runner heartbeat state
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -110,7 +110,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         runner_id=runner_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -124,14 +124,14 @@ def sync(
     runner_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | RunnerHeartbeat | None:
     """ Read the current runner heartbeat state
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -145,7 +145,7 @@ def sync(
     return sync_detailed(
         runner_id=runner_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -153,14 +153,14 @@ async def asyncio_detailed(
     runner_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RunnerHeartbeat]:
     """ Read the current runner heartbeat state
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,7 +173,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         runner_id=runner_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -187,14 +187,14 @@ async def asyncio(
     runner_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | RunnerHeartbeat | None:
     """ Read the current runner heartbeat state
 
     Args:
         runner_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000011.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -208,6 +208,6 @@ async def asyncio(
     return (await asyncio_detailed(
         runner_id=runner_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

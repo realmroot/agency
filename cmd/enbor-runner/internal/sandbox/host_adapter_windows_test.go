@@ -4,7 +4,7 @@ package sandbox
 
 import "testing"
 
-func TestWindowsHasNoAMAHostAdapter(t *testing.T) {
+func TestWindowsHasNoEnborHostAdapter(t *testing.T) {
 	if adapter := NewHostAdapter(0, 0); adapter != nil {
 		t.Fatalf("expected no Windows Enbor host adapter, got %T", adapter)
 	}

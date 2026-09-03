@@ -90,7 +90,7 @@ async function checkpointFromVault(deps: Deps, auth: AuthScope, identityId: stri
       {
         name: 'identity-checkpoint',
         type: 'secret',
-        secretRef: `ama://vaults/${provisioning.vaultId}/credentials/${provisioning.credentialId}`,
+        secretRef: `enbor://vaults/${provisioning.vaultId}/credentials/${provisioning.credentialId}`,
         items: [{ key: 'state.json', path: 'state.json' }],
       },
     ],
@@ -317,7 +317,7 @@ export async function createIdentity(
       'agent-state',
       {
         name: 'Realmroot Agent state',
-        type: 'ama.dev/realmroot-agent-state',
+        type: 'enbor.dev/realmroot-agent-state',
         secret: { stringData: { 'state.json': JSON.stringify(provisioned.checkpoint.state) } },
       },
     )
@@ -328,7 +328,7 @@ export async function createIdentity(
       {
         ...provisioned.descriptor,
         identityId: identity.metadata.uid,
-        credentialRef: `ama://vaults/${location.vaultId}/credentials/${finalStateCredential.metadata.uid}`,
+        credentialRef: `enbor://vaults/${location.vaultId}/credentials/${finalStateCredential.metadata.uid}`,
       },
       new Date().toISOString(),
     )

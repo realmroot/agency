@@ -29,7 +29,7 @@ const ok = (name, cond, detail = '') => {
 function startBridge() {
   const child = spawn('node', [BUNDLE], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, AMA_RUNTIME_BRIDGE_TEST_MODE: '1' },
+    env: { ...process.env, ENBOR_RUNTIME_BRIDGE_TEST_MODE: '1' },
   })
   const events = []
   const outputs = []
@@ -100,7 +100,7 @@ const requestBase = (runtime, requestId, overrides = {}) => ({
   requestId,
   runtime,
   sessionId: requestId,
-  cwd: mkdtempSync(join(tmpdir(), `ama-${runtime}-smoke-`)),
+  cwd: mkdtempSync(join(tmpdir(), `enbor-${runtime}-smoke-`)),
   env: {},
   prompt: `Smoke ${runtime}.`,
   provider: `provider_${runtime}`,
@@ -202,14 +202,14 @@ async function livePermissionFlow() {
 }
 
 async function enborRejectedByBridge() {
-  console.log('\n[ama] first-party runtime boundary')
+  console.log('\n[enbor] first-party runtime boundary')
   const bridge = startBridge()
   await bridge.waitReady()
-  const requestId = 'run_ama_rejected'
-  bridge.send(requestBase('ama', requestId, { runtimeConfig: {} }))
+  const requestId = 'run_enbor_rejected'
+  bridge.send(requestBase('enbor', requestId, { runtimeConfig: {} }))
   await bridge.waitForError(requestId)
   const error = bridge.outputs.find((message) => message.requestId === requestId && message.type === 'error')?.error
-  ok('ama is not a runner SDK bridge provider', String(error?.message ?? '').includes('Unsupported runtime provider: ama'))
+  ok('enbor is not a runner SDK bridge provider', String(error?.message ?? '').includes('Unsupported runtime provider: enbor'))
   bridge.stop()
 }
 

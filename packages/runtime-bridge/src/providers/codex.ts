@@ -615,7 +615,7 @@ export const codexProvider: RuntimeProvider = {
     const shellEnvironment = Object.fromEntries(
       [
         'HOME',
-        'AMA_WORKSPACE_HOME',
+        'ENBOR_WORKSPACE_HOME',
         'GH_CONFIG_DIR',
         'GIT_CONFIG_GLOBAL',
         'GIT_CONFIG_NOSYSTEM',

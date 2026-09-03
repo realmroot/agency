@@ -24,7 +24,7 @@ describe('server-owned browser authentication', () => {
   })
 
   it('keeps the explicit e2e Bearer credential isolated from production browser sessions', async () => {
-    window.localStorage.setItem('ama:e2e-access-token', 'e2e:proof-test')
+    window.localStorage.setItem('enbor:e2e-access-token', 'e2e:proof-test')
 
     await expect(getAuthHeaders()).resolves.toEqual({ authorization: 'Bearer e2e:proof-test' })
   })
@@ -95,24 +95,24 @@ describe('server-owned browser authentication', () => {
   })
 
   it('logs out through the server session endpoint and clears the e2e credential', async () => {
-    window.localStorage.setItem('ama:e2e-access-token', 'e2e:logout')
+    window.localStorage.setItem('enbor:e2e-access-token', 'e2e:logout')
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
 
     await signOut()
 
-    expect(window.localStorage.getItem('ama:e2e-access-token')).toBeNull()
+    expect(window.localStorage.getItem('enbor:e2e-access-token')).toBeNull()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/sessions/current', { method: 'DELETE' })
   })
 
   it('surfaces logout failure after clearing the e2e credential', async () => {
-    window.localStorage.setItem('ama:e2e-access-token', 'e2e:logout-failure')
+    window.localStorage.setItem('enbor:e2e-access-token', 'e2e:logout-failure')
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ error: { type: 'forbidden' } }, 403)),
     )
 
     await expect(signOut()).rejects.toThrow('Failed to sign out')
-    expect(window.localStorage.getItem('ama:e2e-access-token')).toBeNull()
+    expect(window.localStorage.getItem('enbor:e2e-access-token')).toBeNull()
   })
 })

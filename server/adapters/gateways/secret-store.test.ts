@@ -16,7 +16,7 @@ afterEach(() => {
 const encryptedValue = { version: 'v1', algorithm: 'AES-GCM', iv: 'aaa', ciphertext: 'bbb' }
 
 function makeEnv(): Env {
-  return { AMA_VAULT_ENCRYPTION_KEY: 'x'.repeat(32) } as Env
+  return { VAULT_ENCRYPTION_KEY: 'x'.repeat(32) } as Env
 }
 
 describe('[spec: secret-store/gateway] createSecretStoreGateway', () => {
@@ -30,9 +30,9 @@ describe('[spec: secret-store/gateway] createSecretStoreGateway', () => {
     await expect(
       gateway.store(
         {
-          provider: 'ama',
+          provider: 'enbor',
           referenceName: 'MY_KEY',
-          secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+          secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
           hasSecret: true,
           metadata: {},
         },
@@ -46,9 +46,9 @@ describe('[spec: secret-store/gateway] createSecretStoreGateway', () => {
     const gateway = createSecretStoreGateway(makeEnv())
     const result = await gateway.store(
       {
-        provider: 'ama',
+        provider: 'enbor',
         referenceName: 'MY_KEY',
-        secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+        secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
         hasSecret: true,
         metadata: {},
       },

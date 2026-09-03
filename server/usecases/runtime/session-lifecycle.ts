@@ -187,7 +187,7 @@ function sessionSandboxBackend(session: SessionRow): string | null {
   return typeof metadata.sandboxBackend === 'string' ? metadata.sandboxBackend : null
 }
 
-// On close, snapshot a cloud (ama) session's Session DO event log to its
+// On close, snapshot a cloud (enbor) session's Session DO event log to its
 // R2 archive object. Best-effort: the DO keeps the hot rows, so a transient R2
 // failure must not strand the close. No-op for D1-backed sessions (the router
 // only archives DO-stored ones).

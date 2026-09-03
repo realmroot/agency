@@ -28,7 +28,7 @@ class UpdateVaultCredentialSecretRequest:
     """
         Attributes:
             string_data (UpdateVaultCredentialSecretRequestStringData):  Example: {'token': 'redacted-input-only'}.
-            reference_name (str | Unset):  Example: AMA_PROJECT_TOKEN.
+            reference_name (str | Unset):  Example: ENBOR_PROJECT_TOKEN.
             metadata (UpdateVaultCredentialSecretRequestMetadata | Unset):  Example: {'source': 'console'}.
      """
 

@@ -9,12 +9,12 @@ import (
 )
 
 func TestRunVersionPrintsTextAndJSON(t *testing.T) {
-	info := version.Info{Name: "ama-runner", Version: "1.2.3", Commit: "abc", BuildDate: "today"}
+	info := version.Info{Name: "enbor-runner", Version: "1.2.3", Commit: "abc", BuildDate: "today"}
 	var output bytes.Buffer
 	if err := RunVersion(info, &output, false); err != nil {
 		t.Fatalf("expected text version, got %v", err)
 	}
-	if !strings.Contains(output.String(), "ama-runner 1.2.3 (abc, built today)") {
+	if !strings.Contains(output.String(), "enbor-runner 1.2.3 (abc, built today)") {
 		t.Fatalf("unexpected text version output: %s", output.String())
 	}
 

@@ -90,8 +90,8 @@ function version(id: string, credentialId: string, versionNumber: number): Crede
       vaultId: 'vault_identity',
       organizationId: 'user:user_1',
       version: versionNumber,
-      provider: 'ama',
-      secretRef: `ama://vaults/vault_identity/credentials/${credentialId}/versions/${id}`,
+      provider: 'enbor',
+      secretRef: `enbor://vaults/vault_identity/credentials/${credentialId}/versions/${id}`,
       referenceName: 'IDENTITY_STATE',
       hasSecret: true,
       metadata: {},
@@ -530,7 +530,7 @@ describe('[spec: identities/provision] createIdentity', () => {
       purpose === 'enrolled-checkpoint'
         ? credential('vaultcred_enrolled_legacy', 'opaque', { managedBy: 'identity', identityId, purpose })
         : purpose === 'agent-state'
-          ? credential('vaultcred_state_legacy', 'ama.dev/realmroot-agent-state', {
+          ? credential('vaultcred_state_legacy', 'enbor.dev/realmroot-agent-state', {
               managedBy: 'identity',
               identityId,
             })
@@ -538,7 +538,7 @@ describe('[spec: identities/provision] createIdentity', () => {
     await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({
       status: {
         state: 'active',
-        descriptor: { credentialRef: 'ama://vaults/vault_identity/credentials/vaultcred_state_legacy' },
+        descriptor: { credentialRef: 'enbor://vaults/vault_identity/credentials/vaultcred_state_legacy' },
       },
     })
     expect(fx.credentialCount()).toBe(1)
@@ -557,7 +557,7 @@ describe('[spec: identities/provision] createIdentity', () => {
     }
     const insertCredentialWithVersion = fx.deps.vaults.insertCredentialWithVersion
     const insertFinal = vi.fn(async (metadata: Record<string, unknown>) => {
-      persistedFinalCredentials.push(credential(winnerId, 'ama.dev/realmroot-agent-state', metadata))
+      persistedFinalCredentials.push(credential(winnerId, 'enbor.dev/realmroot-agent-state', metadata))
       throw new Error('UNIQUE constraint failed: index idx_vault_credentials_identity_purpose')
     })
     fx.deps.vaults.insertCredentialWithVersion = async (...args) => {
@@ -568,7 +568,7 @@ describe('[spec: identities/provision] createIdentity', () => {
     await expect(createIdentity(fx.deps, auth, input)).resolves.toMatchObject({
       status: {
         state: 'active',
-        descriptor: { credentialRef: `ama://vaults/vault_identity/credentials/${winnerId}` },
+        descriptor: { credentialRef: `enbor://vaults/vault_identity/credentials/${winnerId}` },
       },
     })
     expect(finalLookups).toBe(2)
@@ -678,7 +678,7 @@ describe('[spec: identities/delete] deleteIdentity', () => {
       subject: 'rr_agent_1',
       username: 'reviewer',
       runtime: 'codex',
-      credentialRef: 'ama://vaults/vault_identity/credentials/cred_state',
+      credentialRef: 'enbor://vaults/vault_identity/credentials/cred_state',
     },
   })
 

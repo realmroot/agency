@@ -19,12 +19,12 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateRunnerRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -108,13 +108,13 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateRunnerRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Runner]:
     """ Register a self-hosted runner
 
     Args:
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (CreateRunnerRequest):
 
     Raises:
@@ -128,7 +128,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -142,13 +142,13 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateRunnerRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Runner | None:
     """ Register a self-hosted runner
 
     Args:
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (CreateRunnerRequest):
 
     Raises:
@@ -163,7 +163,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -171,13 +171,13 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateRunnerRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Runner]:
     """ Register a self-hosted runner
 
     Args:
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (CreateRunnerRequest):
 
     Raises:
@@ -191,7 +191,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -205,13 +205,13 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateRunnerRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Runner | None:
     """ Register a self-hosted runner
 
     Args:
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (CreateRunnerRequest):
 
     Raises:
@@ -226,6 +226,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

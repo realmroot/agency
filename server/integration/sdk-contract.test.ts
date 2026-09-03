@@ -106,7 +106,7 @@ async function createSessionThroughSdk(
     spec: {
       agentId: resourceUid(agent),
       environmentId: resourceUid(environment),
-      runtime: 'ama',
+      runtime: 'enbor',
       ...(Array.isArray(volumes) ? { volumes } : {}),
       ...(Array.isArray(volumeMounts) ? { volumeMounts } : {}),
       ...(env && typeof env === 'object' ? { env } : {}),
@@ -265,10 +265,10 @@ describe('[CF] generated SDK contract', () => {
 
     await expect(runner.runners.channel('runner / 1')).resolves.toBeTruthy()
     expect(webSocketFactory).toHaveBeenCalledWith(
-      'wss://example.com/api/v1/runners/runner%20%2F%201/channel?x-ama-project-id=project_runner',
+      'wss://example.com/api/v1/runners/runner%20%2F%201/channel?x-enbor-project-id=project_runner',
       {
         Authorization: 'Bearer runner-token',
-        'x-ama-project-id': 'project_runner',
+        'x-enbor-project-id': 'project_runner',
       },
     )
 
@@ -355,13 +355,11 @@ describe('[CF] generated SDK contract', () => {
     const refs = externalRefs(runId)
     const agent = await createAgentThroughSdk(enbor, runId)
     const environment = await createEnvironmentThroughSdk(enbor, runId)
-    const volumes = [
-      { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/any-managed-agents.git', ref: 'main' },
-    ]
+    const volumes = [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/enbor.git', ref: 'main' }]
 
     const { created, session } = await createSessionThroughSdk(enbor, runId, refs, agent, environment, {
       volumes,
-      volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/any-managed-agents' }],
+      volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/enbor' }],
       prompt: `Start the external product work item for ${runId}.`,
     })
     const sessionId = String(obj(session.metadata).uid)
@@ -381,7 +379,7 @@ describe('[CF] generated SDK contract', () => {
     // The runtime/provider/model were validated before runtime work started.
     const sessionStatus = obj((await readSession(enbor, sessionId)).status)
     const placement = obj(sessionStatus.placement)
-    expect(obj((await readSession(enbor, sessionId)).spec).runtime).toBe('ama')
+    expect(obj((await readSession(enbor, sessionId)).spec).runtime).toBe('enbor')
     expect(placement.hostingMode).toBe('cloud')
     expect(placement.provider).toBeTruthy()
 

@@ -4,8 +4,8 @@ package host
 
 import "testing"
 
-func TestWindowsDoesNotSupportAMARuntime(t *testing.T) {
-	if SupportsAMARuntime() {
+func TestWindowsDoesNotSupportEnborRuntime(t *testing.T) {
+	if SupportsEnborRuntime() {
 		t.Fatal("Windows must not report Enbor runtime support")
 	}
 }

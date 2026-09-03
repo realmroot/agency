@@ -77,7 +77,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     const apiClient = readFileSync('src/lib/enborrpc/core.ts', 'utf8')
 
     expect(apiClient).toMatch(/hc<AppType>/)
-    expect(apiClient).toMatch(/x-ama-client['"]?: ['"]web-rpc/)
+    expect(apiClient).toMatch(/x-enbor-client['"]?: ['"]web-rpc/)
     expect(apiClient).not.toMatch(/@realmroot\/enbor-sdk/)
     expect(existsSync('src/lib/api.ts')).toBe(false)
   })

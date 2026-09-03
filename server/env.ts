@@ -17,11 +17,11 @@ export interface Env {
   CLOUD_TURNS?: Queue<unknown>
   // Wake-up queue for durable HTTP trigger runs. D1 owns FIFO and run state.
   TRIGGER_DISPATCHES?: Queue<unknown>
-  AMA_RUNTIME_MODE?: string
-  AMA_VAULT_ENCRYPTION_KEY?: string
+  RUNTIME_MODE?: string
+  VAULT_ENCRYPTION_KEY?: string
   // AI Gateway name for third-party ({vendor}/{model}) cloud models (Unified
-  // Billing / BYOK); defaults to 'ama'. '@cf/' models stay gateway-free.
-  AMA_AI_GATEWAY_ID?: string
+  // Billing / BYOK); defaults to 'enbor'. '@cf/' models stay gateway-free.
+  AI_GATEWAY_ID?: string
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
   OIDC_CLIENT_SECRET?: string
@@ -39,10 +39,10 @@ export interface Env {
   // outside the explicit E2E test gate.
   OIDC_RESOURCE?: string
   OIDC_BROWSER_SCOPES?: string
-  AMA_WEB_SESSION_ENCRYPTION_KEY?: string
+  WEB_SESSION_ENCRYPTION_KEY?: string
   OIDC_RUNNER_CLIENT_ID?: string
   OIDC_RUNNER_SCOPES?: string
-  AMA_ALLOWED_ORIGINS?: string
-  AMA_E2E_TEST_AUTH?: string
-  AMA_E2E_FAKE_REALMROOT_ENROLLMENT?: string
+  ALLOWED_ORIGINS?: string
+  E2E_TEST_AUTH?: string
+  E2E_FAKE_REALMROOT_ENROLLMENT?: string
 }

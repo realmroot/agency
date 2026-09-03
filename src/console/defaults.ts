@@ -33,7 +33,7 @@ export const emptyAgent: AgentFormState = {
 export const emptySession: SessionFormState = {
   agentId: '',
   environmentId: '',
-  runtime: 'ama',
+  runtime: 'enbor',
   prompt: '',
   credentialVaultIds: [],
   resources: [],

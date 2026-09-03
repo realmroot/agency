@@ -71,7 +71,7 @@ func TestResumeTokenBox(t *testing.T) {
 
 func TestLeaseWorkerPersistResumeToken(t *testing.T) {
 	t.Run("updates active lease once per token", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease()}
+		client := &fakeEnborServer{lease: approvedLease()}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		tokens := &resumeTokenBox{}
@@ -95,7 +95,7 @@ func TestLeaseWorkerPersistResumeToken(t *testing.T) {
 	})
 
 	t.Run("propagates update errors", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease(), updateErr: errors.New("lease update failed")}
+		client := &fakeEnborServer{lease: approvedLease(), updateErr: errors.New("lease update failed")}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		err := worker.persistResumeToken(
@@ -112,7 +112,7 @@ func TestLeaseWorkerPersistResumeToken(t *testing.T) {
 }
 
 func TestIsSupportedSessionRuntimeAcceptsNonEmptyRuntime(t *testing.T) {
-	for _, runtime := range []string{"ama", "claude-code", "codex", "copilot", "future-runtime"} {
+	for _, runtime := range []string{"enbor", "claude-code", "codex", "copilot", "future-runtime"} {
 		if !isSupportedSessionRuntime(runtime) {
 			t.Fatalf("expected %q to be a supported session runtime", runtime)
 		}
@@ -171,7 +171,7 @@ func TestLeaseWorkerSessionStartDoesNotBranchOnExternalRuntimeNames(t *testing.T
 
 func TestLeaseWorkerFailsSessionStartWhenRelayIsNil(t *testing.T) {
 	lease := sessionStartLease()
-	client := &fakeAMAServer{lease: lease}
+	client := &fakeEnborServer{lease: lease}
 	daemon := testDaemon(client, &fakeAdapter{})
 	payload, err := protocol.ParseWorkPayload(lease.workItem.Payload)
 	if err != nil {
@@ -186,7 +186,7 @@ func TestLeaseWorkerFailsSessionStartWhenRelayIsNil(t *testing.T) {
 }
 
 func TestLeaseWorkerRejectsUnsupportedSessionRuntime(t *testing.T) {
-	client := &fakeAMAServer{lease: sessionStartLease()}
+	client := &fakeEnborServer{lease: sessionStartLease()}
 	daemon := testDaemon(client, &fakeAdapter{})
 	err := daemon.leaseWorker().runSessionStart(context.Background(), client.lease.lease, protocol.WorkPayload{
 		Runtime:   "",
@@ -202,7 +202,7 @@ func TestLeaseWorkerRejectsUnsupportedSessionRuntime(t *testing.T) {
 
 func TestLeaseWorkerRunToolFailsWithoutSandboxAdapter(t *testing.T) {
 	work := approvedLease()
-	client := &fakeAMAServer{lease: work}
+	client := &fakeEnborServer{lease: work}
 	daemon := testDaemon(client, nil)
 	payload, err := protocol.ParseWorkPayload(work.workItem.Payload)
 	if err != nil {
@@ -223,7 +223,7 @@ func TestLeaseWorkerRunToolPassesPayloadEnvironment(t *testing.T) {
 		"GH_TOKEN":     "github-value",
 		"CUSTOM_TOKEN": "custom-value",
 	}
-	client := &fakeAMAServer{lease: work}
+	client := &fakeEnborServer{lease: work}
 	adapter := &fakeAdapter{
 		result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok", "exitCode": 0}},
 	}
@@ -246,7 +246,7 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 	t.Run("invalid payload failure update", func(t *testing.T) {
 		work := approvedLease()
 		work.workItem.Payload = enbor.JSON{"protocol": "bad"}
-		client := &fakeAMAServer{lease: work, updateErr: updateErr}
+		client := &fakeEnborServer{lease: work, updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		err := daemon.leaseWorker().runClaimedWork(context.Background(), work.lease, work.workItem)
 		if err == nil || !strings.Contains(err.Error(), updateErr.Error()) {
@@ -256,7 +256,7 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 	t.Run("runtime requirement failure update", func(t *testing.T) {
 		work := sessionStartLease()
 		work.workItem.Payload["runtimeRequirement"] = enbor.JSON{"runtime": "missing"}
-		client := &fakeAMAServer{lease: work, updateErr: updateErr}
+		client := &fakeEnborServer{lease: work, updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		worker.CurrentRuntimes = nil
@@ -265,21 +265,21 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 			t.Fatalf("expected update error, got %v", err)
 		}
 	})
-	t.Run("missing ama relay failure update", func(t *testing.T) {
+	t.Run("missing enbor relay failure update", func(t *testing.T) {
 		work := sessionStartLease()
-		client := &fakeAMAServer{lease: work, updateErr: updateErr}
+		client := &fakeEnborServer{lease: work, updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		payload, err := protocol.ParseWorkPayload(work.workItem.Payload)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = daemon.leaseWorker().runAMASandboxSession(context.Background(), work.lease, payload)
+		err = daemon.leaseWorker().runEnborSandboxSession(context.Background(), work.lease, payload)
 		if err == nil || !strings.Contains(err.Error(), updateErr.Error()) {
 			t.Fatalf("expected update error, got %v", err)
 		}
 	})
 	t.Run("runtime timeout failure update", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease(), updateErr: updateErr}
+		client := &fakeEnborServer{lease: approvedLease(), updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		err := worker.finalizeRuntimeSession(
@@ -295,7 +295,7 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 		}
 	})
 	t.Run("runtime generic failure update", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease(), updateErr: updateErr}
+		client := &fakeEnborServer{lease: approvedLease(), updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		err := worker.finalizeRuntimeSession(
@@ -310,9 +310,9 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 			t.Fatalf("expected update error, got %v", err)
 		}
 	})
-	t.Run("ama workspace failure update", func(t *testing.T) {
+	t.Run("enbor workspace failure update", func(t *testing.T) {
 		work := sessionStartLease()
-		client := &fakeAMAServer{lease: work, updateErr: updateErr}
+		client := &fakeEnborServer{lease: work, updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		relayCtx, cancelRelay := context.WithCancel(context.Background())
 		defer cancelRelay()
@@ -322,14 +322,14 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 			t.Fatal(err)
 		}
 		payload.SessionID = "../bad"
-		err = daemon.leaseWorker().runAMASandboxSession(context.Background(), work.lease, payload)
+		err = daemon.leaseWorker().runEnborSandboxSession(context.Background(), work.lease, payload)
 		if err == nil || !strings.Contains(err.Error(), updateErr.Error()) {
 			t.Fatalf("expected update error, got %v", err)
 		}
 	})
-	t.Run("ama runtime started upload failure update", func(t *testing.T) {
+	t.Run("enbor runtime started upload failure update", func(t *testing.T) {
 		work := sessionStartLease()
-		client := &fakeAMAServer{lease: work, eventErr: errors.New("event upload failed"), updateErr: updateErr}
+		client := &fakeEnborServer{lease: work, eventErr: errors.New("event upload failed"), updateErr: updateErr}
 		daemon := testDaemon(client, &fakeAdapter{})
 		relayCtx, cancelRelay := context.WithCancel(context.Background())
 		defer cancelRelay()
@@ -338,7 +338,7 @@ func TestLeaseWorkerPropagatesLeaseUpdateFailures(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = daemon.leaseWorker().runAMASandboxSession(context.Background(), work.lease, payload)
+		err = daemon.leaseWorker().runEnborSandboxSession(context.Background(), work.lease, payload)
 		if err == nil || !strings.Contains(err.Error(), updateErr.Error()) {
 			t.Fatalf("expected update error, got %v", err)
 		}
@@ -377,7 +377,7 @@ func TestLeaseWorkerRuntimeRequirementHelpers(t *testing.T) {
 func TestLeaseWorkerRunAssignedHandlesFailureAndCancellationStates(t *testing.T) {
 	work := approvedLease()
 	work.workItem.Payload = enbor.JSON{"protocol": "bad"}
-	client := &fakeAMAServer{lease: work}
+	client := &fakeEnborServer{lease: work}
 	relay := runnersession.NewRelay(client, "runner_1", t.TempDir())
 	daemon := testDaemon(client, &fakeAdapter{})
 	worker := daemon.leaseWorker()
@@ -393,12 +393,12 @@ func TestLeaseWorkerRunAssignedHandlesFailureAndCancellationStates(t *testing.T)
 	}
 }
 
-// [spec: runners/ama-sandbox-channel]
-func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *testing.T) {
+// [spec: runners/enbor-sandbox-channel]
+func TestLeaseWorkerRunAssignedMarksOnlySuccessfulEnborStartupSessionActive(t *testing.T) {
 	tests := []struct {
 		name       string
 		work       func() *fakeWork
-		configure  func(*Daemon, *fakeAMAServer)
+		configure  func(*Daemon, *fakeEnborServer)
 		wantErr    bool
 		wantActive bool
 	}{
@@ -410,7 +410,7 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 		{
 			name: "successful external runtime session start",
 			work: func() *fakeWork { return codexSessionStartLease("complete the task") },
-			configure: func(daemon *Daemon, _ *fakeAMAServer) {
+			configure: func(daemon *Daemon, _ *fakeEnborServer) {
 				daemon.RuntimeAdapter = &fakeRuntimeAdapter{result: enbor.JSON{"exitCode": 0}}
 			},
 		},
@@ -430,7 +430,7 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 		{
 			name: "failed Enbor session start",
 			work: sessionStartLease,
-			configure: func(_ *Daemon, client *fakeAMAServer) {
+			configure: func(_ *Daemon, client *fakeEnborServer) {
 				client.eventErr = errors.New("runtime start event failed")
 			},
 			wantErr: true,
@@ -441,7 +441,7 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 		t.Run(test.name, func(t *testing.T) {
 			work := test.work()
 			channel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-			client := &fakeAMAServer{lease: work, hubChannel: channel}
+			client := &fakeEnborServer{lease: work, hubChannel: channel}
 			daemon := testDaemon(client, &fakeAdapter{result: sandbox.ToolResult{Output: map[string]any{"exitCode": 0}}})
 			if test.configure != nil {
 				test.configure(&daemon, client)
@@ -454,7 +454,7 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 			worker := daemon.leaseWorker()
 			worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
 				return []runtime.RunnerRuntime{
-					{Runtime: "ama", State: runtime.RuntimeStateReady},
+					{Runtime: "enbor", State: runtime.RuntimeStateReady},
 					{Runtime: "codex", Models: []string{"gpt-5.3-codex"}, State: runtime.RuntimeStateReady},
 				}
 			}
@@ -479,8 +479,8 @@ func TestLeaseWorkerRunAssignedMarksOnlySuccessfulAMAStartupSessionActive(t *tes
 	}
 }
 
-// [spec: runners/ama-sandbox-channel]
-func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *testing.T) {
+// [spec: runners/enbor-sandbox-channel]
+func TestEnborSandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *testing.T) {
 	work := sessionStartLease()
 	runCtx, cancelRun := context.WithCancel(t.Context())
 	defer cancelRun()
@@ -551,14 +551,14 @@ func TestAMASandboxRenewalFailureAfterCompletionUnregistersAndCleansHandle(t *te
 		t.Fatalf("create runner client: %v", err)
 	}
 	workDir := t.TempDir()
-	daemon := testDaemon(&fakeAMAServer{}, &fakeAdapter{})
+	daemon := testDaemon(&fakeEnborServer{}, &fakeAdapter{})
 	daemon.Config.WorkDir = workDir
 	daemon.Config.RenewInterval = time.Millisecond
 	worker := daemon.leaseWorker()
 	worker.Client = client
-	worker.Relay = runnersession.NewRelay(&fakeAMAServer{}, "runner_1", workDir)
+	worker.Relay = runnersession.NewRelay(&fakeEnborServer{}, "runner_1", workDir)
 	worker.CurrentRuntimes = func() []runtime.RunnerRuntime {
-		return []runtime.RunnerRuntime{{Runtime: "ama", State: runtime.RuntimeStateReady}}
+		return []runtime.RunnerRuntime{{Runtime: "enbor", State: runtime.RuntimeStateReady}}
 	}
 
 	err = worker.RunAssigned(runCtx, work.lease, work.workItem)
@@ -637,7 +637,7 @@ func TestSuccessfulRuntimeResult(t *testing.T) {
 }
 
 func TestLeaseWorkerLeafHelpers(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	daemon := testDaemon(client, &fakeAdapter{})
 	worker := daemon.leaseWorker()
 	if err := worker.uploadSessionEvent(context.Background(), "", enbor.JSON{"type": "ignored"}); err != nil {
@@ -649,15 +649,15 @@ func TestLeaseWorkerLeafHelpers(t *testing.T) {
 	if got := promptWithSkillRefresh("build it", workspace.AgentPrepareReport{}); got != "build it" {
 		t.Fatalf("expected unchanged prompt without skill changes, got %q", got)
 	}
-	if got := promptWithSkillRefresh("", workspace.AgentPrepareReport{SkillChanges: []workspace.SkillRefreshChange{{Ref: "ama@review", Status: "updated"}}}); got != "" {
+	if got := promptWithSkillRefresh("", workspace.AgentPrepareReport{SkillChanges: []workspace.SkillRefreshChange{{Ref: "enbor@review", Status: "updated"}}}); got != "" {
 		t.Fatalf("expected empty prompt to stay empty, got %q", got)
 	}
 	refreshed := promptWithSkillRefresh("build it", workspace.AgentPrepareReport{
-		SkillChanges: []workspace.SkillRefreshChange{{Ref: "ama@review", Status: "updated"}},
+		SkillChanges: []workspace.SkillRefreshChange{{Ref: "enbor@review", Status: "updated"}},
 	})
 	for _, want := range []string{
 		"Workspace skills were refreshed before this prompt.",
-		"- ama@review: updated",
+		"- enbor@review: updated",
 		"User prompt:\nbuild it",
 	} {
 		if !strings.Contains(refreshed, want) {
@@ -674,7 +674,7 @@ func TestLeaseWorkerLeafHelpers(t *testing.T) {
 
 func TestRunToolCancelsLeaseWhenContextIsCancelledBeforeEventUpload(t *testing.T) {
 	work := approvedLease()
-	client := &fakeAMAServer{lease: work}
+	client := &fakeEnborServer{lease: work}
 	daemon := testDaemon(client, &fakeAdapter{})
 	worker := daemon.leaseWorker()
 	payload, err := protocol.ParseWorkPayload(work.workItem.Payload)
@@ -702,7 +702,7 @@ func TestAttachMemoryStoresBranches(t *testing.T) {
 		SessionID: "session_1",
 		Manifest: protocol.WorkspaceManifest{Mounts: []protocol.WorkspaceMount{{
 			Type:      "memory",
-			MemoryRef: "ama://memories/store_1",
+			MemoryRef: "enbor://memories/store_1",
 			ReadOnly:  false,
 			Files:     []protocol.WorkspaceFile{{Path: "memory.md", Content: "remember"}},
 		}}},
@@ -718,7 +718,7 @@ func TestAttachMemoryStoresBranches(t *testing.T) {
 	if got.Output == nil || got.Output["memoryStores"] == nil {
 		t.Fatalf("expected memory stores in result, got %#v", got.Output)
 	}
-	if err := os.RemoveAll(filepath.Join(prepared.Root, ".ama", "memory-stores", "store_1")); err != nil {
+	if err := os.RemoveAll(filepath.Join(prepared.Root, ".enbor", "memory-stores", "store_1")); err != nil {
 		t.Fatal(err)
 	}
 	got = worker.attachMemoryStores(prepared, runtime.Result{Output: enbor.JSON{"exitCode": 0}})

@@ -34,14 +34,270 @@ function expectResolvableIdentitySnapshot(
   expected: { vaultId: string; credentialId: string },
 ) {
   expect(snapshot.credentialRef).toBe(`ama://vaults/${expected.vaultId}/credentials/${expected.credentialId}`)
-  const identity = secretRefIdentity(String(snapshot.credentialRef))
-  expect(identity).toEqual(expected)
   expect(
     db
       .prepare('SELECT id FROM vault_credentials WHERE id = ? AND vault_id = ?')
       .get(expected.credentialId, expected.vaultId),
   ).toEqual({ id: expected.credentialId })
 }
+
+describe('[spec: runtime/enbor-contract-cutover] Enbor contract migration', () => {
+  it('rewrites persisted AMA contracts and enforces the Enbor-only constrained values', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec('PRAGMA foreign_keys=on')
+    applyThrough(db, '0040_open_identity_runtimes.sql')
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
+      INSERT INTO agents (
+        id,project_id,name,skills,subagents,identity_snapshot,created_at,updated_at
+      ) VALUES (
+        'agent_1','project_1','Agent','["ama@realmroot"]','[{"runtime":"ama"}]',
+        '{"runtime":"ama","credentialRef":"ama://vaults/vault_1/credentials/credential_1"}',
+        '2026-01-01','2026-01-01'
+      );
+      INSERT INTO agent_versions (
+        id,agent_id,project_id,version,system_prompt,skills,subagents,identity_snapshot,created_at
+      ) VALUES (
+        'agent_version_1','agent_1','project_1',1,'Work','["ama@realmroot"]','[{"runtime":"ama"}]',
+        '{"runtime":"ama","credentialRef":"ama://vaults/vault_1/credentials/credential_1"}',
+        '2026-01-01'
+      );
+      INSERT INTO environments (
+        id,project_id,name,variables,runtime_config,metadata,created_at,updated_at
+      ) VALUES (
+        'environment_1','project_1','Environment','{"AMA_API_URL":"https://api.example"}',
+        '{"runtime":"ama","protocol":"ama-runner-work"}',
+        '{"secretRef":"ama://vaults/vault_1/credentials/credential_1"}',
+        '2026-01-01','2026-01-01'
+      );
+      INSERT INTO environment_versions (
+        id,environment_id,project_id,version,packages,variables,resource_limits,runtime_config,metadata,created_at
+      ) VALUES (
+        'environment_version_1','environment_1','project_1',1,'[]','{"AMA_API_URL":"https://api.example"}',
+        '{}','{"runtime":"ama","protocol":"ama-runner-work"}',
+        '{"secretRef":"ama://vaults/vault_1/credentials/credential_1"}','2026-01-01'
+      );
+      INSERT INTO sessions (
+        id,agent_id,organization_id,agent_version_id,agent_snapshot,environment_id,
+        environment_version_id,environment_snapshot,env,project_id,durable_object_name,state,
+        metadata,created_at,updated_at,env_from,volumes,volume_mounts
+      ) VALUES (
+        'session_1','agent_1','org_1','agent_version_1','{"runtime":"ama"}',
+        'environment_1','environment_version_1','{"runtime":"ama","memoryPath":"/.ama/memory"}',
+        '{"AMA_API_URL":"https://api.example"}','project_1','session-do-1','running',
+        '{"runtime":"ama"}',
+        '2026-01-01','2026-01-01','[]','[]','[]'
+      );
+      INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,environment_id,trigger_type,runtime,name,
+        prompt_template,env,interval_seconds,enabled,next_due_at,metadata,created_at,updated_at
+      ) VALUES (
+        'trigger_1','org_1','project_1','agent_1','environment_1','scheduled','ama','Trigger',
+        'Ask AMA about ama with LLAMA_MODEL llama-3.3 and llama@meta. Use AMA_API_URL via ama.run for ama@realmroot',
+        '{"AMA_API_URL":"https://api.example","LLAMA_MODEL":"llama-3.3","skill":"llama@meta","memoryRef":"ama://memories/store_1","runtime":"ama"}',
+        3600,1,'2026-01-02','{"runtime":"ama","type":"ama.dev/basic-auth","model":"llama-3.3","env":"LLAMA_MODEL","skill":"llama@meta"}',
+        '2026-01-01','2026-01-01'
+      );
+      INSERT INTO trigger_runs (
+        id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,session_id,
+        correlation_id,metadata,created_at,updated_at
+      ) VALUES (
+        'run_1','org_1','project_1','trigger_1','2026-01-01','dispatched','request_1','session_1',
+        'correlation_1','{"runtime":"ama","secretRef":"ama://vaults/vault_1/credentials/credential_1"}',
+        '2026-01-01','2026-01-01'
+      );
+      INSERT INTO http_trigger_pending_runs (
+        sequence,run_id,trigger_id,organization_id,organization_name,project_id,project_name,
+        requested_by_user_id,routing_key_hash,rendered_prompt,created_at
+      ) VALUES (
+        7,'run_1','trigger_1','org_1','Organization','project_1','Project','user_1','routing-hash',
+        'Ask AMA about ama with LLAMA_MODEL llama-3.3 and llama@meta. Use AMA_API_URL via ama.run for ama@realmroot','2026-01-01'
+      );
+      INSERT INTO session_routes (
+        id,organization_id,project_id,agent_id,trigger_id,routing_key_hash,session_id,
+        activation_run_id,created_at
+      ) VALUES (
+        'route_1','org_1','project_1','agent_1','trigger_1','routing-hash','session_1','run_1','2026-01-01'
+      );
+      INSERT INTO vaults (id,organization_id,project_id,name,created_at,updated_at)
+        VALUES ('vault_1','org_1','project_1','Vault','2026-01-01','2026-01-01');
+      INSERT INTO vault_credentials (
+        id,vault_id,organization_id,project_id,name,type,metadata,state,active_version_id,created_at,updated_at
+      ) VALUES (
+        'credential_1','vault_1','org_1','project_1','Credential','ama.dev/realmroot-agent-state',
+        '{"env":"AMA_API_URL","type":"ama.dev/basic-auth"}',
+        'active','credential_version_1','2026-01-01','2026-01-01'
+      );
+      INSERT INTO vault_credential_versions (
+        id,credential_id,vault_id,organization_id,project_id,version,provider,secret_ref,
+        reference_name,state,has_secret,metadata,created_at
+      ) VALUES (
+        'credential_version_1','credential_1','vault_1','org_1','project_1',1,'ama',
+        'ama://vaults/vault_1/credentials/credential_1/versions/credential_version_1',
+        'CREDENTIAL','active',1,'{"type":"ama.dev/basic-auth"}','2026-01-01'
+      );
+      INSERT INTO identities (
+        id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,
+        idempotency_key_hash,request_fingerprint,created_at,updated_at
+      ) VALUES (
+        'identity_1','project_1','org_1','Identity','identity','ama','active','vault_1','credential_1',
+        'idempotency-hash','fingerprint','2026-01-01','2026-01-01'
+      );
+      INSERT INTO runners (
+        id,organization_id,project_id,name,state,runtimes,metadata,created_at,updated_at
+      ) VALUES (
+        'runner_1','org_1','project_1','Runner','active',
+        '[{"runtime":"ama","protocol":"ama-runner-work"}]',
+        '{"secretRef":"ama://vaults/vault_1/credentials/credential_1","type":"ama.dev/basic-auth"}',
+        '2026-01-01','2026-01-01'
+      );
+    `)
+
+    apply(db, '0041_enbor_contract.sql')
+
+    expect(db.prepare('SELECT runtime,prompt_template,env,metadata FROM triggers').get()).toEqual({
+      runtime: 'enbor',
+      prompt_template:
+        'Ask AMA about ama with LLAMA_MODEL llama-3.3 and llama@meta. Use AMA_API_URL via ama.run for ama@realmroot',
+      env: '{"ENBOR_API_URL":"https://api.example","LLAMA_MODEL":"llama-3.3","skill":"llama@meta","memoryRef":"enbor://memories/store_1","runtime":"enbor"}',
+      metadata:
+        '{"runtime":"enbor","type":"enbor.dev/basic-auth","model":"llama-3.3","env":"LLAMA_MODEL","skill":"llama@meta"}',
+    })
+    expect(db.prepare('SELECT type,metadata FROM vault_credentials').get()).toEqual({
+      type: 'enbor.dev/realmroot-agent-state',
+      metadata: '{"env":"ENBOR_API_URL","type":"enbor.dev/basic-auth"}',
+    })
+    const credentialVersion = db
+      .prepare('SELECT provider,secret_ref,metadata FROM vault_credential_versions')
+      .get() as { provider: string; secret_ref: string; metadata: string }
+    expect(credentialVersion).toEqual({
+      provider: 'enbor',
+      secret_ref: 'enbor://vaults/vault_1/credentials/credential_1/versions/credential_version_1',
+      metadata: '{"type":"enbor.dev/basic-auth"}',
+    })
+    expect(secretRefIdentity(credentialVersion.secret_ref)).toEqual({
+      vaultId: 'vault_1',
+      credentialId: 'credential_1',
+      versionId: 'credential_version_1',
+    })
+    expect(db.prepare('SELECT runtime FROM identities').get()).toEqual({ runtime: 'enbor' })
+    expect(db.prepare('SELECT skills,identity_snapshot FROM agents').get()).toEqual({
+      skills: '["enbor@realmroot"]',
+      identity_snapshot: '{"runtime":"enbor","credentialRef":"enbor://vaults/vault_1/credentials/credential_1"}',
+    })
+    expect(db.prepare('SELECT variables,runtime_config,metadata FROM environments').get()).toEqual({
+      variables: '{"ENBOR_API_URL":"https://api.example"}',
+      runtime_config: '{"runtime":"enbor","protocol":"enbor-runner-work"}',
+      metadata: '{"secretRef":"enbor://vaults/vault_1/credentials/credential_1"}',
+    })
+    expect(db.prepare('SELECT agent_snapshot,environment_snapshot,env,metadata FROM sessions').get()).toEqual({
+      agent_snapshot: '{"runtime":"enbor"}',
+      environment_snapshot: '{"runtime":"enbor","memoryPath":"/.enbor/memory"}',
+      env: '{"ENBOR_API_URL":"https://api.example"}',
+      metadata: '{"runtime":"enbor"}',
+    })
+    expect(db.prepare('SELECT runtimes,metadata FROM runners').get()).toEqual({
+      runtimes: '[{"runtime":"enbor","protocol":"enbor-runner-work"}]',
+      metadata: '{"secretRef":"enbor://vaults/vault_1/credentials/credential_1","type":"enbor.dev/basic-auth"}',
+    })
+    expect(db.prepare('SELECT sequence,rendered_prompt FROM http_trigger_pending_runs').get()).toEqual({
+      sequence: 7,
+      rendered_prompt:
+        'Ask AMA about ama with LLAMA_MODEL llama-3.3 and llama@meta. Use AMA_API_URL via ama.run for ama@realmroot',
+    })
+    expect(db.prepare('SELECT id,activation_run_id FROM session_routes').get()).toEqual({
+      id: 'route_1',
+      activation_run_id: 'run_1',
+    })
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+
+    expect(() => db.prepare("UPDATE triggers SET runtime = 'ama' WHERE id = 'trigger_1'").run()).toThrow(
+      /CHECK constraint failed/,
+    )
+    expect(() =>
+      db.prepare("UPDATE vault_credentials SET type = 'ama.dev/basic-auth' WHERE id = 'credential_1'").run(),
+    ).toThrow(/CHECK constraint failed/)
+    expect(() =>
+      db.prepare("UPDATE vault_credential_versions SET provider = 'ama' WHERE id = 'credential_version_1'").run(),
+    ).toThrow(/CHECK constraint failed/)
+
+    expect(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name IN (?, ?, ?, ?) ORDER BY name")
+        .all(
+          'trg_trigger_runs_reject_insert_on_deleted_trigger',
+          'trg_triggers_reject_live_insert_on_deleted_project',
+          'trg_triggers_reject_live_update_on_deleted_project',
+          'trg_triggers_reject_restore',
+        ),
+    ).toEqual([
+      { name: 'trg_trigger_runs_reject_insert_on_deleted_trigger' },
+      { name: 'trg_triggers_reject_live_insert_on_deleted_project' },
+      { name: 'trg_triggers_reject_live_update_on_deleted_project' },
+      { name: 'trg_triggers_reject_restore' },
+    ])
+
+    db.prepare("UPDATE triggers SET deleted_at = '2026-01-02' WHERE id = 'trigger_1'").run()
+    expect(() => db.prepare("UPDATE triggers SET deleted_at = NULL WHERE id = 'trigger_1'").run()).toThrow(
+      /deleted resources cannot be restored/,
+    )
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO trigger_runs (
+            id,organization_id,project_id,trigger_id,triggered_at,state,idempotency_key,
+            correlation_id,metadata,created_at,updated_at
+          ) VALUES (?,?,?,?,?,'claimed',?,?, '{}',?,?)`,
+        )
+        .run(
+          'run_deleted_trigger',
+          'org_1',
+          'project_1',
+          'trigger_1',
+          '2026-01-02',
+          'request_deleted_trigger',
+          'correlation_deleted_trigger',
+          '2026-01-02',
+          '2026-01-02',
+        ),
+    ).toThrow(/cannot dispatch a deleted trigger/)
+
+    db.prepare(
+      `INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,environment_id,trigger_type,runtime,name,
+        prompt_template,interval_seconds,enabled,next_due_at,metadata,created_at,updated_at
+      ) VALUES (?,?,?,?,?,'scheduled','enbor',?,?,3600,1,?,'{}',?,?)`,
+    ).run(
+      'trigger_guard',
+      'org_1',
+      'project_1',
+      'agent_1',
+      'environment_1',
+      'Guard',
+      'Guard prompt',
+      '2026-01-03',
+      '2026-01-02',
+      '2026-01-02',
+    )
+    db.prepare("UPDATE projects SET deleted_at = '2026-01-02' WHERE id = 'project_1'").run()
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO triggers (
+          id,organization_id,project_id,agent_id,trigger_type,runtime,name,prompt_template,
+          interval_seconds,enabled,next_due_at,metadata,created_at,updated_at
+        ) VALUES ('trigger_live_insert','org_1','project_1','agent_1','scheduled','enbor',
+          'Rejected','Prompt',3600,1,'2026-01-03','{}','2026-01-02','2026-01-02')`,
+        )
+        .run(),
+    ).toThrow(/cannot attach a live resource to a deleted project/)
+    expect(() => db.prepare("UPDATE triggers SET name = 'Rejected' WHERE id = 'trigger_guard'").run()).toThrow(
+      /cannot attach a live resource to a deleted project/,
+    )
+    db.close()
+  })
+})
 
 describe('[spec: projects/lifecycle] default Project naming migration', () => {
   it('renames stored default Projects without changing custom Projects', () => {

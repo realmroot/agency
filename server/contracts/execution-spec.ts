@@ -28,8 +28,8 @@ const GitRefSchema = z
     'Use a safe branch, tag, or commit ref.',
   )
 const MountPathSchema = z.string().min(1).max(200)
-const SecretRefSchema = z.string().min(1).openapi({ example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007' })
-const MemoryRefSchema = z.string().min(1).openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' })
+const SecretRefSchema = z.string().min(1).openapi({ example: 'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007' })
+const MemoryRefSchema = z.string().min(1).openapi({ example: 'enbor://memories/0195f5d6-7c20-7000-8000-00000000000a' })
 const VolumeNameSchema = z
   .string()
   .min(1)
@@ -74,7 +74,7 @@ export const SecretVolumeSchema = z
     name: VolumeNameSchema.openapi({ example: 'github-token' }),
     type: z.literal('secret'),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
+      example: 'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     items: z.array(SecretItemSchema).max(50).optional(),
   })
@@ -85,7 +85,7 @@ export const SecretVolumeProjectionSchema = z
   .object({
     type: z.literal('secret'),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
+      example: 'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     items: z.array(SecretItemSchema).max(50).optional(),
   })
@@ -108,7 +108,7 @@ export const VolumeSchema = z
 export const VolumeMountSchema = z
   .object({
     name: z.string().min(1).max(80).openapi({ example: 'github-token' }),
-    mountPath: MountPathSchema.openapi({ example: '/workspace/.ama/secrets/project' }),
+    mountPath: MountPathSchema.openapi({ example: '/workspace/.enbor/secrets/project' }),
     readOnly: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
@@ -119,7 +119,7 @@ export const EnvFromEntrySchema = z
     type: z.literal('secret').openapi({ example: 'secret' }),
     name: z.string().min(1).max(120).optional().openapi({ example: 'API_TOKEN' }),
     secretRef: SecretRefSchema.openapi({
-      example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
+      example: 'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
     }),
     key: z.string().min(1).max(253).optional().openapi({ example: 'token' }),
   })

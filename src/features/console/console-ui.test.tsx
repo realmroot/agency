@@ -766,7 +766,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
   it('selects first project when no stored project id matches', async () => {
     const projects = [buildProject({ id: 'p1', name: 'First' }), buildProject({ id: 'p2', name: 'Second' })]
     // Clear only the stored project id so nothing matches → falls back to projects[0].
-    window.localStorage.removeItem('ama:selected-project-id')
+    window.localStorage.removeItem('enbor:selected-project-id')
     server.use(projectsHandler(projects))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
@@ -784,14 +784,14 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     expect(screen.getAllByText('User').length).toBeGreaterThan(0)
   })
 
-  it('listens for ama:selected-project-changed event without crashing', async () => {
+  it('listens for enbor:selected-project-changed event without crashing', async () => {
     const projects = [buildProject({ id: 'p1', name: 'Alpha' }), buildProject({ id: 'p2', name: 'Beta' })]
     server.use(projectsHandler(projects))
     renderLayout()
     await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
 
     expect(() => {
-      window.dispatchEvent(new Event('ama:selected-project-changed'))
+      window.dispatchEvent(new Event('enbor:selected-project-changed'))
     }).not.toThrow()
 
     await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
@@ -813,7 +813,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
 
     const projects = [buildProject({ id: 'p1', name: 'Alpha' }), buildProject({ id: 'p2', name: 'Beta' })]
     // Seed the stored project id so p1 is pre-selected; e2e token stays for getAccessToken.
-    window.localStorage.setItem('ama:selected-project-id', 'p1')
+    window.localStorage.setItem('enbor:selected-project-id', 'p1')
     server.use(projectsHandler(projects))
 
     const client = makeQueryClient()
@@ -832,6 +832,6 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     fireEvent.click(trigger)
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Beta' }))
 
-    await waitFor(() => expect(window.localStorage.getItem('ama:selected-project-id')).toBe('p2'))
+    await waitFor(() => expect(window.localStorage.getItem('enbor:selected-project-id')).toBe('p2'))
   })
 })

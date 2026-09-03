@@ -46,7 +46,7 @@ export function createDeps(env: Env): Deps {
   const audit = createAuditPort(db)
   const policy = createPolicyPort(db)
   const sessionOrchestration = createRuntimeOrchestrationRepo(db)
-  // Routes event storage per session: cloud-loop (ama) -> Session DO; relay
+  // Routes event storage per session: cloud-loop (enbor) -> Session DO; relay
   // sessions read live/backfill events through the runner channel only.
   const sessionDoEvents = createSessionDoEventStore(env)
   const isCloudLoop = createCloudLoopChecker(db)
@@ -92,6 +92,6 @@ export function createDeps(env: Env): Deps {
     sessions,
     sessionEventStore,
     createApprovalGate: (values) => createToolApprovalGate({ sessionOrchestration, audit, policy }, values),
-    rereadStartedSession: env.AMA_RUNTIME_MODE === 'test',
+    rereadStartedSession: env.RUNTIME_MODE === 'test',
   }
 }

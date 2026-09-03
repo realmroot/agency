@@ -14,7 +14,7 @@ const descriptor: IdentityDescriptor = {
   subject: 'rr_agent_1',
   username: 'reviewer',
   runtime: 'codex',
-  credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+  credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
 }
 
 describe('Identity runtime resolution', () => {
@@ -29,7 +29,7 @@ describe('Identity runtime resolution', () => {
   })
 
   it('accepts the explicit runtime without an Identity', () => {
-    expect(resolveIdentityRuntime('ama', null)).toBe('ama')
+    expect(resolveIdentityRuntime('enbor', null)).toBe('enbor')
   })
 
   it('inherits or accepts the matching immutable Identity runtime', () => {

@@ -53,9 +53,9 @@ function isEncryptedSecretValue(value: unknown): value is EncryptedSecretValue {
 }
 
 async function vaultEncryptionKey(env: Env) {
-  const secret = env.AMA_VAULT_ENCRYPTION_KEY
+  const secret = env.VAULT_ENCRYPTION_KEY
   if (!secret || secret.length < 32) {
-    throw new Error('AMA_VAULT_ENCRYPTION_KEY with at least 32 characters is required for vault credential storage')
+    throw new Error('VAULT_ENCRYPTION_KEY with at least 32 characters is required for vault credential storage')
   }
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret))
   return await crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])

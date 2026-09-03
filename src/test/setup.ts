@@ -45,8 +45,8 @@ beforeAll(() => {
 beforeEach(() => {
   // The api client's e2e fast-path reads these; every web test is "signed in" by
   // default so the real client attaches auth + project headers.
-  window.localStorage.setItem('ama:e2e-access-token', 'e2e:web-test')
-  window.localStorage.setItem('ama:selected-project-id', 'project_test')
+  window.localStorage.setItem('enbor:e2e-access-token', 'e2e:web-test')
+  window.localStorage.setItem('enbor:selected-project-id', 'project_test')
 })
 
 afterEach(() => {

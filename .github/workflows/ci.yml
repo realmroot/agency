@@ -391,7 +391,7 @@ jobs:
           auth_status="$(docker run --rm \
             --user "$(id -u):$(id -g)" \
             --env HOME=/tmp \
-            --env AMA_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
+            --env ENBOR_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
             --volume "$credential_dir:/enbor/config" \
             enbor-runner:ci-amd64 auth status 2>&1 || true)"
           grep -Fq 'not logged in' <<<"$auth_status"

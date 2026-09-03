@@ -180,7 +180,7 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start cloud session' },
+      { runtime: 'enbor', prompt: 'Start cloud session' },
       null,
     )
 
@@ -213,7 +213,7 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start cloud session' },
+      { runtime: 'enbor', prompt: 'Start cloud session' },
       'req_create_1',
     )
 
@@ -421,8 +421,8 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
     issuer: 'https://realmroot.example.com/api/auth',
     subject: 'rr_agent_1',
     username: 'runner',
-    runtime: 'ama' as const,
-    credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+    runtime: 'enbor' as const,
+    credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
   }
 
   beforeEach(() => {
@@ -448,12 +448,12 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       id: 'vaultver_rotated',
       state: 'active',
       metadata: '{}',
-      secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/vaultver_rotated',
+      secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/vaultver_rotated',
     })
   })
 
   it.each([
-    'ama',
+    'enbor',
     'codex',
     'claude-code',
     'copilot',
@@ -481,7 +481,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       AGENT: runtime,
       AGENT_SESSION_ID: 'session_bound',
       REALMROOT_ORIGIN: new URL(binding.issuer).origin,
-      REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
+      REALMROOT_STATE_DIR: '/workspace/.enbor/realmroot-state',
     })
     expect(JSON.parse(inserted.volumes)).toEqual([
       {
@@ -504,7 +504,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
     expect(JSON.parse(inserted.volumeMounts)).toEqual([
       {
         name: 'realmroot-agent-state',
-        mountPath: '/workspace/.ama/realmroot-state',
+        mountPath: '/workspace/.enbor/realmroot-state',
         readOnly: false,
       },
     ])
@@ -523,7 +523,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start' },
+      { runtime: 'enbor', prompt: 'Start' },
       null,
     )
     expect(result).toMatchObject({
@@ -544,7 +544,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start', env: { [name]: 'override' } },
+      { runtime: 'enbor', prompt: 'Start', env: { [name]: 'override' } },
       null,
     )
 
@@ -562,13 +562,13 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Start',
         volumes: [
           {
             name: 'realmroot-agent-state',
             type: 'git_repository',
-            url: 'https://github.com/saltbo/any-managed-agents.git',
+            url: 'https://github.com/saltbo/enbor.git',
             ref: 'main',
           },
         ],
@@ -587,17 +587,17 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Start',
         volumes: [
           {
             name: 'source',
             type: 'git_repository',
-            url: 'https://github.com/saltbo/any-managed-agents.git',
+            url: 'https://github.com/saltbo/enbor.git',
             ref: 'main',
           },
         ],
-        volumeMounts: [{ name: 'source', mountPath: '/workspace/.ama' }],
+        volumeMounts: [{ name: 'source', mountPath: '/workspace/.enbor' }],
       },
       null,
     )
@@ -609,14 +609,14 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
   })
 
   it.each([
-    { envFrom: [{ type: 'secret', secretRef: 'ama://vaults/vault_2/credentials/cred_2' }] },
+    { envFrom: [{ type: 'secret', secretRef: 'enbor://vaults/vault_2/credentials/cred_2' }] },
     {
       envFrom: [
         {
           type: 'secret',
           name: 'AGENT_SESSION_ID',
           key: 'origin',
-          secretRef: 'ama://vaults/vault_2/credentials/cred_2',
+          secretRef: 'enbor://vaults/vault_2/credentials/cred_2',
         },
       ],
     },
@@ -626,7 +626,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start', envFrom: envFrom as never },
+      { runtime: 'enbor', prompt: 'Start', envFrom: envFrom as never },
       null,
     )
 
@@ -644,7 +644,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       'agent_1',
       'env_1',
       {
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Start',
         volumes: [
           {
@@ -653,18 +653,18 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
             seedFrom: [
               {
                 type: 'secret',
-                secretRef: 'ama://vaults/v/credentials/a',
+                secretRef: 'enbor://vaults/v/credentials/a',
                 items: [{ key: 'a', path: 'shared.json' }],
               },
               {
                 type: 'secret',
-                secretRef: 'ama://vaults/v/credentials/b',
+                secretRef: 'enbor://vaults/v/credentials/b',
                 items: [{ key: 'b', path: 'shared.json' }],
               },
             ],
           },
         ],
-        volumeMounts: [{ name: 'state', mountPath: '/workspace/.ama/state', readOnly: false }],
+        volumeMounts: [{ name: 'state', mountPath: '/workspace/.enbor/state', readOnly: false }],
       },
       null,
     )
@@ -687,7 +687,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       auth,
       'agent_1',
       'env_1',
-      { runtime: 'ama', prompt: 'Start after revocation' },
+      { runtime: 'enbor', prompt: 'Start after revocation' },
       null,
     )
 

@@ -14,9 +14,9 @@ credentials, and user-identity fallback are forbidden.
 ## Setup
 
 ```bash
-realmroot toolbox sync any-managed-agents
-realmroot toolbox any-managed-agents --search agents
-realmroot toolbox any-managed-agents context
+realmroot toolbox sync enbor
+realmroot toolbox enbor --search agents
+realmroot toolbox enbor context
 ```
 
 Realmroot discovers the protected Resource and OpenAPI document, requests controller approval for the exact scope, attributes calls to the stable Agent identity, and signs every request with a fresh RFC 9449 DPoP proof.
@@ -24,7 +24,7 @@ Realmroot discovers the protected Resource and OpenAPI document, requests contro
 ## Discover operations
 
 ```bash
-realmroot toolbox any-managed-agents --search '<capability or operation>'
+realmroot toolbox enbor --search '<capability or operation>'
 ```
 
 Use the exact operation, scope, fields, and command published by discovery. For

@@ -10,7 +10,7 @@ Feature: Identities
     Then Enbor creates one managed Vault and one Realmroot Agent installation
     And verifies the remote Agent before marking the Identity active
     And exposes only identity resource id, provider Agent id, issuer, stable subject, username, runtime, and credential reference as its safe descriptor
-    And stores complete private state only as an ama.dev/realmroot-agent-state credential
+    And stores complete private state only as an enbor.dev/realmroot-agent-state credential
     And rejects incomplete, hand-authored, or incompatible provider state
     And the Identity may remain unbound when Enbor has no driver for its runtime
 

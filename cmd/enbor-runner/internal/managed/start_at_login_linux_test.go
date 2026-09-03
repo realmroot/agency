@@ -21,10 +21,10 @@ func TestSyncServiceStartAtLoginUsesSystemctlEnableAndDisable(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fixture := installSystemctlFixture(t, "disabled", "")
-			if err := syncServiceStartAtLogin("ama-runner-test", test.enabled); err != nil {
+			if err := syncServiceStartAtLogin("enbor-runner-test", test.enabled); err != nil {
 				t.Fatal(err)
 			}
-			if calls := fixture.calls(t); calls != "--user "+test.action+" ama-runner-test.service" {
+			if calls := fixture.calls(t); calls != "--user "+test.action+" enbor-runner-test.service" {
 				t.Fatalf("unexpected systemctl call %q", calls)
 			}
 			if state := fixture.state(t); state != map[bool]string{true: "enabled", false: "disabled"}[test.enabled] {
@@ -36,8 +36,8 @@ func TestSyncServiceStartAtLoginUsesSystemctlEnableAndDisable(t *testing.T) {
 
 func TestSyncServiceStartAtLoginReturnsSystemctlFailure(t *testing.T) {
 	installSystemctlFixture(t, "disabled", "action-error")
-	err := syncServiceStartAtLogin("ama-runner-test", true)
-	if err == nil || !strings.Contains(err.Error(), "systemctl --user enable ama-runner-test.service") || !strings.Contains(err.Error(), "forced action failure") {
+	err := syncServiceStartAtLogin("enbor-runner-test", true)
+	if err == nil || !strings.Contains(err.Error(), "systemctl --user enable enbor-runner-test.service") || !strings.Contains(err.Error(), "forced action failure") {
 		t.Fatalf("unexpected systemctl failure %v", err)
 	}
 }
@@ -57,7 +57,7 @@ func TestSystemdServiceStartAtLoginStates(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			installSystemctlFixture(t, test.state, test.mode)
-			actual, err := systemdServiceStartAtLogin("ama-runner-test")
+			actual, err := systemdServiceStartAtLogin("enbor-runner-test")
 			if test.errDetail != "" {
 				if err == nil || !strings.Contains(err.Error(), test.errDetail) {
 					t.Fatalf("expected %q failure, got %v", test.errDetail, err)
@@ -78,12 +78,12 @@ func TestUpdateServiceStartAtLoginAppliesAndRollsBackNativeState(t *testing.T) {
 		desired  bool
 		calls    string
 	}{
-		{name: "enable then restore disabled", previous: "disabled", desired: true, calls: "--user is-enabled ama-runner-test.service\n--user enable ama-runner-test.service\n--user disable ama-runner-test.service"},
-		{name: "disable then restore enabled", previous: "enabled", desired: false, calls: "--user is-enabled ama-runner-test.service\n--user disable ama-runner-test.service\n--user enable ama-runner-test.service"},
+		{name: "enable then restore disabled", previous: "disabled", desired: true, calls: "--user is-enabled enbor-runner-test.service\n--user enable enbor-runner-test.service\n--user disable enbor-runner-test.service"},
+		{name: "disable then restore enabled", previous: "enabled", desired: false, calls: "--user is-enabled enbor-runner-test.service\n--user disable enbor-runner-test.service\n--user enable enbor-runner-test.service"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fixture := installSystemctlFixture(t, test.previous, "")
-			rollback, err := updateServiceStartAtLogin("ama-runner-test", test.desired)
+			rollback, err := updateServiceStartAtLogin("enbor-runner-test", test.desired)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -109,7 +109,7 @@ func TestUpdateServiceStartAtLoginAppliesAndRollsBackNativeState(t *testing.T) {
 
 func TestUpdateServiceStartAtLoginReturnsApplyFailure(t *testing.T) {
 	installSystemctlFixture(t, "disabled", "action-error")
-	rollback, err := updateServiceStartAtLogin("ama-runner-test", true)
+	rollback, err := updateServiceStartAtLogin("enbor-runner-test", true)
 	if rollback != nil || err == nil || !strings.Contains(err.Error(), "forced action failure") {
 		t.Fatalf("apply failure returned rollback=%t err=%v", rollback != nil, err)
 	}
@@ -117,14 +117,14 @@ func TestUpdateServiceStartAtLoginReturnsApplyFailure(t *testing.T) {
 
 func TestUpdateServiceStartAtLoginReturnsInspectionFailure(t *testing.T) {
 	installSystemctlFixture(t, "disabled", "query-error")
-	rollback, err := updateServiceStartAtLogin("ama-runner-test", true)
+	rollback, err := updateServiceStartAtLogin("enbor-runner-test", true)
 	if rollback != nil || err == nil || !strings.Contains(err.Error(), "forced query failure") {
 		t.Fatalf("inspection failure returned rollback=%t err=%v", rollback != nil, err)
 	}
 }
 
 func TestLinuxStartServiceNowIsNoOp(t *testing.T) {
-	if err := startServiceNow("ama-runner-test", false); err != nil {
+	if err := startServiceNow("enbor-runner-test", false); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -143,39 +143,39 @@ func installSystemctlFixture(t *testing.T, initialState string, mode string) sys
 		t.Fatal(err)
 	}
 	script := `#!/bin/sh
-printf '%s\n' "$*" >> "$AMA_TEST_SYSTEMCTL_CALLS"
+printf '%s\n' "$*" >> "$ENBOR_TEST_SYSTEMCTL_CALLS"
 action="$2"
 if [ "$action" = "is-enabled" ]; then
-  if [ "$AMA_TEST_SYSTEMCTL_MODE" = "unexpected" ]; then
+  if [ "$ENBOR_TEST_SYSTEMCTL_MODE" = "unexpected" ]; then
     printf '%s\n' 'masked'
     exit 0
   fi
-  if [ "$AMA_TEST_SYSTEMCTL_MODE" = "query-error" ]; then
+  if [ "$ENBOR_TEST_SYSTEMCTL_MODE" = "query-error" ]; then
     printf '%s\n' 'forced query failure' >&2
     exit 7
   fi
-  IFS= read -r state < "$AMA_TEST_SYSTEMCTL_STATE"
+  IFS= read -r state < "$ENBOR_TEST_SYSTEMCTL_STATE"
   printf '%s\n' "$state"
   if [ "$state" = "disabled" ]; then exit 1; fi
   exit 0
 fi
-if [ "$AMA_TEST_SYSTEMCTL_MODE" = "action-error" ]; then
+if [ "$ENBOR_TEST_SYSTEMCTL_MODE" = "action-error" ]; then
   printf '%s\n' 'forced action failure' >&2
   exit 8
 fi
 if [ "$action" = "enable" ]; then
-  printf '%s\n' 'enabled' > "$AMA_TEST_SYSTEMCTL_STATE"
+  printf '%s\n' 'enabled' > "$ENBOR_TEST_SYSTEMCTL_STATE"
 else
-  printf '%s\n' 'disabled' > "$AMA_TEST_SYSTEMCTL_STATE"
+  printf '%s\n' 'disabled' > "$ENBOR_TEST_SYSTEMCTL_STATE"
 fi
 `
 	if err := os.WriteFile(filepath.Join(fixtureDir, "systemctl"), []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", fixtureDir)
-	t.Setenv("AMA_TEST_SYSTEMCTL_STATE", statePath)
-	t.Setenv("AMA_TEST_SYSTEMCTL_CALLS", callsPath)
-	t.Setenv("AMA_TEST_SYSTEMCTL_MODE", mode)
+	t.Setenv("ENBOR_TEST_SYSTEMCTL_STATE", statePath)
+	t.Setenv("ENBOR_TEST_SYSTEMCTL_CALLS", callsPath)
+	t.Setenv("ENBOR_TEST_SYSTEMCTL_MODE", mode)
 	return systemctlFixture{statePath: statePath, callsPath: callsPath}
 }
 

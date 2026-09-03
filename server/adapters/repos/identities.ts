@@ -19,7 +19,7 @@ function descriptor(row: Row): IdentityDescriptor | null {
     subject: row.subject,
     username: row.username,
     runtime: row.runtime,
-    credentialRef: `ama://vaults/${encodeURIComponent(row.vaultId)}/credentials/${encodeURIComponent(row.credentialId)}`,
+    credentialRef: `enbor://vaults/${encodeURIComponent(row.vaultId)}/credentials/${encodeURIComponent(row.credentialId)}`,
   }
 }
 

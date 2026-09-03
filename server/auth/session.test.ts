@@ -79,7 +79,7 @@ async function request(
   const usesDpop = values.agentDpop === true
   const authorization = usesDpop ? 'DPoP native-token' : 'Bearer console-token'
   return await app.request(
-    `https://ama.example.com${path}`,
+    `https://enbor.example.com${path}`,
     {
       method: values.method ?? 'GET',
       headers: {
@@ -89,7 +89,7 @@ async function request(
     },
     {
       DB: {} as D1Database,
-      OIDC_RESOURCE: 'https://ama.example.com',
+      OIDC_RESOURCE: 'https://enbor.example.com',
       OIDC_RUNNER_CLIENT_ID: 'runner-client',
     } as Env,
   )
@@ -123,7 +123,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
     const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const response = await app.request(
-      'https://ama.example.com/api/v1/agents/agent_1?authorization=query-secret',
+      'https://enbor.example.com/api/v1/agents/agent_1?authorization=query-secret',
       {
         headers: {
           authorization: `${scheme} ${accessToken}`,
@@ -133,7 +133,7 @@ describe('[spec: auth/oidc-claims] resource permission auth wall', () => {
       },
       {
         DB: {} as D1Database,
-        OIDC_RESOURCE: 'https://ama.example.com',
+        OIDC_RESOURCE: 'https://enbor.example.com',
         OIDC_RUNNER_CLIENT_ID: 'runner-client',
       } as Env,
     )

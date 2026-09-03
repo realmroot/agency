@@ -17,20 +17,20 @@ function request(env: Record<string, string>): RuntimeProviderRequest {
 
 describe('hostHome', () => {
   it('returns the host home when set to a non-empty string', () => {
-    expect(hostHome({ AMA_RUNTIME_BRIDGE_HOST_HOME: '/host' })).toBe('/host')
+    expect(hostHome({ ENBOR_RUNTIME_BRIDGE_HOST_HOME: '/host' })).toBe('/host')
   })
 
   it('returns undefined when unset or empty', () => {
     expect(hostHome({})).toBeUndefined()
-    expect(hostHome({ AMA_RUNTIME_BRIDGE_HOST_HOME: '' })).toBeUndefined()
+    expect(hostHome({ ENBOR_RUNTIME_BRIDGE_HOST_HOME: '' })).toBeUndefined()
   })
 })
 
 describe('sdkEnv', () => {
   it('swaps HOME to the host home and stashes the sandbox HOME', () => {
-    const env = sdkEnv(request({ HOME: '/sandbox', AMA_RUNTIME_BRIDGE_HOST_HOME: '/host', FOO: 'bar' }))
+    const env = sdkEnv(request({ HOME: '/sandbox', ENBOR_RUNTIME_BRIDGE_HOST_HOME: '/host', FOO: 'bar' }))
     expect(env.HOME).toBe('/host')
-    expect(env.AMA_WORKSPACE_HOME).toBe('/sandbox')
+    expect(env.ENBOR_WORKSPACE_HOME).toBe('/sandbox')
     expect(env.GH_CONFIG_DIR).toBe('/sandbox/.config/gh')
     expect(env.GIT_CONFIG_GLOBAL).toBe('/sandbox/.gitconfig')
     expect(env.GIT_CONFIG_NOSYSTEM).toBe('1')
@@ -40,7 +40,7 @@ describe('sdkEnv', () => {
   it('leaves HOME untouched when no host home is supplied', () => {
     const env = sdkEnv(request({ HOME: '/sandbox' }))
     expect(env.HOME).toBe('/sandbox')
-    expect(env.AMA_WORKSPACE_HOME).toBeUndefined()
+    expect(env.ENBOR_WORKSPACE_HOME).toBeUndefined()
     expect(env.GH_CONFIG_DIR).toBeUndefined()
     expect(env.GIT_CONFIG_GLOBAL).toBeUndefined()
     expect(env.GIT_CONFIG_NOSYSTEM).toBeUndefined()

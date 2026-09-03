@@ -10,8 +10,8 @@ import { dpopHeaders, expectAuthRequired, setupOidcProvider, signIn, signInRunne
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 const browserIssuer = 'https://identity.alias.test/api/auth'
-const browserClientId = 'ama-test'
-const browserResource = 'https://ama.tftt.cc/api'
+const browserClientId = 'enbor-test'
+const browserResource = 'https://enbor.realmroot.dev/api'
 const browserSigningKeys = generateKeyPair('RS256', { extractable: true })
 let browserClientSequence = 0
 
@@ -131,7 +131,7 @@ async function beginBrowserSignIn(returnTo = '/agents') {
   })
   expect(response.status).toBe(201)
   const body = (await response.json()) as { authorizationUrl: string }
-  const loginCookie = cookieValue(response, '__Host-ama_login')
+  const loginCookie = cookieValue(response, '__Host-enbor_login')
   expect(loginCookie).toBeTruthy()
   return { response, authorizationUrl: new URL(body.authorizationUrl), loginCookie: loginCookie! }
 }
@@ -149,7 +149,7 @@ async function establishBrowserSession() {
   provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
   const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
   expect(callback.status).toBe(302)
-  const sessionCookie = cookieValue(callback, '__Host-ama_session')
+  const sessionCookie = cookieValue(callback, '__Host-enbor_session')
   expect(sessionCookie).toBeTruthy()
   return sessionCookie!
 }
@@ -184,21 +184,21 @@ describe('[CF] auth v1', () => {
     const res = await SELF.fetch('https://example.com/api/v1/auth/config')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      methods: [{ type: 'oidc', issuer: 'https://identity.alias.test/api/auth', clientId: 'ama-test' }],
+      methods: [{ type: 'oidc', issuer: 'https://identity.alias.test/api/auth', clientId: 'enbor-test' }],
     })
   })
 
   it.each([
     ['a missing client secret', { OIDC_CLIENT_SECRET: undefined }],
-    ['a missing session encryption key', { AMA_WEB_SESSION_ENCRYPTION_KEY: undefined }],
-    ['a short session encryption key', { AMA_WEB_SESSION_ENCRYPTION_KEY: 'too-short' }],
+    ['a missing session encryption key', { WEB_SESSION_ENCRYPTION_KEY: undefined }],
+    ['a short session encryption key', { WEB_SESSION_ENCRYPTION_KEY: 'too-short' }],
   ])('does not advertise browser OIDC with %s', async (_case, override) => {
     const routes = registerAuthRoutes(createDepsApiRouter())
     const bindings = {
       OIDC_ISSUER: browserIssuer,
       OIDC_CLIENT_ID: browserClientId,
       OIDC_CLIENT_SECRET: 'test-confidential-client-secret',
-      AMA_WEB_SESSION_ENCRYPTION_KEY: 'test-web-session-encryption-key-with-32-characters',
+      WEB_SESSION_ENCRYPTION_KEY: 'test-web-session-encryption-key-with-32-characters',
       ...override,
     } as unknown as Env
 
@@ -212,7 +212,7 @@ describe('[CF] auth v1', () => {
     const res = await SELF.fetch('https://hostile.example/.well-known/oauth-protected-resource/api')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      resource: 'https://ama.tftt.cc/api',
+      resource: 'https://enbor.realmroot.dev/api',
       authorization_servers: ['https://identity.alias.test/api/auth'],
       scopes_supported: [
         'agents:read',
@@ -268,9 +268,9 @@ describe('[CF] auth v1', () => {
     const res = await SELF.fetch('https://alias.example/api')
     expect(res.status).toBe(200)
     expect(res.headers.get('link')).toBe(
-      '<https://ama.tftt.cc/api/v1/openapi.json>; rel="service-desc"; type="application/openapi+json"',
+      '<https://enbor.realmroot.dev/api/v1/openapi.json>; rel="service-desc"; type="application/openapi+json"',
     )
-    await expect(res.json()).resolves.toMatchObject({ resource: 'https://ama.tftt.cc/api' })
+    await expect(res.json()).resolves.toMatchObject({ resource: 'https://enbor.realmroot.dev/api' })
   })
 
   it('exposes public browser config through configz', async () => {
@@ -285,9 +285,9 @@ describe('[CF] auth v1', () => {
       auth: {
         oidc: {
           issuer: 'https://identity.alias.test/api/auth',
-          resource: 'https://ama.tftt.cc/api',
+          resource: 'https://enbor.realmroot.dev/api',
           runner: {
-            clientId: 'ama-runner-test',
+            clientId: 'enbor-runner-test',
             scopes: ['openid', 'profile', 'email', 'offline_access'],
           },
         },
@@ -372,7 +372,7 @@ describe('[CF] auth v1', () => {
     expect(authorizationUrl.searchParams.get('nonce')).toBeTruthy()
     expect(authorizationUrl.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
-    expect(loginCookie).toBe(`__Host-ama_login=${authorizationUrl.searchParams.get('state')}`)
+    expect(loginCookie).toBe(`__Host-enbor_login=${authorizationUrl.searchParams.get('state')}`)
     expect(response.headers.get('set-cookie')).toContain('HttpOnly')
     expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
     expect(response.headers.get('set-cookie')).toContain('Secure')
@@ -476,14 +476,14 @@ describe('[CF] auth v1', () => {
     expect(first.status).toBe(201)
     expect(first.headers.get('retry-after')).toBeNull()
     await expect(first.clone().json()).resolves.toMatchObject({ authorizationUrl: expect.any(String) })
-    const clientCookie = cookieValue(first, '__Host-ama_auth_client')
-    expect(clientCookie).toMatch(/^__Host-ama_auth_client=[A-Za-z0-9_-]{43}$/)
+    const clientCookie = cookieValue(first, '__Host-enbor_auth_client')
+    expect(clientCookie).toMatch(/^__Host-enbor_auth_client=[A-Za-z0-9_-]{43}$/)
     expect(first.headers.get('set-cookie')).toContain('HttpOnly')
     expect(first.headers.get('set-cookie')).toContain('SameSite=Lax')
     expect(first.headers.get('set-cookie')).toContain('Secure')
 
     expect((await request(clientCookie!)).status).toBe(201)
-    expect((await request(`__Host-ama_auth_client=${'A'.repeat(43)}`)).status).toBe(201)
+    expect((await request(`__Host-enbor_auth_client=${'A'.repeat(43)}`)).status).toBe(201)
 
     const clientKeys = clientLimit.mock.calls.map(([input]) => input.key)
     const addressKeys = addressLimit.mock.calls.map(([input]) => input.key)
@@ -526,7 +526,7 @@ describe('[CF] auth v1', () => {
 
     expect(callback.status).toBe(400)
     await expect(callback.json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
-    expect(cookieValue(callback, '__Host-ama_session')).toBeNull()
+    expect(cookieValue(callback, '__Host-enbor_session')).toBeNull()
     const sessions = await (env as unknown as Env).DB.prepare('SELECT COUNT(*) AS count FROM web_auth_sessions').first<{
       count: number
     }>()
@@ -545,11 +545,11 @@ describe('[CF] auth v1', () => {
 
     expect(callback.status).toBe(302)
     expect(callback.headers.get('location')).toBe('https://example.com/agents')
-    expect(callback.headers.get('set-cookie')).toContain('__Host-ama_login=')
-    expect(callback.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(callback.headers.get('set-cookie')).toContain('__Host-enbor_login=')
+    expect(callback.headers.get('set-cookie')).toContain('__Host-enbor_session=')
     expect(callback.headers.get('set-cookie')).toContain('HttpOnly')
     expect(callback.headers.get('set-cookie')).not.toContain(provider.accessTokens[0]!)
-    const sessionCookie = cookieValue(callback, '__Host-ama_session')
+    const sessionCookie = cookieValue(callback, '__Host-enbor_session')
     expect(sessionCookie).toBeTruthy()
     expect(provider.tokenRequests).toHaveLength(1)
     expect(provider.tokenRequests[0]?.get('grant_type')).toBe('authorization_code')
@@ -590,7 +590,7 @@ describe('[CF] auth v1', () => {
     const replay = await completeBrowserSignIn(authorizationUrl, loginCookie)
     expect(replay.status).toBe(400)
     await expect(replay.clone().json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
-    expect(cookieValue(replay, '__Host-ama_session')).toBeNull()
+    expect(cookieValue(replay, '__Host-enbor_session')).toBeNull()
     expect(provider.tokenRequests).toHaveLength(1)
     const attempts = await (env as unknown as Env).DB.prepare(
       'SELECT COUNT(*) AS count FROM web_authorization_attempts',
@@ -610,7 +610,7 @@ describe('[CF] auth v1', () => {
 
     expect(callback.status).toBe(400)
     await expect(callback.clone().json()).resolves.toMatchObject({ error: { type: 'oidc_error' } })
-    expect(cookieValue(callback, '__Host-ama_session')).toBeNull()
+    expect(cookieValue(callback, '__Host-enbor_session')).toBeNull()
     expect(provider.tokenRequests).toHaveLength(0)
   })
 
@@ -635,7 +635,7 @@ describe('[CF] auth v1', () => {
     })
 
     expect(response.status).toBe(401)
-    expect(response.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(response.headers.get('set-cookie')).toContain('__Host-enbor_session=')
     expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
     const remaining = await (env as unknown as Env).DB.prepare(
       'SELECT COUNT(*) AS count FROM web_auth_sessions WHERE id_hash = ?',
@@ -689,7 +689,7 @@ describe('[CF] auth v1', () => {
     const { authorizationUrl, loginCookie } = await beginBrowserSignIn('/projects')
     provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
     const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
-    const sessionCookie = cookieValue(callback, '__Host-ama_session')!
+    const sessionCookie = cookieValue(callback, '__Host-enbor_session')!
     const body = JSON.stringify({ name: 'Browser project' })
 
     const rejectedCookie = await SELF.fetch('https://example.com/api/v1/projects', {
@@ -726,7 +726,7 @@ describe('[CF] auth v1', () => {
     const { authorizationUrl, loginCookie } = await beginBrowserSignIn()
     provider.setExpectedNonce(authorizationUrl.searchParams.get('nonce')!)
     const callback = await completeBrowserSignIn(authorizationUrl, loginCookie)
-    const sessionCookie = cookieValue(callback, '__Host-ama_session')!
+    const sessionCookie = cookieValue(callback, '__Host-enbor_session')!
 
     const logout = await SELF.fetch('https://example.com/api/v1/auth/sessions/current', {
       method: 'DELETE',
@@ -734,7 +734,7 @@ describe('[CF] auth v1', () => {
     })
 
     expect(logout.status).toBe(204)
-    expect(logout.headers.get('set-cookie')).toContain('__Host-ama_session=')
+    expect(logout.headers.get('set-cookie')).toContain('__Host-enbor_session=')
     expect(logout.headers.get('set-cookie')).toContain('Max-Age=0')
     const sessionRows = await (env as unknown as Env).DB.prepare(
       'SELECT COUNT(*) AS count FROM web_auth_sessions',
@@ -948,13 +948,13 @@ describe('[CF] projects v1', () => {
         metadata: { name: 'Alternate project agent' },
         spec: { systemPrompt: 'Remain in the selected project.' },
       },
-      headers: { 'x-ama-project-id': alternate.id },
+      headers: { 'x-enbor-project-id': alternate.id },
     })
     expect(createdAgent.status).toBe(201)
     const agent = (await createdAgent.json()) as { metadata: { uid: string } }
 
     const querySelected = await jsonFetch(
-      `/api/v1/agents?x-ama-project-id=${encodeURIComponent(alternate.id)}`,
+      `/api/v1/agents?x-enbor-project-id=${encodeURIComponent(alternate.id)}`,
       tenantA,
     )
     expect(querySelected.status).toBe(200)
@@ -963,9 +963,9 @@ describe('[CF] projects v1', () => {
     })
 
     for (const response of [
-      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-ama-project-id': 'project_missing' } }),
-      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-ama-project-id': '' } }),
-      await jsonFetch('/api/v1/agents?x-ama-project-id=project_missing', tenantA),
+      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-enbor-project-id': 'project_missing' } }),
+      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-enbor-project-id': '' } }),
+      await jsonFetch('/api/v1/agents?x-enbor-project-id=project_missing', tenantA),
     ]) {
       expect(response.status).toBe(404)
       await expect(response.json()).resolves.toEqual({
@@ -977,7 +977,7 @@ describe('[CF] projects v1', () => {
     const foreignCreate = await jsonFetch('/api/v1/projects', tenantB, { body: { name: 'Foreign workspace' } })
     const foreignProject = (await foreignCreate.json()) as { id: string }
     const concealed = await jsonFetch('/api/v1/agents', tenantA, {
-      headers: { 'x-ama-project-id': foreignProject.id },
+      headers: { 'x-enbor-project-id': foreignProject.id },
     })
     expect(concealed.status).toBe(404)
     await expect(concealed.json()).resolves.toEqual({

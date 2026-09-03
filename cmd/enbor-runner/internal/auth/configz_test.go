@@ -35,8 +35,8 @@ func TestEnsureCompatibleConfig(t *testing.T) {
 	if err := EnsureCompatibleConfig(&enborsdk.PublicConfig{
 		Version: enborsdk.N1,
 		Service: enborsdk.PublicServiceConfig{
-			Name:   enborsdk.Enbor,
-			Origin: "https://ama.example.test",
+			Name:   enborsdk.PublicServiceConfigNameEnbor,
+			Origin: "https://enbor.example.test",
 		},
 	}); err != nil {
 		t.Fatalf("expected compatible config response, got %v", err)
@@ -48,7 +48,7 @@ func TestEnsureCompatibleConfig(t *testing.T) {
 		Version: enborsdk.N1,
 		Service: enborsdk.PublicServiceConfig{
 			Name:   "Other",
-			Origin: "https://ama.example.test",
+			Origin: "https://enbor.example.test",
 		},
 	}); err == nil || !strings.Contains(err.Error(), "incompatible") {
 		t.Fatalf("expected incompatible config response error, got %v", err)
@@ -59,13 +59,13 @@ func TestRunnerOidcSettingsFromConfig(t *testing.T) {
 	config := &enborsdk.PublicConfig{
 		Version: enborsdk.N1,
 		Service: enborsdk.PublicServiceConfig{
-			Name:   enborsdk.Enbor,
-			Origin: "https://ama.example.test",
+			Name:   enborsdk.PublicServiceConfigNameEnbor,
+			Origin: "https://enbor.example.test",
 		},
 		Auth: enborsdk.PublicAuthConfig{
 			Oidc: &enborsdk.PublicOidcConfig{
 				Issuer:   "https://issuer.example.test",
-				Resource: "https://ama.example.test/",
+				Resource: "https://enbor.example.test/",
 				Runner: &enborsdk.PublicOidcClientConfig{
 					ClientId: "runner-client",
 					Scopes:   []string{"openid", "profile", "email", "offline_access"},
@@ -77,7 +77,7 @@ func TestRunnerOidcSettingsFromConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected runner oidc settings, got %v", err)
 	}
-	if settings.Resource != "https://ama.example.test" ||
+	if settings.Resource != "https://enbor.example.test" ||
 		settings.ClientID != "runner-client" ||
 		settings.Scopes != "openid profile email offline_access" {
 		t.Fatalf("unexpected runner settings: %#v", settings)
@@ -89,8 +89,8 @@ func TestRunnerOidcSettingsFromConfigRejectsIncompleteOIDCSettings(t *testing.T)
 		return &enborsdk.PublicConfig{
 			Version: enborsdk.N1,
 			Service: enborsdk.PublicServiceConfig{
-				Name:   enborsdk.Enbor,
-				Origin: "https://ama.example.test",
+				Name:   enborsdk.PublicServiceConfigNameEnbor,
+				Origin: "https://enbor.example.test",
 			},
 			Auth: enborsdk.PublicAuthConfig{
 				Oidc: &enborsdk.PublicOidcConfig{

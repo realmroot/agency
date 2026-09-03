@@ -24,6 +24,6 @@ describe('[spec: sessions/workspace-volumes] git repository domain helpers', () 
     expect(gitRepositoryMountPath('https://github.com/saltbo/slink.git')).toBe(
       '/workspace/repos/github.com/saltbo/slink',
     )
-    expect(gitCredentialEnvName('main-repo.1')).toBe('AMA_GIT_TOKEN_MAIN_REPO_1')
+    expect(gitCredentialEnvName('main-repo.1')).toBe('ENBOR_GIT_TOKEN_MAIN_REPO_1')
   })
 })

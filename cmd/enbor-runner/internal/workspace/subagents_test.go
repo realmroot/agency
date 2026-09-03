@@ -18,7 +18,7 @@ func reviewerSnapshot() map[string]any {
 				"systemPrompt":  "Be strict about error handling.",
 				"model":         "gpt-5.3-codex",
 				"allowedTools":  []any{"read", "grep", "web_search"},
-				"skills":        []any{"ama@code-review"},
+				"skills":        []any{"enbor@code-review"},
 				"mcpConnectors": []any{"github"},
 			},
 		},
@@ -144,7 +144,7 @@ func TestPrepareAgentWorkspaceDoesNotWriteSystemPromptFile(t *testing.T) {
 	if err := (&Workspace{Cwd: cwd}).PrepareAgent(context.Background(), "codex", reviewerSnapshot()); err != nil {
 		t.Fatalf("expected workspace preparation success, got %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(cwd, ".ama", "system-prompt.md")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(cwd, ".enbor", "system-prompt.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected no system prompt file in workspace, got err=%v", err)
 	}
 }
@@ -197,8 +197,8 @@ func TestMaterializeSubagentsRejectsUnsafeNamesAndUnsupportedRuntimes(t *testing
 	if err == nil || !strings.Contains(err.Error(), "does not support workspace subagent definitions") {
 		t.Fatalf("expected unsupported runtime error, got %v", err)
 	}
-	if err := materializeSubagents(cwd, "ama", []subagentProfile{{Name: "reviewer"}}); err != nil {
-		t.Fatalf("expected ama runtime to ignore workspace subagent files, got %v", err)
+	if err := materializeSubagents(cwd, "enbor", []subagentProfile{{Name: "reviewer"}}); err != nil {
+		t.Fatalf("expected enbor runtime to ignore workspace subagent files, got %v", err)
 	}
 }
 
@@ -232,7 +232,7 @@ func TestClaudeToolNamesMapsCanonicalSandboxTools(t *testing.T) {
 
 func TestMaterializeSubagentsSkipsWhenSnapshotHasNoSubagents(t *testing.T) {
 	cwd := t.TempDir()
-	if err := materializeSubagents(cwd, "ama", nil); err != nil {
+	if err := materializeSubagents(cwd, "enbor", nil); err != nil {
 		t.Fatalf("expected no-op for empty subagent list, got %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(cwd, ".gitignore")); !os.IsNotExist(err) {

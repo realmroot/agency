@@ -12,7 +12,7 @@ func TestCredentialProfilesSaveLoadSwitchAndLogout(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	first := CredentialProfile{
 		AccountID:    " acct_1 ",
-		APIServer:    "https://ama.example.test/",
+		APIServer:    "https://enbor.example.test/",
 		Email:        " one@example.test ",
 		Name:         " One ",
 		AccessToken:  "token-1",
@@ -25,7 +25,7 @@ func TestCredentialProfilesSaveLoadSwitchAndLogout(t *testing.T) {
 	}
 	second := CredentialProfile{
 		AccountID:   "acct_2",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		Email:       "two@example.test",
 		Name:        "Two",
 		AccessToken: "token-2",
@@ -40,17 +40,17 @@ func TestCredentialProfilesSaveLoadSwitchAndLogout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load active profile: %v", err)
 	}
-	if active == nil || active.AccountID != "acct_2" || active.APIServer != "https://ama.example.test" {
+	if active == nil || active.AccountID != "acct_2" || active.APIServer != "https://enbor.example.test" {
 		t.Fatalf("unexpected active profile %#v", active)
 	}
 	if _, err := selectCredentialProfile(CredentialStore{Profiles: []CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test"},
-	}}, "https://ama.example.test", ""); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
+		{AccountID: "acct_1", APIServer: "https://enbor.example.test"},
+		{AccountID: "acct_2", APIServer: "https://enbor.example.test"},
+	}}, "https://enbor.example.test", ""); err == nil || !strings.Contains(err.Error(), "multiple saved accounts") {
 		t.Fatalf("expected multiple account error, got %v", err)
 	}
 
-	switched, err := SwitchCredentialProfile(path, "https://ama.example.test/", "one@example.test")
+	switched, err := SwitchCredentialProfile(path, "https://enbor.example.test/", "one@example.test")
 	if err != nil {
 		t.Fatalf("switch profile: %v", err)
 	}
@@ -115,10 +115,10 @@ func TestCredentialProfileValidationAndSelectionErrors(t *testing.T) {
 func TestCredentialStoreIgnoresLegacyDPoPKeyOnBearerProfile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	if err := os.WriteFile(path, []byte(`{
-  "active": "https://ama.example.test#acct_1",
+  "active": "https://enbor.example.test#acct_1",
   "profiles": [{
     "accountId": "acct_1",
-    "apiServer": "https://ama.example.test",
+    "apiServer": "https://enbor.example.test",
     "accessToken": "token",
     "tokenType": "Bearer",
     "dpopPrivateKey": "legacy-key-must-be-ignored"
@@ -166,7 +166,7 @@ func TestCredentialStoreHandlesMissingEmptyAndInvalidFiles(t *testing.T) {
 	}
 	if err := SaveCredentialProfile(filepath.Join(fileParent, "credentials.json"), CredentialProfile{
 		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		AccessToken: "token",
 	}); err == nil {
 		t.Fatal("expected save under file parent to fail")
@@ -246,7 +246,7 @@ func TestCredentialProfileUpdateBranches(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "credentials.json")
 	profile := CredentialProfile{
 		AccountID:    "acct_1",
-		APIServer:    "https://ama.example.test",
+		APIServer:    "https://enbor.example.test",
 		AccessToken:  "token-1",
 		RefreshToken: "refresh-1",
 		TokenType:    "Bearer",
@@ -256,7 +256,7 @@ func TestCredentialProfileUpdateBranches(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := UpdateCredentialProfile(path, "https://ama.example.test", nil); err == nil {
+	if _, err := UpdateCredentialProfile(path, "https://enbor.example.test", nil); err == nil {
 		t.Fatal("expected nil update function error")
 	}
 	if _, err := UpdateCredentialProfile(path, "https://missing.example.test", func(current CredentialProfile) (CredentialProfile, bool, error) {
@@ -271,7 +271,7 @@ func TestCredentialProfileUpdateBranches(t *testing.T) {
 		t.Fatalf("expected update callback error, got %v", err)
 	}
 
-	updated, err := UpdateCredentialProfile(path, "https://ama.example.test/", func(current CredentialProfile) (CredentialProfile, bool, error) {
+	updated, err := UpdateCredentialProfile(path, "https://enbor.example.test/", func(current CredentialProfile) (CredentialProfile, bool, error) {
 		current.AccessToken = "token-2"
 		return current, true, nil
 	})
@@ -281,7 +281,7 @@ func TestCredentialProfileUpdateBranches(t *testing.T) {
 	if updated.AccessToken != "token-2" {
 		t.Fatalf("unexpected updated profile %#v", updated)
 	}
-	loaded, err := LoadCredentialProfile(path, "https://ama.example.test")
+	loaded, err := LoadCredentialProfile(path, "https://enbor.example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +372,7 @@ func TestCredentialProfileSelectionEdgeCases(t *testing.T) {
 	}
 
 	invalidExpiry := filepath.Join(t.TempDir(), "invalid-expiry.json")
-	if err := os.WriteFile(invalidExpiry, []byte(`{"active":"https://ama.example.test#acct","profiles":[{"accountId":"acct","apiServer":"https://ama.example.test","accessToken":"token","expiresAt":"not-time"}]}`), 0o600); err != nil {
+	if err := os.WriteFile(invalidExpiry, []byte(`{"active":"https://enbor.example.test#acct","profiles":[{"accountId":"acct","apiServer":"https://enbor.example.test","accessToken":"token","expiresAt":"not-time"}]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LoadActiveCredentialProfile(invalidExpiry); err == nil {

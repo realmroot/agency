@@ -21,7 +21,7 @@ function textFromMessageEvent(event: { payload: { message?: { content?: Array<{ 
 
 describe('runtime event replay', () => {
   it('maps captured Codex provider stream events through the runtime mapper', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-provider-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-replay-provider-test-'))
     const sourcePath = tempFile(dir, 'provider-events.jsonl', [
       providerRecord({ type: 'thread.started', thread_id: 'thread_1' }),
       providerRecord({
@@ -41,7 +41,7 @@ describe('runtime event replay', () => {
   })
 
   it('maps Codex collab tool calls from captured provider events to the canonical agent tool contract', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-collab-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-replay-collab-test-'))
     const sourcePath = tempFile(dir, 'provider-events.jsonl', [
       providerRecord({
         type: 'item.started',
@@ -136,7 +136,7 @@ describe('runtime event replay', () => {
   })
 
   it('rebuilds an events.jsonl file from the default provider-events sidecar', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-rebuild-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-rebuild-test-'))
     const targetDir = join(dir, 'sessions', 'session_1')
     const targetPath = join(targetDir, 'events.jsonl')
     mkdirSync(targetDir, { recursive: true })
@@ -184,7 +184,7 @@ describe('runtime event replay', () => {
   })
 
   it('extracts provider.event frames from captured bridge NDJSON', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-replay-bridge-test-'))
     const sourcePath = tempFile(dir, 'bridge.ndjson', [
       { type: 'ready', requestId: 'run_1' },
       {
@@ -211,7 +211,7 @@ describe('runtime event replay', () => {
   })
 
   it('rejects bridge NDJSON that mixes provider events from multiple requests', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-bridge-mixed-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-replay-bridge-mixed-test-'))
     const sourcePath = tempFile(dir, 'bridge.ndjson', [
       {
         type: 'provider.event',
@@ -233,7 +233,7 @@ describe('runtime event replay', () => {
   })
 
   it('rejects old raw provider JSONL sources', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ama-replay-raw-reject-test-'))
+    const dir = mkdtempSync(join(tmpdir(), 'enbor-replay-raw-reject-test-'))
     const sourcePath = tempFile(dir, 'codex-raw.jsonl', [
       {
         type: 'response_item',

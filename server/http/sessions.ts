@@ -776,7 +776,7 @@ function serializeAgentSnapshot(
 // owning-user scope as query params (the DO trusts the upgrade since the route
 // already verified ownership). The instance is `doName`: a CLI relay session's
 // per-runner instance (shared across the runner's sessions, so a completed session
-// still reads while the runner is online) or its own per-session instance for ama.
+// still reads while the runner is online) or its own per-session instance for enbor.
 // The sessionId always rides in the scope so the DO multiplexes the browser to the
 // right session. Mirrors the runner channel upgrade.
 function upgradeSessionBrowserSocket(
@@ -835,7 +835,7 @@ function upgradeSessionBrowserSocketTicket(env: Env, request: Request, doName: s
 function hasBrowserSocketTicket(request: Request) {
   return (request.headers.get('sec-websocket-protocol') ?? '')
     .split(',')
-    .some((value) => value.trim().startsWith('ama-ticket.'))
+    .some((value) => value.trim().startsWith('enbor-ticket.'))
 }
 
 function asSessionMessageResponse(record: SessionMessage): z.infer<typeof SessionMessageSchema> {
@@ -1297,7 +1297,7 @@ async function createSessionSocketTicket(c: Context<DepsEnv>) {
       organizationId: auth.organization.id,
       projectId: session.metadata.pid,
       userId: auth.user.id,
-      ...(session.spec.runtime !== 'ama' &&
+      ...(session.spec.runtime !== 'enbor' &&
       session.status.placement?.hostingMode === 'self_hosted' &&
       session.spec.environmentId
         ? { runnerEnvironmentId: session.spec.environmentId }
@@ -1482,7 +1482,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         organizationId: auth.organization.id,
         projectId: session.metadata.pid,
         userId: auth.user.id,
-        ...(session.spec.runtime !== 'ama' &&
+        ...(session.spec.runtime !== 'enbor' &&
         session.status.placement?.hostingMode === 'self_hosted' &&
         session.spec.environmentId
           ? { runnerEnvironmentId: session.spec.environmentId }

@@ -21,7 +21,7 @@ function realmrootState(overrides: Record<string, unknown> = {}) {
     agent_id: 'rr_agent_1',
     origin: 'https://realmroot.example.com',
     issuer: 'https://realmroot.example.com/api/auth',
-    runtime: 'ama',
+    runtime: 'enbor',
     host_id: 'host_1',
     agent_key_id: 'key_1',
     agent_private_key: REALMROOT_PRIVATE_KEY,
@@ -60,9 +60,9 @@ describe('[spec: vaults/secret-reference] secretReference', () => {
       { stringData: { value: 'token' } },
     )
     expect(ref).toMatchObject({
-      provider: 'ama',
-      referenceName: 'AMA_VAULTCRED_ABC_V1',
-      secretRef: 'ama://vaults/vault_abc/credentials/vaultcred_abc/versions/vaultver_abc',
+      provider: 'enbor',
+      referenceName: 'ENBOR_VAULTCRED_ABC_V1',
+      secretRef: 'enbor://vaults/vault_abc/credentials/vaultcred_abc/versions/vaultver_abc',
       hasSecret: true,
     })
   })
@@ -78,7 +78,7 @@ describe('[spec: vaults/secret-reference] secretReference', () => {
       },
     )
     expect(ref.referenceName).toBe('CUSTOM')
-    expect(ref.secretRef).toBe('ama://vaults/vault_abc/credentials/vaultcred_abc/versions/vaultver_3')
+    expect(ref.secretRef).toBe('enbor://vaults/vault_abc/credentials/vaultcred_abc/versions/vaultver_3')
   })
 
   it('requires string data', () => {
@@ -94,23 +94,23 @@ describe('[spec: vaults/secret-reference] secretReference', () => {
       'opaque',
       { stringData: { z: 'last', a: 'first' }, metadata: { owner: 'ops' } },
     )
-    expect(ref.secretRef).toBe('ama://vaults/vault%20spaced/credentials/cred%2Fslash/versions/ver%231')
+    expect(ref.secretRef).toBe('enbor://vaults/vault%20spaced/credentials/cred%2Fslash/versions/ver%231')
     expect(ref.metadata).toEqual({ owner: 'ops', dataKeys: ['a', 'z'] })
   })
 })
 
 describe('[spec: vaults/credential-create] validateSecretData', () => {
   it('accepts the supported credential data shapes', () => {
-    expect(validateSecretData('ama.dev/basic-auth', { username: 'u', password: 'p' })).toBeNull()
-    expect(validateSecretData('ama.dev/ssh-auth', { 'ssh-privatekey': 'key' })).toBeNull()
-    expect(validateSecretData('ama.dev/tls', { 'tls.crt': 'crt', 'tls.key': 'key' })).toBeNull()
-    expect(validateSecretData('ama.dev/oauth-token', { 'access-token': 'a', scopes: 'repo' })).toBeNull()
-    expect(validateSecretData('ama.dev/private-key-jwk', { jwk: '{"kty":"oct"}' })).toBeNull()
+    expect(validateSecretData('enbor.dev/basic-auth', { username: 'u', password: 'p' })).toBeNull()
+    expect(validateSecretData('enbor.dev/ssh-auth', { 'ssh-privatekey': 'key' })).toBeNull()
+    expect(validateSecretData('enbor.dev/tls', { 'tls.crt': 'crt', 'tls.key': 'key' })).toBeNull()
+    expect(validateSecretData('enbor.dev/oauth-token', { 'access-token': 'a', scopes: 'repo' })).toBeNull()
+    expect(validateSecretData('enbor.dev/private-key-jwk', { jwk: '{"kty":"oct"}' })).toBeNull()
     expect(validateSecretData('opaque', { any: 'thing', token: 'ok' })).toBeNull()
   })
 
   it.each([
-    'ama',
+    'enbor',
     'codex',
     'claude-code',
     'copilot',
@@ -128,29 +128,29 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
       agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
       enrollment_idempotency_key: 'enroll_1',
     })
-    expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': state })).toBeNull()
-    expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': state, extra: 'no' })).toEqual({
-      'stringData.extra': 'Credential type ama.dev/realmroot-agent-state does not define extra.',
+    expect(validateSecretData('enbor.dev/realmroot-agent-state', { 'state.json': state })).toBeNull()
+    expect(validateSecretData('enbor.dev/realmroot-agent-state', { 'state.json': state, extra: 'no' })).toEqual({
+      'stringData.extra': 'Credential type enbor.dev/realmroot-agent-state does not define extra.',
     })
-    expect(validateSecretData('ama.dev/realmroot-agent-state', { 'state.json': '{bad' })).toEqual({
+    expect(validateSecretData('enbor.dev/realmroot-agent-state', { 'state.json': '{bad' })).toEqual({
       'stringData.state.json': 'Realmroot Agent state must be valid JSON.',
     })
   })
 
   it('[spec: identities/provision] rejects invalid Realmroot runtime identifiers', () => {
     expect(
-      validateSecretData('ama.dev/realmroot-agent-state', {
+      validateSecretData('enbor.dev/realmroot-agent-state', {
         'state.json': JSON.stringify(realmrootState({ runtime: '../invalid' })),
       }),
     ).toEqual({ 'stringData.state.json': 'Realmroot Agent state contains an invalid runtime.' })
   })
 
   it('rejects missing, unsafe, empty, and extra data keys', () => {
-    expect(validateSecretData('ama.dev/basic-auth', { username: 'u' })).toEqual({
-      'stringData.password': 'Credential type ama.dev/basic-auth requires password.',
+    expect(validateSecretData('enbor.dev/basic-auth', { username: 'u' })).toEqual({
+      'stringData.password': 'Credential type enbor.dev/basic-auth requires password.',
     })
-    expect(validateSecretData('ama.dev/basic-auth', { username: 'u', password: 'p', token: 'x' })).toEqual({
-      'stringData.token': 'Credential type ama.dev/basic-auth does not define token.',
+    expect(validateSecretData('enbor.dev/basic-auth', { username: 'u', password: 'p', token: 'x' })).toEqual({
+      'stringData.token': 'Credential type enbor.dev/basic-auth does not define token.',
     })
     expect(validateSecretData('opaque', { 'bad/key': 'x' })).toEqual({
       'stringData.bad/key': 'Use a safe Secret data key.',
@@ -162,13 +162,13 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
   })
 
   it('validates JWK JSON object material', () => {
-    expect(validateSecretData('ama.dev/private-key-jwk', { jwk: '' })).toEqual({
+    expect(validateSecretData('enbor.dev/private-key-jwk', { jwk: '' })).toEqual({
       'stringData.jwk': 'Secret data values must not be empty.',
     })
-    expect(validateSecretData('ama.dev/private-key-jwk', { jwk: 'not-json' })).toEqual({
+    expect(validateSecretData('enbor.dev/private-key-jwk', { jwk: 'not-json' })).toEqual({
       'stringData.jwk': 'JWK must be valid JSON.',
     })
-    expect(validateSecretData('ama.dev/private-key-jwk', { jwk: '[]' })).toEqual({
+    expect(validateSecretData('enbor.dev/private-key-jwk', { jwk: '[]' })).toEqual({
       'stringData.jwk': 'JWK must be a JSON object.',
     })
   })
@@ -276,9 +276,9 @@ describe('[spec: identities/provision] strict Realmroot v0.4.2 state parsing', (
         id: 'identity_1',
         issuer: 'https://realmroot.example.com/api/auth',
         subject: 'rr_agent_1',
-        username: 'ama-agent',
+        username: 'enbor-agent',
         name: 'Enbor Agent',
-        runtime: 'ama',
+        runtime: 'enbor',
       },
       credential_sources: {
         rrcs_AQEBAQEBAQEBAQEBAQEBAQ: {
@@ -309,7 +309,7 @@ describe('[spec: identities/provision] strict Realmroot v0.4.2 state parsing', (
       agentId: 'identity_1',
       origin: 'https://realmroot.example.com',
       issuer: 'https://realmroot.example.com/api/auth',
-      runtime: 'ama',
+      runtime: 'enbor',
     })
   })
 
@@ -524,12 +524,12 @@ describe('[spec: vaults/secret-reference] credentialDataKeys', () => {
 
 describe('[spec: vaults/secret-reference] secretRefIdentity', () => {
   it('parses vault, credential, and credential-version refs', () => {
-    expect(secretRefIdentity('ama://vaults/vault_1')).toEqual({ vaultId: 'vault_1' })
+    expect(secretRefIdentity('enbor://vaults/vault_1')).toEqual({ vaultId: 'vault_1' })
     expect(secretRefIdentity(credentialScopedSecretRef({ vaultId: 'vault_1', credentialId: 'cred_1' }))).toEqual({
       vaultId: 'vault_1',
       credentialId: 'cred_1',
     })
-    expect(secretRefIdentity('ama://vaults/vault_1/credentials/cred_1/versions/ver_1')).toEqual({
+    expect(secretRefIdentity('enbor://vaults/vault_1/credentials/cred_1/versions/ver_1')).toEqual({
       vaultId: 'vault_1',
       credentialId: 'cred_1',
       versionId: 'ver_1',
@@ -537,15 +537,15 @@ describe('[spec: vaults/secret-reference] secretRefIdentity', () => {
   })
 
   it('rejects malformed secret refs and extracts vault ids', () => {
-    expect(enborSecretRef('vault 1')).toBe('ama://vaults/vault%201')
+    expect(enborSecretRef('vault 1')).toBe('enbor://vaults/vault%201')
     expect(credentialVersionSecretRef({ vaultId: 'vault_1', credentialId: 'cred_1', versionId: 'ver_1' })).toBe(
-      'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+      'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
     )
-    expect(vaultIdFromRef('ama://vaults/vault_1')).toBe('vault_1')
+    expect(vaultIdFromRef('enbor://vaults/vault_1')).toBe('vault_1')
     expect(vaultIdFromRef('not a url')).toBeNull()
-    expect(vaultIdFromRef('ama://vaults/vault_1/credentials/cred_1')).toBeNull()
+    expect(vaultIdFromRef('enbor://vaults/vault_1/credentials/cred_1')).toBeNull()
     expect(secretRefIdentity('not a url')).toBeNull()
     expect(secretRefIdentity('https://vaults/vault_1')).toBeNull()
-    expect(secretRefIdentity('ama://vaults/vault_1/bad')).toBeNull()
+    expect(secretRefIdentity('enbor://vaults/vault_1/bad')).toBeNull()
   })
 })

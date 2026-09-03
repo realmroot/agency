@@ -3,7 +3,7 @@ import { encryptSecretValue } from '@server/vault-crypto'
 import { describe, expect, it } from 'vitest'
 import { createInboxCallbackTokenCodec } from './inbox-callback-tokens'
 
-const env = { AMA_VAULT_ENCRYPTION_KEY: 'inbox-test-encryption-key-with-32-characters' } as Env
+const env = { VAULT_ENCRYPTION_KEY: 'inbox-test-encryption-key-with-32-characters' } as Env
 
 describe('[spec: triggers/inbox-provisioning] Inbox callback token encryption', () => {
   it('round-trips a token without placing plaintext in D1 ciphertext', async () => {

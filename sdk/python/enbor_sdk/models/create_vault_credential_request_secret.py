@@ -31,7 +31,7 @@ class CreateVaultCredentialRequestSecret:
 
         Attributes:
             string_data (CreateVaultCredentialRequestSecretStringData):  Example: {'token': 'redacted-input-only'}.
-            reference_name (str | Unset):  Example: AMA_PROJECT_TOKEN.
+            reference_name (str | Unset):  Example: ENBOR_PROJECT_TOKEN.
             metadata (CreateVaultCredentialRequestSecretMetadata | Unset):  Example: {'source': 'console'}.
      """
 

@@ -562,7 +562,7 @@ function expectToast(element: HTMLElement) {
 }
 
 beforeEach(() => {
-  window.localStorage.setItem('ama:e2e-access-token', 'e2e:app-test')
+  window.localStorage.setItem('enbor:e2e-access-token', 'e2e:app-test')
 })
 
 afterEach(() => {
@@ -659,10 +659,10 @@ describe('App', () => {
     await waitFor(() => expect(socketUrls.length).toBeGreaterThan(0))
 
     fireEvent.change(screen.getByPlaceholderText('Send a message to the agent'), {
-      target: { value: 'Create ama-message.txt with exactly: Enbor message completed' },
+      target: { value: 'Create enbor-message.txt with exactly: Enbor message completed' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    expect(await screen.findByText(/Received: Create ama-message/)).toBeTruthy()
+    expect(await screen.findByText(/Received: Create enbor-message/)).toBeTruthy()
     expect(await screen.findByText('bash')).toBeTruthy()
     expect(sentCommands).toContainEqual(expect.objectContaining({ type: 'prompt' }))
   }, 15_000)
@@ -680,7 +680,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Coding agent' })).toBeTruthy()
     expect(await screen.findByText('Agent configuration')).toBeTruthy()
-    expect(await screen.findByText('ama@coding-agent')).toBeTruthy()
+    expect(await screen.findByText('enbor@coding-agent')).toBeTruthy()
     expect(screen.queryByText('Sandbox policy')).toBeNull()
     fireEvent.click(screen.getByRole('tab', { name: 'Sessions' }))
     expect(screen.getAllByText('Sessions').length).toBeGreaterThan(1)
@@ -734,7 +734,7 @@ describe('App', () => {
           phase: 'pending',
           reason: 'waiting-for-runner',
           environmentSnapshot: sessionEnvironmentSnapshot({ type: 'self_hosted' }),
-          spec: { ...session().spec, runtime: 'ama' },
+          spec: { ...session().spec, runtime: 'enbor' },
           status: {
             ...session().status,
             placement: { ...session().status.placement!, hostingMode: 'self_hosted' },
@@ -765,7 +765,7 @@ describe('App', () => {
     expect(await screen.findByText(/hello/)).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Debug' })).toBeTruthy()
     fireEvent.click(screen.getAllByRole('button', { name: 'Open agent details' })[0] as HTMLElement)
-    expect(await screen.findByText('ama@coding-agent')).toBeTruthy()
+    expect(await screen.findByText('enbor@coding-agent')).toBeTruthy()
     expect(screen.queryByText('Sandbox policy')).toBeNull()
 
     sessionRoute.unmount()

@@ -13,37 +13,37 @@ describe('project-selection', () => {
   })
 
   it('returns the stored project id', () => {
-    window.localStorage.setItem('ama:selected-project-id', 'proj_abc')
+    window.localStorage.setItem('enbor:selected-project-id', 'proj_abc')
     expect(getSelectedProjectId()).toBe('proj_abc')
   })
 
   it('stores a project id in localStorage', () => {
     setSelectedProjectId('proj_xyz')
-    expect(window.localStorage.getItem('ama:selected-project-id')).toBe('proj_xyz')
+    expect(window.localStorage.getItem('enbor:selected-project-id')).toBe('proj_xyz')
   })
 
-  it('dispatches ama:selected-project-changed event when setting project id', () => {
+  it('dispatches enbor:selected-project-changed event when setting project id', () => {
     const received: CustomEvent[] = []
-    window.addEventListener('ama:selected-project-changed', (e) => received.push(e as CustomEvent))
+    window.addEventListener('enbor:selected-project-changed', (e) => received.push(e as CustomEvent))
     setSelectedProjectId('proj_dispatch')
     expect(received).toHaveLength(1)
     expect(received[0]?.detail).toEqual({ projectId: 'proj_dispatch' })
-    window.removeEventListener('ama:selected-project-changed', (e) => received.push(e as CustomEvent))
+    window.removeEventListener('enbor:selected-project-changed', (e) => received.push(e as CustomEvent))
   })
 
   it('removes the project id from localStorage on clear', () => {
-    window.localStorage.setItem('ama:selected-project-id', 'proj_to_remove')
+    window.localStorage.setItem('enbor:selected-project-id', 'proj_to_remove')
     clearSelectedProjectId()
-    expect(window.localStorage.getItem('ama:selected-project-id')).toBeNull()
+    expect(window.localStorage.getItem('enbor:selected-project-id')).toBeNull()
   })
 
-  it('dispatches ama:selected-project-changed with null on clear', () => {
+  it('dispatches enbor:selected-project-changed with null on clear', () => {
     const received: CustomEvent[] = []
     const handler = (e: Event) => received.push(e as CustomEvent)
-    window.addEventListener('ama:selected-project-changed', handler)
+    window.addEventListener('enbor:selected-project-changed', handler)
     clearSelectedProjectId()
     expect(received).toHaveLength(1)
     expect(received[0]?.detail).toEqual({ projectId: null })
-    window.removeEventListener('ama:selected-project-changed', handler)
+    window.removeEventListener('enbor:selected-project-changed', handler)
   })
 })

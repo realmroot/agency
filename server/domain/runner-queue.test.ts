@@ -25,10 +25,10 @@ describe('[spec: runners/eligibility] runnerSupportsWork', () => {
     expect(runnerSupportsWork([], { type: 'maintenance' })).toBe(true)
   })
 
-  it('requires the ama runtime for local tool work', () => {
+  it('requires the enbor runtime for local tool work', () => {
     const work = { type: 'tool.execute', toolName: 'bash' }
     expect(runnerSupportsWork([], work)).toBe(false)
-    expect(runnerSupportsWork([{ runtime: 'ama', state: 'ready', models: [] }], work)).toBe(true)
+    expect(runnerSupportsWork([{ runtime: 'enbor', state: 'ready', models: [] }], work)).toBe(true)
   })
 
   it('rejects session starts that declare no runtime requirement', () => {
@@ -106,10 +106,10 @@ describe('runnerSupportsWork runtime matching', () => {
     ).toBe(true)
   })
 
-  it('requires a ready ama inventory entry for ama work', () => {
-    const work = { type: 'session.start', runtimeRequirement: { runtime: 'ama' } }
-    expect(runnerSupportsWork([{ runtime: 'ama', state: 'unhealthy', models: [] }], work)).toBe(false)
-    expect(runnerSupportsWork([{ runtime: 'ama', state: 'ready', models: [] }], work)).toBe(true)
+  it('requires a ready enbor inventory entry for enbor work', () => {
+    const work = { type: 'session.start', runtimeRequirement: { runtime: 'enbor' } }
+    expect(runnerSupportsWork([{ runtime: 'enbor', state: 'unhealthy', models: [] }], work)).toBe(false)
+    expect(runnerSupportsWork([{ runtime: 'enbor', state: 'ready', models: [] }], work)).toBe(true)
   })
 })
 

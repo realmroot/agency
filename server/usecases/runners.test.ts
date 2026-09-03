@@ -71,7 +71,7 @@ describe('[spec: runners/register] registerRunner', () => {
     const result = await registerRunner(fakeDeps(), auth, runnerOidc, {
       name: 'Local runner',
       environmentId: 'env_1',
-      secretRef: 'ama://vaults/vault_1/credentials/cred_1',
+      secretRef: 'enbor://vaults/vault_1/credentials/cred_1',
       authMode: 'realmroot',
       maxConcurrent: 2,
       metadata: { pool: 'default' },
@@ -115,7 +115,7 @@ describe('[spec: runners/register] registerRunner', () => {
         {
           name: 'Runner',
           environmentId: undefined,
-          secretRef: 'ama://vaults/vault_1/credentials/cred_missing',
+          secretRef: 'enbor://vaults/vault_1/credentials/cred_missing',
           authMode: 'realmroot',
           maxConcurrent: 1,
           metadata: {},
@@ -170,7 +170,7 @@ describe('[spec: runners/register] registerRunner', () => {
         {
           name: 'Runner',
           environmentId: undefined,
-          secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_bad',
+          secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_bad',
           authMode: 'realmroot',
           maxConcurrent: 1,
           metadata: {},

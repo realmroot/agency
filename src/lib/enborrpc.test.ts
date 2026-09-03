@@ -5,8 +5,8 @@ import { jsonArg, paramQueryArg, queryArg, queryOptions, rpcRequest } from './en
 
 describe('shared API client [spec: web-console/rpc-client]', () => {
   beforeEach(() => {
-    window.localStorage.setItem('ama:e2e-access-token', 'e2e:api-test')
-    window.localStorage.setItem('ama:selected-project-id', 'project_test')
+    window.localStorage.setItem('enbor:e2e-access-token', 'e2e:api-test')
+    window.localStorage.setItem('enbor:selected-project-id', 'project_test')
   })
 
   function headerValue(headers: HeadersInit | undefined, name: string) {
@@ -85,8 +85,8 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     expect(headerValue(headers, 'accept')).toBe('application/json')
     expect(headerValue(headers, 'authorization')).toBe('Bearer e2e:api-test')
     expect(headerValue(headers, 'dpop')).toBeNull()
-    expect(headerValue(headers, 'x-ama-project-id')).toBe('project_test')
-    expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
+    expect(headerValue(headers, 'x-enbor-project-id')).toBe('project_test')
+    expect(headerValue(headers, 'x-enbor-client')).toBe('web-rpc')
   })
 
   it('serializes session label selectors', async () => {
@@ -133,8 +133,8 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
 
     const headers = fetchMock.mock.calls.find(([input]) => input === '/api/v1/agents')?.[1]?.headers
     expect(headerValue(headers, 'authorization')).toBeNull()
-    expect(headerValue(headers, 'x-ama-project-id')).toBeNull()
-    expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
+    expect(headerValue(headers, 'x-enbor-project-id')).toBeNull()
+    expect(headerValue(headers, 'x-enbor-client')).toBe('web-rpc')
   })
 
   // ---------------------------------------------------------------------------
@@ -520,7 +520,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       spec: {
         agentId: 'agent_1',
         environmentId: null,
-        runtime: 'ama',
+        runtime: 'enbor',
         env: {},
         envFrom: [],
         volumes: [],
@@ -533,7 +533,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
         bindings: {
           agent: { versionId: 'av_1', snapshot: {} as never },
           environment: { id: null, versionId: null, snapshot: null },
-          runtime: 'ama',
+          runtime: 'enbor',
         },
         placement: null,
         startedAt: null,
@@ -548,7 +548,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
         spec: {
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
+          runtime: 'enbor',
         },
         prompt: 'Run Enbor session',
       })
@@ -678,7 +678,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
           spec: {
             agentId: 'agent_1',
             environmentId: null,
-            runtime: 'ama' as const,
+            runtime: 'enbor' as const,
             promptTemplate: 'Run checks',
             env: {},
             envFrom: [],
@@ -713,7 +713,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
             spec: {
               agentId: 'agent_1',
               environmentId: null,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Run checks',
               env: {},
               envFrom: [],
@@ -984,7 +984,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
             vaultId: 'vault_1',
             organizationId: 'org_1',
             version: 2,
-            provider: 'ama',
+            provider: 'enbor',
             secretRef: 'ref',
             referenceName: 'ref',
             hasSecret: true,

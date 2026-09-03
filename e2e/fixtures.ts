@@ -12,7 +12,7 @@ export type E2eToken = {
 type Fixtures = {
   // A per-test run id, unique enough to isolate the rows each crown creates.
   runId: string
-  // The local e2e Console token (minted only by the AMA_E2E_TEST_AUTH harness route).
+  // The local e2e Console token (minted only by the E2E_TEST_AUTH harness route).
   token: E2eToken
   // An authenticated Console client for raw control-plane setup calls.
   api: E2eApi
@@ -48,7 +48,7 @@ export const test = base.extend<Fixtures>({
           ...options,
           headers: {
             authorization: `Bearer ${token.accessToken}`,
-            'x-ama-project-id': token.projectId,
+            'x-enbor-project-id': token.projectId,
           },
         }),
     })
@@ -66,7 +66,7 @@ export async function gotoAuthed(page: Page, token: E2eToken, path: string) {
     throw new Error(`POST /api/v1/e2e/auth/session returned ${response.status()}: ${await response.text()}`)
   }
   await page.addInitScript((projectId) => {
-    window.localStorage.setItem('ama:selected-project-id', projectId)
+    window.localStorage.setItem('enbor:selected-project-id', projectId)
   }, token.projectId)
   await page.goto(path)
 }

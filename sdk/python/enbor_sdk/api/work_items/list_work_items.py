@@ -27,12 +27,12 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -144,7 +144,7 @@ def sync_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | WorkItemListResponse]:
     """ List queued self-hosted work items
@@ -158,7 +158,7 @@ def sync_detailed(
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -178,7 +178,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -199,7 +199,7 @@ def sync(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | WorkItemListResponse | None:
     """ List queued self-hosted work items
@@ -213,7 +213,7 @@ def sync(
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -234,7 +234,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -249,7 +249,7 @@ async def asyncio_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | WorkItemListResponse]:
     """ List queued self-hosted work items
@@ -263,7 +263,7 @@ async def asyncio_detailed(
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -283,7 +283,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -304,7 +304,7 @@ async def asyncio(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | WorkItemListResponse | None:
     """ List queued self-hosted work items
@@ -318,7 +318,7 @@ async def asyncio(
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -339,6 +339,6 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

@@ -377,7 +377,7 @@ describe('SessionsView', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Self-hosted \/ ama/)).toBeTruthy()
+    expect(screen.getByText(/Self-hosted \/ enbor/)).toBeTruthy()
   })
 
   it('calls onDelete after confirming delete for a session', async () => {
@@ -835,7 +835,7 @@ describe('SessionDetailView', () => {
     renderDetailView({
       spec: {
         ...buildSession().spec,
-        volumes: [{ name: 'api-token', type: 'secret', secretRef: 'ama-secret://vault_1/api-token' }],
+        volumes: [{ name: 'api-token', type: 'secret', secretRef: 'enbor-secret://vault_1/api-token' }],
         volumeMounts: [{ name: 'api-token', mountPath: '/run/secrets/api-token' }],
       },
     })
@@ -940,8 +940,8 @@ describe('SessionDetailView', () => {
     renderDetailView({
       spec: {
         ...buildSession().spec,
-        volumes: [{ name: 'memory', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
-        volumeMounts: [{ name: 'memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: true }],
+        volumes: [{ name: 'memory', type: 'memory', memoryRef: 'enbor://memories/memstore_1' }],
+        volumeMounts: [{ name: 'memory', mountPath: '/workspace/.enbor/memory-stores/memstore_1', readOnly: true }],
       },
     })
     const resourcesButtons = screen.getAllByRole('button', { name: 'Open session volumes' })
@@ -1026,7 +1026,7 @@ describe('SessionDetailView', () => {
             type: 'git_repository',
             url: 'https://github.com/acme/app.git',
             ref: 'main',
-            secretRef: 'ama://vaults/vault_abc/credentials/git-token/versions/ver_abc',
+            secretRef: 'enbor://vaults/vault_abc/credentials/git-token/versions/ver_abc',
           },
         ],
         volumeMounts: [{ name: 'repo', mountPath: '/workspace' }],
@@ -1507,7 +1507,7 @@ describe('CreateSessionSheet — formatCreateSessionError', () => {
               details: {
                 resourceType: 'runtime_catalog',
                 hostingMode: 'cloud',
-                runtime: 'ama',
+                runtime: 'enbor',
                 provider: 'workers-ai',
                 model: '@cf/moonshotai/kimi-k2.6',
               },

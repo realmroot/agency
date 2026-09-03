@@ -8,7 +8,7 @@ type ConfigzRoutes = OpenAPIHono<DepsEnv>
 const PublicServiceConfigSchema = z
   .object({
     name: z.literal('Enbor').openapi({ example: 'Enbor' }),
-    origin: z.string().url().openapi({ example: 'https://ama.example.com' }),
+    origin: z.string().url().openapi({ example: 'https://enbor.example.com' }),
   })
   .openapi('PublicServiceConfig')
 
@@ -22,7 +22,7 @@ const PublicOidcClientConfigSchema = z
 const PublicOidcConfigSchema = z
   .object({
     issuer: z.string().url().openapi({ example: 'https://id.example.com/api/auth' }),
-    resource: z.string().url().openapi({ example: 'https://ama.example.com' }),
+    resource: z.string().url().openapi({ example: 'https://enbor.example.com' }),
     runner: PublicOidcClientConfigSchema.optional(),
   })
   .openapi('PublicOidcConfig')

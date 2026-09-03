@@ -19,23 +19,23 @@ func TestRuntimeBridgeHostEnvIncludesNodeToolchainAndTestModeOnly(t *testing.T) 
 	t.Setenv("NODE_PATH", "/node-path")
 	t.Setenv("PNPM_HOME", "/pnpm")
 	t.Setenv("NVM_DIR", "/nvm")
-	t.Setenv("AMA_RUNTIME_BRIDGE_TEST_MODE", "1")
-	t.Setenv("AMA_CODEX_SANDBOX_MODE", "workspace-write")
-	t.Setenv("AMA_CODEX_APPROVAL_POLICY", "on-request")
-	t.Setenv("AMA_CLAUDE_CODE_PERMISSION_MODE", "auto")
-	t.Setenv("AMA_TOKEN", "raw-secret-value")
+	t.Setenv("ENBOR_RUNTIME_BRIDGE_TEST_MODE", "1")
+	t.Setenv("ENBOR_CODEX_SANDBOX_MODE", "workspace-write")
+	t.Setenv("ENBOR_CODEX_APPROVAL_POLICY", "on-request")
+	t.Setenv("ENBOR_CLAUDE_CODE_PERMISSION_MODE", "auto")
+	t.Setenv("ENBOR_TOKEN", "raw-secret-value")
 	env := appendRuntimeBridgeHostEnv([]string{"PATH=/bin"})
 	envText := strings.Join(env, "\n")
 	for _, expected := range []string{
-		"AMA_RUNTIME_BRIDGE_HOST_HOME=",
+		"ENBOR_RUNTIME_BRIDGE_HOST_HOME=",
 		"VOLTA_HOME=/volta",
 		"NODE_PATH=/node-path",
 		"PNPM_HOME=/pnpm",
 		"NVM_DIR=/nvm",
-		"AMA_RUNTIME_BRIDGE_TEST_MODE=1",
-		"AMA_CODEX_SANDBOX_MODE=workspace-write",
-		"AMA_CODEX_APPROVAL_POLICY=on-request",
-		"AMA_CLAUDE_CODE_PERMISSION_MODE=auto",
+		"ENBOR_RUNTIME_BRIDGE_TEST_MODE=1",
+		"ENBOR_CODEX_SANDBOX_MODE=workspace-write",
+		"ENBOR_CODEX_APPROVAL_POLICY=on-request",
+		"ENBOR_CLAUDE_CODE_PERMISSION_MODE=auto",
 	} {
 		if !strings.Contains(envText, expected) {
 			t.Fatalf("expected bridge host env %q in %q", expected, envText)
@@ -337,8 +337,8 @@ echo '{"type":"error","requestId":"inventory","error":{"message":"inventory fail
 }
 
 func TestRuntimeCommandEnvironmentSanitizesRunnerSecrets(t *testing.T) {
-	t.Setenv("AMA_TOKEN", "operator-token")
-	t.Setenv("AMA_RUNNER_OPERATOR_SECRET", "operator-secret")
+	t.Setenv("ENBOR_TOKEN", "operator-token")
+	t.Setenv("ENBOR_RUNNER_OPERATOR_SECRET", "operator-secret")
 	workDir := t.TempDir()
 	env, err := commandEnvironment(Request{
 		SessionID:     "session_1",
@@ -359,21 +359,21 @@ func TestRuntimeCommandEnvironmentSanitizesRunnerSecrets(t *testing.T) {
 	}
 	envText := strings.Join(env, "\n")
 	for _, expected := range []string{
-		"AMA_SESSION_ID=session_1",
-		"AMA_RUNTIME=codex",
-		"AMA_PROVIDER=provider_codex",
-		"AMA_MODEL=gpt-5.3-codex",
-		"AMA_WORKSPACE=" + workDir,
-		"AMA_WORKSPACE_HOME=" + filepath.Join(resolvedWorkDir, ".home"),
-		`AMA_RUNTIME_CONFIG={"mode":"test"}`,
-		`AMA_AGENT_SNAPSHOT={"name":"agent"}`,
+		"ENBOR_SESSION_ID=session_1",
+		"ENBOR_RUNTIME=codex",
+		"ENBOR_PROVIDER=provider_codex",
+		"ENBOR_MODEL=gpt-5.3-codex",
+		"ENBOR_WORKSPACE=" + workDir,
+		"ENBOR_WORKSPACE_HOME=" + filepath.Join(resolvedWorkDir, ".home"),
+		`ENBOR_RUNTIME_CONFIG={"mode":"test"}`,
+		`ENBOR_AGENT_SNAPSHOT={"name":"agent"}`,
 		"CUSTOM=value",
 	} {
 		if !strings.Contains(envText, expected) {
 			t.Fatalf("expected env %q in %q", expected, envText)
 		}
 	}
-	for _, leaked := range []string{"operator-token", "operator-secret", "AMA_INITIAL_PROMPT="} {
+	for _, leaked := range []string{"operator-token", "operator-secret", "ENBOR_INITIAL_PROMPT="} {
 		if strings.Contains(envText, leaked) {
 			t.Fatalf("expected sanitized runtime env, found %q in %q", leaked, envText)
 		}
@@ -391,7 +391,7 @@ func TestRuntimeCommandEnvironmentOmitsUnpinnedProviderAndModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	envText := strings.Join(env, "\n")
-	if strings.Contains(envText, "AMA_PROVIDER=") || strings.Contains(envText, "AMA_MODEL=") {
+	if strings.Contains(envText, "ENBOR_PROVIDER=") || strings.Contains(envText, "ENBOR_MODEL=") {
 		t.Fatalf("expected unpinned provider and model to be omitted, got %q", envText)
 	}
 }
@@ -419,7 +419,7 @@ func TestRuntimeCommandEnvironmentRejectsUnserializableAgentSnapshot(t *testing.
 }
 
 func TestRuntimeCommandEnvironmentRejectsReservedEnv(t *testing.T) {
-	for _, key := range []string{"AMA_SESSION_ID", "ama_codex_sandbox_mode", "Ama_Claude_Code_Permission_Mode"} {
+	for _, key := range []string{"ENBOR_SESSION_ID", "enbor_codex_sandbox_mode", "Enbor_Claude_Code_Permission_Mode"} {
 		if _, err := commandEnvironment(Request{
 			SessionID: "session_1",
 			Runtime:   "codex",

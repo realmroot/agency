@@ -6,7 +6,7 @@ import type { Env } from '../env'
 // agent to a provider/model need the row to exist so the agent.providerId FK
 // and the provider/model availability checks resolve. Provider rows use the
 // vendor slug as their id (id === slug; discovery upserts id: slug). The cloud
-// runtime ('ama') dispatches every model through the Workers AI binding, so
+// runtime ('enbor') dispatches every model through the Workers AI binding, so
 // this seeds one explicit provider/model fixture. Call from a beforeEach:
 // isolated storage resets writes between tests.
 export const TEST_WORKERS_AI_PROVIDER_ID = 'workers-ai'

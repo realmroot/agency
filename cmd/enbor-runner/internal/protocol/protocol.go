@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/samber/lo"
 )
 
@@ -61,7 +61,7 @@ type RunnerChannelMessage struct {
 	EventId    *string                   `json:"eventId,omitempty"`
 	LeaseId    *string                   `json:"leaseId,omitempty"`
 	Message    *string                   `json:"message,omitempty"`
-	Request    *ama.RunnerSandboxRequest `json:"request,omitempty"`
+	Request    *enbor.RunnerSandboxRequest `json:"request,omitempty"`
 	RequestId  *string                   `json:"requestId,omitempty"`
 	RunnerId   *string                   `json:"runnerId,omitempty"`
 	SessionId  *string                   `json:"sessionId,omitempty"`
@@ -70,10 +70,10 @@ type RunnerChannelMessage struct {
 	WorkItemId *string                   `json:"workItemId,omitempty"`
 }
 
-type RunnerSandboxRequest = ama.RunnerSandboxRequest
+type RunnerSandboxRequest = enbor.RunnerSandboxRequest
 type RunnerSessionCommand = json.RawMessage
-type RunnerRuntimeRequest = ama.RunnerRuntimeRequest
-type RunnerRuntimeToolCall = ama.RunnerRuntimeToolCall
+type RunnerRuntimeRequest = enbor.RunnerRuntimeRequest
+type RunnerRuntimeToolCall = enbor.RunnerRuntimeToolCall
 
 type RuntimeRequirement struct {
 	Runtime string `json:"runtime"`
@@ -117,12 +117,12 @@ func ParseWorkPayload(payload any) (WorkPayload, error) {
 	if err != nil {
 		return WorkPayload{}, err
 	}
-	var parsed ama.RunnerWorkPayload
+	var parsed enbor.RunnerWorkPayload
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		return WorkPayload{}, err
 	}
 	normalized := workPayloadFromSDK(parsed)
-	if normalized.Protocol != "ama-runner-work" {
+	if normalized.Protocol != "enbor-runner-work" {
 		return WorkPayload{}, fmt.Errorf("unsupported work protocol %q", normalized.Protocol)
 	}
 	if normalized.Type == "session.start" {
@@ -161,7 +161,7 @@ func ParseWorkPayload(payload any) (WorkPayload, error) {
 	return normalized, nil
 }
 
-func workPayloadFromSDK(payload ama.RunnerWorkPayload) WorkPayload {
+func workPayloadFromSDK(payload enbor.RunnerWorkPayload) WorkPayload {
 	return WorkPayload{
 		Protocol:           runnerWorkPayloadProtocol(payload.Protocol),
 		Type:               stringValue(payload.Type),
@@ -187,7 +187,7 @@ func workPayloadFromSDK(payload ama.RunnerWorkPayload) WorkPayload {
 	}
 }
 
-func runtimeRequirementFromSDK(requirement *ama.RunnerRuntimeRequirement) *RuntimeRequirement {
+func runtimeRequirementFromSDK(requirement *enbor.RunnerRuntimeRequirement) *RuntimeRequirement {
 	if requirement == nil {
 		return nil
 	}
@@ -197,7 +197,7 @@ func runtimeRequirementFromSDK(requirement *ama.RunnerRuntimeRequirement) *Runti
 	}
 }
 
-func toolCallFromSDK(toolCall *ama.RunnerToolCall) *ToolCall {
+func toolCallFromSDK(toolCall *enbor.RunnerToolCall) *ToolCall {
 	if toolCall == nil {
 		return nil
 	}
@@ -210,7 +210,7 @@ func toolCallFromSDK(toolCall *ama.RunnerToolCall) *ToolCall {
 	}
 }
 
-func workspaceManifestFromSDK(manifest *ama.RunnerWorkspaceManifest) WorkspaceManifest {
+func workspaceManifestFromSDK(manifest *enbor.RunnerWorkspaceManifest) WorkspaceManifest {
 	if manifest == nil {
 		return WorkspaceManifest{Root: "/workspace"}
 	}
@@ -220,8 +220,8 @@ func workspaceManifestFromSDK(manifest *ama.RunnerWorkspaceManifest) WorkspaceMa
 	}
 }
 
-func workspaceMountsFromSDK(mounts []ama.RunnerWorkspaceMount) []WorkspaceMount {
-	return lo.Map(mounts, func(mount ama.RunnerWorkspaceMount, _ int) WorkspaceMount {
+func workspaceMountsFromSDK(mounts []enbor.RunnerWorkspaceMount) []WorkspaceMount {
+	return lo.Map(mounts, func(mount enbor.RunnerWorkspaceMount, _ int) WorkspaceMount {
 		return WorkspaceMount{
 			Type:        string(mount.Type),
 			Name:        mount.Name,
@@ -237,7 +237,7 @@ func workspaceMountsFromSDK(mounts []ama.RunnerWorkspaceMount) []WorkspaceMount 
 	})
 }
 
-func workspaceGitCredentialFromSDK(credential *ama.RunnerGitCredential) *WorkspaceGitCredential {
+func workspaceGitCredentialFromSDK(credential *enbor.RunnerGitCredential) *WorkspaceGitCredential {
 	if credential == nil {
 		return nil
 	}
@@ -247,25 +247,25 @@ func workspaceGitCredentialFromSDK(credential *ama.RunnerGitCredential) *Workspa
 	}
 }
 
-func workspaceFilesFromSDK(files *[]ama.RunnerWorkspaceFile) []WorkspaceFile {
+func workspaceFilesFromSDK(files *[]enbor.RunnerWorkspaceFile) []WorkspaceFile {
 	if files == nil {
 		return nil
 	}
-	return lo.Map(*files, func(file ama.RunnerWorkspaceFile, _ int) WorkspaceFile {
+	return lo.Map(*files, func(file enbor.RunnerWorkspaceFile, _ int) WorkspaceFile {
 		return WorkspaceFile{Path: file.Path, Content: file.Content}
 	})
 }
 
-func volumesFromSDK(volumes *[]ama.RunnerVolume) []Volume {
+func volumesFromSDK(volumes *[]enbor.RunnerVolume) []Volume {
 	if volumes == nil {
 		return nil
 	}
-	return lo.Map(*volumes, func(volume ama.RunnerVolume, _ int) Volume {
+	return lo.Map(*volumes, func(volume enbor.RunnerVolume, _ int) Volume {
 		return volumeFromSDK(volume)
 	})
 }
 
-func volumeFromSDK(volume ama.RunnerVolume) Volume {
+func volumeFromSDK(volume enbor.RunnerVolume) Volume {
 	return Volume{
 		Type:      string(volume.Type),
 		Name:      volume.Name,
@@ -276,11 +276,11 @@ func volumeFromSDK(volume ama.RunnerVolume) Volume {
 	}
 }
 
-func volumeMountsFromSDK(mounts *[]ama.RunnerVolumeMount) []VolumeMount {
+func volumeMountsFromSDK(mounts *[]enbor.RunnerVolumeMount) []VolumeMount {
 	if mounts == nil {
 		return nil
 	}
-	return lo.Map(*mounts, func(mount ama.RunnerVolumeMount, _ int) VolumeMount {
+	return lo.Map(*mounts, func(mount enbor.RunnerVolumeMount, _ int) VolumeMount {
 		return VolumeMount{
 			Name:      mount.Name,
 			MountPath: mount.MountPath,
@@ -339,7 +339,7 @@ func SandboxRequestVolumeMounts(request RunnerSandboxRequest) []VolumeMount {
 	return volumeMountsFromSDK(request.VolumeMounts)
 }
 
-func runnerWorkPayloadProtocol(protocol *ama.RunnerWorkPayloadProtocol) string {
+func runnerWorkPayloadProtocol(protocol *enbor.RunnerWorkPayloadProtocol) string {
 	if protocol == nil {
 		return ""
 	}

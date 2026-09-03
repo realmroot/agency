@@ -24,7 +24,7 @@ class VolumeMount:
     """
         Attributes:
             name (str):  Example: github-token.
-            mount_path (str):  Example: /workspace/.ama/secrets/project.
+            mount_path (str):  Example: /workspace/.enbor/secrets/project.
             read_only (bool | Unset):  Example: True.
      """
 

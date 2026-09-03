@@ -24,20 +24,20 @@ describe('sessionResourcesInput', () => {
     })
 
     expect(result.volumes).toEqual([
-      { name: 'vault-vault-one', type: 'secret', secretRef: 'ama://vaults/vault%2Fone' },
+      { name: 'vault-vault-one', type: 'secret', secretRef: 'enbor://vaults/vault%2Fone' },
       { name: 'repo-repo-one', type: 'git_repository', url: 'https://github.com/saltbo/slink.git', ref: 'main' },
       {
         name: 'memory-mem_store-alpha',
         type: 'memory',
-        memoryRef: 'ama://memories/mem_store%3Aalpha',
+        memoryRef: 'enbor://memories/mem_store%3Aalpha',
       },
     ])
     expect(result.volumeMounts).toEqual([
-      { name: 'vault-vault-one', mountPath: '/workspace/.ama/secrets/vault/one', readOnly: true },
+      { name: 'vault-vault-one', mountPath: '/workspace/.enbor/secrets/vault/one', readOnly: true },
       { name: 'repo-repo-one', mountPath: '/workspace/repos/github.com/saltbo/slink', readOnly: true },
       {
         name: 'memory-mem_store-alpha',
-        mountPath: '/workspace/.ama/memory-stores/mem_store:alpha',
+        mountPath: '/workspace/.enbor/memory-stores/mem_store:alpha',
         readOnly: false,
       },
     ])
@@ -70,14 +70,14 @@ describe('sessionResourcesInput', () => {
     })
 
     expect(result.volumes).toEqual([
-      { name: 'vault-resource', type: 'secret', secretRef: 'ama://vaults/%25%25%25' },
+      { name: 'vault-resource', type: 'secret', secretRef: 'enbor://vaults/%25%25%25' },
       { name: 'repo-resource', type: 'git_repository', url: 'https://github.com' },
-      { name: 'memory-memory-one', type: 'memory', memoryRef: 'ama://memories/memory-one' },
+      { name: 'memory-memory-one', type: 'memory', memoryRef: 'enbor://memories/memory-one' },
     ])
     expect(result.volumeMounts).toEqual([
-      { name: 'vault-resource', mountPath: '/workspace/.ama/secrets/%%%', readOnly: true },
+      { name: 'vault-resource', mountPath: '/workspace/.enbor/secrets/%%%', readOnly: true },
       { name: 'repo-resource', mountPath: '/workspace/repos/github.com/repository-1', readOnly: true },
-      { name: 'memory-memory-one', mountPath: '/workspace/.ama/memory-stores/memory-one', readOnly: true },
+      { name: 'memory-memory-one', mountPath: '/workspace/.enbor/memory-stores/memory-one', readOnly: true },
     ])
   })
 })

@@ -24,7 +24,7 @@ class PublicServiceConfig:
     """
         Attributes:
             name (PublicServiceConfigName):  Example: Enbor.
-            origin (str):  Example: https://ama.example.com.
+            origin (str):  Example: https://enbor.example.com.
      """
 
     name: PublicServiceConfigName

@@ -170,7 +170,7 @@ func TestControllerConfiguresServiceLoginStartupPolicy(t *testing.T) {
 			var captured *service.Config
 			controller := &Controller{
 				Registry:   instance.Registry{Dir: t.TempDir()},
-				Executable: "/tmp/ama-runner",
+				Executable: "/tmp/enbor-runner",
 				newService: func(_ service.Interface, config *service.Config) (nativeService, error) {
 					captured = config
 					return &fakeService{statusErr: service.ErrNotInstalled}, nil
@@ -193,14 +193,14 @@ func TestControllerConfiguresServiceLoginStartupPolicy(t *testing.T) {
 
 // [spec: runtime/provider-permission-policy]
 func TestControllerCopiesProviderPermissionPolicyIntoManagedService(t *testing.T) {
-	t.Setenv("AMA_CODEX_SANDBOX_MODE", "workspace-write")
-	t.Setenv("AMA_CODEX_APPROVAL_POLICY", "on-request")
-	t.Setenv("AMA_CLAUDE_CODE_PERMISSION_MODE", "auto")
+	t.Setenv("ENBOR_CODEX_SANDBOX_MODE", "workspace-write")
+	t.Setenv("ENBOR_CODEX_APPROVAL_POLICY", "on-request")
+	t.Setenv("ENBOR_CLAUDE_CODE_PERMISSION_MODE", "auto")
 	record := managedTestRecord(t)
 	var captured *service.Config
 	controller := &Controller{
 		Registry:   instance.Registry{Dir: t.TempDir()},
-		Executable: "/tmp/ama-runner",
+		Executable: "/tmp/enbor-runner",
 		newService: func(_ service.Interface, config *service.Config) (nativeService, error) {
 			captured = config
 			return &fakeService{statusErr: service.ErrNotInstalled}, nil
@@ -212,9 +212,9 @@ func TestControllerCopiesProviderPermissionPolicyIntoManagedService(t *testing.T
 		t.Fatal("service configuration was not created")
 	}
 	for name, expected := range map[string]string{
-		"AMA_CODEX_SANDBOX_MODE":          "workspace-write",
-		"AMA_CODEX_APPROVAL_POLICY":       "on-request",
-		"AMA_CLAUDE_CODE_PERMISSION_MODE": "auto",
+		"ENBOR_CODEX_SANDBOX_MODE":          "workspace-write",
+		"ENBOR_CODEX_APPROVAL_POLICY":       "on-request",
+		"ENBOR_CLAUDE_CODE_PERMISSION_MODE": "auto",
 	} {
 		if captured.EnvVars[name] != expected {
 			t.Fatalf("expected %s=%q in managed service environment, got %#v", name, expected, captured.EnvVars)
@@ -745,12 +745,12 @@ func managedTestRecord(t *testing.T) instance.Record {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
-	stateDir, err := runnerconfig.DefaultStateDirForInstance("https://ama.example.test", "env_1")
+	stateDir, err := runnerconfig.DefaultStateDirForInstance("https://enbor.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	record, err := instance.NewRecord(runnerconfig.Config{
-		APIServer: "https://ama.example.test", ProjectID: "project_1", EnvironmentID: "env_1",
+		APIServer: "https://enbor.example.test", ProjectID: "project_1", EnvironmentID: "env_1",
 		AllowUnsafeProcess: true, StateDir: stateDir, WorkDir: runnerconfig.DefaultWorkDirForStateDir(stateDir),
 		MaxConcurrent: 1, HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60,
 		RenewInterval: 20 * time.Second, CommandTimeout: 10 * time.Minute,

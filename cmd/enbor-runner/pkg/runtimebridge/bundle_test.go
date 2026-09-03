@@ -88,18 +88,18 @@ func TestBytesReturnsCopy(t *testing.T) {
 func TestEmbeddedBundleUsesCanonicalWorkspaceHomeEnv(t *testing.T) {
 	bundle := string(Bytes())
 	for _, expected := range []string{
-		"AMA_WORKSPACE_HOME",
+		"ENBOR_WORKSPACE_HOME",
 		"GH_CONFIG_DIR",
 		"GIT_CONFIG_GLOBAL",
-		"AMA_CODEX_SANDBOX_MODE",
-		"AMA_CODEX_APPROVAL_POLICY",
-		"AMA_CLAUDE_CODE_PERMISSION_MODE",
+		"ENBOR_CODEX_SANDBOX_MODE",
+		"ENBOR_CODEX_APPROVAL_POLICY",
+		"ENBOR_CLAUDE_CODE_PERMISSION_MODE",
 	} {
 		if !strings.Contains(bundle, expected) {
 			t.Fatalf("expected embedded bridge bundle to contain %q", expected)
 		}
 	}
-	if strings.Contains(bundle, "AMA_RUNTIME_BRIDGE_SESSION_HOME") {
+	if strings.Contains(bundle, "ENBOR_RUNTIME_BRIDGE_SESSION_HOME") {
 		t.Fatal("embedded bridge bundle still contains deprecated session home env")
 	}
 }

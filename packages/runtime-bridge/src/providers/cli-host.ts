@@ -6,8 +6,8 @@ import type { RuntimeProviderRequest } from '../protocol'
 
 /** Narrows an env-supplied host home to a non-empty string, else undefined. */
 export function hostHome(env: Record<string, string>): string | undefined {
-  return typeof env.AMA_RUNTIME_BRIDGE_HOST_HOME === 'string' && env.AMA_RUNTIME_BRIDGE_HOST_HOME
-    ? env.AMA_RUNTIME_BRIDGE_HOST_HOME
+  return typeof env.ENBOR_RUNTIME_BRIDGE_HOST_HOME === 'string' && env.ENBOR_RUNTIME_BRIDGE_HOST_HOME
+    ? env.ENBOR_RUNTIME_BRIDGE_HOST_HOME
     : undefined
 }
 
@@ -24,7 +24,7 @@ export function sdkEnv(request: RuntimeProviderRequest): Record<string, string> 
     ...(home
       ? {
           HOME: home,
-          AMA_WORKSPACE_HOME: sessionHome,
+          ENBOR_WORKSPACE_HOME: sessionHome,
           GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
           GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
           GIT_CONFIG_NOSYSTEM: '1',

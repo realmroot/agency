@@ -2,6 +2,6 @@
 
 package host
 
-func SupportsAMARuntime() bool {
+func SupportsEnborRuntime() bool {
 	return false
 }

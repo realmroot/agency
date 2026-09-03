@@ -68,7 +68,7 @@ describe('runner protocol schemas', () => {
           {
             name: 'memory',
             type: 'memory',
-            memoryRef: 'ama://memories/store_1',
+            memoryRef: 'enbor://memories/store_1',
           },
         ],
         volumeMounts: [{ name: 'memory', mountPath: '/workspace/memory', readOnly: false }],
@@ -182,7 +182,7 @@ describe('runner protocol schemas', () => {
     ).toMatchObject({ root: '/workspace' })
     expect(
       RunnerWorkPayloadSchema.safeParse({
-        protocol: 'ama-runner-work',
+        protocol: 'enbor-runner-work',
         type: 'session.start',
         sessionId: 'session_1',
         hostingMode: 'self_hosted',

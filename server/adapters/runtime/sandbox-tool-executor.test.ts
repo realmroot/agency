@@ -28,12 +28,12 @@ describe('tool-executor', () => {
     sandboxMock.destroy.mockReset()
   })
 
-  it('uses the test executor when Enbor runtime mode is test', () => {
-    expect(toolExecutor({ AMA_RUNTIME_MODE: 'test' } as Env)).toBeInstanceOf(TestToolExecutor)
+  it('uses the test executor when runtime mode is test', () => {
+    expect(toolExecutor({ RUNTIME_MODE: 'test' } as Env)).toBeInstanceOf(TestToolExecutor)
   })
 
   it('uses the Cloudflare Sandbox executor outside test mode', () => {
-    expect(toolExecutor({ AMA_RUNTIME_MODE: 'live' } as Env)).toBeInstanceOf(CloudflareSandboxToolExecutor)
+    expect(toolExecutor({ RUNTIME_MODE: 'live' } as Env)).toBeInstanceOf(CloudflareSandboxToolExecutor)
   })
 
   it('simulates canonical bash output in test mode', async () => {

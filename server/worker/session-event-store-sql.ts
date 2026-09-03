@@ -1,5 +1,5 @@
 // The Session DO's in-object canonical event store, over the DO's embedded
-// SQLite (ctx.storage.sql). It is the cloud-loop (ama runtime) home for the
+// SQLite (ctx.storage.sql). It is the cloud-loop (enbor runtime) home for the
 // event firehose: the same event row and query contract as the D1 store
 // (server/db/session-event-store.ts +
 // server/adapters/repos/sessions.ts), one contract / two implementations. The

@@ -12,7 +12,7 @@ func TestIdentityStoreUsesStateDirAndMachineID(t *testing.T) {
 	stateDir := t.TempDir()
 	workDir := t.TempDir()
 	config := runnerconfig.Config{
-		APIServer:     "https://ama.example.test",
+		APIServer:     "https://enbor.example.test",
 		ProjectID:     "project_1",
 		EnvironmentID: "env_1",
 		StateDir:      stateDir,
@@ -61,7 +61,7 @@ func TestIdentityStoreUsesStateDirAndMachineID(t *testing.T) {
 func TestIdentityStoreClearsOnlyCurrentBinding(t *testing.T) {
 	stateDir := t.TempDir()
 	base := runnerconfig.Config{
-		APIServer:     "https://ama.example.test",
+		APIServer:     "https://enbor.example.test",
 		ProjectID:     "project_1",
 		EnvironmentID: "env_1",
 		StateDir:      stateDir,
