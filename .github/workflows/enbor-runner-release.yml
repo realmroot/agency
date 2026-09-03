@@ -5,13 +5,18 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
+
+concurrency:
+  group: enbor-runner-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -40,11 +45,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify the public container
+  verify-public-container:
+    name: Verify public container
+    needs: release
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # A fresh, anonymous runner proves the package is publicly installable and
+      # lets this verification be retried without publishing the release again.
+      - name: Pull and start the public container
         run: |
           set -euo pipefail
           image_version="${GITHUB_REF_NAME#v}"
-          docker logout ghcr.io
-          docker image rm "ghcr.io/realmroot/enbor-runner:${image_version}" || true
           docker pull "ghcr.io/realmroot/enbor-runner:${image_version}"
           docker run --rm "ghcr.io/realmroot/enbor-runner:${image_version}" version --json | grep -Fq '"name":"enbor-runner"'

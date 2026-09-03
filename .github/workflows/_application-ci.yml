@@ -1,0 +1,149 @@
+name: Application CI
+
+on:
+  workflow_call:
+    inputs:
+      quality:
+        required: true
+        type: boolean
+      application:
+        required: true
+        type: boolean
+      integration:
+        required: true
+        type: boolean
+      e2e:
+        required: true
+        type: boolean
+      build:
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and Typecheck
+    if: inputs.quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check embedded runtime bridge bundle
+        run: |
+          pnpm run bridge:build
+          git diff --exit-code -- cmd/ama-runner/pkg/runtimebridge/bundle.mjs
+      - run: pnpm run lint
+      - run: pnpm run lint:arch
+      - run: pnpm run lint:spec
+      - run: pnpm run lint:escapes
+      - run: pnpm run lint:types
+      - run: pnpm run typecheck
+      - run: pnpm --filter @any-managed-agents/sdk run typecheck
+
+  test:
+    name: Unit, Web, and Contracts
+    if: inputs.application
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: |
+            cmd/ama-runner/go.sum
+            sdk/go/go.sum
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+      - run: pnpm install --frozen-lockfile
+      - run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1
+      - run: uv tool install openapi-python-client==0.29.0
+      - run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: pnpm run contract:check
+      # sdk-layout.test.ts owns OpenAPI/SDK drift verification inside this suite.
+      - run: pnpm run test:coverage
+
+  integration:
+    name: Workerd Integration
+    if: inputs.integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run --project integration
+
+  e2e:
+    name: Playwright E2E
+    if: inputs.e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run e2e
+
+  build:
+    name: Build
+    if: inputs.build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+  application-required:
+    name: Application Required
+    needs: [lint, test, integration, e2e, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify selected jobs
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success" or .result == "skipped")' <<<"$JOB_RESULTS"

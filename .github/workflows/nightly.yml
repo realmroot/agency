@@ -1,0 +1,50 @@
+name: Nightly
+run-name: ${{ github.event_name == 'schedule' && 'Nightly full verification' || 'Manual full verification' }}
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run away from GitHub's top-of-hour load spike.
+    - cron: '17 5 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  application:
+    name: Application CI
+    uses: ./.github/workflows/_application-ci.yml
+    with:
+      quality: true
+      application: true
+      integration: true
+      e2e: true
+      build: true
+
+  enbor-runner:
+    name: Enbor Runner CI
+    uses: ./.github/workflows/_enbor-runner-ci.yml
+    with:
+      runner: true
+      packaging: true
+
+  runtime-bridge:
+    name: Runtime Bridge CI
+    uses: ./.github/workflows/_runtime-bridge-ci.yml
+    with:
+      runtime: true
+
+  nightly-required:
+    name: Nightly Required
+    needs: [application, enbor-runner, runtime-bridge]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify workflows
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success")' <<<"$JOB_RESULTS"
