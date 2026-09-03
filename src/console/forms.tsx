@@ -1,4 +1,5 @@
 import { AMA_SANDBOX_TOOL_NAMES } from '@ama/runtime-contracts/agent-tools'
+import { isRuntimeName } from '@ama/runtime-contracts/runtime-names'
 import { useQuery } from '@tanstack/react-query'
 import { Bot, Boxes, ChevronDown, MessageSquare, Plus, Server, Trash2 } from 'lucide-react'
 import type { FormEvent } from 'react'
@@ -462,7 +463,7 @@ export function SessionForm({
             onValueChange={(agentId) => {
               const identityRuntime = activeAgents.find((agent) => agent.metadata.uid === agentId)?.spec.identity
                 ?.runtime
-              setValue({ ...value, agentId, ...(identityRuntime ? { runtime: identityRuntime } : {}) })
+              setValue({ ...value, agentId, ...(isRuntimeName(identityRuntime) ? { runtime: identityRuntime } : {}) })
             }}
           >
             <SelectTrigger>

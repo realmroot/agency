@@ -477,6 +477,63 @@ describe('[CF] /api/v1/agents', () => {
     expect(oversizedRes.status).toBe(400)
   })
 
+  it('returns 409 without binding an Identity whose runtime has no registered AMA driver [spec: agents/identity-binding]', async () => {
+    const authorization = await signIn()
+    const createResponse = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Unsupported runtime Agent')),
+    })
+    expect(createResponse.status).toBe(201)
+    const agent = (await createResponse.json()) as { metadata: { uid: string } }
+    const project = await env.DB.prepare('SELECT project_id FROM agents WHERE id = ?')
+      .bind(agent.metadata.uid)
+      .first<{ project_id: string }>()
+    if (!project) throw new Error('Expected signed-in Project')
+    const identityId = 'identity_unsupported_runtime'
+    const now = '2026-09-03T00:00:00.000Z'
+    await env.DB.prepare(`INSERT INTO identities (
+      id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+      idempotency_key_hash,request_fingerprint,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        identityId,
+        project.project_id,
+        defaultClaims().organizationId,
+        'Hermes Identity',
+        'hermes-worker',
+        'hermes',
+        'active',
+        'vault_unsupported_runtime',
+        'credential_unsupported_runtime',
+        'realmroot_agent_unsupported_runtime',
+        'https://id.realmroot.dev/api/auth',
+        'realmroot_subject_unsupported_runtime',
+        'hash_unsupported_runtime',
+        'fingerprint_unsupported_runtime',
+        now,
+        now,
+      )
+      .run()
+
+    const response = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { identityRef: identityId } }),
+    })
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        type: 'identity_runtime_unsupported',
+        message: 'Identity runtime is not supported by this AMA deployment: hermes.',
+      },
+    })
+    await expect(
+      env.DB.prepare('SELECT bound_agent_id FROM identities WHERE id = ?')
+        .bind(identityId)
+        .first<{ bound_agent_id: string | null }>(),
+    ).resolves.toEqual({ bound_agent_id: null })
+  })
+
   it('[spec: agents/api-schedulability] filters by Identity runtime and current Inbox scheduling readiness', async () => {
     const authorization = await signIn()
     const createRes = await jsonFetch('/api/v1/agents', authorization, {

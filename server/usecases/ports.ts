@@ -1,7 +1,7 @@
 import type { Agent, AgentSpec, AgentVersion } from '@server/domain/agent'
 import type { ConnectorAvailability, ConnectorCatalogEntry, ConnectorCatalogTool } from '@server/domain/connector'
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
-import type { Identity, IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
+import type { Identity, IdentityCheckpoint, IdentityDescriptor, IdentityRuntime } from '@server/domain/identity'
 import type { Memory, MemoryStore } from '@server/domain/memory-store'
 import type { CatalogModel } from '@server/domain/model-catalog'
 import type { ModelAvailability, ModelCatalogState } from '@server/domain/provider'
@@ -168,7 +168,7 @@ export interface CreateIdentityRecordInput {
   name: string
   description: string | null
   username: string
-  runtime: RuntimeName
+  runtime: IdentityRuntime
   vaultId: string
   idempotencyKeyHash: string
   requestFingerprint: string
@@ -213,14 +213,14 @@ export interface RealmrootEnrollmentGateway {
     origin: string
     username: string
     name: string
-    runtime: RuntimeName
+    runtime: IdentityRuntime
     idempotencyKey: string
   }): Promise<IdentityCheckpoint>
   provision(input: {
     origin: string
     username: string
     name: string
-    runtime: RuntimeName
+    runtime: IdentityRuntime
     idempotencyKey: string
     checkpoint: IdentityCheckpoint
     managementCredential: RealmrootManagementCredential

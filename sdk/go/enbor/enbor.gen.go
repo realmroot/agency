@@ -522,30 +522,6 @@ func (e CreateBudgetRequestWindow) Valid() bool {
 	}
 }
 
-// Defines values for CreateIdentityRequestSpecRuntime.
-const (
-	CreateIdentityRequestSpecRuntimeAma        CreateIdentityRequestSpecRuntime = "ama"
-	CreateIdentityRequestSpecRuntimeClaudeCode CreateIdentityRequestSpecRuntime = "claude-code"
-	CreateIdentityRequestSpecRuntimeCodex      CreateIdentityRequestSpecRuntime = "codex"
-	CreateIdentityRequestSpecRuntimeCopilot    CreateIdentityRequestSpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the CreateIdentityRequestSpecRuntime enum.
-func (e CreateIdentityRequestSpecRuntime) Valid() bool {
-	switch e {
-	case CreateIdentityRequestSpecRuntimeAma:
-		return true
-	case CreateIdentityRequestSpecRuntimeClaudeCode:
-		return true
-	case CreateIdentityRequestSpecRuntimeCodex:
-		return true
-	case CreateIdentityRequestSpecRuntimeCopilot:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreateRunnerRequestAuthMode.
 const (
 	CreateRunnerRequestAuthModeRealmroot CreateRunnerRequestAuthMode = "realmroot"
@@ -1014,30 +990,6 @@ func (e HttpTriggerConcurrencyMode) Valid() bool {
 	}
 }
 
-// Defines values for IdentitySpecRuntime.
-const (
-	IdentitySpecRuntimeAma        IdentitySpecRuntime = "ama"
-	IdentitySpecRuntimeClaudeCode IdentitySpecRuntime = "claude-code"
-	IdentitySpecRuntimeCodex      IdentitySpecRuntime = "codex"
-	IdentitySpecRuntimeCopilot    IdentitySpecRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the IdentitySpecRuntime enum.
-func (e IdentitySpecRuntime) Valid() bool {
-	switch e {
-	case IdentitySpecRuntimeAma:
-		return true
-	case IdentitySpecRuntimeClaudeCode:
-		return true
-	case IdentitySpecRuntimeCodex:
-		return true
-	case IdentitySpecRuntimeCopilot:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for IdentityStatusState.
 const (
 	IdentityStatusStateActive       IdentityStatusState = "active"
@@ -1053,30 +1005,6 @@ func (e IdentityStatusState) Valid() bool {
 	case IdentityStatusStateError:
 		return true
 	case IdentityStatusStateProvisioning:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for IdentityDescriptorRuntime.
-const (
-	IdentityDescriptorRuntimeAma        IdentityDescriptorRuntime = "ama"
-	IdentityDescriptorRuntimeClaudeCode IdentityDescriptorRuntime = "claude-code"
-	IdentityDescriptorRuntimeCodex      IdentityDescriptorRuntime = "codex"
-	IdentityDescriptorRuntimeCopilot    IdentityDescriptorRuntime = "copilot"
-)
-
-// Valid indicates whether the value is a known member of the IdentityDescriptorRuntime enum.
-func (e IdentityDescriptorRuntime) Valid() bool {
-	switch e {
-	case IdentityDescriptorRuntimeAma:
-		return true
-	case IdentityDescriptorRuntimeClaudeCode:
-		return true
-	case IdentityDescriptorRuntimeCodex:
-		return true
-	case IdentityDescriptorRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -2822,22 +2750,22 @@ func (e WorkItemState) Valid() bool {
 
 // Defines values for ListAgentsParamsRuntime.
 const (
-	Ama        ListAgentsParamsRuntime = "ama"
-	ClaudeCode ListAgentsParamsRuntime = "claude-code"
-	Codex      ListAgentsParamsRuntime = "codex"
-	Copilot    ListAgentsParamsRuntime = "copilot"
+	ListAgentsParamsRuntimeAma        ListAgentsParamsRuntime = "ama"
+	ListAgentsParamsRuntimeClaudeCode ListAgentsParamsRuntime = "claude-code"
+	ListAgentsParamsRuntimeCodex      ListAgentsParamsRuntime = "codex"
+	ListAgentsParamsRuntimeCopilot    ListAgentsParamsRuntime = "copilot"
 )
 
 // Valid indicates whether the value is a known member of the ListAgentsParamsRuntime enum.
 func (e ListAgentsParamsRuntime) Valid() bool {
 	switch e {
-	case Ama:
+	case ListAgentsParamsRuntimeAma:
 		return true
-	case ClaudeCode:
+	case ListAgentsParamsRuntimeClaudeCode:
 		return true
-	case Codex:
+	case ListAgentsParamsRuntimeCodex:
 		return true
-	case Copilot:
+	case ListAgentsParamsRuntimeCopilot:
 		return true
 	default:
 		return false
@@ -3578,13 +3506,11 @@ type CreateHttpTriggerRunRequest map[string]interface{}
 type CreateIdentityRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		Runtime  CreateIdentityRequestSpecRuntime `json:"runtime"`
-		Username string                           `json:"username"`
+		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+		Runtime  IdentityRuntime `json:"runtime"`
+		Username string          `json:"username"`
 	} `json:"spec"`
 }
-
-// CreateIdentityRequestSpecRuntime defines model for CreateIdentityRequest.Spec.Runtime.
-type CreateIdentityRequestSpecRuntime string
 
 // CreateLeaseRequest defines model for CreateLeaseRequest.
 type CreateLeaseRequest struct {
@@ -4071,8 +3997,9 @@ type HttpTriggerConcurrencyMode string
 type Identity struct {
 	Metadata ResourceMetadata `json:"metadata"`
 	Spec     struct {
-		Runtime  IdentitySpecRuntime `json:"runtime"`
-		Username string              `json:"username"`
+		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+		Runtime  IdentityRuntime `json:"runtime"`
+		Username string          `json:"username"`
 	} `json:"spec"`
 	Status struct {
 		BoundAgentId *string             `json:"boundAgentId"`
@@ -4083,33 +4010,32 @@ type Identity struct {
 	} `json:"status"`
 }
 
-// IdentitySpecRuntime defines model for Identity.Spec.Runtime.
-type IdentitySpecRuntime string
-
 // IdentityStatusState defines model for Identity.Status.State.
 type IdentityStatusState string
 
 // IdentityDescriptor defines model for IdentityDescriptor.
 type IdentityDescriptor struct {
 	// AgentId Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
-	AgentId    string                    `json:"agentId"`
-	IdentityId string                    `json:"identityId"`
-	Issuer     string                    `json:"issuer"`
-	Runtime    IdentityDescriptorRuntime `json:"runtime"`
+	AgentId    string `json:"agentId"`
+	IdentityId string `json:"identityId"`
+	Issuer     string `json:"issuer"`
+
+	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+	Runtime IdentityRuntime `json:"runtime"`
 
 	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
 	Subject  string `json:"subject"`
 	Username string `json:"username"`
 }
 
-// IdentityDescriptorRuntime defines model for IdentityDescriptor.Runtime.
-type IdentityDescriptorRuntime string
-
 // IdentityListResponse defines model for IdentityListResponse.
 type IdentityListResponse struct {
 	Data       []Identity     `json:"data"`
 	Pagination ListPagination `json:"pagination"`
 }
+
+// IdentityRuntime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+type IdentityRuntime = string
 
 // ImageContentBlock defines model for ImageContentBlock.
 type ImageContentBlock struct {
@@ -5140,10 +5066,12 @@ type SessionEventsAccepted struct {
 // SessionIdentityDescriptor defines model for SessionIdentityDescriptor.
 type SessionIdentityDescriptor struct {
 	// AgentId Realmroot internal Identity resource id. It is not the stable OIDC subject and must not be used for Inbox addressing.
-	AgentId    string      `json:"agentId"`
-	IdentityId string      `json:"identityId"`
-	Issuer     string      `json:"issuer"`
-	Runtime    RuntimeName `json:"runtime"`
+	AgentId    string `json:"agentId"`
+	IdentityId string `json:"identityId"`
+	Issuer     string `json:"issuer"`
+
+	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+	Runtime IdentityRuntime `json:"runtime"`
 
 	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
 	Subject  string `json:"subject"`

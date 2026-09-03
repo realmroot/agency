@@ -1,5 +1,4 @@
-import type { Identity, IdentityCheckpoint } from '@server/domain/identity'
-import type { RuntimeName } from '@server/domain/runtime-catalog'
+import type { Identity, IdentityCheckpoint, IdentityRuntime } from '@server/domain/identity'
 import { newPrimaryKey } from '@server/id'
 import type { Deps } from './deps'
 import type { AuthScope, RealmrootManagementCredential } from './ports'
@@ -138,7 +137,7 @@ export async function createIdentity(
     name: string
     description: string | null
     username: string
-    runtime: RuntimeName
+    runtime: IdentityRuntime
     idempotencyKey: string
     subjectToken: string
   },

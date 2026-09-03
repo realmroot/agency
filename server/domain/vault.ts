@@ -3,8 +3,8 @@
 // unit-testable. Secret storage is a boundary and lives behind the SecretStore
 // gateway, not here.
 
+import { type IdentityRuntime, isIdentityRuntime } from './identity'
 import type { ResourceMetadata, ResourcePhase } from './resource'
-import type { RuntimeName } from './runtime-catalog'
 
 export const SECRET_PROVIDERS = ['ama'] as const
 export const VAULT_SCOPES = ['project', 'organization'] as const
@@ -250,7 +250,7 @@ export interface RealmrootAgentStateMetadata {
   agentId: string
   origin: string
   issuer: string
-  runtime: RuntimeName
+  runtime: IdentityRuntime
 }
 
 const REALMROOT_AGENT_STATE_VERSION = 18
@@ -530,8 +530,8 @@ export function parseRealmrootAgentState(content: string): RealmrootAgentStateMe
   if (issuer.protocol !== 'https:' || issuer.username || issuer.password || issuer.search || issuer.hash) {
     throw new Error('Realmroot Agent state issuer must be a safe HTTPS URL.')
   }
-  if (!['ama', 'claude-code', 'codex', 'copilot'].includes(state.runtime as string)) {
-    throw new Error('Realmroot Agent state contains an unsupported runtime.')
+  if (!isIdentityRuntime(state.runtime)) {
+    throw new Error('Realmroot Agent state contains an invalid runtime.')
   }
   if (typeof state.agent_private_key !== 'string' || decodedBase64UrlLength(state.agent_private_key) !== 64) {
     throw new Error('Realmroot Agent state contains an invalid Ed25519 private key.')
@@ -545,7 +545,7 @@ export function parseRealmrootAgentState(content: string): RealmrootAgentStateMe
     agentId: typeof stableIdentity?.id === 'string' ? stableIdentity.id : (state.agent_id as string),
     origin: state.origin as string,
     issuer: state.issuer as string,
-    runtime: state.runtime as RuntimeName,
+    runtime: state.runtime as IdentityRuntime,
   }
 }
 

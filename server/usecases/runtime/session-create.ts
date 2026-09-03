@@ -18,10 +18,11 @@ import type { RuntimeName } from '@server/contracts/environment-contracts'
 import {
   IdentityRuntimeMismatchError,
   IdentityRuntimeRequiredError,
+  IdentityRuntimeUnsupportedError,
   resolveIdentityRuntime,
 } from '@server/domain/identity'
 import { amaMemoryRef, memoryStoreIdFromRef } from '@server/domain/memory-store'
-import { runtimeDriverName } from '@server/domain/runtime/driver'
+import { runtimeDriverName, runtimeNameForIdentity } from '@server/domain/runtime/driver'
 import type {
   EnvFromEntry,
   GitRepositoryVolume,
@@ -626,9 +627,13 @@ export async function createSessionForAgent(
   const agentSnapshot = createAgentSnapshot(agentVersion)
   let runtime: RuntimeName
   try {
-    runtime = resolveIdentityRuntime(options.runtime, agentSnapshot.identity)
+    runtime = runtimeNameForIdentity(resolveIdentityRuntime(options.runtime, agentSnapshot.identity))
   } catch (error) {
-    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+    if (
+      error instanceof IdentityRuntimeMismatchError ||
+      error instanceof IdentityRuntimeRequiredError ||
+      error instanceof IdentityRuntimeUnsupportedError
+    ) {
       return { ok: false, error: { status: 409, code: error.code, message: error.message } }
     }
     throw error

@@ -16,6 +16,7 @@ import {
   type VolumeMountSchema,
   type VolumeSchema,
 } from '../contracts/execution-spec'
+import { IdentityRuntimeSchema } from '../contracts/identity-contracts'
 import { ResourceMetadataSchema } from '../contracts/resource-contracts'
 import { type PendingSessionApproval, sessionApprovalState } from '../domain/runtime/approval-state'
 import type { Session, SessionApproval, SessionEvent, SessionMessage } from '../domain/session'
@@ -79,7 +80,7 @@ const SessionIdentityDescriptorSchema = z
         'Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.',
     }),
     username: z.string(),
-    runtime: RuntimeSchema,
+    runtime: IdentityRuntimeSchema,
   })
   .strict()
   .openapi('SessionIdentityDescriptor')

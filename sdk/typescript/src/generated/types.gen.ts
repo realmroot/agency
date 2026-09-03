@@ -767,8 +767,13 @@ export type IdentityDescriptor = {
      */
     subject: string;
     username: string;
-    runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
+    runtime: IdentityRuntime;
 } | null;
+
+/**
+ * Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+ */
+export type IdentityRuntime = string;
 
 export type AgentStatus = {
     phase: ResourcePhase;
@@ -955,7 +960,7 @@ export type Identity = {
     metadata: ResourceMetadata;
     spec: {
         username: string;
-        runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
+        runtime: IdentityRuntime;
     };
     status: {
         phase: ResourcePhase;
@@ -970,7 +975,7 @@ export type CreateIdentityRequest = {
     metadata: ResourceCreateMetadata;
     spec: {
         username: string;
-        runtime: 'ama' | 'codex' | 'claude-code' | 'copilot';
+        runtime: IdentityRuntime;
     };
 };
 
@@ -1746,7 +1751,7 @@ export type SessionIdentityDescriptor = {
      */
     subject: string;
     username: string;
-    runtime: RuntimeName;
+    runtime: IdentityRuntime;
 } | null;
 
 export type SessionEnvironmentSnapshot = {
@@ -2485,7 +2490,7 @@ export type CreateAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Identity already bound
+     * Identity already bound or its runtime has no registered AMA driver
      */
     409: ErrorResponse;
 };
@@ -2616,7 +2621,7 @@ export type UpdateAgentErrors = {
      */
     404: ErrorResponse;
     /**
-     * A live Inbox Trigger prevents the requested update
+     * A live Inbox Trigger, existing binding, or unsupported Identity runtime prevents the update
      */
     409: ErrorResponse;
 };

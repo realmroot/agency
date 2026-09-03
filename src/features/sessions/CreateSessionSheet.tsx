@@ -1,3 +1,4 @@
+import { isRuntimeName } from '@ama/runtime-contracts/runtime-names'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
@@ -104,10 +105,11 @@ export function CreateSessionSheet({
         ? current.environmentId
         : activeEnvironment?.metadata.uid || ''
       const identityRuntime = agents.find((agent) => agent.metadata.uid === nextAgentId)?.spec.identity?.runtime
+      const supportedIdentityRuntime = isRuntimeName(identityRuntime) ? identityRuntime : undefined
       if (
         current.agentId === nextAgentId &&
         current.environmentId === nextEnvironmentId &&
-        (!identityRuntime || current.runtime === identityRuntime)
+        (!supportedIdentityRuntime || current.runtime === supportedIdentityRuntime)
       ) {
         return current
       }
@@ -115,7 +117,7 @@ export function CreateSessionSheet({
         ...current,
         agentId: nextAgentId,
         environmentId: nextEnvironmentId,
-        ...(identityRuntime ? { runtime: identityRuntime } : {}),
+        ...(supportedIdentityRuntime ? { runtime: supportedIdentityRuntime } : {}),
       }
     })
   }, [agentId, agents, environments, open])

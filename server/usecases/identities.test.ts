@@ -1,4 +1,4 @@
-import type { Identity, IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
+import type { Identity, IdentityCheckpoint, IdentityDescriptor, IdentityRuntime } from '@server/domain/identity'
 import { resourceMetadata } from '@server/domain/resource'
 import type { Credential, CredentialVersion, Vault } from '@server/domain/vault'
 import { describe, expect, it, vi } from 'vitest'
@@ -39,6 +39,7 @@ function identityRecord(
     descriptor?: IdentityDescriptor | null
     boundAgentId?: string | null
     deletedAt?: string | null
+    runtime?: IdentityRuntime
   } = {},
 ): Identity {
   return {
@@ -50,7 +51,7 @@ function identityRecord(
       updatedAt: timestamp,
       ...(values.deletedAt === undefined ? {} : { deletedAt: values.deletedAt }),
     }),
-    spec: { username: 'reviewer', runtime: 'codex' },
+    spec: { username: 'reviewer', runtime: values.runtime ?? 'codex' },
     status: {
       phase: 'active',
       state: values.state ?? 'provisioning',
@@ -99,7 +100,7 @@ function version(id: string, credentialId: string, versionNumber: number): Crede
   }
 }
 
-function enrolledCheckpoint(runtime = 'codex' as const): IdentityCheckpoint {
+function enrolledCheckpoint(runtime: IdentityRuntime = 'codex'): IdentityCheckpoint {
   const remote = {
     agentId: 'rr_agent_1',
     issuer: 'https://realmroot.example/api/auth',
@@ -148,13 +149,16 @@ function fixture(
   let checkpointJson = options.checkpointJson ?? ''
   let credentialNumber = 0
   let provisioningOwner: string | null = null
+  let currentRuntime: IdentityRuntime = 'codex'
   const credentials = new Map<string, Credential>()
   const initialize = vi.fn(
-    async (): Promise<IdentityCheckpoint> => ({
+    async (
+      input: Parameters<NonNullable<Deps['realmrootEnrollment']>['initialize']>[0],
+    ): Promise<IdentityCheckpoint> => ({
       version: 1,
       stage: 'initialized',
       remote: null,
-      state: { version: 18, runtime: 'codex', installation_private_key: 'checkpoint-secret' },
+      state: { version: 18, runtime: input.runtime, installation_private_key: 'checkpoint-secret' },
     }),
   )
   const provision = vi.fn(async (input: Parameters<NonNullable<Deps['realmrootEnrollment']>['provision']>[0]) => {
@@ -163,7 +167,7 @@ function fixture(
       (typeof options.provisionFailure === 'object' && options.provisionFailure.value)
     )
       throw new Error('remote unavailable')
-    const checkpoint = enrolledCheckpoint()
+    const checkpoint = enrolledCheckpoint(input.runtime)
     await input.onCheckpoint(checkpoint)
     return { checkpoint, descriptor: checkpoint.remote! }
   })
@@ -184,7 +188,10 @@ function fixture(
         currentIdentity
           ? { vaultId: 'vault_identity', credentialId: checkpointCredentialId, requestFingerprint }
           : null,
-      claim: async (input: { id: string; idempotencyKeyHash: string; requestFingerprint: string }, owner: string) => {
+      claim: async (
+        input: { id: string; runtime: IdentityRuntime; idempotencyKeyHash: string; requestFingerprint: string },
+        owner: string,
+      ) => {
         if (options.deletedIdentity && !currentIdentity) {
           keyHash = input.idempotencyKeyHash
           requestFingerprint = input.requestFingerprint
@@ -195,7 +202,8 @@ function fixture(
           keyHash = input.idempotencyKeyHash
           requestFingerprint = input.requestFingerprint
           provisioningOwner = owner
-          currentIdentity = identityRecord({ id: input.id })
+          currentRuntime = input.runtime
+          currentIdentity = identityRecord({ id: input.id, runtime: currentRuntime })
           return { identity: currentIdentity, acquired: true, requestFingerprint }
         }
         if (input.idempotencyKeyHash !== keyHash || input.requestFingerprint !== requestFingerprint) {
@@ -203,7 +211,7 @@ function fixture(
         }
         if (currentIdentity.status.state === 'error') {
           provisioningOwner = owner
-          currentIdentity = identityRecord({ id: currentIdentity.metadata.uid })
+          currentIdentity = identityRecord({ id: currentIdentity.metadata.uid, runtime: currentRuntime })
           return { identity: currentIdentity, acquired: true, requestFingerprint }
         }
         return { identity: currentIdentity, acquired: false, requestFingerprint }
@@ -215,13 +223,24 @@ function fixture(
       activate: async (_id: string, owner: string, credentialId: string, descriptor: IdentityDescriptor) => {
         if (owner !== provisioningOwner) throw new Error('Identity provisioning ownership was lost')
         checkpointCredentialId = credentialId
-        currentIdentity = identityRecord({ id: currentIdentity!.metadata.uid, state: 'active', descriptor })
+        currentRuntime = descriptor.runtime
+        currentIdentity = identityRecord({
+          id: currentIdentity!.metadata.uid,
+          state: 'active',
+          descriptor,
+          runtime: currentRuntime,
+        })
         provisioningOwner = null
         return currentIdentity
       },
       fail: async (_id: string, owner: string, failureCode: string) => {
         if (owner !== provisioningOwner || currentIdentity?.status.state === 'active') return
-        currentIdentity = identityRecord({ id: currentIdentity!.metadata.uid, state: 'error', failureCode })
+        currentIdentity = identityRecord({
+          id: currentIdentity!.metadata.uid,
+          state: 'error',
+          failureCode,
+          runtime: currentRuntime,
+        })
         provisioningOwner = null
       },
       delete: async () => true,
@@ -312,6 +331,16 @@ describe('[spec: identities/provision] createIdentity', () => {
     expect(JSON.stringify(result)).not.toContain('checkpoint-secret')
     expect(JSON.stringify(result)).not.toContain('agent_private_key')
     expect(fx.credentialCount()).toBe(3)
+  })
+
+  it('provisions a canonical Identity runtime even when AMA has no execution driver for it', async () => {
+    const fx = fixture()
+    const result = await createIdentity(fx.deps, auth, { ...input, runtime: 'antigravity' })
+
+    expect(fx.initialize).toHaveBeenCalledWith(expect.objectContaining({ runtime: 'antigravity' }))
+    expect(fx.provision).toHaveBeenCalledWith(expect.objectContaining({ runtime: 'antigravity' }))
+    expect(result.spec.runtime).toBe('antigravity')
+    expect(result.status.descriptor?.runtime).toBe('antigravity')
   })
 
   it('[spec: identities/idempotent-resume] returns an active Identity without creating another key or Remote Agent', async () => {

@@ -2981,13 +2981,7 @@
             "example": "researcher"
           },
           "runtime": {
-            "type": "string",
-            "enum": [
-              "ama",
-              "codex",
-              "claude-code",
-              "copilot"
-            ]
+            "$ref": "#/components/schemas/IdentityRuntime"
           }
         },
         "required": [
@@ -2999,6 +2993,14 @@
           "runtime"
         ],
         "additionalProperties": false
+      },
+      "IdentityRuntime": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "description": "Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.",
+        "example": "codex"
       },
       "AgentStatus": {
         "type": "object",
@@ -3842,13 +3844,7 @@
                 "type": "string"
               },
               "runtime": {
-                "type": "string",
-                "enum": [
-                  "ama",
-                  "codex",
-                  "claude-code",
-                  "copilot"
-                ]
+                "$ref": "#/components/schemas/IdentityRuntime"
               }
             },
             "required": [
@@ -3913,13 +3909,7 @@
                 "pattern": "^[a-z0-9][a-z0-9-]*$"
               },
               "runtime": {
-                "type": "string",
-                "enum": [
-                  "ama",
-                  "codex",
-                  "claude-code",
-                  "copilot"
-                ]
+                "$ref": "#/components/schemas/IdentityRuntime"
               }
             },
             "required": [
@@ -7216,7 +7206,7 @@
             "type": "string"
           },
           "runtime": {
-            "$ref": "#/components/schemas/RuntimeName"
+            "$ref": "#/components/schemas/IdentityRuntime"
           }
         },
         "required": [
@@ -9554,7 +9544,7 @@
             }
           },
           "409": {
-            "description": "Identity already bound",
+            "description": "Identity already bound or its runtime has no registered AMA driver",
             "content": {
               "application/json": {
                 "schema": {
@@ -9729,7 +9719,7 @@
             }
           },
           "409": {
-            "description": "A live Inbox Trigger prevents the requested update",
+            "description": "A live Inbox Trigger, existing binding, or unsupported Identity runtime prevents the update",
             "content": {
               "application/json": {
                 "schema": {

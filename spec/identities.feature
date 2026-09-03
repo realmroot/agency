@@ -6,12 +6,13 @@ Feature: Identities
   @identities/provision @api
   Scenario: Provision a personal Realmroot Agent identity synchronously
     Given a Realmroot User is operating a personal project
-    When the user creates an Identity with a username and supported runtime
+    When the user creates an Identity with a username and canonical runtime identifier
     Then AMA creates one managed Vault and one Realmroot Agent installation
     And verifies the remote Agent before marking the Identity active
     And exposes only identity resource id, provider Agent id, issuer, stable subject, username, runtime, and credential reference as its safe descriptor
     And stores complete private state only as an ama.dev/realmroot-agent-state credential
     And rejects incomplete, hand-authored, or incompatible provider state
+    And the Identity may remain unbound when AMA has no driver for its runtime
 
   @identities/idempotent-resume @usecase
   Scenario: Resume failed provisioning without duplicating identity material

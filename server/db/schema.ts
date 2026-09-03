@@ -123,7 +123,7 @@ export const identities = sqliteTable(
     name: text('name').notNull(),
     description: text('description'),
     username: text('username').notNull(),
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
+    runtime: text('runtime').notNull(),
     state: text('state', { enum: ['provisioning', 'active', 'error'] })
       .notNull()
       .default('provisioning'),
@@ -147,7 +147,10 @@ export const identities = sqliteTable(
     uniqueIndex('idx_identities_project_idempotency').on(table.projectId, table.idempotencyKeyHash),
     uniqueIndex('idx_identities_remote_agent').on(table.remoteAgentId),
     index('idx_identities_bound_agent').on(table.boundAgentId),
-    check('ck_identities_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
+    check(
+      'ck_identities_runtime',
+      sql`length(${table.runtime}) between 1 and 64 and substr(${table.runtime}, 1, 1) glob '[a-z0-9]' and ${table.runtime} not glob '*[^a-z0-9._-]*'`,
+    ),
     check('ck_identities_state', sql`${table.state} in ('provisioning','active','error')`),
   ],
 )

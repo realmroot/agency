@@ -314,7 +314,8 @@ describe('[spec: agents/create] createAgent', () => {
 })
 
 describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Identity binding', () => {
-  function withIdentity(deps: Deps, boundAgentId: string | null = null) {
+  function withIdentity(deps: Deps, boundAgentId: string | null = null, runtime = 'codex') {
+    const descriptor = { ...identityDescriptor, runtime }
     deps.identities = {
       find: async () => ({
         metadata: resourceMetadata({
@@ -324,8 +325,8 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         }),
-        spec: { username: 'reviewer', runtime: 'codex' },
-        status: { phase: 'active', state: 'active', failureCode: null, boundAgentId, descriptor: identityDescriptor },
+        spec: { username: 'reviewer', runtime },
+        status: { phase: 'active', state: 'active', failureCode: null, boundAgentId, descriptor },
       }),
       bind: async () => ({}) as never,
     } as never
@@ -352,6 +353,21 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
         identityRef: 'identity_1',
       }),
     ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError', code: 'identity_already_bound' })
+  })
+
+  it('rejects binding an Identity whose runtime has no registered AMA driver', async () => {
+    await expect(
+      createAgent(withIdentity(fakeDeps(), null, 'hermes'), auth, {
+        name: 'Hermes identity agent',
+        description: null,
+        spec: spec(),
+        identityRef: 'identity_1',
+      }),
+    ).rejects.toMatchObject({
+      name: 'IdentityRuntimeUnsupportedError',
+      code: 'identity_runtime_unsupported',
+      runtime: 'hermes',
+    })
   })
 
   it('replays a concurrent idempotent creation after the selected Identity becomes bound', async () => {

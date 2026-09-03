@@ -83,7 +83,6 @@ from .create_environment_request_spec_variables_additional_property import Creat
 from .create_http_trigger_run_request import CreateHttpTriggerRunRequest
 from .create_identity_request import CreateIdentityRequest
 from .create_identity_request_spec import CreateIdentityRequestSpec
-from .create_identity_request_spec_runtime import CreateIdentityRequestSpecRuntime
 from .create_lease_request import CreateLeaseRequest
 from .create_memory_store_memory_request import CreateMemoryStoreMemoryRequest
 from .create_memory_store_memory_request_metadata import CreateMemoryStoreMemoryRequestMetadata
@@ -184,10 +183,8 @@ from .http_trigger_concurrency import HttpTriggerConcurrency
 from .http_trigger_concurrency_mode import HttpTriggerConcurrencyMode
 from .identity import Identity
 from .identity_descriptor_type_0 import IdentityDescriptorType0
-from .identity_descriptor_type_0_runtime import IdentityDescriptorType0Runtime
 from .identity_list_response import IdentityListResponse
 from .identity_spec import IdentitySpec
-from .identity_spec_runtime import IdentitySpecRuntime
 from .identity_status import IdentityStatus
 from .identity_status_state import IdentityStatusState
 from .image_content_block import ImageContentBlock
@@ -633,7 +630,6 @@ __all__ = (
     "CreateHttpTriggerRunRequest",
     "CreateIdentityRequest",
     "CreateIdentityRequestSpec",
-    "CreateIdentityRequestSpecRuntime",
     "CreateLeaseRequest",
     "CreateMemoryStoreMemoryRequest",
     "CreateMemoryStoreMemoryRequestMetadata",
@@ -734,10 +730,8 @@ __all__ = (
     "HttpTriggerConcurrencyMode",
     "Identity",
     "IdentityDescriptorType0",
-    "IdentityDescriptorType0Runtime",
     "IdentityListResponse",
     "IdentitySpec",
-    "IdentitySpecRuntime",
     "IdentityStatus",
     "IdentityStatusState",
     "ImageContentBlock",

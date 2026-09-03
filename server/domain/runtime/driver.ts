@@ -7,6 +7,7 @@
 // port, so the domain driver stays free of any adapters/session-runtime import
 // and domain-stays-pure holds.
 
+import { type IdentityRuntime, IdentityRuntimeUnsupportedError } from '@server/domain/identity'
 import {
   type RuntimeHostingMode,
   type RuntimeName,
@@ -54,6 +55,11 @@ const RUNTIME_DRIVER_NAMES: ReadonlySet<string> = new Set(RUNTIME_DRIVERS.map((d
 
 export function isRuntimeName(value: unknown): value is RuntimeName {
   return typeof value === 'string' && RUNTIME_DRIVER_NAMES.has(value)
+}
+
+export function runtimeNameForIdentity(runtime: IdentityRuntime): RuntimeName {
+  if (!isRuntimeName(runtime)) throw new IdentityRuntimeUnsupportedError(runtime)
+  return runtime
 }
 
 export function runtimeDriver(runtime: RuntimeName) {
