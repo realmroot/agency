@@ -1369,6 +1369,13 @@ export class ProjectReservedNameError extends Error {
   }
 }
 
+export class ProjectNameConflictError extends Error {
+  constructor(name: string) {
+    super(`A project named "${name}" already exists in this organization`)
+    this.name = 'ProjectNameConflictError'
+  }
+}
+
 // DB boundary for projects. organizationId stays in the DB for tenancy but is
 // never exposed on ProjectRecord. The only implementation lives in
 // adapters/repos.

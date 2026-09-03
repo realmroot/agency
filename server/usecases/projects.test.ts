@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
-import { type AuthScope, type ProjectRecord, ProjectReservedNameError } from './ports'
+import { type AuthScope, ProjectNameConflictError, type ProjectRecord, ProjectReservedNameError } from './ports'
 import { createProject, deleteProject, listProjects, updateProject } from './projects'
 
 const auth: AuthScope = {
@@ -65,6 +65,15 @@ describe('listProjects [spec: projects/lifecycle]', () => {
 })
 
 describe('createProject', () => {
+  it('exposes a stable project-name conflict category', () => {
+    const error = new ProjectNameConflictError('Workspace')
+
+    expect(error).toMatchObject({
+      name: 'ProjectNameConflictError',
+      message: 'A project named "Workspace" already exists in this organization',
+    })
+  })
+
   it('ensures the default before inserting a custom project in the caller organization', async () => {
     const operations: string[] = []
     let ensuredAt: string | null = null

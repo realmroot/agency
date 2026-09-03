@@ -799,6 +799,59 @@ describe('[CF] projects v1', () => {
     await expect(readRes.json()).resolves.toMatchObject({ id: project.id, name: 'Control Plane' })
   })
 
+  it('[spec: projects/name-uniqueness] rejects duplicate names per organization while allowing the same name across organizations', async () => {
+    const tenantA = await signInUser('project_unique_tenant_a')
+    const first = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Shared workspace' } })
+    expect(first.status).toBe(201)
+    const firstProject = (await first.json()) as { id: string }
+
+    const duplicateCreate = await jsonFetch('/api/v1/projects', tenantA, {
+      body: { name: 'Shared workspace' },
+    })
+    expect(duplicateCreate.status).toBe(409)
+    await expect(duplicateCreate.json()).resolves.toEqual({
+      error: {
+        type: 'conflict',
+        message: 'A project named "Shared workspace" already exists in this organization',
+      },
+    })
+
+    const renameTarget = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Rename target' } })
+    const renameTargetProject = (await renameTarget.json()) as { id: string }
+    const duplicateRename = await jsonFetch(`/api/v1/projects/${renameTargetProject.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'Shared workspace' },
+    })
+    expect(duplicateRename.status).toBe(409)
+    await expect(duplicateRename.json()).resolves.toMatchObject({
+      error: { type: 'conflict' },
+    })
+
+    const tenantB = await signInUser('project_unique_tenant_b')
+    const crossTenant = await jsonFetch('/api/v1/projects', tenantB, { body: { name: 'Shared workspace' } })
+    expect(crossTenant.status).toBe(201)
+
+    const tenantC = await signInUser('project_unique_tenant_c')
+    const attempts = await Promise.all([
+      jsonFetch('/api/v1/projects', tenantC, { body: { name: 'Concurrent workspace' } }),
+      jsonFetch('/api/v1/projects', tenantC, { body: { name: 'Concurrent workspace' } }),
+    ])
+    expect(attempts.map((response) => response.status).sort()).toEqual([201, 409])
+    const successfulAttempt = attempts.find((response) => response.status === 201)!
+    const concurrentProject = (await successfulAttempt.json()) as { id: string }
+    const stored = await env.DB.prepare(`
+      SELECT name
+      FROM projects
+      WHERE organization_id = (SELECT organization_id FROM projects WHERE id = ?)
+        AND name = ?
+    `)
+      .bind(concurrentProject.id, 'Concurrent workspace')
+      .all<{ name: string }>()
+    expect(stored.results).toEqual([{ name: 'Concurrent workspace' }])
+
+    expect((await jsonFetch(`/api/v1/projects/${firstProject.id}`, tenantA)).status).toBe(200)
+  })
+
   it('[spec: projects/rename] renames ordinary projects while protecting tenant and Default boundaries', async () => {
     const tenantA = await signInUser('project_rename_tenant_a')
     const initialProjects = await jsonFetch('/api/v1/projects', tenantA)

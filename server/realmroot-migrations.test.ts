@@ -96,6 +96,54 @@ describe('[spec: projects/lifecycle] default Project naming migration', () => {
   })
 })
 
+describe('[spec: projects/name-uniqueness] project name uniqueness migration', () => {
+  it('deduplicates legacy names per organization before enforcing the database constraint', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0035_rename_default_project.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('project_original', 'org_1', 'Workspace', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('project_duplicate', 'org_1', 'Workspace', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('project_collision', 'org_1', 'Workspace Copy project_duplicate', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('project_other_org', 'org_2', 'Workspace', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z');
+    `)
+
+    apply(db, '0036_one_default_project_per_organization.sql')
+    apply(db, '0037_unique_project_names_per_organization.sql')
+
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_1' ORDER BY id").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'project_collision', name: 'Workspace Copy project_duplicate' },
+      { id: 'project_duplicate', name: 'Workspace Copy project_duplicate 1' },
+      { id: 'project_original', name: 'Workspace' },
+    ])
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_2' ORDER BY id").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'project_other_org', name: 'Workspace' },
+    ])
+    expect(db.prepare('PRAGMA index_list(projects)').all()).toContainEqual({
+      name: 'idx_projects_unique_name_per_organization',
+      unique: 1,
+      origin: 'c',
+      partial: 0,
+      seq: expect.any(Number),
+    })
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_conflict', 'org_1', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).toThrow(/UNIQUE constraint failed: projects\.organization_id, projects\.name/)
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_cross_tenant', 'org_3', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).not.toThrow()
+    db.close()
+  })
+})
+
 describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
   it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
     const db = new DatabaseSync(':memory:')

@@ -9102,7 +9102,7 @@
             }
           },
           "409": {
-            "description": "The reserved Default project name cannot be created explicitly",
+            "description": "The project name already exists or the reserved Default name was used",
             "content": {
               "application/json": {
                 "schema": {
@@ -9270,7 +9270,7 @@
             }
           },
           "409": {
-            "description": "The Default project is immutable and its name is reserved",
+            "description": "The project name already exists, or the Default project or name is immutable",
             "content": {
               "application/json": {
                 "schema": {
