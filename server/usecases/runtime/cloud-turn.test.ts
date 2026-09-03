@@ -226,7 +226,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] parks a completed turn idle and sleeps its existing sandbox', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '300' } }) }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
 
@@ -240,22 +240,36 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
       expect.objectContaining({ state: 'idle' }),
     )
     expect(updateSessionWhenStateMock.mock.calls.at(-1)?.[3]).not.toHaveProperty('sandboxId')
-    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 60)
+    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 300)
   })
 
   it.each([
-    { metadata: null, label: 'missing annotation' },
+    { metadata: null, label: 'missing metadata' },
+    { metadata: JSON.stringify({}), label: 'missing annotations' },
+    { metadata: JSON.stringify({ annotations: {} }), label: 'missing annotation key' },
     {
       metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '0' } }),
-      label: 'explicit zero',
+      label: 'zero annotation',
     },
-  ])('[spec: runtime/idle-retention] does not sleep the sandbox for $label', async ({ metadata }) => {
+    {
+      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '-1' } }),
+      label: 'negative annotation',
+    },
+    {
+      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '1.5' } }),
+      label: 'non-integer annotation',
+    },
+    {
+      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': 'later' } }),
+      label: 'non-numeric annotation',
+    },
+  ])('[spec: runtime/idle-retention] sleeps the sandbox for 60 seconds for $label', async ({ metadata }) => {
     findSessionMock.mockResolvedValue(fakeSession({ metadata }))
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
 
     await consumeCloudTurnQueueMessage(deps, stepMessage)
 
-    expect(idleCloudSessionMock).not.toHaveBeenCalled()
+    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 60)
     expect(updateSessionWhenStateMock).toHaveBeenCalledWith(
       'proj_1',
       'session_1',
@@ -344,13 +358,21 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
     expect(runSessionTurnMock).toHaveBeenCalledOnce()
   })
 
-  it('[spec: runtime/idle-retention] skips cloud activation for a runner-backed sandbox turn', async () => {
-    findSessionMock.mockResolvedValue(fakeSession({ metadata: JSON.stringify({ sandboxBackend: 'runner-sandbox' }) }))
+  it.each([
+    { annotations: undefined, label: 'the default timeout' },
+    { annotations: { 'ama.dev/idle-timeout-seconds': '300' }, label: 'an explicit timeout' },
+  ])('[spec: runtime/idle-retention] skips cloud lifecycle for a runner-backed sandbox turn with $label', async ({
+    annotations,
+  }) => {
+    findSessionMock.mockResolvedValue(
+      fakeSession({ metadata: JSON.stringify({ sandboxBackend: 'runner-sandbox', annotations }) }),
+    )
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
 
     await consumeCloudTurnQueueMessage(deps, stepMessage)
 
     expect(activateCloudSessionMock).not.toHaveBeenCalled()
+    expect(idleCloudSessionMock).not.toHaveBeenCalled()
     expect(resolveEnvMock).not.toHaveBeenCalled()
     expect(resolveWorkspaceManifestMock).not.toHaveBeenCalled()
     expect(runSessionTurnMock).toHaveBeenCalledOnce()
@@ -820,7 +842,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
   })
 
   it('[spec: runtime/idle-retention] starts without a prompt, sleeps the same sandbox, and retains its id', async () => {
-    const metadata = JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } })
+    const metadata = JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '300' } })
     findSessionMock.mockResolvedValue(pendingRow({ metadata }))
 
     await startSessionRuntimeForRow(startupDeps, auth, {
@@ -833,7 +855,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       envFrom: [],
     })
 
-    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 60)
+    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 300)
     expect(completeCloudSessionStartMock).toHaveBeenCalledWith(
       'proj_1',
       'session_1',
@@ -893,7 +915,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '0' } }),
       label: 'explicit zero',
     },
-  ])('[spec: runtime/idle-retention] starts idle without sleeping for $label', async ({ metadata }) => {
+  ])('[spec: runtime/idle-retention] starts idle with the 60-second default for $label', async ({ metadata }) => {
     await startSessionRuntimeForRow(startupDeps, auth, {
       pending: pendingRow({ metadata }) as never,
       agentSnapshot,
@@ -904,7 +926,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       envFrom: [],
     })
 
-    expect(idleCloudSessionMock).not.toHaveBeenCalled()
+    expect(idleCloudSessionMock).toHaveBeenCalledWith('sandbox_1', 60)
     expect(completeCloudSessionStartMock).toHaveBeenCalledWith(
       'proj_1',
       'session_1',

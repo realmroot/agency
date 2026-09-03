@@ -1,13 +1,14 @@
 import type { ResourceMetadata } from '@server/domain/resource'
 import { newPrimaryKey } from '@server/id'
-import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
+import {
+  AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
+  DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS,
+} from '@server/metadata-keys'
 import type { Deps } from './deps'
 import { dispatchToReusableSession } from './dispatch-triggers'
 import { inboxTokenHash } from './inbox-subscriptions'
 import type { AuthScope, InboxNotification, RuntimeSessionHandle } from './ports'
 import { createSession } from './runtime/sessions'
-
-const DEFAULT_INBOX_SESSION_IDLE_TIMEOUT_SECONDS = '60'
 
 export class InboxNotificationError extends Error {
   constructor(
@@ -153,7 +154,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: trigger.spec.template.metadata.labels,
     annotations: {
-      [AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]: DEFAULT_INBOX_SESSION_IDLE_TIMEOUT_SECONDS,
+      [AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]: String(DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS),
       ...trigger.spec.template.metadata.annotations,
       source: 'inbox-trigger',
       inboxTriggerId: trigger.metadata.uid,

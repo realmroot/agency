@@ -342,7 +342,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       templateAnnotations: { 'ama.dev/idle-timeout-seconds': '0' },
       expectedIdleTimeout: '0',
     },
-  ])('defaults Inbox Session idle retention while preserving an explicit template timeout %#', async ({
+  ])('defaults Inbox Session idle retention when missing while preserving template annotation metadata %#', async ({
     templateAnnotations,
     expectedIdleTimeout,
   }) => {
@@ -414,7 +414,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
   it.each([
     { annotations: {}, expectedBackfill: true },
     { annotations: { 'ama.dev/idle-timeout-seconds': '0' }, expectedBackfill: false },
-  ])('backfills default idle retention before reusing a pre-existing cloud Session while preserving explicit metadata %#', async ({
+  ])('backfills a missing Inbox annotation before reuse while preserving existing annotation metadata %#', async ({
     annotations,
     expectedBackfill,
   }) => {
