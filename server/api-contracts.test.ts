@@ -65,8 +65,8 @@ function readTarFiles(archive: Buffer): Map<string, Buffer> {
     const header = tar.subarray(offset, offset + 512)
     if (header.every((byte) => byte === 0)) break
 
-    const name = header.subarray(0, 100).toString('utf8').replace(/\0.*$/, '')
-    const sizeText = header.subarray(124, 136).toString('ascii').replace(/\0.*$/, '').trim()
+    const name = Buffer.from(header.subarray(0, 100)).toString('utf8').replace(/\0.*$/, '')
+    const sizeText = Buffer.from(header.subarray(124, 136)).toString('ascii').replace(/\0.*$/, '').trim()
     const size = Number.parseInt(sizeText, 8)
     const contentsStart = offset + 512
     files.set(name, Buffer.from(tar.subarray(contentsStart, contentsStart + size)))
