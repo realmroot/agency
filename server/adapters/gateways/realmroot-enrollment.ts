@@ -155,7 +155,7 @@ async function createRemote(
       installation: {
         agentId: state.agent_id,
         hostId: state.host_id,
-        name: 'Any Managed Agents',
+        name: 'Enbor',
         kid: state.agent_key_id,
         publicKey: installationJwk(state),
       },

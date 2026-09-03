@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { api, type CredentialType } from '@/lib/amarpc'
+import { api, type CredentialType } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 import {

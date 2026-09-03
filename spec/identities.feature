@@ -1,5 +1,5 @@
 Feature: Identities
-  An Identity is an AMA-managed, provider-neutral Agent identity with an immutable
+  An Identity is an Enbor-managed, provider-neutral Agent identity with an immutable
   runtime. Its safe descriptor is stable across runtimes and its private state lives
   only in a dedicated managed Vault. Realmroot is the current provider adapter.
 
@@ -7,32 +7,32 @@ Feature: Identities
   Scenario: Provision a personal Realmroot Agent identity synchronously
     Given a Realmroot User is operating a personal project
     When the user creates an Identity with a username and canonical runtime identifier
-    Then AMA creates one managed Vault and one Realmroot Agent installation
+    Then Enbor creates one managed Vault and one Realmroot Agent installation
     And verifies the remote Agent before marking the Identity active
     And exposes only identity resource id, provider Agent id, issuer, stable subject, username, runtime, and credential reference as its safe descriptor
     And stores complete private state only as an ama.dev/realmroot-agent-state credential
     And rejects incomplete, hand-authored, or incompatible provider state
-    And the Identity may remain unbound when AMA has no driver for its runtime
+    And the Identity may remain unbound when Enbor has no driver for its runtime
 
   @identities/idempotent-resume @usecase
   Scenario: Resume failed provisioning without duplicating identity material
     Given Identity provisioning stopped after a durable checkpoint
     When the same user retries the same request with the same Idempotency-Key and fresh authority
-    Then AMA resumes with the original Identity, key, Vault, and remote Agent
+    Then Enbor resumes with the original Identity, key, Vault, and remote Agent
     And a different request using that key is rejected as an idempotency conflict
 
   @identities/agent-provision @usecase
   Scenario: A controlled Agent provisions another personal Agent identity
     Given an authenticated Realmroot Agent acts for its active controller in that controller's personal project
     When the Agent creates an Identity with its current Resource access token
-    Then AMA delegates that exact Agent authority to Realmroot and provisions the child Identity
+    Then Enbor delegates that exact Agent authority to Realmroot and provisions the child Identity
     And the new Identity remains owned and controlled by the same Realmroot User
     And no browser approval or User-token substitution occurs
-    And AMA neither issues provider authority nor proxies provider business API traffic
+    And Enbor neither issues provider authority nor proxies provider business API traffic
 
   @identities/installation-identifiers @usecase
   Scenario: Generate standard Realmroot installation identifiers
-    Given AMA is initializing a new Realmroot Agent installation
+    Given Enbor is initializing a new Realmroot Agent installation
     When it checkpoints the Agent, host, and key identifiers
     Then each new persistent identifier is a standard UUID version 7 without a resource-type prefix
     And previously checkpointed opaque identifiers remain readable
@@ -40,7 +40,7 @@ Feature: Identities
   @identities/personal-only @api
   Scenario: Reject unsupported Identity owners
     Given an organization project or a Runner principal requests an Identity
-    When AMA evaluates the create request
+    When Enbor evaluates the create request
     Then it returns a stable organization_identity_not_supported or forbidden error
     And no Identity, Vault, key, or remote Agent is created
 
@@ -48,22 +48,22 @@ Feature: Identities
   Scenario: Bind an Identity to one Agent for its lifetime
     Given an active unbound Identity
     When an Agent first selects it
-    Then AMA atomically records that Agent as its permanent owner
+    Then Enbor atomically records that Agent as its permanent owner
     And another Agent cannot select it after the first Agent changes or removes Identity
 
   @identities/delete @api
   Scenario: Soft-delete an unused Identity without deleting its remote Agent
     Given an active Identity is not currently selected by its bound Agent
     When the user deletes the Identity
-    Then AMA hides it from the default list without calling Realmroot deletion
+    Then Enbor hides it from the default list without calling Realmroot deletion
     And an Identity currently selected by its Agent is rejected with identity_in_use
 
   @identities/runtime-constraint @usecase
   Scenario: Resolve Session and Trigger runtime from the selected Identity
     Given an Agent version snapshots an Identity and its immutable runtime
     When a Session or Trigger omits runtime
-    Then AMA persists the Identity runtime before environment and runner checks
-    And provider-bound Sessions expose their canonical AMA Session id to the runtime
+    Then Enbor persists the Identity runtime before environment and runner checks
+    And provider-bound Sessions expose their canonical Enbor Session id to the runtime
     And an explicit different runtime is rejected with identity_runtime_mismatch
     And an Agent without Identity still requires an explicit runtime
 

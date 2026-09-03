@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { useClientPagination } from '@/console/use-client-pagination'
-import type { AuditRecord, Vault, VaultCredential } from '@/lib/amarpc'
+import type { AuditRecord, Vault, VaultCredential } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, server } from '@/test/msw'
 import {
   credential as resourceCredential,

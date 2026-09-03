@@ -1,19 +1,19 @@
-import type { AmaSandboxToolName } from './agent-tools'
-import type { AmaSandboxToolInputByName, AmaSandboxToolOutputByName } from './tool-contracts'
+import type { EnborSandboxToolName } from './agent-tools'
+import type { EnborSandboxToolInputByName, EnborSandboxToolOutputByName } from './tool-contracts'
 
-export type ToolExecutionInput<TName extends AmaSandboxToolName = AmaSandboxToolName> = {
+export type ToolExecutionInput<TName extends EnborSandboxToolName = EnborSandboxToolName> = {
   sessionId: string
   sandboxId: string
   toolCallId: string
   toolName: TName
-  input: AmaSandboxToolInputByName[TName]
+  input: EnborSandboxToolInputByName[TName]
   cwd?: string
 }
 
-export type ToolExecutionResult<TName extends AmaSandboxToolName = AmaSandboxToolName> = {
+export type ToolExecutionResult<TName extends EnborSandboxToolName = EnborSandboxToolName> = {
   toolCallId: string
   toolName: TName
-  output: AmaSandboxToolOutputByName[TName]
+  output: EnborSandboxToolOutputByName[TName]
   error: Record<string, unknown> | null
   durationMs: number
 }

@@ -1664,11 +1664,11 @@
           },
           "mountPath": {
             "type": "string",
-            "example": "/workspace/repos/saltbo/any-managed-agents"
+            "example": "/workspace/repos/realmroot/enbor"
           },
           "url": {
             "type": "string",
-            "example": "https://github.com/saltbo/any-managed-agents.git"
+            "example": "https://github.com/realmroot/enbor.git"
           },
           "ref": {
             "type": "string",
@@ -1747,7 +1747,7 @@
           },
           "url": {
             "type": "string",
-            "example": "https://github.com/saltbo/any-managed-agents.git"
+            "example": "https://github.com/realmroot/enbor.git"
           },
           "ref": {
             "type": "string",
@@ -1773,7 +1773,7 @@
           },
           "mountPath": {
             "type": "string",
-            "example": "/workspace/repos/saltbo/any-managed-agents"
+            "example": "/workspace/repos/realmroot/enbor"
           },
           "readOnly": {
             "type": "boolean"
@@ -1825,6 +1825,9 @@
             "type": "string",
             "enum": [
               "ama-runner-work"
+            ],
+            "x-enum-varnames": [
+              "EnborRunnerWork"
             ]
           },
           "type": {
@@ -2383,9 +2386,9 @@
           "name": {
             "type": "string",
             "enum": [
-              "Any Managed Agents"
+              "Enbor"
             ],
-            "example": "Any Managed Agents"
+            "example": "Enbor"
           },
           "origin": {
             "type": "string",
@@ -2999,7 +3002,7 @@
         "minLength": 1,
         "maxLength": 64,
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
-        "description": "Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.",
+        "description": "Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.",
         "example": "codex"
       },
       "AgentStatus": {
@@ -6032,7 +6035,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500,
-            "example": "https://github.com/saltbo/any-managed-agents.git"
+            "example": "https://github.com/realmroot/enbor.git"
           },
           "ref": {
             "type": "string",
@@ -7351,7 +7354,7 @@
               "type": "string"
             },
             "example": {
-              "ticket": "AMA-123"
+              "ticket": "Enbor-123"
             }
           }
         },
@@ -7463,7 +7466,7 @@
               "type": "string"
             },
             "example": {
-              "ticket": "AMA-123"
+              "ticket": "Enbor-123"
             }
           }
         },
@@ -7615,7 +7618,7 @@
           "events": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AmaEvent"
+              "$ref": "#/components/schemas/EnborEvent"
             },
             "minItems": 1,
             "maxItems": 100
@@ -7626,7 +7629,7 @@
         ],
         "additionalProperties": false
       },
-      "AmaEvent": {
+      "EnborEvent": {
         "oneOf": [
           {
             "type": "object",
@@ -8772,12 +8775,12 @@
       }
     },
     "parameters": {
-      "AmaProjectId": {
+      "EnborProjectId": {
         "name": "X-AMA-Project-ID",
         "in": "header",
         "required": false,
         "x-cli-name": "project-id",
-        "description": "Selects an AMA project in the authenticated organization. Omit to use the default project.",
+        "description": "Selects an Enbor project in the authenticated organization. Omit to use the default project.",
         "schema": {
           "type": "string",
           "minLength": 1
@@ -9397,7 +9400,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -9442,7 +9445,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -9479,7 +9482,7 @@
             "in": "header"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -9534,7 +9537,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -9544,7 +9547,7 @@
             }
           },
           "409": {
-            "description": "Identity already bound or its runtime has no registered AMA driver",
+            "description": "Identity already bound or its runtime has no registered Enbor driver",
             "content": {
               "application/json": {
                 "schema": {
@@ -9582,7 +9585,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -9654,7 +9657,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -9756,7 +9759,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -9822,7 +9825,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -9905,7 +9908,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10032,7 +10035,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10077,7 +10080,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -10114,7 +10117,7 @@
             "in": "header"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -10169,7 +10172,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -10217,7 +10220,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10289,7 +10292,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -10381,7 +10384,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10457,7 +10460,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10540,7 +10543,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10667,7 +10670,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10712,7 +10715,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -10749,7 +10752,7 @@
             "in": "header"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -10804,7 +10807,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -10861,7 +10864,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -10932,7 +10935,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -11405,7 +11408,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -11428,7 +11431,7 @@
         "x-cli-name": "create-runner",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       },
@@ -11524,7 +11527,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -11569,7 +11572,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -11607,7 +11610,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -11688,7 +11691,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -11790,7 +11793,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -11866,7 +11869,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -11937,7 +11940,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -12041,7 +12044,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12203,7 +12206,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12248,7 +12251,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -12286,7 +12289,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12433,7 +12436,7 @@
         "x-cli-name": "claim-work-item",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       },
@@ -12498,7 +12501,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12543,7 +12546,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -12581,7 +12584,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12652,7 +12655,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -12776,7 +12779,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -12789,7 +12792,7 @@
         "x-cli-name": "list-budgets",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       },
@@ -12858,7 +12861,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -12881,7 +12884,7 @@
         "x-cli-name": "create-budget",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       }
@@ -12911,7 +12914,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -12982,7 +12985,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -13074,7 +13077,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -13410,7 +13413,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -13461,7 +13464,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -13499,7 +13502,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -13598,7 +13601,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -13643,7 +13646,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -13980,7 +13983,7 @@
         "x-cli-name": "create-trigger",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       },
@@ -14067,7 +14070,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14112,7 +14115,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -14150,7 +14153,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14221,7 +14224,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -14333,7 +14336,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14478,7 +14481,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14560,7 +14563,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -14672,7 +14675,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14809,7 +14812,7 @@
         "x-cli-name": "create-session",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       },
@@ -14908,7 +14911,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -14953,7 +14956,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -14991,7 +14994,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15063,7 +15066,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -15165,7 +15168,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15245,7 +15248,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15341,7 +15344,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15422,7 +15425,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -15544,7 +15547,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15696,7 +15699,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15788,7 +15791,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -15881,7 +15884,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -15964,7 +15967,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -16046,7 +16049,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -16183,7 +16186,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -16228,7 +16231,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -16305,7 +16308,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -16328,7 +16331,7 @@
         "x-cli-name": "create-memory-store",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       }
@@ -16358,7 +16361,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -16429,7 +16432,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -16521,7 +16524,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -16609,7 +16612,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -16690,7 +16693,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -16802,7 +16805,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -16913,7 +16916,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17023,7 +17026,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17068,7 +17071,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -17145,7 +17148,7 @@
             }
           },
           "404": {
-            "description": "The selected AMA project does not exist in the authenticated organization",
+            "description": "The selected Enbor project does not exist in the authenticated organization",
             "content": {
               "application/json": {
                 "schema": {
@@ -17168,7 +17171,7 @@
         "x-cli-name": "create-vault",
         "parameters": [
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ]
       }
@@ -17198,7 +17201,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17269,7 +17272,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -17371,7 +17374,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17503,7 +17506,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17584,7 +17587,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -17696,7 +17699,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -17777,7 +17780,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -17850,7 +17853,7 @@
           "Vaults"
         ],
         "summary": "Update a vault credential secret",
-        "description": "Updates credential secret material. AMA records version snapshots internally for auditability.",
+        "description": "Updates credential secret material. Enbor records version snapshots internally for auditability.",
         "security": [
           {
             "oidcAccessToken": [
@@ -17878,7 +17881,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "requestBody": {
@@ -18046,7 +18049,7 @@
             "in": "query"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {
@@ -18147,7 +18150,7 @@
             "in": "path"
           },
           {
-            "$ref": "#/components/parameters/AmaProjectId"
+            "$ref": "#/components/parameters/EnborProjectId"
           }
         ],
         "responses": {

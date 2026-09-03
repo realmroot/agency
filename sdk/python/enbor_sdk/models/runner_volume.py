@@ -27,7 +27,7 @@ class RunnerVolume:
             name (str):  Example: source.
             type_ (RunnerVolumeType):  Example: git_repository.
             secret_ref (str | Unset):
-            url (str | Unset):  Example: https://github.com/saltbo/any-managed-agents.git.
+            url (str | Unset):  Example: https://github.com/realmroot/enbor.git.
             ref (str | Unset):  Example: main.
             memory_ref (str | Unset):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
      """

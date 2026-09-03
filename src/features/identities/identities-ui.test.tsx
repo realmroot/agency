@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { toast } from 'sonner'
 import { describe, expect, it, vi } from 'vitest'
-import type { Identity } from '@/lib/amarpc'
+import type { Identity } from '@/lib/enborrpc'
 import { HttpResponse, http, server } from '@/test/msw'
 import { CreateIdentitySheet } from './CreateIdentitySheet'
 import { IdentitiesPage } from './IdentitiesPage'

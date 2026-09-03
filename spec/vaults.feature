@@ -8,7 +8,7 @@ Feature: Vaults
 
   @vaults/secret-reference @domain
   Scenario: Build safe secret references and strip stored secret material
-    Given a credential is stored through the AMA vault provider
+    Given a credential is stored through the Enbor vault provider
     When the secret reference is built
     Then it derives a provider, reference name, and safe secret reference without the raw value
     And provider selection is not exposed until a concrete provider implementation exists
@@ -47,7 +47,7 @@ Feature: Vaults
     When the user creates, lists, reads, updates, and deletes project-scoped vaults and their credentials
     Then vault and credential responses expose only safe metadata and reference fields
     And secret values are accepted only on create or rotate and are never returned
-    And credential versions are read-only snapshots created by AMA when credential secret material changes
+    And credential versions are read-only snapshots created by Enbor when credential secret material changes
 
   @vaults/api-tenancy @api
   Scenario: Scope vault credentials to organization and project

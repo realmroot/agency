@@ -1,10 +1,10 @@
 import {
-  AMA_SESSION_EVENT_TYPES,
-  type AmaSessionEventType,
-  amaSessionEventTypeFromPayload,
+  ENBOR_SESSION_EVENT_TYPES,
+  type EnborSessionEventType,
+  enborSessionEventTypeFromPayload,
 } from '@shared/session-events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SessionEvent } from '@/lib/amarpc'
+import type { SessionEvent } from '@/lib/enborrpc'
 import * as oidcModule from '@/lib/oidc'
 import { initialSessionRuntimeState, sessionRuntimeReducer, sessionSocketConnection } from './session-runtime'
 
@@ -74,10 +74,10 @@ function normalizeTestPayload(sequence: number, type: string, payload: Record<st
   return { type, payload }
 }
 
-function amaEvent(payload: Record<string, unknown>): SessionEvent {
+function enborEvent(payload: Record<string, unknown>): SessionEvent {
   const normalized = normalizeTestPayload(0, typeof payload.type === 'string' ? payload.type : '', payload)
   syntheticEventSequence += 1
-  return event(syntheticEventSequence, normalized.type as AmaSessionEventType, normalized.payload)
+  return event(syntheticEventSequence, normalized.type as EnborSessionEventType, normalized.payload)
 }
 
 function objectValue(value: unknown): Record<string, unknown> {
@@ -132,37 +132,37 @@ const canonicalEventPayloads = {
   },
   'permission.denied': { type: 'permission.denied', reason: 'denied', resourceType: 'tool' },
   'runtime.error': { type: 'runtime.error', message: 'Runtime failed' },
-} satisfies Record<AmaSessionEventType, Record<string, unknown>>
+} satisfies Record<EnborSessionEventType, Record<string, unknown>>
 
 describe('sessionRuntimeReducer', () => {
-  it('keeps the accepted AMA event schema aligned with reducer coverage', () => {
-    expect(Object.keys(canonicalEventPayloads)).toEqual(AMA_SESSION_EVENT_TYPES)
+  it('keeps the accepted Enbor event schema aligned with reducer coverage', () => {
+    expect(Object.keys(canonicalEventPayloads)).toEqual(ENBOR_SESSION_EVENT_TYPES)
 
     const state = Object.entries(canonicalEventPayloads).reduce(
       (next, [, payload], index) =>
         sessionRuntimeReducer(next, {
           type: 'event',
-          item: amaEvent(payload),
+          item: enborEvent(payload),
           at: new Date((index + 1) * 1000).toISOString(),
         }),
       initialSessionRuntimeState,
     )
 
-    expect(state.sessionEvents.map((item) => item.type)).toEqual(AMA_SESSION_EVENT_TYPES)
+    expect(state.sessionEvents.map((item) => item.type)).toEqual(ENBOR_SESSION_EVENT_TYPES)
     expect(state.messages.some((message) => message.content.includes('Hello'))).toBe(true)
     expect(state.messages.some((message) => message.content === 'Runtime failed')).toBe(true)
     expect(state.tools).toHaveLength(1)
     for (const [type, payload] of Object.entries(canonicalEventPayloads)) {
-      expect(amaSessionEventTypeFromPayload(payload)).toBe(type)
+      expect(enborSessionEventTypeFromPayload(payload)).toBe(type)
     }
-    expect(amaSessionEventTypeFromPayload({ content: 'line without a type' })).toBe('unknown')
-    expect(amaSessionEventTypeFromPayload({ type: 'future_event', content: 'debug only' })).toBe('future_event')
+    expect(enborSessionEventTypeFromPayload({ content: 'line without a type' })).toBe('unknown')
+    expect(enborSessionEventTypeFromPayload({ type: 'future_event', content: 'debug only' })).toBe('future_event')
   })
 
   it('keeps prior tool output when updates carry empty values', () => {
     const started = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_call',
         toolCall: { id: 'tool_empty_values', name: 'inspect', input: { path: 'README.md' } },
       }),
@@ -170,7 +170,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const withText = sessionRuntimeReducer(started, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.updated',
         toolCall: { id: 'tool_empty_values', name: 'inspect', input: { path: 'README.md' } },
         partialResult: { content: [{ type: 'text', text: 'first' }] },
@@ -179,7 +179,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const withEmptyString = sessionRuntimeReducer(withText, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.updated',
         toolCall: { id: 'tool_empty_values', name: 'inspect', input: { path: 'README.md' } },
         partialResult: { content: [] },
@@ -188,7 +188,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const withEmptyArray = sessionRuntimeReducer(withEmptyString, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.updated',
         toolCall: { id: 'tool_empty_values', name: 'inspect', input: { path: 'README.md' } },
         partialResult: { content: [] },
@@ -203,7 +203,7 @@ describe('sessionRuntimeReducer', () => {
   it('renders runtime error diagnostics from the standard message field', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'runtime.error', message: 'model failed' }),
+      item: enborEvent({ type: 'runtime.error', message: 'model failed' }),
       at: new Date(1000).toISOString(),
     })
 
@@ -224,7 +224,7 @@ describe('sessionRuntimeReducer', () => {
   it('keeps error tool calls inspectable', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.completed',
         toolCall: { id: 'tool_missing_error', name: 'inspect', input: {} },
         result: { content: [] },
@@ -243,12 +243,12 @@ describe('sessionRuntimeReducer', () => {
   it('dedupes live event records by id', () => {
     const first = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'usage.recorded', id: 'usage_1', model: 'test-model', totalTokens: 1 }),
+      item: enborEvent({ type: 'usage.recorded', id: 'usage_1', model: 'test-model', totalTokens: 1 }),
       at: new Date(1000).toISOString(),
     })
     const second = sessionRuntimeReducer(first, {
       type: 'event',
-      item: amaEvent({ type: 'usage.recorded', id: 'usage_1', model: 'test-model', totalTokens: 1 }),
+      item: enborEvent({ type: 'usage.recorded', id: 'usage_1', model: 'test-model', totalTokens: 1 }),
       at: new Date(2000).toISOString(),
     })
 
@@ -258,7 +258,7 @@ describe('sessionRuntimeReducer', () => {
   it('renders non-tool message content blocks without dropping agent feedback', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'message.completed',
         message: {
           id: 'msg_reasoning',
@@ -287,15 +287,15 @@ describe('sessionRuntimeReducer', () => {
       events: [
         event(1, 'message.updated', {
           type: 'message.updated',
-          message: { role: 'assistant', content: [{ type: 'text', text: 'AMA' }] },
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Enbor' }] },
         }),
         event(2, 'message.completed', {
           type: 'message.completed',
-          message: { role: 'assistant', content: [{ type: 'text', text: 'AMA proxy ok' }] },
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Enbor proxy ok' }] },
         }),
         event(3, 'turn.completed', {
           type: 'turn.completed',
-          message: { id: 'message_1', role: 'assistant', content: [{ type: 'text', text: 'AMA proxy ok' }] },
+          message: { id: 'message_1', role: 'assistant', content: [{ type: 'text', text: 'Enbor proxy ok' }] },
         }),
       ],
     })
@@ -304,7 +304,7 @@ describe('sessionRuntimeReducer', () => {
     expect(state.messages).toHaveLength(1)
     expect(state.messages[0]).toMatchObject({
       role: 'assistant',
-      content: 'AMA proxy ok',
+      content: 'Enbor proxy ok',
       status: 'complete',
     })
     expect(state.messages[0]?.id).toBe('message_1')
@@ -635,7 +635,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const replayed = sessionRuntimeReducer(loaded, {
       type: 'event',
-      item: amaEvent(messagePayload),
+      item: enborEvent(messagePayload),
       at: new Date(99_000).toISOString(),
     })
 
@@ -693,7 +693,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles reset action by returning initial state', () => {
     const modified = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'runtime.error', message: 'test error' }),
+      item: enborEvent({ type: 'runtime.error', message: 'test error' }),
       at: new Date(1000).toISOString(),
     })
     const reset = sessionRuntimeReducer(modified, { type: 'reset' })
@@ -704,7 +704,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles runtime.error events as visible error messages', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'runtime.error', message: 'runtime failed' }),
+      item: enborEvent({ type: 'runtime.error', message: 'runtime failed' }),
       at: new Date(1000).toISOString(),
     })
 
@@ -716,7 +716,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles permission.requested as debug event without transcript message', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'permission.requested',
         permissionId: 'perm_1',
         action: 'shell',
@@ -757,7 +757,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles runtime.error with standard message field', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'runtime.error', message: 'structured error' }),
+      item: enborEvent({ type: 'runtime.error', message: 'structured error' }),
       at: new Date(1000).toISOString(),
     })
 
@@ -767,7 +767,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles runtime.error with no specific fields using default message', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'runtime.error' }),
+      item: enborEvent({ type: 'runtime.error' }),
       at: new Date(1000).toISOString(),
     })
 
@@ -777,7 +777,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles message.started event with streaming status', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'message.started',
         message: { role: 'assistant', content: [{ type: 'text', text: 'Starting...' }], timestamp: 12345 },
       }),
@@ -791,7 +791,7 @@ describe('sessionRuntimeReducer', () => {
   it('appends streaming content to existing message on message.updated', () => {
     const started = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'message.started',
         message: { role: 'assistant', content: [{ type: 'text', text: 'Hello' }], id: 'msg_stream_1' },
       }),
@@ -799,7 +799,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const updated = sessionRuntimeReducer(started, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'message.updated',
         message: { role: 'assistant', content: [{ type: 'text', text: ' world' }], id: 'msg_stream_1' },
       }),
@@ -814,7 +814,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles test.tool_call with callId from toolCall.id', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_call',
         toolCall: { id: 'tool_from_call', name: 'read_file', input: { path: 'README.md' } },
       }),
@@ -829,7 +829,7 @@ describe('sessionRuntimeReducer', () => {
   it('handles test.tool_result.completed with error status', () => {
     const started = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_call',
         toolCall: { id: 'tool_err_1', name: 'exec', input: { command: 'fail' } },
       }),
@@ -837,7 +837,7 @@ describe('sessionRuntimeReducer', () => {
     })
     const ended = sessionRuntimeReducer(started, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.completed',
         toolCall: { id: 'tool_err_1', name: 'exec', input: { command: 'fail' } },
         error: { message: 'exec failed' },
@@ -873,12 +873,12 @@ describe('sessionRuntimeReducer', () => {
     })
     const replayedStart = sessionRuntimeReducer(loaded, {
       type: 'event',
-      item: amaEvent(startPayload),
+      item: enborEvent(startPayload),
       at: new Date(99_000).toISOString(),
     })
     const replayedEnd = sessionRuntimeReducer(replayedStart, {
       type: 'event',
-      item: amaEvent(endPayload),
+      item: enborEvent(endPayload),
       at: new Date(100_000).toISOString(),
     })
 
@@ -952,7 +952,7 @@ describe('sessionRuntimeReducer — extractText edge cases (line 594)', () => {
     // When message content is a number, extractText returns '' (line 594 fallback)
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'message.completed', message: { role: 'assistant', content: 42 } }),
+      item: enborEvent({ type: 'message.completed', message: { role: 'assistant', content: 42 } }),
       at: '2026-05-23T00:00:00.000Z',
     })
     const msg = state.messages[0]
@@ -963,7 +963,7 @@ describe('sessionRuntimeReducer — extractText edge cases (line 594)', () => {
   it('extracts empty string from message with boolean content', () => {
     const state = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({ type: 'message.completed', message: { role: 'assistant', content: false } }),
+      item: enborEvent({ type: 'message.completed', message: { role: 'assistant', content: false } }),
       at: '2026-05-23T00:00:00.000Z',
     })
     expect(state.messages[0]?.content ?? '').toBe('')
@@ -1089,7 +1089,7 @@ describe('sessionRuntimeReducer — hasToolValue edge cases (lines 632, 635)', (
     // Create the tool first via test.tool_call
     const stateAfterStart = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_call',
         toolCall: { id: 'tool_str', name: 'read', input: { path: '/file.txt' } },
       }),
@@ -1099,7 +1099,7 @@ describe('sessionRuntimeReducer — hasToolValue edge cases (lines 632, 635)', (
     // Update with empty string result — hasToolValue('') = false → existing output kept
     const stateAfterEnd = sessionRuntimeReducer(stateAfterStart, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.completed',
         toolCall: { id: 'tool_str', name: 'read', input: { path: '/file.txt' } },
         result: { content: [] },
@@ -1117,7 +1117,7 @@ describe('sessionRuntimeReducer — hasToolValue edge cases (lines 632, 635)', (
     // First, create the tool via test.tool_call with a real output
     const stateAfterStart = sessionRuntimeReducer(initialSessionRuntimeState, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_call',
         toolCall: { id: 'tool_arr', name: 'read', input: { path: '/file.txt' } },
       }),
@@ -1127,7 +1127,7 @@ describe('sessionRuntimeReducer — hasToolValue edge cases (lines 632, 635)', (
     // Then update with test.tool_result.completed that has an empty tool result.
     const stateAfterEnd = sessionRuntimeReducer(stateAfterStart, {
       type: 'event',
-      item: amaEvent({
+      item: enborEvent({
         type: 'test.tool_result.completed',
         toolCall: { id: 'tool_arr', name: 'read', input: { path: '/file.txt' } },
         result: { content: [] },

@@ -1,11 +1,11 @@
-import type { AmaRuntimeEvent } from '@ama/runtime-contracts/bridge-protocol'
+import type { EnborRuntimeEvent } from '@enbor/runtime-contracts/bridge-protocol'
 import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderHandle } from './protocol'
 import { createRuntimeControlQueue } from './runtime-controls'
 
 function runtimeHandle(overrides: Partial<RuntimeProviderHandle> = {}): RuntimeProviderHandle {
   return {
-    events: (async function* (): AsyncGenerator<AmaRuntimeEvent> {})(),
+    events: (async function* (): AsyncGenerator<EnborRuntimeEvent> {})(),
     abort: vi.fn(async () => {}),
     send: vi.fn(async () => {}),
     ...overrides,

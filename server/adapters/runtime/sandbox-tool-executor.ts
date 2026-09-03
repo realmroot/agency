@@ -1,9 +1,9 @@
-import { parseAmaSandboxToolInput, parseAmaSandboxToolOutput } from '@ama/runtime-contracts/tool-contracts'
+import { parseEnborSandboxToolInput, parseEnborSandboxToolOutput } from '@enbor/runtime-contracts/tool-contracts'
 import type { Env } from '../../env'
 import { RuntimeTurnCancelledError } from '../../usecases/runtime/engine/errors'
 import type { ToolExecutionInput, ToolExecutionResult, ToolExecutor } from '../../usecases/runtime/engine/ports'
 
-// Worker-host adapter for the AMA turn engine ToolExecutor port: executes sandbox
+// Worker-host adapter for the Enbor turn engine ToolExecutor port: executes sandbox
 // tools against the Cloudflare Sandbox (or a deterministic in-process simulator
 // in test mode). The canonical port types live in the engine/contracts; re-exported
 // here so existing importers keep their paths.
@@ -254,13 +254,13 @@ export class CloudflareSandboxToolExecutor implements ToolExecutor {
       throw new RuntimeTurnCancelledError()
     }
     const startedAt = Date.now()
-    const toolInput = parseAmaSandboxToolInput(input.toolName, input.input)
+    const toolInput = parseEnborSandboxToolInput(input.toolName, input.input)
     const sandbox = await this.sandbox(input.sandboxId)
     const output = await this.executeInSandbox(sandbox, { ...input, input: toolInput } as ToolExecutionInput)
     return {
       toolCallId: input.toolCallId,
       toolName: input.toolName,
-      output: parseAmaSandboxToolOutput(input.toolName, output),
+      output: parseEnborSandboxToolOutput(input.toolName, output),
       error: null,
       durationMs: Date.now() - startedAt,
     }
@@ -405,12 +405,12 @@ export class TestToolExecutor implements ToolExecutor {
       throw new Error(`Unsupported sandbox tool: ${input.toolName}`)
     }
     const startedAt = Date.now()
-    const toolInput = parseAmaSandboxToolInput(input.toolName, input.input)
+    const toolInput = parseEnborSandboxToolInput(input.toolName, input.input)
     const output = this.simulate({ ...input, input: toolInput } as ToolExecutionInput)
     return {
       toolCallId: input.toolCallId,
       toolName: input.toolName,
-      output: parseAmaSandboxToolOutput(input.toolName, output),
+      output: parseEnborSandboxToolOutput(input.toolName, output),
       error: null,
       durationMs: Object.keys(output).length === 0 ? 0 : Math.max(1, Date.now() - startedAt),
     }

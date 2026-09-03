@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CredentialType } from '@/lib/amarpc'
+import type { CredentialType } from '@/lib/enborrpc'
 import {
   credentialSecretData,
   credentialTypes,

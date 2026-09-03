@@ -27,7 +27,7 @@ function recordingStream() {
   }
 }
 
-describe('AMA runtime turn-engine', () => {
+describe('Enbor runtime turn-engine', () => {
   it('correlates contentIndex to the partial content slot, not the source index [spec: runtime/turn]', () => {
     const { events, stream } = recordingStream()
     const content = [

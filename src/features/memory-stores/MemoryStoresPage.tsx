@@ -16,7 +16,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import { useClientPagination } from '@/console/use-client-pagination'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 import { CreateMemoryStoreSheet } from './MemoryStoreForms'

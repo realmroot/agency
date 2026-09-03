@@ -6,7 +6,7 @@ import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Env } from '../env'
 import { newPrimaryKey } from '../id'
 import { verifyDpopCredential } from './dpop'
-import { AMA_SCOPES } from './scopes'
+import { ENBOR_SCOPES } from './scopes'
 
 export interface UserInfoClaims {
   iss?: string
@@ -21,7 +21,7 @@ export interface UserInfoClaims {
   roles: string[]
   permissions: string[]
   // Team identifiers asserted by the OIDC provider (top-level `teams` claim
-  // or `authorization.teams`). AMA keeps no local team tables; provider
+  // or `authorization.teams`). Enbor keeps no local team tables; provider
   // access rules reference these identifiers directly.
   teams: string[]
   actor?: { issuer: string; subject: string; profile: 'ai_agent' }
@@ -332,7 +332,7 @@ function e2eClaims(env: Env, spec: string, clientId: string | undefined): JWTPay
         'leases:write',
         'sessions:write',
       ]
-    : AMA_SCOPES
+    : ENBOR_SCOPES
   const scope = ['openid', 'profile', 'email', 'offline_access', ...resourceScopes].join(' ')
   return {
     iss: env.OIDC_ISSUER?.replace(/\/$/, '') || 'https://oidc.test/api/auth',

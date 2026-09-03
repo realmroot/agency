@@ -3,7 +3,7 @@ import { reduceTurnStatus, type TurnStatus } from './turn-status'
 
 const idle: TurnStatus = { kind: 'idle' }
 
-describe('AMA runtime turn-status reducer', () => {
+describe('Enbor runtime turn-status reducer', () => {
   it('records each terminal signal from idle', () => {
     expect(reduceTurnStatus(idle, { type: 'pause' })).toEqual({ kind: 'paused' })
     expect(reduceTurnStatus(idle, { type: 'cancel' })).toEqual({ kind: 'cancelled' })

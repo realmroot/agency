@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import type { Agent, Environment } from '@/lib/amarpc'
+import type { Agent, Environment } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import {
   type AgentOverrides,

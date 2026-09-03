@@ -1,6 +1,6 @@
 {
   "name": "@realmroot/enbor-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Generated TypeScript SDK for the Enbor control-plane API",
   "license": "Apache-2.0",
@@ -29,7 +29,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "generate": "openapi-ts",
-    "smoke": "pnpm run build && node -e \"import('@realmroot/enbor-sdk').then((sdk) => { if (typeof sdk.createAmaClient !== 'function') throw new Error('SDK createAmaClient export is missing') })\"",
+    "smoke": "pnpm run build && node -e \"import('@realmroot/enbor-sdk').then((sdk) => { if (typeof sdk.createEnborClient !== 'function') throw new Error('SDK createEnborClient export is missing') })\"",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {

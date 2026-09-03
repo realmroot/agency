@@ -9,8 +9,8 @@
 // path would otherwise skip (the D1 insert records it inline).
 
 import type { EventStore } from '@server/usecases/ports'
-import type { AmaEvent } from '@shared/session-events'
-import { normalizeAmaEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
+import { normalizeEnborEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import { eq } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { sessions } from '../../db/schema'
@@ -66,7 +66,7 @@ export function createEventStore(db: Db, isCloudLoop: CloudLoopChecker, doStore:
 
   const appendStoredEvent = async (
     scope: { organizationId: string; projectId: string; sessionId: string },
-    canonicalEvent: AmaEvent,
+    canonicalEvent: EnborEvent,
   ) => {
     if (await isCloudLoop(scope.sessionId)) {
       const { id } = await doStore.append(scope, canonicalEvent)
@@ -80,7 +80,7 @@ export function createEventStore(db: Db, isCloudLoop: CloudLoopChecker, doStore:
     return 'relay'
   }
   const appendEvent: EventStore['appendEvent'] = async (scope, event) => {
-    return await appendStoredEvent(scope, normalizeAmaEvent(event))
+    return await appendStoredEvent(scope, normalizeEnborEvent(event))
   }
 
   return {

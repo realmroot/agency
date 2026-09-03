@@ -12,7 +12,7 @@ import { assistantMessage, ZERO_USAGE } from '../../usecases/runtime/engine/turn
 
 // The Worker host's ModelClient adapter: Workers AI egress with deterministic
 // test-mode simulation. Owns the OpenAI request/response mapping and
-// provider-error normalization so the AMA turn engine stays
+// provider-error normalization so the Enbor turn engine stays
 // platform-free. Failures are normalized through the provider adapter before
 // they leave this seam.
 
@@ -277,7 +277,7 @@ function testAssistantMessage(model: Model<string>, context: Context) {
   if (toolCall) {
     return testToolCallMessage(model, toolCall)
   }
-  return assistantMessage(model, [{ type: 'text', text: `AMA runtime processed: ${prompt}` }], 'stop', {
+  return assistantMessage(model, [{ type: 'text', text: `Enbor runtime processed: ${prompt}` }], 'stop', {
     ...ZERO_USAGE,
     input: 9,
     output: 5,

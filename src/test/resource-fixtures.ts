@@ -13,7 +13,7 @@ import type {
   Vault,
   VaultCredential,
   VaultCredentialVersion,
-} from '@/lib/amarpc'
+} from '@/lib/enborrpc'
 
 const now = '2026-05-23T00:00:00.000Z'
 type JsonObject = VaultCredential['spec']['metadata']

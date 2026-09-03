@@ -855,7 +855,7 @@ export const updateVaultCredential = (options) => (options.client ?? client).pat
 /**
  * Update a vault credential secret
  *
- * Updates credential secret material. AMA records version snapshots internally for auditability.
+ * Updates credential secret material. Enbor records version snapshots internally for auditability.
  */
 export const updateVaultCredentialSecret = (options) => (options.client ?? client).put({
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',

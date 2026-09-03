@@ -9,7 +9,7 @@ import {
 } from './agent'
 
 describe('[spec: agents/tool-contract] validateAllowedTools', () => {
-  it('defaults to the complete AMA runtime tool set', () => {
+  it('defaults to the complete Enbor runtime tool set', () => {
     expect(defaultAllowedTools()).toEqual([
       'read',
       'bash',
@@ -31,13 +31,13 @@ describe('[spec: agents/tool-contract] validateAllowedTools', () => {
 
   it('rejects unsupported tool names', () => {
     expect(validateAllowedTools(['repo.delete'])).toEqual({
-      allowedTools: 'Tool is not supported by the AMA runtime: repo.delete',
+      allowedTools: 'Tool is not supported by the Enbor runtime: repo.delete',
     })
   })
 
   it('rejects secret-looking tool names', () => {
     expect(validateAllowedTools(['raw-secret-token'])).toEqual({
-      allowedTools: 'Tool is not supported by the AMA runtime: raw-secret-token',
+      allowedTools: 'Tool is not supported by the Enbor runtime: raw-secret-token',
     })
   })
 
@@ -93,7 +93,7 @@ describe('[spec: agents/validation] validateSubagents', () => {
 
   it('rejects invalid sub-agent tools and skills', () => {
     expect(validateSubagents([{ ...subagent, allowedTools: ['repo.delete'] }])).toEqual({
-      subagents: 'Tool is not supported by the AMA runtime: repo.delete',
+      subagents: 'Tool is not supported by the Enbor runtime: repo.delete',
     })
     expect(validateSubagents([{ ...subagent, skills: ['missing-style'] }])).toEqual({
       subagents: 'Skill must be a stable <source>@<skill> reference: missing-style',

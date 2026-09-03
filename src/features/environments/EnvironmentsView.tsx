@@ -13,7 +13,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Environment } from '@/lib/amarpc'
+import type { Environment } from '@/lib/enborrpc'
 
 function networkSummary(environment: Environment) {
   if (environment.spec.networking.type === 'limited') {

@@ -398,7 +398,7 @@ describe('codexProvider', () => {
     })
   })
 
-  it('normalizes Codex command output into AMA tool results', async () => {
+  it('normalizes Codex command output into Enbor tool results', async () => {
     runStreamedMock.mockResolvedValue({ events: commandEvents() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 
@@ -470,7 +470,7 @@ describe('codexProvider', () => {
     expect(toolCallIds).toEqual(['item_1', 'item_1', 'item_1', 'item_1'])
   })
 
-  it('keeps AMA message ids unique when Codex reuses text item ids across turns', async () => {
+  it('keeps Enbor message ids unique when Codex reuses text item ids across turns', async () => {
     runStreamedMock.mockResolvedValue({ events: repeatedAgentMessageEvents() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 
@@ -503,7 +503,7 @@ describe('codexProvider', () => {
     expect(events).toEqual([])
   })
 
-  it('normalizes Codex sub-agent functions to the canonical AMA agent tool contract', async () => {
+  it('normalizes Codex sub-agent functions to the canonical Enbor agent tool contract', async () => {
     runStreamedMock.mockResolvedValue({ events: subagentFunctionEvents() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 
@@ -567,7 +567,7 @@ describe('codexProvider', () => {
     expect(JSON.stringify(events)).not.toContain('call_child_1')
   })
 
-  it('normalizes Codex live collab tool calls to the canonical AMA agent tool contract', async () => {
+  it('normalizes Codex live collab tool calls to the canonical Enbor agent tool contract', async () => {
     runStreamedMock.mockResolvedValue({ events: collabSubagentEvents() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 

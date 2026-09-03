@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { AuditRecord } from '@/lib/amarpc'
+import type { AuditRecord } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, server } from '@/test/msw'
 import { AuditPage } from './AuditPage'
 import { AuditRecordPage } from './AuditRecordPage'

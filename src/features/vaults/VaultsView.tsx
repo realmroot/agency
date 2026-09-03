@@ -13,7 +13,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Vault } from '@/lib/amarpc'
+import type { Vault } from '@/lib/enborrpc'
 
 export function VaultsView({
   vaults,

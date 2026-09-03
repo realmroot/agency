@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { AMA_RUNTIME_TOOL_NAMES } from './agent-tools'
+import { ENBOR_RUNTIME_TOOL_NAMES } from './agent-tools'
 import {
-  type AmaOrchestrationToolCall,
-  AmaOrchestrationToolCallSchema,
-  type AmaSandboxToolCall,
-  AmaSandboxToolCallSchema,
+  type EnborOrchestrationToolCall,
+  EnborOrchestrationToolCallSchema,
+  type EnborSandboxToolCall,
+  EnborSandboxToolCallSchema,
 } from './tool-contracts'
 
 // The session metadata stamp that routes a session's canonical event firehose to
@@ -13,7 +13,7 @@ import {
 // D1 for self-hosted runner sessions.
 export const SESSION_DO_EVENT_STORE = 'session-do'
 
-export const AMA_SESSION_EVENT_TYPES = [
+export const ENBOR_SESSION_EVENT_TYPES = [
   'runtime.started',
   'runtime.completed',
   'turn.started',
@@ -28,9 +28,9 @@ export const AMA_SESSION_EVENT_TYPES = [
   'runtime.error',
 ] as const
 
-export type AmaSessionEventType = (typeof AMA_SESSION_EVENT_TYPES)[number]
+export type EnborSessionEventType = (typeof ENBOR_SESSION_EVENT_TYPES)[number]
 
-const AMA_SESSION_EVENT_TYPE_SET = new Set<string>(AMA_SESSION_EVENT_TYPES)
+const ENBOR_SESSION_EVENT_TYPE_SET = new Set<string>(ENBOR_SESSION_EVENT_TYPES)
 
 export type TextContentBlock = { type: 'text'; text: string }
 export type ReasoningContentBlock = { type: 'reasoning'; text: string }
@@ -85,7 +85,7 @@ export type ExternalToolCall = {
   input: Record<string, unknown>
 }
 
-export type ToolCall = AmaSandboxToolCall | AmaOrchestrationToolCall | ExternalToolCall
+export type ToolCall = EnborSandboxToolCall | EnborOrchestrationToolCall | ExternalToolCall
 
 export type ToolResult = {
   content: ToolResultValueContentBlock[]
@@ -149,7 +149,7 @@ export type PermissionResolvedPayload = {
 }
 export type RuntimeErrorPayload = EventError
 
-export type AmaEventPayloadByType = {
+export type EnborEventPayloadByType = {
   'runtime.started': RuntimeLifecyclePayload
   'runtime.completed': RuntimeLifecyclePayload
   'turn.started': TurnPayload
@@ -164,14 +164,14 @@ export type AmaEventPayloadByType = {
   'runtime.error': RuntimeErrorPayload
 }
 
-export type AmaEvent<TType extends AmaSessionEventType = AmaSessionEventType> = {
+export type EnborEvent<TType extends EnborSessionEventType = EnborSessionEventType> = {
   [K in TType]: {
     type: K
-    payload: AmaEventPayloadByType[K]
+    payload: EnborEventPayloadByType[K]
   }
 }[TType]
 
-export type SessionEvent = AmaEvent & {
+export type SessionEvent = EnborEvent & {
   id: string
   sessionId: string
   sequence: number
@@ -201,21 +201,21 @@ export const EventErrorSchema = z
   })
   .strict()
 
-const AMA_RUNTIME_TOOL_NAME_SET = new Set<string>(AMA_RUNTIME_TOOL_NAMES)
+const ENBOR_RUNTIME_TOOL_NAME_SET = new Set<string>(ENBOR_RUNTIME_TOOL_NAMES)
 
 export const ExternalToolCallSchema = z
   .object({
     id: z.string(),
-    name: z.string().refine((value) => !AMA_RUNTIME_TOOL_NAME_SET.has(value), {
-      message: 'known AMA runtime tools must use their canonical input schema',
+    name: z.string().refine((value) => !ENBOR_RUNTIME_TOOL_NAME_SET.has(value), {
+      message: 'known Enbor runtime tools must use their canonical input schema',
     }),
     input: JsonObjectSchema,
   })
   .strict()
 
 export const ToolCallSchema = z.union([
-  AmaSandboxToolCallSchema,
-  AmaOrchestrationToolCallSchema,
+  EnborSandboxToolCallSchema,
+  EnborOrchestrationToolCallSchema,
   ExternalToolCallSchema,
 ])
 
@@ -342,7 +342,7 @@ const PermissionResolvedPayloadSchema = z
     details: JsonObjectSchema.optional(),
   })
   .strict()
-export const AmaEventSchema = z.discriminatedUnion('type', [
+export const EnborEventSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('runtime.started'),
@@ -402,7 +402,7 @@ export const AmaEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('runtime.error'), payload: EventErrorSchema }).strict(),
 ])
 
-function sessionEventSchema<TType extends AmaSessionEventType>(type: TType, payload: z.ZodTypeAny) {
+function sessionEventSchema<TType extends EnborSessionEventType>(type: TType, payload: z.ZodTypeAny) {
   return z
     .object({
       id: z.string(),
@@ -430,14 +430,14 @@ export const SessionEventSchema = z.discriminatedUnion('type', [
   sessionEventSchema('runtime.error', EventErrorSchema),
 ])
 
-export function isAmaSessionEventType(value: string): value is AmaSessionEventType {
-  return AMA_SESSION_EVENT_TYPE_SET.has(value)
+export function isEnborSessionEventType(value: string): value is EnborSessionEventType {
+  return ENBOR_SESSION_EVENT_TYPE_SET.has(value)
 }
 
-export function amaSessionEventTypeFromPayload(event: Record<string, unknown>): string {
+export function enborSessionEventTypeFromPayload(event: Record<string, unknown>): string {
   return typeof event.type === 'string' && event.type ? event.type : 'unknown'
 }
 
-export function normalizeAmaEvent(event: AmaEvent): AmaEvent {
-  return { type: event.type, payload: event.payload } as AmaEvent
+export function normalizeEnborEvent(event: EnborEvent): EnborEvent {
+  return { type: event.type, payload: event.payload } as EnborEvent
 }

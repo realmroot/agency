@@ -1,5 +1,5 @@
 import {
-  assertAmaRuntimeEvent,
+  assertEnborRuntimeEvent,
   messageEvent,
   randomId,
   runtimeError,
@@ -8,11 +8,11 @@ import {
   toolCallBlock,
   toolResultMessage,
   usageEvent,
-} from './events/ama'
+} from './events/enbor'
 import {
-  type AmaRuntimeEvent,
   bridgeError,
   createResumeTokenWatcher,
+  type EnborRuntimeEvent,
   type RuntimeBridgeInputMessage,
   type RuntimeBridgeOutputMessage,
   type RuntimeProviderHandle,
@@ -23,8 +23,8 @@ type RunRequest = Extract<RuntimeBridgeInputMessage, { type: 'run' }>
 
 type RunState = { controls: RuntimeControlQueue }
 
-function sessionEventOutput(requestId: string, event: AmaRuntimeEvent): RuntimeBridgeOutputMessage {
-  const canonical = assertAmaRuntimeEvent(event)
+function sessionEventOutput(requestId: string, event: EnborRuntimeEvent): RuntimeBridgeOutputMessage {
+  const canonical = assertEnborRuntimeEvent(event)
   return {
     type: 'runtime.event',
     requestId,
@@ -79,7 +79,7 @@ export function liveBridgeTestHandle(request: RunRequest): RuntimeProviderHandle
   const initialMessage = request.resume
     ? `${marker} resumed-with-token:${request.resumeToken ? 'yes' : 'none'}`
     : `${marker} received:${request.prompt}`
-  const queue: AmaRuntimeEvent[] = [
+  const queue: EnborRuntimeEvent[] = [
     runtimeEvent('turn.started', { status: 'running' }),
     runtimeEvent('message.completed', { message: textMessage('assistant', initialMessage) }),
   ]
@@ -94,7 +94,7 @@ export function liveBridgeTestHandle(request: RunRequest): RuntimeProviderHandle
   }
   let ended = false
   let wake: (() => void) | null = null
-  const push = (...events: AmaRuntimeEvent[]) => {
+  const push = (...events: EnborRuntimeEvent[]) => {
     queue.push(...events)
     wake?.()
   }
@@ -151,7 +151,7 @@ export function liveBridgeTestHandle(request: RunRequest): RuntimeProviderHandle
   }
 }
 
-export function deterministicBridgeTestEvents(request: RunRequest): AmaRuntimeEvent[] {
+export function deterministicBridgeTestEvents(request: RunRequest): EnborRuntimeEvent[] {
   const marker = `${request.runtime}-bridge-test`
   const toolCallId = `${request.runtime.replace(/[^a-z0-9]/gi, '_')}_tool`
   const receipt = [

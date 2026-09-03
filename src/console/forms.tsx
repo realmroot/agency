@@ -1,5 +1,5 @@
-import { AMA_SANDBOX_TOOL_NAMES } from '@ama/runtime-contracts/agent-tools'
-import { isRuntimeName } from '@ama/runtime-contracts/runtime-names'
+import { ENBOR_SANDBOX_TOOL_NAMES } from '@enbor/runtime-contracts/agent-tools'
+import { isRuntimeName } from '@enbor/runtime-contracts/runtime-names'
 import { useQuery } from '@tanstack/react-query'
 import { Bot, Boxes, ChevronDown, MessageSquare, Plus, Server, Trash2 } from 'lucide-react'
 import type { FormEvent } from 'react'
@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { type Agent, api, type Environment, type Identity, type MemoryStore, type Vault } from '@/lib/amarpc'
+import { type Agent, api, type Environment, type Identity, type MemoryStore, type Vault } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { parseTools } from './format'
 import {
@@ -357,7 +357,7 @@ export function AllowedToolsField({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-          {AMA_SANDBOX_TOOL_NAMES.map((tool) => (
+          {ENBOR_SANDBOX_TOOL_NAMES.map((tool) => (
             <DropdownMenuCheckboxItem
               key={tool}
               checked={selected.includes(tool)}
@@ -519,7 +519,7 @@ export function SessionForm({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="ama">AMA</SelectItem>
+                <SelectItem value="ama">Enbor</SelectItem>
                 <SelectItem value="claude-code">Claude Code</SelectItem>
                 <SelectItem value="codex">Codex</SelectItem>
                 <SelectItem value="copilot">Copilot</SelectItem>
@@ -772,7 +772,7 @@ function SessionResourcesField({
           <p className="text-sm text-muted-foreground">No resources attached.</p>
         )}
       </div>
-      <FieldDescription>AMA manages mount paths for attached repositories and memory stores.</FieldDescription>
+      <FieldDescription>Enbor manages mount paths for attached repositories and memory stores.</FieldDescription>
     </Field>
   )
 }

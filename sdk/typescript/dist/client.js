@@ -2,16 +2,16 @@
 // The generated OpenAPI layer owns HTTP shapes; this file owns SDK shape.
 import { createClient, createConfig } from './generated/client/index.js';
 import * as ops from './generated/sdk.gen.js';
-export class AmaApiError extends Error {
+export class EnborApiError extends Error {
     status;
     responseText;
     body;
     constructor(status, responseText, body) {
-        super(`AMA API request failed${status === undefined ? '' : ` with HTTP ${status}`}`);
+        super(`Enbor API request failed${status === undefined ? '' : ` with HTTP ${status}`}`);
         this.status = status;
         this.responseText = responseText;
         this.body = body;
-        this.name = 'AmaApiError';
+        this.name = 'EnborApiError';
     }
 }
 async function unwrap(call) {
@@ -20,7 +20,7 @@ async function unwrap(call) {
         return data;
     }
     const body = error ?? data;
-    throw new AmaApiError(response?.status, typeof body === 'string' ? body : JSON.stringify(body ?? {}), body);
+    throw new EnborApiError(response?.status, typeof body === 'string' ? body : JSON.stringify(body ?? {}), body);
 }
 function websocketURL(config, path) {
     const url = new URL(path, config.baseUrl);
@@ -39,7 +39,7 @@ function base64Url(value) {
 }
 async function authenticatedWebSocket(config, path) {
     if (!config.authorize)
-        throw new Error('Realmroot DPoP authorizer is required for AMA WebSocket connections');
+        throw new Error('Realmroot DPoP authorizer is required for Enbor WebSocket connections');
     const url = websocketURL(config, path);
     const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET');
     return new WebSocket(url.toString(), [
@@ -202,7 +202,7 @@ function createConfiguredClient(config) {
         },
     }));
 }
-export function createAmaClient(config) {
+export function createEnborClient(config) {
     const client = createConfiguredClient(config);
     return {
         raw: client,
@@ -330,7 +330,7 @@ export function createAmaClient(config) {
         },
     };
 }
-export function createAmaRunnerClient(config) {
+export function createEnborRunnerClient(config) {
     const client = createConfiguredClient(config);
     return {
         raw: client,

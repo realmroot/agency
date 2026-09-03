@@ -66,7 +66,7 @@ test.describe('console (real browser)', () => {
     await gotoAuthed(page, token, '/agents')
 
     // The authenticated shell rendered through the server-owned browser session.
-    await expect(page.getByText('Any Managed Agents').first()).toBeVisible()
+    await expect(page.getByText('Enbor').first()).toBeVisible()
 
     // Navigate to Environments through the primary nav — real client-side routing.
     await page.getByRole('link', { name: 'Environments' }).first().click()

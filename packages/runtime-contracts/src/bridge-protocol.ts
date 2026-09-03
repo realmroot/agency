@@ -1,18 +1,21 @@
 import { z } from 'zod'
 import { EXTERNAL_RUNTIME_NAMES } from './runtime-names'
 import {
-  AMA_SESSION_EVENT_TYPES,
-  type AmaEvent,
-  type AmaSessionEventType,
+  ENBOR_SESSION_EVENT_TYPES,
+  type EnborEvent,
+  type EnborSessionEventType,
   JsonObjectSchema,
   JsonValueSchema,
 } from './session-events'
 
-const AmaSessionEventTypeValues = [...AMA_SESSION_EVENT_TYPES] as [AmaSessionEventType, ...AmaSessionEventType[]]
+const EnborSessionEventTypeValues = [...ENBOR_SESSION_EVENT_TYPES] as [
+  EnborSessionEventType,
+  ...EnborSessionEventType[],
+]
 
 export const StringMapSchema = z.record(z.string(), z.string())
 export const ExternalRuntimeNameSchema = z.enum(EXTERNAL_RUNTIME_NAMES)
-export const AmaSessionEventTypeSchema = z.enum(AmaSessionEventTypeValues)
+export const EnborSessionEventTypeSchema = z.enum(EnborSessionEventTypeValues)
 
 export const RuntimeBridgeRunMessageSchema = z
   .object({
@@ -109,7 +112,7 @@ export const RuntimeBridgeInventoryResultSchema = z
   .strict()
 
 export const RuntimeBridgeEventBodySchema = JsonObjectSchema
-export const AmaRuntimeEventSchema = RuntimeBridgeEventBodySchema
+export const EnborRuntimeEventSchema = RuntimeBridgeEventBodySchema
 
 export const RuntimeBridgeErrorSchema = z
   .object({
@@ -174,5 +177,5 @@ export type RuntimeBridgeInventoryMessage = z.infer<typeof RuntimeBridgeInventor
 export type RuntimeBridgeInputMessage = z.infer<typeof RuntimeBridgeInputMessageSchema>
 export type RuntimeUsageWindow = z.infer<typeof RuntimeUsageWindowSchema>
 export type RuntimeInventoryEntry = z.infer<typeof RuntimeInventoryEntrySchema>
-export type AmaRuntimeEvent = AmaEvent
+export type EnborRuntimeEvent = EnborEvent
 export type RuntimeBridgeOutputMessage = z.infer<typeof RuntimeBridgeOutputMessageSchema>

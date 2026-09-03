@@ -63,7 +63,7 @@ const PROJECT_SCOPED_RESOURCES = new Set([
   'work-items',
 ])
 
-const AMA_PROJECT_ID_PARAMETER = '#/components/parameters/AmaProjectId'
+const ENBOR_PROJECT_ID_PARAMETER = '#/components/parameters/EnborProjectId'
 
 const CLI_OPERATION_NAME_OVERRIDES: Readonly<Record<string, string>> = {
   createInboxNotification: 'receive-inbox-notification',
@@ -110,12 +110,12 @@ export function finalizeOpenApiDocument<T extends { paths: object; components?: 
   const mutable = document as T & MutableOpenApiDocument
   mutable.components ??= {}
   mutable.components.parameters ??= {}
-  mutable.components.parameters.AmaProjectId = {
+  mutable.components.parameters.EnborProjectId = {
     name: 'X-AMA-Project-ID',
     in: 'header',
     required: false,
     'x-cli-name': 'project-id',
-    description: 'Selects an AMA project in the authenticated organization. Omit to use the default project.',
+    description: 'Selects an Enbor project in the authenticated organization. Omit to use the default project.',
     schema: { type: 'string', minLength: 1 },
   }
   for (const [path, operations] of Object.entries(mutable.paths) as Array<[string, Record<string, OpenApiOperation>]>) {
@@ -127,12 +127,12 @@ export function finalizeOpenApiDocument<T extends { paths: object; components?: 
       const resource = path.split('/')[3]
       if (resource && PROJECT_SCOPED_RESOURCES.has(resource)) {
         operation.parameters ??= []
-        if (!operation.parameters.some((parameter) => parameter.$ref === AMA_PROJECT_ID_PARAMETER)) {
-          operation.parameters.push({ $ref: AMA_PROJECT_ID_PARAMETER })
+        if (!operation.parameters.some((parameter) => parameter.$ref === ENBOR_PROJECT_ID_PARAMETER)) {
+          operation.parameters.push({ $ref: ENBOR_PROJECT_ID_PARAMETER })
         }
         operation.responses ??= {}
         operation.responses['404'] ??= {
-          description: 'The selected AMA project does not exist in the authenticated organization',
+          description: 'The selected Enbor project does not exist in the authenticated organization',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/ErrorResponse' },

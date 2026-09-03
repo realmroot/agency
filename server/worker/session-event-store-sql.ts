@@ -14,7 +14,7 @@ import type { SessionEvent } from '@server/domain/session'
 import { newPrimaryKey } from '@server/id'
 import { redactToolResultsFromPayload } from '@server/redaction'
 import type { EventPage, EventQuery } from '@server/usecases/ports'
-import { type AmaEvent, isAmaSessionEventType, normalizeAmaEvent } from '@shared/session-events'
+import { type EnborEvent, isEnborSessionEventType, normalizeEnborEvent } from '@shared/session-events'
 
 export interface EventWriteContext {
   organizationId: string
@@ -74,9 +74,9 @@ function dropLegacySessionEventColumns(sql: SqlStorage): void {
 export function appendCanonicalEventToSql(
   sql: SqlStorage,
   scope: EventWriteContext,
-  event: AmaEvent,
+  event: EnborEvent,
 ): { id: string; sequence: number; record: SessionEvent } {
-  const normalized = normalizeAmaEvent(event)
+  const normalized = normalizeEnborEvent(event)
   const eventId = newPrimaryKey()
   const maxSequence =
     sql
@@ -156,12 +156,12 @@ export interface RelayedRunnerEvent {
   sessionId: string
   sequence: number
   createdAt: string
-  type: AmaEvent['type']
-  payload: AmaEvent['payload']
+  type: EnborEvent['type']
+  payload: EnborEvent['payload']
 }
 
 export function stepRelayEvent(raw: RelayedRunnerEvent, scope: EventWriteContext): EventRow {
-  const event = normalizeAmaEvent({ type: raw.type, payload: raw.payload } as AmaEvent)
+  const event = normalizeEnborEvent({ type: raw.type, payload: raw.payload } as EnborEvent)
   return {
     id: raw.id,
     organization_id: scope.organizationId,
@@ -222,9 +222,9 @@ export function exportSessionEventsJsonl(sql: SqlStorage, sessionId: string): st
   return rows.map((row) => JSON.stringify(serializeRow(row))).join('\n')
 }
 
-// Row -> SessionEvent. The store only accepts canonical AMA event rows.
+// Row -> SessionEvent. The store only accepts canonical Enbor event rows.
 export function serializeRow(row: EventRow): SessionEvent {
-  if (!isAmaSessionEventType(row.type)) {
+  if (!isEnborSessionEventType(row.type)) {
     throw new Error(`Unsupported session event type: ${row.type}`)
   }
   const rawPayload = JSON.parse(row.payload) as Record<string, unknown>
@@ -234,6 +234,6 @@ export function serializeRow(row: EventRow): SessionEvent {
     sequence: row.sequence,
     createdAt: row.created_at,
     type: row.type,
-    payload: rawPayload as AmaEvent['payload'],
+    payload: rawPayload as EnborEvent['payload'],
   } as SessionEvent
 }

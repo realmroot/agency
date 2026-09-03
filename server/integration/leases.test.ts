@@ -655,7 +655,7 @@ describe('[CF] /api/v1/leases', () => {
     })
   })
 
-  it('rejects caller-assigned runtimes when their target session id differs from the AMA session [spec: runners/session-runtime-binding]', async () => {
+  it('rejects caller-assigned runtimes when their target session id differs from the Enbor session [spec: runners/session-runtime-binding]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
@@ -683,7 +683,7 @@ describe('[CF] /api/v1/leases', () => {
     await expect(conflictRes.json()).resolves.toMatchObject({
       error: {
         type: 'conflict',
-        message: `Runtime claude-code must use AMA session ${session.id} as its resume token; got runtime-session-2`,
+        message: `Runtime claude-code must use Enbor session ${session.id} as its resume token; got runtime-session-2`,
       },
     })
 
@@ -700,7 +700,7 @@ describe('[CF] /api/v1/leases', () => {
     expect(stored).toEqual({ resume_token: null })
   })
 
-  it('locks provider-assigned runtime session ids on the AMA session [spec: runners/session-runtime-binding]', async () => {
+  it('locks provider-assigned runtime session ids on the Enbor session [spec: runners/session-runtime-binding]', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
@@ -728,7 +728,7 @@ describe('[CF] /api/v1/leases', () => {
     await expect(conflictRes.json()).resolves.toMatchObject({
       error: {
         type: 'conflict',
-        message: `AMA session ${session.id} is already bound to resume token codex:codex-thread-1`,
+        message: `Enbor session ${session.id} is already bound to resume token codex:codex-thread-1`,
       },
     })
 

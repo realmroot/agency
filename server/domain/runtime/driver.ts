@@ -28,7 +28,7 @@ export type RuntimeDriver = {
 
 const SELF_HOSTED_ONLY_DRIVERS = ['claude-code', 'codex', 'copilot'] as const
 
-const AMA_DRIVER: RuntimeDriver = {
+const ENBOR_DRIVER: RuntimeDriver = {
   runtime: 'ama',
   cloudBackend: 'ama-cloud',
   cloudProtocol: 'ama-runtime-rpc',
@@ -46,7 +46,7 @@ const SELF_HOSTED_DRIVERS: RuntimeDriver[] = SELF_HOSTED_ONLY_DRIVERS.map((runti
   supportsCloudStartup: false,
 }))
 
-export const RUNTIME_DRIVERS: readonly RuntimeDriver[] = [AMA_DRIVER, ...SELF_HOSTED_DRIVERS]
+export const RUNTIME_DRIVERS: readonly RuntimeDriver[] = [ENBOR_DRIVER, ...SELF_HOSTED_DRIVERS]
 
 // Valid runtime names derived from the registered drivers, so an untrusted
 // string (e.g. a queue message field) can be checked before it is cast to the

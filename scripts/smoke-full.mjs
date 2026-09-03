@@ -1,8 +1,8 @@
-// Full-chain AMA smoke.
+// Full-chain Enbor smoke.
 //
 // This is intentionally heavier than the focused smoke checks:
 // - boots the real local Worker stack through the e2e server script
-// - builds and starts a real ama-runner process
+// - builds and starts a real enbor-runner process
 // - creates real control-plane resources over HTTP
 // - opens the real browser session WebSocket
 // - runs the focused session-socket integration check, including live prompt dispatch
@@ -572,7 +572,7 @@ async function main() {
     fail('codex CLI is required for full smoke')
   }
   const temp = tempRoot()
-  const runnerBinary = join(temp, 'ama-runner')
+  const runnerBinary = join(temp, 'enbor-runner')
   const credentialPath = join(temp, 'credentials.json')
   const runId = `full-smoke-${Date.now()}`
   const port = Number(process.env.E2E_PORT || (await findFreePort()))
@@ -588,7 +588,7 @@ async function main() {
 
   try {
     run('pnpm', ['run', 'bridge:build'])
-    run('go', ['build', '-o', runnerBinary, '.'], { cwd: join(ROOT, 'cmd/ama-runner') })
+    run('go', ['build', '-o', runnerBinary, '.'], { cwd: join(ROOT, 'cmd/enbor-runner') })
 
     info(`starting local e2e server on ${origin}`)
     server = startProcess('pnpm', ['run', 'e2e:server'], {
@@ -654,7 +654,7 @@ async function main() {
         metadata: { name: `full-smoke-agent-${runId}` },
         spec: {
           systemPrompt: [
-            'You are running the AMA full-chain smoke test.',
+            'You are running the Enbor full-chain smoke test.',
             'Before using any file or shell tool, you MUST call the spawn_agent collaboration tool exactly once with the arithmetic-checker agent and ask it to reply only 4 for 2+2.',
             'You MUST call wait for that child and receive 4 before continuing. If the child result is unavailable, fail instead of completing the task.',
             'After the child returns 4, use the shell tool to run pwd exactly once.',
@@ -692,7 +692,7 @@ async function main() {
           volumeMounts: [],
         },
         prompt: [
-          'Run the full-chain AMA smoke test.',
+          'Run the full-chain Enbor smoke test.',
           `Before any other tool call, you MUST call spawn_agent exactly once with subagent type arithmetic-checker and prompt it to answer only "${SUBAGENT_RESULT}" for 2+2.`,
           `Then you MUST call wait for that child and receive "${SUBAGENT_RESULT}" before using file or shell tools.`,
           'After the child returns 4, use the shell tool to run pwd exactly once.',
@@ -792,7 +792,7 @@ async function main() {
 
     const types = eventTypes(socket.frames)
     info(`verified ${sessionId}; live event types: ${types.join(', ')}`)
-    info('AMA full-chain smoke passed')
+    info('Enbor full-chain smoke passed')
   } catch (error) {
     preserveTempAfterCleanupFailure = error?.smokeCleanupFailed === true
     const liveDiagnostics = []

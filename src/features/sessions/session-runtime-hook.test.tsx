@@ -2,7 +2,7 @@
  * Tests for useSessionRuntimeSession hook.
  *
  * Uses a MockWebSocket to exercise the live session socket path.
- * No vi.spyOn/vi.mock of @/lib/amarpc.
+ * No vi.spyOn/vi.mock of @/lib/enborrpc.
  *
  * ROOT CAUSE OF OOM: The hook's socket effect depends on props that can
  * change reference on every re-render, causing infinite loops:
@@ -21,7 +21,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useCallback } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Session, SessionEvent } from '@/lib/amarpc'
+import type { Session, SessionEvent } from '@/lib/enborrpc'
 import * as oidcModule from '@/lib/oidc'
 import { buildTestSession, type TestSessionOverrides } from '@/testing/session'
 import { useSessionRuntimeSession } from './use-session-runtime'

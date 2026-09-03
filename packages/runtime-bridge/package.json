@@ -1,5 +1,5 @@
 {
-  "name": "@ama/runtime-bridge",
+  "name": "@enbor/runtime-bridge",
   "version": "0.1.0",
   "private": true,
   "type": "module",

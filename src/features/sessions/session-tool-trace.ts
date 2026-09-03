@@ -1,4 +1,4 @@
-import type { SessionEvent } from '@/lib/amarpc'
+import type { SessionEvent } from '@/lib/enborrpc'
 
 export type SessionToolTraceStatus = 'running' | 'completed' | 'failed'
 export type SessionToolTraceApproval = 'approved' | 'denied' | 'approval required'
@@ -26,7 +26,7 @@ interface TraceAccumulator extends SessionToolTraceEntry {
   endSequence: number | null
 }
 
-// Builds one trace entry per tool execution from canonical AMA message content
+// Builds one trace entry per tool execution from canonical Enbor message content
 // blocks. Pairing uses toolCall.id and tool_result.toolCallId; results without
 // a recorded call degrade into explicit orphaned entries instead of being
 // dropped.

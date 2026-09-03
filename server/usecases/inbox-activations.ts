@@ -1,8 +1,8 @@
 import type { ResourceMetadata } from '@server/domain/resource'
 import { newPrimaryKey } from '@server/id'
 import {
-  AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
   DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS,
+  ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
 } from '@server/metadata-keys'
 import type { Deps } from './deps'
 import { dispatchToReusableSession } from './dispatch-triggers'
@@ -124,14 +124,14 @@ async function ensureInboxIdleTimeout(
     annotations &&
     typeof annotations === 'object' &&
     !Array.isArray(annotations) &&
-    Object.hasOwn(annotations, AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS)
+    Object.hasOwn(annotations, ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS)
   ) {
     return
   }
   const exists = await deps.sessions.setMetadataAnnotationIfMissing(
     projectId,
     session.id,
-    AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
+    ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
     idleTimeoutSeconds,
     new Date().toISOString(),
   )
@@ -154,7 +154,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: trigger.spec.template.metadata.labels,
     annotations: {
-      [AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]: String(DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS),
+      [ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]: String(DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS),
       ...trigger.spec.template.metadata.annotations,
       source: 'inbox-trigger',
       inboxTriggerId: trigger.metadata.uid,
@@ -201,7 +201,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
         deps,
         activation.projectId,
         existing,
-        String(sessionMetadata.annotations[AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]),
+        String(sessionMetadata.annotations[ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]),
       )
       const outcome = await dispatchExisting(deps, auth, existing, prompt, activation.run.correlationId)
       if (!outcome.ok) {

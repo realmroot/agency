@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader } from '@/console/components'
 import { useUrlFilter } from '@/console/use-list-filters'
-import { api, type UsageSummaryOptions } from '@/lib/amarpc'
+import { api, type UsageSummaryOptions } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { UsageView } from './UsageView'
 

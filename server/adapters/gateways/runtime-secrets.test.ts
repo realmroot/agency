@@ -43,7 +43,7 @@ describe('[spec: runtime-secrets/gateway] createRuntimeSecretGateway', () => {
     expect(typeof gateway.resolveWorkspaceManifest).toBe('function')
   })
 
-  it('decrypts the stored ciphertext for an AMA credential version', async () => {
+  it('decrypts the stored ciphertext for an Enbor credential version', async () => {
     secretVersionForResolutionMock.mockResolvedValueOnce({
       state: 'active',
       metadata: JSON.stringify({ encryptedSecretData: { value: 'cipher' } }),

@@ -25,7 +25,7 @@ Feature: Agents
     When the agent is created or updated
     Then a new Agent Version stores only the safe Identity descriptor and immutable runtime
     And changing or removing Identity creates another Agent Version
-    And an Identity whose runtime has no registered AMA driver is rejected without being bound
+    And an Identity whose runtime has no registered Enbor driver is rejected without being bound
 
   @agents/inbox-identity-rebind @usecase
   Scenario: Keep a live Inbox Trigger bound to one mailbox identity
@@ -71,7 +71,7 @@ Feature: Agents
   Scenario: Retry Agent creation without duplicating an Identity binding
     Given a caller supplies an Idempotency-Key when creating an Agent
     When the same project retries the same request with that key
-    Then AMA returns the originally created Agent without another Agent Version
+    Then Enbor returns the originally created Agent without another Agent Version
     And reusing the key for different Agent data is rejected as a conflict
 
   @agents/api-openapi @api
@@ -97,7 +97,7 @@ Feature: Agents
     And created-date filters and project scope are respected
 
   @agents/api-schedulability @api
-  Scenario: Discover agents that AMA can schedule through Inbox
+  Scenario: Discover agents that Enbor can schedule through Inbox
     Given active Agents have Realmroot Identities and Inbox Triggers in a project
     When a caller lists Agents by Identity runtime or schedulable state
     Then each Agent reports whether an active Inbox Trigger can resolve a compatible live execution environment

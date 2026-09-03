@@ -1,10 +1,10 @@
 import { SELF } from 'cloudflare:test'
-import { isAmaSessionEventType } from '@shared/session-events'
+import { isEnborSessionEventType } from '@shared/session-events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import openapi from '../../sdk/openapi.json'
 import resources from '../../sdk/spec/resources.json'
-import type { AmaClient } from '../../sdk/typescript/src/index'
-import { createAmaClient, createAmaRunnerClient } from '../../sdk/typescript/src/index'
+import type { EnborClient } from '../../sdk/typescript/src/index'
+import { createEnborClient, createEnborRunnerClient } from '../../sdk/typescript/src/index'
 import { dpopHeaders, seedPlatformProvider, signIn } from './auth'
 
 // The SDK's external operation inventory, derived from the published OpenAPI
@@ -31,7 +31,7 @@ type SdkList = { data: Json[]; pagination: { limit: number; hasMore: boolean; ne
 
 const STANDARD_RESOURCE_FIELDS = new Set(['metadata', 'spec', 'status'])
 
-// The external product owns these workflow ids; AMA only ever sees them as opaque metadata.
+// The external product owns these workflow ids; Enbor only ever sees them as opaque metadata.
 function externalRefs(runId: string) {
   return { product: 'downstream-service', boardId: `board_${runId}`, taskId: `task_${runId}` }
 }
@@ -54,7 +54,7 @@ async function newSdk() {
   const accessToken = authorization.replace(/^Bearer\s+/i, '')
   const runId = accessToken.replace(/^e2e:/, '')
   return {
-    ama: createAmaClient({
+    enbor: createEnborClient({
       baseUrl: 'https://example.com',
       authorize: async (url, method) => {
         const headers = dpopHeaders(`DPoP ${accessToken}`, method, url)
@@ -65,18 +65,18 @@ async function newSdk() {
   }
 }
 
-async function createAgentThroughSdk(ama: AmaClient, runId: string) {
-  return (await ama.agents.create({
+async function createAgentThroughSdk(enbor: EnborClient, runId: string) {
+  return (await enbor.agents.create({
     metadata: { name: `${runId} external agent` },
     spec: {
-      systemPrompt: 'Work items arrive from an external product over the AMA SDK.',
+      systemPrompt: 'Work items arrive from an external product over the Enbor SDK.',
       provider: 'workers-ai',
       model: '@cf/moonshotai/kimi-k2.6',
     },
   })) as Json
 }
-async function createEnvironmentThroughSdk(ama: AmaClient, runId: string) {
-  return (await ama.environments.create({
+async function createEnvironmentThroughSdk(enbor: EnborClient, runId: string) {
+  return (await enbor.environments.create({
     metadata: { name: `${runId} external env` },
     spec: {
       type: 'cloud',
@@ -85,12 +85,12 @@ async function createEnvironmentThroughSdk(ama: AmaClient, runId: string) {
     },
   })) as Json
 }
-const readSession = (ama: AmaClient, sessionId: string) => ama.sessions.get(sessionId) as Promise<Json>
-const listEvents = (ama: AmaClient, sessionId: string) =>
-  ama.sessions.listEvents(sessionId, { limit: 200 }) as Promise<SdkList>
+const readSession = (enbor: EnborClient, sessionId: string) => enbor.sessions.get(sessionId) as Promise<Json>
+const listEvents = (enbor: EnborClient, sessionId: string) =>
+  enbor.sessions.listEvents(sessionId, { limit: 200 }) as Promise<SdkList>
 
 async function createSessionThroughSdk(
-  ama: AmaClient,
+  enbor: EnborClient,
   runId: string,
   refs: ReturnType<typeof externalRefs>,
   agent: Json,
@@ -101,7 +101,7 @@ async function createSessionThroughSdk(
   if (Object.keys(unexpected).length > 0) {
     throw new Error(`Unexpected SDK session options: ${Object.keys(unexpected).join(', ')}`)
   }
-  const created = (await ama.sessions.create({
+  const created = (await enbor.sessions.create({
     metadata: { name: `${runId} external session`, ...externalMetadata(refs) },
     spec: {
       agentId: resourceUid(agent),
@@ -116,7 +116,7 @@ async function createSessionThroughSdk(
   })) as Json
   // Cloud sessions reach `idle` synchronously in the integration pool, so we just
   // read the session back rather than polling a runtime drive-to-idle loop.
-  const session = await readSession(ama, String(obj(created.metadata).uid))
+  const session = await readSession(enbor, String(obj(created.metadata).uid))
   return { created, session }
 }
 
@@ -203,8 +203,8 @@ describe('[CF] generated SDK contract', () => {
     expect(operations.map(({ operationId }) => operationId)).not.toContain('createSessionSocketTicket')
 
     const authorize = vi.fn(async () => ({ accessToken: 'token', dpopProof: 'proof' }))
-    const agent = createAmaClient({ baseUrl: 'https://example.com', authorize })
-    const runner = createAmaRunnerClient({
+    const agent = createEnborClient({ baseUrl: 'https://example.com', authorize })
+    const runner = createEnborRunnerClient({
       baseUrl: 'https://example.com',
       headers: { authorization: 'Bearer runner-token' },
     })
@@ -218,7 +218,7 @@ describe('[CF] generated SDK contract', () => {
     const projects = resources.facades.public.resources.find(({ name }) => name === 'projects')
     expect(projects?.methods).toContainEqual({ name: 'update', operationId: 'updateProject' })
 
-    const client = createAmaClient({
+    const client = createEnborClient({
       baseUrl: 'https://example.com',
       authorize: async () => ({ accessToken: 'token', dpopProof: 'proof' }),
     })
@@ -232,7 +232,7 @@ describe('[CF] generated SDK contract', () => {
       return Response.json({ error: { type: 'fixture_stop', message: 'header captured' } }, { status: 409 })
     })
     vi.stubGlobal('fetch', fetch)
-    const client = createAmaClient({
+    const client = createEnborClient({
       baseUrl: 'https://example.com',
       authorize: async () => ({ accessToken: 'token', dpopProof: 'proof' }),
     })
@@ -253,7 +253,7 @@ describe('[CF] generated SDK contract', () => {
       send: vi.fn(),
     } as unknown as WebSocket
     const webSocketFactory = vi.fn(async () => socket)
-    const runner = createAmaRunnerClient({
+    const runner = createEnborRunnerClient({
       baseUrl: 'https://example.com',
       projectId: 'project_runner',
       headers: {
@@ -273,13 +273,13 @@ describe('[CF] generated SDK contract', () => {
     )
 
     await expect(
-      createAmaRunnerClient({
+      createEnborRunnerClient({
         baseUrl: 'https://example.com',
         headers: { authorization: 'Bearer runner-token' },
       }).runners.channel('runner_1'),
     ).rejects.toThrow('Runner WebSocket factory with Bearer header support is required')
     await expect(
-      createAmaRunnerClient({
+      createEnborRunnerClient({
         baseUrl: 'https://example.com',
         headers: { authorization: 'DPoP runner-token' },
         webSocketFactory,
@@ -287,25 +287,25 @@ describe('[CF] generated SDK contract', () => {
     ).rejects.toThrow('Runner WebSocket requires an Authorization: Bearer header')
   })
 
-  it('external product manages standard AMA resources through the SDK [spec: projects/external-resources]', async () => {
-    const { ama, runId } = await newSdk()
+  it('external product manages standard Enbor resources through the SDK [spec: projects/external-resources]', async () => {
+    const { enbor, runId } = await newSdk()
     const refs = externalRefs(runId)
 
-    const createdAgent = await createAgentThroughSdk(ama, runId)
+    const createdAgent = await createAgentThroughSdk(enbor, runId)
     const createdAgentId = resourceUid(createdAgent)
-    const updatedAgent = (await ama.agents.update(createdAgentId, {
+    const updatedAgent = (await enbor.agents.update(createdAgentId, {
       metadata: { description: 'Updated by the external product through the SDK.' },
     })) as Json
-    const createdEnv = await createEnvironmentThroughSdk(ama, runId)
+    const createdEnv = await createEnvironmentThroughSdk(enbor, runId)
     const createdEnvId = resourceUid(createdEnv)
 
-    // AMA stores only standard resource fields; external ids are not part of
+    // Enbor stores only standard resource fields; external ids are not part of
     // reusable Agent or Environment specs.
-    const agent = (await ama.agents.get(resourceUid(updatedAgent))) as Json
+    const agent = (await enbor.agents.get(resourceUid(updatedAgent))) as Json
     for (const key of Object.keys(agent)) {
       expect(STANDARD_RESOURCE_FIELDS.has(key), `agent field "${key}" is not standard`).toBe(true)
     }
-    const environment = (await ama.environments.get(createdEnvId)) as Json
+    const environment = (await enbor.environments.get(createdEnvId)) as Json
     for (const key of Object.keys(environment)) {
       expect(STANDARD_RESOURCE_FIELDS.has(key), `environment field "${key}" is not standard`).toBe(true)
     }
@@ -324,14 +324,14 @@ describe('[CF] generated SDK contract', () => {
       expect(serialized.includes(refs.boardId)).toBe(false)
     }
 
-    // The product keeps its own mapping; AMA ids resolve back through it.
+    // The product keeps its own mapping; Enbor ids resolve back through it.
     const productRecords = new Map<string, string>()
     productRecords.set(refs.taskId, resourceUid(agent))
     productRecords.set(refs.boardId, resourceUid(environment))
-    expect(resourceUid((await ama.agents.get(productRecords.get(refs.taskId) as string)) as Json)).toBe(
+    expect(resourceUid((await enbor.agents.get(productRecords.get(refs.taskId) as string)) as Json)).toBe(
       resourceUid(agent),
     )
-    expect(resourceUid((await ama.environments.get(productRecords.get(refs.boardId) as string)) as Json)).toBe(
+    expect(resourceUid((await enbor.environments.get(productRecords.get(refs.boardId) as string)) as Json)).toBe(
       resourceUid(environment),
     )
 
@@ -350,16 +350,16 @@ describe('[CF] generated SDK contract', () => {
     expect(workflowOps.map((op) => op.operationId)).toEqual([])
   })
 
-  it('external product starts work by creating an AMA session [spec: projects/external-session]', async () => {
-    const { ama, runId } = await newSdk()
+  it('external product starts work by creating an Enbor session [spec: projects/external-session]', async () => {
+    const { enbor, runId } = await newSdk()
     const refs = externalRefs(runId)
-    const agent = await createAgentThroughSdk(ama, runId)
-    const environment = await createEnvironmentThroughSdk(ama, runId)
+    const agent = await createAgentThroughSdk(enbor, runId)
+    const environment = await createEnvironmentThroughSdk(enbor, runId)
     const volumes = [
       { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/any-managed-agents.git', ref: 'main' },
     ]
 
-    const { created, session } = await createSessionThroughSdk(ama, runId, refs, agent, environment, {
+    const { created, session } = await createSessionThroughSdk(enbor, runId, refs, agent, environment, {
       volumes,
       volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/any-managed-agents' }],
       prompt: `Start the external product work item for ${runId}.`,
@@ -367,63 +367,63 @@ describe('[CF] generated SDK contract', () => {
     const sessionId = String(obj(session.metadata).uid)
 
     // Snapshots pin the selected agent/environment and are immutable after creation.
-    const before = await readSession(ama, sessionId)
+    const before = await readSession(enbor, sessionId)
     expect(obj(obj(obj(obj(before.status).bindings).agent).snapshot).agentId).toBe(resourceUid(agent))
     expect(typeof obj(obj(obj(obj(before.status).bindings).agent).snapshot).version).toBe('number')
     expect(obj(obj(obj(obj(before.status).bindings).environment).snapshot).environmentId).toBe(resourceUid(environment))
-    await ama.agents.update(resourceUid(agent), {
+    await enbor.agents.update(resourceUid(agent), {
       spec: { systemPrompt: 'Changed after session creation — the snapshot must not follow.' },
     })
-    const after = await readSession(ama, sessionId)
+    const after = await readSession(enbor, sessionId)
     expect(obj(obj(after.status).bindings).agent).toEqual(obj(obj(before.status).bindings).agent)
     expect(obj(obj(after.status).bindings).environment).toEqual(obj(obj(before.status).bindings).environment)
 
     // The runtime/provider/model were validated before runtime work started.
-    const sessionStatus = obj((await readSession(ama, sessionId)).status)
+    const sessionStatus = obj((await readSession(enbor, sessionId)).status)
     const placement = obj(sessionStatus.placement)
-    expect(obj((await readSession(ama, sessionId)).spec).runtime).toBe('ama')
+    expect(obj((await readSession(enbor, sessionId)).spec).runtime).toBe('ama')
     expect(placement.hostingMode).toBe('cloud')
     expect(placement.provider).toBeTruthy()
 
     // Stable id/status/runtime + canonical session event and socket operations.
     expect(typeof obj(created.metadata).uid === 'string' && (obj(created.metadata).uid as string).length > 0).toBe(true)
-    const fetched = await readSession(ama, String(obj(created.metadata).uid))
+    const fetched = await readSession(enbor, String(obj(created.metadata).uid))
     expect(obj(fetched.metadata).uid).toBe(obj(created.metadata).uid)
     expect('reason' in obj(fetched.status)).toBe(true)
-    expect(typeof ama.sessions.stream).toBe('function')
+    expect(typeof enbor.sessions.stream).toBe('function')
     const socketOperation = operations.find((op) => op.operationId === 'connectSessionSocket')
     expect(socketOperation?.path).toBe('/api/v1/sessions/{sessionId}/socket')
     const eventsOperation = operations.find((op) => op.operationId === 'listSessionEvents')
     expect(eventsOperation?.path).toBe('/api/v1/sessions/{sessionId}/events')
 
     // Canonical progress events exist in renderable sequence order; the initial prompt drove a turn.
-    const events = await listEvents(ama, sessionId)
+    const events = await listEvents(enbor, sessionId)
     expect(events.data.length).toBeGreaterThan(0)
     expect(JSON.stringify(events.data)).toContain(`work item for ${runId}`)
     for (const record of events.data) {
-      expect(isAmaSessionEventType(String(record.type)), `non-canonical event type "${record.type}"`).toBe(true)
+      expect(isEnborSessionEventType(String(record.type)), `non-canonical event type "${record.type}"`).toBe(true)
     }
     const sequences = events.data.map((e) => Number(e.sequence))
     expect(sequences).toEqual([...sequences].sort((a, b) => a - b))
   })
 
-  it('external product controls a running session only through AMA endpoints [spec: projects/external-control]', async () => {
-    const { ama, runId } = await newSdk()
+  it('external product controls a running session only through Enbor endpoints [spec: projects/external-control]', async () => {
+    const { enbor, runId } = await newSdk()
     const refs = externalRefs(runId)
-    const agent = await createAgentThroughSdk(ama, runId)
-    const environment = await createEnvironmentThroughSdk(ama, runId)
-    const { session } = await createSessionThroughSdk(ama, runId, refs, agent, environment, {
+    const agent = await createAgentThroughSdk(enbor, runId)
+    const environment = await createEnvironmentThroughSdk(enbor, runId)
+    const { session } = await createSessionThroughSdk(enbor, runId, refs, agent, environment, {
       prompt: `Start the external control session for ${runId}.`,
     })
     const sessionId = String(obj(session.metadata).uid)
 
-    const command = (await ama.sessions.createMessage(sessionId, {
+    const command = (await enbor.sessions.createMessage(sessionId, {
       type: 'prompt',
       content: `external product follow-up ${runId}`,
     })) as Json
-    const closed = (await ama.sessions.update(sessionId, { state: 'closed' })) as Json
+    const closed = (await enbor.sessions.update(sessionId, { state: 'closed' })) as Json
 
-    // The follow-up is an addressable message routed on AMA-relative channels.
+    // The follow-up is an addressable message routed on Enbor-relative channels.
     expect(typeof command.id === 'string' && (command.id as string).length > 0).toBe(true)
     expect(command.sessionId).toBe(obj(obj(closed).metadata).uid)
     expect(command.type).toBe('prompt')
@@ -432,24 +432,24 @@ describe('[CF] generated SDK contract', () => {
     expect(JSON.stringify(command).includes('://')).toBe(false)
 
     // The command result is persisted as canonical session events; lifecycle state lives on the session status.
-    const events = await listEvents(ama, sessionId)
+    const events = await listEvents(enbor, sessionId)
     expect(JSON.stringify(events.data).includes(`external product follow-up ${runId}`)).toBe(true)
     for (const record of events.data) {
-      expect(isAmaSessionEventType(String(record.type)), `non-canonical event type "${record.type}"`).toBe(true)
+      expect(isEnborSessionEventType(String(record.type)), `non-canonical event type "${record.type}"`).toBe(true)
     }
-    expect(obj(await readSession(ama, sessionId)).status).toMatchObject({ phase: 'closed' })
-    expect(obj(await ama.sessions.update(sessionId, { state: 'idle' })).status).toMatchObject({
+    expect(obj(await readSession(enbor, sessionId)).status).toMatchObject({ phase: 'closed' })
+    expect(obj(await enbor.sessions.update(sessionId, { state: 'idle' })).status).toMatchObject({
       phase: 'idle',
       closedAt: null,
     })
 
-    // The SDK inventory only targets AMA control-plane endpoints; nothing leaks a local endpoint.
+    // The SDK inventory only targets Enbor control-plane endpoints; nothing leaks a local endpoint.
     for (const op of operations) {
       expect(op.path.startsWith('/api/v1/'), `${op.operationId} must target /api/v1/`).toBe(true)
       expect(op.path.startsWith('/runtime/')).toBe(false)
     }
-    const finalSession = await readSession(ama, sessionId)
-    const finalEvents = await listEvents(ama, sessionId)
+    const finalSession = await readSession(enbor, sessionId)
+    const finalEvents = await listEvents(enbor, sessionId)
     for (const surface of [JSON.stringify(finalSession), JSON.stringify(finalEvents.data)]) {
       expect(/wss?:\/\//.test(surface), 'no absolute socket endpoints leak').toBe(false)
       expect(surface.includes('preview-url')).toBe(false)

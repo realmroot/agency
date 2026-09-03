@@ -19,8 +19,8 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version-file: cmd/ama-runner/go.mod
-          cache-dependency-path: cmd/ama-runner/go.sum
+          go-version-file: cmd/enbor-runner/go.mod
+          cache-dependency-path: cmd/enbor-runner/go.sum
 
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 

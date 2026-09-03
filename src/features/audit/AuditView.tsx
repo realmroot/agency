@@ -3,7 +3,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/compon
 import { EmptyState, StatusBadge, TablePagination, TableSurface } from '@/console/components'
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { AuditRecord } from '@/lib/amarpc'
+import type { AuditRecord } from '@/lib/enborrpc'
 
 export function AuditView({
   records,

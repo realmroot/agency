@@ -29,7 +29,7 @@ class SessionCreateMetadata:
         Attributes:
             name (str | Unset):  Example: Implement billing export.
             labels (SessionCreateMetadataLabels | Unset):  Example: {'app': 'automation-service'}.
-            annotations (SessionCreateMetadataAnnotations | Unset):  Example: {'ticket': 'AMA-123'}.
+            annotations (SessionCreateMetadataAnnotations | Unset):  Example: {'ticket': 'Enbor-123'}.
      """
 
     name: str | Unset = UNSET

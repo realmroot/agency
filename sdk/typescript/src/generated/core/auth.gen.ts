@@ -1,4 +1,4 @@
-// Generated authentication boundary for the Realmroot-native AMA Resource.
+// Generated authentication boundary for the Realmroot-native Enbor Resource.
 
 export type AuthToken = string | undefined
 
@@ -14,5 +14,5 @@ export const getAuthToken = async (
   _auth: Auth,
   _callback: ((auth: Auth) => Promise<AuthToken> | AuthToken) | AuthToken,
 ): Promise<string | undefined> => {
-  throw new Error('Raw token authentication is unsupported; use createAmaClient with a Realmroot DPoP authorizer')
+  throw new Error('Raw token authentication is unsupported; use createEnborClient with a Realmroot DPoP authorizer')
 }

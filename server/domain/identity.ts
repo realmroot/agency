@@ -51,7 +51,7 @@ export function resolveIdentityRuntime(runtime: RuntimeName | undefined, descrip
 export class IdentityRuntimeUnsupportedError extends Error {
   readonly code = 'identity_runtime_unsupported'
   constructor(readonly runtime: IdentityRuntime) {
-    super(`Identity runtime is not supported by this AMA deployment: ${runtime}.`)
+    super(`Identity runtime is not supported by this Enbor deployment: ${runtime}.`)
     this.name = 'IdentityRuntimeUnsupportedError'
   }
 }

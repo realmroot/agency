@@ -22,7 +22,7 @@ T = TypeVar("T", bound="SessionCreateMetadataAnnotations")
 class SessionCreateMetadataAnnotations:
     """
         Example:
-            {'ticket': 'AMA-123'}
+            {'ticket': 'Enbor-123'}
 
      """
 

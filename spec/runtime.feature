@@ -1,7 +1,7 @@
 Feature: Runtime
-  AMA owns the session runtime engine: it drives model, tool, and sandbox work for
+  Enbor owns the session runtime engine: it drives model, tool, and sandbox work for
   a session, normalizes everything into canonical events, and exposes runtime only
-  through AMA session endpoints — never sandbox- or runner-local processes. Running
+  through Enbor session endpoints — never sandbox- or runner-local processes. Running
   sessions cancel cooperatively and runtime failures terminate sessions in a
   visible, recoverable state.
 
@@ -42,11 +42,11 @@ Feature: Runtime
     And an approval decision atomically leases an idle Session before tool execution or continuation so duplicate approval and close cannot race it
 
   @runtime/self-hosted-ama-cloud-loop @usecase
-  Scenario: Run self-hosted AMA through the cloud turn loop with a runner sandbox
-    Given an AMA session uses a self-hosted environment
+  Scenario: Run self-hosted Enbor through the cloud turn loop with a runner sandbox
+    Given an Enbor session uses a self-hosted environment
     When the runner claims the session work
     Then the runner prepares only the sandbox workspace and tool executor
-    And AMA runs the same cloud turn loop, model calls, turn leases, and canonical event store used by cloud sessions
+    And Enbor runs the same cloud turn loop, model calls, turn leases, and canonical event store used by cloud sessions
     And sandbox tools are executed through the runner-backed sandbox channel
 
   @runtime/workspace-contract @usecase
@@ -131,10 +131,10 @@ Feature: Runtime
     And the process adapter supports bash, read, write, edit, grep, find, ls, fetch, and web_search
     And sandbox commands receive a runner-controlled home and temporary directory without control-plane credentials
 
-  # ── Session lifecycle over AMA endpoints (api: cooperative close) ──
+  # ── Session lifecycle over Enbor endpoints (api: cooperative close) ──
 
   @runtime/close @api
   Scenario: Close a running session cooperatively over the API
-    Given a session is running through the AMA runtime endpoint
+    Given a session is running through the Enbor runtime endpoint
     When the user closes the session through the sessions API
     Then the status becomes closed and no successful completion events are written after cancellation

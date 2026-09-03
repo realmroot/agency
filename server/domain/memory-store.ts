@@ -35,7 +35,7 @@ function uriPathSegment(value: string) {
   return encodeURIComponent(value)
 }
 
-export function amaMemoryRef(storeId: string) {
+export function enborMemoryRef(storeId: string) {
   return `ama://memories/${uriPathSegment(storeId)}`
 }
 

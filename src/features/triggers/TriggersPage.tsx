@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { PageHeader } from '@/console/components'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { matchesSearch, useUrlFilter } from '@/console/use-list-filters'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { CreateTriggerSheet } from './CreateTriggerSheet'
 import { TriggersView } from './TriggersView'

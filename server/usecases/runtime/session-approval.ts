@@ -17,7 +17,7 @@ import { parseAgentSnapshot, parseJson } from '@server/domain/runtime/session-sn
 import { newTurnId, turnLeaseExpiry } from '@server/domain/runtime/turn'
 import { now, requestIdFrom, stringify } from '@server/domain/runtime/util'
 import { safeRuntimeError } from '@server/runtime-error'
-import { isAmaSandboxToolName } from '@shared/agent-tools'
+import { isEnborSandboxToolName } from '@shared/agent-tools'
 import type { AuthScope, SessionSandboxExecutor } from '../ports'
 import { writeSessionApprovalState } from './approval-gate'
 import type { CloudTurnDeps } from './cloud-turn'
@@ -171,7 +171,7 @@ export async function decideSessionApproval(
     if (approved && body.result) {
       resultOutput = body.result
     } else if (approved) {
-      if (!isAmaSandboxToolName(pending.toolName)) {
+      if (!isEnborSandboxToolName(pending.toolName)) {
         throw new Error(`Unsupported approved sandbox tool: ${pending.toolName}`)
       }
       const agentSnapshot = parseAgentSnapshot(session.agentSnapshot)

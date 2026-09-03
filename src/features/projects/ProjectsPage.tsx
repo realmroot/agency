@@ -12,7 +12,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/compon
 import { ConfirmAction, EmptyState, PageHeader, ResourceIdentityCell, TableSurface } from '@/console/components'
 import { formatDate } from '@/console/format'
 import { TextField } from '@/console/forms'
-import { api, type Project } from '@/lib/amarpc'
+import { api, type Project } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 import { useConsoleContext } from '../console/console-context'

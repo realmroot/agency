@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { MobileNavButton, NavButton } from '@/console/components'
-import type { Project } from '@/lib/amarpc'
+import type { Project } from '@/lib/enborrpc'
 import { signOut } from '@/lib/oidc'
 import { CreateProjectSheet } from './CreateProjectSheet'
 import { useConsoleContext } from './console-context'
@@ -52,7 +52,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
             <Bot size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">Any Managed Agents</p>
+            <p className="truncate text-sm font-medium">Enbor</p>
             <ProjectSwitcher
               projects={context.projects}
               currentProjectId={context.auth.project.id}
@@ -69,7 +69,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
       <section className="lg:pl-64">
         <div className="border-b bg-background px-4 py-4 lg:hidden">
           <div className="mb-3 min-w-0">
-            <p className="truncate text-sm font-medium">Any Managed Agents</p>
+            <p className="truncate text-sm font-medium">Enbor</p>
             <ProjectSwitcher
               projects={context.projects}
               currentProjectId={context.auth.project.id}

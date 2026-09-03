@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { AMA_ORCHESTRATION_TOOL_NAMES, AMA_SANDBOX_TOOL_NAMES } from './agent-tools'
+import { ENBOR_ORCHESTRATION_TOOL_NAMES, ENBOR_SANDBOX_TOOL_NAMES } from './agent-tools'
 
-export const AmaSandboxToolNameSchema = z.enum(AMA_SANDBOX_TOOL_NAMES)
-export const AmaOrchestrationToolNameSchema = z.enum(AMA_ORCHESTRATION_TOOL_NAMES)
+export const EnborSandboxToolNameSchema = z.enum(ENBOR_SANDBOX_TOOL_NAMES)
+export const EnborOrchestrationToolNameSchema = z.enum(ENBOR_ORCHESTRATION_TOOL_NAMES)
 
 const NonNegativeIntegerSchema = z.number().int().min(0)
 const PositiveNumberSchema = z.number().positive()
@@ -132,7 +132,7 @@ export const AgentToolInputSchema = z
 
 export const CommandToolOutputSchema = BashToolOutputSchema
 
-export const AmaSandboxToolInputSchemas = {
+export const EnborSandboxToolInputSchemas = {
   bash: BashToolInputSchema,
   read: ReadToolInputSchema,
   write: WriteToolInputSchema,
@@ -144,11 +144,11 @@ export const AmaSandboxToolInputSchemas = {
   web_search: WebSearchToolInputSchema,
 } as const
 
-export const AmaOrchestrationToolInputSchemas = {
+export const EnborOrchestrationToolInputSchemas = {
   agent: AgentToolInputSchema,
 } as const
 
-export const AmaSandboxToolOutputSchemas = {
+export const EnborSandboxToolOutputSchemas = {
   bash: BashToolOutputSchema,
   read: ReadToolOutputSchema,
   write: WriteToolOutputSchema,
@@ -160,7 +160,7 @@ export const AmaSandboxToolOutputSchemas = {
   web_search: CommandToolOutputSchema,
 } as const
 
-export const AmaSandboxToolCallSchema = z.discriminatedUnion('name', [
+export const EnborSandboxToolCallSchema = z.discriminatedUnion('name', [
   z.object({ id: z.string().min(1), name: z.literal('bash'), input: BashToolInputSchema }).strict(),
   z.object({ id: z.string().min(1), name: z.literal('read'), input: ReadToolInputSchema }).strict(),
   z.object({ id: z.string().min(1), name: z.literal('write'), input: WriteToolInputSchema }).strict(),
@@ -172,7 +172,7 @@ export const AmaSandboxToolCallSchema = z.discriminatedUnion('name', [
   z.object({ id: z.string().min(1), name: z.literal('web_search'), input: WebSearchToolInputSchema }).strict(),
 ])
 
-export const AmaOrchestrationToolCallSchema = z.discriminatedUnion('name', [
+export const EnborOrchestrationToolCallSchema = z.discriminatedUnion('name', [
   z.object({ id: z.string().min(1), name: z.literal('agent'), input: AgentToolInputSchema }).strict(),
 ])
 
@@ -191,10 +191,10 @@ export type FetchToolInput = z.infer<typeof FetchToolInputSchema>
 export type WebSearchToolInput = z.infer<typeof WebSearchToolInputSchema>
 export type AgentToolInput = z.infer<typeof AgentToolInputSchema>
 export type CommandToolOutput = z.infer<typeof CommandToolOutputSchema>
-export type AmaSandboxToolCall = z.infer<typeof AmaSandboxToolCallSchema>
-export type AmaOrchestrationToolCall = z.infer<typeof AmaOrchestrationToolCallSchema>
+export type EnborSandboxToolCall = z.infer<typeof EnborSandboxToolCallSchema>
+export type EnborOrchestrationToolCall = z.infer<typeof EnborOrchestrationToolCallSchema>
 
-export type AmaSandboxToolInputByName = {
+export type EnborSandboxToolInputByName = {
   bash: BashToolInput
   read: ReadToolInput
   write: WriteToolInput
@@ -206,11 +206,11 @@ export type AmaSandboxToolInputByName = {
   web_search: WebSearchToolInput
 }
 
-export type AmaOrchestrationToolInputByName = {
+export type EnborOrchestrationToolInputByName = {
   agent: AgentToolInput
 }
 
-export type AmaSandboxToolOutputByName = {
+export type EnborSandboxToolOutputByName = {
   bash: BashToolOutput
   read: ReadToolOutput
   write: WriteToolOutput
@@ -222,31 +222,33 @@ export type AmaSandboxToolOutputByName = {
   web_search: CommandToolOutput
 }
 
-export function parseAmaSandboxToolInput<TName extends keyof AmaSandboxToolInputByName>(
+export function parseEnborSandboxToolInput<TName extends keyof EnborSandboxToolInputByName>(
   name: TName,
   input: unknown,
-): AmaSandboxToolInputByName[TName] {
-  return AmaSandboxToolInputSchemas[name].parse(input) as AmaSandboxToolInputByName[TName]
+): EnborSandboxToolInputByName[TName] {
+  return EnborSandboxToolInputSchemas[name].parse(input) as EnborSandboxToolInputByName[TName]
 }
 
-export function parseAmaOrchestrationToolInput<TName extends keyof AmaOrchestrationToolInputByName>(
+export function parseEnborOrchestrationToolInput<TName extends keyof EnborOrchestrationToolInputByName>(
   name: TName,
   input: unknown,
-): AmaOrchestrationToolInputByName[TName] {
-  return AmaOrchestrationToolInputSchemas[name].parse(input) as AmaOrchestrationToolInputByName[TName]
+): EnborOrchestrationToolInputByName[TName] {
+  return EnborOrchestrationToolInputSchemas[name].parse(input) as EnborOrchestrationToolInputByName[TName]
 }
 
-export function parseAmaSandboxToolOutput<TName extends keyof AmaSandboxToolOutputByName>(
+export function parseEnborSandboxToolOutput<TName extends keyof EnborSandboxToolOutputByName>(
   name: TName,
   output: unknown,
-): AmaSandboxToolOutputByName[TName] {
-  return AmaSandboxToolOutputSchemas[name].parse(output) as AmaSandboxToolOutputByName[TName]
+): EnborSandboxToolOutputByName[TName] {
+  return EnborSandboxToolOutputSchemas[name].parse(output) as EnborSandboxToolOutputByName[TName]
 }
 
-export function amaSandboxToolInputJsonSchema<TName extends keyof AmaSandboxToolInputByName>(name: TName) {
-  return z.toJSONSchema(AmaSandboxToolInputSchemas[name])
+export function enborSandboxToolInputJsonSchema<TName extends keyof EnborSandboxToolInputByName>(name: TName) {
+  return z.toJSONSchema(EnborSandboxToolInputSchemas[name])
 }
 
-export function amaOrchestrationToolInputJsonSchema<TName extends keyof AmaOrchestrationToolInputByName>(name: TName) {
-  return z.toJSONSchema(AmaOrchestrationToolInputSchemas[name])
+export function enborOrchestrationToolInputJsonSchema<TName extends keyof EnborOrchestrationToolInputByName>(
+  name: TName,
+) {
+  return z.toJSONSchema(EnborOrchestrationToolInputSchemas[name])
 }

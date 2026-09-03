@@ -1,4 +1,4 @@
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LIFECYCLE_LEASE_TTL_MS } from '../../domain/runtime/turn'
 import { RUNTIME_START_TIMEOUT_MS } from '../../domain/runtime/util'
@@ -50,13 +50,13 @@ const {
       (input: {
         provider: string
         model: string | null
-        onEvent: (event: AmaEvent) => Promise<void>
+        onEvent: (event: EnborEvent) => Promise<void>
       }) => Promise<{ status: string }>
     >(),
   enqueueCloudTurnMock: vi.fn(),
   cloudTurnsRunInlineMock: vi.fn(() => false),
   recordAuditMock: vi.fn(),
-  appendEventMock: vi.fn<(scope: unknown, event: AmaEvent) => Promise<string>>(async () => 'event_test'),
+  appendEventMock: vi.fn<(scope: unknown, event: EnborEvent) => Promise<string>>(async () => 'event_test'),
   findSessionMock: vi.fn(),
   sessionEventStreamMock: vi.fn(() => [] as unknown[]),
   updateSessionWhenStateMock: vi.fn<
@@ -122,7 +122,7 @@ const deps: CloudTurnDeps = {
     activateCloudSession: activateCloudSessionMock,
     idleCloudSession: idleCloudSessionMock,
   } as never,
-  amaTurnExecutor: { runTurn: (input: unknown) => runSessionTurnMock(input as never) } as never,
+  enborTurnExecutor: { runTurn: (input: unknown) => runSessionTurnMock(input as never) } as never,
   cloudTurnQueue: cloudTurnQueue as never,
   runtimeSecrets: {
     resolveEnv: resolveEnvMock,
@@ -611,7 +611,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       idleCloudSession: idleCloudSessionMock,
       stopCloudSession: (sandboxId: unknown) => stopSessionRuntimeMock(env, sandboxId),
     } as never,
-    amaTurnExecutor: { runTurn: (input: unknown) => runSessionTurnMock(input as never) } as never,
+    enborTurnExecutor: { runTurn: (input: unknown) => runSessionTurnMock(input as never) } as never,
     cloudTurnQueue: cloudTurnQueue as never,
     runtimeSecrets: {
       resolveEnv: () => resolveEnvFromMock(),

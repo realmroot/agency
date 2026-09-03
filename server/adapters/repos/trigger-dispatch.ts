@@ -2,7 +2,7 @@ import { RuntimeSchema } from '@server/contracts/environment-contracts'
 import type { ResourceMetadata } from '@server/domain/resource'
 import type { Trigger, TriggerSessionTemplate } from '@server/domain/trigger'
 import { newPrimaryKey } from '@server/id'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type {
   ClaimedRun,
   DueTrigger,
@@ -278,7 +278,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
     },
 
     async claimNextHttpRun(triggerId) {
-      const routingKeyPath = `$.annotations."${AMA_ANNOTATION_KEY_ROUTING_KEY_HASH}"`
+      const routingKeyPath = `$.annotations."${ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH}"`
       const active = await db
         .select({
           sessionId: sessions.id,

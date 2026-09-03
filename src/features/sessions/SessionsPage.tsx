@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { ConfirmAction, EmptyState, PageHeader } from '@/console/components'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { matchesSearch, useUrlFilter } from '@/console/use-list-filters'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 import { CreateSessionSheet } from './CreateSessionSheet'

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState, Meta, MetaGrid, TableEmpty, TableSurface } from '@/console/components'
 import { formatCostMicros, stringifyJson } from '@/console/format'
-import type { UsageSummary } from '@/lib/amarpc'
+import type { UsageSummary } from '@/lib/enborrpc'
 
 export function UsageView({ summary }: { summary: UsageSummary | null }) {
   if (!summary)

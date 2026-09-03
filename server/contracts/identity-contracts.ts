@@ -8,6 +8,6 @@ export const IdentityRuntimeSchema = z
   .regex(IDENTITY_RUNTIME_PATTERN)
   .openapi('IdentityRuntime', {
     description:
-      'Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.',
+      'Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.',
     example: 'codex',
   })

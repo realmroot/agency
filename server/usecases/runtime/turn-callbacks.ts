@@ -2,7 +2,7 @@
 //
 // Both cloud-side turn entrypoints — the CLOUD_TURNS queue path
 // (executeCloudSessionTurn) and the runtime-endpoint proxy
-// (recordRuntimeMessageOutcome) — drive the same AMA turn engine over the
+// (recordRuntimeMessageOutcome) — drive the same Enbor turn engine over the
 // SAME callback bundle: the suppress→ensureActive→append event sink, the
 // approval-gate tool-result resolver, and the policy+gate approveToolCall with
 // its denial recording.
@@ -16,7 +16,7 @@
 // the tool-approvals layer stays the single owner of the gate construction).
 
 import { parseJson } from '@server/domain/runtime/session-snapshot'
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import type {
   AuthScope,
   EventStore,
@@ -42,7 +42,7 @@ export async function assertRuntimeSessionRunning(
 
 export interface SessionTurnCallbacks {
   ensureActive: () => Promise<void>
-  onEvent: (event: AmaEvent) => Promise<void>
+  onEvent: (event: EnborEvent) => Promise<void>
   resolveToolResult: (input: {
     toolCallId: string
     toolName: string
@@ -68,7 +68,7 @@ type TurnCallbacksDeps = {
     auth: AuthScope
     sessionId: string
     sessionMetadata: Record<string, unknown>
-    appendEvent: (event: AmaEvent) => Promise<string>
+    appendEvent: (event: EnborEvent) => Promise<string>
   }) => ToolApprovalGate
 }
 
@@ -96,7 +96,7 @@ export function buildSessionTurnCallbacks(
     appendEvent: (event) => appendRuntimeEvent({ sessionEventStore }, { auth, sessionId, event }),
   })
   let policyDeniedToolCall = false
-  const onEvent = async (event: AmaEvent) => {
+  const onEvent = async (event: EnborEvent) => {
     if (approvalGate.shouldSuppressEvent(event)) {
       return
     }

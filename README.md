@@ -100,7 +100,7 @@ Enbor is early-stage software. The repository currently contains the Cloudflare 
 The project is moving toward a release where developers can define and version agents, configure reusable environments, start sessions across supported runtimes, inspect persisted events, and embed those capabilities in their own products.
 
 The repository and generated SDK distributions use the Enbor name. Resource
-Server and runtime protocol identifiers retain their existing `agency` and `AMA`
+Server and runtime protocol identifiers retain their existing `agency` and `Enbor`
 names until their separately versioned migrations are complete.
 
 ## Install Enbor Runner

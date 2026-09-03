@@ -1,0 +1,925 @@
+package workspace
+
+import (
+	"context"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/realmroot/enbor/cmd/enbor-runner/internal/protocol"
+)
+
+func TestResourceMountClassifiersAndFileManifestEntries(t *testing.T) {
+	mounts := []protocol.WorkspaceMount{
+		{Type: "git_repository", Name: "repo"},
+		{Type: "memory", Name: "memory"},
+		{Type: "secret", Name: "secret"},
+	}
+	if len(gitRepositoryMounts(mounts)) != 1 || len(memoryMounts(mounts)) != 1 || len(secretMounts(mounts)) != 1 {
+		t.Fatalf("unexpected mount classification")
+	}
+	entries := fileManifestEntries([]protocol.WorkspaceFile{{Path: "a.txt", Content: "secret"}})
+	if len(entries) != 1 || entries[0].Path != "a.txt" || entries[0].Content != "" {
+		t.Fatalf("expected file manifest entries to drop content, got %#v", entries)
+	}
+}
+
+func TestMaterializeSecretMountWritableAndRejectsUnsafePaths(t *testing.T) {
+	root := t.TempDir()
+	path, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		ReadOnly:  false,
+		Files:     []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize secret: %v", err)
+	}
+	if path != filepath.Join(root, "secrets") {
+		t.Fatalf("unexpected secret path %q", path)
+	}
+	if data, err := os.ReadFile(filepath.Join(path, "TOKEN")); err != nil || string(data) != "value" {
+		t.Fatalf("expected secret file, got %q err=%v", data, err)
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets", Files: []protocol.WorkspaceFile{{Path: "../TOKEN"}}}); err == nil {
+		t.Fatal("expected unsafe secret file path error")
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: ""}); err == nil {
+		t.Fatal("expected missing secret mount path error")
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace"}); err == nil {
+		t.Fatal("expected workspace root secret mount path error")
+	}
+	if _, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/../secrets"}); err == nil {
+		t.Fatal("expected escaping secret mount path error")
+	}
+}
+
+func TestMaterializeEmptyDirRejectsInvalidMountsAndSeedPaths(t *testing.T) {
+	root := t.TempDir()
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{}); err == nil {
+		t.Fatal("expected missing empty directory mount path error")
+	}
+
+	occupied := filepath.Join(root, "occupied")
+	if err := os.WriteFile(occupied, []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/occupied",
+	}); err == nil || !strings.Contains(err.Error(), "must be a directory") {
+		t.Fatalf("expected occupied mount path error, got %v", err)
+	}
+
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/runtime-state",
+		Files:     []protocol.WorkspaceFile{{Path: "../outside", Content: "secret"}},
+	}); err == nil {
+		t.Fatal("expected unsafe seed path error")
+	}
+	if _, err := os.Stat(filepath.Join(root, "outside")); !os.IsNotExist(err) {
+		t.Fatalf("expected no seed outside the mount, got %v", err)
+	}
+}
+
+func TestMaterializeEmptyDirRejectsParentFileConflict(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "parent")
+	if err := os.WriteFile(parent, []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/parent/runtime-state",
+	}); err == nil {
+		t.Fatal("expected parent file conflict")
+	}
+}
+
+func TestRejectWorkspaceSymlinkComponentsHandlesWorkspaceBoundaries(t *testing.T) {
+	root := t.TempDir()
+	if err := rejectWorkspaceSymlinkComponents(root, root); err != nil {
+		t.Fatalf("expected workspace root to be accepted: %v", err)
+	}
+	if err := rejectWorkspaceSymlinkComponents(root, filepath.Dir(root)); err == nil || !strings.Contains(err.Error(), "stay inside") {
+		t.Fatalf("expected outside path rejection, got %v", err)
+	}
+
+	target := t.TempDir()
+	linked := filepath.Join(root, "linked")
+	if err := os.Symlink(target, linked); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
+	if err := rejectWorkspaceSymlinkComponents(root, filepath.Join(linked, "runtime-state")); err == nil || !strings.Contains(err.Error(), "symbolic links") {
+		t.Fatalf("expected symlink component rejection, got %v", err)
+	}
+}
+
+func TestReusableEmptyDirMountClassifiesFilesystemEntries(t *testing.T) {
+	t.Run("missing", func(t *testing.T) {
+		reusable, err := reusableEmptyDirMount(filepath.Join(t.TempDir(), "missing"))
+		if err != nil || reusable {
+			t.Fatalf("expected missing path to require publication, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		mountPath := filepath.Join(t.TempDir(), "mount")
+		if err := os.Mkdir(mountPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err != nil || !reusable {
+			t.Fatalf("expected directory reuse, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("regular file", func(t *testing.T) {
+		mountPath := filepath.Join(t.TempDir(), "mount")
+		if err := os.WriteFile(mountPath, []byte("occupied"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err == nil || reusable || !strings.Contains(err.Error(), "must be a directory") {
+			t.Fatalf("expected regular file rejection, reusable=%v err=%v", reusable, err)
+		}
+	})
+
+	t.Run("symbolic link", func(t *testing.T) {
+		root := t.TempDir()
+		target := filepath.Join(root, "target")
+		mountPath := filepath.Join(root, "mount")
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, mountPath); err != nil {
+			t.Skipf("symlink not supported: %v", err)
+		}
+		reusable, err := reusableEmptyDirMount(mountPath)
+		if err == nil || reusable || !strings.Contains(err.Error(), "symbolic links") {
+			t.Fatalf("expected symbolic link rejection, reusable=%v err=%v", reusable, err)
+		}
+	})
+}
+
+func TestMaterializeEmptyDirCleansUpConflictingSeedTrees(t *testing.T) {
+	tests := []struct {
+		name  string
+		files []protocol.WorkspaceFile
+	}{
+		{
+			name: "file blocks child directory",
+			files: []protocol.WorkspaceFile{
+				{Path: "state", Content: "file"},
+				{Path: "state/runtime.json", Content: "nested"},
+			},
+		},
+		{
+			name: "directory blocks file",
+			files: []protocol.WorkspaceFile{
+				{Path: "state/runtime.json", Content: "nested"},
+				{Path: "state", Content: "file"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			if _, err := materializeEmptyDirMount(root, protocol.WorkspaceMount{
+				MountPath: "/workspace/runtime-state",
+				Files:     test.files,
+			}); err == nil {
+				t.Fatal("expected conflicting seed tree error")
+			}
+			entries, err := os.ReadDir(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Fatalf("expected failed staging directory cleanup, got %#v", entries)
+			}
+		})
+	}
+}
+
+func TestPublishEmptyDirMountHandlesWinnerAndConcurrentReuse(t *testing.T) {
+	t.Run("publishes a new mount", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || !published {
+			t.Fatalf("expected publication, published=%v err=%v", published, err)
+		}
+	})
+
+	t.Run("reuses an empty concurrent directory winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || published {
+			t.Fatalf("expected empty concurrent winner reuse, published=%v err=%v", published, err)
+		}
+		if info, err := os.Stat(target); err != nil || !info.IsDir() {
+			t.Fatalf("expected empty winner directory to remain, info=%v err=%v", info, err)
+		}
+		if info, err := os.Stat(staging); err != nil || !info.IsDir() {
+			t.Fatalf("expected unpublished staging directory to remain available for cleanup, info=%v err=%v", info, err)
+		}
+	})
+
+	t.Run("reuses a concurrent directory winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(target, "winner"), []byte("state"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		published, err := publishEmptyDirMount(staging, target)
+		if err != nil || published {
+			t.Fatalf("expected concurrent winner reuse, published=%v err=%v", published, err)
+		}
+		if data, err := os.ReadFile(filepath.Join(target, "winner")); err != nil || string(data) != "state" {
+			t.Fatalf("expected winner contents to remain intact, data=%q err=%v", data, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected unpublished staging directory to remain available for cleanup: %v", err)
+		}
+	})
+
+	t.Run("rejects a concurrent regular file winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, []byte("file"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if published, err := publishEmptyDirMount(staging, target); err == nil || published {
+			t.Fatalf("expected non-directory conflict, published=%v err=%v", published, err)
+		}
+		if data, err := os.ReadFile(target); err != nil || string(data) != "file" {
+			t.Fatalf("expected existing file to remain intact, data=%q err=%v", data, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected rejected staging directory to remain available for cleanup: %v", err)
+		}
+	})
+
+	t.Run("rejects a concurrent symbolic link winner", func(t *testing.T) {
+		root := t.TempDir()
+		staging := filepath.Join(root, "staging")
+		targetDir := filepath.Join(root, "target-dir")
+		target := filepath.Join(root, "target")
+		if err := os.Mkdir(staging, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(targetDir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(targetDir, target); err != nil {
+			t.Skipf("symlink not supported: %v", err)
+		}
+		if published, err := publishEmptyDirMount(staging, target); err == nil || published {
+			t.Fatalf("expected symbolic link conflict, published=%v err=%v", published, err)
+		}
+		info, err := os.Lstat(target)
+		if err != nil || info.Mode()&os.ModeSymlink == 0 {
+			t.Fatalf("expected existing symbolic link to remain intact, info=%v err=%v", info, err)
+		}
+		if _, err := os.Stat(staging); err != nil {
+			t.Fatalf("expected rejected staging directory to remain available for cleanup: %v", err)
+		}
+	})
+}
+
+func TestMaterializeMemoryAndSecretMountsPropagateFilesystemConflicts(t *testing.T) {
+	tests := []struct {
+		name        string
+		mountPath   string
+		prepare     func(t *testing.T, mountPath string)
+		materialize func(root string) error
+	}{
+		{
+			name:      "memory mount is a file",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
+				return err
+			},
+		},
+		{
+			name:      "memory seed parent is a file",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "blocked"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+					MemoryRef: "ama://memories/store_1",
+					Files:     []protocol.WorkspaceFile{{Path: "blocked/plan.md", Content: "ship"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "memory seed target is a directory",
+			mountPath: filepath.Join(".ama", "memory-stores", "store_1", "plan.md"),
+			prepare:   prepareMountDirectory,
+			materialize: func(root string) error {
+				_, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+					MemoryRef: "ama://memories/store_1",
+					Files:     []protocol.WorkspaceFile{{Path: "plan.md", Content: "ship"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "secret mount is a file",
+			mountPath: "secrets",
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{MountPath: "/workspace/secrets"})
+				return err
+			},
+		},
+		{
+			name:      "secret seed parent is a file",
+			mountPath: filepath.Join("secrets", "blocked"),
+			prepare:   prepareMountFile,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{
+					MountPath: "/workspace/secrets",
+					Files:     []protocol.WorkspaceFile{{Path: "blocked/TOKEN", Content: "value"}},
+				})
+				return err
+			},
+		},
+		{
+			name:      "secret seed target is a directory",
+			mountPath: filepath.Join("secrets", "TOKEN"),
+			prepare:   prepareMountDirectory,
+			materialize: func(root string) error {
+				_, err := materializeSecretMount(root, protocol.WorkspaceMount{
+					MountPath: "/workspace/secrets",
+					Files:     []protocol.WorkspaceFile{{Path: "TOKEN", Content: "value"}},
+				})
+				return err
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			test.prepare(t, filepath.Join(root, test.mountPath))
+			if err := test.materialize(root); err == nil {
+				t.Fatal("expected filesystem conflict to be propagated")
+			}
+		})
+	}
+}
+
+func prepareMountFile(t *testing.T, filePath string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filePath, []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func prepareMountDirectory(t *testing.T, directoryPath string) {
+	t.Helper()
+	if err := os.MkdirAll(directoryPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMaterializeSecretMountReadOnly(t *testing.T) {
+	root := t.TempDir()
+	path, err := materializeSecretMount(root, protocol.WorkspaceMount{
+		MountPath: "/workspace/secrets",
+		ReadOnly:  true,
+		Files:     []protocol.WorkspaceFile{{Path: "nested/TOKEN", Content: "value"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize readonly secret: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(path, func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() {
+				return os.Chmod(path, 0o755)
+			}
+			return os.Chmod(path, 0o644)
+		})
+	})
+	info, err := os.Stat(filepath.Join(path, "nested", "TOKEN"))
+	if err != nil {
+		t.Fatalf("stat secret file: %v", err)
+	}
+	if info.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("secret file remains writable: %o", info.Mode().Perm())
+	}
+	dirInfo, err := os.Stat(filepath.Join(path, "nested"))
+	if err != nil {
+		t.Fatalf("stat secret dir: %v", err)
+	}
+	if dirInfo.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("secret directory remains writable: %o", dirInfo.Mode().Perm())
+	}
+}
+
+func TestMaterializeMemoryStoreRejectsInvalidRefsAndPaths(t *testing.T) {
+	root := t.TempDir()
+	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{MemoryRef: "bad"}); err == nil {
+		t.Fatal("expected invalid memory ref error")
+	}
+	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+		MemoryRef: "ama://memories/store_1",
+		Files:     []protocol.WorkspaceFile{{Path: "/absolute.md", Content: "bad"}},
+	}); err == nil {
+		t.Fatal("expected invalid memory path error")
+	}
+	if _, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+		MemoryRef: "ama://memories/store_1",
+		MountPath: "/outside",
+	}); err == nil {
+		t.Fatal("expected unsafe memory mount path error")
+	}
+}
+
+func TestMaterializeMemoryStoreReadOnlyAndResetPermissions(t *testing.T) {
+	root := t.TempDir()
+	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+		MemoryRef: "ama://memories/store_1",
+		ReadOnly:  true,
+		Files:     []protocol.WorkspaceFile{{Path: "notes/plan.md", Content: "ship"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize memory: %v", err)
+	}
+	fileInfo, err := os.Stat(filepath.Join(path, "notes", "plan.md"))
+	if err != nil {
+		t.Fatalf("stat memory file: %v", err)
+	}
+	if fileInfo.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("memory file remains writable: %o", fileInfo.Mode().Perm())
+	}
+	if err := resetMemoryStorePermissions(path); err != nil {
+		t.Fatalf("reset memory permissions: %v", err)
+	}
+	fileInfo, err = os.Stat(filepath.Join(path, "notes", "plan.md"))
+	if err != nil {
+		t.Fatalf("stat reset memory file: %v", err)
+	}
+	if fileInfo.Mode().Perm()&0o200 == 0 {
+		t.Fatalf("reset memory file is not writable: %o", fileInfo.Mode().Perm())
+	}
+}
+
+func TestMaterializeMemoryStoreWritableUsesCustomMountPath(t *testing.T) {
+	root := t.TempDir()
+	path, err := materializeMemoryStore(root, protocol.WorkspaceMount{
+		MemoryRef: "ama://memories/store_1",
+		MountPath: "/workspace/shared/notes",
+		Files:     []protocol.WorkspaceFile{{Path: "daily/plan.md", Content: "ship"}},
+	})
+	if err != nil {
+		t.Fatalf("materialize writable memory: %v", err)
+	}
+	if path != filepath.Join(root, "shared", "notes") {
+		t.Fatalf("unexpected writable memory mount path %q", path)
+	}
+	fileInfo, err := os.Stat(filepath.Join(path, "daily", "plan.md"))
+	if err != nil {
+		t.Fatalf("stat writable memory file: %v", err)
+	}
+	if fileInfo.Mode().Perm()&0o200 == 0 {
+		t.Fatalf("writable memory file is not writable: %o", fileInfo.Mode().Perm())
+	}
+}
+
+func TestReadMemoryFilesReadsNestedFilesAndPropagatesErrors(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "notes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "notes", "plan.md"), []byte("ship it"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	memories, err := readMemoryFiles(root)
+	if err != nil {
+		t.Fatalf("read memory files: %v", err)
+	}
+	if len(memories) != 1 || memories[0].Path != "notes/plan.md" || memories[0].Content != "ship it" {
+		t.Fatalf("unexpected memory snapshots %#v", memories)
+	}
+	if _, err := readMemoryFiles(filepath.Join(root, "missing")); err == nil {
+		t.Fatal("expected missing memory root error")
+	}
+}
+
+func TestResetMemoryStorePermissionsIgnoresEmptyAndMissingRoots(t *testing.T) {
+	if err := resetMemoryStorePermissions(""); err != nil {
+		t.Fatalf("empty root should be ignored: %v", err)
+	}
+	if err := resetMemoryStorePermissions(filepath.Join(t.TempDir(), "missing")); err != nil {
+		t.Fatalf("missing root should be ignored: %v", err)
+	}
+}
+
+func TestDefaultMountPathHelpers(t *testing.T) {
+	gitPath, err := defaultGitMountPath(protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"})
+	if err != nil || gitPath != path.Join("repos", "github.com", "saltbo", "slink") {
+		t.Fatalf("unexpected git mount path %q err=%v", gitPath, err)
+	}
+	if _, err := defaultGitMountPath(protocol.WorkspaceMount{URL: "ssh://github.com/saltbo/slink.git"}); err == nil {
+		t.Fatal("expected unsafe git URL error")
+	}
+	memoryPath, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "ama://memories/store_1"})
+	if err != nil || memoryPath != path.Join(".ama", "memory-stores", "store_1") {
+		t.Fatalf("unexpected memory mount path %q err=%v", memoryPath, err)
+	}
+	if coalesce(" value ", "fallback") != " value " || coalesce(" ", "fallback") != "fallback" {
+		t.Fatal("unexpected coalesce behavior")
+	}
+	if _, err := defaultMemoryStoreMountPath(protocol.WorkspaceMount{MemoryRef: "ama://memories/"}); err == nil {
+		t.Fatal("expected empty memory store id to fail")
+	}
+	for _, memoryRef := range []string{
+		"ama://vaults/store_1",
+		"ama://memories/store_1/nested",
+		"ama://memories/%2F",
+	} {
+		if _, err := memoryStoreIDFromRef(memoryRef); err == nil {
+			t.Fatalf("expected invalid memory ref %q to fail", memoryRef)
+		}
+	}
+}
+
+func TestMaterializeGitRepositoryRejectsInvalidInputs(t *testing.T) {
+	root := t.TempDir()
+	if _, _, err := materializeGitRepository(context.Background(), t.TempDir(), root, protocol.WorkspaceMount{URL: "bad-url"}, ""); err == nil {
+		t.Fatal("expected invalid git repository URL error")
+	}
+	if _, _, err := materializeGitRepository(context.Background(), t.TempDir(), root, protocol.WorkspaceMount{
+		URL:       "https://github.com/saltbo/slink.git",
+		MountPath: "/outside",
+	}, ""); err == nil {
+		t.Fatal("expected unsafe git mount path error")
+	}
+	if err := os.WriteFile(filepath.Join(root, "repos"), []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := materializeGitRepository(context.Background(), t.TempDir(), root, protocol.WorkspaceMount{
+		URL: "https://github.com/saltbo/slink.git",
+	}, ""); err == nil {
+		t.Fatal("expected repository mount parent conflict")
+	}
+}
+
+func TestMaterializeGitRepositoryPropagatesCacheRefAndWorktreeErrors(t *testing.T) {
+	t.Run("cache directory conflict", func(t *testing.T) {
+		workDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(workDir, "repositories"), []byte("occupied"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), protocol.WorkspaceMount{
+			URL: "https://github.com/saltbo/slink.git",
+		}, ""); err == nil {
+			t.Fatal("expected repository cache conflict")
+		}
+	})
+
+	t.Run("missing requested ref", func(t *testing.T) {
+		installWorkspaceScriptedGit(t, `#!/bin/sh
+case "$*" in
+  *rev-parse*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+		workDir := t.TempDir()
+		volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git", Ref: "missing"}
+		repositoryURL, err := parseGitRepositoryURL(volume.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(repositoryCacheDir(workDir, repositoryURL), ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), volume, ""); err == nil || !strings.Contains(err.Error(), "not available") {
+			t.Fatalf("expected missing repository ref error, got %v", err)
+		}
+	})
+
+	t.Run("worktree add failure", func(t *testing.T) {
+		installWorkspaceScriptedGit(t, `#!/bin/sh
+case "$*" in
+  *rev-parse*) echo HEAD; exit 0 ;;
+  *"worktree add"*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+		workDir := t.TempDir()
+		volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git", Ref: "main"}
+		repositoryURL, err := parseGitRepositoryURL(volume.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(repositoryCacheDir(workDir, repositoryURL), ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := materializeGitRepository(context.Background(), workDir, t.TempDir(), volume, ""); err == nil {
+			t.Fatal("expected worktree add error")
+		}
+	})
+}
+
+func TestMaterializeGitRepositoryUsesCacheAndExistingMount(t *testing.T) {
+	installWorkspaceFakeGit(t)
+	workDir := t.TempDir()
+	sessionRoot := t.TempDir()
+	volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"}
+	repositoryURL, err := parseGitRepositoryURL(volume.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := repositoryCacheDir(workDir, repositoryURL)
+	if err := os.MkdirAll(filepath.Join(cacheDir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mountPath := filepath.Join(sessionRoot, "repos", "github.com", "saltbo", "slink")
+	if err := os.MkdirAll(mountPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gotMount, gotCache, err := materializeGitRepository(context.Background(), workDir, sessionRoot, volume, "")
+	if err != nil {
+		t.Fatalf("materialize existing git mount: %v", err)
+	}
+	if gotMount != mountPath || gotCache != cacheDir {
+		t.Fatalf("unexpected mount/cache %q %q", gotMount, gotCache)
+	}
+}
+
+func TestMaterializeGitRepositoryAddsWorktreeWithFakeGit(t *testing.T) {
+	installWorkspaceFakeGit(t)
+	workDir := t.TempDir()
+	sessionRoot := t.TempDir()
+	volume := protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"}
+	repositoryURL, err := parseGitRepositoryURL(volume.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := repositoryCacheDir(workDir, repositoryURL)
+	if err := os.MkdirAll(filepath.Join(cacheDir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gotMount, gotCache, err := materializeGitRepository(context.Background(), workDir, sessionRoot, volume, "")
+	if err != nil {
+		t.Fatalf("materialize git worktree: %v", err)
+	}
+	if gotCache != cacheDir {
+		t.Fatalf("unexpected cache dir %q", gotCache)
+	}
+	if _, err := os.Stat(gotMount); err != nil {
+		t.Fatalf("expected fake worktree at %q: %v", gotMount, err)
+	}
+}
+
+func TestEnsureRepositoryCacheClonesWithFakeGit(t *testing.T) {
+	installWorkspaceFakeGit(t)
+	cacheDir := filepath.Join(t.TempDir(), "repositories", "github.com", "saltbo", "slink")
+	err := ensureRepositoryCache(context.Background(), cacheDir, protocol.WorkspaceMount{URL: "https://github.com/saltbo/slink.git"}, "")
+	if err != nil {
+		t.Fatalf("expected fake clone success, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
+		t.Fatalf("expected fake clone to create git cache, got %v", err)
+	}
+}
+
+func installWorkspaceFakeGit(t *testing.T) {
+	t.Helper()
+	installWorkspaceScriptedGit(t, `#!/bin/sh
+set -eu
+last=""
+for arg in "$@"; do last="$arg"; done
+case "$*" in
+  clone\ *|*" clone "*)
+    mkdir -p "$last/.git"
+    exit 0
+    ;;
+  fetch\ *|*" fetch "*)
+    exit 0
+    ;;
+  rev-parse\ *|*" rev-parse "*)
+    echo HEAD
+    exit 0
+    ;;
+  worktree\ add\ *|*" worktree add "*)
+    previous=""
+    for arg in "$@"; do
+      if [ "$previous" = "--detach" ]; then
+        mkdir -p "$arg"
+        exit 0
+      fi
+      previous="$arg"
+    done
+    exit 0
+    ;;
+  symbolic-ref\ *|*" symbolic-ref "*)
+    exit 1
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+`)
+}
+
+func installWorkspaceScriptedGit(t *testing.T, script string) {
+	t.Helper()
+	dir := t.TempDir()
+	scriptPath := filepath.Join(dir, "git.sh")
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	executablePath := filepath.Join(dir, "git")
+	if runtime.GOOS == "windows" {
+		executablePath += ".cmd"
+		if err := os.WriteFile(executablePath, []byte("@echo off\r\nsh \"%~dp0git.sh\" %*\r\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := os.Rename(scriptPath, executablePath); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func TestEnsureRepositoryCacheRejectsInvalidURL(t *testing.T) {
+	err := ensureRepositoryCache(context.Background(), filepath.Join(t.TempDir(), "cache"), protocol.WorkspaceMount{URL: "bad-url"}, "")
+	if err == nil {
+		t.Fatal("expected invalid repository URL error")
+	}
+}
+
+func TestParseGitRepositoryURLRejectsUnsafeForms(t *testing.T) {
+	for _, rawURL := range []string{
+		"http://github.com/saltbo/slink.git",
+		"https://user@github.com/saltbo/slink.git",
+		"https://github.com/saltbo/slink.git?token=secret",
+		"https://github.com/saltbo/slink.git#main",
+		"https://github.com/saltbo",
+		"https://github.com/saltbo/../slink",
+		"https://github.com/saltbo/slink space",
+		"https://github.com/saltbo/%2e%2e/slink",
+	} {
+		if _, err := parseGitRepositoryURL(rawURL); err == nil {
+			t.Fatalf("expected unsafe git URL %q to fail", rawURL)
+		}
+	}
+}
+
+func TestCredentialHelpersSkipInvalidInputs(t *testing.T) {
+	lines := gitCredentialLines([]protocol.WorkspaceMount{
+		{URL: "https://github.com/saltbo/slink.git"},
+		{URL: "https://github.com/saltbo/slink.git", Credential: &protocol.WorkspaceGitCredential{Username: "", Password: "token"}},
+		{URL: "bad-url", Credential: &protocol.WorkspaceGitCredential{Username: "x", Password: "token"}},
+		{URL: "https://github.com/saltbo/slink.git", Credential: &protocol.WorkspaceGitCredential{Username: "x", Password: "token"}},
+	})
+	if len(lines) != 1 || !strings.Contains(lines[0], "https://x:token@github.com") {
+		t.Fatalf("expected one valid credential line, got %#v", lines)
+	}
+	if path, err := writeGitCredentialStore(t.TempDir(), nil); err != nil || path != "" {
+		t.Fatalf("expected no credential file for empty lines, path=%q err=%v", path, err)
+	}
+	parentFile := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(parentFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writeGitCredentialStore(filepath.Join(parentFile, "session"), []string{"https://x:y@example.test\n"}); err == nil {
+		t.Fatal("expected credential store write under file parent to fail")
+	}
+}
+
+func TestConfigureWorkspaceGitCredentialsUsesSessionStore(t *testing.T) {
+	installWorkspaceFakeGit(t)
+	cacheDir := t.TempDir()
+	worktreeDir := t.TempDir()
+	credentialsPath := filepath.Join(t.TempDir(), "git-credentials")
+	if err := os.WriteFile(credentialsPath, []byte("https://x:y@example.test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := configureWorkspaceGitCredentials(context.Background(), credentialsPath, []preparedWorktree{{
+		cacheDir: cacheDir,
+		path:     worktreeDir,
+	}})
+	if err != nil {
+		t.Fatalf("expected credential helper configuration, got %v", err)
+	}
+	if err := configureWorkspaceGitCredentials(context.Background(), "", []preparedWorktree{{cacheDir: cacheDir, path: worktreeDir}}); err != nil {
+		t.Fatalf("expected empty credentials path to skip configuration, got %v", err)
+	}
+	if err := configureWorkspaceGitCredentials(context.Background(), credentialsPath, nil); err != nil {
+		t.Fatalf("expected empty worktrees to skip configuration, got %v", err)
+	}
+}
+
+func TestConfigureWorktreeCredentialHelperPropagatesGitErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		failMatch  string
+		wantConfig string
+	}{
+		{name: "enable worktree config", failMatch: "extensions.worktreeConfig", wantConfig: "extensions.worktreeConfig"},
+		{name: "replace inherited helpers", failMatch: "--replace-all", wantConfig: "--replace-all"},
+		{name: "add session helper", failMatch: "--add", wantConfig: "--add"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			installWorkspaceScriptedGit(t, `#!/bin/sh
+set -eu
+case "$*" in
+  *`+tc.failMatch+`*) exit 7 ;;
+  *) exit 0 ;;
+esac
+`)
+			err := configureWorktreeCredentialHelper(context.Background(), t.TempDir(), filepath.Join(t.TempDir(), "git-credentials"))
+			if err == nil || !strings.Contains(err.Error(), tc.wantConfig) {
+				t.Fatalf("expected %q git error, got %v", tc.wantConfig, err)
+			}
+		})
+	}
+}
+
+func TestWriteSessionStateRejectsUnwritableSessionDir(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "state-parent-file")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeSessionState(filepath.Join(file, "session"), "/workspace", nil); err == nil {
+		t.Fatal("expected state write error")
+	}
+}
+
+func TestResolveWorktreeRefUsesRemoteBranchCommitOrHead(t *testing.T) {
+	if _, err := execLookPathGit(); err != nil {
+		t.Skipf("git not available: %v", err)
+	}
+	cacheDir := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "--version")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, cacheDir, "init", "-b", "main")
+	runGit(t, cacheDir, "config", "user.email", "runner@example.test")
+	runGit(t, cacheDir, "config", "user.name", "Runner")
+	if err := os.WriteFile(filepath.Join(cacheDir, "README.md"), []byte("ok\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, cacheDir, "add", "README.md")
+	runGit(t, cacheDir, "commit", "-m", "init")
+	commit := strings.TrimSpace(runGitOutput(t, cacheDir, "rev-parse", "HEAD"))
+	runGit(t, cacheDir, "update-ref", "refs/remotes/origin/main", commit)
+
+	if got, err := resolveWorktreeRef(context.Background(), cacheDir, "main"); err != nil || got != "refs/remotes/origin/main" {
+		t.Fatalf("expected remote branch ref, got %q err=%v", got, err)
+	}
+	if got, err := resolveWorktreeRef(context.Background(), cacheDir, commit); err != nil || got != commit {
+		t.Fatalf("expected commit ref, got %q err=%v", got, err)
+	}
+	if got, err := resolveWorktreeRef(context.Background(), cacheDir, "missing"); err == nil || got != "" {
+		t.Fatalf("expected missing ref error, got %q err=%v", got, err)
+	}
+	if got, err := resolveWorktreeRef(context.Background(), cacheDir, ""); err != nil || got != "HEAD" {
+		t.Fatalf("expected HEAD fallback, got %q err=%v", got, err)
+	}
+}
+
+func execLookPathGit() (string, error) {
+	return exec.LookPath("git")
+}

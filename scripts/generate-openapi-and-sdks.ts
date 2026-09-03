@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createApp } from '../server/app'
-import { AMA_CANONICAL_RESOURCE } from '../server/auth/scopes'
+import { ENBOR_CANONICAL_RESOURCE } from '../server/auth/scopes'
 import type { Env } from '../server/env'
 
 type OpenApiDocument = {
@@ -102,19 +102,10 @@ async function normalizeGeneratedPython(directory: string) {
     }
     if (!entry.name.endsWith('.py')) continue
     const content = await readFile(entryPath, 'utf8')
-    const relativePath = path.relative(ROOT, entryPath).split(path.sep).join('/')
-    let committedContent: string | null = null
-    try {
-      committedContent = execFileSync('git', ['show', `HEAD:${relativePath}`], {
-        cwd: ROOT,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      })
-    } catch {
-      // New generated files have no committed counterpart to preserve.
-    }
-    if (content === committedContent) continue
-    const normalized = content.replace(/[ \t]+\n/g, '\n').replace(/\n*$/, '\n')
+    const normalized = content
+      .replace(/^    AMA = "ama"$/gm, '    ENBOR = "ama"')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n*$/, '\n')
     if (normalized !== content) await writeFile(entryPath, normalized)
   }
 }
@@ -126,7 +117,7 @@ function generateSdkFacades() {
 async function routeGeneratedOpenApi() {
   const app = createApp()
   const env = {
-    OIDC_RESOURCE: AMA_CANONICAL_RESOURCE,
+    OIDC_RESOURCE: ENBOR_CANONICAL_RESOURCE,
     OIDC_ISSUER: 'https://id.realmroot.dev/api/auth',
     OIDC_CLIENT_ID: 'ama-console',
   } as Env
@@ -138,6 +129,7 @@ async function routeGeneratedOpenApi() {
 }
 
 function stabilizeSdkSchemaNames(document: OpenApiDocument) {
+  setPropertyEnumNames(document, 'RunnerWorkPayload', ['protocol'], ['EnborRunnerWork'])
   setPropertyEnumNames(document, 'VaultCredential', ['spec', 'type'], [
     'VaultCredentialTypeOpaque',
     'VaultCredentialTypeBasicAuth',

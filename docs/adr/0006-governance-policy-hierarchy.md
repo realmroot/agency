@@ -15,7 +15,7 @@ narrower scope to weaken a broader restriction.
   project ownership.
 - Effective resolution is deterministic and monotonic: a narrower scope cannot
   weaken a broader restriction.
-- AMA consumes team identity from the configured OIDC provider rather than
+- Enbor consumes team identity from the configured OIDC provider rather than
   maintaining a competing team directory.
 - Historical execution evidence remains immutable while policy evaluation uses
   the current effective policy.
@@ -27,6 +27,6 @@ Observable merge and enforcement behavior is specified in
 
 - Policy evaluation is stable regardless of claim ordering.
 - A narrower scope cannot relax an explicit broader restriction.
-- AMA relies on team claims from the configured OIDC provider instead of
+- Enbor relies on team claims from the configured OIDC provider instead of
   duplicating team ownership.
 - Historical evidence remains intact while future work observes current policy.

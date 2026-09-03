@@ -1,7 +1,6 @@
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import type {
   AgentRepo,
-  AmaTurnExecutor,
   AuditPort,
   AuditReadRepo,
   AuthScope,
@@ -9,6 +8,7 @@ import type {
   CloudRuntimeLifecycle,
   CloudTurnQueue,
   ConnectorRepo,
+  EnborTurnExecutor,
   EnvironmentRepo,
   EventStore,
   IdentityRepo,
@@ -48,7 +48,7 @@ type CreateApprovalGate = (values: {
   auth: AuthScope
   sessionId: string
   sessionMetadata: Record<string, unknown>
-  appendEvent: (event: AmaEvent) => Promise<string>
+  appendEvent: (event: EnborEvent) => Promise<string>
 }) => ToolApprovalGate
 
 // Aggregates every port a usecase may reach for. Constructed once per request
@@ -87,7 +87,7 @@ export interface Deps {
   cloudRuntime: CloudRuntimeLifecycle
   runtimeWorkspace: RuntimeWorkspaceReader
   sandboxExecutor: SessionSandboxExecutor
-  amaTurnExecutor: AmaTurnExecutor
+  enborTurnExecutor: EnborTurnExecutor
   sessionOrchestration: SessionOrchestrationStore
   sessions: SessionRepo
   // "Storage follows the loop": cloud-loop (ama) events live in the Session DO,

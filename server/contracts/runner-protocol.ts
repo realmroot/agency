@@ -24,8 +24,8 @@ export const RunnerWorkspaceMountSchema = z
   .object({
     name: z.string().openapi({ example: 'source' }),
     type: z.enum(['git_repository', 'memory', 'secret', 'empty_dir']).openapi({ example: 'git_repository' }),
-    mountPath: z.string().openapi({ example: '/workspace/repos/saltbo/any-managed-agents' }),
-    url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
+    mountPath: z.string().openapi({ example: '/workspace/repos/realmroot/enbor' }),
+    url: z.string().optional().openapi({ example: 'https://github.com/realmroot/enbor.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
     credential: RunnerGitCredentialSchema.optional(),
     memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
@@ -49,7 +49,7 @@ export const RunnerVolumeSchema = z
     name: z.string().openapi({ example: 'source' }),
     type: z.enum(['secret', 'git_repository', 'memory', 'empty_dir']).openapi({ example: 'git_repository' }),
     secretRef: z.string().optional(),
-    url: z.string().optional().openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
+    url: z.string().optional().openapi({ example: 'https://github.com/realmroot/enbor.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
     memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
   })
@@ -59,7 +59,7 @@ export const RunnerVolumeSchema = z
 export const RunnerVolumeMountSchema = z
   .object({
     name: z.string().openapi({ example: 'source' }),
-    mountPath: z.string().openapi({ example: '/workspace/repos/saltbo/any-managed-agents' }),
+    mountPath: z.string().openapi({ example: '/workspace/repos/realmroot/enbor' }),
     readOnly: z.boolean().optional(),
   })
   .strict()

@@ -17,7 +17,7 @@
 import { type PendingSessionApproval, sessionApprovalState } from '@server/domain/runtime/approval-state'
 import { now } from '@server/domain/runtime/util'
 import { newPrimaryKey } from '@server/id'
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import type {
   AuditPort,
   AuthScope,
@@ -68,7 +68,7 @@ export function createToolApprovalGate(
     auth: AuthScope
     sessionId: string
     sessionMetadata: Record<string, unknown>
-    appendEvent: (event: AmaEvent) => Promise<string>
+    appendEvent: (event: EnborEvent) => Promise<string>
   },
 ): ToolApprovalGate {
   const { sessionOrchestration: store, audit, policy } = deps

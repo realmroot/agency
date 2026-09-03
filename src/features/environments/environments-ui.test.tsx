@@ -6,7 +6,7 @@ import type { ClientPagination } from '@/console/use-client-pagination'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { EnvironmentDetailView } from '@/features/environments/EnvironmentDetailView'
 import { EnvironmentsView } from '@/features/environments/EnvironmentsView'
-import type { Environment, Runner, Session } from '@/lib/amarpc'
+import type { Environment, Runner, Session } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import {
   type EnvironmentOverrides,

@@ -1,6 +1,6 @@
-export const AMA_CANONICAL_RESOURCE = 'https://ama.tftt.cc/api'
-export const AMA_RESOURCE_NAME = 'Any Managed Agents API'
-export const AMA_RESOURCE_DESCRIPTION =
+export const ENBOR_CANONICAL_RESOURCE = 'https://ama.tftt.cc/api'
+export const ENBOR_RESOURCE_NAME = 'Enbor API'
+export const ENBOR_RESOURCE_DESCRIPTION =
   'Realmroot-protected control plane for managed Agents, environments, sessions, runners, governance, usage, and audit.'
 
 const resourceNames = [
@@ -24,7 +24,7 @@ const resourceNames = [
   'work-items',
 ] as const
 
-export const AMA_SCOPES = resourceNames.flatMap((resource) => [`${resource}:read`, `${resource}:write`] as const)
+export const ENBOR_SCOPES = resourceNames.flatMap((resource) => [`${resource}:read`, `${resource}:write`] as const)
 
 export function requiredScope(method: string, requestUrl: string) {
   const pathname = new URL(requestUrl).pathname
@@ -41,9 +41,9 @@ export function protectedResourceMetadata(resource: string, issuer: string) {
   return {
     resource,
     authorization_servers: [issuer],
-    scopes_supported: AMA_SCOPES,
+    scopes_supported: ENBOR_SCOPES,
     bearer_methods_supported: ['header'],
-    resource_name: AMA_RESOURCE_NAME,
+    resource_name: ENBOR_RESOURCE_NAME,
     dpop_signing_alg_values_supported: ['ES256'],
     dpop_bound_access_tokens_required: false,
     realmroot_client_authentication: {

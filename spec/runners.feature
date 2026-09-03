@@ -1,21 +1,21 @@
 Feature: Runners
   Self-hosted environments are serviced by registered runtime runners that lease
-  AMA-owned session work. AMA queues work without a Cloudflare Sandbox, runners
-  claim leases for eligible work, provide sandbox execution for AMA sessions,
+  Enbor-owned session work. Enbor queues work without a Cloudflare Sandbox, runners
+  claim leases for eligible work, provide sandbox execution for Enbor sessions,
   run CLI-backed runtimes over a runner-owned channel, and the work queue recovers
-  expired leases. AMA stays the control plane and canonical event store;
+  expired leases. Enbor stays the control plane and canonical event store;
   runner-local runtime endpoints are never exposed.
 
   @runners/local-instances @unit
   Scenario: Manage isolated local Runner instances
     Given an operator does not configure runner state or work directories
-    When runners connect to AMA API Servers and Environments
+    When runners connect to Enbor API Servers and Environments
     Then each API Server and Environment pair receives one stable isolated state directory
     And the same pair cannot run more than one local Runner process
     And the operator can start, list, inspect, stop, restart, configure, view logs, and remove local Runner instances
     And managed Runners do not start at login unless the operator explicitly enables that policy
     And the operator can inspect and change the start-at-login policy without changing whether the Runner is currently running
-    And local process state is reported separately from AMA control-plane heartbeat state
+    And local process state is reported separately from Enbor control-plane heartbeat state
     And restarting an instance reuses its Runner identity, workspaces, and session event logs
     And each instance keeps using the Realmroot account selected when it was created even when another account becomes active for the same API Server
     And explicit state and work directory overrides are available only to foreground run mode
@@ -30,7 +30,7 @@ Feature: Runners
     And an already-assigned lease remains locally valid if that same matching runtime becomes limited after the scheduling heartbeat
     And a null model requires only the ready runtime without inventing a model id
     And session starts that declare no runtime requirement are not claimable
-    And local sandbox tool work requires the AMA runtime while other unscoped non-session work is claimable by any runner
+    And local sandbox tool work requires the Enbor runtime while other unscoped non-session work is claimable by any runner
 
   @runners/auth-binding @domain
   Scenario: Bind runner registration to its Realmroot token
@@ -71,7 +71,7 @@ Feature: Runners
     And the heartbeat reports one runtimes list with each runtime's models, version, availability state, and safe diagnostics
     And the runner resource does not expose a generic capabilities field or a legacy runtimeInventory field
     And host platform metadata is diagnostic while the runtimes list remains authoritative for scheduling
-    And Windows omits the unsupported AMA runtime while still reporting detected CLI-backed runtimes
+    And Windows omits the unsupported Enbor runtime while still reporting detected CLI-backed runtimes
     And quota-governed runtimes are probed before the first schedulable heartbeat
     And quota-governed runtimes whose usage probe is unavailable are reported as limited before work can be assigned
     And disabled runners cannot heartbeat themselves active and every runner endpoint requires authentication
@@ -79,7 +79,7 @@ Feature: Runners
   @runners/stale-heartbeat @api
   Scenario: Treat runners that stop heartbeating as offline
     Given an active self-hosted runner stops sending heartbeats beyond the control-plane grace window
-    When operators read or filter runners and AMA evaluates runtime scheduling or lease claims
+    When operators read or filter runners and Enbor evaluates runtime scheduling or lease claims
     Then the runner is reported as offline and excluded from active runner results
     And it cannot satisfy runtime availability or claim new work while its heartbeat is stale
     And a fresh heartbeat makes the same runner active again without re-registration
@@ -90,7 +90,7 @@ Feature: Runners
   Scenario: Queue self-hosted session work without a Cloudflare Sandbox
     Given a self-hosted environment has an active eligible runner
     When the user creates a session in that environment
-    Then AMA queues session work without creating a Cloudflare Sandbox
+    Then Enbor queues session work without creating a Cloudflare Sandbox
     And the session stays pending with a waiting-for-runner reason until a runner claims it
 
   @runners/work-items @api
@@ -119,11 +119,11 @@ Feature: Runners
     And control-plane cancellation of already running self-hosted work is not available until a cancellation resource is defined
 
   @runners/ama-sandbox-channel @api
-  Scenario: Keep an AMA sandbox channel after startup work completes
-    Given a self-hosted AMA session has completed its startup lease
-    When the AMA runtime executes a sandbox tool for that session
+  Scenario: Keep an Enbor sandbox channel after startup work completes
+    Given a self-hosted Enbor session has completed its startup lease
+    When the Enbor runtime executes a sandbox tool for that session
     Then the runner pool routes the sandbox request through the live runner channel
-    And a reconnect advertises and restores every active AMA Session route
+    And a reconnect advertises and restores every active Enbor Session route
     And only the current runner connection may replace or retire its routes
     And stopping the sandbox retires live routing while preserving event backfill
     And completed CLI runtime sessions remain unavailable for live sandbox requests
@@ -138,18 +138,18 @@ Feature: Runners
     And an eligible runner can claim the recovered work again, return the session to running, and complete it to idle
 
   @runners/session-runtime-binding @api
-  Scenario: Bind each AMA session to one target runtime session
+  Scenario: Bind each Enbor session to one target runtime session
     Given a runner lease reports a target runtime session id for self-hosted work
-    When the same AMA session reports a different target runtime session id
-    Then AMA rejects the lease update before persisting the second target runtime session id
-    And the original target runtime session id remains the only binding for that AMA session
+    When the same Enbor session reports a different target runtime session id
+    Then Enbor rejects the lease update before persisting the second target runtime session id
+    And the original target runtime session id remains the only binding for that Enbor session
 
   @runners/live-prompt @api
   Scenario: Deliver prompts to a live self-hosted runner session
     Given a self-hosted session is already leased to an online runner
     When the user sends another prompt to that running session
-    Then AMA delivers the prompt over the runner session command channel only through a runner that supports command acknowledgements
-    And AMA accepts the prompt only after the runner writes it to the live runtime bridge
+    Then Enbor delivers the prompt over the runner session command channel only through a runner that supports command acknowledgements
+    And Enbor accepts the prompt only after the runner writes it to the live runtime bridge
     And retries across channel reconnection reuse one request id so a lost acknowledgement cannot deliver the prompt twice while the runner process remains alive
     And restarting the runner process is an explicit at-least-once delivery boundary
     And a runner without the acknowledgement capability returns a retryable conflict until it is upgraded

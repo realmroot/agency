@@ -1,12 +1,12 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from enbor_sdk.facade import create_ama_client
+from enbor_sdk.facade import create_enbor_client
 
 
 class CreationFacadeTest(TestCase):
     def test_agents_create_omits_unspecified_idempotency_key(self) -> None:
-        client = create_ama_client(base_url="https://example.com")
+        client = create_enbor_client(base_url="https://example.com")
         response = object()
         body = object()
         with (
@@ -19,7 +19,7 @@ class CreationFacadeTest(TestCase):
         create.assert_called_once_with(client=client.raw, body=body)
 
     def test_agents_create_forwards_provided_idempotency_key(self) -> None:
-        client = create_ama_client(base_url="https://example.com")
+        client = create_enbor_client(base_url="https://example.com")
         response = object()
         body = object()
         with (
@@ -32,7 +32,7 @@ class CreationFacadeTest(TestCase):
         create.assert_called_once_with(client=client.raw, body=body, idempotency_key="agent-idempotency-1")
 
     def test_environments_create_omits_unspecified_idempotency_key(self) -> None:
-        client = create_ama_client(base_url="https://example.com")
+        client = create_enbor_client(base_url="https://example.com")
         response = object()
         body = object()
         with (
@@ -45,7 +45,7 @@ class CreationFacadeTest(TestCase):
         create.assert_called_once_with(client=client.raw, body=body)
 
     def test_environments_create_forwards_provided_idempotency_key(self) -> None:
-        client = create_ama_client(base_url="https://example.com")
+        client = create_enbor_client(base_url="https://example.com")
         response = object()
         body = object()
         with (

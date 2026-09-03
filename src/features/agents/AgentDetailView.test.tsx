@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
-import type { Agent, AgentVersion, Session, SessionAgentSnapshot } from '@/lib/amarpc'
+import type { Agent, AgentVersion, Session, SessionAgentSnapshot } from '@/lib/enborrpc'
 import {
   type AgentOverrides,
   type AgentVersionOverrides,

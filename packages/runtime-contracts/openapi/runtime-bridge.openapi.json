@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "AMA Runtime Bridge Protocol",
+    "title": "Enbor Runtime Bridge Protocol",
     "version": "1.0.0"
   },
   "paths": {},
@@ -24,7 +24,7 @@
           "ExternalRuntimeCopilot"
         ]
       },
-      "AmaSessionEventType": {
+      "EnborSessionEventType": {
         "type": "string",
         "enum": [
           "runtime.started",

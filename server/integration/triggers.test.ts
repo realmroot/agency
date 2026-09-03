@@ -4,7 +4,7 @@ import { createTriggerDispatchRepo } from '@server/adapters/repos/trigger-dispat
 import { createDeps } from '@server/composition'
 import { createDb } from '@server/db/client'
 import type { Env } from '@server/env'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from '@server/usecases/dispatch-triggers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
@@ -755,7 +755,7 @@ describe('[CF] /api/v1/triggers', () => {
       .first<{ state: string; metadata: string }>()
     expect(activeSession?.state).toBe('pending')
     const activeRoutingKeyHash = (JSON.parse(activeSession!.metadata) as { annotations: Record<string, string> })
-      .annotations[AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]
+      .annotations[ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]
     expect(activeRoutingKeyHash).toEqual(expect.any(String))
 
     const owner = await env.DB.prepare(
@@ -1096,7 +1096,7 @@ describe('[CF] /api/v1/triggers', () => {
     await expect(sessionRes.json()).resolves.toMatchObject({
       metadata: {
         annotations: {
-          [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: 'c54d83738741c7e14509b968123cae0c54ca45e644a54f7f3f863de4ca70e655',
+          [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: 'c54d83738741c7e14509b968123cae0c54ca45e644a54f7f3f863de4ca70e655',
         },
       },
     })

@@ -116,7 +116,7 @@ Feature: Triggers
     When requests arrive for another routing key and then for the active routing key
     Then the other routing key remains queued until the active session becomes idle
     And the active routing key is delivered immediately to its existing session
-    And queued routing keys dispatch in AMA acceptance order with at most one active session
+    And queued routing keys dispatch in Enbor acceptance order with at most one active session
 
   @triggers/http-serial-wake-bounded @usecase
   Scenario: Blocked serial trigger wake signals remain bounded

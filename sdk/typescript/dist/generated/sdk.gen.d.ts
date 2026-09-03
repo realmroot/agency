@@ -456,7 +456,7 @@ export declare const updateVaultCredential: <ThrowOnError extends boolean = fals
 /**
  * Update a vault credential secret
  *
- * Updates credential secret material. AMA records version snapshots internally for auditability.
+ * Updates credential secret material. Enbor records version snapshots internally for auditability.
  */
 export declare const updateVaultCredentialSecret: <ThrowOnError extends boolean = false>(options: Options<UpdateVaultCredentialSecretData, ThrowOnError>) => RequestResult<UpdateVaultCredentialSecretResponses, UpdateVaultCredentialSecretErrors, ThrowOnError>;
 /**

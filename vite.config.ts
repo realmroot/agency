@@ -34,7 +34,7 @@ export default defineConfig(({ command }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        '@ama/runtime-contracts': path.resolve(__dirname, './packages/runtime-contracts/src'),
+        '@enbor/runtime-contracts': path.resolve(__dirname, './packages/runtime-contracts/src'),
         '@server': path.resolve(__dirname, './server'),
         '@shared': path.resolve(__dirname, './shared'),
       },

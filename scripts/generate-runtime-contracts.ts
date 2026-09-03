@@ -11,7 +11,7 @@ import {
   RuntimeUsageWindowSchema,
 } from '../packages/runtime-contracts/src/bridge-protocol'
 import { EXTERNAL_RUNTIME_NAMES } from '../packages/runtime-contracts/src/runtime-names'
-import { AMA_SESSION_EVENT_TYPES } from '../packages/runtime-contracts/src/session-events'
+import { ENBOR_SESSION_EVENT_TYPES } from '../packages/runtime-contracts/src/session-events'
 
 type JSONSchema = Record<string, unknown>
 type OpenApiDocument = {
@@ -30,13 +30,13 @@ const ROOT = path.join(import.meta.dirname, '..')
 const RUNTIME_CONTRACT_OPENAPI = path.join(ROOT, 'packages/runtime-contracts/openapi/runtime-bridge.openapi.json')
 const SESSION_EVENT_OPENAPI = path.join(ROOT, 'packages/runtime-contracts/openapi/session-events.openapi.json')
 
-const RUNTIME_BRIDGE_CONFIG = path.join(ROOT, 'cmd/ama-runner/pkg/runtimebridge/oapi-codegen.config.yaml')
-const SESSION_EVENT_CONFIG = path.join(ROOT, 'cmd/ama-runner/pkg/sessionevent/oapi-codegen.config.yaml')
+const RUNTIME_BRIDGE_CONFIG = path.join(ROOT, 'cmd/enbor-runner/pkg/runtimebridge/oapi-codegen.config.yaml')
+const SESSION_EVENT_CONFIG = path.join(ROOT, 'cmd/enbor-runner/pkg/sessionevent/oapi-codegen.config.yaml')
 
-const RUNTIME_BRIDGE_GO = path.join(ROOT, 'cmd/ama-runner/pkg/runtimebridge/protocol_gen.go')
-const SESSION_EVENT_GO = path.join(ROOT, 'cmd/ama-runner/pkg/sessionevent/session_events_gen.go')
+const RUNTIME_BRIDGE_GO = path.join(ROOT, 'cmd/enbor-runner/pkg/runtimebridge/protocol_gen.go')
+const SESSION_EVENT_GO = path.join(ROOT, 'cmd/enbor-runner/pkg/sessionevent/session_events_gen.go')
 
-const SESSION_EVENT_TYPES = [...AMA_SESSION_EVENT_TYPES]
+const SESSION_EVENT_TYPES = [...ENBOR_SESSION_EVENT_TYPES]
 
 async function main() {
   const check = process.argv.includes('--check')
@@ -75,7 +75,7 @@ function runtimeBridgeOpenApiDocument(): OpenApiDocument {
   return {
     openapi: '3.0.3',
     info: {
-      title: 'AMA Runtime Bridge Protocol',
+      title: 'Enbor Runtime Bridge Protocol',
       version: '1.0.0',
     },
     paths: {},
@@ -90,7 +90,7 @@ function runtimeBridgeOpenApiDocument(): OpenApiDocument {
           enum: EXTERNAL_RUNTIME_NAMES,
           'x-enum-varnames': EXTERNAL_RUNTIME_NAMES.map((name) => `ExternalRuntime${goConstName(name)}`),
         },
-        AmaSessionEventType: sessionEventTypeSchema(),
+        EnborSessionEventType: sessionEventTypeSchema(),
         RuntimeBridgeRunMessage: bridgeRunMessageSchema(),
         RuntimeBridgeControlMessage: bridgeControlMessageSchema(),
         RuntimeBridgeInventoryMessage: bridgeInventoryMessageSchema(),
@@ -108,13 +108,13 @@ function sessionEventOpenApiDocument(): OpenApiDocument {
   return {
     openapi: '3.0.3',
     info: {
-      title: 'AMA Session Event Types',
+      title: 'Enbor Session Event Types',
       version: '1.0.0',
     },
     paths: {},
     components: {
       schemas: {
-        AmaSessionEventType: sessionEventTypeSchema(),
+        EnborSessionEventType: sessionEventTypeSchema(),
       },
     },
   }

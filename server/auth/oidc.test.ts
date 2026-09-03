@@ -169,7 +169,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     })
   })
 
-  it('accepts an unknown downstream client Bearer token for the exact AMA resource', async () => {
+  it('accepts an unknown downstream client Bearer token for the exact Enbor resource', async () => {
     const issuer = 'https://id-downstream.test/api/auth'
     const { token, jwks } = await signedToken({
       issuer,
@@ -422,7 +422,7 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
   it.each([
     ['missing', null],
     ['wrong', 'https://other-api.example.com'],
-  ])('rejects a signed JWT with %s AMA audience', async (_name, audience) => {
+  ])('rejects a signed JWT with %s Enbor audience', async (_name, audience) => {
     const issuer = `https://id-audience-${_name}.test/api/auth`
     const resource = 'https://ama.example.com'
     const { token, jwks } = await signedToken({ issuer, audience })
@@ -433,7 +433,7 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     )
   })
 
-  it('accepts the configured AMA audience and does not invent owner or wildcard authority', async () => {
+  it('accepts the configured Enbor audience and does not invent owner or wildcard authority', async () => {
     const issuer = 'https://id-audience-correct.test/api/auth'
     const resource = 'https://ama.example.com'
     const { token, jwks } = await signedToken({ issuer, audience: resource })

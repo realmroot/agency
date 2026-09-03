@@ -214,7 +214,7 @@ export async function createIdentity(
           organizationId: auth.organization.id,
           projectId: auth.project.id,
           name: `Identity · ${input.name}`,
-          description: 'AMA-managed Realmroot Agent installation state.',
+          description: 'Enbor-managed Realmroot Agent installation state.',
           scope: 'project',
           managedBy: 'identity',
         },

@@ -1,15 +1,15 @@
-// AMA cloud-loop execution contract.
+// Enbor cloud-loop execution contract.
 //
-// This is the single source of the AMA first-party turn engine. The loop runs
+// This is the single source of the Enbor first-party turn engine. The loop runs
 // only in the cloud control plane; self-hosted runners may provide a sandbox
 // executor, but they do not host this loop. The engine depends only on the
 // agent libraries, runtime contracts, and the ports below — never on Env,
 // Cloudflare Sandbox SDK, D1, Hono, runner channels, or fetch.
 
-import type { ToolExecutionInput, ToolExecutionResult } from '@ama/runtime-contracts/sandbox-tools'
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import type { AssistantMessage, Context, Model } from '@earendil-works/pi-ai'
-import type { AmaEvent } from '@shared/session-events'
+import type { ToolExecutionInput, ToolExecutionResult } from '@enbor/runtime-contracts/sandbox-tools'
+import type { EnborEvent } from '@shared/session-events'
 
 export type { ToolExecutionInput, ToolExecutionResult }
 
@@ -41,7 +41,7 @@ export type RuntimeToolPolicyDecision = {
 // D1; the runner forwards over its channel. A suppression decorator (approval
 // gate) wraps this without the engine knowing.
 export interface RuntimeEventSink {
-  emit(event: AmaEvent): Promise<void>
+  emit(event: EnborEvent): Promise<void>
 }
 
 // Gates a tool call before execution (sandbox/network policy + approval).

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { PageHeader } from '@/console/components'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { useUrlFilter } from '@/console/use-list-filters'
-import { type AuditRecordListOptions, api } from '@/lib/amarpc'
+import { type AuditRecordListOptions, api } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { AuditView } from './AuditView'
 

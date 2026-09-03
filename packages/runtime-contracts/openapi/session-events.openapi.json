@@ -1,13 +1,13 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "AMA Session Event Types",
+    "title": "Enbor Session Event Types",
     "version": "1.0.0"
   },
   "paths": {},
   "components": {
     "schemas": {
-      "AmaSessionEventType": {
+      "EnborSessionEventType": {
         "type": "string",
         "enum": [
           "runtime.started",

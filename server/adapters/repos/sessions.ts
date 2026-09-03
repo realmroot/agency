@@ -1,5 +1,5 @@
 import { newPrimaryKey } from '@server/id'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type {
   EventQuery,
   RuntimeSessionHandle,
@@ -10,10 +10,10 @@ import type {
   SessionRepo,
 } from '@server/usecases/ports'
 import {
-  AMA_SESSION_EVENT_TYPES,
-  type AmaEvent,
-  type AmaSessionEventType,
-  isAmaSessionEventType,
+  ENBOR_SESSION_EVENT_TYPES,
+  type EnborEvent,
+  type EnborSessionEventType,
+  isEnborSessionEventType,
 } from '@shared/session-events'
 import { and, asc, desc, eq, gt, gte, inArray, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
@@ -240,7 +240,7 @@ function serializeApproval(row: SessionApprovalRow): SessionApproval {
 }
 
 function serializeEvent(row: SessionEventRow): SessionEvent {
-  if (!isAmaSessionEventType(row.type)) {
+  if (!isEnborSessionEventType(row.type)) {
     throw new Error(`Unsupported session event type: ${row.type}`)
   }
   const rawPayload = JSON.parse(row.payload) as Record<string, unknown>
@@ -250,7 +250,7 @@ function serializeEvent(row: SessionEventRow): SessionEvent {
     sequence: row.sequence,
     createdAt: row.createdAt,
     type: row.type,
-    payload: rawPayload as AmaEvent['payload'],
+    payload: rawPayload as EnborEvent['payload'],
   } as SessionEvent
 }
 
@@ -364,7 +364,7 @@ export function createSessionRepo(db: Db): SessionRepo {
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
             eq(
-              sql<string>`json_extract(${sessions.metadata}, ${`$.annotations."${AMA_ANNOTATION_KEY_ROUTING_KEY_HASH}"`})`,
+              sql<string>`json_extract(${sessions.metadata}, ${`$.annotations."${ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH}"`})`,
               keyHash,
             ),
           ),
@@ -588,5 +588,5 @@ export function createSessionRepo(db: Db): SessionRepo {
 }
 
 // Re-exported for the http layer's SSE/CSV event filter cap parity.
-export const SESSION_EVENT_TYPES = AMA_SESSION_EVENT_TYPES
-export type { AmaSessionEventType }
+export const SESSION_EVENT_TYPES = ENBOR_SESSION_EVENT_TYPES
+export type { EnborSessionEventType }

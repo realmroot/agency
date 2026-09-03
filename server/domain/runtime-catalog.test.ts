@@ -28,7 +28,7 @@ describe('runtimeRequirement', () => {
     expect(runtimeRequirement('copilot', null)).toEqual({ runtime: 'copilot' })
   })
 
-  it('leaves AMA model routing to the control plane catalog', () => {
+  it('leaves Enbor model routing to the control plane catalog', () => {
     expect(runtimeRequirement('ama', '@cf/moonshotai/kimi-k2.6')).toEqual({ runtime: 'ama' })
   })
 })

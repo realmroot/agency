@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 const recordProviderSignals = vi.fn()
 vi.mock('../repos/usage-write', () => ({ createUsageWriteRepo: () => ({ recordProviderSignals }) }))
 
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import { createCloudLoopChecker, createEventStore } from './session-event-store'
 
 function fakeStampDb(
@@ -54,7 +54,7 @@ function fakeDoStore() {
 }
 
 const scope = { organizationId: 'org_1', projectId: 'project_1', sessionId: 'sess_1' }
-const event: AmaEvent = { type: 'turn.completed', payload: {} }
+const event: EnborEvent = { type: 'turn.completed', payload: {} }
 const query = { order: 'asc' as const, limit: 50 }
 
 // Every non-cloud session now relays over the per-runner channel. The isCloudLoop

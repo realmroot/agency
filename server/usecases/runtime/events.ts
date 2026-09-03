@@ -1,16 +1,16 @@
 // Cross-cutting session event + transcript usecases for the runtime data plane.
-// Deps-first: they append AMA protocol events and read the event stream through
+// Deps-first: they append Enbor protocol events and read the event stream through
 // ports. No db handle, no adapters.
 
 import { now } from '@server/domain/runtime/util'
 import type { SessionRow } from '@shared/runtime-rows'
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import type { AuditPort, AuthScope, EventStore, SessionOrchestrationStore } from '../ports'
 import { runtimeMessagesFromEvents } from './engine/transcript'
 
-export async function appendAmaEvent(
+export async function appendEnborEvent(
   deps: { sessionEventStore: EventStore },
-  values: { auth: AuthScope; sessionId: string; event: AmaEvent },
+  values: { auth: AuthScope; sessionId: string; event: EnborEvent },
 ) {
   return await deps.sessionEventStore.appendEvent(
     { organizationId: values.auth.organization.id, projectId: values.auth.project.id, sessionId: values.sessionId },
@@ -20,9 +20,9 @@ export async function appendAmaEvent(
 
 export async function appendRuntimeEvent(
   deps: { sessionEventStore: EventStore },
-  values: { auth: AuthScope; sessionId: string; event: AmaEvent },
+  values: { auth: AuthScope; sessionId: string; event: EnborEvent },
 ) {
-  return appendAmaEvent(deps, {
+  return appendEnborEvent(deps, {
     auth: values.auth,
     sessionId: values.sessionId,
     event: values.event,
@@ -33,7 +33,7 @@ export async function appendUserPromptEvent(
   deps: { sessionEventStore: EventStore },
   values: { auth: AuthScope; sessionId: string; prompt: string },
 ) {
-  return appendAmaEvent(deps, {
+  return appendEnborEvent(deps, {
     auth: values.auth,
     sessionId: values.sessionId,
     event: {

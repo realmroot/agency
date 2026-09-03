@@ -6,7 +6,7 @@ import { auditRecords } from '../../db/schema'
 type Db = ReturnType<typeof drizzle>
 
 // Internal principals are recorded as system actors with no user id. These
-// scopes are constructed by AMA itself rather than accepted from a token.
+// scopes are constructed by Enbor itself rather than accepted from a token.
 function defaultActor(auth: AuthScope) {
   if (auth.user.id.startsWith('system:') && auth.roles.includes('system')) {
     return { actorType: 'system' as const, actorUserId: null, controllerUserId: null }

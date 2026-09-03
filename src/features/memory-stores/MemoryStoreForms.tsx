@@ -7,7 +7,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { api, type MemoryStoreMemory } from '@/lib/amarpc'
+import { api, type MemoryStoreMemory } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -113,7 +113,7 @@ export function MemoryEntrySheet({
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{memory ? 'Edit Memory' : 'Add Memory'}</SheetTitle>
-          <SheetDescription>Memory path is mounted under AMA's managed store directory.</SheetDescription>
+          <SheetDescription>Memory path is mounted under Enbor's managed store directory.</SheetDescription>
         </SheetHeader>
         <form className="flex flex-col gap-4 px-4 pb-4" onSubmit={submit}>
           <FieldGroup>

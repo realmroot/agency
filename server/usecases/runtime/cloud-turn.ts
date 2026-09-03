@@ -13,7 +13,7 @@
 // the orchestration store, runtime lifecycle/turn executor, queue, audit,
 // runtime input, and the event/turn-callbacks/provisioning helpers arrive as ports/usecases on
 // `deps` instead of being built from env/db. The module is infra-free: it
-// reaches for ports + domain + shared contracts + the AMA turn engine + sibling
+// reaches for ports + domain + shared contracts + the Enbor turn engine + sibling
 // usecases only.
 
 import type { RuntimeName } from '@server/contracts/environment-contracts'
@@ -38,18 +38,18 @@ import {
 } from '@server/domain/runtime/turn'
 import { now, requestIdFrom } from '@server/domain/runtime/util'
 import {
-  AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
   DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS,
+  ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
 } from '@server/metadata-keys'
 import { safeRuntimeError } from '@server/runtime-error'
-import { type AmaEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
+import { type EnborEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
-  AmaTurnExecutor,
   AuditPort,
   AuthScope,
   CloudRuntimeLifecycle,
   CloudTurnQueue,
   CloudTurnQueueMessage,
+  EnborTurnExecutor,
   EventStore,
   PolicyPort,
   ProviderRepo,
@@ -72,7 +72,7 @@ type CreateApprovalGate = (values: {
   auth: AuthScope
   sessionId: string
   sessionMetadata: Record<string, unknown>
-  appendEvent: (event: AmaEvent) => Promise<string>
+  appendEvent: (event: EnborEvent) => Promise<string>
 }) => ToolApprovalGate
 
 function idleTimeoutSeconds(metadata: Record<string, unknown>): number {
@@ -80,7 +80,7 @@ function idleTimeoutSeconds(metadata: Record<string, unknown>): number {
   if (!annotations || typeof annotations !== 'object' || Array.isArray(annotations)) {
     return DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS
   }
-  const value = Number((annotations as Record<string, unknown>)[AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS])
+  const value = Number((annotations as Record<string, unknown>)[ENBOR_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS])
   return Number.isInteger(value) && value > 0 ? value : DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS
 }
 
@@ -156,7 +156,7 @@ export type CloudTurnDeps = {
   providers: ProviderRepo
   audit: AuditPort
   cloudRuntime: CloudRuntimeLifecycle
-  amaTurnExecutor: AmaTurnExecutor
+  enborTurnExecutor: EnborTurnExecutor
   cloudTurnQueue: CloudTurnQueue
   runtimeSecrets: RuntimeSecretGateway
   createApprovalGate: CreateApprovalGate
@@ -362,7 +362,7 @@ export type CloudTurnOutcome =
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: ReturnType<typeof safeRuntimeError> }
 
-function isRuntimeUserMessageEvent(event: AmaEvent) {
+function isRuntimeUserMessageEvent(event: EnborEvent) {
   if (event.type !== 'message.started' && event.type !== 'message.updated' && event.type !== 'message.completed') {
     return false
   }
@@ -441,7 +441,7 @@ export async function executeCloudSessionTurn(
     })
     const startedAt = Date.now()
     const turnCallbacks = callbacks
-    const result = await deps.amaTurnExecutor.runTurn({
+    const result = await deps.enborTurnExecutor.runTurn({
       sessionId: session.id,
       sandboxId: session.sandboxId ?? '',
       provider: turnProvider,
@@ -458,7 +458,7 @@ export async function executeCloudSessionTurn(
         work.prompt === undefined
           ? turnCallbacks.onEvent
           : async (event) => {
-              // AMA persisted the submitted prompt before starting the model
+              // Enbor persisted the submitted prompt before starting the model
               // turn. The Pi runtime emits the same user-message lifecycle;
               // keep that transport echo out of the canonical transcript.
               if (!isRuntimeUserMessageEvent(event)) await turnCallbacks.onEvent(event)

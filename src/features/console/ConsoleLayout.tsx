@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Outlet } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { FullscreenMessage } from '@/console/components'
-import { ApiError, api } from '@/lib/amarpc'
+import { ApiError, api } from '@/lib/enborrpc'
 import { getCurrentUser, signIn } from '@/lib/oidc'
 import { getSelectedProjectId, setSelectedProjectId } from '@/lib/project-selection'
 import { queryKeys } from '@/lib/query-keys'
@@ -55,7 +55,7 @@ export function ConsoleLayout() {
     const returnTo = `${window.location.pathname}${window.location.search}`
     return (
       <FullscreenMessage
-        title="Any Managed Agents"
+        title="Enbor"
         body="Sign in through OIDC provider to open the control plane."
         action={
           <Button size="lg" onClick={() => void signIn(returnTo)}>

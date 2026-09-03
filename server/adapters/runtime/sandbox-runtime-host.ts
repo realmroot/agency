@@ -1,6 +1,6 @@
-import { parseAmaSandboxToolInput } from '@ama/runtime-contracts/tool-contracts'
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import { getModel, type Model } from '@earendil-works/pi-ai'
+import { parseEnborSandboxToolInput } from '@enbor/runtime-contracts/tool-contracts'
 import { BUNDLED_REALMROOT_GO_PACKAGE, BUNDLED_REALMROOT_WEBI_PACKAGE } from '@server/domain/environment'
 import { gitRepositoryMountPath } from '@server/domain/git-repository'
 import { memoryStoreIdFromRef, normalizeMemoryPath } from '@server/domain/memory-store'
@@ -13,14 +13,14 @@ import {
 } from '@server/domain/runtime/execution-inputs'
 import type { WorkspaceGitCredential, WorkspaceManifest, WorkspaceManifestMount } from '@server/domain/workspace'
 import type {
-  AmaTurnExecutor,
   CloudRuntimeLifecycle,
+  EnborTurnExecutor,
   RunnerChannel,
   RuntimeWorkspaceReader,
   SessionSandboxExecutor,
 } from '@server/usecases/ports'
-import { isAmaSandboxToolName } from '@shared/agent-tools'
-import type { AmaEvent } from '@shared/session-events'
+import { isEnborSandboxToolName } from '@shared/agent-tools'
+import type { EnborEvent } from '@shared/session-events'
 import { canonicalProvider } from '../../domain/runtime/provider'
 import type { Env } from '../../env'
 import { EnvironmentPackageInstallationError } from '../../runtime-error'
@@ -40,7 +40,7 @@ import { runTurn, runtimeMessagesFromEvents } from '../../usecases/runtime/engin
 import { toolExecutor } from './sandbox-tool-executor'
 import { workersAiModelClient } from './workers-ai-model-client'
 
-// Canonical home is the AMA turn engine; re-exported so existing importers keep
+// Canonical home is the Enbor turn engine; re-exported so existing importers keep
 // their import paths.
 export type { RuntimeToolPolicyDecision, RuntimeToolPolicyInput }
 // The turn engine, ports, and error vocabulary live under
@@ -48,7 +48,7 @@ export type { RuntimeToolPolicyDecision, RuntimeToolPolicyInput }
 // resolves the model, builds the Cloudflare tool executor and the Workers AI
 // model client, maps the SessionTurnInput callbacks to ports, and owns
 // cloud-only sandbox start/stop and workspace preparation.
-// Canonical home is the AMA turn engine; re-exported for existing importers.
+// Canonical home is the Enbor turn engine; re-exported for existing importers.
 export {
   isRuntimePolicyDenied,
   isRuntimeTurnCancelled,
@@ -117,7 +117,7 @@ export type SessionTurnInput = {
   // Checked before each model call after the first; returning true pauses the run.
   shouldPause?: () => boolean
   ensureActive?: () => Promise<void>
-  onEvent: (event: AmaEvent) => Promise<void>
+  onEvent: (event: EnborEvent) => Promise<void>
   approveToolCall?: (input: RuntimeToolPolicyInput) => Promise<RuntimeToolPolicyDecision>
   // Supplies a caller-provided tool result (e.g. an approved custom tool
   // outcome) instead of executing the tool in the sandbox.
@@ -486,7 +486,7 @@ export async function startSessionRuntime(
   input: SessionRuntimeStartInput,
 ): Promise<SessionRuntimeStartResult> {
   if (!input.model) {
-    throw new Error('AMA cloud runtime requires an explicitly pinned model')
+    throw new Error('Enbor cloud runtime requires an explicitly pinned model')
   }
   if (env.AMA_RUNTIME_MODE !== 'test') {
     const getSandbox = await getSandboxBinding()
@@ -625,10 +625,10 @@ export async function executeRuntimeToolCalls(
     }
     const toolCallId = call.id
     const toolName = typeof call.name === 'string' ? call.name : 'tool'
-    if (!isAmaSandboxToolName(toolName)) {
+    if (!isEnborSandboxToolName(toolName)) {
       throw new Error(`Unsupported sandbox tool: ${toolName}`)
     }
-    const input = parseAmaSandboxToolInput(toolName, call.input ?? {})
+    const input = parseEnborSandboxToolInput(toolName, call.input ?? {})
     results.push(
       await executor.execute({
         sessionId: values.sessionId,
@@ -679,7 +679,7 @@ export async function runSessionTurn(
   executor = toolExecutor(env),
 ): Promise<SessionTurnResult> {
   if (!input.model) {
-    throw new Error('AMA cloud runtime requires an explicitly pinned model')
+    throw new Error('Enbor cloud runtime requires an explicitly pinned model')
   }
   const provider = piProviderName(input.provider)
   const modelId = input.model
@@ -708,7 +708,7 @@ export type RuntimeExecutionAdapters = {
   cloudRuntime: CloudRuntimeLifecycle
   runtimeWorkspace: RuntimeWorkspaceReader
   sandboxExecutor: SessionSandboxExecutor
-  amaTurnExecutor: AmaTurnExecutor
+  enborTurnExecutor: EnborTurnExecutor
 }
 
 // Binds env-backed cloud/runner execution behind narrow usecase ports. The
@@ -774,7 +774,7 @@ export function createRuntimeExecutionAdapters(
             }
             const toolName = (() => {
               const value = typeof call.name === 'string' ? call.name : 'tool'
-              if (!isAmaSandboxToolName(value)) {
+              if (!isEnborSandboxToolName(value)) {
                 throw new Error(`Unsupported sandbox tool: ${value}`)
               }
               return value
@@ -785,7 +785,7 @@ export function createRuntimeExecutionAdapters(
                 sandboxId: input.sandboxId,
                 toolCallId: call.id,
                 toolName,
-                input: parseAmaSandboxToolInput(toolName, call.input ?? {}),
+                input: parseEnborSandboxToolInput(toolName, call.input ?? {}),
                 cwd: '/workspace',
               }),
             )
@@ -798,7 +798,7 @@ export function createRuntimeExecutionAdapters(
         return await (await executorForSession(input.sessionId)).execute(input)
       },
     },
-    amaTurnExecutor: {
+    enborTurnExecutor: {
       async runTurn(input) {
         return await runSessionTurn(env, input, await executorForSession(input.sessionId))
       },

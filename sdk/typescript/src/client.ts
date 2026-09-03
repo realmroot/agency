@@ -5,28 +5,28 @@ import { createClient, createConfig } from './generated/client/index.js'
 import * as ops from './generated/sdk.gen.js'
 import type * as types from './generated/types.gen.js'
 
-export interface AmaClientConfig {
+export interface EnborClientConfig {
   baseUrl: string
   projectId?: string
   headers?: Record<string, string>
   authorize?: (url: string, method: string) => Promise<{ accessToken: string; dpopProof: string }>
 }
 
-export interface AmaRunnerClientConfig {
+export interface EnborRunnerClientConfig {
   baseUrl: string
   projectId?: string
   headers?: Record<string, string>
   webSocketFactory?: (url: string, headers: Record<string, string>) => WebSocket | Promise<WebSocket>
 }
 
-export class AmaApiError extends Error {
+export class EnborApiError extends Error {
   constructor(
     readonly status: number | undefined,
     readonly responseText: string,
     readonly body: unknown,
   ) {
-    super(`AMA API request failed${status === undefined ? '' : ` with HTTP ${status}`}`)
-    this.name = 'AmaApiError'
+    super(`Enbor API request failed${status === undefined ? '' : ` with HTTP ${status}`}`)
+    this.name = 'EnborApiError'
   }
 }
 
@@ -36,7 +36,7 @@ async function unwrap<TData>(call: Promise<{ data: TData | undefined; error?: un
     return data as TData
   }
   const body = error ?? data
-  throw new AmaApiError(response?.status, typeof body === 'string' ? body : JSON.stringify(body ?? {}), body)
+  throw new EnborApiError(response?.status, typeof body === 'string' ? body : JSON.stringify(body ?? {}), body)
 }
 
 export interface SessionStream {
@@ -57,7 +57,7 @@ type SessionSocketServerMessage =
   | (types.SessionSocketBackfillMessage & { type: 'backfill' })
   | { type: 'runner_unavailable'; message: string }
 
-function websocketURL(config: Pick<AmaClientConfig, 'baseUrl' | 'projectId'>, path: string): URL {
+function websocketURL(config: Pick<EnborClientConfig, 'baseUrl' | 'projectId'>, path: string): URL {
   const url = new URL(path, config.baseUrl)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   if (config.projectId) {
@@ -73,8 +73,8 @@ function base64Url(value: string): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
-async function authenticatedWebSocket(config: AmaClientConfig, path: string): Promise<WebSocket> {
-  if (!config.authorize) throw new Error('Realmroot DPoP authorizer is required for AMA WebSocket connections')
+async function authenticatedWebSocket(config: EnborClientConfig, path: string): Promise<WebSocket> {
+  if (!config.authorize) throw new Error('Realmroot DPoP authorizer is required for Enbor WebSocket connections')
   const url = websocketURL(config, path)
   const authorization = await config.authorize(url.toString().replace(/^ws/, 'http'), 'GET')
   return new WebSocket(url.toString(), [
@@ -84,7 +84,7 @@ async function authenticatedWebSocket(config: AmaClientConfig, path: string): Pr
   ])
 }
 
-async function runnerWebSocket(config: AmaRunnerClientConfig, path: string): Promise<WebSocket> {
+async function runnerWebSocket(config: EnborRunnerClientConfig, path: string): Promise<WebSocket> {
   if (!config.webSocketFactory) throw new Error('Runner WebSocket factory with Bearer header support is required')
   const headers = Object.fromEntries(
     Object.entries(config.headers ?? {}).filter(([name]) => name.toLowerCase() !== 'dpop'),
@@ -97,7 +97,7 @@ async function runnerWebSocket(config: AmaRunnerClientConfig, path: string): Pro
   return config.webSocketFactory(websocketURL(config, path).toString(), headers)
 }
 
-async function createSessionStream(config: AmaClientConfig, sessionId: string): Promise<SessionStream> {
+async function createSessionStream(config: EnborClientConfig, sessionId: string): Promise<SessionStream> {
   const socket = await authenticatedWebSocket(config, `/api/v1/sessions/${encodeURIComponent(sessionId)}/socket`)
   const buffered: types.SessionEvent[] = []
   const waiters: Array<(result: IteratorResult<types.SessionEvent>) => void> = []
@@ -170,7 +170,7 @@ async function createSessionStream(config: AmaClientConfig, sessionId: string): 
   }
 }
 
-async function createRunnerChannel(config: AmaRunnerClientConfig, runnerId: string): Promise<RunnerChannel> {
+async function createRunnerChannel(config: EnborRunnerClientConfig, runnerId: string): Promise<RunnerChannel> {
   const socket = await runnerWebSocket(config, `/api/v1/runners/${encodeURIComponent(runnerId)}/channel`)
   const buffered: types.RunnerChannelMessage[] = []
   const waiters: Array<(result: IteratorResult<types.RunnerChannelMessage>) => void> = []
@@ -226,7 +226,7 @@ async function createRunnerChannel(config: AmaRunnerClientConfig, runnerId: stri
   }
 }
 
-function createConfiguredClient(config: AmaClientConfig | AmaRunnerClientConfig) {
+function createConfiguredClient(config: EnborClientConfig | EnborRunnerClientConfig) {
   const authenticatedFetch: typeof fetch = async (input, init) => {
     const request = new Request(input, init)
     const headers = new Headers(request.headers)
@@ -249,9 +249,9 @@ function createConfiguredClient(config: AmaClientConfig | AmaRunnerClientConfig)
   )
 }
 
-export type AmaClient = ReturnType<typeof createAmaClient>
+export type EnborClient = ReturnType<typeof createEnborClient>
 
-export function createAmaClient(config: AmaClientConfig) {
+export function createEnborClient(config: EnborClientConfig) {
   const client = createConfiguredClient(config)
 
   return {
@@ -397,9 +397,9 @@ export function createAmaClient(config: AmaClientConfig) {
   }
 }
 
-export type AmaRunnerClient = ReturnType<typeof createAmaRunnerClient>
+export type EnborRunnerClient = ReturnType<typeof createEnborRunnerClient>
 
-export function createAmaRunnerClient(config: AmaRunnerClientConfig) {
+export function createEnborRunnerClient(config: EnborRunnerClientConfig) {
   const client = createConfiguredClient(config)
 
   return {

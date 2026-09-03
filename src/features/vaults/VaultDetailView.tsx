@@ -13,7 +13,7 @@ import {
   TableSurface,
 } from '@/console/components'
 import { formatDate } from '@/console/format'
-import type { AuditRecord, Vault, VaultCredential } from '@/lib/amarpc'
+import type { AuditRecord, Vault, VaultCredential } from '@/lib/enborrpc'
 
 export function VaultDetailView({
   vault,

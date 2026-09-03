@@ -1,4 +1,4 @@
-import { type AmaSessionEventType, isAmaSessionEventType, type SessionEvent } from './session-events'
+import { type EnborSessionEventType, isEnborSessionEventType, type SessionEvent } from './session-events'
 
 export type SessionSocketPromptMessage = {
   type: 'prompt'
@@ -23,7 +23,7 @@ export type SessionSocketBackfillRequestMessage = {
   requestId?: string
   cursor?: number
   limit?: number
-  eventType?: AmaSessionEventType
+  eventType?: EnborSessionEventType
 }
 
 export type SessionSocketClientMessage =
@@ -95,7 +95,7 @@ export function sessionSocketClientMessageFrom(value: unknown): SessionSocketCli
   if (message.type === 'backfill') {
     if (
       message.eventType !== undefined &&
-      (typeof message.eventType !== 'string' || !isAmaSessionEventType(message.eventType))
+      (typeof message.eventType !== 'string' || !isEnborSessionEventType(message.eventType))
     ) {
       return null
     }
@@ -162,7 +162,7 @@ function isSessionEvent(value: unknown): value is SessionEvent {
     typeof record.sequence === 'number' &&
     typeof record.createdAt === 'string' &&
     typeof record.type === 'string' &&
-    isAmaSessionEventType(record.type) &&
+    isEnborSessionEventType(record.type) &&
     isObject(record.payload)
   )
 }

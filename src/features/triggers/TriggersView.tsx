@@ -13,7 +13,7 @@ import {
 import { formatRelativeTime } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import { AgentIdentityCell } from '@/features/console/agent-identity-cell'
-import type { Agent, Trigger } from '@/lib/amarpc'
+import type { Agent, Trigger } from '@/lib/enborrpc'
 
 export function formatInterval(intervalSeconds: number) {
   if (intervalSeconds % 86400 === 0) {

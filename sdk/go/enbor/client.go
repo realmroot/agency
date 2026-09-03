@@ -107,7 +107,7 @@ func NewRunner(config ClientConfig) (*RunnerClient, error) {
 
 func newClientCore(config ClientConfig) (*clientCore, error) {
 	if strings.TrimSpace(config.BaseURL) == "" {
-		return nil, fmt.Errorf("AMA base URL is required")
+		return nil, fmt.Errorf("Enbor base URL is required")
 	}
 	headers := map[string]string{}
 	for key, value := range config.Headers {
@@ -153,12 +153,12 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	if e.Status == 0 {
-		return "AMA API request failed"
+		return "Enbor API request failed"
 	}
 	if e.ResponseText != "" {
-		return fmt.Sprintf("AMA API request failed with HTTP %d: %s", e.Status, e.ResponseText)
+		return fmt.Sprintf("Enbor API request failed with HTTP %d: %s", e.Status, e.ResponseText)
 	}
-	return fmt.Sprintf("AMA API request failed with HTTP %d", e.Status)
+	return fmt.Sprintf("Enbor API request failed with HTTP %d", e.Status)
 }
 
 func StatusCode(err error) (int, bool) {
@@ -232,7 +232,7 @@ func (c *clientCore) webSocketURL(path string) (string, error) {
 	case "http":
 		parsed.Scheme = "ws"
 	default:
-		return "", fmt.Errorf("AMA base URL must use http or https")
+		return "", fmt.Errorf("Enbor base URL must use http or https")
 	}
 	parsed.Path = path
 	parsed.RawPath = ""

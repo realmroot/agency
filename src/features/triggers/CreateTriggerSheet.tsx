@@ -1,4 +1,4 @@
-import { isRuntimeName } from '@ama/runtime-contracts/runtime-names'
+import { isRuntimeName } from '@enbor/runtime-contracts/runtime-names'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlarmClock } from 'lucide-react'
 import type { FormEvent } from 'react'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { TextAreaField, TextField } from '@/console/forms'
-import { api, type RuntimeName } from '@/lib/amarpc'
+import { api, type RuntimeName } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -275,7 +275,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="ama">AMA</SelectItem>
+                      <SelectItem value="ama">Enbor</SelectItem>
                       <SelectItem value="claude-code">Claude Code</SelectItem>
                       <SelectItem value="codex">Codex</SelectItem>
                       <SelectItem value="copilot">Copilot</SelectItem>

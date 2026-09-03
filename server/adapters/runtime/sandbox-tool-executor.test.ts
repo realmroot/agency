@@ -28,7 +28,7 @@ describe('tool-executor', () => {
     sandboxMock.destroy.mockReset()
   })
 
-  it('uses the test executor when AMA runtime mode is test', () => {
+  it('uses the test executor when Enbor runtime mode is test', () => {
     expect(toolExecutor({ AMA_RUNTIME_MODE: 'test' } as Env)).toBeInstanceOf(TestToolExecutor)
   })
 

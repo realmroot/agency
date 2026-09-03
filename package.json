@@ -1,5 +1,5 @@
 {
-  "name": "any-managed-agents",
+  "name": "enbor",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -26,7 +26,7 @@
     "lint:escapes": "tsx scripts/check-type-escapes.ts",
     "lint:types": "eslint .",
     "format": "biome format --write .",
-    "bridge:build": "esbuild packages/runtime-bridge/src/main.ts --bundle --platform=node --format=esm --target=node24 --banner:js=\"import { createRequire as __amaCreateRequire } from 'node:module'; const require = __amaCreateRequire(import.meta.url);\" --outfile=cmd/ama-runner/pkg/runtimebridge/bundle.mjs",
+    "bridge:build": "esbuild packages/runtime-bridge/src/main.ts --bundle --platform=node --format=esm --target=node24 --banner:js=\"import { createRequire as __enborCreateRequire } from 'node:module'; const require = __enborCreateRequire(import.meta.url);\" --outfile=cmd/enbor-runner/pkg/runtimebridge/bundle.mjs",
     "openapi:generate": "tsx scripts/generate-openapi-and-sdks.ts",
     "openapi:check": "tsx scripts/generate-openapi-and-sdks.ts --check",
     "contract:generate": "tsx scripts/generate-runtime-contracts.ts",

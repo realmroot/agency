@@ -30,8 +30,8 @@ class RunnerWorkspaceMount:
         Attributes:
             name (str):  Example: source.
             type_ (RunnerWorkspaceMountType):  Example: git_repository.
-            mount_path (str):  Example: /workspace/repos/saltbo/any-managed-agents.
-            url (str | Unset):  Example: https://github.com/saltbo/any-managed-agents.git.
+            mount_path (str):  Example: /workspace/repos/realmroot/enbor.
+            url (str | Unset):  Example: https://github.com/realmroot/enbor.git.
             ref (str | Unset):  Example: main.
             credential (RunnerGitCredential | Unset):
             memory_ref (str | Unset):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.

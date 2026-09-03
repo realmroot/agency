@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PromptTemplateRenderError, renderHttpPromptTemplate } from './http-trigger-template'
 
 describe('renderHttpPromptTemplate', () => {
-  it('renders body, header, and AMA run variables', () => {
+  it('renders body, header, and Enbor run variables', () => {
     const prompt = renderHttpPromptTemplate(
       'Handle {{ .body.ticket.id }} for {{ .body.team }} via {{ .header["x-source"] }} reused={{ .ama.run.session_reused }}.',
       {

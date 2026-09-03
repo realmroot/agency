@@ -8,8 +8,8 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { parseJsonObject } from '@/console/format'
-import type { VaultCredential } from '@/lib/amarpc'
-import { api } from '@/lib/amarpc'
+import type { VaultCredential } from '@/lib/enborrpc'
+import { api } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -55,7 +55,7 @@ export function RotateCredentialSheet({
           <SheetDescription>
             {/* v8 ignore start -- sheet is only open when credential !== null; the null fallback never renders */}
             {credential
-              ? `Replace the secret material for ${credential.metadata.name}. AMA records the change for auditability.`
+              ? `Replace the secret material for ${credential.metadata.name}. Enbor records the change for auditability.`
               : 'Replace credential secret material.'}
             {/* v8 ignore stop */}
           </SheetDescription>

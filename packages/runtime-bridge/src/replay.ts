@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { RuntimeBridgeOutputMessageSchema, type RuntimeBridgeRunMessage } from '@ama/runtime-contracts/bridge-protocol'
-import { runtimeEvent, turnEnd } from './events/ama'
-import type { AmaRuntimeEvent } from './protocol'
+import {
+  RuntimeBridgeOutputMessageSchema,
+  type RuntimeBridgeRunMessage,
+} from '@enbor/runtime-contracts/bridge-protocol'
+import { runtimeEvent, turnEnd } from './events/enbor'
+import type { EnborRuntimeEvent } from './protocol'
 import { codexEventsFromProviderEvents } from './providers/codex'
 
 export type RuntimeReplaySourceFormat = 'auto' | 'provider-events' | 'bridge-ndjson'
@@ -19,7 +22,7 @@ type JsonlRecord = {
 
 type JsonObject = Record<string, unknown>
 
-export function runtimeEventsFromSource(input: RuntimeReplayInput): AmaRuntimeEvent[] {
+export function runtimeEventsFromSource(input: RuntimeReplayInput): EnborRuntimeEvent[] {
   const records = readJsonl(input.sourcePath)
   const format = resolveSourceFormat(records, input.sourceFormat ?? 'auto')
   switch (format) {
@@ -32,7 +35,7 @@ export function runtimeEventsFromSource(input: RuntimeReplayInput): AmaRuntimeEv
   }
 }
 
-export function withRuntimeLifecycle(events: AmaRuntimeEvent[]): AmaRuntimeEvent[] {
+export function withRuntimeLifecycle(events: EnborRuntimeEvent[]): EnborRuntimeEvent[] {
   const output = [...events]
   if (!output.some((event) => event.type === 'runtime.started')) output.unshift(runtimeEvent('runtime.started'))
   if (!output.some((event) => event.type === 'turn.started')) {
@@ -47,7 +50,7 @@ function eventsFromProviderEventRecords(
   records: JsonlRecord[],
   sourcePath: string,
   runtimeOverride: RuntimeReplayInput['runtime'],
-): AmaRuntimeEvent[] {
+): EnborRuntimeEvent[] {
   const runtime = inferProviderEventsRuntime(records, runtimeOverride, sourcePath)
   const providerEvents = records.map((record) => providerEventFromRecord(record, sourcePath))
   return eventsFromCapturedProviderEvents(runtime, providerEvents)
@@ -57,7 +60,7 @@ function eventsFromBridgeNdjson(
   records: JsonlRecord[],
   sourcePath: string,
   runtimeOverride: RuntimeReplayInput['runtime'],
-): AmaRuntimeEvent[] {
+): EnborRuntimeEvent[] {
   const providerRecords: JsonlRecord[] = []
   for (const record of records) {
     const parsed = RuntimeBridgeOutputMessageSchema.safeParse(record.value)
@@ -87,7 +90,7 @@ function eventsFromBridgeNdjson(
 function eventsFromCapturedProviderEvents(
   runtime: RuntimeBridgeRunMessage['runtime'],
   providerEvents: unknown[],
-): AmaRuntimeEvent[] {
+): EnborRuntimeEvent[] {
   switch (runtime) {
     case 'codex':
       return withRuntimeLifecycle(codexEventsFromProviderEvents(providerEvents))

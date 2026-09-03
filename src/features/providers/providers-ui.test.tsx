@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import type { ProviderModel } from '@/lib/amarpc'
+import type { ProviderModel } from '@/lib/enborrpc'
 import { HttpResponse, http, server } from '@/test/msw'
 import { ProvidersPage } from './ProvidersPage'
 

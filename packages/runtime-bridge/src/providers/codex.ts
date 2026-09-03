@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
+import type { MessageContentBlock, ToolResult } from '@enbor/runtime-contracts/session-events'
 import { Codex, type ThreadEvent } from '@openai/codex-sdk'
 import {
   messageEvent,
@@ -11,11 +11,11 @@ import {
   toolCallBlock,
   toolResultMessage,
   turnEnd,
-} from '../events/ama'
+} from '../events/enbor'
 import { resolveCliPath } from '../host/cli'
 import {
-  type AmaRuntimeEvent,
   agentSystemPrompt,
+  type EnborRuntimeEvent,
   type RuntimeProvider,
   type RuntimeProviderHandle,
   type RuntimeProviderRequest,
@@ -269,7 +269,7 @@ class CodexEventMapper {
     void threadId
   }
 
-  *map(event: ThreadEvent): Generator<AmaRuntimeEvent> {
+  *map(event: ThreadEvent): Generator<EnborRuntimeEvent> {
     switch (event.type) {
       case 'thread.started':
         yield runtimeEvent('runtime.started')
@@ -364,7 +364,7 @@ class CodexEventMapper {
     this.nativeFunctionInputByCallId.set(id, shape.args)
   }
 
-  private mapFunctionCallOutput(item: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapFunctionCallOutput(item: Record<string, unknown>): EnborRuntimeEvent[] {
     const id = codexToolCallId(item)
     if (!id) return []
     const nativeFunctionName = this.nativeFunctionNameByCallId.get(id)
@@ -383,7 +383,7 @@ class CodexEventMapper {
     return [messageEvent(toolResultMessage(id, toolResult(item), Boolean(item.error)))]
   }
 
-  private mapSubagentControlOutput(nativeFunctionName: string, item: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapSubagentControlOutput(nativeFunctionName: string, item: Record<string, unknown>): EnborRuntimeEvent[] {
     if (nativeFunctionName !== 'wait_agent' && nativeFunctionName !== 'close_agent') return []
     const id = codexToolCallId(item)
     const finals = subagentFinalsFromCodexControl(
@@ -415,7 +415,7 @@ class CodexEventMapper {
     })
   }
 
-  private mapCollabToolStarted(item: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapCollabToolStarted(item: Record<string, unknown>): EnborRuntimeEvent[] {
     const shape = codexToolShape(item)
     const id = codexToolCallId(item)
     this.trackCollabToolCall(item, id)
@@ -430,11 +430,11 @@ class CodexEventMapper {
     ]
   }
 
-  private mapCollabToolCompleted(item: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapCollabToolCompleted(item: Record<string, unknown>): EnborRuntimeEvent[] {
     const shape = codexToolShape(item)
     const id = codexToolCallId(item)
     this.trackCollabToolCall(item, id)
-    const events: AmaRuntimeEvent[] = []
+    const events: EnborRuntimeEvent[] = []
     if (shape && id && !shape.hiddenControl && !this.emittedCollabToolCallIds.has(id)) {
       this.emittedCollabToolCallIds.add(id)
       events.push(
@@ -471,7 +471,7 @@ class CodexEventMapper {
     }
   }
 
-  private mapCollabAgentFinals(item: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapCollabAgentFinals(item: Record<string, unknown>): EnborRuntimeEvent[] {
     return collabFinalsFromCodexToolCall(item).flatMap((final) => {
       const toolCallId = this.agentToolCallIdByAgentId.get(final.agentId)
       if (!toolCallId || this.finalizedAgentIds.has(final.agentId)) return []
@@ -497,9 +497,9 @@ class CodexEventMapper {
   }
 }
 
-export function codexEventsFromProviderEvents(providerEvents: unknown[]): AmaRuntimeEvent[] {
+export function codexEventsFromProviderEvents(providerEvents: unknown[]): EnborRuntimeEvent[] {
   const mapper = new CodexEventMapper()
-  const events: AmaRuntimeEvent[] = []
+  const events: EnborRuntimeEvent[] = []
   for (const providerEvent of providerEvents) {
     for (const event of mapper.map(providerEvent as ThreadEvent)) events.push(event)
   }
@@ -643,7 +643,7 @@ export const codexProvider: RuntimeProvider = {
       // instead of with the session-scoped git credential).
       config: {
         // Codex exec --json omits unified custom-tool events, while the standard shell
-        // path emits correlated command_execution events that AMA can persist and relay.
+        // path emits correlated command_execution events that Enbor can persist and relay.
         features: { apps: false, multi_agent: true, unified_exec: false },
         // The Codex process needs the host HOME for its provider login, but tool
         // subprocesses belong to the session and must never load host shell state.

@@ -1,21 +1,21 @@
 import type {
-  AmaRuntimeEvent,
+  EnborRuntimeEvent,
   RuntimeBridgeRunMessage,
   RuntimeUsageWindow,
-} from '@ama/runtime-contracts/bridge-protocol'
+} from '@enbor/runtime-contracts/bridge-protocol'
 
 export type {
-  AmaRuntimeEvent,
+  EnborRuntimeEvent,
   RuntimeBridgeControlMessage,
   RuntimeBridgeInputMessage,
   RuntimeBridgeOutputMessage,
   RuntimeBridgeRunMessage,
   RuntimeInventoryEntry,
   RuntimeUsageWindow,
-} from '@ama/runtime-contracts/bridge-protocol'
+} from '@enbor/runtime-contracts/bridge-protocol'
 
 export type RuntimeProviderHandle = {
-  events: AsyncIterable<AmaRuntimeEvent>
+  events: AsyncIterable<EnborRuntimeEvent>
   abort(): Promise<void>
   send(message: string): Promise<void>
   getResumeToken?(): string | undefined

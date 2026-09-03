@@ -1,6 +1,9 @@
-import { type SessionSocketServerMessage, sessionSocketServerMessageFrom } from '@ama/runtime-contracts/session-socket'
+import {
+  type SessionSocketServerMessage,
+  sessionSocketServerMessageFrom,
+} from '@enbor/runtime-contracts/session-socket'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import type { Session, SessionEvent } from '@/lib/amarpc'
+import type { Session, SessionEvent } from '@/lib/enborrpc'
 import {
   initialSessionRuntimeState,
   type SessionRuntimeCommand,

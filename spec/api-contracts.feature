@@ -2,7 +2,7 @@ Feature: API contracts
   The control plane is automated through a single OpenAPI document generated from
   the Hono routes under /api/v1. Errors use a stable envelope, lists paginate and
   filter consistently, the document drives protected-resource clients and generated
-  SDKs, and runtime Session traffic stays on AMA endpoints rather than a bespoke CLI
+  SDKs, and runtime Session traffic stays on Enbor endpoints rather than a bespoke CLI
   protocol.
 
   # ── Health probe and OpenAPI generation (api: assembled server) ──
@@ -22,12 +22,12 @@ Feature: API contracts
     Then it is generated from Hono route schemas and stays entirely under /api/v1
     And every operation has a unique id, summary, tags, a documented success response, and scoped OAuth auth on protected paths
     And its path and method inventory comes from route schemas rather than a hand-maintained endpoint catalog
-    And it does not describe a replacement for AMA runtime session traffic
+    And it does not describe a replacement for Enbor runtime session traffic
 
   @api-contracts/resource-discovery @api
   Scenario: Publish the OAuth protected Resource contract
     Given the Worker app is initialized
-    When a client discovers the exact AMA Resource
+    When a client discovers the exact Enbor Resource
     Then RFC 9728 metadata publishes the exact resource, configured authorization server, supported Bearer and DPoP modes, and complete scope catalog
     And the Resource response links the live OpenAPI document with service-desc
     And every OpenAPI operation scope belongs to the published catalog
@@ -54,7 +54,7 @@ Feature: API contracts
 
   @api-contracts/resource-identifiers @api
   Scenario: Generate opaque time-ordered resource identifiers
-    Given AMA creates a resource with a server-owned primary key
+    Given Enbor creates a resource with a server-owned primary key
     When the resource is persisted and returned through the API
     Then its identifier is a standard UUID version 7 without a resource-type prefix
     And previously persisted identifiers remain valid resource locators

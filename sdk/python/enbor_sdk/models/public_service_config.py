@@ -23,7 +23,7 @@ T = TypeVar("T", bound="PublicServiceConfig")
 class PublicServiceConfig:
     """
         Attributes:
-            name (PublicServiceConfigName):  Example: Any Managed Agents.
+            name (PublicServiceConfigName):  Example: Enbor.
             origin (str):  Example: https://ama.example.com.
      """
 

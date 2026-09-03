@@ -1,11 +1,11 @@
 import { stdin, stdout } from 'node:process'
 import { createInterface } from 'node:readline'
-import { assertAmaRuntimeEvent } from './events/ama'
+import { assertEnborRuntimeEvent } from './events/enbor'
 import { resolveCliPath } from './host/cli'
 import {
-  type AmaRuntimeEvent,
   bridgeError,
   createResumeTokenWatcher,
+  type EnborRuntimeEvent,
   type RuntimeBridgeInputMessage,
   type RuntimeBridgeOutputMessage,
   type RuntimeInventoryEntry,
@@ -24,8 +24,8 @@ function write(message: RuntimeBridgeOutputMessage) {
   stdout.write(`${JSON.stringify(message)}\n`)
 }
 
-function writeSessionEvent(requestId: string, event: AmaRuntimeEvent) {
-  const canonical = assertAmaRuntimeEvent(event)
+function writeSessionEvent(requestId: string, event: EnborRuntimeEvent) {
+  const canonical = assertEnborRuntimeEvent(event)
   write({
     type: 'runtime.event',
     requestId,

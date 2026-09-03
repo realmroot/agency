@@ -1,5 +1,5 @@
 // Runner relay permission decision — deps-first. The one control-plane decision a
-// per-runner relay channel needs: evaluate AMA session policy for a runtime
+// per-runner relay channel needs: evaluate Enbor session policy for a runtime
 // permission request and build the reply the DO relays back to the runner. Infra-
 // free (deps + domain only); it never touches the WebSocket and stores nothing — a
 // relay session keeps no cloud copy.
@@ -30,7 +30,7 @@ type RelayPermissionScope = {
   runnerId: string
 }
 
-// Evaluate AMA session policy for a runtime permission request and build the reply
+// Evaluate Enbor session policy for a runtime permission request and build the reply
 // the runner forwards to the live runtime. A relay session keeps no cloud copy, so
 // the decision is computed from the session snapshot alone and nothing is persisted.
 // Null means there was no session to decide against.

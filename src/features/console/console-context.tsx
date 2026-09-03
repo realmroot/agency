@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AuthContext, Project } from '@/lib/amarpc'
+import type { AuthContext, Project } from '@/lib/enborrpc'
 
 export interface ConsoleContextValue {
   auth: AuthContext

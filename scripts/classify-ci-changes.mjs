@@ -81,9 +81,9 @@ export function classifyChanges(paths, { full = false } = {}) {
       enable(classification, 'application', 'runner', 'packaging')
     } else if (/^sdk\//.test(path)) {
       enable(classification, 'quality', 'application')
-    } else if (/^cmd\/ama-runner\//.test(path)) {
+    } else if (/^cmd\/enbor-runner\//.test(path)) {
       enable(classification, 'runner', 'packaging')
-      if (path === 'cmd/ama-runner/pkg/runtimebridge/bundle.mjs') {
+      if (path === 'cmd/enbor-runner/pkg/runtimebridge/bundle.mjs') {
         enable(classification, 'quality', 'runtime')
       }
     } else if (/^\.goreleaser\.ya?ml$/.test(path)) {

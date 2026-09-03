@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Identity } from '@/lib/amarpc'
+import type { Identity } from '@/lib/enborrpc'
 import { identityAssignmentLabel, identityStatusLabel } from './identity-display'
 
 const now = '2026-08-29T00:00:00.000Z'

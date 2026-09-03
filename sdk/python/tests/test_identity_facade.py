@@ -1,12 +1,12 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from enbor_sdk.facade import create_ama_client
+from enbor_sdk.facade import create_enbor_client
 
 
 class IdentityFacadeTest(TestCase):
     def test_forwards_required_idempotency_key(self) -> None:
-        client = create_ama_client(base_url="https://example.com")
+        client = create_enbor_client(base_url="https://example.com")
         response = object()
         body = object()
         with (

@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
-import { AMA_SESSION_EVENT_TYPES, type AmaEvent } from '@shared/session-events'
+import { ENBOR_SESSION_EVENT_TYPES, type EnborEvent } from '@shared/session-events'
 import type { Context } from 'hono'
 import { isRunnerOidcAuth, requireAuth, requireSessionEventsAuth } from '../auth/session'
 import {
@@ -138,7 +138,7 @@ const SessionCreateMetadataSchema = z
     annotations: z
       .record(z.string(), z.string())
       .optional()
-      .openapi({ example: { ticket: 'AMA-123' } }),
+      .openapi({ example: { ticket: 'Enbor-123' } }),
   })
   .strict()
   .openapi('SessionCreateMetadata')
@@ -412,11 +412,11 @@ const PermissionResolvedPayloadSchema = z
   })
   .strict()
   .openapi('PermissionResolvedPayload')
-function eventSchema<TType extends (typeof AMA_SESSION_EVENT_TYPES)[number]>(type: TType, payload: z.ZodTypeAny) {
+function eventSchema<TType extends (typeof ENBOR_SESSION_EVENT_TYPES)[number]>(type: TType, payload: z.ZodTypeAny) {
   return z.object({ type: z.literal(type), payload }).strict()
 }
 
-function sessionEventSchema<TType extends (typeof AMA_SESSION_EVENT_TYPES)[number]>(
+function sessionEventSchema<TType extends (typeof ENBOR_SESSION_EVENT_TYPES)[number]>(
   type: TType,
   payload: z.ZodTypeAny,
 ) {
@@ -432,7 +432,7 @@ function sessionEventSchema<TType extends (typeof AMA_SESSION_EVENT_TYPES)[numbe
     .strict()
 }
 
-const AmaEventSchema = z
+const EnborEventSchema = z
   .discriminatedUnion('type', [
     eventSchema('runtime.started', RuntimeLifecyclePayloadSchema),
     eventSchema('runtime.completed', RuntimeLifecyclePayloadSchema),
@@ -447,7 +447,7 @@ const AmaEventSchema = z
     eventSchema('permission.denied', PermissionDeniedPayloadSchema),
     eventSchema('runtime.error', EventErrorSchema),
   ])
-  .openapi('AmaEvent')
+  .openapi('EnborEvent')
 
 const SessionEventSchema = z
   .discriminatedUnion('type', [
@@ -603,7 +603,7 @@ const CreateSessionMessageSchema = z
   .openapi('CreateSessionMessageRequest')
 
 const CreateSessionEventsSchema = z
-  .object({ events: z.array(AmaEventSchema).min(1).max(MAX_EVENT_BATCH) })
+  .object({ events: z.array(EnborEventSchema).min(1).max(MAX_EVENT_BATCH) })
   .strict()
   .openapi('CreateSessionEventsRequest')
 
@@ -688,7 +688,7 @@ const MessageListQuerySchema = z.object({
 })
 const EventsQuerySchema = eventListQuerySchema().extend({
   type: z
-    .enum(AMA_SESSION_EVENT_TYPES)
+    .enum(ENBOR_SESSION_EVENT_TYPES)
     .optional()
     .openapi({ param: { name: 'type', in: 'query' }, example: 'message.completed' }),
   createdFrom: z
@@ -1616,7 +1616,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
           projectId: auth.project.id,
           sessionId: session.id,
         },
-        events.map((event) => ({ type: event.type, payload: event.payload }) as AmaEvent),
+        events.map((event) => ({ type: event.type, payload: event.payload }) as EnborEvent),
       )
       return c.json({ accepted }, 201)
     })

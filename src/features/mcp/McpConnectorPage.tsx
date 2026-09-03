@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
 import { DetailSection, EmptyState, Meta, MetaGrid, PageHeader, StatusBadge } from '@/console/components'
-import { ApiError, api, type Connector } from '@/lib/amarpc'
+import { ApiError, api, type Connector } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { connectorDisabledReason } from './McpView'
 

@@ -18,7 +18,7 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
 
   it('rejects an Identity runtime that has no registered driver', () => {
     expect(() => runtimeNameForIdentity('hermes')).toThrow(
-      'Identity runtime is not supported by this AMA deployment: hermes.',
+      'Identity runtime is not supported by this Enbor deployment: hermes.',
     )
   })
 

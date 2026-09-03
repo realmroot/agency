@@ -2,7 +2,7 @@ import { computeModelCostMicros, isProviderErrorCategory, providerFamily } from 
 import { newPrimaryKey } from '@server/id'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import type { AmaEvent, ToolCall } from '../../../shared/session-events'
+import type { EnborEvent, ToolCall } from '../../../shared/session-events'
 import { providerModels, providers, sessionEvents, sessions, usageRecords } from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
@@ -18,7 +18,7 @@ export interface UsageRecordingScope {
 // Write-only: the read/report side is UsageRepo. Constructed by the session-
 // event-store infra, not wired into Deps (no usecase records usage directly).
 export interface UsageWriteRepo {
-  recordProviderSignals(scope: UsageRecordingScope, sessionEventId: string, canonicalEvent: AmaEvent): Promise<void>
+  recordProviderSignals(scope: UsageRecordingScope, sessionEventId: string, canonicalEvent: EnborEvent): Promise<void>
 }
 
 function numberField(payload: Record<string, unknown>, key: string) {

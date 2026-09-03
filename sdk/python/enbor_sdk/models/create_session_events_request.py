@@ -11,18 +11,18 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.ama_event_type_0 import AmaEventType0
-  from ..models.ama_event_type_1 import AmaEventType1
-  from ..models.ama_event_type_10 import AmaEventType10
-  from ..models.ama_event_type_11 import AmaEventType11
-  from ..models.ama_event_type_2 import AmaEventType2
-  from ..models.ama_event_type_3 import AmaEventType3
-  from ..models.ama_event_type_4 import AmaEventType4
-  from ..models.ama_event_type_5 import AmaEventType5
-  from ..models.ama_event_type_6 import AmaEventType6
-  from ..models.ama_event_type_7 import AmaEventType7
-  from ..models.ama_event_type_8 import AmaEventType8
-  from ..models.ama_event_type_9 import AmaEventType9
+  from ..models.enbor_event_type_0 import EnborEventType0
+  from ..models.enbor_event_type_1 import EnborEventType1
+  from ..models.enbor_event_type_10 import EnborEventType10
+  from ..models.enbor_event_type_11 import EnborEventType11
+  from ..models.enbor_event_type_2 import EnborEventType2
+  from ..models.enbor_event_type_3 import EnborEventType3
+  from ..models.enbor_event_type_4 import EnborEventType4
+  from ..models.enbor_event_type_5 import EnborEventType5
+  from ..models.enbor_event_type_6 import EnborEventType6
+  from ..models.enbor_event_type_7 import EnborEventType7
+  from ..models.enbor_event_type_8 import EnborEventType8
+  from ..models.enbor_event_type_9 import EnborEventType9
 
 
 
@@ -36,53 +36,54 @@ T = TypeVar("T", bound="CreateSessionEventsRequest")
 class CreateSessionEventsRequest:
     """
         Attributes:
-            events (list[AmaEventType0 | AmaEventType1 | AmaEventType10 | AmaEventType11 | AmaEventType2 | AmaEventType3 |
-                AmaEventType4 | AmaEventType5 | AmaEventType6 | AmaEventType7 | AmaEventType8 | AmaEventType9]):
+            events (list[EnborEventType0 | EnborEventType1 | EnborEventType10 | EnborEventType11 | EnborEventType2 |
+                EnborEventType3 | EnborEventType4 | EnborEventType5 | EnborEventType6 | EnborEventType7 | EnborEventType8 |
+                EnborEventType9]):
      """
 
-    events: list[AmaEventType0 | AmaEventType1 | AmaEventType10 | AmaEventType11 | AmaEventType2 | AmaEventType3 | AmaEventType4 | AmaEventType5 | AmaEventType6 | AmaEventType7 | AmaEventType8 | AmaEventType9]
+    events: list[EnborEventType0 | EnborEventType1 | EnborEventType10 | EnborEventType11 | EnborEventType2 | EnborEventType3 | EnborEventType4 | EnborEventType5 | EnborEventType6 | EnborEventType7 | EnborEventType8 | EnborEventType9]
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.ama_event_type_0 import AmaEventType0
-        from ..models.ama_event_type_1 import AmaEventType1
-        from ..models.ama_event_type_10 import AmaEventType10
-        from ..models.ama_event_type_11 import AmaEventType11
-        from ..models.ama_event_type_2 import AmaEventType2
-        from ..models.ama_event_type_3 import AmaEventType3
-        from ..models.ama_event_type_4 import AmaEventType4
-        from ..models.ama_event_type_5 import AmaEventType5
-        from ..models.ama_event_type_6 import AmaEventType6
-        from ..models.ama_event_type_7 import AmaEventType7
-        from ..models.ama_event_type_8 import AmaEventType8
-        from ..models.ama_event_type_9 import AmaEventType9
+        from ..models.enbor_event_type_0 import EnborEventType0
+        from ..models.enbor_event_type_1 import EnborEventType1
+        from ..models.enbor_event_type_10 import EnborEventType10
+        from ..models.enbor_event_type_11 import EnborEventType11
+        from ..models.enbor_event_type_2 import EnborEventType2
+        from ..models.enbor_event_type_3 import EnborEventType3
+        from ..models.enbor_event_type_4 import EnborEventType4
+        from ..models.enbor_event_type_5 import EnborEventType5
+        from ..models.enbor_event_type_6 import EnborEventType6
+        from ..models.enbor_event_type_7 import EnborEventType7
+        from ..models.enbor_event_type_8 import EnborEventType8
+        from ..models.enbor_event_type_9 import EnborEventType9
         events = []
         for events_item_data in self.events:
             events_item: dict[str, Any]
-            if isinstance(events_item_data, AmaEventType0):
+            if isinstance(events_item_data, EnborEventType0):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType1):
+            elif isinstance(events_item_data, EnborEventType1):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType2):
+            elif isinstance(events_item_data, EnborEventType2):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType3):
+            elif isinstance(events_item_data, EnborEventType3):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType4):
+            elif isinstance(events_item_data, EnborEventType4):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType5):
+            elif isinstance(events_item_data, EnborEventType5):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType6):
+            elif isinstance(events_item_data, EnborEventType6):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType7):
+            elif isinstance(events_item_data, EnborEventType7):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType8):
+            elif isinstance(events_item_data, EnborEventType8):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType9):
+            elif isinstance(events_item_data, EnborEventType9):
                 events_item = events_item_data.to_dict()
-            elif isinstance(events_item_data, AmaEventType10):
+            elif isinstance(events_item_data, EnborEventType10):
                 events_item = events_item_data.to_dict()
             else:
                 events_item = events_item_data.to_dict()
@@ -104,140 +105,140 @@ class CreateSessionEventsRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.ama_event_type_0 import AmaEventType0
-        from ..models.ama_event_type_1 import AmaEventType1
-        from ..models.ama_event_type_10 import AmaEventType10
-        from ..models.ama_event_type_11 import AmaEventType11
-        from ..models.ama_event_type_2 import AmaEventType2
-        from ..models.ama_event_type_3 import AmaEventType3
-        from ..models.ama_event_type_4 import AmaEventType4
-        from ..models.ama_event_type_5 import AmaEventType5
-        from ..models.ama_event_type_6 import AmaEventType6
-        from ..models.ama_event_type_7 import AmaEventType7
-        from ..models.ama_event_type_8 import AmaEventType8
-        from ..models.ama_event_type_9 import AmaEventType9
+        from ..models.enbor_event_type_0 import EnborEventType0
+        from ..models.enbor_event_type_1 import EnborEventType1
+        from ..models.enbor_event_type_10 import EnborEventType10
+        from ..models.enbor_event_type_11 import EnborEventType11
+        from ..models.enbor_event_type_2 import EnborEventType2
+        from ..models.enbor_event_type_3 import EnborEventType3
+        from ..models.enbor_event_type_4 import EnborEventType4
+        from ..models.enbor_event_type_5 import EnborEventType5
+        from ..models.enbor_event_type_6 import EnborEventType6
+        from ..models.enbor_event_type_7 import EnborEventType7
+        from ..models.enbor_event_type_8 import EnborEventType8
+        from ..models.enbor_event_type_9 import EnborEventType9
         d = dict(src_dict)
         events = []
         _events = d.pop("events")
         for events_item_data in (_events):
-            def _parse_events_item(data: object) -> AmaEventType0 | AmaEventType1 | AmaEventType10 | AmaEventType11 | AmaEventType2 | AmaEventType3 | AmaEventType4 | AmaEventType5 | AmaEventType6 | AmaEventType7 | AmaEventType8 | AmaEventType9:
+            def _parse_events_item(data: object) -> EnborEventType0 | EnborEventType1 | EnborEventType10 | EnborEventType11 | EnborEventType2 | EnborEventType3 | EnborEventType4 | EnborEventType5 | EnborEventType6 | EnborEventType7 | EnborEventType8 | EnborEventType9:
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_0 = AmaEventType0.from_dict(data)
+                    componentsschemas_enbor_event_type_0 = EnborEventType0.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_0
+                    return componentsschemas_enbor_event_type_0
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_1 = AmaEventType1.from_dict(data)
+                    componentsschemas_enbor_event_type_1 = EnborEventType1.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_1
+                    return componentsschemas_enbor_event_type_1
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_2 = AmaEventType2.from_dict(data)
+                    componentsschemas_enbor_event_type_2 = EnborEventType2.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_2
+                    return componentsschemas_enbor_event_type_2
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_3 = AmaEventType3.from_dict(data)
+                    componentsschemas_enbor_event_type_3 = EnborEventType3.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_3
+                    return componentsschemas_enbor_event_type_3
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_4 = AmaEventType4.from_dict(data)
+                    componentsschemas_enbor_event_type_4 = EnborEventType4.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_4
+                    return componentsschemas_enbor_event_type_4
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_5 = AmaEventType5.from_dict(data)
+                    componentsschemas_enbor_event_type_5 = EnborEventType5.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_5
+                    return componentsschemas_enbor_event_type_5
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_6 = AmaEventType6.from_dict(data)
+                    componentsschemas_enbor_event_type_6 = EnborEventType6.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_6
+                    return componentsschemas_enbor_event_type_6
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_7 = AmaEventType7.from_dict(data)
+                    componentsschemas_enbor_event_type_7 = EnborEventType7.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_7
+                    return componentsschemas_enbor_event_type_7
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_8 = AmaEventType8.from_dict(data)
+                    componentsschemas_enbor_event_type_8 = EnborEventType8.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_8
+                    return componentsschemas_enbor_event_type_8
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_9 = AmaEventType9.from_dict(data)
+                    componentsschemas_enbor_event_type_9 = EnborEventType9.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_9
+                    return componentsschemas_enbor_event_type_9
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
-                    componentsschemas_ama_event_type_10 = AmaEventType10.from_dict(data)
+                    componentsschemas_enbor_event_type_10 = EnborEventType10.from_dict(data)
 
 
 
-                    return componentsschemas_ama_event_type_10
+                    return componentsschemas_enbor_event_type_10
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_ama_event_type_11 = AmaEventType11.from_dict(data)
+                componentsschemas_enbor_event_type_11 = EnborEventType11.from_dict(data)
 
 
 
-                return componentsschemas_ama_event_type_11
+                return componentsschemas_enbor_event_type_11
 
             events_item = _parse_events_item(events_item_data)
 

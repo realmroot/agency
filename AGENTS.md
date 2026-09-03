@@ -12,8 +12,8 @@
 - Enbor is Cloudflare-native infrastructure for developers building agent products: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
 - Architecture rationale and ownership boundaries live in `docs/adr/`. Observable product and API behavior lives only in `spec/*.feature`; do not restate either in this file.
-- AMA is infrastructure for downstream products and must not depend on or recognize any one of them. Do not add downstream-product names, client IDs, environment variables, routes, query parameters, authorization branches, fixtures, or compatibility behavior to AMA; expose generic resource capabilities and let each consumer own its business binding.
-- Use standard protocols at external boundaries and keep provider-specific implementation behind adapters. Do not turn a current provider into the AMA protocol contract.
+- Enbor is infrastructure for downstream products and must not depend on or recognize any one of them. Do not add downstream-product names, client IDs, environment variables, routes, query parameters, authorization branches, fixtures, or compatibility behavior to Enbor; expose generic resource capabilities and let each consumer own its business binding.
+- Use standard protocols at external boundaries and keep provider-specific implementation behind adapters. Do not turn a current provider into the Enbor protocol contract.
 
 ## Workflow: Spec-Traced, Verified At The Cheapest Layer
 
@@ -86,7 +86,7 @@ hard-to-reverse architecture decisions in `docs/adr/`.
 - `src/app/` - React application providers and router setup.
 - `src/features/` - Route-level feature orchestration for console pages.
 - `src/features/console/` - Shared authenticated console shell and context.
-- `src/console/` - Reusable AMA product components, form helpers, formatting, defaults, and view models.
+- `src/console/` - Reusable Enbor product components, form helpers, formatting, defaults, and view models.
 - `src/components/ui/` - shadcn-generated primitives. Prefer these before writing custom primitives.
 - `spec/` - Product behaviour in Gherkin (BDD-lite). One `.feature` per capability; tests trace back via `[spec: id]`. See `spec/README.md`.
 - `e2e/` - Native Playwright crowns (`*.spec.ts`), fixtures, browser helpers, and local e2e harnesses for `@e2e` scenarios.
@@ -99,7 +99,7 @@ hard-to-reverse architecture decisions in `docs/adr/`.
 - `src/App.tsx` should compose providers and `RouterProvider`; primary route definitions belong in `src/app/router.tsx`.
 - Use React Query for server state. Do not add feature-level `useEffect + useState` API loading loops.
 - Use the shared Hono RPC client for browser control-plane calls. Do not add ad hoc `fetch('/api/...')` clients in feature code.
-- Compose route pages from shadcn primitives and shared AMA components. Do not recreate local button, input, card, panel, or field systems.
+- Compose route pages from shadcn primitives and shared Enbor components. Do not recreate local button, input, card, panel, or field systems.
 - Forms use shadcn `Field` primitives for labels, descriptions, errors, and validation layout.
 - Date and time display uses the shared dayjs-backed formatter in `src/console/format.ts`.
 - For visible UI changes, run the proof layer selected by the owning Feature on desktop and 390px mobile where applicable.

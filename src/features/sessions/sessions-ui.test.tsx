@@ -1,11 +1,11 @@
-import { AMA_SESSION_EVENT_TYPES } from '@shared/session-events'
+import { ENBOR_SESSION_EVENT_TYPES } from '@shared/session-events'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatTime } from '@/console/format'
 import { SessionForm } from '@/console/forms'
 import { useClientPagination } from '@/console/use-client-pagination'
-import { type Agent, ApiError, type Environment, type Session, type SessionEvent } from '@/lib/amarpc'
+import { type Agent, ApiError, type Environment, type Session, type SessionEvent } from '@/lib/enborrpc'
 import {
   type AgentOverrides,
   type EnvironmentOverrides,
@@ -128,7 +128,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
     expect(screen.getByText('Agent provider/model: workers-ai / @cf/moonshotai/kimi-k2.6')).toBeTruthy()
     expect(screen.getByText('Environment type: Self-hosted')).toBeTruthy()
     expect(screen.getByText('Runtime is selected per session.')).toBeTruthy()
-    expect(screen.getAllByText('AMA').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0)
   })
 
   it('formats structured runtime capability failures with exact runtime provider and model', () => {
@@ -468,7 +468,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           eventType: 'tool_result',
         },
       ],
-      sessionEvents: AMA_SESSION_EVENT_TYPES.map((type, index) =>
+      sessionEvents: ENBOR_SESSION_EVENT_TYPES.map((type, index) =>
         buildPersistedEvent({
           id: `debug_${type}`,
           sequence: index + 1,
@@ -502,7 +502,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
     fireEvent.click(debugTab)
     await waitFor(() => expect(debugTab.getAttribute('aria-selected')).toBe('true'))
 
-    for (const type of AMA_SESSION_EVENT_TYPES) {
+    for (const type of ENBOR_SESSION_EVENT_TYPES) {
       expect(screen.getAllByText(type).length).toBeGreaterThan(0)
       expect(screen.getByText(`debug_${type}`)).toBeTruthy()
     }

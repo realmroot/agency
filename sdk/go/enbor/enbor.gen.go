@@ -24,186 +24,6 @@ const (
 	SessionSocketTicketScopes sessionSocketTicketContextKey = "sessionSocketTicket.Scopes"
 )
 
-// Defines values for AmaEvent0Type.
-const (
-	AmaEvent0TypeRuntimeStarted AmaEvent0Type = "runtime.started"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent0Type enum.
-func (e AmaEvent0Type) Valid() bool {
-	switch e {
-	case AmaEvent0TypeRuntimeStarted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent1Type.
-const (
-	AmaEvent1TypeRuntimeCompleted AmaEvent1Type = "runtime.completed"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent1Type enum.
-func (e AmaEvent1Type) Valid() bool {
-	switch e {
-	case AmaEvent1TypeRuntimeCompleted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent2Type.
-const (
-	AmaEvent2TypeTurnStarted AmaEvent2Type = "turn.started"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent2Type enum.
-func (e AmaEvent2Type) Valid() bool {
-	switch e {
-	case AmaEvent2TypeTurnStarted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent3Type.
-const (
-	AmaEvent3TypeTurnCompleted AmaEvent3Type = "turn.completed"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent3Type enum.
-func (e AmaEvent3Type) Valid() bool {
-	switch e {
-	case AmaEvent3TypeTurnCompleted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent4Type.
-const (
-	AmaEvent4TypeMessageStarted AmaEvent4Type = "message.started"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent4Type enum.
-func (e AmaEvent4Type) Valid() bool {
-	switch e {
-	case AmaEvent4TypeMessageStarted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent5Type.
-const (
-	AmaEvent5TypeMessageUpdated AmaEvent5Type = "message.updated"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent5Type enum.
-func (e AmaEvent5Type) Valid() bool {
-	switch e {
-	case AmaEvent5TypeMessageUpdated:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent6Type.
-const (
-	AmaEvent6TypeMessageCompleted AmaEvent6Type = "message.completed"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent6Type enum.
-func (e AmaEvent6Type) Valid() bool {
-	switch e {
-	case AmaEvent6TypeMessageCompleted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent7Type.
-const (
-	AmaEvent7TypeUsageRecorded AmaEvent7Type = "usage.recorded"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent7Type enum.
-func (e AmaEvent7Type) Valid() bool {
-	switch e {
-	case AmaEvent7TypeUsageRecorded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent8Type.
-const (
-	AmaEvent8TypePermissionRequested AmaEvent8Type = "permission.requested"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent8Type enum.
-func (e AmaEvent8Type) Valid() bool {
-	switch e {
-	case AmaEvent8TypePermissionRequested:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent9Type.
-const (
-	AmaEvent9TypePermissionResolved AmaEvent9Type = "permission.resolved"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent9Type enum.
-func (e AmaEvent9Type) Valid() bool {
-	switch e {
-	case AmaEvent9TypePermissionResolved:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent10Type.
-const (
-	AmaEvent10TypePermissionDenied AmaEvent10Type = "permission.denied"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent10Type enum.
-func (e AmaEvent10Type) Valid() bool {
-	switch e {
-	case AmaEvent10TypePermissionDenied:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AmaEvent11Type.
-const (
-	AmaEvent11TypeRuntimeError AmaEvent11Type = "runtime.error"
-)
-
-// Valid indicates whether the value is a known member of the AmaEvent11Type enum.
-func (e AmaEvent11Type) Valid() bool {
-	switch e {
-	case AmaEvent11TypeRuntimeError:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AuditRecordActorType.
 const (
 	AuditRecordActorTypeAgent  AuditRecordActorType = "agent"
@@ -672,6 +492,186 @@ const (
 func (e EmptyDirVolumeType) Valid() bool {
 	switch e {
 	case EmptyDirVolumeTypeEmptyDir:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent0Type.
+const (
+	EnborEvent0TypeRuntimeStarted EnborEvent0Type = "runtime.started"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent0Type enum.
+func (e EnborEvent0Type) Valid() bool {
+	switch e {
+	case EnborEvent0TypeRuntimeStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent1Type.
+const (
+	EnborEvent1TypeRuntimeCompleted EnborEvent1Type = "runtime.completed"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent1Type enum.
+func (e EnborEvent1Type) Valid() bool {
+	switch e {
+	case EnborEvent1TypeRuntimeCompleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent2Type.
+const (
+	EnborEvent2TypeTurnStarted EnborEvent2Type = "turn.started"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent2Type enum.
+func (e EnborEvent2Type) Valid() bool {
+	switch e {
+	case EnborEvent2TypeTurnStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent3Type.
+const (
+	EnborEvent3TypeTurnCompleted EnborEvent3Type = "turn.completed"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent3Type enum.
+func (e EnborEvent3Type) Valid() bool {
+	switch e {
+	case EnborEvent3TypeTurnCompleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent4Type.
+const (
+	EnborEvent4TypeMessageStarted EnborEvent4Type = "message.started"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent4Type enum.
+func (e EnborEvent4Type) Valid() bool {
+	switch e {
+	case EnborEvent4TypeMessageStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent5Type.
+const (
+	EnborEvent5TypeMessageUpdated EnborEvent5Type = "message.updated"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent5Type enum.
+func (e EnborEvent5Type) Valid() bool {
+	switch e {
+	case EnborEvent5TypeMessageUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent6Type.
+const (
+	EnborEvent6TypeMessageCompleted EnborEvent6Type = "message.completed"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent6Type enum.
+func (e EnborEvent6Type) Valid() bool {
+	switch e {
+	case EnborEvent6TypeMessageCompleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent7Type.
+const (
+	EnborEvent7TypeUsageRecorded EnborEvent7Type = "usage.recorded"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent7Type enum.
+func (e EnborEvent7Type) Valid() bool {
+	switch e {
+	case EnborEvent7TypeUsageRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent8Type.
+const (
+	EnborEvent8TypePermissionRequested EnborEvent8Type = "permission.requested"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent8Type enum.
+func (e EnborEvent8Type) Valid() bool {
+	switch e {
+	case EnborEvent8TypePermissionRequested:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent9Type.
+const (
+	EnborEvent9TypePermissionResolved EnborEvent9Type = "permission.resolved"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent9Type enum.
+func (e EnborEvent9Type) Valid() bool {
+	switch e {
+	case EnborEvent9TypePermissionResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent10Type.
+const (
+	EnborEvent10TypePermissionDenied EnborEvent10Type = "permission.denied"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent10Type enum.
+func (e EnborEvent10Type) Valid() bool {
+	switch e {
+	case EnborEvent10TypePermissionDenied:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnborEvent11Type.
+const (
+	EnborEvent11TypeRuntimeError EnborEvent11Type = "runtime.error"
+)
+
+// Valid indicates whether the value is a known member of the EnborEvent11Type enum.
+func (e EnborEvent11Type) Valid() bool {
+	switch e {
+	case EnborEvent11TypeRuntimeError:
 		return true
 	default:
 		return false
@@ -1202,13 +1202,13 @@ func (e PublicConfigVersion) Valid() bool {
 
 // Defines values for PublicServiceConfigName.
 const (
-	AnyManagedAgents PublicServiceConfigName = "Any Managed Agents"
+	Enbor PublicServiceConfigName = "Enbor"
 )
 
 // Valid indicates whether the value is a known member of the PublicServiceConfigName enum.
 func (e PublicServiceConfigName) Valid() bool {
 	switch e {
-	case AnyManagedAgents:
+	case Enbor:
 		return true
 	default:
 		return false
@@ -1610,13 +1610,13 @@ func (e RunnerVolumeType) Valid() bool {
 
 // Defines values for RunnerWorkPayloadProtocol.
 const (
-	AmaRunnerWork RunnerWorkPayloadProtocol = "ama-runner-work"
+	EnborRunnerWork RunnerWorkPayloadProtocol = "ama-runner-work"
 )
 
 // Valid indicates whether the value is a known member of the RunnerWorkPayloadProtocol enum.
 func (e RunnerWorkPayloadProtocol) Valid() bool {
 	switch e {
-	case AmaRunnerWork:
+	case EnborRunnerWork:
 		return true
 	default:
 		return false
@@ -3160,119 +3160,6 @@ type AgentVersionStatus struct {
 	Version int    `json:"version"`
 }
 
-// AmaEvent defines model for AmaEvent.
-type AmaEvent struct {
-	union json.RawMessage
-}
-
-// AmaEvent0 defines model for .
-type AmaEvent0 struct {
-	Payload RuntimeLifecyclePayload `json:"payload"`
-	Type    AmaEvent0Type           `json:"type"`
-}
-
-// AmaEvent0Type defines model for AmaEvent.0.Type.
-type AmaEvent0Type string
-
-// AmaEvent1 defines model for .
-type AmaEvent1 struct {
-	Payload RuntimeLifecyclePayload `json:"payload"`
-	Type    AmaEvent1Type           `json:"type"`
-}
-
-// AmaEvent1Type defines model for AmaEvent.1.Type.
-type AmaEvent1Type string
-
-// AmaEvent2 defines model for .
-type AmaEvent2 struct {
-	Payload TurnPayload   `json:"payload"`
-	Type    AmaEvent2Type `json:"type"`
-}
-
-// AmaEvent2Type defines model for AmaEvent.2.Type.
-type AmaEvent2Type string
-
-// AmaEvent3 defines model for .
-type AmaEvent3 struct {
-	Payload TurnPayload   `json:"payload"`
-	Type    AmaEvent3Type `json:"type"`
-}
-
-// AmaEvent3Type defines model for AmaEvent.3.Type.
-type AmaEvent3Type string
-
-// AmaEvent4 defines model for .
-type AmaEvent4 struct {
-	Payload MessageEventPayload `json:"payload"`
-	Type    AmaEvent4Type       `json:"type"`
-}
-
-// AmaEvent4Type defines model for AmaEvent.4.Type.
-type AmaEvent4Type string
-
-// AmaEvent5 defines model for .
-type AmaEvent5 struct {
-	Payload MessageEventPayload `json:"payload"`
-	Type    AmaEvent5Type       `json:"type"`
-}
-
-// AmaEvent5Type defines model for AmaEvent.5.Type.
-type AmaEvent5Type string
-
-// AmaEvent6 defines model for .
-type AmaEvent6 struct {
-	Payload MessageEventPayload `json:"payload"`
-	Type    AmaEvent6Type       `json:"type"`
-}
-
-// AmaEvent6Type defines model for AmaEvent.6.Type.
-type AmaEvent6Type string
-
-// AmaEvent7 defines model for .
-type AmaEvent7 struct {
-	Payload UsageRecordedPayload `json:"payload"`
-	Type    AmaEvent7Type        `json:"type"`
-}
-
-// AmaEvent7Type defines model for AmaEvent.7.Type.
-type AmaEvent7Type string
-
-// AmaEvent8 defines model for .
-type AmaEvent8 struct {
-	Payload PermissionRequestPayload `json:"payload"`
-	Type    AmaEvent8Type            `json:"type"`
-}
-
-// AmaEvent8Type defines model for AmaEvent.8.Type.
-type AmaEvent8Type string
-
-// AmaEvent9 defines model for .
-type AmaEvent9 struct {
-	Payload PermissionResolvedPayload `json:"payload"`
-	Type    AmaEvent9Type             `json:"type"`
-}
-
-// AmaEvent9Type defines model for AmaEvent.9.Type.
-type AmaEvent9Type string
-
-// AmaEvent10 defines model for .
-type AmaEvent10 struct {
-	Payload PermissionDeniedPayload `json:"payload"`
-	Type    AmaEvent10Type          `json:"type"`
-}
-
-// AmaEvent10Type defines model for AmaEvent.10.Type.
-type AmaEvent10Type string
-
-// AmaEvent11 defines model for .
-type AmaEvent11 struct {
-	Payload EventError     `json:"payload"`
-	Type    AmaEvent11Type `json:"type"`
-}
-
-// AmaEvent11Type defines model for AmaEvent.11.Type.
-type AmaEvent11Type string
-
 // AuditRecord defines model for AuditRecord.
 type AuditRecord struct {
 	Action           string                 `json:"action"`
@@ -3506,7 +3393,7 @@ type CreateHttpTriggerRunRequest map[string]interface{}
 type CreateIdentityRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
 		Runtime  IdentityRuntime `json:"runtime"`
 		Username string          `json:"username"`
 	} `json:"spec"`
@@ -3556,7 +3443,7 @@ type CreateRunnerRequestAuthMode string
 
 // CreateSessionEventsRequest defines model for CreateSessionEventsRequest.
 type CreateSessionEventsRequest struct {
-	Events []AmaEvent `json:"events"`
+	Events []EnborEvent `json:"events"`
 }
 
 // CreateSessionMessageRequest defines model for CreateSessionMessageRequest.
@@ -3688,6 +3575,119 @@ type EmptyDirVolume struct {
 
 // EmptyDirVolumeType defines model for EmptyDirVolume.Type.
 type EmptyDirVolumeType string
+
+// EnborEvent defines model for EnborEvent.
+type EnborEvent struct {
+	union json.RawMessage
+}
+
+// EnborEvent0 defines model for .
+type EnborEvent0 struct {
+	Payload RuntimeLifecyclePayload `json:"payload"`
+	Type    EnborEvent0Type         `json:"type"`
+}
+
+// EnborEvent0Type defines model for EnborEvent.0.Type.
+type EnborEvent0Type string
+
+// EnborEvent1 defines model for .
+type EnborEvent1 struct {
+	Payload RuntimeLifecyclePayload `json:"payload"`
+	Type    EnborEvent1Type         `json:"type"`
+}
+
+// EnborEvent1Type defines model for EnborEvent.1.Type.
+type EnborEvent1Type string
+
+// EnborEvent2 defines model for .
+type EnborEvent2 struct {
+	Payload TurnPayload     `json:"payload"`
+	Type    EnborEvent2Type `json:"type"`
+}
+
+// EnborEvent2Type defines model for EnborEvent.2.Type.
+type EnborEvent2Type string
+
+// EnborEvent3 defines model for .
+type EnborEvent3 struct {
+	Payload TurnPayload     `json:"payload"`
+	Type    EnborEvent3Type `json:"type"`
+}
+
+// EnborEvent3Type defines model for EnborEvent.3.Type.
+type EnborEvent3Type string
+
+// EnborEvent4 defines model for .
+type EnborEvent4 struct {
+	Payload MessageEventPayload `json:"payload"`
+	Type    EnborEvent4Type     `json:"type"`
+}
+
+// EnborEvent4Type defines model for EnborEvent.4.Type.
+type EnborEvent4Type string
+
+// EnborEvent5 defines model for .
+type EnborEvent5 struct {
+	Payload MessageEventPayload `json:"payload"`
+	Type    EnborEvent5Type     `json:"type"`
+}
+
+// EnborEvent5Type defines model for EnborEvent.5.Type.
+type EnborEvent5Type string
+
+// EnborEvent6 defines model for .
+type EnborEvent6 struct {
+	Payload MessageEventPayload `json:"payload"`
+	Type    EnborEvent6Type     `json:"type"`
+}
+
+// EnborEvent6Type defines model for EnborEvent.6.Type.
+type EnborEvent6Type string
+
+// EnborEvent7 defines model for .
+type EnborEvent7 struct {
+	Payload UsageRecordedPayload `json:"payload"`
+	Type    EnborEvent7Type      `json:"type"`
+}
+
+// EnborEvent7Type defines model for EnborEvent.7.Type.
+type EnborEvent7Type string
+
+// EnborEvent8 defines model for .
+type EnborEvent8 struct {
+	Payload PermissionRequestPayload `json:"payload"`
+	Type    EnborEvent8Type          `json:"type"`
+}
+
+// EnborEvent8Type defines model for EnborEvent.8.Type.
+type EnborEvent8Type string
+
+// EnborEvent9 defines model for .
+type EnborEvent9 struct {
+	Payload PermissionResolvedPayload `json:"payload"`
+	Type    EnborEvent9Type           `json:"type"`
+}
+
+// EnborEvent9Type defines model for EnborEvent.9.Type.
+type EnborEvent9Type string
+
+// EnborEvent10 defines model for .
+type EnborEvent10 struct {
+	Payload PermissionDeniedPayload `json:"payload"`
+	Type    EnborEvent10Type        `json:"type"`
+}
+
+// EnborEvent10Type defines model for EnborEvent.10.Type.
+type EnborEvent10Type string
+
+// EnborEvent11 defines model for .
+type EnborEvent11 struct {
+	Payload EventError       `json:"payload"`
+	Type    EnborEvent11Type `json:"type"`
+}
+
+// EnborEvent11Type defines model for EnborEvent.11.Type.
+type EnborEvent11Type string
 
 // EnvFromEntry defines model for EnvFromEntry.
 type EnvFromEntry struct {
@@ -3997,7 +3997,7 @@ type HttpTriggerConcurrencyMode string
 type Identity struct {
 	Metadata ResourceMetadata `json:"metadata"`
 	Spec     struct {
-		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+		// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
 		Runtime  IdentityRuntime `json:"runtime"`
 		Username string          `json:"username"`
 	} `json:"spec"`
@@ -4020,7 +4020,7 @@ type IdentityDescriptor struct {
 	IdentityId string `json:"identityId"`
 	Issuer     string `json:"issuer"`
 
-	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
 	Runtime IdentityRuntime `json:"runtime"`
 
 	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
@@ -4034,7 +4034,7 @@ type IdentityListResponse struct {
 	Pagination ListPagination `json:"pagination"`
 }
 
-// IdentityRuntime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+// IdentityRuntime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
 type IdentityRuntime = string
 
 // ImageContentBlock defines model for ImageContentBlock.
@@ -5070,7 +5070,7 @@ type SessionIdentityDescriptor struct {
 	IdentityId string `json:"identityId"`
 	Issuer     string `json:"issuer"`
 
-	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+	// Runtime Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
 	Runtime IdentityRuntime `json:"runtime"`
 
 	// Subject Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.
@@ -5899,8 +5899,8 @@ type WriteToolInput struct {
 	Path    string `json:"path"`
 }
 
-// AmaProjectId defines model for AmaProjectId.
-type AmaProjectId = string
+// EnborProjectId defines model for EnborProjectId.
+type EnborProjectId = string
 
 // inboxCallbackBearerContextKey is the context key for inboxCallbackBearer security scheme
 type inboxCallbackBearerContextKey string
@@ -5928,8 +5928,8 @@ type ListAgentsParams struct {
 	// Schedulable Filter by current Inbox scheduling readiness.
 	Schedulable *ListAgentsParamsSchedulable `form:"schedulable,omitempty" json:"schedulable,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListAgentsParamsRuntime defines parameters for ListAgents.
@@ -5942,38 +5942,38 @@ type ListAgentsParamsSchedulable string
 type CreateAgentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteAgentParams defines parameters for DeleteAgent.
 type DeleteAgentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadAgentParams defines parameters for ReadAgent.
 type ReadAgentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateAgentParams defines parameters for UpdateAgent.
 type UpdateAgentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListAgentVersionsParams defines parameters for ListAgentVersions.
 type ListAgentVersionsParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadAgentVersionParams defines parameters for ReadAgentVersion.
 type ReadAgentVersionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
@@ -5997,32 +5997,32 @@ type ReadAuthConfigParams struct {
 
 // ListBudgetsParams defines parameters for ListBudgets.
 type ListBudgetsParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateBudgetParams defines parameters for CreateBudget.
 type CreateBudgetParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteBudgetParams defines parameters for DeleteBudget.
 type DeleteBudgetParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadBudgetParams defines parameters for ReadBudget.
 type ReadBudgetParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateBudgetParams defines parameters for UpdateBudget.
 type UpdateBudgetParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -6047,46 +6047,46 @@ type ListEnvironmentsParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateEnvironmentParams defines parameters for CreateEnvironment.
 type CreateEnvironmentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteEnvironmentParams defines parameters for DeleteEnvironment.
 type DeleteEnvironmentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadEnvironmentParams defines parameters for ReadEnvironment.
 type ReadEnvironmentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateEnvironmentParams defines parameters for UpdateEnvironment.
 type UpdateEnvironmentParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListEnvironmentVersionsParams defines parameters for ListEnvironmentVersions.
 type ListEnvironmentVersionsParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadEnvironmentVersionParams defines parameters for ReadEnvironmentVersion.
 type ReadEnvironmentVersionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListIdentitiesParams defines parameters for ListIdentities.
@@ -6097,28 +6097,28 @@ type ListIdentitiesParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateIdentityParams defines parameters for CreateIdentity.
 type CreateIdentityParams struct {
 	IdempotencyKey string `json:"idempotency-key"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteIdentityParams defines parameters for DeleteIdentity.
 type DeleteIdentityParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadIdentityParams defines parameters for ReadIdentity.
 type ReadIdentityParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListLeasesParams defines parameters for ListLeases.
@@ -6128,8 +6128,8 @@ type ListLeasesParams struct {
 	Limit    *int                   `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor   *string                `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListLeasesParamsState defines parameters for ListLeases.
@@ -6137,20 +6137,20 @@ type ListLeasesParamsState string
 
 // CreateLeaseParams defines parameters for CreateLease.
 type CreateLeaseParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadLeaseParams defines parameters for ReadLease.
 type ReadLeaseParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateLeaseParams defines parameters for UpdateLease.
 type UpdateLeaseParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListMemoryStoresParams defines parameters for ListMemoryStores.
@@ -6161,32 +6161,32 @@ type ListMemoryStoresParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateMemoryStoreParams defines parameters for CreateMemoryStore.
 type CreateMemoryStoreParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteMemoryStoreParams defines parameters for DeleteMemoryStore.
 type DeleteMemoryStoreParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadMemoryStoreParams defines parameters for ReadMemoryStore.
 type ReadMemoryStoreParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateMemoryStoreParams defines parameters for UpdateMemoryStore.
 type UpdateMemoryStoreParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListMemoryStoreMemoriesParams defines parameters for ListMemoryStoreMemories.
@@ -6194,26 +6194,26 @@ type ListMemoryStoreMemoriesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateMemoryStoreMemoryParams defines parameters for CreateMemoryStoreMemory.
 type CreateMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteMemoryStoreMemoryParams defines parameters for DeleteMemoryStoreMemory.
 type DeleteMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateMemoryStoreMemoryParams defines parameters for UpdateMemoryStoreMemory.
 type UpdateMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListProjectsParams defines parameters for ListProjects.
@@ -6232,8 +6232,8 @@ type ListRunnersParams struct {
 	State         *ListRunnersParamsState `form:"state,omitempty" json:"state,omitempty"`
 	EnvironmentId *string                 `form:"environmentId,omitempty" json:"environmentId,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListRunnersParamsState defines parameters for ListRunners.
@@ -6241,44 +6241,44 @@ type ListRunnersParamsState string
 
 // CreateRunnerParams defines parameters for CreateRunner.
 type CreateRunnerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteRunnerParams defines parameters for DeleteRunner.
 type DeleteRunnerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadRunnerParams defines parameters for ReadRunner.
 type ReadRunnerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateRunnerParams defines parameters for UpdateRunner.
 type UpdateRunnerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ConnectRunnerChannelParams defines parameters for ConnectRunnerChannel.
 type ConnectRunnerChannelParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadRunnerHeartbeatParams defines parameters for ReadRunnerHeartbeat.
 type ReadRunnerHeartbeatParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // PutRunnerHeartbeatParams defines parameters for PutRunnerHeartbeat.
 type PutRunnerHeartbeatParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionsParams defines parameters for ListSessions.
@@ -6291,8 +6291,8 @@ type ListSessionsParams struct {
 	State         *ListSessionsParamsState `form:"state,omitempty" json:"state,omitempty"`
 	LabelSelector *string                  `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionsParamsState defines parameters for ListSessions.
@@ -6300,44 +6300,44 @@ type ListSessionsParamsState string
 
 // CreateSessionParams defines parameters for CreateSession.
 type CreateSessionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteSessionParams defines parameters for DeleteSession.
 type DeleteSessionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadSessionParams defines parameters for ReadSession.
 type ReadSessionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateSessionParams defines parameters for UpdateSession.
 type UpdateSessionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionApprovalsParams defines parameters for ListSessionApprovals.
 type ListSessionApprovalsParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadSessionApprovalParams defines parameters for ReadSessionApproval.
 type ReadSessionApprovalParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DecideSessionApprovalParams defines parameters for DecideSessionApproval.
 type DecideSessionApprovalParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionEventsParams defines parameters for ListSessionEvents.
@@ -6349,8 +6349,8 @@ type ListSessionEventsParams struct {
 	CreatedFrom *time.Time                    `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
 	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionEventsParamsOrder defines parameters for ListSessionEvents.
@@ -6361,8 +6361,8 @@ type ListSessionEventsParamsType string
 
 // CreateSessionEventsParams defines parameters for CreateSessionEvents.
 type CreateSessionEventsParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionMessagesParams defines parameters for ListSessionMessages.
@@ -6370,26 +6370,26 @@ type ListSessionMessagesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateSessionMessageParams defines parameters for CreateSessionMessage.
 type CreateSessionMessageParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadSessionMessageParams defines parameters for ReadSessionMessage.
 type ReadSessionMessageParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ConnectSessionSocketParams defines parameters for ConnectSessionSocket.
 type ConnectSessionSocketParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggersParams defines parameters for ListTriggers.
@@ -6403,8 +6403,8 @@ type ListTriggersParams struct {
 	// Suspend Filter by the operational toggle.
 	Suspend *ListTriggersParamsSuspend `form:"suspend,omitempty" json:"suspend,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggersParamsSuspend defines parameters for ListTriggers.
@@ -6412,26 +6412,26 @@ type ListTriggersParamsSuspend string
 
 // CreateTriggerParams defines parameters for CreateTrigger.
 type CreateTriggerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteTriggerParams defines parameters for DeleteTrigger.
 type DeleteTriggerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadTriggerParams defines parameters for ReadTrigger.
 type ReadTriggerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateTriggerParams defines parameters for UpdateTrigger.
 type UpdateTriggerParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggerRunsParams defines parameters for ListTriggerRuns.
@@ -6443,8 +6443,8 @@ type ListTriggerRunsParams struct {
 	Cursor      *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListTriggerRunsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggerRunsParamsState defines parameters for ListTriggerRuns.
@@ -6452,14 +6452,14 @@ type ListTriggerRunsParamsState string
 
 // CreateTriggerRunParams defines parameters for CreateTriggerRun.
 type CreateTriggerRunParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadTriggerRunParams defines parameters for ReadTriggerRun.
 type ReadTriggerRunParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListUsageRecordsParams defines parameters for ListUsageRecords.
@@ -6473,14 +6473,14 @@ type ListUsageRecordsParams struct {
 	Limit      *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor     *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadUsageRecordParams defines parameters for ReadUsageRecord.
 type ReadUsageRecordParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParams defines parameters for ReadUsageSummary.
@@ -6489,8 +6489,8 @@ type ReadUsageSummaryParams struct {
 	From    *time.Time                     `form:"from,omitempty" json:"from,omitempty"`
 	To      *time.Time                     `form:"to,omitempty" json:"to,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParamsGroupBy defines parameters for ReadUsageSummary.
@@ -6504,32 +6504,32 @@ type ListVaultsParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateVaultParams defines parameters for CreateVault.
 type CreateVaultParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // DeleteVaultParams defines parameters for DeleteVault.
 type DeleteVaultParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadVaultParams defines parameters for ReadVault.
 type ReadVaultParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateVaultParams defines parameters for UpdateVault.
 type UpdateVaultParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialsParams defines parameters for ListVaultCredentials.
@@ -6541,8 +6541,8 @@ type ListVaultCredentialsParams struct {
 	Cursor      *string                          `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialsParamsState defines parameters for ListVaultCredentials.
@@ -6550,26 +6550,26 @@ type ListVaultCredentialsParamsState string
 
 // CreateVaultCredentialParams defines parameters for CreateVaultCredential.
 type CreateVaultCredentialParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadVaultCredentialParams defines parameters for ReadVaultCredential.
 type ReadVaultCredentialParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateVaultCredentialParams defines parameters for UpdateVaultCredential.
 type UpdateVaultCredentialParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // UpdateVaultCredentialSecretParams defines parameters for UpdateVaultCredentialSecret.
 type UpdateVaultCredentialSecretParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialVersionsParams defines parameters for ListVaultCredentialVersions.
@@ -6580,8 +6580,8 @@ type ListVaultCredentialVersionsParams struct {
 	Cursor      *string                                 `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialVersionsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialVersionsParamsState defines parameters for ListVaultCredentialVersions.
@@ -6589,8 +6589,8 @@ type ListVaultCredentialVersionsParamsState string
 
 // ReadVaultCredentialVersionParams defines parameters for ReadVaultCredentialVersion.
 type ReadVaultCredentialVersionParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListWorkItemsParams defines parameters for ListWorkItems.
@@ -6604,8 +6604,8 @@ type ListWorkItemsParams struct {
 	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListWorkItemsParamsState defines parameters for ListWorkItems.
@@ -6613,8 +6613,8 @@ type ListWorkItemsParamsState string
 
 // ReadWorkItemParams defines parameters for ReadWorkItem.
 type ReadWorkItemParams struct {
-	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // CreateAgentJSONRequestBody defines body for CreateAgent for application/json ContentType.
@@ -6796,328 +6796,6 @@ func (a ProviderModelPricing) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-// AsAmaEvent0 returns the union data inside the AmaEvent as a AmaEvent0
-func (t AmaEvent) AsAmaEvent0() (AmaEvent0, error) {
-	var body AmaEvent0
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent0 overwrites any union data inside the AmaEvent as the provided AmaEvent0
-func (t *AmaEvent) FromAmaEvent0(v AmaEvent0) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent0 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent0
-func (t *AmaEvent) MergeAmaEvent0(v AmaEvent0) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent1 returns the union data inside the AmaEvent as a AmaEvent1
-func (t AmaEvent) AsAmaEvent1() (AmaEvent1, error) {
-	var body AmaEvent1
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent1 overwrites any union data inside the AmaEvent as the provided AmaEvent1
-func (t *AmaEvent) FromAmaEvent1(v AmaEvent1) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent1 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent1
-func (t *AmaEvent) MergeAmaEvent1(v AmaEvent1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent2 returns the union data inside the AmaEvent as a AmaEvent2
-func (t AmaEvent) AsAmaEvent2() (AmaEvent2, error) {
-	var body AmaEvent2
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent2 overwrites any union data inside the AmaEvent as the provided AmaEvent2
-func (t *AmaEvent) FromAmaEvent2(v AmaEvent2) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent2 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent2
-func (t *AmaEvent) MergeAmaEvent2(v AmaEvent2) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent3 returns the union data inside the AmaEvent as a AmaEvent3
-func (t AmaEvent) AsAmaEvent3() (AmaEvent3, error) {
-	var body AmaEvent3
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent3 overwrites any union data inside the AmaEvent as the provided AmaEvent3
-func (t *AmaEvent) FromAmaEvent3(v AmaEvent3) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent3 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent3
-func (t *AmaEvent) MergeAmaEvent3(v AmaEvent3) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent4 returns the union data inside the AmaEvent as a AmaEvent4
-func (t AmaEvent) AsAmaEvent4() (AmaEvent4, error) {
-	var body AmaEvent4
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent4 overwrites any union data inside the AmaEvent as the provided AmaEvent4
-func (t *AmaEvent) FromAmaEvent4(v AmaEvent4) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent4 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent4
-func (t *AmaEvent) MergeAmaEvent4(v AmaEvent4) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent5 returns the union data inside the AmaEvent as a AmaEvent5
-func (t AmaEvent) AsAmaEvent5() (AmaEvent5, error) {
-	var body AmaEvent5
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent5 overwrites any union data inside the AmaEvent as the provided AmaEvent5
-func (t *AmaEvent) FromAmaEvent5(v AmaEvent5) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent5 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent5
-func (t *AmaEvent) MergeAmaEvent5(v AmaEvent5) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent6 returns the union data inside the AmaEvent as a AmaEvent6
-func (t AmaEvent) AsAmaEvent6() (AmaEvent6, error) {
-	var body AmaEvent6
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent6 overwrites any union data inside the AmaEvent as the provided AmaEvent6
-func (t *AmaEvent) FromAmaEvent6(v AmaEvent6) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent6 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent6
-func (t *AmaEvent) MergeAmaEvent6(v AmaEvent6) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent7 returns the union data inside the AmaEvent as a AmaEvent7
-func (t AmaEvent) AsAmaEvent7() (AmaEvent7, error) {
-	var body AmaEvent7
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent7 overwrites any union data inside the AmaEvent as the provided AmaEvent7
-func (t *AmaEvent) FromAmaEvent7(v AmaEvent7) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent7 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent7
-func (t *AmaEvent) MergeAmaEvent7(v AmaEvent7) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent8 returns the union data inside the AmaEvent as a AmaEvent8
-func (t AmaEvent) AsAmaEvent8() (AmaEvent8, error) {
-	var body AmaEvent8
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent8 overwrites any union data inside the AmaEvent as the provided AmaEvent8
-func (t *AmaEvent) FromAmaEvent8(v AmaEvent8) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent8 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent8
-func (t *AmaEvent) MergeAmaEvent8(v AmaEvent8) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent9 returns the union data inside the AmaEvent as a AmaEvent9
-func (t AmaEvent) AsAmaEvent9() (AmaEvent9, error) {
-	var body AmaEvent9
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent9 overwrites any union data inside the AmaEvent as the provided AmaEvent9
-func (t *AmaEvent) FromAmaEvent9(v AmaEvent9) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent9 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent9
-func (t *AmaEvent) MergeAmaEvent9(v AmaEvent9) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent10 returns the union data inside the AmaEvent as a AmaEvent10
-func (t AmaEvent) AsAmaEvent10() (AmaEvent10, error) {
-	var body AmaEvent10
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent10 overwrites any union data inside the AmaEvent as the provided AmaEvent10
-func (t *AmaEvent) FromAmaEvent10(v AmaEvent10) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent10 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent10
-func (t *AmaEvent) MergeAmaEvent10(v AmaEvent10) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsAmaEvent11 returns the union data inside the AmaEvent as a AmaEvent11
-func (t AmaEvent) AsAmaEvent11() (AmaEvent11, error) {
-	var body AmaEvent11
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAmaEvent11 overwrites any union data inside the AmaEvent as the provided AmaEvent11
-func (t *AmaEvent) FromAmaEvent11(v AmaEvent11) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAmaEvent11 performs a merge with any union data inside the AmaEvent, using the provided AmaEvent11
-func (t *AmaEvent) MergeAmaEvent11(v AmaEvent11) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t AmaEvent) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *AmaEvent) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
 // AsCreateTriggerRequestSpecSource0 returns the union data inside the CreateTriggerRequest_Spec_Source as a CreateTriggerRequestSpecSource0
 func (t CreateTriggerRequest_Spec_Source) AsCreateTriggerRequestSpecSource0() (CreateTriggerRequestSpecSource0, error) {
 	var body CreateTriggerRequestSpecSource0
@@ -7202,6 +6880,328 @@ func (t CreateTriggerRequest_Spec_Source) MarshalJSON() ([]byte, error) {
 }
 
 func (t *CreateTriggerRequest_Spec_Source) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsEnborEvent0 returns the union data inside the EnborEvent as a EnborEvent0
+func (t EnborEvent) AsEnborEvent0() (EnborEvent0, error) {
+	var body EnborEvent0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent0 overwrites any union data inside the EnborEvent as the provided EnborEvent0
+func (t *EnborEvent) FromEnborEvent0(v EnborEvent0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent0 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent0
+func (t *EnborEvent) MergeEnborEvent0(v EnborEvent0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent1 returns the union data inside the EnborEvent as a EnborEvent1
+func (t EnborEvent) AsEnborEvent1() (EnborEvent1, error) {
+	var body EnborEvent1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent1 overwrites any union data inside the EnborEvent as the provided EnborEvent1
+func (t *EnborEvent) FromEnborEvent1(v EnborEvent1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent1 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent1
+func (t *EnborEvent) MergeEnborEvent1(v EnborEvent1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent2 returns the union data inside the EnborEvent as a EnborEvent2
+func (t EnborEvent) AsEnborEvent2() (EnborEvent2, error) {
+	var body EnborEvent2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent2 overwrites any union data inside the EnborEvent as the provided EnborEvent2
+func (t *EnborEvent) FromEnborEvent2(v EnborEvent2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent2 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent2
+func (t *EnborEvent) MergeEnborEvent2(v EnborEvent2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent3 returns the union data inside the EnborEvent as a EnborEvent3
+func (t EnborEvent) AsEnborEvent3() (EnborEvent3, error) {
+	var body EnborEvent3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent3 overwrites any union data inside the EnborEvent as the provided EnborEvent3
+func (t *EnborEvent) FromEnborEvent3(v EnborEvent3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent3 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent3
+func (t *EnborEvent) MergeEnborEvent3(v EnborEvent3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent4 returns the union data inside the EnborEvent as a EnborEvent4
+func (t EnborEvent) AsEnborEvent4() (EnborEvent4, error) {
+	var body EnborEvent4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent4 overwrites any union data inside the EnborEvent as the provided EnborEvent4
+func (t *EnborEvent) FromEnborEvent4(v EnborEvent4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent4 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent4
+func (t *EnborEvent) MergeEnborEvent4(v EnborEvent4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent5 returns the union data inside the EnborEvent as a EnborEvent5
+func (t EnborEvent) AsEnborEvent5() (EnborEvent5, error) {
+	var body EnborEvent5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent5 overwrites any union data inside the EnborEvent as the provided EnborEvent5
+func (t *EnborEvent) FromEnborEvent5(v EnborEvent5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent5 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent5
+func (t *EnborEvent) MergeEnborEvent5(v EnborEvent5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent6 returns the union data inside the EnborEvent as a EnborEvent6
+func (t EnborEvent) AsEnborEvent6() (EnborEvent6, error) {
+	var body EnborEvent6
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent6 overwrites any union data inside the EnborEvent as the provided EnborEvent6
+func (t *EnborEvent) FromEnborEvent6(v EnborEvent6) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent6 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent6
+func (t *EnborEvent) MergeEnborEvent6(v EnborEvent6) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent7 returns the union data inside the EnborEvent as a EnborEvent7
+func (t EnborEvent) AsEnborEvent7() (EnborEvent7, error) {
+	var body EnborEvent7
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent7 overwrites any union data inside the EnborEvent as the provided EnborEvent7
+func (t *EnborEvent) FromEnborEvent7(v EnborEvent7) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent7 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent7
+func (t *EnborEvent) MergeEnborEvent7(v EnborEvent7) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent8 returns the union data inside the EnborEvent as a EnborEvent8
+func (t EnborEvent) AsEnborEvent8() (EnborEvent8, error) {
+	var body EnborEvent8
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent8 overwrites any union data inside the EnborEvent as the provided EnborEvent8
+func (t *EnborEvent) FromEnborEvent8(v EnborEvent8) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent8 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent8
+func (t *EnborEvent) MergeEnborEvent8(v EnborEvent8) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent9 returns the union data inside the EnborEvent as a EnborEvent9
+func (t EnborEvent) AsEnborEvent9() (EnborEvent9, error) {
+	var body EnborEvent9
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent9 overwrites any union data inside the EnborEvent as the provided EnborEvent9
+func (t *EnborEvent) FromEnborEvent9(v EnborEvent9) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent9 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent9
+func (t *EnborEvent) MergeEnborEvent9(v EnborEvent9) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent10 returns the union data inside the EnborEvent as a EnborEvent10
+func (t EnborEvent) AsEnborEvent10() (EnborEvent10, error) {
+	var body EnborEvent10
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent10 overwrites any union data inside the EnborEvent as the provided EnborEvent10
+func (t *EnborEvent) FromEnborEvent10(v EnborEvent10) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent10 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent10
+func (t *EnborEvent) MergeEnborEvent10(v EnborEvent10) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEnborEvent11 returns the union data inside the EnborEvent as a EnborEvent11
+func (t EnborEvent) AsEnborEvent11() (EnborEvent11, error) {
+	var body EnborEvent11
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEnborEvent11 overwrites any union data inside the EnborEvent as the provided EnborEvent11
+func (t *EnborEvent) FromEnborEvent11(v EnborEvent11) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEnborEvent11 performs a merge with any union data inside the EnborEvent, using the provided EnborEvent11
+func (t *EnborEvent) MergeEnborEvent11(v EnborEvent11) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t EnborEvent) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *EnborEvent) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

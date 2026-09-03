@@ -1,6 +1,6 @@
-import type { SessionSocketClientMessage } from '@ama/runtime-contracts/session-socket'
-import type { AmaSessionEventType } from '@shared/session-events'
-import type { SessionEvent } from '@/lib/amarpc'
+import type { SessionSocketClientMessage } from '@enbor/runtime-contracts/session-socket'
+import type { EnborSessionEventType } from '@shared/session-events'
+import type { SessionEvent } from '@/lib/enborrpc'
 import { getAuthHeaders } from '@/lib/oidc'
 
 export type SessionRuntimeConnectionState = 'connecting' | 'open' | 'closed' | 'error'
@@ -247,7 +247,7 @@ function isUserMessage(event: Record<string, unknown>, eventType: string) {
   return stringField(objectValue(event.message), 'role') === 'user'
 }
 
-function sessionEventType(stored: SessionEvent, _payload: Record<string, unknown>): AmaSessionEventType {
+function sessionEventType(stored: SessionEvent, _payload: Record<string, unknown>): EnborSessionEventType {
   return stored.type
 }
 
