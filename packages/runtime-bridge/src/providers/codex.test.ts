@@ -256,9 +256,26 @@ afterEach(() => {
   startThreadMock.mockClear()
   resumeThreadMock.mockClear()
   runStreamedMock.mockClear()
+  vi.unstubAllEnvs()
 })
 
 describe('codexProvider', () => {
+  it('[spec: runtime/provider-permission-policy] applies runner-owned Codex permission settings', async () => {
+    vi.stubEnv('AMA_CODEX_SANDBOX_MODE', 'workspace-write')
+    vi.stubEnv('AMA_CODEX_APPROVAL_POLICY', 'on-request')
+    runStreamedMock.mockResolvedValue({ events: events() })
+    startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
+
+    const handle = await codexProvider.execute(request())
+    for await (const _event of handle.events) {
+      // drain
+    }
+
+    expect(startThreadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ sandboxMode: 'workspace-write', approvalPolicy: 'on-request' }),
+    )
+  })
+
   it('passes agent system prompt through Codex developer instructions without prefixing the user prompt', async () => {
     runStreamedMock.mockResolvedValue({ events: events() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })

@@ -20,6 +20,9 @@ func TestRuntimeBridgeHostEnvIncludesNodeToolchainAndTestModeOnly(t *testing.T) 
 	t.Setenv("PNPM_HOME", "/pnpm")
 	t.Setenv("NVM_DIR", "/nvm")
 	t.Setenv("AMA_RUNTIME_BRIDGE_TEST_MODE", "1")
+	t.Setenv("AMA_CODEX_SANDBOX_MODE", "workspace-write")
+	t.Setenv("AMA_CODEX_APPROVAL_POLICY", "on-request")
+	t.Setenv("AMA_CLAUDE_CODE_PERMISSION_MODE", "auto")
 	t.Setenv("AMA_TOKEN", "raw-secret-value")
 	env := appendRuntimeBridgeHostEnv([]string{"PATH=/bin"})
 	envText := strings.Join(env, "\n")
@@ -30,6 +33,9 @@ func TestRuntimeBridgeHostEnvIncludesNodeToolchainAndTestModeOnly(t *testing.T) 
 		"PNPM_HOME=/pnpm",
 		"NVM_DIR=/nvm",
 		"AMA_RUNTIME_BRIDGE_TEST_MODE=1",
+		"AMA_CODEX_SANDBOX_MODE=workspace-write",
+		"AMA_CODEX_APPROVAL_POLICY=on-request",
+		"AMA_CLAUDE_CODE_PERMISSION_MODE=auto",
 	} {
 		if !strings.Contains(envText, expected) {
 			t.Fatalf("expected bridge host env %q in %q", expected, envText)
@@ -413,13 +419,15 @@ func TestRuntimeCommandEnvironmentRejectsUnserializableAgentSnapshot(t *testing.
 }
 
 func TestRuntimeCommandEnvironmentRejectsReservedEnv(t *testing.T) {
-	if _, err := commandEnvironment(Request{
-		SessionID: "session_1",
-		Runtime:   "codex",
-		Env:       map[string]string{"AMA_SESSION_ID": "override"},
-		WorkDir:   t.TempDir(),
-	}); err == nil || !strings.Contains(err.Error(), "reserved") {
-		t.Fatalf("expected reserved env error, got %v", err)
+	for _, key := range []string{"AMA_SESSION_ID", "ama_codex_sandbox_mode", "Ama_Claude_Code_Permission_Mode"} {
+		if _, err := commandEnvironment(Request{
+			SessionID: "session_1",
+			Runtime:   "codex",
+			Env:       map[string]string{key: "override"},
+			WorkDir:   t.TempDir(),
+		}); err == nil || !strings.Contains(err.Error(), "reserved") {
+			t.Fatalf("expected reserved env error for %q, got %v", key, err)
+		}
 	}
 }
 

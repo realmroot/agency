@@ -77,6 +77,38 @@ On Windows:
   --environment-id $env:AMA_ENVIRONMENT_ID
 ```
 
+## Provider permission policy
+
+The runner accepts provider permission policy through host environment
+variables. Managed `ama-runner start` installations copy these values into the
+native user service when the instance is created; foreground `ama-runner run`
+reads them from its process environment.
+
+| Variable | Allowed values | Default |
+| --- | --- | --- |
+| `AMA_CODEX_SANDBOX_MODE` | `read-only`, `workspace-write`, `danger-full-access` | `danger-full-access` |
+| `AMA_CODEX_APPROVAL_POLICY` | `never`, `on-request`, `untrusted`; deprecated `on-failure` remains accepted for the pinned SDK | `never` |
+| `AMA_CLAUDE_CODE_PERMISSION_MODE` | `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto` | `bypassPermissions` |
+
+Codex enterprise users can keep the workspace sandbox and send escalations
+through their configured reviewer:
+
+```bash
+AMA_CODEX_SANDBOX_MODE=workspace-write \
+AMA_CODEX_APPROVAL_POLICY=on-request \
+ama-runner start \
+  --api-server "https://ama.example.com" \
+  --project-id "project_..." \
+  --environment-id "env_..." \
+  --allow-unsafe-process
+```
+
+Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For
+example, a runner can use Claude Code's model-reviewed permission mode with
+`AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values
+before provider execution. Session environment variables cannot change these
+settings because AMA reserves the `AMA_` prefix for runner-owned configuration.
+
 ## Local files
 
 Configuration, credentials, managed-instance definitions, state, workspaces,

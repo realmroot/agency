@@ -103,6 +103,14 @@ Feature: Runtime
     And the shell tool uses the session home, temporary directories, and git configuration
     And the shell tool does not load the host login shell profile
 
+  @runtime/provider-permission-policy @usecase
+  Scenario: Configure provider permission policy on the self-hosted runner
+    Given a self-hosted Codex or Claude Code runtime operates under managed provider policy
+    When the runner starts the provider bridge with provider-scoped permission settings
+    Then the bridge validates and applies the configured provider modes
+    And an unset setting preserves the existing autonomous default
+    And session environment data cannot override runner-owned permission policy
+
   @runtime/session-history-retention @usecase
   Scenario: Preserve durable session history while expiring runner workspaces
     Given an old self-hosted session has durable history, disposable runner artifacts, and unknown diagnostic artifacts

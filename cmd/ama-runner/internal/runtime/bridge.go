@@ -299,7 +299,7 @@ func commandEnvironment(request Request) ([]string, error) {
 }
 
 func isReservedEnvKey(key string) bool {
-	return strings.HasPrefix(key, "AMA_")
+	return len(key) >= len("AMA_") && strings.EqualFold(key[:len("AMA_")], "AMA_")
 }
 
 func exitCode(err error) int {
@@ -386,6 +386,9 @@ func appendRuntimeBridgeHostEnv(env []string) []string {
 		"PNPM_HOME",
 		"NVM_DIR",
 		"AMA_RUNTIME_BRIDGE_TEST_MODE",
+		"AMA_CODEX_SANDBOX_MODE",
+		"AMA_CODEX_APPROVAL_POLICY",
+		"AMA_CLAUDE_CODE_PERMISSION_MODE",
 	} {
 		if value, ok := os.LookupEnv(key); ok && value != "" {
 			env = append(env, key+"="+value)

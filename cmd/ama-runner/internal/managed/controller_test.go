@@ -191,6 +191,37 @@ func TestControllerConfiguresServiceLoginStartupPolicy(t *testing.T) {
 	}
 }
 
+// [spec: runtime/provider-permission-policy]
+func TestControllerCopiesProviderPermissionPolicyIntoManagedService(t *testing.T) {
+	t.Setenv("AMA_CODEX_SANDBOX_MODE", "workspace-write")
+	t.Setenv("AMA_CODEX_APPROVAL_POLICY", "on-request")
+	t.Setenv("AMA_CLAUDE_CODE_PERMISSION_MODE", "auto")
+	record := managedTestRecord(t)
+	var captured *service.Config
+	controller := &Controller{
+		Registry:   instance.Registry{Dir: t.TempDir()},
+		Executable: "/tmp/ama-runner",
+		newService: func(_ service.Interface, config *service.Config) (nativeService, error) {
+			captured = config
+			return &fakeService{statusErr: service.ErrNotInstalled}, nil
+		},
+	}
+
+	_ = controller.Status(context.Background(), record)
+	if captured == nil {
+		t.Fatal("service configuration was not created")
+	}
+	for name, expected := range map[string]string{
+		"AMA_CODEX_SANDBOX_MODE":          "workspace-write",
+		"AMA_CODEX_APPROVAL_POLICY":       "on-request",
+		"AMA_CLAUDE_CODE_PERMISSION_MODE": "auto",
+	} {
+		if captured.EnvVars[name] != expected {
+			t.Fatalf("expected %s=%q in managed service environment, got %#v", name, expected, captured.EnvVars)
+		}
+	}
+}
+
 // [spec: runners/local-instances]
 func TestControllerUpdatesLoginStartupWithoutChangingServiceState(t *testing.T) {
 	for _, status := range []service.Status{service.StatusRunning, service.StatusStopped} {

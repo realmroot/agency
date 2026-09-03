@@ -305,7 +305,13 @@ func (c *Controller) LogPath(record instance.Record) string {
 func (c *Controller) service(record instance.Record, program service.Interface) (nativeService, error) {
 	logDir := filepath.Join(record.Config.StateDir, "logs")
 	environment := map[string]string{}
-	for _, name := range []string{"PATH", "XDG_STATE_HOME"} {
+	for _, name := range []string{
+		"PATH",
+		"XDG_STATE_HOME",
+		"AMA_CODEX_SANDBOX_MODE",
+		"AMA_CODEX_APPROVAL_POLICY",
+		"AMA_CLAUDE_CODE_PERMISSION_MODE",
+	} {
 		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 			environment[name] = value
 		}

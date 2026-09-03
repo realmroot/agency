@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeProviderRequest } from '../protocol'
 
+const queryMock = vi.hoisted(() => vi.fn())
+
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  query: vi.fn(),
+  query: queryMock,
 }))
 
 vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
@@ -13,7 +15,47 @@ vi.mock('./cli-host', () => ({
   sdkEnv: (request: RuntimeProviderRequest) => request.env,
 }))
 
-const { ClaudeEventMapper } = await import('./claude-code')
+const { ClaudeEventMapper, claudeCodeProvider } = await import('./claude-code')
+
+function request(): RuntimeProviderRequest {
+  return {
+    type: 'run',
+    requestId: 'req_1',
+    runtime: 'claude-code',
+    sessionId: 'session_1',
+    cwd: '/workspace',
+    env: { HOME: '/home/agent' },
+    prompt: 'USER_TASK',
+  }
+}
+
+afterEach(() => {
+  queryMock.mockReset()
+  vi.unstubAllEnvs()
+})
+
+describe('claudeCodeProvider', () => {
+  it('[spec: runtime/provider-permission-policy] applies runner-owned Claude Code permission settings', async () => {
+    vi.stubEnv('AMA_CLAUDE_CODE_PERMISSION_MODE', 'auto')
+    const close = vi.fn()
+    queryMock.mockReturnValue({
+      async *[Symbol.asyncIterator]() {},
+      close,
+      streamInput: vi.fn(),
+    })
+
+    const handle = await claudeCodeProvider.execute(request())
+
+    expect(queryMock).toHaveBeenCalledWith({
+      prompt: 'USER_TASK',
+      options: expect.objectContaining({ permissionMode: 'auto' }),
+    })
+    const options = queryMock.mock.calls[0]?.[0]?.options as Record<string, unknown>
+    expect(options).not.toHaveProperty('allowDangerouslySkipPermissions')
+    await handle.abort()
+    expect(close).toHaveBeenCalled()
+  })
+})
 
 describe('ClaudeEventMapper', () => {
   it('maps Claude Code builtin tool calls to canonical AMA runtime tools', () => {
