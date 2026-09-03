@@ -19,11 +19,7 @@ export const projects = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [
-    uniqueIndex('idx_projects_one_default_per_organization')
-      .on(table.organizationId)
-      .where(sql`${table.name} = 'Default'`),
-  ],
+  (table) => [uniqueIndex('idx_projects_unique_name_per_organization').on(table.organizationId, table.name)],
 )
 
 // Browser login state and sessions are server-owned. Cookies contain only

@@ -1,6 +1,12 @@
 import { DEFAULT_PROJECT_NAME } from '@server/domain/project'
 import { newPrimaryKey } from '@server/id'
-import type { ListPageResult, ProjectListQuery, ProjectRecord, ProjectRepo } from '@server/usecases/ports'
+import {
+  type ListPageResult,
+  type ProjectListQuery,
+  ProjectNameConflictError,
+  type ProjectRecord,
+  type ProjectRepo,
+} from '@server/usecases/ports'
 import { and, asc, desc, eq, lt, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { projects } from '../../db/schema'
@@ -17,6 +23,18 @@ function isForeignKeyConstraintError(error: unknown): boolean {
   if (error instanceof Error && error.message.toLowerCase().includes('foreign key constraint failed')) return true
   if (error && typeof error === 'object' && 'cause' in error) {
     return isForeignKeyConstraintError((error as { cause?: unknown }).cause)
+  }
+  return false
+}
+
+function isProjectNameConstraintError(error: unknown): boolean {
+  if (
+    error instanceof Error &&
+    error.message.toLowerCase().includes('unique constraint failed: projects.organization_id, projects.name')
+  )
+    return true
+  if (error && typeof error === 'object' && 'cause' in error) {
+    return isProjectNameConstraintError((error as { cause?: unknown }).cause)
   }
   return false
 }
@@ -88,18 +106,28 @@ export function createProjectRepo(db: Db): ProjectRepo {
         createdAt: timestamp,
         updatedAt: timestamp,
       }
-      await db.insert(projects).values(row)
+      try {
+        await db.insert(projects).values(row)
+      } catch (error) {
+        if (isProjectNameConstraintError(error)) throw new ProjectNameConflictError(name)
+        throw error
+      }
       return recordFrom(row)
     },
 
     async updateName(organizationId, projectId, name, timestamp) {
-      const row = await db
-        .update(projects)
-        .set({ name, updatedAt: timestamp })
-        .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
-        .returning()
-        .get()
-      return row ? recordFrom(row) : null
+      try {
+        const row = await db
+          .update(projects)
+          .set({ name, updatedAt: timestamp })
+          .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
+          .returning()
+          .get()
+        return row ? recordFrom(row) : null
+      } catch (error) {
+        if (isProjectNameConstraintError(error)) throw new ProjectNameConflictError(name)
+        throw error
+      }
     },
 
     async delete(organizationId, projectId) {

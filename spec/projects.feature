@@ -35,6 +35,16 @@ Feature: Projects
     And an empty project name is rejected as invalid
     And Toolbox exposes the operation as "update-project"
 
+  @projects/name-uniqueness @api
+  Scenario: Keep project names unique within an organization
+    Given projects are scoped to their owning organization
+    When callers create or rename projects using a name that already exists
+    Then the Projects API rejects an exact duplicate within the same organization as a conflict
+    And a different organization may use the same project name
+    And the database constraint serializes concurrent attempts so only one exact name is stored per organization
+    And the migration preserves one legacy project name and deterministically renames later duplicates before enabling the constraint
+    And the system-owned "Default" project remains unique, immutable, and undeletable
+
   # ── External product as substrate (e2e: real SDK + Worker + D1) ──
   # Native Playwright e2e specs execute these scenarios for real through `pnpm run e2e`.
 

@@ -8,7 +8,7 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import { type ProjectRecord, ProjectReservedNameError } from '../usecases/ports'
+import { ProjectNameConflictError, type ProjectRecord, ProjectReservedNameError } from '../usecases/ports'
 import { createProject, deleteProject, listProjects, updateProject } from '../usecases/projects'
 
 // Mounted at /api/v1/projects (docs/api-v1-design.md §2 Projects).
@@ -111,7 +111,7 @@ const createProjectRoute = createRoute({
     201: { description: 'Created project', content: { 'application/json': { schema: ProjectSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'The reserved Default project name cannot be created explicitly',
+      description: 'The project name already exists or the reserved Default name was used',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
@@ -168,7 +168,7 @@ const updateProjectRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Project not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'The Default project is immutable and its name is reserved',
+      description: 'The project name already exists, or the Default project or name is immutable',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
@@ -212,7 +212,7 @@ export function registerProjectRoutes(routes: ProjectRoutes) {
         const project = await createProject(deps, auth, c.req.valid('json').name)
         return c.json(serializeProject(project), 201)
       } catch (error) {
-        if (error instanceof ProjectReservedNameError) {
+        if (error instanceof ProjectReservedNameError || error instanceof ProjectNameConflictError) {
           return c.json(errorBody('conflict', error.message), 409)
         }
         throw error
@@ -248,7 +248,7 @@ export function registerProjectRoutes(routes: ProjectRoutes) {
         }
         return c.json(serializeProject(result.project), 200)
       } catch (error) {
-        if (error instanceof ProjectReservedNameError) {
+        if (error instanceof ProjectReservedNameError || error instanceof ProjectNameConflictError) {
           return c.json(errorBody('conflict', error.message), 409)
         }
         throw error

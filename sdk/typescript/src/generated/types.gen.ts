@@ -2279,7 +2279,7 @@ export type CreateProjectErrors = {
      */
     403: ErrorResponse;
     /**
-     * The reserved Default project name cannot be created explicitly
+     * The project name already exists or the reserved Default name was used
      */
     409: ErrorResponse;
 };
@@ -2396,7 +2396,7 @@ export type UpdateProjectErrors = {
      */
     404: ErrorResponse;
     /**
-     * The Default project is immutable and its name is reserved
+     * The project name already exists, or the Default project or name is immutable
      */
     409: ErrorResponse;
 };

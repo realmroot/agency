@@ -11,13 +11,14 @@ import {
   Fingerprint,
   LogOut,
   MessageSquare,
+  PanelTopOpen,
   Plus,
   Server,
   Settings,
   Vault,
 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -135,6 +136,12 @@ function ProjectSwitcher({
         <DropdownMenuItem onSelect={onCreate}>
           <Plus size={15} />
           Create project
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/settings/projects">
+            <PanelTopOpen size={15} />
+            Manage projects
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
