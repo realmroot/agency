@@ -419,13 +419,15 @@ func TestRuntimeCommandEnvironmentRejectsUnserializableAgentSnapshot(t *testing.
 }
 
 func TestRuntimeCommandEnvironmentRejectsReservedEnv(t *testing.T) {
-	if _, err := commandEnvironment(Request{
-		SessionID: "session_1",
-		Runtime:   "codex",
-		Env:       map[string]string{"AMA_SESSION_ID": "override"},
-		WorkDir:   t.TempDir(),
-	}); err == nil || !strings.Contains(err.Error(), "reserved") {
-		t.Fatalf("expected reserved env error, got %v", err)
+	for _, key := range []string{"AMA_SESSION_ID", "ama_codex_sandbox_mode", "Ama_Claude_Code_Permission_Mode"} {
+		if _, err := commandEnvironment(Request{
+			SessionID: "session_1",
+			Runtime:   "codex",
+			Env:       map[string]string{key: "override"},
+			WorkDir:   t.TempDir(),
+		}); err == nil || !strings.Contains(err.Error(), "reserved") {
+			t.Fatalf("expected reserved env error for %q, got %v", key, err)
+		}
 	}
 }
 

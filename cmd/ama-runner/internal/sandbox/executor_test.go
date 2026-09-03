@@ -140,14 +140,16 @@ func TestProcessAdapterMergesRequestEnvironment(t *testing.T) {
 
 func TestProcessAdapterRejectsReservedRequestEnvironment(t *testing.T) {
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
-	_, err := adapter.Execute(context.Background(), ToolRequest{
-		ToolName: "bash",
-		Input:    map[string]any{"command": "env"},
-		WorkDir:  t.TempDir(),
-		Env:      map[string]string{"AMA_SESSION_ID": "override"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "reserved") {
-		t.Fatalf("expected reserved env error, got %v", err)
+	for _, key := range []string{"AMA_SESSION_ID", "ama_codex_sandbox_mode", "Ama_Claude_Code_Permission_Mode"} {
+		_, err := adapter.Execute(context.Background(), ToolRequest{
+			ToolName: "bash",
+			Input:    map[string]any{"command": "env"},
+			WorkDir:  t.TempDir(),
+			Env:      map[string]string{key: "override"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "reserved") {
+			t.Fatalf("expected reserved env error for %q, got %v", key, err)
+		}
 	}
 }
 

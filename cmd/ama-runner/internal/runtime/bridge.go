@@ -299,7 +299,7 @@ func commandEnvironment(request Request) ([]string, error) {
 }
 
 func isReservedEnvKey(key string) bool {
-	return strings.HasPrefix(key, "AMA_")
+	return len(key) >= len("AMA_") && strings.EqualFold(key[:len("AMA_")], "AMA_")
 }
 
 func exitCode(err error) int {

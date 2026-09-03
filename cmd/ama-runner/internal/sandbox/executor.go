@@ -346,12 +346,16 @@ func appendRequestEnvironment(env []string, requestEnv map[string]string) ([]str
 		if key == "" || strings.Contains(key, "=") {
 			return nil, fmt.Errorf("env key %q is invalid", key)
 		}
-		if strings.HasPrefix(key, "AMA_") {
+		if isReservedEnvKey(key) {
 			return nil, fmt.Errorf("env key %q is reserved", key)
 		}
 		env = append(env, key+"="+value)
 	}
 	return env, nil
+}
+
+func isReservedEnvKey(key string) bool {
+	return len(key) >= len("AMA_") && strings.EqualFold(key[:len("AMA_")], "AMA_")
 }
 
 func ProcessCommandEnvironment(workDir string) ([]string, error) {

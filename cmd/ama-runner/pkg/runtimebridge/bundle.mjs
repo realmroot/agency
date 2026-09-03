@@ -37898,6 +37898,32 @@ function objectValue2(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+// packages/runtime-bridge/src/providers/permission-policy.ts
+var CODEX_SANDBOX_MODES = ["read-only", "workspace-write", "danger-full-access"];
+var CODEX_APPROVAL_POLICIES = ["never", "on-request", "on-failure", "untrusted"];
+var CLAUDE_CODE_PERMISSION_MODES = ["default", "acceptEdits", "bypassPermissions", "plan", "dontAsk", "auto"];
+function environmentChoice(env2, name, values, fallback) {
+  const configured = env2[name]?.trim();
+  if (!configured) return fallback;
+  if (values.includes(configured)) return configured;
+  throw new Error(`${name} must be one of ${values.join(", ")}; received ${JSON.stringify(configured)}`);
+}
+function codexPermissionPolicy(env2 = process.env) {
+  return {
+    sandboxMode: environmentChoice(env2, "AMA_CODEX_SANDBOX_MODE", CODEX_SANDBOX_MODES, "danger-full-access"),
+    approvalPolicy: environmentChoice(env2, "AMA_CODEX_APPROVAL_POLICY", CODEX_APPROVAL_POLICIES, "never")
+  };
+}
+function claudeCodePermissionPolicy(env2 = process.env) {
+  const permissionMode = environmentChoice(
+    env2,
+    "AMA_CLAUDE_CODE_PERMISSION_MODE",
+    CLAUDE_CODE_PERMISSION_MODES,
+    "bypassPermissions"
+  );
+  return permissionMode === "bypassPermissions" ? { permissionMode, allowDangerouslySkipPermissions: true } : { permissionMode };
+}
+
 // packages/runtime-bridge/src/providers/claude-code.ts
 var CLAUDE_USAGE_API = "https://api.anthropic.com/api/oauth/usage";
 var CLAUDE_WINDOW_LABELS = {
@@ -38184,8 +38210,7 @@ var claudeCodeProvider = {
       env: claudeSdkEnv(request3),
       ...systemPrompt ? { systemPrompt } : {},
       ...request3.model ? { model: request3.model } : {},
-      permissionMode: "bypassPermissions",
-      allowDangerouslySkipPermissions: true,
+      ...claudeCodePermissionPolicy(),
       ...claudePath ? { pathToClaudeCodeExecutable: claudePath } : {},
       abortController,
       includePartialMessages: true
@@ -38249,8 +38274,7 @@ var claudeCodeProvider = {
       options: {
         cwd: process.cwd(),
         env: queryEnv,
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
+        ...claudeCodePermissionPolicy(),
         ...claudePath ? { pathToClaudeCodeExecutable: claudePath } : {}
       }
     });
@@ -39348,8 +39372,7 @@ var codexProvider = {
     const threadOptions = {
       workingDirectory: request3.cwd,
       skipGitRepoCheck: true,
-      sandboxMode: "danger-full-access",
-      approvalPolicy: "never",
+      ...codexPermissionPolicy(),
       ...model ? { model } : {}
     };
     const thread = request3.resume && resumeToken ? codex.resumeThread(resumeToken, threadOptions) : codex.startThread(threadOptions);
