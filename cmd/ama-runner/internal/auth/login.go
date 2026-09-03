@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	sdkama "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
-	sdkama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
 type LoginCommand struct {

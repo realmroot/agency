@@ -3,7 +3,7 @@ package daemon
 import (
 	"testing"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 func TestSDKErrorClassifiers(t *testing.T) {

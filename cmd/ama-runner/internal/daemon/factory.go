@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
+	sdkama "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerauth "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/auth"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
-	sdkama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
 func New(config runnerconfig.Config, build version.Info) (*Daemon, error) {

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 // Event is one canonical event in the runner's local log. The id and sequence

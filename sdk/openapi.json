@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Any Managed Agents API",
+    "title": "Enbor API",
     "version": "1.0.0",
-    "description": "Realmroot-native control-plane API for Any Managed Agents. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted."
+    "description": "Realmroot-native control-plane API for Enbor. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted."
   },
   "servers": [
     {

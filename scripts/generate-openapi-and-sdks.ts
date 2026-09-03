@@ -71,7 +71,7 @@ function run(command: string, args: string[], cwd: string) {
 }
 
 function generateTypeScriptSdk() {
-  run('pnpm', ['--filter', '@any-managed-agents/sdk', 'run', 'generate'], ROOT)
+  run('pnpm', ['--filter', '@realmroot/enbor-sdk', 'run', 'generate'], ROOT)
 }
 
 function generateGoSdk() {
@@ -83,14 +83,14 @@ async function generatePythonSdk() {
   // remove the previous output first; `--meta none` keeps the hand-maintained
   // pyproject.toml. py.typed is re-added because `--meta none` omits it.
   const sdkDir = path.join(ROOT, 'sdk/python')
-  execFileSync('rm', ['-rf', 'ama_sdk'], { cwd: sdkDir, stdio: 'inherit' })
+  execFileSync('rm', ['-rf', 'enbor_sdk'], { cwd: sdkDir, stdio: 'inherit' })
   run(
     'openapi-python-client',
-    ['generate', '--path', '../openapi.json', '--config', 'openapi-python-client.config.yaml', '--meta', 'none', '--output-path', 'ama_sdk', '--overwrite'],
+    ['generate', '--path', '../openapi.json', '--config', 'openapi-python-client.config.yaml', '--meta', 'none', '--output-path', 'enbor_sdk', '--overwrite'],
     sdkDir,
   )
-  execFileSync('touch', ['ama_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
-  await normalizeGeneratedPython(path.join(sdkDir, 'ama_sdk'))
+  execFileSync('touch', ['enbor_sdk/py.typed'], { cwd: sdkDir, stdio: 'inherit' })
+  await normalizeGeneratedPython(path.join(sdkDir, 'enbor_sdk'))
 }
 
 async function normalizeGeneratedPython(directory: string) {

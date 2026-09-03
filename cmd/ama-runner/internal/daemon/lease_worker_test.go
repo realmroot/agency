@@ -19,13 +19,13 @@ import (
 	"testing"
 	"time"
 
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
 	runnersession "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/session"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

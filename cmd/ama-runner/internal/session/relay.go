@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
 type Channel = ama.JSONChannel

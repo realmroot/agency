@@ -1,6 +1,6 @@
 overlay: 1.0.0
 info:
-  title: AMA Go SDK generation overlay
+  title: Enbor Go SDK generation overlay
   version: 1.0.0
 # Generated alongside oapi-codegen.config.yaml. Drops meaningless `nullable:
 # true` on free-form additionalProperties/items values. oapi-codegen renders

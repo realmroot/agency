@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 func TestEventLogAppendReadAllAndReopen(t *testing.T) {

@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from ama_sdk.facade import create_ama_client
+from enbor_sdk.facade import create_ama_client
 
 
 class CreationFacadeTest(TestCase):
@@ -10,8 +10,8 @@ class CreationFacadeTest(TestCase):
         response = object()
         body = object()
         with (
-            patch("ama_sdk.facade.create_agent_api.sync_detailed", return_value=response) as create,
-            patch("ama_sdk.facade._unwrap", return_value="agent"),
+            patch("enbor_sdk.facade.create_agent_api.sync_detailed", return_value=response) as create,
+            patch("enbor_sdk.facade._unwrap", return_value="agent"),
         ):
             result = client.agents.create(body)
 
@@ -23,8 +23,8 @@ class CreationFacadeTest(TestCase):
         response = object()
         body = object()
         with (
-            patch("ama_sdk.facade.create_agent_api.sync_detailed", return_value=response) as create,
-            patch("ama_sdk.facade._unwrap", return_value="agent"),
+            patch("enbor_sdk.facade.create_agent_api.sync_detailed", return_value=response) as create,
+            patch("enbor_sdk.facade._unwrap", return_value="agent"),
         ):
             result = client.agents.create(body, "agent-idempotency-1")
 
@@ -36,8 +36,8 @@ class CreationFacadeTest(TestCase):
         response = object()
         body = object()
         with (
-            patch("ama_sdk.facade.create_environment_api.sync_detailed", return_value=response) as create,
-            patch("ama_sdk.facade._unwrap", return_value="environment"),
+            patch("enbor_sdk.facade.create_environment_api.sync_detailed", return_value=response) as create,
+            patch("enbor_sdk.facade._unwrap", return_value="environment"),
         ):
             result = client.environments.create(body)
 
@@ -49,8 +49,8 @@ class CreationFacadeTest(TestCase):
         response = object()
         body = object()
         with (
-            patch("ama_sdk.facade.create_environment_api.sync_detailed", return_value=response) as create,
-            patch("ama_sdk.facade._unwrap", return_value="environment"),
+            patch("enbor_sdk.facade.create_environment_api.sync_detailed", return_value=response) as create,
+            patch("enbor_sdk.facade._unwrap", return_value="environment"),
         ):
             result = client.environments.create(body, "environment-idempotency-1")
 
