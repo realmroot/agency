@@ -10,7 +10,7 @@ function id(prefix: string) {
 }
 
 describe('[CF] Session repository metadata annotations', () => {
-  it('[spec: triggers/inbox-routing] atomically sets only a missing annotation while preserving current metadata and explicit zero', async () => {
+  it('[spec: triggers/inbox-routing] atomically sets only a missing annotation while preserving current and zero-valued annotation metadata', async () => {
     const projectId = id('project')
     const organizationId = id('org')
     const agentId = id('agent')

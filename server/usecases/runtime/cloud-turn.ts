@@ -37,7 +37,10 @@ import {
   turnLeaseExpiry,
 } from '@server/domain/runtime/turn'
 import { now, requestIdFrom } from '@server/domain/runtime/util'
-import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
+import {
+  AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
+  DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS,
+} from '@server/metadata-keys'
 import { safeRuntimeError } from '@server/runtime-error'
 import { type AmaEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
@@ -72,18 +75,20 @@ type CreateApprovalGate = (values: {
   appendEvent: (event: AmaEvent) => Promise<string>
 }) => ToolApprovalGate
 
-function idleTimeoutSeconds(metadataJson: string | null): number | null {
-  const metadata = parseJson<Record<string, unknown>>(metadataJson) ?? {}
+function idleTimeoutSeconds(metadata: Record<string, unknown>): number {
   const annotations = metadata.annotations
-  if (!annotations || typeof annotations !== 'object' || Array.isArray(annotations)) return null
+  if (!annotations || typeof annotations !== 'object' || Array.isArray(annotations)) {
+    return DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS
+  }
   const value = Number((annotations as Record<string, unknown>)[AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS])
-  return Number.isInteger(value) && value > 0 ? value : null
+  return Number.isInteger(value) && value > 0 ? value : DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS
 }
 
-async function idleCloudSessionIfConfigured(deps: CloudTurnDeps, auth: AuthScope, session: SessionRow) {
+async function sleepIdleCloudSession(deps: CloudTurnDeps, auth: AuthScope, session: SessionRow) {
   if (!session.sandboxId) return
-  const timeoutSeconds = idleTimeoutSeconds(session.metadata)
-  if (timeoutSeconds === null) return
+  const metadata = parseJson<Record<string, unknown>>(session.metadata) ?? {}
+  if (metadata.sandboxBackend === 'runner-sandbox') return
+  const timeoutSeconds = idleTimeoutSeconds(metadata)
   try {
     await deps.cloudRuntime.idleCloudSession(session.sandboxId, timeoutSeconds)
   } catch (error) {
@@ -284,7 +289,7 @@ export async function startSessionRuntimeForRow(
     }
     const startedSession = await store.findSession(auth.project.id, sessionId)
     if (!startedSession) throw new Error('Started Session row is required')
-    if (!prompt) await idleCloudSessionIfConfigured(deps, auth, startedSession)
+    if (!prompt) await sleepIdleCloudSession(deps, auth, startedSession)
     await store.releaseTurnLease(auth.project.id, sessionId, startupLeaseId, {})
     await deps.audit.record(auth, {
       action: 'session.runtime.start',
@@ -466,7 +471,7 @@ export async function executeCloudSessionTurn(
         state: 'idle',
         updatedAt: now(),
       })
-      await idleCloudSessionIfConfigured(deps, auth, session)
+      await sleepIdleCloudSession(deps, auth, session)
     }
 
     if (result.status === 'paused') {
@@ -495,7 +500,7 @@ export async function executeCloudSessionTurn(
           stateReason: 'requires-action',
           updatedAt: now(),
         })
-        await idleCloudSessionIfConfigured(deps, auth, session)
+        await sleepIdleCloudSession(deps, auth, session)
         return { ok: true, requiresAction: true }
       }
       return { ok: false, cancelled: true }
@@ -507,7 +512,7 @@ export async function executeCloudSessionTurn(
         stateReason: 'policy-denied',
         updatedAt: now(),
       })
-      await idleCloudSessionIfConfigured(deps, auth, session)
+      await sleepIdleCloudSession(deps, auth, session)
       return { ok: false, cancelled: false, error: safeError }
     }
     await markPromptFailed(deps, auth, session, safeError.message)
@@ -532,7 +537,7 @@ export async function handleTurnOutcome(
   if (outcome.ok && outcome.paused) {
     const depth = await store.incrementContinuationDepth(auth.project.id, session.id, turnId)
     if (depth >= MAX_CONTINUATION_DEPTH) {
-      await idleCloudSessionIfConfigured(deps, auth, session)
+      await sleepIdleCloudSession(deps, auth, session)
       await store.releaseTurnLease(auth.project.id, session.id, turnId, {
         state: 'idle',
         stateReason: CONTINUATION_LIMIT_REASON,
