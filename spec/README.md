@@ -1,9 +1,16 @@
 # Product specs (BDD-lite)
 
 Behaviour-first product specs in Gherkin `.feature` files. This directory is the
-**single source of truth for `.feature` files** and for **what the product does**,
-independent of implementation. The `.feature` files are documentation: tests trace
-back to scenarios by id, the spec does not generate tests.
+**single source of truth for what the product and API do**, independent of
+implementation. Tests trace back to scenarios by id; the specs do not generate
+tests.
+
+Do not specify product behavior or API behavior in Markdown. This prohibition
+includes product specs, API design documents, endpoint catalogs, and normative
+request/response examples. Exact API shapes are generated as OpenAPI from route
+schemas, while observable API semantics live here as scenarios. If behavior is
+found in Markdown, migrate it into the owning Feature and delete the Markdown
+source in the same change.
 
 ## Convention
 
@@ -15,11 +22,11 @@ back to scenarios by id, the spec does not generate tests.
   `@e2e`:
 
   ```gherkin
-  @agents/create @usecase
-  Scenario: Create an agent definition
-    Given a signed-in user with access to a project
-    When the user creates an agent with instructions, provider, model, and tools
-    Then the agent is stored with a current version and project scope
+  @<capability>/<stable-scenario-id> @<layer>
+  Scenario: <observable outcome>
+    Given <precondition>
+    When <action>
+    Then <observable result>
   ```
 
 - The id **never changes** once written (rename = new id). Ids are trivially

@@ -61,7 +61,7 @@ export async function toolPolicyRequiresApproval(db: PolicyDb, auth: AuthScope, 
 //
 // Effective governance policy merges organization → team → project scope rows
 // with deterministic most-restrictive semantics (the merge + level selection
-// live in domain/policy.ts; documented in docs/product/decisions.md). Team rows
+// live in domain/policy.ts; documented in docs/adr/0006-governance-policy-hierarchy.md). Team rows
 // apply only when the caller's OIDC-asserted team memberships include the row's
 // team id.
 
@@ -110,7 +110,7 @@ export async function evaluateProviderPolicy(
     }
   }
 
-  // Budgets live only in the budgets table (docs/api-v1-design.md).
+  // Budgets live only in the budgets table ([spec: governance/budget-api]).
   const budgetDecision = evaluateBudgets(
     await repo.enabledBudgets(auth.project.id),
     await repo.successfulUsage(auth.project.id),

@@ -1,19 +1,16 @@
 # Contributing to Any Managed Agents
 
-Thanks for helping improve Any Managed Agents. This guide covers local development, verification, and contribution expectations. Product positioning and user-facing project overview belong in [README.md](README.md); implementation details belong here or in `docs/`.
+Thanks for helping improve Any Managed Agents. This guide covers local development, verification, and contribution expectations. Product positioning and the non-normative project overview belong in [README.md](README.md); product and API behavior belong only in `spec/*.feature`.
 
 ## Project Boundaries
 
 Any Managed Agents is a Cloudflare-native Managed Agent control plane.
 
-- AMA owns the control plane: projects, agents, environments, sessions, providers, vault references, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata.
-- OIDC owns authentication, users, and organization identity. AMA must not maintain local user or organization tables.
-- Pi coding agent is the v1 runtime inside one Cloudflare Sandbox per running session.
-- Cloudflare Sandbox owns filesystem, process isolation, and per-session execution.
-- Runtime traffic uses Pi protocol directly or through a transparent AMA proxy.
-- OpenAPI and RFC 9728 metadata are the external contract for Realmroot Toolbox and DPoP-aware generated SDKs.
-- The web console uses the shared Hono RPC client for internal control-plane calls.
-- Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, and secret references only.
+- Read `docs/adr/` for architecture rationale and ownership boundaries.
+- Read `spec/*.feature` for every observable product and API behavior.
+- Use generated OpenAPI for exact paths, methods, and schemas.
+- Keep provider-specific code behind adapters and use standard protocols where
+  standards exist.
 
 This is a clean-room implementation. Do not copy source, specs, UI text, database schemas, or implementation details from AGPL projects.
 
@@ -64,8 +61,10 @@ Choose the smallest meaningful check for a narrow change. For broad control-plan
 ## Specs First (BDD-lite)
 
 Product behaviour starts in Gherkin under `spec/` (see `spec/README.md`). The
-`.feature` files are documentation, one per capability; tests trace back to scenarios
-with `[spec: <id>]` breadcrumbs rather than being generated from them.
+`.feature` files are the exclusive specification, one per capability; tests trace
+back to scenarios with `[spec: <id>]` breadcrumbs rather than being generated from
+them. Do not create Markdown product specs, API design documents, endpoint catalogs,
+or normative request/response examples. Generated OpenAPI owns exact API shapes.
 
 1. Write or update a scenario in `spec/<capability>.feature` with a stable id
    `@<capability>/<slug>` and one layer tag (`@domain`/`@usecase`/`@web`/`@api`/`@e2e`).
@@ -90,24 +89,28 @@ src/app/           React providers and router setup
 src/features/      Route-level console features
 src/console/       Shared AMA console components and view models
 src/components/ui/ shadcn-generated primitives
-spec/              Product behaviour in Gherkin (BDD-lite documentation, one file per capability)
-e2e/          Native Playwright crowns (*.spec.ts), fixtures, and local harnesses (@e2e)
-docs/product/      Product decisions, API boundaries, and implementation notes
-docs/infra/        Cloudflare deployment and infrastructure notes
+spec/              Product and API behavior in Gherkin, one Feature per capability
+e2e/               Native Playwright crowns (*.spec.ts), fixtures, and local harnesses (@e2e)
+docs/adr/          Consequential architecture decisions and trade-offs
+docs/infra/        Deployment and operational runbooks
 ```
 
 ## API and OpenAPI
 
-Control-plane API behavior must stay aligned across route handlers, validation schemas, tests, and generated OpenAPI output. Stable error envelopes matter. Do not replace structured API errors with ad hoc strings.
+Control-plane API behavior must stay aligned across the owning Feature, route handlers, validation schemas, tests, and generated OpenAPI output.
 
-OpenAPI is the public contract for Realmroot Toolbox and generated SDKs. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls. The server-owned browser login bootstrap, callback, current-session read, and logout are the narrow auth-boundary exception.
+OpenAPI is the public machine-readable contract for protected-resource clients and generated SDKs. The browser console should use the shared Hono RPC client instead of ad hoc `fetch('/api/...')` calls.
+
+Regenerate and verify the OpenAPI snapshot and language SDKs with
+`pnpm run openapi:generate` and `pnpm run openapi:check`. Do not maintain
+hand-written Markdown API reference or SDK usage documentation.
 
 ## Authentication
 
-AMA is a native Realmroot Resource Server:
+AMA is an OAuth protected Resource with OpenID Connect identity:
 
 - `oauth4webapi` in the Worker for authorization-code PKCE, callback, and confidential client handling.
-- `jose` in the Worker for Realmroot JWT/JWKS and RFC 9449 DPoP verification.
+- `jose` in the Worker for JWT/JWKS and RFC 9449 DPoP verification.
 
 Do not hand-roll token parsing, token validation, callback validation, or OIDC discovery logic.
 
@@ -123,7 +126,8 @@ Expected configuration names use generic OIDC terminology, for example:
 
 ## UI Contributions
 
-Follow `docs/product/ui-ux-standards.md` for visible console work.
+Describe visible console behavior in `spec/web-console.feature` or the owning
+capability Feature before implementation.
 
 - Compose route pages from shadcn primitives and shared AMA components.
 - Use React Query for server state.
@@ -140,7 +144,7 @@ For full deployment setup, including D1, OIDC redirect URIs, Cloudflare Sandbox,
 ## Pull Request Expectations
 
 - Keep changes focused.
-- Update specs or docs when behavior changes.
+- Update the owning Feature when behavior changes; never put behavior in Markdown.
 - Keep route schemas, OpenAPI output, and tests aligned.
 - Do not commit `.env`, `.dev.vars`, secrets, local Playwright artifacts, Wrangler state, screenshots, videos, traces, or generated runtime artifacts.
 - Prefer failing fast over swallowing errors.

@@ -38,10 +38,15 @@ describe('deployment environment example', () => {
     expect(readFileSync('.env.example', 'utf8')).not.toContain('OIDC_TRUSTED_BEARER_CLIENT_IDS')
   })
 
-  it('documents the self-hosted runner as Bearer-only', () => {
+  it('delegates runner behavior to Features and describes authentication generically', () => {
     const guide = readFileSync('docs/infra/self-hosted-runner.md', 'utf8')
 
-    expect(guide).toContain('Loads the saved Realmroot Bearer Context-login profile.')
+    expect(guide).toContain('OAuth 2.0 and OpenID Connect provider')
+    expect(guide).toContain('Realmroot is the current provider.')
+    expect(guide.match(/Realmroot/g)).toHaveLength(1)
+    expect(guide).toMatch(/\]\(\.\.\/\.\.\/spec\/runners\.feature\)/)
+    expect(guide).toMatch(/\]\(\.\.\/\.\.\/spec\/runtime\.feature\)/)
+    expect(guide).not.toContain('Loads the saved Realmroot Bearer Context-login profile.')
     expect(guide).not.toContain('device-login profile and DPoP private key')
   })
 })

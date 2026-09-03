@@ -13,7 +13,7 @@ import {
 import { errorResponse } from '../errors'
 import { AuthenticatedOperation, type DepsEnv, ErrorResponseSchema } from '../openapi'
 
-// Mounted at /api/v1/auth (docs/api-v1-design.md §2 Auth). The auth resource's
+// Mounted at /api/v1/auth ([spec: auth/session-current]). The auth resource's
 // http layer; it delegates to server/auth/ (the authentication module that owns
 // its own tables and raw-request handling, spanning layers by design — see the
 // hono-cf-clean-arch skill auth note).

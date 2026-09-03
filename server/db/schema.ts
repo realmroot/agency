@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
-// API v1 schema. Conventions (docs/api-v1-design.md):
+// API v1 schema. Observable conventions live in spec/api-contracts.feature:
 // - `state` = operational state machine; `archivedAt` = lifecycle (null = live).
 // - `enabled` boolean = operational toggle. Enum values never contain
 //   archived/deleted/paused.
@@ -806,7 +806,7 @@ export const runners = sqliteTable(
     currentLoad: integer('current_load').notNull().default(0),
     maxConcurrent: integer('max_concurrent').notNull().default(1),
     // Heartbeat-reported diagnostic snapshots (value objects, never reverse-queried)
-    // — KEEP as JSON per the api-v1-design header.
+    // — KEEP as JSON per the canonical resource representation contract.
     runtimeUsage: text('runtime_usage').notNull().default('[]'),
     runtimes: text('runtimes').notNull().default('[]'),
     metadata: text('metadata').notNull().default('{}'),

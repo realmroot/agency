@@ -115,6 +115,8 @@ Feature: Runners
     Then outcomes land on the work item and drive the session to idle or error
     And the lease channel rejects non-upgrade requests and finished leases
     And a finished lease can no longer be renewed or completed
+    And losing lease ownership cancels local work and records a cancelled outcome
+    And control-plane cancellation of already running self-hosted work is not available until a cancellation resource is defined
 
   @runners/ama-sandbox-channel @api
   Scenario: Keep an AMA sandbox channel after startup work completes

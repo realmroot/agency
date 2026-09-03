@@ -1,6 +1,18 @@
-# AMA Runner Architecture
+# 0009: Runner object model
 
-This document fixes the target shape for the Go `ama-runner` implementation.
+- Status: Accepted
+- Date: 2026-06-28
+
+## Context
+
+The Go `ama-runner` needs a stable object and package ownership model across
+foreground execution, managed services, lease orchestration, session relays,
+runtime bridges, and host operating systems. Excess layers obscure the single
+lease lifecycle; too little separation leaks platform and protocol details.
+
+## Decision
+
+The following structure fixes the target shape for the Go `ama-runner` implementation.
 The goal is to keep the runner boring: one process that registers itself,
 polls work, keeps a relay open, executes sandbox or external-runtime work, and
 reports lease state through the Go AMA SDK.
@@ -186,7 +198,18 @@ It does not prepare workspaces, update AMA leases, capture memory-store snapshot
 or know about the runner relay hub. Those are lease orchestration concerns owned
 by `daemon.LeaseWorker`.
 
-## Rejected Shapes
+## Consequences
+
+- Lifecycle owners remain explicit without splitting one lease across
+  forwarding abstractions.
+- Host-specific and cross-language protocol details stay behind narrow package
+  boundaries.
+- The Runner calls the Go AMA SDK facade directly and does not maintain a second
+  control-plane client abstraction.
+- Future structural changes that overturn this ownership model require a
+  superseding ADR.
+
+## Rejected alternatives
 
 - A separate `controlplane` package inside runner: rejected because AMA Server API
   calls belong behind the Go SDK facade, not a runner-specific adapter.
