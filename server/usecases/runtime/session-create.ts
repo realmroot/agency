@@ -66,7 +66,7 @@ const VOLUME_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 const SECRET_ITEM_PATH_PATTERN = /^[A-Za-z0-9._/-]+$/
 const REALMROOT_STATE_VOLUME = 'realmroot-agent-state'
 const REALMROOT_STATE_DIR = '/workspace/.ama/realmroot-state'
-const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
+const REALMROOT_RESERVED_ENV = new Set(['AGENT', 'AGENT_SESSION_ID', 'REALMROOT_ORIGIN', 'REALMROOT_STATE_DIR'])
 
 function pathsOverlap(left: string, right: string) {
   return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
@@ -344,6 +344,7 @@ function sessionTitleFromPrompt(prompt: string) {
 
 function identityRuntimeInputs(
   binding: AgentSnapshot['identity'],
+  sessionId: string,
   env: Record<string, string>,
   envFrom: EnvFromEntry[],
   volumes: Volume[],
@@ -385,6 +386,7 @@ function identityRuntimeInputs(
     env: {
       ...env,
       AGENT: binding.runtime,
+      AGENT_SESSION_ID: sessionId,
       REALMROOT_ORIGIN: new URL(binding.issuer).origin,
       REALMROOT_STATE_DIR,
     },
@@ -630,8 +632,10 @@ export async function createSessionForAgent(
     }
     throw error
   }
+  const id = options.id ?? newPrimaryKey()
   const realmrootInputs = identityRuntimeInputs(
     agentSnapshot.identity,
+    id,
     options.env ?? {},
     options.envFrom ?? [],
     normalizedWorkspaceVolumes.volumes,
@@ -787,7 +791,6 @@ export async function createSessionForAgent(
   }
 
   const timestamp = now()
-  const id = options.id ?? newPrimaryKey()
   const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(
     agentSnapshot,
     validatedVolumes.volumes,

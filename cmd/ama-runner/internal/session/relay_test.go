@@ -113,6 +113,19 @@ func (h *closeCountingHandle) Close(context.Context) error {
 	return h.err
 }
 
+type sandboxRequestHandle struct {
+	calls  int
+	result ama.JSON
+	err    error
+}
+
+func (h *sandboxRequestHandle) Close(context.Context) error { return nil }
+
+func (h *sandboxRequestHandle) ExecuteSandbox(context.Context, protocol.RunnerSandboxRequest) (ama.JSON, error) {
+	h.calls += 1
+	return h.result, h.err
+}
+
 func TestRelayEventDropsWhenNotConnected(t *testing.T) {
 	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
 	// conn is nil; relayEvent must not panic and must return without writing
@@ -610,6 +623,103 @@ func TestRelayHandlesSandboxRequest(t *testing.T) {
 	}
 }
 
+// [spec: runners/ama-sandbox-channel]
+func TestRelayReconnectAdvertisesAllActiveSessions(t *testing.T) {
+	opener := &fakeOpener{}
+	hub := NewRelay(opener, "runner_1", t.TempDir())
+	hub.Register("session_z", &closeCountingHandle{})
+	hub.Register("session_a", &closeCountingHandle{})
+
+	for attempt := 0; attempt < 2; attempt++ {
+		channel := newFakeChannel(ama.JSON{"type": "runner.channel.accepted"}, errors.New("connection dropped"))
+		opener.channel = channel
+		if err := hub.connectAndServe(context.Background()); err == nil {
+			t.Fatal("expected relay connection to end after the test channel drops")
+		}
+		channel.mu.Lock()
+		if len(channel.writes) != 1 {
+			channel.mu.Unlock()
+			t.Fatalf("reconnect %d wrote %d frames", attempt, len(channel.writes))
+		}
+		got := channel.writes[0]
+		channel.mu.Unlock()
+		if got["type"] != "runner.sessions.active" || got["runnerId"] != "runner_1" {
+			t.Fatalf("reconnect %d wrote wrong active-session frame: %v", attempt, got)
+		}
+		ids, ok := got["sessionIds"].([]any)
+		if !ok || len(ids) != 2 || ids[0] != "session_a" || ids[1] != "session_z" {
+			t.Fatalf("reconnect %d did not advertise every sorted active Session: %v", attempt, got)
+		}
+	}
+}
+
+// [spec: runners/ama-sandbox-channel]
+func TestRelaySandboxStopRetiresOnlyAfterSuccess(t *testing.T) {
+	t.Run("successful stop unregisters and emits inactive", func(t *testing.T) {
+		channel := newFakeChannel()
+		hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
+		handle := &sandboxRequestHandle{result: ama.JSON{"ok": true}}
+		hub.Register("session_1", handle)
+
+		hub.handleSandboxRequest(context.Background(), channel, protocol.RunnerChannelMessage{
+			Type:      "sandbox.request",
+			RequestId: ptr("stop_1"),
+			SessionId: ptr("session_1"),
+			Request:   &ama.RunnerSandboxRequest{Type: "sandbox.stop"},
+		})
+
+		channel.mu.Lock()
+		writes := append([]ama.JSON(nil), channel.writes...)
+		channel.mu.Unlock()
+		if len(writes) != 2 || writes[0]["type"] != "sandbox.response" || writes[0]["ok"] != true {
+			t.Fatalf("successful stop did not return its sandbox response: %v", writes)
+		}
+		if writes[1]["type"] != "runner.session.inactive" || writes[1]["sessionId"] != "session_1" {
+			t.Fatalf("successful stop did not emit inactive: %v", writes)
+		}
+		hub.mu.Lock()
+		_, registered := hub.sessions["session_1"]
+		hub.mu.Unlock()
+		if registered {
+			t.Fatal("successful stop left the sandbox registered")
+		}
+	})
+
+	t.Run("failed stop remains registered and retryable", func(t *testing.T) {
+		channel := newFakeChannel()
+		hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
+		handle := &sandboxRequestHandle{err: errors.New("sandbox cleanup failed")}
+		hub.Register("session_1", handle)
+		message := protocol.RunnerChannelMessage{
+			Type:      "sandbox.request",
+			RequestId: ptr("stop_1"),
+			SessionId: ptr("session_1"),
+			Request:   &ama.RunnerSandboxRequest{Type: "sandbox.stop"},
+		}
+
+		hub.handleSandboxRequest(context.Background(), channel, message)
+		hub.mu.Lock()
+		_, registered := hub.sessions["session_1"]
+		hub.mu.Unlock()
+		if !registered {
+			t.Fatal("failed stop removed the sandbox route")
+		}
+		handle.err = nil
+		message.RequestId = ptr("stop_2")
+		hub.handleSandboxRequest(context.Background(), channel, message)
+
+		if handle.calls != 2 {
+			t.Fatalf("expected failed stop to remain retryable, got %d calls", handle.calls)
+		}
+		channel.mu.Lock()
+		writes := append([]ama.JSON(nil), channel.writes...)
+		channel.mu.Unlock()
+		if len(writes) != 3 || writes[0]["ok"] != false || writes[1]["ok"] != true || writes[2]["type"] != "runner.session.inactive" {
+			t.Fatalf("unexpected failed-stop retry frames: %v", writes)
+		}
+	})
+}
+
 func TestRelayHandlesSandboxRequestErrors(t *testing.T) {
 	t.Run("inactive session", func(t *testing.T) {
 		ch := newFakeChannel()
@@ -695,7 +805,7 @@ func TestRelayNotifyWorkFinishedWritesTerminalStates(t *testing.T) {
 		{state: "failed", typ: "work.failed"},
 		{state: "cancelled", typ: "work.cancelled"},
 	} {
-		hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", tc.state)
+		hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", tc.state, false)
 		ch.mu.Lock()
 		got := ch.writes[len(ch.writes)-1]
 		ch.mu.Unlock()
@@ -703,13 +813,21 @@ func TestRelayNotifyWorkFinishedWritesTerminalStates(t *testing.T) {
 			t.Fatalf("state %q wrote wrong frame: %v", tc.state, got)
 		}
 	}
+
+	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed", true)
+	ch.mu.Lock()
+	got := ch.writes[len(ch.writes)-1]
+	ch.mu.Unlock()
+	if got["sessionActive"] != true {
+		t.Fatalf("expected completed AMA sandbox startup to retain the session channel: %v", got)
+	}
 }
 
 func TestRelayNotifyWorkFinishedDropsWhenDisconnectedOrWriteFails(t *testing.T) {
 	hub := NewRelay(&fakeOpener{}, "runner_1", t.TempDir())
-	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed")
+	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed", false)
 	hub.setConn(&errWriteChannel{})
-	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed")
+	hub.NotifyWorkFinished(context.Background(), "session_1", "lease_1", "completed", false)
 }
 
 func TestRelayHandlesBackfillForCompletedSession(t *testing.T) {

@@ -6,8 +6,14 @@ import {
   hasSecretMaterial,
   RUNTIME_CONFIG_FIELDS,
 } from '@server/domain/environment'
+import { creationDigest, creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
-import { type AuthScope, EnvironmentArchivedError, EnvironmentValidationError } from './ports'
+import {
+  type AuthScope,
+  CreationIdempotencyConflictError,
+  EnvironmentArchivedError,
+  EnvironmentValidationError,
+} from './ports'
 
 // Validates the config against sibling resources (MCP catalog entries) and the
 // secret-free-object rules. Throws
@@ -46,16 +52,31 @@ function packagesEqual(left: EnvironmentConfig['packages'], right: EnvironmentCo
 export async function createEnvironment(
   deps: Deps,
   auth: AuthScope,
-  input: { name: string; description: string | null; config: EnvironmentConfig },
+  input: { name: string; description: string | null; config: EnvironmentConfig; idempotencyKey?: string },
 ): Promise<Environment> {
   validateConfig(input.config)
+  const requestFingerprint = input.idempotencyKey
+    ? await creationFingerprint({ name: input.name, description: input.description, config: input.config })
+    : undefined
+  const keyHash = input.idempotencyKey ? await creationDigest(input.idempotencyKey) : undefined
+  if (keyHash && requestFingerprint) {
+    const replay = await deps.environments.findCreation(auth.project.id, keyHash)
+    if (replay) {
+      if (replay.fingerprint !== requestFingerprint) throw new CreationIdempotencyConflictError()
+      return replay.environment
+    }
+  }
   const createdAt = new Date().toISOString()
-  const environment = await deps.environments.insert(
-    { projectId: auth.project.id, name: input.name, description: input.description, config: input.config },
+  const { environment, version } = await deps.environments.insertWithInitialVersion(
+    {
+      projectId: auth.project.id,
+      name: input.name,
+      description: input.description,
+      config: input.config,
+      ...(keyHash && requestFingerprint ? { creationKeyHash: keyHash, creationFingerprint: requestFingerprint } : {}),
+    },
     createdAt,
   )
-  const version = await deps.environments.insertVersion(environment, input.config, createdAt)
-  await deps.environments.setCurrentVersion(environment.metadata.uid, version.metadata.uid)
   return {
     ...environment,
     status: { ...environment.status, currentVersionId: version.metadata.uid, version: version.status.version },

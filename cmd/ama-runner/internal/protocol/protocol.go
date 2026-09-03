@@ -65,6 +65,7 @@ type RunnerChannelMessage struct {
 	RequestId  *string                   `json:"requestId,omitempty"`
 	RunnerId   *string                   `json:"runnerId,omitempty"`
 	SessionId  *string                   `json:"sessionId,omitempty"`
+	SessionIds []string                  `json:"sessionIds,omitempty"`
 	Type       string                    `json:"type"`
 	WorkItemId *string                   `json:"workItemId,omitempty"`
 }

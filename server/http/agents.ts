@@ -6,7 +6,13 @@ import {
   ResourceUpdateMetadataSchema,
   serializeResource,
 } from '@server/contracts/resource-contracts'
-import { type Agent, type AgentSpec, type AgentVersion, defaultAllowedTools } from '@server/domain/agent'
+import {
+  type Agent,
+  type AgentSpec,
+  type AgentSubagent,
+  type AgentVersion,
+  defaultAllowedTools,
+} from '@server/domain/agent'
 import { requireAuth } from '../auth/session'
 import {
   AuthenticatedOperation,
@@ -22,6 +28,7 @@ import {
   AgentArchivedError,
   AgentInboxIdentityConflictError,
   AgentValidationError,
+  CreationIdempotencyConflictError,
   IdentityAlreadyBoundError,
 } from '../usecases/ports'
 import { requestId } from './request-context'
@@ -126,6 +133,10 @@ const AgentStatusSchema = z
     phase: ResourcePhaseSchema,
     currentVersionId: z.string().nullable().openapi({ example: '0195f5d6-7c20-7000-8000-000000000003' }),
     version: z.number().int().openapi({ example: 1 }),
+    schedulable: z.boolean().openapi({
+      description: 'Whether an active Inbox Trigger can currently resolve a compatible execution environment.',
+      example: true,
+    }),
   })
   .openapi('AgentStatus')
 
@@ -234,6 +245,22 @@ const ListQuerySchema = listQuerySchema().extend({
     description: 'Exact Realmroot Agent actor id bound through the Agent Identity.',
     example: '019ff41a-7da6-708f-8b05-44d4d0373685',
   }),
+  runtime: z
+    .enum(['ama', 'codex', 'claude-code', 'copilot'])
+    .optional()
+    .openapi({
+      param: { name: 'runtime', in: 'query' },
+      description: 'Exact runtime of the bound Realmroot Identity.',
+      example: 'codex',
+    }),
+  schedulable: z
+    .enum(['true', 'false'])
+    .optional()
+    .openapi({
+      param: { name: 'schedulable', in: 'query' },
+      description: 'Filter by current Inbox scheduling readiness.',
+      example: 'true',
+    }),
 })
 const AgentListResponseSchema = listResponseSchema('AgentListResponse', AgentSchema)
 const AgentVersionListResponseSchema = listResponseSchema('AgentVersionListResponse', AgentVersionSchema)
@@ -264,7 +291,10 @@ const createAgentRoute = createRoute({
   tags: ['Agents'],
   summary: 'Create an agent',
   ...AuthenticatedOperation,
-  request: { body: { required: true, content: { 'application/json': { schema: CreateAgentSchema } } } },
+  request: {
+    headers: z.object({ 'idempotency-key': z.string().min(8).max(200).optional() }),
+    body: { required: true, content: { 'application/json': { schema: CreateAgentSchema } } },
+  },
   responses: {
     201: { description: 'Created agent', content: { 'application/json': { schema: AgentSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
@@ -360,7 +390,17 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const { archived, search, createdFrom, createdTo, identityAgentId, limit = 50, cursor } = c.req.valid('query')
+      const {
+        archived,
+        search,
+        createdFrom,
+        createdTo,
+        identityAgentId,
+        runtime,
+        schedulable,
+        limit = 50,
+        cursor,
+      } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -371,6 +411,8 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         projectId: auth.project.id,
         archived: archived === 'true',
         ...(identityAgentId ? { identityAgentId } : {}),
+        ...(runtime ? { runtime } : {}),
+        ...(schedulable ? { schedulable: schedulable === 'true' } : {}),
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
@@ -390,6 +432,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
     })
     .openapi(createAgentRoute, async (c) => {
       const body = c.req.valid('json')
+      const headers = c.req.valid('header')
       const deps = c.get('deps')
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
@@ -401,6 +444,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
           description: body.metadata.description ?? null,
           spec: specFromPayload(body),
           identityRef: body.spec.identityRef ?? null,
+          ...(headers['idempotency-key'] ? { idempotencyKey: headers['idempotency-key'] } : {}),
         })
         return c.json(serializeAgent(agent), 201)
       } catch (error) {
@@ -555,12 +599,47 @@ function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): A
 
 function serializeAgent(agent: Agent) {
   const resource = serializeResource(agent)
-  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
+  return {
+    ...resource,
+    spec: {
+      ...resource.spec,
+      subagents: serializeSubagents(resource.spec.subagents),
+      identity: publicIdentity(resource.spec.identity),
+    },
+  }
 }
 
 function serializeAgentVersion(version: AgentVersion) {
   const resource = serializeResource(version)
-  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
+  return {
+    ...resource,
+    spec: {
+      ...resource.spec,
+      subagents: serializeSubagents(resource.spec.subagents),
+      identity: publicIdentity(resource.spec.identity),
+    },
+  }
+}
+
+function serializeSubagents(subagents: AgentSpec['subagents']): AgentSpec['subagents'] {
+  return subagents.map((subagent) => {
+    const legacy = subagent as AgentSubagent & { bio?: unknown; instructions?: unknown }
+    return {
+      name: typeof legacy.name === 'string' ? legacy.name : '',
+      description:
+        typeof legacy.description === 'string' ? legacy.description : typeof legacy.bio === 'string' ? legacy.bio : '',
+      systemPrompt:
+        typeof legacy.systemPrompt === 'string'
+          ? legacy.systemPrompt
+          : typeof legacy.instructions === 'string'
+            ? legacy.instructions
+            : '',
+      model: typeof legacy.model === 'string' ? legacy.model : null,
+      allowedTools: Array.isArray(legacy.allowedTools) ? legacy.allowedTools : [],
+      skills: Array.isArray(legacy.skills) ? legacy.skills : [],
+      mcpConnectors: Array.isArray(legacy.mcpConnectors) ? legacy.mcpConnectors : [],
+    }
+  })
 }
 
 function publicIdentity(identity: Agent['spec']['identity']) {
@@ -578,6 +657,9 @@ function validationOr(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0], e
     return c.json(domainValidation(error.message, error.fields), 400)
   }
   if (error instanceof IdentityAlreadyBoundError) {
+    return c.json({ error: { type: error.code, message: error.message } }, 409)
+  }
+  if (error instanceof CreationIdempotencyConflictError) {
     return c.json({ error: { type: error.code, message: error.message } }, 409)
   }
   throw error

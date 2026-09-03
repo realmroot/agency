@@ -1,6 +1,6 @@
 # UI/UX Standards
 
-Any Managed Agents is an operational control plane. The product UI must feel quiet, dense, predictable, and built for repeated work. New pages must reuse the same application shell, component primitives, route patterns, spacing, and feedback model instead of inventing local page styles.
+Enbor is developer infrastructure with an operational control-plane console, not an end-user Agent product. The console must feel quiet, dense, predictable, and built for repeated work. New pages must reuse the same application shell, component primitives, route patterns, spacing, and feedback model instead of inventing local page styles.
 
 ## Product Style
 

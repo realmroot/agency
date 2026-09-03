@@ -80,6 +80,7 @@ func (r LeaseWorker) RunOne(ctx context.Context) error {
 
 func (r LeaseWorker) RunAssigned(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem) error {
 	sessionID := workItemSessionID(workItem)
+	payload, payloadErr := protocol.ParseWorkPayload(workItem.Payload)
 	err := r.runClaimedWork(ctx, lease, workItem)
 	if r.Relay != nil {
 		state := "completed"
@@ -90,7 +91,8 @@ func (r LeaseWorker) RunAssigned(ctx context.Context, lease *ama.Lease, workItem
 				state = "failed"
 			}
 		}
-		r.Relay.NotifyWorkFinished(context.Background(), sessionID, lease.Id, state)
+		sessionActive := err == nil && payloadErr == nil && payload.Type == "session.start" && payload.Runtime == "ama"
+		r.Relay.NotifyWorkFinished(context.Background(), sessionID, lease.Id, state, sessionActive)
 	}
 	if err != nil {
 		return err
@@ -287,6 +289,7 @@ func (r LeaseWorker) runAMASandboxSession(ctx context.Context, lease *ama.Lease,
 	}
 	cancel()
 	if err := firstRenewError(renewErrors); err != nil && !isCompletedLeaseRenewalRace(err) {
+		relay.Unregister(payload.SessionID)
 		return err
 	}
 	return nil

@@ -2,6 +2,7 @@ import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/doma
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
 import type { IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
+import { runnerHeartbeatStaleBefore } from '@server/domain/runner-queue'
 import { newPrimaryKey } from '@server/id'
 import type {
   AgentListPage,
@@ -10,8 +11,27 @@ import type {
   CreateAgentInput,
   UpdateAgentFields,
 } from '@server/usecases/ports'
-import { AgentInboxIdentityConflictError, IdentityAlreadyBoundError } from '@server/usecases/ports'
-import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
+import {
+  AgentInboxIdentityConflictError,
+  CreationIdempotencyConflictError,
+  IdentityAlreadyBoundError,
+} from '@server/usecases/ports'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  lte,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, agentVersions, connectors, identities, providers, triggers } from '../../db/schema'
 
@@ -75,7 +95,7 @@ async function versionNumberOf(db: Db, agentId: string, versionId: string | null
   return row?.version ?? 0
 }
 
-function agentRecordFrom(row: AgentRow, version: number): Agent {
+function agentRecordFrom(row: AgentRow, version: number, schedulable = false): Agent {
   return {
     metadata: resourceMetadata({
       uid: row.id,
@@ -91,8 +111,80 @@ function agentRecordFrom(row: AgentRow, version: number): Agent {
       phase: resourcePhase(row.archivedAt),
       currentVersionId: row.currentVersionId,
       version,
+      schedulable,
     },
   }
+}
+
+function schedulableExpression() {
+  const agentId = sql.raw('"agents"."id"')
+  const projectId = sql.raw('"agents"."project_id"')
+  const identityId = sql.raw('"agents"."identity_id"')
+  const archivedAt = sql.raw('"agents"."archived_at"')
+  const providerId = sql.raw('"agents"."provider_id"')
+  const model = sql.raw('"agents"."model"')
+  const selectedModel = sql`case
+    when ${providerId} is not null and ${model} like ${providerId} || '/%'
+      then substr(${model}, length(${providerId}) + 2)
+    else ${model}
+  end`
+  return sql<number>`case when ${archivedAt} is null and exists (
+    select 1
+    from identities scheduling_identity
+    join triggers scheduling_trigger
+      on scheduling_trigger.agent_id = ${agentId}
+      and scheduling_trigger.project_id = ${projectId}
+    where scheduling_identity.id = ${identityId}
+      and scheduling_identity.project_id = ${projectId}
+      and scheduling_identity.state = 'active'
+      and scheduling_identity.archived_at is null
+      and scheduling_identity.bound_agent_id = ${agentId}
+      and scheduling_trigger.trigger_type = 'inbox'
+      and scheduling_trigger.enabled = 1
+      and scheduling_trigger.archived_at is null
+      and scheduling_trigger.inbox_provisioning_state = 'active'
+      and scheduling_trigger.inbox_registered_agent_subject = scheduling_identity.subject
+      and scheduling_trigger.runtime = scheduling_identity.runtime
+      and (
+        exists (
+          select 1
+          from environments cloud_environment
+          where cloud_environment.id = scheduling_trigger.environment_id
+            and cloud_environment.project_id = ${projectId}
+            and cloud_environment.archived_at is null
+            and cloud_environment.current_version_id is not null
+            and cloud_environment.hosting_mode = 'cloud'
+            and scheduling_trigger.runtime = 'ama'
+        )
+        or exists (
+          select 1
+          from runners scheduling_runner
+          join environments runner_environment
+            on runner_environment.id = scheduling_runner.environment_id
+            and runner_environment.project_id = scheduling_runner.project_id
+          join json_each(scheduling_runner.runtimes) scheduling_runtime
+          where scheduling_runner.project_id = ${projectId}
+            and scheduling_runner.state = 'active'
+            and scheduling_runner.archived_at is null
+            and scheduling_runner.last_heartbeat_at >= ${runnerHeartbeatStaleBefore()}
+            and runner_environment.archived_at is null
+            and runner_environment.current_version_id is not null
+            and runner_environment.hosting_mode = 'self_hosted'
+            and (scheduling_trigger.environment_id is null or scheduling_trigger.environment_id = scheduling_runner.environment_id)
+            and json_extract(scheduling_runtime.value, '$.runtime') = scheduling_trigger.runtime
+            and json_extract(scheduling_runtime.value, '$.state') = 'ready'
+            and (
+              scheduling_trigger.runtime = 'ama'
+              or ${model} is null
+              or exists (
+                select 1
+                from json_each(json_extract(scheduling_runtime.value, '$.models')) scheduling_model
+                where scheduling_model.value = ${selectedModel}
+              )
+            )
+        )
+      )
+  ) then 1 else 0 end`
 }
 
 function versionRecordFrom(row: AgentVersionRow): AgentVersion {
@@ -112,9 +204,52 @@ function versionRecordFrom(row: AgentVersionRow): AgentVersion {
   }
 }
 
+async function findCreation(db: Db, projectId: string, creationKeyHash: string) {
+  const schedulable = schedulableExpression()
+  const row = await db
+    .select({ ...getTableColumns(agents), schedulable })
+    .from(agents)
+    .where(and(eq(agents.projectId, projectId), eq(agents.creationKeyHash, creationKeyHash)))
+    .get()
+  if (!row?.creationFingerprint) return null
+  const initialVersion = await db
+    .select()
+    .from(agentVersions)
+    .where(and(eq(agentVersions.agentId, row.id), eq(agentVersions.version, 1)))
+    .get()
+  if (!initialVersion) throw new Error('Idempotent Agent creation is missing its initial version')
+  const agent = agentRecordFrom(
+    {
+      ...row,
+      name: row.creationName ?? row.name,
+      description: row.creationDescription,
+      archivedAt: null,
+      currentVersionId: initialVersion.id,
+      updatedAt: row.createdAt,
+    },
+    1,
+    false,
+  )
+  return {
+    agent: {
+      ...agent,
+      spec: versionRecordFrom(initialVersion).spec,
+      status: {
+        ...agent.status,
+        phase: resourcePhase(null),
+        currentVersionId: initialVersion.id,
+        version: 1,
+        schedulable: false,
+      },
+    },
+    fingerprint: row.creationFingerprint,
+  }
+}
+
 export function createAgentRepo(db: Db): AgentRepo {
   return {
     async list(query: AgentListQuery): Promise<AgentListPage> {
+      const schedulable = schedulableExpression()
       const identity = query.identityAgentId
         ? await db
             .select({ id: identities.id, boundAgentId: identities.boundAgentId })
@@ -137,6 +272,10 @@ export function createAgentRepo(db: Db): AgentRepo {
         query.archived ? isNotNull(agents.archivedAt) : isNull(agents.archivedAt),
         identity?.boundAgentId ? eq(agents.id, identity.boundAgentId) : undefined,
         identity ? eq(agents.identityId, identity.id) : undefined,
+        query.runtime
+          ? eq(sql<string>`json_extract(${agents.identitySnapshot}, '$.runtime')`, query.runtime)
+          : undefined,
+        query.schedulable !== undefined ? eq(schedulable, query.schedulable ? 1 : 0) : undefined,
         query.search ? like(agents.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(agents.createdAt, query.createdFrom) : undefined,
         query.createdTo ? lte(agents.createdAt, query.createdTo) : undefined,
@@ -148,7 +287,7 @@ export function createAgentRepo(db: Db): AgentRepo {
           : undefined,
       ].filter((filter) => filter !== undefined)
       const rows = await db
-        .select()
+        .select({ ...getTableColumns(agents), schedulable })
         .from(agents)
         .where(and(...filters))
         .orderBy(desc(agents.createdAt), desc(agents.id))
@@ -156,31 +295,41 @@ export function createAgentRepo(db: Db): AgentRepo {
       const hasMore = rows.length > query.limit
       const page = rows.slice(0, query.limit)
       const records = await Promise.all(
-        page.map(async (row) => agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))),
+        page.map(async (row) =>
+          agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId), Boolean(row.schedulable)),
+        ),
       )
       return { rows: records, hasMore }
     },
 
     async find(projectId, agentId) {
+      const schedulable = schedulableExpression()
       const row = await db
-        .select()
+        .select({ ...getTableColumns(agents), schedulable })
         .from(agents)
         .where(and(eq(agents.id, agentId), eq(agents.projectId, projectId)))
         .get()
       if (!row) {
         return null
       }
-      return agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))
+      return agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId), Boolean(row.schedulable))
+    },
+
+    async findCreation(projectId, creationKeyHash) {
+      return findCreation(db, projectId, creationKeyHash)
     },
 
     async liveAgents(projectId) {
+      const schedulable = schedulableExpression()
       const rows = await db
-        .select()
+        .select({ ...getTableColumns(agents), schedulable })
         .from(agents)
         .where(and(eq(agents.projectId, projectId), isNull(agents.archivedAt)))
         .orderBy(desc(agents.createdAt), desc(agents.id))
       return Promise.all(
-        rows.map(async (row) => agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId))),
+        rows.map(async (row) =>
+          agentRecordFrom(row, await versionNumberOf(db, row.id, row.currentVersionId), Boolean(row.schedulable)),
+        ),
       )
     },
 
@@ -220,6 +369,10 @@ export function createAgentRepo(db: Db): AgentRepo {
         currentVersionId: versionId,
         createdAt,
         updatedAt: createdAt,
+        creationKeyHash: input.creationKeyHash ?? null,
+        creationFingerprint: input.creationFingerprint ?? null,
+        creationName: input.creationKeyHash ? input.name : null,
+        creationDescription: input.creationKeyHash ? input.description : null,
         ...specColumns(input.spec),
       }
       const versionRow = {
@@ -233,6 +386,19 @@ export function createAgentRepo(db: Db): AgentRepo {
       try {
         await db.batch([db.insert(agents).values(row), db.insert(agentVersions).values(versionRow)])
       } catch (error) {
+        if (input.creationKeyHash && input.creationFingerprint) {
+          const replay = await findCreation(db, input.projectId, input.creationKeyHash)
+          if (replay) {
+            if (replay.fingerprint !== input.creationFingerprint) throw new CreationIdempotencyConflictError()
+            const version = await db
+              .select()
+              .from(agentVersions)
+              .where(eq(agentVersions.id, replay.agent.status.currentVersionId ?? ''))
+              .get()
+            if (!version) throw new Error('Idempotent Agent creation is missing its initial version')
+            return { agent: replay.agent, version: versionRecordFrom(version) }
+          }
+        }
         if (isIdentityBindingConflict(error)) throw new IdentityAlreadyBoundError()
         throw error
       }

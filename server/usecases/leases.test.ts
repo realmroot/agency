@@ -90,6 +90,7 @@ function fakeDeps(overrides: {
   }
   const workItems: Deps['workItems'] = {
     list: async () => ({ rows: [], hasMore: false }),
+    findLatestBySessions: async () => [],
     find: async () => null,
     rawPayload: async () => ({ type: 'session.start' }),
     activeLeaseRunnerId: async () => null,

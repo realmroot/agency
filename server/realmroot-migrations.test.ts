@@ -43,6 +43,130 @@ function expectResolvableIdentitySnapshot(
   ).toEqual({ id: expected.credentialId })
 }
 
+describe('[spec: projects/lifecycle] default Project naming migration', () => {
+  it('renames stored default Projects without changing custom Projects', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0034_creation_idempotency.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('project_default', 'org_1', 'Default project', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('project_custom', 'org_1', 'Control Plane', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+    `)
+
+    apply(db, '0035_rename_default_project.sql')
+
+    expect(db.prepare('SELECT id, name FROM projects ORDER BY id').all()).toEqual([
+      { id: 'project_custom', name: 'Control Plane' },
+      { id: 'project_default', name: 'Default' },
+    ])
+    db.close()
+  })
+
+  it('keeps the oldest legacy Default per organization and enforces uniqueness', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0035_rename_default_project.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('old_default', 'org_1', 'Default', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('new_default', 'org_1', 'Default', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('other_default', 'org_2', 'Default', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z'),
+        ('custom_only', 'org_3', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+    `)
+
+    apply(db, '0036_one_default_project_per_organization.sql')
+
+    expect(
+      db.prepare("SELECT id, organization_id, name FROM projects WHERE organization_id != 'org_3' ORDER BY id").all(),
+    ).toEqual([
+      { id: 'new_default', organization_id: 'org_1', name: 'Default Copy new_defa' },
+      { id: 'old_default', organization_id: 'org_1', name: 'Default' },
+      { id: 'other_default', organization_id: 'org_2', name: 'Default' },
+    ])
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_3' ORDER BY name").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'custom_only', name: 'Workspace' },
+    ])
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('duplicate_default', 'org_1', 'Default', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).toThrow(/UNIQUE constraint failed: projects\.organization_id/)
+    db.close()
+  })
+})
+
+describe('[spec: projects/name-uniqueness] project name uniqueness migration', () => {
+  it('deduplicates legacy names per organization before enforcing the database constraint', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0035_rename_default_project.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('project_original', 'org_1', 'Workspace', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('project_duplicate', 'org_1', 'Workspace', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('project_collision', 'org_1', 'Workspace Copy project_duplicate', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('project_other_org', 'org_2', 'Workspace', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z');
+    `)
+
+    apply(db, '0036_one_default_project_per_organization.sql')
+    apply(db, '0037_unique_project_names_per_organization.sql')
+
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_1' ORDER BY id").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'project_collision', name: 'Workspace Copy project_duplicate' },
+      { id: 'project_duplicate', name: 'Workspace Copy project_duplicate 1' },
+      { id: 'project_original', name: 'Workspace' },
+    ])
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_2' ORDER BY id").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'project_other_org', name: 'Workspace' },
+    ])
+    expect(db.prepare('PRAGMA index_list(projects)').all()).toContainEqual({
+      name: 'idx_projects_unique_name_per_organization',
+      unique: 1,
+      origin: 'c',
+      partial: 0,
+      seq: expect.any(Number),
+    })
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_conflict', 'org_1', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).toThrow(/UNIQUE constraint failed: projects\.organization_id, projects\.name/)
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('project_cross_tenant', 'org_3', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).not.toThrow()
+    db.close()
+  })
+})
+
+describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
+  it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0034_creation_idempotency.sql')
+
+    for (const table of ['agents', 'environments']) {
+      const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+      expect(columns.map(({ name }) => name)).toEqual(
+        expect.arrayContaining(['creation_key_hash', 'creation_fingerprint', 'creation_name', 'creation_description']),
+      )
+      const indexes = db.prepare(`PRAGMA index_list(${table})`).all() as Array<{ name: string; unique: number }>
+      expect(indexes).toContainEqual({
+        name: `idx_${table}_project_creation_idempotency`,
+        unique: 1,
+        origin: 'c',
+        partial: 0,
+        seq: expect.any(Number),
+      })
+    }
+    db.close()
+  })
+})
+
 describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
   it('keeps browser authorization attempts free of D1 client-key rate-limit state', () => {
     const db = new DatabaseSync(':memory:')

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_session_message_request import CreateSessionMessageRequest
 from ...models.error_response import ErrorResponse
 from ...models.session_message import SessionMessage
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     session_id: str,
     *,
     body: CreateSessionMessageRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -112,12 +117,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateSessionMessageRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionMessage]:
     """ Send a prompt message to a session
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (CreateSessionMessageRequest):
 
     Raises:
@@ -132,6 +139,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         session_id=session_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -146,12 +154,14 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateSessionMessageRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionMessage | None:
     """ Send a prompt message to a session
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (CreateSessionMessageRequest):
 
     Raises:
@@ -167,6 +177,7 @@ def sync(
         session_id=session_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -175,12 +186,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateSessionMessageRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionMessage]:
     """ Send a prompt message to a session
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (CreateSessionMessageRequest):
 
     Raises:
@@ -195,6 +208,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         session_id=session_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -209,12 +223,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateSessionMessageRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionMessage | None:
     """ Send a prompt message to a session
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (CreateSessionMessageRequest):
 
     Raises:
@@ -230,5 +246,6 @@ async def asyncio(
         session_id=session_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

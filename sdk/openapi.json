@@ -2564,7 +2564,7 @@
           },
           "name": {
             "type": "string",
-            "example": "Default project"
+            "example": "Default"
           }
         },
         "required": [
@@ -2690,6 +2690,21 @@
         "required": [
           "name"
         ]
+      },
+      "UpdateProjectRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Research workspace"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
       },
       "AgentListResponse": {
         "type": "object",
@@ -3005,12 +3020,18 @@
           "version": {
             "type": "integer",
             "example": 1
+          },
+          "schedulable": {
+            "type": "boolean",
+            "description": "Whether an active Inbox Trigger can currently resolve a compatible execution environment.",
+            "example": true
           }
         },
         "required": [
           "phase",
           "currentVersionId",
-          "version"
+          "version",
+          "schedulable"
         ]
       },
       "ResourcePhase": {
@@ -5829,7 +5850,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -5922,7 +5943,7 @@
           "maxLength": 16000
         },
         "example": {
-          "AK_API_URL": "https://ak.example.com"
+          "SERVICE_API_URL": "https://service.example.com"
         }
       },
       "EnvFromEntry": {
@@ -6364,7 +6385,7 @@
                           "type": "string"
                         },
                         "example": {
-                          "app": "agent-kanban"
+                          "app": "automation-service"
                         }
                       },
                       "annotations": {
@@ -6596,7 +6617,7 @@
                           "type": "string"
                         },
                         "example": {
-                          "app": "agent-kanban"
+                          "app": "automation-service"
                         }
                       },
                       "annotations": {
@@ -7382,7 +7403,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -7498,7 +7519,7 @@
               "type": "string"
             },
             "example": {
-              "app": "agent-kanban"
+              "app": "automation-service"
             }
           },
           "annotations": {
@@ -8823,7 +8844,19 @@
         ]
       }
     },
-    "parameters": {}
+    "parameters": {
+      "AmaProjectId": {
+        "name": "X-AMA-Project-ID",
+        "in": "header",
+        "required": false,
+        "x-cli-name": "project-id",
+        "description": "Selects an AMA project in the authenticated organization. Omit to use the default project.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
   },
   "paths": {
     "/api/v1/configz": {
@@ -8844,7 +8877,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "config"
       }
     },
     "/api/v1/auth/config": {
@@ -8878,7 +8912,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "auth-methods"
       }
     },
     "/api/v1/auth/sessions/current": {
@@ -8926,7 +8961,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "whoami"
       }
     },
     "/api/v1/projects": {
@@ -9008,7 +9044,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-projects"
       },
       "post": {
         "operationId": "createProject",
@@ -9063,8 +9100,19 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The project name already exists or the reserved Default name was used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "create-project"
       }
     },
     "/api/v1/projects/{projectId}": {
@@ -9133,7 +9181,177 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-project"
+      },
+      "patch": {
+        "operationId": "updateProject",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Rename a project",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "projects:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000001"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Renamed project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The project name already exists, or the Default project or name is immutable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "update-project"
+      },
+      "delete": {
+        "operationId": "deleteProject",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete an empty project",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "projects:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000001"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Project deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Project is the default project or still owns resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-project"
       }
     },
     "/api/v1/agents": {
@@ -9232,6 +9450,41 @@
             "description": "Exact Realmroot Agent actor id bound through the Agent Identity.",
             "name": "identityAgentId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ama",
+                "codex",
+                "claude-code",
+                "copilot"
+              ],
+              "description": "Exact runtime of the bound Realmroot Identity.",
+              "example": "codex"
+            },
+            "required": false,
+            "description": "Exact runtime of the bound Realmroot Identity.",
+            "name": "runtime",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter by current Inbox scheduling readiness.",
+              "example": "true"
+            },
+            "required": false,
+            "description": "Filter by current Inbox scheduling readiness.",
+            "name": "schedulable",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9274,8 +9527,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-agents"
       },
       "post": {
         "operationId": "createAgent",
@@ -9288,6 +9552,21 @@
             "oidcAccessToken": [
               "agents:write"
             ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -9341,6 +9620,16 @@
               }
             }
           },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "Identity already bound",
             "content": {
@@ -9351,7 +9640,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-agent"
       }
     },
     "/api/v1/agents/{agentId}": {
@@ -9377,6 +9667,9 @@
             "required": true,
             "name": "agentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9420,7 +9713,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-agent"
       },
       "patch": {
         "operationId": "updateAgent",
@@ -9445,6 +9739,9 @@
             "required": true,
             "name": "agentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -9518,7 +9815,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-agent"
       }
     },
     "/api/v1/agents/{agentId}/versions": {
@@ -9544,6 +9842,9 @@
             "required": true,
             "name": "agentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9587,7 +9888,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-agent-versions"
       }
     },
     "/api/v1/agents/{agentId}/versions/{version}": {
@@ -9623,6 +9925,9 @@
             "required": true,
             "name": "version",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9676,7 +9981,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-agent-version"
       }
     },
     "/api/v1/environments": {
@@ -9761,6 +10067,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9803,8 +10112,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-environments"
       },
       "post": {
         "operationId": "createEnvironment",
@@ -9817,6 +10137,21 @@
             "oidcAccessToken": [
               "environments:write"
             ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -9869,8 +10204,29 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "create-environment"
       }
     },
     "/api/v1/environments/{environmentId}": {
@@ -9896,6 +10252,9 @@
             "required": true,
             "name": "environmentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -9939,7 +10298,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-environment"
       },
       "patch": {
         "operationId": "updateEnvironment",
@@ -9964,6 +10324,9 @@
             "required": true,
             "name": "environmentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -10037,7 +10400,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-environment"
       }
     },
     "/api/v1/environments/{environmentId}/versions": {
@@ -10063,6 +10427,9 @@
             "required": true,
             "name": "environmentId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -10106,7 +10473,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-environment-versions"
       }
     },
     "/api/v1/environments/{environmentId}/versions/{version}": {
@@ -10142,6 +10510,9 @@
             "required": true,
             "name": "version",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -10195,7 +10566,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-environment-version"
       }
     },
     "/api/v1/identities": {
@@ -10280,6 +10652,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -10322,8 +10697,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-identities"
       },
       "post": {
         "operationId": "createIdentity",
@@ -10348,6 +10734,9 @@
             "required": true,
             "name": "idempotency-key",
             "in": "header"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -10401,6 +10790,16 @@
               }
             }
           },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "Conflict",
             "content": {
@@ -10421,7 +10820,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-identity"
       }
     },
     "/api/v1/identities/{identityId}": {
@@ -10446,6 +10846,9 @@
             "required": true,
             "name": "identityId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -10489,7 +10892,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-identity"
       },
       "patch": {
         "operationId": "updateIdentity",
@@ -10512,6 +10916,9 @@
             "required": true,
             "name": "identityId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -10580,7 +10987,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "archive-identity"
       }
     },
     "/api/v1/inbox-notifications": {
@@ -10647,7 +11055,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "receive-inbox-notification"
       }
     },
     "/api/v1/providers": {
@@ -10695,7 +11104,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-providers"
       }
     },
     "/api/v1/providers/models": {
@@ -10743,7 +11153,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-models"
       }
     },
     "/api/v1/providers/refresh": {
@@ -10792,7 +11203,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "refresh-model-catalog"
       }
     },
     "/api/v1/providers/{providerId}": {
@@ -10861,7 +11273,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-provider"
       }
     },
     "/api/v1/providers/{providerId}/models": {
@@ -10930,7 +11343,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-provider-models"
       }
     },
     "/api/v1/runners": {
@@ -10998,6 +11412,16 @@
               }
             }
           },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "Conflict",
             "content": {
@@ -11008,7 +11432,13 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-runner",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       },
       "get": {
         "operationId": "listRunners",
@@ -11115,6 +11545,9 @@
             "required": false,
             "name": "environmentId",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11157,8 +11590,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-runners"
       }
     },
     "/api/v1/runners/{runnerId}": {
@@ -11184,6 +11628,9 @@
             "required": true,
             "name": "runnerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11227,7 +11674,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-runner"
       },
       "patch": {
         "operationId": "updateRunner",
@@ -11251,6 +11699,9 @@
             "required": true,
             "name": "runnerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -11324,7 +11775,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-runner"
       }
     },
     "/api/v1/runners/{runnerId}/heartbeat": {
@@ -11350,6 +11802,9 @@
             "required": true,
             "name": "runnerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11393,7 +11848,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-runner-heartbeat"
       },
       "put": {
         "operationId": "putRunnerHeartbeat",
@@ -11417,6 +11873,9 @@
             "required": true,
             "name": "runnerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -11490,12 +11949,14 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-runner-heartbeat"
       }
     },
     "/api/v1/runners/{runnerId}/channel": {
       "get": {
         "operationId": "connectRunnerChannel",
+        "x-cli-ignore": true,
         "tags": [
           "Runners"
         ],
@@ -11516,6 +11977,9 @@
             "required": true,
             "name": "runnerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11675,6 +12139,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11717,8 +12184,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-work-items"
       }
     },
     "/api/v1/work-items/{workItemId}": {
@@ -11744,6 +12222,9 @@
             "required": true,
             "name": "workItemId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11797,7 +12278,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-work-item"
       }
     },
     "/api/v1/leases": {
@@ -11885,7 +12367,13 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "claim-work-item",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       },
       "get": {
         "operationId": "listLeases",
@@ -11946,6 +12434,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -11988,8 +12479,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-leases"
       }
     },
     "/api/v1/leases/{leaseId}": {
@@ -12015,6 +12517,9 @@
             "required": true,
             "name": "leaseId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12058,7 +12563,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-lease"
       },
       "patch": {
         "operationId": "updateLease",
@@ -12082,6 +12588,9 @@
             "required": true,
             "name": "leaseId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -12155,7 +12664,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-lease"
       }
     },
     "/api/v1/budgets": {
@@ -12202,8 +12712,24 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-budgets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       },
       "post": {
         "operationId": "createBudget",
@@ -12268,8 +12794,24 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "create-budget",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       }
     },
     "/api/v1/budgets/{budgetId}": {
@@ -12295,6 +12837,9 @@
             "required": true,
             "name": "budgetId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12338,7 +12883,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-budget"
       },
       "patch": {
         "operationId": "updateBudget",
@@ -12362,6 +12908,9 @@
             "required": true,
             "name": "budgetId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -12425,7 +12974,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-budget"
       },
       "delete": {
         "operationId": "deleteBudget",
@@ -12449,6 +12999,9 @@
             "required": true,
             "name": "budgetId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12485,7 +13038,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "delete-budget"
       }
     },
     "/api/v1/connectors": {
@@ -12617,7 +13171,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-connectors"
       }
     },
     "/api/v1/connectors/{connectorId}": {
@@ -12686,7 +13241,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-connector"
       }
     },
     "/api/v1/usage-records": {
@@ -12779,6 +13335,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12827,8 +13386,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-usage-records"
       }
     },
     "/api/v1/usage-records/{recordId}": {
@@ -12854,6 +13424,9 @@
             "required": true,
             "name": "recordId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12897,7 +13470,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-usage-record"
       }
     },
     "/api/v1/usage-summary": {
@@ -12949,6 +13523,9 @@
             "required": false,
             "name": "to",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -12991,8 +13568,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "read-usage-summary"
       }
     },
     "/api/v1/audit-records": {
@@ -13146,7 +13734,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-audit-records"
       }
     },
     "/api/v1/audit-records/{recordId}": {
@@ -13215,7 +13804,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-audit-record"
       }
     },
     "/api/v1/triggers": {
@@ -13313,7 +13903,13 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-trigger",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       },
       "get": {
         "operationId": "listTriggers",
@@ -13411,6 +14007,9 @@
             "description": "Filter by the operational toggle.",
             "name": "suspend",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -13453,8 +14052,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-triggers"
       }
     },
     "/api/v1/triggers/{triggerId}": {
@@ -13480,6 +14090,9 @@
             "required": true,
             "name": "triggerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -13523,7 +14136,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-trigger"
       },
       "patch": {
         "operationId": "updateTrigger",
@@ -13548,6 +14162,9 @@
             "required": true,
             "name": "triggerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -13631,7 +14248,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-trigger"
       },
       "delete": {
         "operationId": "deleteTrigger",
@@ -13656,6 +14274,9 @@
             "required": true,
             "name": "triggerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -13702,7 +14323,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "delete-trigger"
       }
     },
     "/api/v1/triggers/{triggerId}/runs": {
@@ -13797,6 +14419,9 @@
             "required": false,
             "name": "state",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -13850,7 +14475,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-trigger-runs"
       },
       "post": {
         "operationId": "createTriggerRun",
@@ -13875,6 +14501,9 @@
             "required": true,
             "name": "triggerId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -13948,7 +14577,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "run-trigger"
       }
     },
     "/api/v1/triggers/{triggerId}/runs/{runId}": {
@@ -13983,6 +14613,9 @@
             "required": true,
             "name": "runId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14026,7 +14659,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-trigger-run"
       }
     },
     "/api/v1/sessions": {
@@ -14114,7 +14748,13 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-session",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       },
       "get": {
         "operationId": "listSessions",
@@ -14224,6 +14864,9 @@
             "required": false,
             "name": "labelSelector",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14266,8 +14909,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-sessions"
       }
     },
     "/api/v1/sessions/{sessionId}": {
@@ -14293,6 +14947,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14336,7 +14993,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-session"
       },
       "patch": {
         "operationId": "updateSession",
@@ -14361,6 +15019,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -14434,12 +15095,14 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-session"
       }
     },
     "/api/v1/sessions/{sessionId}/socket": {
       "get": {
         "operationId": "connectSessionSocket",
+        "x-cli-ignore": true,
         "tags": [
           "Sessions"
         ],
@@ -14463,6 +15126,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14556,6 +15222,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14609,7 +15278,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-session-messages"
       },
       "post": {
         "operationId": "createSessionMessage",
@@ -14633,6 +15303,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -14716,7 +15389,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "send-session-message"
       }
     },
     "/api/v1/sessions/{sessionId}/messages/{messageId}": {
@@ -14751,6 +15425,9 @@
             "required": true,
             "name": "messageId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14794,7 +15471,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-session-message"
       }
     },
     "/api/v1/sessions/{sessionId}/events": {
@@ -14899,6 +15577,9 @@
             "required": false,
             "name": "createdTo",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -14962,7 +15643,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-session-events"
       },
       "post": {
         "operationId": "createSessionEvents",
@@ -14987,6 +15669,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -15050,7 +15735,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "append-session-events"
       }
     },
     "/api/v1/sessions/{sessionId}/approvals": {
@@ -15076,6 +15762,9 @@
             "required": true,
             "name": "sessionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -15119,7 +15808,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-session-approvals"
       }
     },
     "/api/v1/sessions/{sessionId}/approvals/{approvalId}": {
@@ -15155,6 +15845,9 @@
             "required": true,
             "name": "approvalId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -15198,7 +15891,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-session-approval"
       },
       "patch": {
         "operationId": "decideSessionApproval",
@@ -15233,6 +15927,9 @@
             "required": true,
             "name": "approvalId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -15296,7 +15993,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "decide-session-approval"
       }
     },
     "/api/v1/memory-stores": {
@@ -15381,6 +16079,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -15423,8 +16124,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-memory-stores"
       },
       "post": {
         "operationId": "createMemoryStore",
@@ -15489,8 +16201,24 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "create-memory-store",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       }
     },
     "/api/v1/memory-stores/{storeId}": {
@@ -15516,6 +16244,9 @@
             "required": true,
             "name": "storeId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -15559,7 +16290,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-memory-store"
       },
       "patch": {
         "operationId": "updateMemoryStore",
@@ -15583,6 +16315,9 @@
             "required": true,
             "name": "storeId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -15646,7 +16381,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-memory-store"
       }
     },
     "/api/v1/memory-stores/{storeId}/memories": {
@@ -15694,6 +16430,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -15747,7 +16486,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-memory-store-memories"
       },
       "post": {
         "operationId": "createMemoryStoreMemory",
@@ -15771,6 +16511,9 @@
             "required": true,
             "name": "storeId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -15844,7 +16587,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-memory-store-memory"
       }
     },
     "/api/v1/memory-stores/{storeId}/memories/{memoryId}": {
@@ -15879,6 +16623,9 @@
             "required": true,
             "name": "memoryId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -15952,7 +16699,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-memory-store-memory"
       },
       "delete": {
         "operationId": "deleteMemoryStoreMemory",
@@ -15985,6 +16733,9 @@
             "required": true,
             "name": "memoryId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -16021,7 +16772,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "delete-memory-store-memory"
       }
     },
     "/api/v1/vaults": {
@@ -16106,6 +16858,9 @@
             "required": false,
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -16148,8 +16903,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "list-vaults"
       },
       "post": {
         "operationId": "createVault",
@@ -16214,8 +16980,24 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The selected AMA project does not exist in the authenticated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        }
+        },
+        "x-cli-name": "create-vault",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ]
       }
     },
     "/api/v1/vaults/{vaultId}": {
@@ -16241,6 +17023,9 @@
             "required": true,
             "name": "vaultId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -16284,7 +17069,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-vault"
       },
       "patch": {
         "operationId": "updateVault",
@@ -16309,6 +17095,9 @@
             "required": true,
             "name": "vaultId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -16382,7 +17171,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-vault"
       }
     },
     "/api/v1/vaults/{vaultId}/credentials": {
@@ -16474,6 +17264,9 @@
             "required": false,
             "name": "state",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -16527,7 +17320,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-vault-credentials"
       },
       "post": {
         "operationId": "createVaultCredential",
@@ -16551,6 +17345,9 @@
             "required": true,
             "name": "vaultId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -16624,7 +17421,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "create-vault-credential"
       }
     },
     "/api/v1/vaults/{vaultId}/credentials/{credentialId}": {
@@ -16659,6 +17457,9 @@
             "required": true,
             "name": "credentialId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -16702,7 +17503,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-vault-credential"
       },
       "patch": {
         "operationId": "updateVaultCredential",
@@ -16736,6 +17538,9 @@
             "required": true,
             "name": "credentialId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -16799,7 +17604,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-vault-credential"
       },
       "put": {
         "operationId": "updateVaultCredentialSecret",
@@ -16833,6 +17639,9 @@
             "required": true,
             "name": "credentialId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "requestBody": {
@@ -16906,7 +17715,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "update-vault-credential-secret"
       }
     },
     "/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions": {
@@ -16997,6 +17807,9 @@
             "required": false,
             "name": "state",
             "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -17050,7 +17863,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "list-vault-credential-versions"
       }
     },
     "/api/v1/vaults/{vaultId}/credentials/{credentialId}/versions/{versionId}": {
@@ -17094,6 +17908,9 @@
             "required": true,
             "name": "versionId",
             "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
         "responses": {
@@ -17137,7 +17954,8 @@
               }
             }
           }
-        }
+        },
+        "x-cli-name": "read-vault-credential-version"
       }
     }
   }

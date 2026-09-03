@@ -16,6 +16,7 @@ const pythonModules = collectPythonModules(path.join(ROOT, 'sdk/python/ama_sdk/a
 validateSpec()
 rewriteTypeScriptGeneratedAuthBoundary()
 rewritePythonAuthenticatedClient()
+rewritePythonUnsetImports(path.join(ROOT, 'sdk/python/ama_sdk/api'))
 writeFileSync(path.join(ROOT, 'sdk/typescript/src/client.ts'), generateTypeScriptClient())
 writeFileSync(path.join(ROOT, 'sdk/go/ama/client.go'), generateGoClient())
 writeFileSync(path.join(ROOT, 'sdk/python/ama_sdk/facade.py'), generatePythonFacade())
@@ -102,6 +103,25 @@ class AuthenticatedClient(Client):
   writeFileSync(clientPath, `${source.slice(0, start)}${replacement}`)
 }
 
+function rewritePythonUnsetImports(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name)
+    if (entry.isDirectory()) {
+      rewritePythonUnsetImports(entryPath)
+      continue
+    }
+    if (!entry.name.endsWith('.py')) continue
+    const source = readFileSync(entryPath, 'utf8')
+    if (!source.includes('| Unset') || /from \.{2,}types import [^\n]*\bUnset\b/.test(source)) continue
+    const updated = source.replace(
+      /from (\.{2,}types) import ([^\n]+)/,
+      (_match, modulePath, imports) => `from ${modulePath} import ${imports}, Unset`,
+    )
+    if (updated === source) throw new Error(`Generated Python Unset import was not found in ${entryPath}`)
+    writeFileSync(entryPath, updated)
+  }
+}
+
 function normalizeFacades(document) {
   if (document.facades) {
     return document.facades
@@ -120,10 +140,11 @@ function collectOperations(document) {
   for (const [operationPath, methods] of Object.entries(document.paths)) {
     for (const [httpMethod, operation] of Object.entries(methods)) {
       if (!operation.operationId) continue
-      const parameters = operation.parameters ?? []
+      const parameters = (operation.parameters ?? []).map((parameter) => resolveParameter(document, parameter))
       const pathParams = parameters.filter((param) => param.in === 'path')
       const queryParams = parameters.filter((param) => param.in === 'query')
-      const headerParams = parameters.filter((param) => param.in === 'header')
+      const generatedHeaderParams = parameters.filter((param) => param.in === 'header')
+      const headerParams = generatedHeaderParams.filter((param) => param.name.toLowerCase() !== 'x-ama-project-id')
       const bodyType = requestBodyType(operation)
       const success = successResponse(operation)
       result.set(operation.operationId, {
@@ -134,6 +155,7 @@ function collectOperations(document) {
         pathParams,
         queryParams,
         headerParams,
+        hasGeneratedRequestParams: queryParams.length > 0 || generatedHeaderParams.length > 0,
         bodyType,
         success,
         errorStatuses: Object.keys(operation.responses ?? {}).filter((status) => Number(status) >= 400),
@@ -141,6 +163,15 @@ function collectOperations(document) {
     }
   }
   return result
+}
+
+function resolveParameter(document, parameter) {
+  if (!parameter.$ref) return parameter
+  const prefix = '#/components/parameters/'
+  if (!parameter.$ref.startsWith(prefix)) throw new Error(`Unsupported OpenAPI parameter reference: ${parameter.$ref}`)
+  const resolved = document.components?.parameters?.[parameter.$ref.slice(prefix.length)]
+  if (!resolved) throw new Error(`Missing OpenAPI parameter reference: ${parameter.$ref}`)
+  return resolved
 }
 
 function requestBodyType(operation) {
@@ -580,27 +611,39 @@ function generateGoMethod(serviceName, method) {
   }
   const rawName = `${pascal(operation.id)}WithResponse`
   const pathArgs = operation.pathParams.map((param) => `${goParamName(param.name)} ${goScalarType(param.schema)}`)
-  const requestParamsArg =
-    operation.queryParams.length > 0 || operation.headerParams.length > 0
-      ? `params *${pascal(operation.id)}Params`
-      : undefined
+  const facadeHasRequestParams = operation.queryParams.length > 0 || operation.headerParams.length > 0
+  const requestParamsArg = facadeHasRequestParams ? `params *${pascal(operation.id)}Params` : undefined
   const bodyArg = operation.bodyType ? `body ${operation.bodyType}` : undefined
   const args = ['ctx context.Context', ...pathArgs, requestParamsArg, bodyArg].filter(Boolean).join(', ')
   const rawArgs = ['ctx', ...operation.pathParams.map((param) => goParamName(param.name))]
-  if (operation.queryParams.length > 0 || operation.headerParams.length > 0) rawArgs.push('params')
+  if (operation.hasGeneratedRequestParams) rawArgs.push(facadeHasRequestParams ? 'params' : 'nil')
   if (operation.bodyType) rawArgs.push('body')
   const errors = operation.errorStatuses.map((status) => `response.JSON${status}`).join(', ')
   const returnType = operation.success.empty ? 'error' : `(*${operation.success.type}, error)`
   const success = operation.success.empty
     ? `return unwrapEmpty(response.StatusCode(), response.Body${errors ? `, ${errors}` : ''})`
     : `return unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})`
+  const optionalHeaderOnly =
+    operation.queryParams.length === 0 &&
+    operation.headerParams.length > 0 &&
+    operation.headerParams.every((param) => !param.required)
+  if (optionalHeaderOnly) {
+    const baseArgs = ['ctx context.Context', ...pathArgs, bodyArg].filter(Boolean).join(', ')
+    const baseCallArgs = [
+      'ctx',
+      ...operation.pathParams.map((param) => goParamName(param.name)),
+      'nil',
+      ...(operation.bodyType ? ['body'] : []),
+    ]
+    return `func (s ${serviceName}) ${pascal(method.name)}(${baseArgs}) ${returnType} {\n\treturn s.${pascal(method.name)}WithParams(${baseCallArgs.join(', ')})\n}\n\nfunc (s ${serviceName}) ${pascal(method.name)}WithParams(${args}) ${returnType} {\n\tresponse, err := s.client.raw.${rawName}(${rawArgs.join(', ')})\n\tif err != nil {\n\t\t${operation.success.empty ? 'return err' : 'return nil, err'}\n\t}\n\t${success}\n}\n`
+  }
   return `func (s ${serviceName}) ${pascal(method.name)}(${args}) ${returnType} {\n\tresponse, err := s.client.raw.${rawName}(${rawArgs.join(', ')})\n\tif err != nil {\n\t\t${operation.success.empty ? 'return err' : 'return nil, err'}\n\t}\n\t${success}\n}\n`
 }
 
 function generateGoCreateRawEventsMethod(serviceName) {
   const operation = operations.get('createSessionEvents')
   const errors = operation.errorStatuses.map((status) => `response.JSON${status}`).join(', ')
-  return `func (s ${serviceName}) CreateRawEvents(ctx context.Context, sessionID string, events []JSON) (*SessionEventsAccepted, error) {\n\tbody, err := json.Marshal(struct {\n\t\tEvents []JSON \`json:"events"\`\n\t}{Events: events})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresponse, err := s.client.raw.CreateSessionEventsWithBodyWithResponse(\n\t\tctx,\n\t\tsessionID,\n\t\t"application/json",\n\t\tbytes.NewReader(body),\n\t)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})\n}\n`
+  return `func (s ${serviceName}) CreateRawEvents(ctx context.Context, sessionID string, events []JSON) (*SessionEventsAccepted, error) {\n\tbody, err := json.Marshal(struct {\n\t\tEvents []JSON \`json:"events"\`\n\t}{Events: events})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresponse, err := s.client.raw.CreateSessionEventsWithBodyWithResponse(\n\t\tctx,\n\t\tsessionID,\n\t\tnil,\n\t\t"application/json",\n\t\tbytes.NewReader(body),\n\t)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})\n}\n`
 }
 
 function goResourceName(name) {
@@ -674,11 +717,21 @@ function generatePythonMethod(method) {
   const callArgs = operation.pathParams.map((param) => `${pythonName(param.name)}=${pythonName(param.name)}`)
   callArgs.push('client=self._client')
   if (operation.bodyType) callArgs.push('body=body')
-  for (const param of operation.headerParams) {
+  for (const param of operation.headerParams.filter((item) => item.required)) {
     callArgs.push(`${pythonName(param.name)}=${pythonName(param.name)}`)
   }
+  const optionalHeaders = operation.headerParams.filter((param) => !param.required)
+  if (optionalHeaders.length > 0) callArgs.push('**header_kwargs')
   if (operation.queryParams.length > 0) callArgs.push('**query')
-  return `def ${pythonName(method.name)}(${args}) -> Any:\n    return _unwrap(${moduleAlias}.sync_detailed(${callArgs.join(', ')}))`
+  const headerSetup = optionalHeaders
+    .map(
+      (param) =>
+        `if ${pythonName(param.name)} is not None:\n        header_kwargs["${pythonName(param.name)}"] = ${pythonName(param.name)}`,
+    )
+    .join('\n    ')
+  return `def ${pythonName(method.name)}(${args}) -> Any:${
+    optionalHeaders.length > 0 ? `\n    header_kwargs: dict[str, str] = {}\n    ${headerSetup}` : ''
+  }\n    return _unwrap(${moduleAlias}.sync_detailed(${callArgs.join(', ')}))`
 }
 
 function isWebSocketOperation(operationId) {

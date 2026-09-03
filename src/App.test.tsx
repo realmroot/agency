@@ -695,6 +695,9 @@ describe('App', () => {
     fireEvent.click(primaryNav().getByRole('link', { name: 'Settings' }))
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeTruthy()
     expect(window.location.pathname).toBe('/settings/providers')
+    fireEvent.click(screen.getByRole('tab', { name: 'Projects' }))
+    expect(window.location.pathname).toBe('/settings/projects')
+    expect(await screen.findByRole('heading', { name: 'Project management' })).toBeTruthy()
     fireEvent.click(screen.getByRole('tab', { name: 'MCP' }))
     expect(window.location.pathname).toBe('/settings/mcp')
     expect(await screen.findByText('MCP connectors')).toBeTruthy()
@@ -711,6 +714,7 @@ describe('App', () => {
 
     fireEvent.click(primaryNav().getByRole('link', { name: 'Settings' }))
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Projects' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Providers' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'MCP' })).toBeTruthy()
   })

@@ -1,6 +1,6 @@
 # Product Decisions
 
-These decisions define the intended end state for Any Managed Agents.
+These decisions define the intended end state for Enbor, the open infrastructure for durable agents. Existing `AMA` names in this document are compatibility-sensitive technical identifiers, not the product name.
 
 ## Environment and Sandbox
 

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_identity_request import CreateIdentityRequest
 from ...models.error_response import ErrorResponse
 from ...models.identity import Identity
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,10 +20,14 @@ def _get_kwargs(
     *,
     body: CreateIdentityRequest,
     idempotency_key: str,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
     headers["idempotency-key"] = idempotency_key
+
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
 
 
 
@@ -73,6 +78,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
@@ -107,12 +119,14 @@ def sync_detailed(
     client: AuthenticatedClient,
     body: CreateIdentityRequest,
     idempotency_key: str,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Identity]:
     """ Create an identity
 
     Args:
         idempotency_key (str):
+        x_ama_project_id (str | Unset):
         body (CreateIdentityRequest):
 
     Raises:
@@ -127,6 +141,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -141,12 +156,14 @@ def sync(
     client: AuthenticatedClient,
     body: CreateIdentityRequest,
     idempotency_key: str,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Identity | None:
     """ Create an identity
 
     Args:
         idempotency_key (str):
+        x_ama_project_id (str | Unset):
         body (CreateIdentityRequest):
 
     Raises:
@@ -162,6 +179,7 @@ def sync(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -170,12 +188,14 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     body: CreateIdentityRequest,
     idempotency_key: str,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Identity]:
     """ Create an identity
 
     Args:
         idempotency_key (str):
+        x_ama_project_id (str | Unset):
         body (CreateIdentityRequest):
 
     Raises:
@@ -190,6 +210,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -204,12 +225,14 @@ async def asyncio(
     client: AuthenticatedClient,
     body: CreateIdentityRequest,
     idempotency_key: str,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Identity | None:
     """ Create an identity
 
     Args:
         idempotency_key (str):
+        x_ama_project_id (str | Unset):
         body (CreateIdentityRequest):
 
     Raises:
@@ -225,5 +248,6 @@ async def asyncio(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

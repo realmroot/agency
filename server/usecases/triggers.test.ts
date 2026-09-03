@@ -131,7 +131,7 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
       mcpConnectors: [],
       identity: null,
     },
-    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1 },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, schedulable: false },
   }
   return { triggers, agents: { find: async () => agent } } as unknown as Deps
 }
@@ -163,7 +163,7 @@ function identityAgent(runtime: 'ama' | 'codex' | 'claude-code' | 'copilot'): Ag
         credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
       },
     },
-    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1 },
+    status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, schedulable: false },
   }
 }
 
@@ -303,7 +303,7 @@ describe('[spec: triggers/create] createTrigger', () => {
           ...baseConfig({
             template: {
               ...baseConfig().template,
-              spec: { ...baseConfig().template.spec, env: { AK_API_TOKEN: 'x' } },
+              spec: { ...baseConfig().template.spec, env: { DOWNSTREAM_API_TOKEN: 'x' } },
             },
           }),
           nextDueAt: null,

@@ -1,6 +1,5 @@
 import {
   type ArrayItem,
-  jsonArg,
   type ListItem,
   type ListOptions,
   type ListResponse,
@@ -35,7 +34,8 @@ export const agentsApi = {
   listAgents: (options: AgentListOptions = {}) =>
     rpcRequest<ListResponse<Agent>>(v1.agents.$get(queryArg<typeof v1.agents.$get>(options))),
   readAgent: (id: string) => rpcRequest<Agent>(v1.agents[':agentId'].$get({ param: { agentId: id } })),
-  createAgent: (input: AgentInput) => rpcRequest<Agent>(v1.agents.$post(jsonArg<typeof v1.agents.$post>(input))),
+  createAgent: (input: AgentInput) =>
+    rpcRequest<Agent>(v1.agents.$post({ json: input, header: { 'idempotency-key': crypto.randomUUID() } })),
   updateAgent: (id: string, input: Partial<AgentInput> & { archived?: boolean }) =>
     rpcRequest<Agent>(
       v1.agents[':agentId'].$patch({

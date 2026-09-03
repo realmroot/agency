@@ -50,8 +50,10 @@ from .api.memory_stores import read_memory_store as read_memory_store_api
 from .api.memory_stores import update_memory_store as update_memory_store_api
 from .api.memory_stores import update_memory_store_memory as update_memory_store_memory_api
 from .api.projects import create_project as create_project_api
+from .api.projects import delete_project as delete_project_api
 from .api.projects import list_projects as list_projects_api
 from .api.projects import read_project as read_project_api
+from .api.projects import update_project as update_project_api
 from .api.providers import list_models as list_models_api
 from .api.providers import list_provider_models as list_provider_models_api
 from .api.providers import list_providers as list_providers_api
@@ -390,6 +392,12 @@ class _ProjectsResource:
     def get(self, project_id: str) -> Any:
         return _unwrap(read_project_api.sync_detailed(project_id=project_id, client=self._client))
 
+    def update(self, project_id: str, body: Any) -> Any:
+        return _unwrap(update_project_api.sync_detailed(project_id=project_id, client=self._client, body=body))
+
+    def delete(self, project_id: str) -> Any:
+        return _unwrap(delete_project_api.sync_detailed(project_id=project_id, client=self._client))
+
 class _AgentsResource:
     def __init__(self, owner: _ClientCore) -> None:
         self._owner = owner
@@ -398,8 +406,11 @@ class _AgentsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_agents_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_agent_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, agent_id: str) -> Any:
         return _unwrap(read_agent_api.sync_detailed(agent_id=agent_id, client=self._client))
@@ -438,8 +449,11 @@ class _EnvironmentsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_environments_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_environment_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_environment_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, environment_id: str) -> Any:
         return _unwrap(read_environment_api.sync_detailed(environment_id=environment_id, client=self._client))

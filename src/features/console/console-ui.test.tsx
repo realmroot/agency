@@ -517,6 +517,32 @@ describe('[spec: console/shell] ConsoleShell', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Create project' }))
     await waitFor(() => expect(screen.getByText(/A project isolates its own/)).toBeTruthy())
   })
+
+  it('[spec: web-console/project-switcher] links to project management from the switcher', async () => {
+    stubMenuPointerEvents()
+
+    const projects = [buildProject({ id: 'p1', name: 'Alpha' })]
+    const auth = buildAuth({ project: { id: 'p1', name: 'Alpha' } })
+
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <MemoryRouter>
+          <ConsoleContextProvider value={{ auth, projects, selectProject: vi.fn() }}>
+            <ConsoleShell>
+              <div />
+            </ConsoleShell>
+          </ConsoleContextProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    const trigger = screen.getAllByLabelText('Switch project')[0]!
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.click(trigger)
+
+    const manageProjects = await screen.findByRole('menuitem', { name: 'Manage projects' })
+    expect(manageProjects.getAttribute('href')).toBe('/settings/projects')
+  })
 })
 
 // ─── CreateProjectSheet.tsx ──────────────────────────────────────────────────

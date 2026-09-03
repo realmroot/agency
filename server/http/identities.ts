@@ -213,7 +213,7 @@ export function registerIdentityRoutes(routes: Routes) {
       const directToken = subjectToken(c.req.raw, null)
       const token = directToken ?? (await webSessionAccessToken(c))
       if (!token)
-        return c.json({ error: { type: 'forbidden', message: 'A current Realmroot User grant is required.' } }, 403)
+        return c.json({ error: { type: 'forbidden', message: 'A current Realmroot Resource grant is required.' } }, 403)
       try {
         const identity = await createIdentity(c.get('deps'), auth, {
           name: body.metadata.name,

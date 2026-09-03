@@ -11,6 +11,8 @@ from ... import errors
 from ...models.agent_list_response import AgentListResponse
 from ...models.error_response import ErrorResponse
 from ...models.list_agents_archived import ListAgentsArchived
+from ...models.list_agents_runtime import ListAgentsRuntime
+from ...models.list_agents_schedulable import ListAgentsSchedulable
 from ...types import UNSET, Unset
 from typing import cast
 import datetime
@@ -26,8 +28,15 @@ def _get_kwargs(
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
+    runtime: ListAgentsRuntime | Unset = UNSET,
+    schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -58,6 +67,18 @@ def _get_kwargs(
 
     params["identityAgentId"] = identity_agent_id
 
+    json_runtime: str | Unset = UNSET
+    if not isinstance(runtime, Unset):
+        json_runtime = runtime.value
+
+    params["runtime"] = json_runtime
+
+    json_schedulable: str | Unset = UNSET
+    if not isinstance(schedulable, Unset):
+        json_schedulable = schedulable.value
+
+    params["schedulable"] = json_schedulable
+
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -69,6 +90,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -102,6 +124,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -127,6 +156,9 @@ def sync_detailed(
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
+    runtime: ListAgentsRuntime | Unset = UNSET,
+    schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -142,6 +174,11 @@ def sync_detailed(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
+        runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
+            Example: codex.
+        schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
+            Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -160,6 +197,9 @@ created_to=created_to,
 limit=limit,
 cursor=cursor,
 identity_agent_id=identity_agent_id,
+runtime=runtime,
+schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -179,6 +219,9 @@ def sync(
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
+    runtime: ListAgentsRuntime | Unset = UNSET,
+    schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -194,6 +237,11 @@ def sync(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
+        runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
+            Example: codex.
+        schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
+            Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -213,6 +261,9 @@ created_to=created_to,
 limit=limit,
 cursor=cursor,
 identity_agent_id=identity_agent_id,
+runtime=runtime,
+schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -226,6 +277,9 @@ async def asyncio_detailed(
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
+    runtime: ListAgentsRuntime | Unset = UNSET,
+    schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -241,6 +295,11 @@ async def asyncio_detailed(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
+        runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
+            Example: codex.
+        schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
+            Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -259,6 +318,9 @@ created_to=created_to,
 limit=limit,
 cursor=cursor,
 identity_agent_id=identity_agent_id,
+runtime=runtime,
+schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -278,6 +340,9 @@ async def asyncio(
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
+    runtime: ListAgentsRuntime | Unset = UNSET,
+    schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -293,6 +358,11 @@ async def asyncio(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
+        runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
+            Example: codex.
+        schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
+            Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -312,5 +382,8 @@ created_to=created_to,
 limit=limit,
 cursor=cursor,
 identity_agent_id=identity_agent_id,
+runtime=runtime,
+schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

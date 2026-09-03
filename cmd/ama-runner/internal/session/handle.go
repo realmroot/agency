@@ -132,14 +132,15 @@ func NewSandboxHandle(
 
 func (h *SandboxHandle) Close(ctx context.Context) error {
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	if h.workspaceClosed {
-		h.mu.Unlock()
 		return nil
 	}
+	if err := h.workspace.Cleanup(ctx); err != nil {
+		return err
+	}
 	h.workspaceClosed = true
-	workspace := h.workspace
-	h.mu.Unlock()
-	return workspace.Cleanup(ctx)
+	return nil
 }
 
 func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (ama.JSON, error) {

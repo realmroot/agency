@@ -10,14 +10,21 @@ from ... import errors
 
 from ...models.budget import Budget
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
     budget_id: str,
+    *,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -30,6 +37,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -82,12 +90,14 @@ def sync_detailed(
     budget_id: str,
     *,
     client: AuthenticatedClient,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Budget | ErrorResponse]:
     """ Read a budget
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -100,6 +110,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         budget_id=budget_id,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -113,12 +124,14 @@ def sync(
     budget_id: str,
     *,
     client: AuthenticatedClient,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Budget | ErrorResponse | None:
     """ Read a budget
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -132,6 +145,7 @@ def sync(
     return sync_detailed(
         budget_id=budget_id,
 client=client,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -139,12 +153,14 @@ async def asyncio_detailed(
     budget_id: str,
     *,
     client: AuthenticatedClient,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Budget | ErrorResponse]:
     """ Read a budget
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,6 +173,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         budget_id=budget_id,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -170,12 +187,14 @@ async def asyncio(
     budget_id: str,
     *,
     client: AuthenticatedClient,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Budget | ErrorResponse | None:
     """ Read a budget
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -189,5 +208,6 @@ async def asyncio(
     return (await asyncio_detailed(
         budget_id=budget_id,
 client=client,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_trigger_request import CreateTriggerRequest
 from ...models.error_response import ErrorResponse
 from ...models.trigger import Trigger
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -110,11 +115,13 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
     """ Create a trigger
 
     Args:
+        x_ama_project_id (str | Unset):
         body (CreateTriggerRequest):
 
     Raises:
@@ -128,6 +135,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -141,11 +149,13 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
     """ Create a trigger
 
     Args:
+        x_ama_project_id (str | Unset):
         body (CreateTriggerRequest):
 
     Raises:
@@ -160,6 +170,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -167,11 +178,13 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
     """ Create a trigger
 
     Args:
+        x_ama_project_id (str | Unset):
         body (CreateTriggerRequest):
 
     Raises:
@@ -185,6 +198,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -198,11 +212,13 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
     """ Create a trigger
 
     Args:
+        x_ama_project_id (str | Unset):
         body (CreateTriggerRequest):
 
     Raises:
@@ -217,5 +233,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

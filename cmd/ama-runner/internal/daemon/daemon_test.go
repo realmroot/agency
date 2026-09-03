@@ -444,6 +444,41 @@ func (ch *fakeSessionChannel) writtenMessages() []ama.JSON {
 	return messages
 }
 
+func assertRunnerEventMessages(t *testing.T, messages []ama.JSON) {
+	t.Helper()
+	activeSessionFrames := 0
+	runnerEventFrames := 0
+	for _, message := range messages {
+		switch message["type"] {
+		case "runner.sessions.active":
+			activeSessionFrames++
+			if message["runnerId"] != "runner_1" {
+				t.Fatalf("expected active-session frame for runner_1, got %#v", message)
+			}
+			if _, ok := message["sessionIds"].([]any); !ok {
+				t.Fatalf("expected active-session frame to include sessionIds, got %#v", message)
+			}
+		case "runner.event":
+			runnerEventFrames++
+			sessionID, _ := message["sessionId"].(string)
+			record, ok := message["record"].(map[string]any)
+			eventID, _ := record["id"].(string)
+			eventType, _ := record["type"].(string)
+			if !ok || sessionID == "" || eventID == "" || eventType == "" || record["sessionId"] != sessionID {
+				t.Fatalf("expected valid runner event envelope, got %#v", message)
+			}
+		default:
+			t.Fatalf("expected runner event or active-session frame, got %#v", message)
+		}
+	}
+	if activeSessionFrames != 1 {
+		t.Fatalf("expected one active-session handshake frame, got %d in %#v", activeSessionFrames, messages)
+	}
+	if runnerEventFrames == 0 {
+		t.Fatalf("expected at least one runner event frame, got %#v", messages)
+	}
+}
+
 func (a *fakeAdapter) Execute(ctx context.Context, request sandbox.ToolRequest) (sandbox.ToolResult, error) {
 	a.mu.Lock()
 	a.requests = append(a.requests, request)
@@ -730,11 +765,7 @@ func TestRunOnceDispatchesCodexRuntimeThroughAdapterAndCompletesSessionLease(t *
 			t.Fatalf("expected channel/uploaded events to include %q, got %v", want, gotTypes)
 		}
 	}
-	for _, message := range hubChannel.writtenMessages() {
-		if message["type"] != "runner.event" {
-			t.Fatalf("expected codex event to use runner session channel envelope, got %#v", message)
-		}
-	}
+	assertRunnerEventMessages(t, hubChannel.writtenMessages())
 	serializedEvents := mustJSON(t, hubChannel.writtenMessages())
 	if strings.Contains(serializedEvents, "AMA_TOKEN") {
 		t.Fatalf("expected safe codex environment, got %s", serializedEvents)
@@ -760,7 +791,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 			"memoryRef": "ama://memories/memstore_1",
 			"readOnly":  false,
 			"files": []any{ama.JSON{
-				"path":    "ak-maintainer-heartbeat.md",
+				"path":    "downstream-heartbeat.md",
 				"content": "initial heartbeat\n",
 			}},
 		}},
@@ -770,7 +801,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: ama.JSON{"exitCode": 0},
 		inspect: func(request runtime.Request) error {
-			memoryPath := filepath.Join(request.WorkDir, ".ama", "memory-stores", "memstore_1", "ak-maintainer-heartbeat.md")
+			memoryPath := filepath.Join(request.WorkDir, ".ama", "memory-stores", "memstore_1", "downstream-heartbeat.md")
 			data, err := os.ReadFile(memoryPath)
 			if err != nil {
 				return err
@@ -806,7 +837,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 		t.Fatalf("expected one memory snapshot, got %#v", store)
 	}
 	memory, ok := memories[0].(map[string]any)
-	if !ok || memory["path"] != "ak-maintainer-heartbeat.md" || memory["content"] != "updated heartbeat\n" {
+	if !ok || memory["path"] != "downstream-heartbeat.md" || memory["content"] != "updated heartbeat\n" {
 		t.Fatalf("expected updated memory content, got %#v", memory)
 	}
 }
@@ -2356,12 +2387,7 @@ func TestRunOnceDispatchesCopilotRuntimeThroughAdapter(t *testing.T) {
 		!strings.Contains(serializedStoredEvents, `"text":"copilot prompt"`) {
 		t.Fatalf("expected initial prompt to be durable in runner log, got %s", serializedStoredEvents)
 	}
-	for _, message := range hubChannel.writtenMessages() {
-		record, _ := message["record"].(map[string]any)
-		if message["type"] != "runner.event" || record["id"] == "" {
-			t.Fatalf("expected copilot event to use runner event envelope, got %#v", message)
-		}
-	}
+	assertRunnerEventMessages(t, hubChannel.writtenMessages())
 	serializedEvents := mustJSON(t, hubChannel.writtenMessages())
 	for _, want := range []string{
 		"copilot prompt ok",

@@ -42,6 +42,13 @@ Feature: Environments
     And the API enforces auth and project tenancy
     And legacy hosting and runtime fields are rejected and removed legacy fields fail validation
 
+  @environments/create-idempotency @api
+  Scenario: Retry Environment creation without duplicating a Machine definition
+    Given a caller supplies an Idempotency-Key when creating an Environment
+    When the same project retries the same request with that key
+    Then AMA returns the originally created Environment with its original version
+    And reusing the key for different Environment data is rejected as a conflict
+
   @environments/api-validation @api
   Scenario: Validate environment policy and secret references over the API
     Given a signed-in user has access to a project

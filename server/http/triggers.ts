@@ -64,7 +64,7 @@ const TriggerSourceSchema = z
 
 const TriggerTemplateMetadataSchema = z
   .object({
-    labels: z.record(z.string(), z.string()).openapi({ example: { app: 'agent-kanban' } }),
+    labels: z.record(z.string(), z.string()).openapi({ example: { app: 'automation-service' } }),
     annotations: z.record(z.string(), z.string()).openapi({ example: { owner: 'growth' } }),
   })
   .openapi('TriggerTemplateMetadata')

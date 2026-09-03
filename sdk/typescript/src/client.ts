@@ -270,11 +270,13 @@ export function createAmaClient(config: AmaClientConfig) {
       list: (query?: types.ListProjectsData['query']) => unwrap(ops.listProjects({ client, query })),
       create: (body: types.CreateProjectRequest) => unwrap(ops.createProject({ client, body })),
       get: (projectId: string) => unwrap(ops.readProject({ client, path: { projectId } })),
+      update: (projectId: string, body: types.UpdateProjectRequest) => unwrap(ops.updateProject({ client, path: { projectId }, body })),
+      delete: (projectId: string) => unwrap(ops.deleteProject({ client, path: { projectId } })),
     },
 
     agents: {
       list: (query?: types.ListAgentsData['query']) => unwrap(ops.listAgents({ client, query })),
-      create: (body: types.CreateAgentRequest) => unwrap(ops.createAgent({ client, body })),
+      create: (body: types.CreateAgentRequest, idempotencyKey?: string) => unwrap(ops.createAgent({ client, body, headers: { "idempotency-key": idempotencyKey } })),
       get: (agentId: string) => unwrap(ops.readAgent({ client, path: { agentId } })),
       update: (agentId: string, body: types.UpdateAgentRequest) => unwrap(ops.updateAgent({ client, path: { agentId }, body })),
       listVersions: (agentId: string) => unwrap(ops.listAgentVersions({ client, path: { agentId } })),
@@ -290,7 +292,7 @@ export function createAmaClient(config: AmaClientConfig) {
 
     environments: {
       list: (query?: types.ListEnvironmentsData['query']) => unwrap(ops.listEnvironments({ client, query })),
-      create: (body: types.CreateEnvironmentRequest) => unwrap(ops.createEnvironment({ client, body })),
+      create: (body: types.CreateEnvironmentRequest, idempotencyKey?: string) => unwrap(ops.createEnvironment({ client, body, headers: { "idempotency-key": idempotencyKey } })),
       get: (environmentId: string) => unwrap(ops.readEnvironment({ client, path: { environmentId } })),
       update: (environmentId: string, body: types.UpdateEnvironmentRequest) => unwrap(ops.updateEnvironment({ client, path: { environmentId }, body })),
       listVersions: (environmentId: string) => unwrap(ops.listEnvironmentVersions({ client, path: { environmentId } })),

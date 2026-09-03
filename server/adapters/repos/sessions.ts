@@ -353,15 +353,6 @@ export function createSessionRepo(db: Db): SessionRepo {
       return row ? serializeSession(row) : null
     },
 
-    async findByOrganization(organizationId, sessionId) {
-      const row = await db
-        .select()
-        .from(sessions)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.organizationId, organizationId)))
-        .get()
-      return row ? serializeSession(row) : null
-    },
-
     async findReusableHttpTriggerSession(projectId, triggerId, keyHash) {
       const row = await db
         .select()
@@ -426,6 +417,20 @@ export function createSessionRepo(db: Db): SessionRepo {
         .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
         .get()
       return row ? serializeSession(row) : null
+    },
+
+    async setMetadataAnnotationIfMissing(projectId, sessionId, key, value, updatedAt) {
+      const annotationPath = `$.annotations."${key}"`
+      const missing = sql`json_type(${sessions.metadata}, ${annotationPath}) is null`
+      const rows = await db
+        .update(sessions)
+        .set({
+          metadata: sql`case when ${missing} then json_set(${sessions.metadata}, ${annotationPath}, ${value}) else ${sessions.metadata} end`,
+          updatedAt: sql`case when ${missing} then ${updatedAt} else ${sessions.updatedAt} end`,
+        })
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .returning({ id: sessions.id })
+      return rows.length > 0
     },
 
     async listMessages(query: SessionMessageListQuery): Promise<SessionMessageListPage> {

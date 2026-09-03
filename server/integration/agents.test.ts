@@ -316,6 +316,66 @@ describe('[CF] /api/v1/agents', () => {
     expect(unarchivedUpdateRes.status).toBe(200)
   })
 
+  it('[spec: agents/api-archive] archives a persisted legacy agent without validating its runtime fields', async () => {
+    const authorization = await signIn()
+    const createdRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Legacy archive target')),
+    })
+    const created = (await createdRes.json()) as { metadata: { uid: string } }
+    await env.DB.prepare('UPDATE agents SET subagents = ? WHERE id = ?')
+      .bind(
+        JSON.stringify([
+          {
+            name: 'Maya Lin',
+            bio: 'Legacy persisted sub-agent.',
+            instructions: 'Review the work.',
+            modelPreferences: {},
+          },
+        ]),
+        created.metadata.uid,
+      )
+      .run()
+
+    const archiveRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: true }),
+    })
+
+    expect(archiveRes.status).toBe(200)
+    const archived = (await archiveRes.json()) as {
+      metadata: Record<string, unknown>
+      spec: { subagents: Array<Record<string, unknown>> }
+      status: Record<string, unknown>
+    }
+    expect(archived).toMatchObject({
+      metadata: { uid: created.metadata.uid, archivedAt: expect.any(String) },
+      spec: {
+        subagents: [
+          {
+            name: 'Maya Lin',
+            description: 'Legacy persisted sub-agent.',
+            systemPrompt: 'Review the work.',
+            model: null,
+            allowedTools: [],
+            skills: [],
+            mcpConnectors: [],
+          },
+        ],
+      },
+      status: { phase: 'archived' },
+    })
+    expect(Object.keys(archived.spec.subagents[0])).toEqual([
+      'name',
+      'description',
+      'systemPrompt',
+      'model',
+      'allowedTools',
+      'skills',
+      'mcpConnectors',
+    ])
+  })
+
   it('lists agents with pagination, search, archived, and date filters within the project [spec: agents/api-pagination] [spec: api-contracts/pagination] [spec: api-contracts/date-filters]', async () => {
     const authorization = await signIn()
     const createAlphaRes = await jsonFetch('/api/v1/agents', authorization, {
@@ -502,6 +562,258 @@ describe('[CF] /api/v1/agents', () => {
     expect(whitespaceRes.status).toBe(400)
     const oversizedRes = await jsonFetch(`/api/v1/agents?identityAgentId=${'a'.repeat(161)}`, authorization)
     expect(oversizedRes.status).toBe(400)
+  })
+
+  it('[spec: agents/api-schedulability] filters by Identity runtime and current Inbox scheduling readiness', async () => {
+    const authorization = await signIn()
+    const createRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Schedulable Codex agent', { model: 'gpt-5.6-sol' })),
+    })
+    expect(createRes.status).toBe(201)
+    const agent = (await createRes.json()) as { metadata: { uid: string } }
+    const project = await env.DB.prepare('SELECT id FROM projects ORDER BY created_at DESC LIMIT 1').first<{
+      id: string
+    }>()
+    if (!project) throw new Error('Expected project')
+
+    const now = new Date().toISOString()
+    const identityId = 'identity_schedulable_codex'
+    const subject = '019ff41a-7da6-708f-8b05-44d4d0373999'
+    await env.DB.prepare(`INSERT INTO identities (
+      id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+      idempotency_key_hash,request_fingerprint,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        identityId,
+        project.id,
+        defaultClaims().organizationId,
+        'Schedulable Identity',
+        'schedulable-codex',
+        'codex',
+        'active',
+        'vault_schedulable_codex',
+        'credential_schedulable_codex',
+        subject,
+        'https://id.realmroot.dev/api/auth',
+        subject,
+        'hash_schedulable_codex',
+        'fingerprint_schedulable_codex',
+        now,
+        now,
+      )
+      .run()
+    const bindRes = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ spec: { identityRef: identityId } }),
+    })
+    expect(bindRes.status).toBe(200)
+
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO environments (
+        id,project_id,name,hosting_mode,current_version_id,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?)`).bind(
+        'environment_schedulable_codex',
+        project.id,
+        'Local Codex',
+        'self_hosted',
+        'environment_version_schedulable_codex',
+        now,
+        now,
+      ),
+      env.DB.prepare(`INSERT INTO environment_versions (
+        id,environment_id,project_id,version,packages,variables,hosting_mode,network_policy,mcp_policy,
+        package_manager_policy,resource_limits,runtime_config,metadata,created_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+        'environment_version_schedulable_codex',
+        'environment_schedulable_codex',
+        project.id,
+        1,
+        '[]',
+        '{}',
+        'self_hosted',
+        '{"mode":"unrestricted"}',
+        '{}',
+        '{}',
+        '{}',
+        '{}',
+        '{}',
+        now,
+      ),
+      env.DB.prepare(`INSERT INTO runners (
+        id,organization_id,project_id,name,environment_id,state,current_load,max_concurrent,runtimes,last_heartbeat_at,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+        'runner_schedulable_codex',
+        defaultClaims().organizationId,
+        project.id,
+        'Codex runner',
+        'environment_schedulable_codex',
+        'active',
+        0,
+        1,
+        JSON.stringify([{ runtime: 'codex', models: ['gpt-5.6-sol'], state: 'ready' }]),
+        now,
+        now,
+        now,
+      ),
+      env.DB.prepare(`INSERT INTO triggers (
+        id,organization_id,project_id,agent_id,environment_id,trigger_type,runtime,name,prompt_template,enabled,
+        inbox_subscription_id,inbox_callback_token_hash,inbox_callback_token_ciphertext,inbox_provisioning_state,
+        inbox_registered_agent_subject,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+        'trigger_schedulable_codex',
+        defaultClaims().organizationId,
+        project.id,
+        agent.metadata.uid,
+        'environment_schedulable_codex',
+        'inbox',
+        'codex',
+        'Downstream Inbox',
+        'Handle the notification.',
+        1,
+        'subscription_schedulable_codex',
+        'callback_hash_schedulable_codex',
+        'callback_ciphertext_schedulable_codex',
+        'active',
+        subject,
+        now,
+        now,
+      ),
+    ])
+
+    const listRes = await jsonFetch('/api/v1/agents?runtime=codex&schedulable=true', authorization)
+    expect(listRes.status).toBe(200)
+    await expect(listRes.json()).resolves.toMatchObject({
+      data: [{ metadata: { uid: agent.metadata.uid }, status: { schedulable: true } }],
+    })
+    const otherRuntime = await jsonFetch('/api/v1/agents?runtime=ama', authorization)
+    await expect(otherRuntime.json()).resolves.toMatchObject({ data: [] })
+
+    await env.DB.prepare("UPDATE runners SET state = 'offline' WHERE id = ?").bind('runner_schedulable_codex').run()
+    const unavailable = await jsonFetch('/api/v1/agents?schedulable=true', authorization)
+    await expect(unavailable.json()).resolves.toMatchObject({ data: [] })
+    const direct = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization)
+    await expect(direct.json()).resolves.toMatchObject({ status: { schedulable: false } })
+  })
+
+  it('[spec: agents/create-idempotency] replays a bound Agent creation and rejects a changed request', async () => {
+    const authorization = await signIn()
+    expect((await jsonFetch('/api/v1/agents', authorization)).status).toBe(200)
+    const project = await env.DB.prepare('SELECT id FROM projects ORDER BY created_at DESC LIMIT 1').first<{
+      id: string
+    }>()
+    if (!project) throw new Error('Expected project')
+    const now = new Date().toISOString()
+    const identityId = 'identity_agent_idempotency'
+    await env.DB.prepare(`INSERT INTO identities (
+      id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+      idempotency_key_hash,request_fingerprint,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(
+        identityId,
+        project.id,
+        defaultClaims().organizationId,
+        'Idempotent Identity',
+        'idempotent-agent',
+        'codex',
+        'active',
+        'vault_agent_idempotency',
+        'credential_agent_idempotency',
+        '019ff41a-7da6-708f-8b05-44d4d0373888',
+        'https://id.realmroot.dev/api/auth',
+        '019ff41a-7da6-708f-8b05-44d4d0373888',
+        'hash_agent_idempotency',
+        'fingerprint_agent_idempotency',
+        now,
+        now,
+      )
+      .run()
+    const body = agentBody('Idempotent Agent', { identityRef: identityId })
+    const create = () =>
+      jsonFetch('/api/v1/agents', authorization, {
+        method: 'POST',
+        headers: { 'idempotency-key': 'agent-create-idempotency-1' },
+        body: JSON.stringify(body),
+      })
+    const [first, replay] = await Promise.all([create(), create()])
+    expect(first.status).toBe(201)
+    const firstAgent = (await first.json()) as {
+      metadata: {
+        uid: string
+        name: string
+        description: string | null
+        createdAt: string
+        updatedAt: string
+        archivedAt: string | null
+      }
+    }
+    expect(replay.status).toBe(201)
+    await expect(replay.json()).resolves.toMatchObject({ metadata: { uid: firstAgent.metadata.uid } })
+    const counts = await env.DB.prepare(
+      'SELECT (SELECT count(*) FROM agents WHERE name = ?) AS agents, (SELECT count(*) FROM agent_versions WHERE agent_id = ?) AS versions',
+    )
+      .bind('Idempotent Agent', firstAgent.metadata.uid)
+      .first<{ agents: number; versions: number }>()
+    expect(counts).toEqual({ agents: 1, versions: 1 })
+
+    const update = await jsonFetch(`/api/v1/agents/${firstAgent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        metadata: { name: 'Renamed Agent', description: 'Updated description.' },
+        spec: { systemPrompt: 'Updated after creation.' },
+      }),
+    })
+    expect(update.status).toBe(200)
+    await expect(update.json()).resolves.toMatchObject({
+      metadata: { name: 'Renamed Agent', description: 'Updated description.' },
+      spec: { systemPrompt: 'Updated after creation.' },
+      status: { version: 2 },
+    })
+
+    const archive = await jsonFetch(`/api/v1/agents/${firstAgent.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: true }),
+    })
+    expect(archive.status).toBe(200)
+    await expect(archive.json()).resolves.toMatchObject({
+      metadata: { name: 'Renamed Agent', description: 'Updated description.', archivedAt: expect.any(String) },
+      status: { phase: 'archived', version: 2 },
+    })
+
+    const postUpdateReplay = await create()
+    expect(postUpdateReplay.status).toBe(201)
+    const replayedAgent = (await postUpdateReplay.json()) as {
+      metadata: {
+        uid: string
+        name: string
+        description: string | null
+        createdAt: string
+        updatedAt: string
+        archivedAt: string | null
+      }
+      spec: { systemPrompt: string }
+      status: { phase: string; version: number }
+    }
+    expect(replayedAgent).toMatchObject({
+      metadata: {
+        uid: firstAgent.metadata.uid,
+        name: 'Idempotent Agent',
+        description: null,
+        archivedAt: null,
+      },
+      spec: { systemPrompt: 'Idempotent Agent system prompt.' },
+      status: { phase: 'active', version: 1 },
+    })
+    expect(replayedAgent.metadata.updatedAt).toBe(replayedAgent.metadata.createdAt)
+    expect(replayedAgent.metadata.createdAt).toBe(firstAgent.metadata.createdAt)
+
+    const conflict = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      headers: { 'idempotency-key': 'agent-create-idempotency-1' },
+      body: JSON.stringify(agentBody('Changed Agent', { identityRef: identityId })),
+    })
+    expect(conflict.status).toBe(409)
+    await expect(conflict.json()).resolves.toMatchObject({ error: { type: 'idempotency_conflict' } })
   })
 
   it('returns 409 when replacing or removing Identity from an Agent with a live Inbox Trigger [spec: agents/inbox-identity-rebind]', async () => {

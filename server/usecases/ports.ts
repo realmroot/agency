@@ -101,6 +101,8 @@ export interface AgentListQuery {
   projectId: string
   archived: boolean
   identityAgentId?: string
+  runtime?: string
+  schedulable?: boolean
   search?: string
   createdFrom?: string
   createdTo?: string
@@ -118,6 +120,8 @@ export interface CreateAgentInput {
   name: string
   description: string | null
   spec: AgentSpec
+  creationKeyHash?: string
+  creationFingerprint?: string
 }
 
 export interface UpdateAgentFields {
@@ -134,6 +138,7 @@ export interface UpdateAgentFields {
 export interface AgentRepo {
   list(query: AgentListQuery): Promise<AgentListPage>
   find(projectId: string, agentId: string): Promise<Agent | null>
+  findCreation(projectId: string, creationKeyHash: string): Promise<{ agent: Agent; fingerprint: string } | null>
   // Live (non-archived) agents in the project, newest first.
   liveAgents(projectId: string): Promise<Agent[]>
 
@@ -367,6 +372,15 @@ export class EnvironmentArchivedError extends Error {
   }
 }
 
+export class CreationIdempotencyConflictError extends Error {
+  readonly code = 'idempotency_conflict'
+
+  constructor(message = 'Idempotency-Key was already used for a different creation request.') {
+    super(message)
+    this.name = 'CreationIdempotencyConflictError'
+  }
+}
+
 export interface EnvironmentListQuery {
   projectId: string
   archived: boolean
@@ -387,6 +401,8 @@ export interface CreateEnvironmentInput {
   name: string
   description: string | null
   config: EnvironmentConfig
+  creationKeyHash?: string
+  creationFingerprint?: string
 }
 
 export interface UpdateEnvironmentFields {
@@ -403,13 +419,19 @@ export interface UpdateEnvironmentFields {
 export interface EnvironmentRepo {
   list(query: EnvironmentListQuery): Promise<EnvironmentListPage>
   find(projectId: string, environmentId: string): Promise<Environment | null>
+  findCreation(
+    projectId: string,
+    creationKeyHash: string,
+  ): Promise<{ environment: Environment; fingerprint: string } | null>
 
   insertVersion(environment: Environment, config: EnvironmentConfig, createdAt: string): Promise<EnvironmentVersion>
   listVersions(projectId: string, environmentId: string): Promise<EnvironmentVersion[]>
   findVersion(projectId: string, environmentId: string, version: number): Promise<EnvironmentVersion | null>
 
-  insert(input: CreateEnvironmentInput, createdAt: string): Promise<Environment>
-  setCurrentVersion(environmentId: string, versionId: string): Promise<void>
+  insertWithInitialVersion(
+    input: CreateEnvironmentInput,
+    createdAt: string,
+  ): Promise<{ environment: Environment; version: EnvironmentVersion }>
   update(projectId: string, environmentId: string, fields: UpdateEnvironmentFields, updatedAt: string): Promise<void>
   unarchive(projectId: string, environmentId: string, updatedAt: string): Promise<void>
 
@@ -1334,13 +1356,37 @@ export interface ProjectListQuery {
   cursor: { createdAt: string; id: string } | null
 }
 
+export type ProjectDeleteResult = 'deleted' | 'not_found' | 'not_empty' | 'default_project'
+export type ProjectUpdateResult =
+  | { status: 'updated'; project: ProjectRecord }
+  | { status: 'not_found' }
+  | { status: 'default_project' }
+
+export class ProjectReservedNameError extends Error {
+  constructor() {
+    super('Default is a reserved project name')
+    this.name = 'ProjectReservedNameError'
+  }
+}
+
+export class ProjectNameConflictError extends Error {
+  constructor(name: string) {
+    super(`A project named "${name}" already exists in this organization`)
+    this.name = 'ProjectNameConflictError'
+  }
+}
+
 // DB boundary for projects. organizationId stays in the DB for tenancy but is
 // never exposed on ProjectRecord. The only implementation lives in
 // adapters/repos.
 export interface ProjectRepo {
   list(query: ProjectListQuery): Promise<ListPageResult<ProjectRecord>>
   find(organizationId: string, projectId: string): Promise<ProjectRecord | null>
+  findDefault(organizationId: string): Promise<ProjectRecord | null>
+  ensureDefault(organizationId: string, timestamp: string): Promise<ProjectRecord>
   insert(organizationId: string, name: string, timestamp: string): Promise<ProjectRecord>
+  updateName(organizationId: string, projectId: string, name: string, timestamp: string): Promise<ProjectRecord | null>
+  delete(organizationId: string, projectId: string): Promise<ProjectDeleteResult>
 }
 
 // --- runners, work items, leases (self-hosted runner queue) ---
@@ -1543,6 +1589,7 @@ export interface WorkItemListQuery {
 // runner currently holding a still-active lease on the work item, or null.
 export interface WorkItemRepo {
   list(query: WorkItemListQuery): Promise<ListPageResult<WorkItemRecord>>
+  findLatestBySessions(projectId: string, sessionIds: string[]): Promise<WorkItemRecord[]>
   find(projectId: string, workItemId: string): Promise<WorkItemRecord | null>
   rawPayload(projectId: string, workItemId: string): Promise<Record<string, unknown> | null>
   activeLeaseRunnerId(projectId: string, workItemId: string): Promise<string | null>
@@ -1863,6 +1910,8 @@ export type SessionTurnInput = {
 // by the self-hosted runner channel.
 export interface CloudRuntimeLifecycle {
   startCloudSession(input: SandboxRuntimeStartInput): Promise<SandboxRuntimeStartResult>
+  activateCloudSession(input: SandboxRuntimeStartInput): Promise<void>
+  idleCloudSession(sandboxId: string, sleepAfterSeconds: number): Promise<void>
   stopCloudSession(sandboxId: string): Promise<void>
 }
 
@@ -1938,6 +1987,61 @@ export interface SessionOrchestrationStore {
     sessionId: string,
     expected: string | string[],
     fields: SessionUpdate,
+  ): Promise<boolean>
+  acquirePendingStartupLease(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  completeCloudSessionStart(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    fields: SessionUpdate,
+    runtimeMetadata: Record<string, unknown>,
+  ): Promise<boolean>
+  failCloudSessionStart(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    fields: SessionUpdate,
+    runtimeMetadata: Record<string, unknown>,
+  ): Promise<boolean>
+  claimSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  completeSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    closedAt: string,
+  ): Promise<boolean>
+  failSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    message: string,
+    timestamp: string,
+  ): Promise<boolean>
+  claimSessionReopen(projectId: string, sessionId: string, sandboxId: string, startedAt: string): Promise<boolean>
+  acquireIdleTurnLease(
+    projectId: string,
+    sessionId: string,
+    turnId: string,
+    leaseExpiresAt: string,
+    now: string,
   ): Promise<boolean>
   queueSessionWorkWhenState(
     projectId: string,
@@ -2028,12 +2132,20 @@ export interface SessionOrchestrationStore {
 
   // ── watchdog: stalled cloud sessions + leaked sandboxes ──
   markStalledCloudSessions(threshold: string, timestamp: string): Promise<void>
-  markIdleTimedOutSessions(timestamp: string): Promise<void>
   leakedSandboxSessions(
     terminalStates: string[],
     limit: number,
+    closingBefore: string,
   ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]>
-  stampSandboxDestroyed(sessionId: string, metadataJson: string): Promise<void>
+  claimSandboxCleanup(
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  releaseSandboxCleanup(sessionId: string, sandboxId: string, cleanupId: string): Promise<boolean>
+  stampSandboxDestroyed(sessionId: string, sandboxId: string, cleanupId: string, destroyedAt: string): Promise<boolean>
 
   // ── runner session channel (durable object) ──
   channelSession(
@@ -2144,7 +2256,6 @@ export interface RuntimeSessionHandle {
 export interface SessionRepo {
   list(query: SessionListQuery): Promise<SessionListPage>
   find(projectId: string, sessionId: string): Promise<Session | null>
-  findByOrganization(organizationId: string, sessionId: string): Promise<Session | null>
   findReusableHttpTriggerSession(
     projectId: string,
     triggerId: string,
@@ -2164,6 +2275,13 @@ export interface SessionRepo {
     fields: { title?: string; metadata?: Record<string, unknown> },
     updatedAt: string,
   ): Promise<Session | null>
+  setMetadataAnnotationIfMissing(
+    projectId: string,
+    sessionId: string,
+    key: string,
+    value: string,
+    updatedAt: string,
+  ): Promise<boolean>
 
   listMessages(query: SessionMessageListQuery): Promise<SessionMessageListPage>
   findMessage(projectId: string, sessionId: string, messageId: string): Promise<SessionMessage | null>

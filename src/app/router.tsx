@@ -12,6 +12,7 @@ import { McpConnectorPage } from '@/features/mcp/McpConnectorPage'
 import { McpPage } from '@/features/mcp/McpPage'
 import { MemoryStoreDetailPage } from '@/features/memory-stores/MemoryStoreDetailPage'
 import { MemoryStoresPage } from '@/features/memory-stores/MemoryStoresPage'
+import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ProvidersPage } from '@/features/providers/ProvidersPage'
 import { SessionDetailPage } from '@/features/sessions/SessionDetailPage'
 import { SessionsPage } from '@/features/sessions/SessionsPage'
@@ -58,6 +59,7 @@ export function createAppRouter() {
           element: <SettingsPage />,
           children: [
             { index: true, element: <Navigate to="/settings/providers" replace /> },
+            { path: 'projects', element: <ProjectsPage /> },
             { path: 'providers', element: <ProvidersPage /> },
             { path: 'mcp', element: <McpPage /> },
             { path: 'mcp/:connectorId', element: <McpConnectorPage /> },

@@ -24,7 +24,8 @@ import {
   parseAgentSnapshot,
   parseJson,
 } from '@server/domain/runtime/session-snapshot'
-import { now, RUNTIME_START_TIMEOUT_MS, requestIdFrom, stringify } from '@server/domain/runtime/util'
+import { LIFECYCLE_LEASE_TTL_MS, lifecycleLeaseExpiry, newTurnId } from '@server/domain/runtime/turn'
+import { now, requestIdFrom, stringify } from '@server/domain/runtime/util'
 import { sessionRuntimeConfig, sessionRuntimeFromMetadata } from '@server/domain/runtime-session'
 import { safeRuntimeError } from '@server/runtime-error'
 import type { AuthScope, RunnerChannel, RuntimeWorkspaceReader, SessionRow } from '../ports'
@@ -67,7 +68,12 @@ async function closeSessionRow(
   reason = 'user_requested',
 ): Promise<CloseSessionResult> {
   if (session.state === 'closed') {
-    return { ok: true, session }
+    return session.closedAt
+      ? { ok: true, session }
+      : {
+          ok: false,
+          error: { status: 409, code: 'conflict', message: 'Session runtime cleanup is still in progress' },
+        }
   }
   if (sessionSandboxBackend(session) === 'runner-sandbox' || !session.sandboxId) {
     return await closeSelfHostedSession(deps, auth, session, requestId, reason)
@@ -75,7 +81,25 @@ async function closeSessionRow(
 
   const store = deps.sessionOrchestration
   const closingAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'closed', updatedAt: closingAt })
+  const cleanupId = newTurnId()
+  const claimed = await store.claimSessionClose(
+    auth.project.id,
+    session.id,
+    session.sandboxId,
+    cleanupId,
+    lifecycleLeaseExpiry(closingAt),
+    closingAt,
+  )
+  if (!claimed) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Session has an active turn or is no longer available to close',
+      },
+    }
+  }
 
   try {
     await syncWritableMemoryStores(deps, auth, session)
@@ -83,11 +107,7 @@ async function closeSessionRow(
   } catch (error) {
     const safeError = safeRuntimeError(error)
     const failedAt = now()
-    await store.updateSession(auth.project.id, session.id, {
-      state: 'error',
-      stateReason: safeError.message,
-      updatedAt: failedAt,
-    })
+    await store.failSessionClose(auth.project.id, session.id, session.sandboxId, cleanupId, safeError.message, failedAt)
     await deps.audit.record(auth, {
       action: 'session.close',
       resourceType: 'session',
@@ -109,7 +129,14 @@ async function closeSessionRow(
   }
 
   const closedAt = now()
-  await store.updateSession(auth.project.id, session.id, { state: 'closed', closedAt, updatedAt: closedAt })
+  const finalized = await store.completeSessionClose(
+    auth.project.id,
+    session.id,
+    session.sandboxId,
+    cleanupId,
+    closedAt,
+  )
+  if (!finalized) throw new Error('Claimed Session close could not be finalized')
   await deps.audit.record(auth, {
     action: 'session.close',
     resourceType: 'session',
@@ -268,6 +295,13 @@ export async function reopenSession(
     })
   } else {
     const metadata = parseJson<Record<string, unknown>>(session.metadata) ?? {}
+    if (!session.closedAt || typeof metadata.sandboxDestroyedAt !== 'string') {
+      return {
+        ok: false,
+        error: { status: 409, code: 'conflict', message: 'Session runtime cleanup is not complete' },
+      }
+    }
+    const { sandboxDestroyedAt: _destroyedAt, ...reopenedMetadata } = metadata
     const agentSnapshot = parseAgentSnapshot(session.agentSnapshot)
     if (!agentSnapshot) {
       return {
@@ -275,12 +309,7 @@ export async function reopenSession(
         error: { status: 409, code: 'conflict', message: 'Session agent snapshot is required' },
       }
     }
-    const pending = await store.updateSessionWhenState(auth.project.id, session.id, 'closed', {
-      state: 'pending',
-      stateReason: null,
-      closedAt: null,
-      updatedAt: reopenedAt,
-    })
+    const pending = await store.claimSessionReopen(auth.project.id, session.id, session.sandboxId, reopenedAt)
     if (!pending) {
       return {
         ok: false,
@@ -288,7 +317,15 @@ export async function reopenSession(
       }
     }
     await startSessionRuntimeForRow(deps, auth, {
-      pending: { ...session, state: 'pending', stateReason: null, closedAt: null, updatedAt: reopenedAt },
+      pending: {
+        ...session,
+        state: 'pending',
+        stateReason: null,
+        startedAt: reopenedAt,
+        closedAt: null,
+        metadata: JSON.stringify(reopenedMetadata),
+        updatedAt: reopenedAt,
+      },
       agentSnapshot,
       environmentSnapshot: normalizeEnvironmentSnapshot(
         parseJson<ReturnType<typeof createEnvironmentSnapshot>>(session.environmentSnapshot),
@@ -387,6 +424,7 @@ export async function unarchiveSession(
 
 // Mark pending sessions whose cloud runtime startup window elapsed as errored.
 export async function markExpiredPendingSessions(deps: Pick<LifecycleDeps, 'sessionOrchestration'>, auth: AuthScope) {
-  const expiredBefore = new Date(Date.now() - RUNTIME_START_TIMEOUT_MS).toISOString()
-  await deps.sessionOrchestration.markExpiredPendingSessions(auth.project.id, expiredBefore, now())
+  const sweptAt = now()
+  const expiredBefore = new Date(Date.parse(sweptAt) - LIFECYCLE_LEASE_TTL_MS).toISOString()
+  await deps.sessionOrchestration.markExpiredPendingSessions(auth.project.id, expiredBefore, sweptAt)
 }

@@ -220,7 +220,7 @@ export function createAmaClient(config) {
         },
         agents: {
             list: (query) => unwrap(ops.listAgents({ client, query })),
-            create: (body) => unwrap(ops.createAgent({ client, body })),
+            create: (body, idempotencyKey) => unwrap(ops.createAgent({ client, body, headers: { "idempotency-key": idempotencyKey } })),
             get: (agentId) => unwrap(ops.readAgent({ client, path: { agentId } })),
             update: (agentId, body) => unwrap(ops.updateAgent({ client, path: { agentId }, body })),
             listVersions: (agentId) => unwrap(ops.listAgentVersions({ client, path: { agentId } })),
@@ -234,7 +234,7 @@ export function createAmaClient(config) {
         },
         environments: {
             list: (query) => unwrap(ops.listEnvironments({ client, query })),
-            create: (body) => unwrap(ops.createEnvironment({ client, body })),
+            create: (body, idempotencyKey) => unwrap(ops.createEnvironment({ client, body, headers: { "idempotency-key": idempotencyKey } })),
             get: (environmentId) => unwrap(ops.readEnvironment({ client, path: { environmentId } })),
             update: (environmentId, body) => unwrap(ops.updateEnvironment({ client, path: { environmentId }, body })),
             listVersions: (environmentId) => unwrap(ops.listEnvironmentVersions({ client, path: { environmentId } })),

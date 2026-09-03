@@ -6,7 +6,9 @@ interface OpenApiOperation {
   summary?: string
   tags?: string[]
   security?: unknown
-  parameters?: Array<{ name?: string }>
+  'x-cli-ignore'?: boolean
+  'x-cli-name'?: string
+  parameters?: Array<{ name?: string; $ref?: string }>
   requestBody?: { content?: Record<string, unknown> }
   responses?: Record<string, { content?: Record<string, { schema?: unknown }> }>
 }
@@ -18,6 +20,7 @@ interface OpenApiDocument {
   components?: {
     schemas?: Record<string, unknown>
     securitySchemes?: Record<string, unknown>
+    parameters?: Record<string, unknown>
   }
 }
 
@@ -25,7 +28,7 @@ const METHODS = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const EXPECTED_RESTISH_OPERATIONS = {
   Config: ['readConfigz'],
   Auth: ['readAuthConfig'],
-  Projects: ['listProjects', 'createProject'],
+  Projects: ['listProjects', 'createProject', 'updateProject', 'deleteProject'],
   Agents: ['listAgents', 'createAgent'],
   Environments: ['listEnvironments', 'createEnvironment'],
   Sessions: ['listSessions', 'createSession'],
@@ -280,7 +283,17 @@ describe('[CF] OpenAPI documentation', () => {
     expect(
       doc.paths['/api/v1/agents'].get.parameters?.map((parameter) => (parameter as { name?: string }).name),
     ).toEqual(
-      expect.arrayContaining(['archived', 'search', 'createdFrom', 'createdTo', 'identityAgentId', 'limit', 'cursor']),
+      expect.arrayContaining([
+        'archived',
+        'search',
+        'createdFrom',
+        'createdTo',
+        'identityAgentId',
+        'runtime',
+        'schedulable',
+        'limit',
+        'cursor',
+      ]),
     )
 
     expect(doc.components?.securitySchemes).toEqual(
@@ -638,6 +651,130 @@ describe('[CF] OpenAPI documentation', () => {
     // Anchor the public/protected split to known endpoints so the security model stays meaningful.
     expect(doc.paths['/api/v1/configz'].get.security).toBeUndefined()
     expect(doc.paths['/api/v1/agents'].get.security).toEqual([{ oidcAccessToken: ['agents:read'] }])
+  })
+
+  it('exposes project selection to Toolbox only on project-scoped operations [spec: api-contracts/realmroot-toolbox]', async () => {
+    const doc = await fetchOpenApi()
+    const selector = { $ref: '#/components/parameters/AmaProjectId' }
+    const projectScopedResources = new Set([
+      'agents',
+      'budgets',
+      'environments',
+      'identities',
+      'leases',
+      'memory-stores',
+      'runners',
+      'sessions',
+      'triggers',
+      'usage-records',
+      'usage-summary',
+      'vaults',
+      'work-items',
+    ])
+
+    expect(doc.components?.parameters?.AmaProjectId).toMatchObject({
+      name: 'X-AMA-Project-ID',
+      in: 'header',
+      required: false,
+      'x-cli-name': 'project-id',
+      schema: { type: 'string', minLength: 1 },
+    })
+    for (const { path, operation } of operations(doc)) {
+      const resource = path.split('/')[3]
+      if (resource && projectScopedResources.has(resource)) {
+        expect(operation.parameters, `${operation.operationId} must expose project selection`).toContainEqual(selector)
+        expect(operation.responses?.['404'], `${operation.operationId} must document an invalid selector`).toBeDefined()
+        expectJsonErrorResponse(operation, '404')
+      } else {
+        expect(
+          operation.parameters ?? [],
+          `${operation.operationId} must not expose project selection`,
+        ).not.toContainEqual(selector)
+      }
+    }
+    expect(doc.paths['/api/v1/audit-records'].get.parameters ?? []).not.toContainEqual(selector)
+    expect(doc.paths['/api/v1/audit-records/{recordId}'].get.parameters ?? []).not.toContainEqual(selector)
+  })
+
+  it('excludes only WebSocket upgrade operations from the generated CLI [spec: api-contracts/realmroot-toolbox]', async () => {
+    const doc = await fetchOpenApi()
+    const publishedOperations = operations(doc).map(({ operation }) => operation)
+    const upgradeOperations = publishedOperations.filter((operation) => operation.responses?.['101'])
+    const ignoredOperations = publishedOperations.filter((operation) => operation['x-cli-ignore'])
+
+    expect(upgradeOperations.map(({ operationId }) => operationId).sort()).toEqual([
+      'connectRunnerChannel',
+      'connectSessionSocket',
+    ])
+    expect(ignoredOperations.map(({ operationId }) => operationId).sort()).toEqual([
+      'connectRunnerChannel',
+      'connectSessionSocket',
+    ])
+    for (const operation of upgradeOperations) {
+      expect(operation['x-cli-ignore'], `${operation.operationId} must be hidden from Restish`).toBe(true)
+      expect(operation['x-cli-name'], `${operation.operationId} must not reserve a CLI command name`).toBeUndefined()
+    }
+
+    const byId = new Map(publishedOperations.map((operation) => [operation.operationId, operation]))
+    for (const operationId of [
+      'listSessions',
+      'createSession',
+      'listSessionEvents',
+      'createSessionEvents',
+      'createSessionMessage',
+    ]) {
+      expect(byId.get(operationId)?.['x-cli-ignore'], `${operationId} must remain available to Restish`).toBeUndefined()
+    }
+  })
+
+  it('publishes a unique stable CLI name for every Toolbox-visible operation [spec: api-contracts/realmroot-toolbox]', async () => {
+    const doc = await fetchOpenApi()
+    const visibleOperations = operations(doc)
+      .map(({ operation }) => operation)
+      .filter((operation) => operation['x-cli-ignore'] !== true)
+    const cliNames = visibleOperations.map((operation) => operation['x-cli-name'])
+
+    for (const operation of visibleOperations) {
+      expect(operation['x-cli-name'], `${operation.operationId} must have an explicit CLI name`).toMatch(
+        /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
+      )
+    }
+    expect(new Set(cliNames).size).toBe(cliNames.length)
+
+    const byId = new Map(visibleOperations.map((operation) => [operation.operationId, operation['x-cli-name']]))
+    expect(Object.fromEntries(byId)).toMatchObject({
+      createInboxNotification: 'receive-inbox-notification',
+      createLease: 'claim-work-item',
+      createSessionEvents: 'append-session-events',
+      createSessionMessage: 'send-session-message',
+      createTriggerRun: 'run-trigger',
+      putRunnerHeartbeat: 'update-runner-heartbeat',
+      readAuthConfig: 'auth-methods',
+      readConfigz: 'config',
+      readCurrentAuthSession: 'whoami',
+      refreshCatalog: 'refresh-model-catalog',
+      updateIdentity: 'archive-identity',
+      createAgent: 'create-agent',
+      deleteProject: 'delete-project',
+      listSessionEvents: 'list-session-events',
+      readAgentVersion: 'read-agent-version',
+    })
+  })
+
+  it('publishes project rename for OpenAPI and Toolbox [spec: projects/rename]', async () => {
+    const doc = await fetchOpenApi()
+    const operation = doc.paths['/api/v1/projects/{projectId}'].patch
+
+    expect(operation).toMatchObject({
+      operationId: 'updateProject',
+      'x-cli-name': 'update-project',
+      tags: ['Projects'],
+    })
+    expect(operation.requestBody?.content?.['application/json']).toBeTruthy()
+    expect(Object.keys(operation.responses ?? {})).toEqual(expect.arrayContaining(['200', '400', '401', '404', '409']))
+    expectJsonErrorResponse(operation, '400')
+    expectJsonErrorResponse(operation, '404')
+    expectJsonErrorResponse(operation, '409')
   })
 
   it('serves interactive API docs', async () => {

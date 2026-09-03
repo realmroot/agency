@@ -23,7 +23,7 @@ class AuthProject:
     """
         Attributes:
             id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
-            name (str):  Example: Default project.
+            name (str):  Example: Default.
      """
 
     id: str

@@ -23,6 +23,24 @@ Feature: Runtime
     Then model output is produced and tool calls are dispatched through the executor
     And the next turn context is reconstructed from persisted canonical events
 
+  @runtime/idle-retention @usecase
+  Scenario: Retain an idle cloud Session while allowing its sandbox to sleep
+    Given a cloud Session has a sandbox and an optional positive idle retention duration
+    When startup has no prompt or a turn settles idle after completion, policy denial, required action, or the continuation cap
+    Then the Session remains idle with the same sandbox id
+    And startup acquires generation ownership before resolving secrets and renews it after preflight before launching the runtime
+    And lifecycle ownership outlives one Worker invocation, while losing ownership before launch causes no sandbox side effect
+    And an owned sandbox launch is allowed to settle without an artificial local timeout before completion or failure is recorded
+    And pending cleanup uses the current generation epoch and cannot expire a live startup owner
+    And completion atomically merges runtime metadata without overwriting metadata changes made while the runtime was launching
+    And the cloud runtime applies the configured retention duration or the platform default before releasing sandbox keepalive
+    And the next cloud turn reactivates that sandbox and rebuilds its runtime workspace only when the ready marker is absent
+    And a sandbox sleep failure is audited without blocking Session state or turn lease settlement
+    And a missing, zero, or invalid retention duration falls back to the platform default
+    And a duplicate or late startup cannot mutate or destroy a winning or reopened Session generation
+    And a startup failure mutates, destroys, and reports only while it owns the same pending generation
+    And an approval decision atomically leases an idle Session before tool execution or continuation so duplicate approval and close cannot race it
+
   @runtime/self-hosted-ama-cloud-loop @usecase
   Scenario: Run self-hosted AMA through the cloud turn loop with a runner sandbox
     Given an AMA session uses a self-hosted environment
@@ -53,6 +71,7 @@ Feature: Runtime
     Given a tool is dispatched that violates the agent allow-list or fails to execute
     When the runtime executes the turn
     Then a structured tool-result error is recorded in the transcript so the Agent can correct the call
+    And failed shell commands preserve bounded standard output and standard error in that tool result
     And only an unrecoverable model, provider, policy, or runtime failure terminalizes the turn
 
   @runtime/large-bridge-events @usecase

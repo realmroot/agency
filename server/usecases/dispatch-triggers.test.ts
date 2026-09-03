@@ -629,7 +629,7 @@ describe('[spec: triggers/dispatch] dispatchDueScheduledTriggers — environment
     const envFrom = [
       {
         type: 'secret' as const,
-        name: 'AK_AGENT_KEY',
+        name: 'DOWNSTREAM_AGENT_KEY',
         secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
       },
     ]
@@ -638,7 +638,7 @@ describe('[spec: triggers/dispatch] dispatchDueScheduledTriggers — environment
         ...dueTrigger().template,
         spec: {
           ...dueTrigger().template.spec,
-          env: { AK_AGENT_ID: 'agent_1', AK_SESSION_ID: 'ak_session_1' },
+          env: { DOWNSTREAM_AGENT_ID: 'agent_1', DOWNSTREAM_SESSION_ID: 'downstream_session_1' },
           envFrom,
         },
       },
@@ -1347,7 +1347,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
     const envFrom = [
       {
         type: 'secret' as const,
-        name: 'AK_AGENT_KEY',
+        name: 'DOWNSTREAM_AGENT_KEY',
         secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
       },
     ]
@@ -1357,7 +1357,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
           ...httpTrigger().spec.template,
           spec: {
             ...httpTrigger().spec.template.spec,
-            env: { AK_AGENT_ID: 'agent_1', AK_SESSION_ID: 'ak_session_1' },
+            env: { DOWNSTREAM_AGENT_ID: 'agent_1', DOWNSTREAM_SESSION_ID: 'downstream_session_1' },
             envFrom,
           },
         },

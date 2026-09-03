@@ -15,6 +15,10 @@ export type { SessionState }
 // (CLOUD_TURN_SOFT_BUDGET_MS, 4 min) and renewed per event, so a live turn never
 // loses its lease mid-flight, while a crashed holder is recovered after the TTL.
 export const TURN_LEASE_TTL_MS = 6 * 60_000
+// Startup and destroy calls can occupy a full queue invocation. Keep their
+// ownership beyond the platform's invocation bound so a replacement worker
+// cannot touch the same sandbox ID while the prior invocation is still alive.
+export const LIFECYCLE_LEASE_TTL_MS = 30 * 60_000
 
 // Hard cap on continuation steps in one turn chain (~25 × ~4-min steps bounds a
 // runaway pause/continue loop far under any legitimate turn). At the cap the turn
@@ -32,4 +36,8 @@ export function newTurnId(): string {
 
 export function turnLeaseExpiry(fromIso: string = now()): string {
   return new Date(Date.parse(fromIso) + TURN_LEASE_TTL_MS).toISOString()
+}
+
+export function lifecycleLeaseExpiry(fromIso: string = now()): string {
+  return new Date(Date.parse(fromIso) + LIFECYCLE_LEASE_TTL_MS).toISOString()
 }

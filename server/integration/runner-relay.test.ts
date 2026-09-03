@@ -19,6 +19,7 @@
 //    same session socket.
 
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
@@ -194,6 +195,23 @@ async function openRunnerChannel(authorization: string, runnerId: string) {
   }
 
   return { ws, frames, waitForFrame }
+}
+
+async function runnerSessionActive(environmentId: string, sessionId: string) {
+  const stub = env.RUNNER_POOL.get(env.RUNNER_POOL.idFromName(environmentId))
+  const response = await stub.fetch('https://runner-pool.test/status', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  })
+  return ((await response.json()) as { active: boolean }).active
+}
+
+async function waitForRunnerSessionActive(environmentId: string, sessionId: string) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (await runnerSessionActive(environmentId, sessionId)) return
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  throw new Error(`Runner session route for ${sessionId} never became active`)
 }
 
 // Open the browser WebSocket for a session. Browser sockets route to the
@@ -547,31 +565,24 @@ describe('[CF] per-runner relay end-to-end', () => {
     // Open a browser socket — it routes to the per-session Session DO.
     const browser = await openBrowserSocket(authorization, session.id)
 
-    // Send a runner.event on the SECOND (active) socket. If reconnect teardown
-    // clobbered the new runner connection, the browser would never receive the
-    // event written into its Session DO.
-    second.ws.send(
-      JSON.stringify({
-        type: 'runner.event',
-        sessionId: session.id,
-        record: {
-          id: 'event_bbb',
-          sessionId: session.id,
-          sequence: 1,
-          createdAt: '2026-06-20T00:00:00.000Z',
-          type: 'message.completed',
-          payload: {
-            message: { id: 'msg_reconnect', role: 'assistant', content: [{ type: 'text', text: 'reconnect works' }] },
-          },
-        },
-      }),
-    )
+    // Exact-connection ownership prevents the replacement socket from inheriting
+    // the old socket's route. Events are rejected until the runner advertises its
+    // active sessions and the persisted latest assignment validates ownership.
+    expect(await runnerSessionActive(environment.id, session.id)).toBe(false)
+    second.ws.send(runnerMessageFrame(session.id, 'event_before_advertisement', 1, 'assistant', 'must not relay'))
+    second.ws.send(JSON.stringify({ type: 'runner.sessions.active', runnerId: runner.id, sessionIds: [session.id] }))
+    await waitForRunnerSessionActive(environment.id, session.id)
+
+    // If reconnect teardown clobbered the new runner connection, this event
+    // would never reach the Session DO and browser socket.
+    second.ws.send(runnerMessageFrame(session.id, 'event_bbb', 2, 'assistant', 'reconnect works'))
 
     const live = await browser.waitForFrame(
       (f) => f.type === 'event' && ((f.record as { type?: string } | undefined)?.type ?? '') === 'message.completed',
       'event:message.completed after reconnect',
     )
     expect((live.record as { type: string }).type).toBe('message.completed')
+    expect(browser.frames.some((frame) => frameIncludes(frame, 'must not relay'))).toBe(false)
 
     second.ws.close()
     browser.ws.close()

@@ -66,6 +66,13 @@ Feature: Agents
     And the API enforces auth, project tenancy, model policy, and tool policy
     And normal agent responses never expose sandbox policy
 
+  @agents/create-idempotency @api
+  Scenario: Retry Agent creation without duplicating an Identity binding
+    Given a caller supplies an Idempotency-Key when creating an Agent
+    When the same project retries the same request with that key
+    Then AMA returns the originally created Agent without another Agent Version
+    And reusing the key for different Agent data is rejected as a conflict
+
   @agents/api-openapi @api
   Scenario: Publish agent routes in the OpenAPI document
     Given the Worker app is initialized
@@ -80,19 +87,30 @@ Feature: Agents
     Then the bound agent is returned without exposing agents from another project
     And missing, archived, and malformed identity filters follow the collection contract
 
-	  @agents/api-pagination @api
-	  Scenario: List agents with pagination, filters, and tenant scope
+  @agents/api-pagination @api
+  Scenario: List agents with pagination, filters, and tenant scope
 	    Given a project has active and archived agents created across dates
 	    When the user lists agents with a page size
 	    Then the response includes data and cursor pagination metadata
 	    And archived agents are hidden unless archived filtering is requested
     And created-date filters and project scope are respected
 
+  @agents/api-schedulability @api
+  Scenario: Discover agents that AMA can schedule through Inbox
+    Given active Agents have Realmroot Identities and Inbox Triggers in a project
+    When a caller lists Agents by Identity runtime or schedulable state
+    Then each Agent reports whether an active Inbox Trigger can resolve a compatible live execution environment
+    And runtime filtering uses the exact runtime of the bound Identity
+    And scheduling ignores task ownership, workload, and any accepting-tasks flag
+    And archived Agents, Identities, Triggers, Environments, and Runners never make an Agent schedulable
+
   @agents/api-archive @api
   Scenario: Archive an agent safely
     Given an agent exists with existing sessions
     When the user archives the agent
     Then it is hidden from default lists and creation flows
+    And an archive-only request does not revalidate legacy runtime configuration
+    And a legacy sub-agent configuration is normalized to the current response contract
     And new sessions cannot be created from it while existing sessions stay readable
     And the archive operation records an audit event
 

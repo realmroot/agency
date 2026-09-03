@@ -1,6 +1,6 @@
 # Self-Hosted AMA Runner
 
-`cmd/ama-runner` is the first self-hosted tool-executor daemon for Any Managed Agents. AMA keeps ownership of the agent loop, work queue, policy decisions, session state, and event storage. The runner leases AMA-owned self-hosted work and reports structured events/results back through the runner protocol API.
+`cmd/ama-runner` is Enbor's first self-hosted tool-executor daemon. AMA keeps ownership of the agent loop, work queue, policy decisions, session state, and event storage. The runner leases AMA-owned self-hosted work and reports structured events/results back through the runner protocol API.
 
 The daemon is intentionally not a Pi or PyAgent runtime host. It must not launch local Pi loops, expose runner-local session URLs, or accept unapproved local work.
 

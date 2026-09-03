@@ -11,6 +11,7 @@ from ... import errors
 from ...models.environment import Environment
 from ...models.error_response import ErrorResponse
 from ...models.update_environment_request import UpdateEnvironmentRequest
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     environment_id: str,
     *,
     body: UpdateEnvironmentRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -105,6 +110,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateEnvironmentRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Environment | ErrorResponse]:
     """ Update an environment
@@ -114,6 +120,7 @@ def sync_detailed(
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+        x_ama_project_id (str | Unset):
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -128,6 +135,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         environment_id=environment_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -142,6 +150,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateEnvironmentRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Environment | ErrorResponse | None:
     """ Update an environment
@@ -151,6 +160,7 @@ def sync(
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+        x_ama_project_id (str | Unset):
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -166,6 +176,7 @@ def sync(
         environment_id=environment_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -174,6 +185,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateEnvironmentRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Environment | ErrorResponse]:
     """ Update an environment
@@ -183,6 +195,7 @@ async def asyncio_detailed(
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+        x_ama_project_id (str | Unset):
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -197,6 +210,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         environment_id=environment_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -211,6 +225,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateEnvironmentRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Environment | ErrorResponse | None:
     """ Update an environment
@@ -220,6 +235,7 @@ async def asyncio(
 
     Args:
         environment_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
+        x_ama_project_id (str | Unset):
         body (UpdateEnvironmentRequest):
 
     Raises:
@@ -235,5 +251,6 @@ async def asyncio(
         environment_id=environment_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

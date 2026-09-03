@@ -10,13 +10,17 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-o
 // - organization_id stays in the DB for tenancy but is never exposed in API
 //   payloads.
 
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  name: text('name').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-})
+export const projects = sqliteTable(
+  'projects',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organization_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_projects_unique_name_per_organization').on(table.organizationId, table.name)],
+)
 
 // Browser login state and sessions are server-owned. Cookies contain only
 // opaque random values; Realmroot tokens are encrypted before entering D1.
@@ -165,16 +169,23 @@ export const agents = sqliteTable(
     mcpConnectors: text('mcp_connectors').notNull().default('[]'),
     identityId: text('identity_id').references(() => identities.id),
     identitySnapshot: text('identity_snapshot'),
+    creationKeyHash: text('creation_key_hash'),
+    creationFingerprint: text('creation_fingerprint'),
+    creationName: text('creation_name'),
+    creationDescription: text('creation_description'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to agent_versions: agents<->agent_versions is a
     // circular reference (agent_versions.agentId FKs agents.id). The pointer is
-    // maintained by the repo (setCurrentVersion) in the same write path; a FK
-    // here would create an insert-order deadlock on first version creation.
+    // maintained by the repo in the same atomic batch as each version write; a
+    // FK here would create an insert-order deadlock on first version creation.
     currentVersionId: text('current_version_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id)],
+  (table) => [
+    index('idx_agents_project_created').on(table.projectId, table.createdAt, table.id),
+    uniqueIndex('idx_agents_project_creation_idempotency').on(table.projectId, table.creationKeyHash),
+  ],
 )
 
 // Immutable per-version snapshot of agent config. JSON columns are intentional
@@ -271,10 +282,14 @@ export const environments = sqliteTable(
     resourceLimits: text('resource_limits').notNull().default('{}'),
     runtimeConfig: text('runtime_config').notNull().default('{}'),
     metadata: text('metadata').notNull().default('{}'),
+    creationKeyHash: text('creation_key_hash'),
+    creationFingerprint: text('creation_fingerprint'),
+    creationName: text('creation_name'),
+    creationDescription: text('creation_description'),
     archivedAt: text('archived_at'),
     // Intentionally NOT a FK to environment_versions: the circular reference
     // (environment_versions.environment_id -> environments.id) would make inserts
-    // un-orderable. Set by setCurrentVersion after the version row exists;
+    // un-orderable. The repo writes the initial pointer and version atomically;
     // integrity is enforced in the usecase, not the DB.
     currentVersionId: text('current_version_id'),
     createdAt: text('created_at').notNull(),
@@ -282,6 +297,7 @@ export const environments = sqliteTable(
   },
   (table) => [
     index('idx_environments_project_created').on(table.projectId, table.createdAt, table.id),
+    uniqueIndex('idx_environments_project_creation_idempotency').on(table.projectId, table.creationKeyHash),
     check('ck_environments_hosting_mode', sql`${table.hostingMode} in ('cloud','self_hosted')`),
   ],
 )

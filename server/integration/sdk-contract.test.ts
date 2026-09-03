@@ -33,7 +33,7 @@ const STANDARD_RESOURCE_FIELDS = new Set(['metadata', 'spec', 'status'])
 
 // The external product owns these workflow ids; AMA only ever sees them as opaque metadata.
 function externalRefs(runId: string) {
-  return { product: 'agent-kanban', boardId: `board_${runId}`, taskId: `task_${runId}` }
+  return { product: 'downstream-service', boardId: `board_${runId}`, taskId: `task_${runId}` }
 }
 function externalMetadata(refs: ReturnType<typeof externalRefs>): Json {
   return { annotations: { externalProduct: refs.product, externalBoardId: refs.boardId, externalTaskId: refs.taskId } }
@@ -212,6 +212,17 @@ describe('[CF] generated SDK contract', () => {
     expect(runner.sessions).not.toHaveProperty('createSocketTicket')
     expect(agent.raw).toBeTruthy()
     expect(runner.raw).toBeTruthy()
+  })
+
+  it('exposes Project rename through the generated SDK facade [spec: projects/rename]', () => {
+    const projects = resources.facades.public.resources.find(({ name }) => name === 'projects')
+    expect(projects?.methods).toContainEqual({ name: 'update', operationId: 'updateProject' })
+
+    const client = createAmaClient({
+      baseUrl: 'https://example.com',
+      authorize: async () => ({ accessToken: 'token', dpopProof: 'proof' }),
+    })
+    expect((client.projects as unknown as Record<string, unknown>).update).toBeTypeOf('function')
   })
 
   it('forwards the required Identity idempotency key through the TypeScript facade', async () => {

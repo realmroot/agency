@@ -142,10 +142,10 @@ function fakeDeps(
   const sessions: Deps['sessions'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => sessionRecord(),
-    findByOrganization: async () => sessionRecord(),
     findReusableHttpTriggerSession: async () => null,
     findRuntimeRow: async () => sessionRow(),
     updateFields: async () => sessionRecord(),
+    setMetadataAnnotationIfMissing: async () => true,
     listMessages: async () => ({ rows: [], hasMore: false }),
     findMessage: async () => null,
     insertMessage: async (record): Promise<SessionMessage> =>

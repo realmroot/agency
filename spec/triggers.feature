@@ -95,8 +95,13 @@ Feature: Triggers
     When Inbox delivers notifications with equal, different, and absent routing keys
     Then equal keys share one Session under an atomic route binding
     And a terminal or archived bound Session is atomically replaced without splitting concurrent deliveries
+    And a runner-sandbox Session whose live runner route was lost is atomically replaced while an accepted route is reused
+    And a cloudflare-sandbox Session is reused without runner-channel preflight
     And different keys use different Sessions
     And notifications without a key each create a new Session
+    And created routed Sessions record the sixty-second annotation when template metadata omits it and otherwise preserve the template value
+    And pre-existing routed Sessions missing that annotation are backfilled atomically without overwriting current metadata
+    And preserved zero or invalid annotation metadata still resolves to the shared runtime default
 
   @triggers/http-serial-dispatch @usecase
   Scenario: Serial HTTP triggers queue different subjects without delaying the active subject

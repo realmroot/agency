@@ -403,6 +403,28 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       const [, init] = fetchMock.mock.calls[0]!
       expect(init?.method).toBe('POST')
     })
+
+    it('[spec: web-console/project-management] updateProject patches the selected project name', async () => {
+      const fetchMock = makeJsonFetch({ id: 'p2', name: 'Renamed Project', createdAt: '', updatedAt: '' })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await api.updateProject('p2', { name: 'Renamed Project' })
+
+      expect(result.name).toBe('Renamed Project')
+      expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/projects/p2')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('PATCH')
+      expect(requestJson(fetchMock, 0)).toEqual({ name: 'Renamed Project' })
+    })
+
+    it('[spec: web-console/project-management] deleteProject deletes the selected project', async () => {
+      const fetchMock = makeEmptyFetch()
+      vi.stubGlobal('fetch', fetchMock)
+
+      await api.deleteProject('p2')
+
+      expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/projects/p2')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE')
+    })
   })
 
   // ---------------------------------------------------------------------------

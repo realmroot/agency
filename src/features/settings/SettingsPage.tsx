@@ -3,11 +3,15 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/console/components'
 
 const SETTINGS_TABS = [
+  { value: 'projects', label: 'Projects', to: '/settings/projects' },
   { value: 'providers', label: 'Providers', to: '/settings/providers' },
   { value: 'mcp', label: 'MCP', to: '/settings/mcp' },
 ] as const
 
 function currentTab(pathname: string) {
+  if (pathname.startsWith('/settings/projects')) {
+    return 'projects'
+  }
   if (pathname.startsWith('/settings/mcp')) {
     return 'mcp'
   }

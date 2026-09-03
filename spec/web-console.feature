@@ -15,12 +15,22 @@ Feature: Web console
     And an Organization claim is never mislabeled as a personal workspace when its display name is absent
 
   @web-console/project-switcher @web
-  Scenario: Switch and create projects from the sidebar header
+  Scenario: Switch, create, and manage projects from the sidebar header
     Given a signed-in user belongs to an organization with one or more projects
     When the user opens the project switcher in the sidebar header
     Then the switcher lists every project and marks the active one
     And selecting a project switches the active project and refreshes control-plane data
     And choosing "Create project" opens a form that creates a project and switches to it
+    And choosing "Manage projects" navigates to "/settings/projects"
+
+  @web-console/project-management @web
+  Scenario: Manage organization projects from Settings
+    Given a signed-in user opens the Projects tab in Settings
+    When the Projects page loads the organization's projects through the shared API client
+    Then it lists the system-owned Default project and ordinary projects
+    And the Default project offers no rename or delete action
+    And renaming an ordinary project uses a secondary form and refreshes the stored list
+    And deleting an ordinary project requires destructive confirmation and refreshes the stored list
 
   @web-console/routed-pages @web
   Scenario: Navigate routed resource and detail pages

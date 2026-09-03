@@ -1,9 +1,15 @@
 import type { Environment, EnvironmentConfig, EnvironmentVersion } from '@server/domain/environment'
 import { resourceMetadata } from '@server/domain/resource'
 import { describe, expect, it } from 'vitest'
+import { creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import { createEnvironment, updateEnvironment } from './environments'
-import { type AuthScope, EnvironmentArchivedError, EnvironmentValidationError } from './ports'
+import {
+  type AuthScope,
+  CreationIdempotencyConflictError,
+  EnvironmentArchivedError,
+  EnvironmentValidationError,
+} from './ports'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -72,12 +78,13 @@ function fakeDeps(overrides: { repo?: Partial<Deps['environments']> } = {}): Dep
   const repo: Deps['environments'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
+    findCreation: async () => null,
     insertVersion: async (environment, cfg, createdAt): Promise<EnvironmentVersion> =>
       environmentVersion(environment, cfg, createdAt),
     listVersions: async () => [],
     findVersion: async () => null,
-    insert: async (input, createdAt): Promise<Environment> =>
-      environmentRecord({
+    insertWithInitialVersion: async (input, createdAt) => {
+      const environment = environmentRecord({
         metadata: {
           uid: 'env_new',
           name: input.name,
@@ -86,9 +93,23 @@ function fakeDeps(overrides: { repo?: Partial<Deps['environments']> } = {}): Dep
           updatedAt: createdAt,
         },
         spec: input.config,
-        status: { currentVersionId: null, version: 0 },
-      }),
-    setCurrentVersion: async () => {},
+        status: { currentVersionId: 'envver_new', version: 1 },
+      })
+      return {
+        environment,
+        version: {
+          metadata: resourceMetadata({
+            uid: 'envver_new',
+            pid: input.projectId,
+            name: 'v1',
+            createdAt,
+            updatedAt: createdAt,
+          }),
+          spec: input.config,
+          status: { environmentId: environment.metadata.uid, version: 1 },
+        },
+      }
+    },
     update: async () => {},
     unarchive: async () => {},
     connectorAvailable: async () => true,
@@ -149,15 +170,41 @@ function fakeDeps(overrides: { repo?: Partial<Deps['environments']> } = {}): Dep
 }
 
 describe('[spec: environments/create] createEnvironment', () => {
-  it('inserts the environment, snapshots version 1, and sets it current', async () => {
-    const setCurrent: string[] = []
-    const deps = fakeDeps({
-      repo: { setCurrentVersion: async (_id, versionId) => void setCurrent.push(versionId) },
-    })
+  it('atomically inserts the environment with version 1 current', async () => {
+    const deps = fakeDeps()
     const environment = await createEnvironment(deps, auth, { name: 'Node', description: null, config: config() })
     expect(environment.status.currentVersionId).toBe('envver_new')
-    expect(environment.status.version).toBe(2)
-    expect(setCurrent).toEqual(['envver_new'])
+    expect(environment.status.version).toBe(1)
+  })
+
+  it('replays an existing creation with the same idempotency key and request', async () => {
+    const input = { name: 'Node', description: null, config: config(), idempotencyKey: 'create-environment-once' }
+    const replay = environmentRecord({ metadata: { uid: 'env_replay' } })
+    const fingerprint = await creationFingerprint({
+      name: input.name,
+      description: input.description,
+      config: input.config,
+    })
+    const deps = fakeDeps({ repo: { findCreation: async () => ({ fingerprint, environment: replay }) } })
+
+    await expect(createEnvironment(deps, auth, input)).resolves.toBe(replay)
+  })
+
+  it('rejects reuse of an idempotency key for a different Environment request', async () => {
+    const deps = fakeDeps({
+      repo: {
+        findCreation: async () => ({ fingerprint: 'different-request', environment: environmentRecord() }),
+      },
+    })
+
+    await expect(
+      createEnvironment(deps, auth, {
+        name: 'Node',
+        description: null,
+        config: config(),
+        idempotencyKey: 'reused-environment-key',
+      }),
+    ).rejects.toBeInstanceOf(CreationIdempotencyConflictError)
   })
 
   it('rejects redeclaring the Realmroot CLI bundled in the cloud image', async () => {

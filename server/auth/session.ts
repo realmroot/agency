@@ -11,6 +11,7 @@ import {
   OidcError,
   oidcAudience,
   organizationIdForClaims,
+  ProjectSelectionError,
   type UserInfoClaims,
   upsertProjectForClaims,
 } from './oidc'
@@ -127,6 +128,10 @@ function logAuthenticationFailure<E extends HonoEnv>(c: AppContext<E>, error: Oi
   })
 }
 
+function projectSelectionErrorResponse<E extends HonoEnv>(c: AppContext<E>) {
+  return errorResponse(c, 404, 'not_found', 'Project not found') as never
+}
+
 export async function resolveAuthContext<E extends HonoEnv>(
   c: AppContext<E>,
   db: DrizzleD1Database,
@@ -173,6 +178,7 @@ export async function requireSessionEventsAuth<E extends HonoEnv>(c: AppContext<
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
+    if (err instanceof ProjectSelectionError) return projectSelectionErrorResponse(c)
     if (err instanceof WebSessionCsrfError) {
       return errorResponse(c, 403, 'forbidden', err.message) as never
     }
@@ -291,6 +297,7 @@ export async function requireAuth<E extends HonoEnv>(c: AppContext<E>) {
     auth = await resolveAuthContext(c, db)
   } catch (err) {
     if (err instanceof AuthorizationError) return authorizationErrorResponse(c, err)
+    if (err instanceof ProjectSelectionError) return projectSelectionErrorResponse(c)
     if (err instanceof WebSessionCsrfError) {
       return errorResponse(c, 403, 'forbidden', err.message) as never
     }

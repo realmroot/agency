@@ -20,8 +20,13 @@ def _get_kwargs(
     *,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -43,6 +48,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -104,6 +110,7 @@ def sync_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionMessageListResponse]:
     """ List session messages
@@ -112,6 +119,7 @@ def sync_detailed(
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -126,6 +134,7 @@ def sync_detailed(
         session_id=session_id,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -141,6 +150,7 @@ def sync(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionMessageListResponse | None:
     """ List session messages
@@ -149,6 +159,7 @@ def sync(
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -164,6 +175,7 @@ def sync(
 client=client,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -173,6 +185,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionMessageListResponse]:
     """ List session messages
@@ -181,6 +194,7 @@ async def asyncio_detailed(
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -195,6 +209,7 @@ async def asyncio_detailed(
         session_id=session_id,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -210,6 +225,7 @@ async def asyncio(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionMessageListResponse | None:
     """ List session messages
@@ -218,6 +234,7 @@ async def asyncio(
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -233,5 +250,6 @@ async def asyncio(
 client=client,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

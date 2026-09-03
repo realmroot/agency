@@ -1,5 +1,13 @@
+import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Deps } from './deps'
-import type { OrgScope, ProjectListQuery, ProjectRecord } from './ports'
+import {
+  type OrgScope,
+  type ProjectDeleteResult,
+  type ProjectListQuery,
+  type ProjectRecord,
+  ProjectReservedNameError,
+  type ProjectUpdateResult,
+} from './ports'
 
 // Lists projects in the caller's organization. Every organization always has at
 // least its default project, so a first, unpaged, empty page lazily creates it.
@@ -8,14 +16,37 @@ export async function listProjects(
   auth: OrgScope,
   query: Omit<ProjectListQuery, 'organizationId'>,
 ): Promise<{ rows: ProjectRecord[]; hasMore: boolean }> {
-  const page = await deps.projects.list({ organizationId: auth.organization.id, ...query })
-  if (page.rows.length === 0 && !query.cursor) {
-    const created = await deps.projects.insert(auth.organization.id, 'Default project', new Date().toISOString())
-    return { rows: [created], hasMore: false }
+  if (!query.cursor) {
+    await deps.projects.ensureDefault(auth.organization.id, new Date().toISOString())
   }
-  return page
+  return deps.projects.list({ organizationId: auth.organization.id, ...query })
 }
 
 export async function createProject(deps: Deps, auth: OrgScope, name: string): Promise<ProjectRecord> {
-  return deps.projects.insert(auth.organization.id, name, new Date().toISOString())
+  if (name === DEFAULT_PROJECT_NAME) throw new ProjectReservedNameError()
+  const timestamp = new Date().toISOString()
+  await deps.projects.ensureDefault(auth.organization.id, timestamp)
+  return deps.projects.insert(auth.organization.id, name, timestamp)
+}
+
+export async function updateProject(
+  deps: Deps,
+  auth: OrgScope,
+  projectId: string,
+  name: string,
+): Promise<ProjectUpdateResult> {
+  const project = await deps.projects.find(auth.organization.id, projectId)
+  if (!project) return { status: 'not_found' }
+  if (project.name === DEFAULT_PROJECT_NAME) return { status: 'default_project' }
+  if (name === DEFAULT_PROJECT_NAME) throw new ProjectReservedNameError()
+  const updated = await deps.projects.updateName(auth.organization.id, projectId, name, new Date().toISOString())
+  return updated ? { status: 'updated', project: updated } : { status: 'not_found' }
+}
+
+export async function deleteProject(deps: Deps, auth: OrgScope, projectId: string): Promise<ProjectDeleteResult> {
+  const project = await deps.projects.find(auth.organization.id, projectId)
+  if (!project) return 'not_found'
+  const defaultProject = await deps.projects.findDefault(auth.organization.id)
+  if (defaultProject?.id === project.id) return 'default_project'
+  return deps.projects.delete(auth.organization.id, projectId)
 }

@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { createRemoteJWKSet, customFetch, type JWKSCacheInput, type JWTPayload, jwksCache, jwtVerify } from 'jose'
 import { projects } from '../db/schema'
+import { DEFAULT_PROJECT_NAME } from '../domain/project'
 import type { Env } from '../env'
 import { newPrimaryKey } from '../id'
 import { verifyDpopCredential } from './dpop'
@@ -30,6 +31,13 @@ export class OidcError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'OidcError'
+  }
+}
+
+export class ProjectSelectionError extends Error {
+  constructor() {
+    super('Project not found')
+    this.name = 'ProjectSelectionError'
   }
 }
 
@@ -189,9 +197,9 @@ export async function upsertProjectForClaims(
   requestedProjectId?: string,
 ) {
   const organizationId = organizationIdForClaims(claims)
-  const projectName = 'Default project'
+  const projectName = DEFAULT_PROJECT_NAME
 
-  if (requestedProjectId) {
+  if (requestedProjectId !== undefined) {
     const requestedProject = await db
       .select()
       .from(projects)
@@ -200,6 +208,7 @@ export async function upsertProjectForClaims(
     if (requestedProject) {
       return { id: requestedProject.id, name: requestedProject.name, organizationId: requestedProject.organizationId }
     }
+    throw new ProjectSelectionError()
   }
 
   let project = await db
@@ -208,21 +217,21 @@ export async function upsertProjectForClaims(
     .where(and(eq(projects.organizationId, organizationId), eq(projects.name, projectName)))
     .orderBy(asc(projects.createdAt), asc(projects.id))
     .get()
-  project ??= await db
-    .select()
-    .from(projects)
-    .where(eq(projects.organizationId, organizationId))
-    .orderBy(asc(projects.createdAt), asc(projects.id))
-    .get()
   if (!project) {
-    project = {
+    const candidate = {
       id: newPrimaryKey(),
       organizationId,
       name: projectName,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
-    await db.insert(projects).values(project)
+    await db.insert(projects).values(candidate).onConflictDoNothing()
+    project = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.organizationId, organizationId), eq(projects.name, projectName)))
+      .get()
+    if (!project) throw new Error('Default project could not be resolved after creation')
   }
   return { id: project.id, name: project.name, organizationId: project.organizationId }
 }
@@ -257,20 +266,14 @@ function normalizeClaims(env: Env, claims: Record<string, unknown> & { sub: stri
 
 function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 'bearer' | 'dpop') {
   const clientId = stringClaim(claims.client_id)
-  const allowedClients = new Set([
-    env.OIDC_CLIENT_ID,
-    env.OIDC_RUNNER_CLIENT_ID,
-    ...trustedBearerClientIds(env),
-    'realmroot-cli',
-  ])
-  if (!clientId || !allowedClients.has(clientId)) throw new OidcError('Realmroot access token client is not allowed')
+  if (!clientId) throw new OidcError('Realmroot access token omitted the client id')
   if (credentialMode === 'bearer' && clientId === 'realmroot-cli') {
     throw new OidcError('Realmroot Agent clients require DPoP')
   }
   if (credentialMode === 'bearer' && claims.cnf !== undefined) {
     throw new OidcError('Realmroot sender-constrained tokens require proof-of-possession authentication')
   }
-  if (credentialMode === 'dpop' && clientId !== 'realmroot-cli') {
+  if (credentialMode === 'dpop' && (clientId === env.OIDC_CLIENT_ID || clientId === env.OIDC_RUNNER_CLIENT_ID)) {
     throw new OidcError('Realmroot Console and runner clients require Bearer authentication')
   }
   if (clientId !== 'realmroot-cli') return
@@ -278,13 +281,6 @@ function validateRealmrootClient(env: Env, claims: JWTPayload, credentialMode?: 
   if (!actor || actor.iss !== env.OIDC_ISSUER?.replace(/\/$/, '') || typeof actor.sub !== 'string' || !actor.sub) {
     throw new OidcError('Realmroot Agent token omitted the stable Agent actor')
   }
-}
-
-function trustedBearerClientIds(env: Env) {
-  return (env.OIDC_TRUSTED_BEARER_CLIENT_IDS ?? '')
-    .split(/[\s,]+/)
-    .map((clientId) => clientId.trim())
-    .filter(Boolean)
 }
 
 function bearerAccessToken(request: Request) {

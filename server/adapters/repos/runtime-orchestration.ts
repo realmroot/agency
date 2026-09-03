@@ -3,7 +3,6 @@ import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runtimesSupport } from '@server/domain/runtime-catalog'
 import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
 import { newPrimaryKey } from '@server/id'
-import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import type { ConnectorRecord, RunnerRuntime, SessionOrchestrationStore } from '@server/usecases/ports'
 import type {
   AgentRow,
@@ -65,6 +64,7 @@ type WorkItemInsertColumns = typeof workItems.$inferInsert
 type SessionApprovalInsertColumns = typeof sessionApprovals.$inferInsert
 type ConnectorRow = typeof connectors.$inferSelect
 const STATIC_CATALOG_TIMESTAMP = '1970-01-01T00:00:00.000Z'
+const TERMINAL_RUNTIME_STATES = ['closed', 'error']
 
 function connectorRecordFrom(row: ConnectorRow): ConnectorRecord {
   return {
@@ -191,6 +191,170 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
       return Boolean(updated)
     },
 
+    async acquirePendingStartupLease(projectId, sessionId, expectedStartedAt, startupId, leaseExpiresAt, timestamp) {
+      const updated = await db
+        .update(sessions)
+        .set({ activeTurnId: startupId, turnLeaseExpiresAt: leaseExpiresAt, updatedAt: timestamp })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
+            expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
+            or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async completeCloudSessionStart(projectId, sessionId, expectedStartedAt, startupId, fields, runtimeMetadata) {
+      const { metadata: _metadata, ...persistedFields } = persistedSessionWrite(fields)
+      const updated = await db
+        .update(sessions)
+        .set({
+          ...(persistedFields as SessionUpdateColumns),
+          metadata: sql`json_patch(${sessions.metadata}, ${JSON.stringify(runtimeMetadata)})`,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
+            expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
+            eq(sessions.activeTurnId, startupId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async failCloudSessionStart(projectId, sessionId, expectedStartedAt, startupId, fields, runtimeMetadata) {
+      const { metadata: _metadata, ...persistedFields } = persistedSessionWrite(fields)
+      const updated = await db
+        .update(sessions)
+        .set({
+          ...(persistedFields as SessionUpdateColumns),
+          metadata: sql`json_patch(${sessions.metadata}, ${JSON.stringify(runtimeMetadata)})`,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.state, persistedSessionState('pending') as SessionStateColumn),
+            expectedStartedAt === null ? isNull(sessions.startedAt) : eq(sessions.startedAt, expectedStartedAt),
+            eq(sessions.activeTurnId, startupId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async claimSessionClose(projectId, sessionId, sandboxId, cleanupId, leaseExpiresAt, timestamp) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          state: persistedSessionState('closed'),
+          stateReason: 'closing',
+          activeTurnId: cleanupId,
+          turnLeaseExpiresAt: leaseExpiresAt,
+          closedAt: null,
+          updatedAt: timestamp,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.sandboxId, sandboxId),
+            ne(sessions.state, persistedSessionState('closed') as SessionStateColumn),
+            or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async completeSessionClose(projectId, sessionId, sandboxId, cleanupId, closedAt) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          stateReason: null,
+          activeTurnId: null,
+          turnLeaseExpiresAt: null,
+          closedAt,
+          metadata: sql`json_set(${sessions.metadata}, '$.sandboxDestroyedAt', ${closedAt})`,
+          updatedAt: closedAt,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.sandboxId, sandboxId),
+            eq(sessions.activeTurnId, cleanupId),
+            eq(sessions.state, persistedSessionState('closed') as SessionStateColumn),
+            eq(sessions.stateReason, 'closing'),
+            isNull(sessions.closedAt),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async failSessionClose(projectId, sessionId, sandboxId, cleanupId, message, timestamp) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          state: persistedSessionState('error'),
+          stateReason: message,
+          activeTurnId: null,
+          turnLeaseExpiresAt: null,
+          updatedAt: timestamp,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.sandboxId, sandboxId),
+            eq(sessions.activeTurnId, cleanupId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async claimSessionReopen(projectId, sessionId, sandboxId, startedAt) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          state: persistedSessionState('pending'),
+          stateReason: null,
+          startedAt,
+          closedAt: null,
+          metadata: sql`json_remove(${sessions.metadata}, '$.sandboxDestroyedAt')`,
+          updatedAt: startedAt,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.sandboxId, sandboxId),
+            eq(sessions.state, persistedSessionState('closed') as SessionStateColumn),
+            isNotNull(sessions.closedAt),
+            sql`json_type(${sessions.metadata}, '$.sandboxDestroyedAt') is not null`,
+            isNull(sessions.activeTurnId),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
     async queueSessionWorkWhenState(
       projectId: string,
       sessionId: string,
@@ -268,6 +432,30 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             eq(sessions.id, sessionId),
             eq(sessions.projectId, projectId),
             eq(sessions.state, 'running'),
+            or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, now)),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async acquireIdleTurnLease(projectId, sessionId, turnId, leaseExpiresAt, now) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          state: persistedSessionState('running'),
+          stateReason: null,
+          activeTurnId: turnId,
+          turnLeaseExpiresAt: leaseExpiresAt,
+          continuationDepth: 0,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.projectId, projectId),
+            eq(sessions.state, persistedSessionState('idle') as SessionStateColumn),
             or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, now)),
           ),
         )
@@ -709,7 +897,8 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
                 ne(sessions.stateReason, 'waiting-for-runner-recovery'),
               ),
             ),
-            sql`${sessions.createdAt} < ${expiredBefore}`,
+            sql`coalesce(${sessions.startedAt}, ${sessions.createdAt}) < ${expiredBefore}`,
+            or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
           ),
         )
     },
@@ -768,30 +957,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         )
     },
 
-    async markIdleTimedOutSessions(timestamp: string): Promise<void> {
-      const timeoutSeconds = sql<number>`cast(json_extract(${sessions.metadata}, ${`$.annotations."${AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS}"`}) as integer)`
-      await db
-        .update(sessions)
-        .set({
-          state: persistedSessionState('closed'),
-          stateReason: 'idle-timeout',
-          closedAt: timestamp,
-          updatedAt: timestamp,
-        })
-        .where(
-          and(
-            isNull(sessions.archivedAt),
-            eq(sessions.state, 'idle'),
-            sql`${timeoutSeconds} > 0`,
-            sql`strftime('%s', ${timestamp}) - strftime('%s', ${sessions.updatedAt}) >= ${timeoutSeconds}`,
-          ),
-        )
-    },
-
-    async leakedSandboxSessions(
-      terminalStates: string[],
-      limit: number,
-    ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]> {
+    async leakedSandboxSessions(terminalStates, limit, closingBefore) {
       return db
         .select({ id: sessions.id, sandboxId: sessions.sandboxId, metadata: sessions.metadata })
         .from(sessions)
@@ -804,16 +970,73 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
             isNotNull(sessions.sandboxId),
             notLike(sessions.metadata, '%"sandboxBackend":"runner-sandbox"%'),
             notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
+            or(
+              ne(sessions.state, persistedSessionState('closed') as SessionStateColumn),
+              isNotNull(sessions.closedAt),
+              lt(sessions.updatedAt, closingBefore),
+            ),
           ),
         )
         .limit(limit)
     },
 
-    async stampSandboxDestroyed(sessionId: string, metadataJson: string): Promise<void> {
-      await db
+    async claimSandboxCleanup(sessionId, sandboxId, cleanupId, leaseExpiresAt, timestamp) {
+      const updated = await db
         .update(sessions)
-        .set({ metadata: metadataJson, updatedAt: sql`updated_at` })
-        .where(eq(sessions.id, sessionId))
+        .set({ activeTurnId: cleanupId, turnLeaseExpiresAt: leaseExpiresAt, updatedAt: timestamp })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.sandboxId, sandboxId),
+            or(
+              inArray(sessions.state, persistedSessionStates(TERMINAL_RUNTIME_STATES) as SessionStateColumn[]),
+              isNotNull(sessions.archivedAt),
+            ),
+            notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
+            or(isNull(sessions.activeTurnId), lt(sessions.turnLeaseExpiresAt, timestamp)),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async releaseSandboxCleanup(sessionId, sandboxId, cleanupId) {
+      const updated = await db
+        .update(sessions)
+        .set({ activeTurnId: null, turnLeaseExpiresAt: null, updatedAt: sql`updated_at` })
+        .where(and(eq(sessions.id, sessionId), eq(sessions.sandboxId, sandboxId), eq(sessions.activeTurnId, cleanupId)))
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
+    },
+
+    async stampSandboxDestroyed(sessionId, sandboxId, cleanupId, destroyedAt) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          metadata: sql`json_set(${sessions.metadata}, '$.sandboxDestroyedAt', ${destroyedAt})`,
+          closedAt: sql`case when ${sessions.stateReason} = 'closing' then ${destroyedAt} else ${sessions.closedAt} end`,
+          stateReason: sql`case when ${sessions.stateReason} = 'closing' then null else ${sessions.stateReason} end`,
+          activeTurnId: null,
+          turnLeaseExpiresAt: null,
+          updatedAt: sql`updated_at`,
+        })
+        .where(
+          and(
+            eq(sessions.id, sessionId),
+            eq(sessions.sandboxId, sandboxId),
+            eq(sessions.activeTurnId, cleanupId),
+            or(
+              inArray(sessions.state, persistedSessionStates(TERMINAL_RUNTIME_STATES) as SessionStateColumn[]),
+              isNotNull(sessions.archivedAt),
+            ),
+            notLike(sessions.metadata, '%"sandboxDestroyedAt"%'),
+          ),
+        )
+        .returning({ id: sessions.id })
+        .get()
+      return Boolean(updated)
     },
 
     // ── runner session channel (durable object) ──────────────────────────────

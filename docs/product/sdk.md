@@ -1,26 +1,26 @@
 # SDK and API Boundary
 
-This repository publishes the Any Managed Agents control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. Agent-facing clients require request-aware Realmroot DPoP authentication, while runner clients receive Bearer authentication through their configured transport; none accepts a raw access-token constructor shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
+This repository publishes the Enbor control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. These interfaces are for developers embedding durable Agent resources and Session execution in their own products; they are not an end-user Agent API. Agent-facing clients require request-aware Realmroot DPoP authentication, while runner clients receive Bearer authentication through their configured transport; none accepts a raw access-token constructor shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
 
 ## SDK Layers
 
 ```txt
 User application
   -> Realmroot Toolbox, an Agent DPoP SDK, or a runner Bearer SDK
-  -> Any Managed Agents OpenAPI control-plane API
+  -> Enbor OpenAPI control-plane API
   -> AMA session endpoint
   -> selected session runtime
   -> canonical AMA session events
 
 Web console
   -> Hono RPC client
-  -> Any Managed Agents control-plane routes
+  -> Enbor control-plane routes
   -> AMA session endpoint
   -> selected session runtime
   -> canonical AMA session events
 ```
 
-## External Any Managed Agents SDKs
+## External Enbor SDKs
 
 Repo-local generated SDK scaffolds use this repository's OpenAPI document as their source of truth. Those SDKs are the developer entry point for product resources:
 

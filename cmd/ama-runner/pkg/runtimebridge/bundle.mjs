@@ -38235,7 +38235,7 @@ var claudeCodeProvider = {
     });
   },
   // Enumerate the models the host Claude Code login can serve via the SDK's
-  // supportedModels() on an idle query (same path as the AK CLI reference).
+  // supportedModels() uses the runtime's idle-query path.
   async listModels({ env: env2 }) {
     const home = hostHome(env2);
     const queryEnv = { ...process.env };
@@ -218074,7 +218074,7 @@ var copilotProvider = {
     };
   },
   // Enumerate the models the host Copilot login can serve via the SDK's
-  // listModels() (same path as the AK CLI reference).
+  // listModels() uses the same idle-query path as other clients.
   async listModels({ env: env2 }) {
     const home = hostHome(env2);
     const clientEnv = { ...process.env, ...home ? { HOME: home } : {} };

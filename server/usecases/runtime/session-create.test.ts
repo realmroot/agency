@@ -469,7 +469,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       auth,
       'agent_1',
       'env_1',
-      { prompt: 'Use private resources' },
+      { id: 'session_bound', prompt: 'Use private resources' },
       null,
     )
 
@@ -479,6 +479,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
     )[0]![0]
     expect(JSON.parse(inserted.env)).toEqual({
       AGENT: runtime,
+      AGENT_SESSION_ID: 'session_bound',
       REALMROOT_ORIGIN: new URL(binding.issuer).origin,
       REALMROOT_STATE_DIR: '/workspace/.ama/realmroot-state',
     })
@@ -534,6 +535,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
 
   it.each([
     'AGENT',
+    'AGENT_SESSION_ID',
     'REALMROOT_ORIGIN',
     'REALMROOT_STATE_DIR',
   ])('rejects caller control of reserved env %s', async (name) => {
@@ -612,7 +614,7 @@ describe('[spec: sessions/identity-materialization] Identity runtime inputs', ()
       envFrom: [
         {
           type: 'secret',
-          name: 'REALMROOT_ORIGIN',
+          name: 'AGENT_SESSION_ID',
           key: 'origin',
           secretRef: 'ama://vaults/vault_2/credentials/cred_2',
         },

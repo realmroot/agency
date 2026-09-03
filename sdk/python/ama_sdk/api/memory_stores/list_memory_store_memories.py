@@ -20,8 +20,13 @@ def _get_kwargs(
     *,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -43,6 +48,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -104,6 +110,7 @@ def sync_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | MemoryStoreMemoryListResponse]:
     """ List memories in a memory store
@@ -113,6 +120,7 @@ def sync_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -127,6 +135,7 @@ def sync_detailed(
         store_id=store_id,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -142,6 +151,7 @@ def sync(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | MemoryStoreMemoryListResponse | None:
     """ List memories in a memory store
@@ -151,6 +161,7 @@ def sync(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,6 +177,7 @@ def sync(
 client=client,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -175,6 +187,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | MemoryStoreMemoryListResponse]:
     """ List memories in a memory store
@@ -184,6 +197,7 @@ async def asyncio_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -198,6 +212,7 @@ async def asyncio_detailed(
         store_id=store_id,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -213,6 +228,7 @@ async def asyncio(
     client: AuthenticatedClient,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | MemoryStoreMemoryListResponse | None:
     """ List memories in a memory store
@@ -222,6 +238,7 @@ async def asyncio(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -237,5 +254,6 @@ async def asyncio(
 client=client,
 limit=limit,
 cursor=cursor,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed
