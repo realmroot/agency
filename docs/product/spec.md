@@ -1,6 +1,8 @@
 # Product Spec
 
-Any Managed Agents is a Cloudflare-native managed agents system. It is inspired by CMA and Claude Managed Agents, but it is not vendor locked to Anthropic or any single model provider.
+Enbor is open, Cloudflare-native infrastructure for developers building agent products. It provides a self-hostable control and execution plane for durable, versioned Agent definitions and their Sessions across cloud and self-hosted runtimes. It is not an end-user agent, a downstream agent product, or a replacement agent framework.
+
+Enbor is inspired by CMA and Claude Managed Agents, but it is not locked to Anthropic, a single model provider, or one runtime. The repository and compatibility-sensitive package, Resource Server, and runtime identifiers continue to use `agency`, `any-managed-agents`, and `AMA` until they are migrated separately.
 
 ## End State
 
@@ -27,7 +29,9 @@ Any Managed Agents is a Cloudflare-native managed agents system. It is inspired 
 
 ## Boundary
 
-The platform owns the control plane:
+Agent frameworks define how one run executes. Enbor defines what an Agent is across runs: its durable configuration, immutable versions, execution environments, Session instances, canonical events, and governance history. Downstream products own their end-user experience and business workflows.
+
+Enbor owns the control plane:
 
 - OIDC provider-backed tenancy and AMA projects
 - agent definitions for persona, instructions, policy, provider, model, skills, tools, and MCP connectors

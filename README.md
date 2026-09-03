@@ -1,84 +1,105 @@
-# Any Managed Agents
+# Enbor
 
-[![CI](https://github.com/saltbo/any-managed-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/saltbo/any-managed-agents/actions/workflows/ci.yml)
+[![CI](https://github.com/realmroot/agency/actions/workflows/ci.yml/badge.svg)](https://github.com/realmroot/agency/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![OpenAPI](https://img.shields.io/badge/API-OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](docs/product/sdk.md)
 
-**Any Managed Agents is an open-source, self-hostable alternative to Claude Managed Agents.**
+**The open infrastructure for durable agents.**
 
-AMA implements the same core idea as Claude Managed Agents: a managed service layer for agents, environments, sessions, and runtime events. The difference is that AMA is open source, self-hosted on your Cloudflare account, and designed to work with multiple model providers instead of only Claude.
+Enbor is an open-source, self-hostable control and execution plane for developers building agent products. Define an agent once—its identity, instructions, model policy, skills, tools, MCP connectors, memory, and governance—then version it and run consistent sessions across cloud and self-hosted runtimes.
 
-## Why This Exists
+> Define once. Run anywhere. Evolve over time.
 
-[Claude Managed Agents](https://platform.claude.com/docs/en/managed-agents/overview) shows where production agent infrastructure is going: long-running sessions, secure containers, tool execution, persisted events, and a first-class API surface for agents, environments, sessions, and events. Anthropic describes it as a configurable agent harness running on managed infrastructure, designed for long-running asynchronous work.
+Enbor is infrastructure. It is not an end-user agent, an agent application, or another framework for implementing one agent loop. Products build their own experiences and workflows on top of Enbor's durable resources, APIs, and runtime boundary.
 
-That direction is right. The lock-in tradeoff is not.
+## Why Enbor Exists
 
-Claude Managed Agents is purpose-built for Claude. Any Managed Agents is built for teams that want CMA-style managed agent infrastructure, but with:
+Most agent tooling starts with a run. Prompts, skills, tools, MCP configuration, model choices, and policies are assembled for one process on one machine. The next environment often has to assemble them again, while the identity and history of the agent are left to the application to reconstruct.
 
-- **Any model provider**: use Workers AI first, then plug in OpenAI-compatible, Anthropic, local, or custom provider adapters.
-- **Self-hosted control**: deploy the control plane on your own Cloudflare account instead of depending on a single vendor-hosted agent service.
-- **Open API surface**: manage agents, environments, sessions, events, providers, usage, and audit data through an OpenAPI-backed control plane.
-- **Runtime flexibility**: run cloud sessions on Cloudflare Sandbox and self-hosted sessions through registered runtime runners.
-- **Product ownership**: integrate managed agents into your own product without inheriting another vendor's console, data plane, or roadmap constraints.
+Enbor starts with the agent itself. An `Agent` is a long-lived, versioned definition and a `Session` is one concrete run of that definition. Environments describe where work can execute; runtimes describe how it executes. Models, machines, and runtimes may change without redefining what the agent is.
 
-## What It Does
+```txt
+Agent definition -> immutable version -> Session
+                                      -> Session
+                                      -> Session
+```
 
-- Manages agents, environments, sessions, providers, usage records, audit records, and governance metadata.
-- Creates one isolated Cloudflare Sandbox execution environment per running cloud session.
-- Publishes a Realmroot-native Hono/OpenAPI control-plane API for Realmroot Toolbox and DPoP-aware generated SDKs.
-- Uses an OIDC provider for authentication and tenancy instead of maintaining local user tables.
-- Stores platform metadata in D1 and secret references in Cloudflare-managed secret storage.
-- Provides a React console for authenticated project, agent, environment, and session workflows.
-- Documents product behavior in Gherkin specs (BDD-lite) and exercises it through native Playwright end-to-end crowns plus vitest coverage gates.
+This gives agent product developers one canonical place to manage durable definitions, execution environments, runtime sessions, events, policy, credentials, memory, usage, and audit history.
 
-## AMA vs CMA
+## The Name
 
-| Area | Claude Managed Agents | Any Managed Agents |
-| --- | --- | --- |
-| Model choice | Claude | Workers AI first, with provider adapters for other models |
-| Hosting model | Anthropic-hosted managed infrastructure | Self-hosted Cloudflare control plane |
-| Core objects | Agents, environments, sessions, events | Agents, environments, sessions, events, plus provider governance and audit metadata |
-| API surface | Claude Platform API | OpenAPI-backed control-plane API |
-| Runtime ownership | Anthropic-managed runtime | Project-owned execution plane on Cloudflare Sandbox or self-hosted runners |
-| Product fit | Best when you want Claude-hosted agent infrastructure | Best when you want a CMA alternative you can own, extend, and embed |
+`Enbor` means the trunk of a tree in Basque: the durable structure that remains while branches grow and change. An Enbor Agent plays the same role. Sessions branch from a stable, versioned definition while its capabilities, policy, and memory can evolve without losing the Agent's identity.
+
+## Infrastructure Boundary
+
+Enbor owns:
+
+- **Durable agent definitions**: identity, instructions, provider and model policy, skills, tools, MCP connectors, memory bindings, governance, and versions.
+- **Execution configuration**: reusable cloud or self-hosted environments, workspace setup, network policy, resource limits, and safe secret references.
+- **Session lifecycle**: immutable agent and environment snapshots, runtime selection, dispatch, persisted events, transcripts, approvals, usage, and audit records.
+- **Developer interfaces**: an OpenAPI-backed control plane, generated SDKs, Realmroot Toolbox integration, and an operational console.
+- **Runtime portability**: a canonical session surface across the first-party `ama` runtime and runner-managed integrations such as `claude-code`, `codex`, and `copilot`.
+
+Enbor does not own:
+
+- the customer-facing product or its business workflow
+- the model provider
+- a downstream product's user experience
+- a replacement protocol or agent loop for every runtime
+
+Agent frameworks answer **how one run executes**. Enbor answers **what the agent is across runs, versions, environments, and runtimes**.
 
 ## Architecture
 
 ```txt
 +-------------------------------------------------------------+
-| Access                                                      |
-| Web console, Realmroot Toolbox, DPoP-aware generated SDKs   |
+| Developer Interfaces                                        |
+| Product APIs, generated SDKs, Realmroot Toolbox, console    |
 +-----------------------------+-------------------------------+
                               |
 +-----------------------------v-------------------------------+
-| Control Plane                                               |
-| Projects, agents, environments, sessions, provider policy,  |
-| usage records, audit records, OpenAPI routes                |
+| Enbor Control Plane                                         |
+| Agent definitions and versions, environments, sessions,     |
+| provider policy, memory, governance, usage, and audit        |
 +-----------------------------+-------------------------------+
                               |
 +-----------------------------v-------------------------------+
-| Execution Plane                                             |
+| Enbor Execution Plane                                       |
 | Cloudflare Sandbox for cloud sessions, self-hosted runners, |
-| workspace state, tool execution, event streaming, history   |
+| runtime adapters, event streaming, and persisted history    |
 +-----------------------------+-------------------------------+
                               |
 +-----------------------------v-------------------------------+
 | Platform Services                                           |
-| OIDC, Workers, D1, Durable Objects, Sandbox, Workers AI,    |
-| provider adapters, Secrets, MCP                             |
+| Realmroot, Workers, D1, Durable Objects, Sandbox, Secrets,  |
+| Workers AI, provider adapters, and MCP                      |
 +-------------------------------------------------------------+
 ```
 
-At a high level, AMA owns the agent control plane: who can create agents, which environment a session runs in, which providers are allowed, what happened during execution, and how the run is audited. Cloudflare provides the serverless substrate for deployment, storage, isolation, and runtime execution.
+Cloudflare provides the serverless substrate for deployment, storage, isolation, and cloud execution. Realmroot provides authentication, stable Agent identity, tenancy, and delegated authority. Enbor provides the durable Agent model and the control and execution planes that downstream products embed.
+
+## How It Relates to Claude Managed Agents
+
+[Claude Managed Agents](https://platform.claude.com/docs/en/managed-agents/overview) demonstrates the value of first-class infrastructure for long-running agent work. Enbor applies that infrastructure model to an open, self-hostable, multi-runtime control plane.
+
+| Area | Claude Managed Agents | Enbor |
+| --- | --- | --- |
+| Model choice | Claude | Workers AI first, with adapters for other configured providers |
+| Hosting model | Anthropic-hosted managed infrastructure | Self-hosted Cloudflare control plane and execution plane |
+| Core objects | Agents, environments, sessions, events | Versioned agents, environments, sessions, events, memory, governance, usage, and audit resources |
+| API surface | Claude Platform API | OpenAPI-backed control-plane API and canonical session surface |
+| Runtime ownership | Anthropic-managed runtime | Cloudflare Sandbox or registered self-hosted runners |
+| Product fit | Products committed to Claude-hosted infrastructure | Developers who need agent infrastructure they can own, extend, and embed |
 
 ## Status
 
-Any Managed Agents is early-stage software. The repository currently contains the Cloudflare foundation, OpenAPI-backed control-plane surface, authenticated console, executable product specs, CI, and deployment documentation.
+Enbor is early-stage software. The repository currently contains the Cloudflare foundation, OpenAPI-backed control-plane surface, authenticated console, generated SDK scaffolds, executable product specs, CI, and deployment documentation.
 
-The project is moving toward a release where a signed-in user can create an environment, create an agent, start a managed session, send work into a sandboxed execution environment, inspect persisted events, and stop the session cleanly.
+The project is moving toward a release where developers can define and version agents, configure reusable environments, start sessions across supported runtimes, inspect persisted events, and embed those capabilities in their own products.
+
+The repository, package, Resource Server, and runtime identifiers currently retain their existing `agency`, `any-managed-agents`, and `AMA` names. Their migration is separate from adopting Enbor as the product name.
 
 ## Documentation
 

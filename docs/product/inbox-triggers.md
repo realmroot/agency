@@ -1,21 +1,21 @@
 # Inbox Triggers
 
-Agency owns the user-visible Trigger and its Trigger Runs. Inbox owns the
+Enbor owns the user-visible Trigger and its Trigger Runs. Inbox owns the
 corresponding Subscription and Message data. The first integration is one
-Trigger to one Subscription; there is no shared Subscription or Agency fan-out.
+Trigger to one Subscription; there is no shared Subscription or Enbor fan-out.
 
 ## Subscription management contract
 
-Agency calls Inbox with its dedicated Realmroot M2M service identity and the
+Enbor calls Inbox with its dedicated Realmroot M2M service identity and the
 `subscriptions:read subscriptions:manage` scopes. The Inbox protected-resource base is configured as
-`INBOX_RESOURCE`. Agency controls the stable Subscription id, composed of the
+`INBOX_RESOURCE`. Enbor controls the stable Subscription id, composed of the
 `sub_` prefix plus 32 lowercase hexadecimal characters, and uses these resource
 operations with `API-Version: 2026-08-11`:
 
 The M2M exchange uses a dedicated Realmroot machine Application configured by
 `INBOX_CLIENT_ID` and the `INBOX_CLIENT_SECRET` Worker secret. The browser Web
 Application configured by `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` is never
-reused for Inbox provisioning. Agency sends the exact `INBOX_RESOURCE` as the
+reused for Inbox provisioning. Enbor sends the exact `INBOX_RESOURCE` as the
 OAuth 2.0 Resource Indicator (`resource`), never as an `audience` parameter.
 
 - `PUT {INBOX_RESOURCE}/subscriptions/{subscriptionId}` with `If-None-Match: *`
@@ -47,8 +47,8 @@ Realmroot internal Identity resource id from `IdentityDescriptor.agentId`.
 Those UUIDv7 values may differ, and Inbox public Agent discovery is keyed by the
 stable subject.
 
-Agency persists the remote-confirmed registered subject and the target subject
-for the current PUT transition. Before every PUT, Agency reads the Inbox
+Enbor persists the remote-confirmed registered subject and the target subject
+for the current PUT transition. Before every PUT, Enbor reads the Inbox
 Subscription representation and treats its UUIDv7 `agentId` as the only
 authoritative registered subject. A successful PUT advances the registered
 subject atomically with local `active` state and clears the target. Failed PUTs
@@ -63,11 +63,11 @@ remote state from the internal `IdentityDescriptor.agentId`. Subscription ids,
 callback credentials, ETags, child Trigger Runs, pending HTTP dispatches, and
 Session routes are preserved by the constraint-compatible table rebuild.
 
-The callback token is never placed in a URL, API response, or log. Agency stores
+The callback token is never placed in a URL, API response, or log. Enbor stores
 its SHA-256 hash for admission and an AES-GCM ciphertext for reliable idempotent
 Subscription retries. Retries reuse the same token, so an uncertain PUT cannot
-make Inbox and Agency disagree about which callback credential is current.
-Agency also stores the current Subscription ETag.
+make Inbox and Enbor disagree about which callback credential is current.
+Enbor also stores the current Subscription ETag.
 Provisioning state is `pending`, `active`, `inactive`, or `error`; the scheduled
 reconciler retries pending and failed transitions with the same callback token.
 Only classified Inbox gateway failures become provisioning errors. Every
@@ -83,7 +83,7 @@ ciphertext, and service credentials are not included in gateway diagnostics.
 ## Notification contract
 
 Inbox creates a notification receipt through
-`POST <Agency OIDC_RESOURCE>/v1/inbox-notifications` with
+`POST <OIDC_RESOURCE>/v1/inbox-notifications` with
 `Authorization: Bearer <registered-token>` and `Content-Type: application/json`:
 
 ```json
@@ -99,11 +99,11 @@ Inbox creates a notification receipt through
 ```
 
 The callback `agentId` carries the stable OIDC subject registered on the
-Subscription. While provisioning is `pending` or `error`, Agency accepts the
+Subscription. While provisioning is `pending` or `error`, Enbor accepts the
 registered subject and the persisted transition target because the Subscription
 id and callback Bearer token already bind the delivery. This covers
 the non-atomic window where Inbox accepted a PUT but the local active-state write
-failed. Once provisioning is `active`, Agency accepts only the registered subject.
+failed. Once provisioning is `active`, Enbor accepts only the registered subject.
 
 A migrated Subscription can have a pre-existing ETag while its registered
 subject is still unknown before the first authoritative Inbox GET. In that
@@ -127,7 +127,7 @@ orphan version. SQLite serializes that batch with Trigger insertion: a Trigger
 inserted first blocks the rebind, while a rebind committed first makes a later
 Trigger observe the new current Identity.
 
-Agency validates the Subscription token and Agent identity, then persistently
+Enbor validates the Subscription token and Agent identity, then persistently
 deduplicates on `(subscriptionId, eventId)` by creating one Trigger Run. A `202`
 means that receipt is durable; it does not mean the Agent completed processing.
 The notification contains no Message body. Inbox retries timeouts, network
@@ -135,7 +135,7 @@ errors, `429`, and `5xx` responses; other non-`2xx` responses are permanent.
 
 ## Session routing
 
-Agency hashes an optional routing key and atomically binds
+Enbor hashes an optional routing key and atomically binds
 `(agentId, triggerId, routingKeyHash)` to a Session id through a D1 unique
 constraint. The binding is reserved before Session creation, so concurrent first
 events cannot create multiple Sessions. Equal keys reuse the bound Session,
