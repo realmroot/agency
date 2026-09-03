@@ -273,7 +273,11 @@ export class CloudflareSandboxToolExecutor implements ToolExecutor {
 
   private async sandbox(sandboxId: string) {
     const getSandbox = await getSandboxBinding()
-    return getSandbox(this.env.SANDBOX, sandboxId, { keepAlive: true, normalizeId: true })
+    return getSandbox(this.env.SANDBOX, sandboxId, {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
   }
 
   private async executeInSandbox(

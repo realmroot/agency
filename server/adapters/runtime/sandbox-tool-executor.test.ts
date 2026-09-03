@@ -87,7 +87,11 @@ describe('tool-executor', () => {
       output: { stdout: 'ok', stderr: '', exitCode: 0 },
       error: null,
     })
-    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
     expect(sandboxMock.exec).toHaveBeenCalledWith('git status', { cwd: '/workspace', timeout: 600_000 })
   })
 

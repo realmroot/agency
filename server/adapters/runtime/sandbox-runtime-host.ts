@@ -490,7 +490,11 @@ export async function startSessionRuntime(
   }
   if (env.AMA_RUNTIME_MODE !== 'test') {
     const getSandbox = await getSandboxBinding()
-    const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
+    const sandbox = getSandbox(env.SANDBOX, input.sandboxId, {
+      enableDefaultSession: false,
+      keepAlive: true,
+      normalizeId: true,
+    })
     const sessionEnv = { ...(input.env ?? {}) }
     const environmentBin = await prepareCloudEnvironmentPackages(sandbox, input.environmentSnapshot)
     if (environmentBin) {
@@ -524,7 +528,11 @@ export async function startSessionRuntime(
 export async function activateSessionRuntime(env: Env, input: SessionRuntimeStartInput) {
   if (env.AMA_RUNTIME_MODE === 'test') return
   const getSandbox = await getSandboxBinding()
-  const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
+  const sandbox = getSandbox(env.SANDBOX, input.sandboxId, {
+    enableDefaultSession: false,
+    keepAlive: true,
+    normalizeId: true,
+  })
   const marker = await sandbox.exec(`test -f ${shellQuote(RUNTIME_READY_MARKER)}`)
   if (marker.exitCode === 0) return
   await startSessionRuntime(env, input)
@@ -537,7 +545,7 @@ export async function stopSessionRuntime(env: Env, sandboxId: string) {
 export async function idleSessionRuntime(env: Env, sandboxId: string, sleepAfterSeconds: number) {
   if (env.AMA_RUNTIME_MODE === 'test') return
   const getSandbox = await getSandboxBinding()
-  const sandbox = getSandbox(env.SANDBOX, sandboxId, { normalizeId: true })
+  const sandbox = getSandbox(env.SANDBOX, sandboxId, { enableDefaultSession: false, normalizeId: true })
   for (let attempt = 1; attempt <= IDLE_LIFECYCLE_ATTEMPTS; attempt += 1) {
     try {
       await sandbox.setSleepAfter(`${sleepAfterSeconds}s`)
@@ -557,7 +565,11 @@ export async function readMemoryStoreMemories(
     return []
   }
   const getSandbox = await getSandboxBinding()
-  const sandbox = getSandbox(env.SANDBOX, input.sandboxId, { keepAlive: true, normalizeId: true })
+  const sandbox = getSandbox(env.SANDBOX, input.sandboxId, {
+    enableDefaultSession: false,
+    keepAlive: true,
+    normalizeId: true,
+  })
   const stores: Array<{ memoryRef: string; memories: Array<{ path: string; content: string }> }> = []
   for (const volume of input.volumes) {
     if (volumeMountReadOnly(volume.name, input.volumeMounts)) {

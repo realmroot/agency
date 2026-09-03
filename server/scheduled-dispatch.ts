@@ -10,7 +10,7 @@ export type { ScheduleDispatchResult }
 // the worker scheduled handler can pass it through.
 export function dispatchDueScheduledTriggers(
   env: Env,
-  _ctx: ExecutionContext,
+  _ctx: { waitUntil(promise: Promise<unknown>): void },
   options: { heartbeatAt?: string; projectId?: string; limit?: number } = {},
 ): Promise<ScheduleDispatchResult> {
   return runDispatch(createDeps(env), options)
