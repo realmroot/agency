@@ -21,9 +21,11 @@ import type {
   VaultVisibility,
   VersionListQuery,
 } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, desc, eq, gte, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { vaultCredentials, vaultCredentialVersions, vaults } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type VaultRow = typeof vaults.$inferSelect
@@ -47,13 +49,13 @@ function vaultRecordFrom(row: VaultRow): Vault {
       description: row.description,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     }),
     spec: {
       organizationId: row.organizationId,
       scope: row.scope as VaultScope,
     },
-    status: { phase: resourcePhase(row.archivedAt) },
+    status: { phase: resourcePhase(row.deletedAt) },
   }
 }
 
@@ -65,7 +67,7 @@ function credentialRecordFrom(row: CredentialRow): Credential {
       name: row.name,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.revokedAt,
+      deletedAt: row.revokedAt,
     }),
     spec: {
       vaultId: row.vaultId,
@@ -93,7 +95,7 @@ function versionRecordFrom(row: CredentialVersionRow): CredentialVersion {
       name: `v${row.version}`,
       createdAt: row.createdAt,
       updatedAt: row.createdAt,
-      archivedAt: row.revokedAt,
+      deletedAt: row.revokedAt,
     }),
     spec: {
       credentialId: row.credentialId,
@@ -140,7 +142,7 @@ export function createVaultRepo(db: Db): VaultRepo {
     async list(query: VaultListQuery): Promise<ListPageResult<Vault>> {
       const filters = [
         publicVisibilityFilter(query),
-        query.archived ? isNotNull(vaults.archivedAt) : isNull(vaults.archivedAt),
+        isNull(vaults.deletedAt),
         query.search ? like(vaults.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(vaults.createdAt, query.createdFrom) : undefined,
         query.createdTo ? lte(vaults.createdAt, query.createdTo) : undefined,
@@ -165,7 +167,7 @@ export function createVaultRepo(db: Db): VaultRepo {
       const row = await db
         .select()
         .from(vaults)
-        .where(and(eq(vaults.id, vaultId), publicVisibilityFilter(visibility)))
+        .where(and(eq(vaults.id, vaultId), publicVisibilityFilter(visibility), isNull(vaults.deletedAt)))
         .get()
       return row ? vaultRecordFrom(row) : null
     },
@@ -188,26 +190,41 @@ export function createVaultRepo(db: Db): VaultRepo {
         description: input.description,
         scope: input.scope,
         managedBy: input.managedBy ?? null,
-        archivedAt: null,
+        deletedAt: null,
         createdAt,
         updatedAt: createdAt,
       }
-      await db.insert(vaults).values(row)
+      try {
+        await db.insert(vaults).values(row)
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Vault')
+        throw error
+      }
       return vaultRecordFrom(row)
     },
 
     async update(vaultId, fields: UpdateVaultFields, updatedAt) {
-      await db
+      const updated = await db
         .update(vaults)
         .set({
           name: fields.name,
           description: fields.description,
           scope: fields.scope,
           projectId: fields.projectId,
-          archivedAt: fields.archivedAt,
           updatedAt,
         })
-        .where(eq(vaults.id, vaultId))
+        .where(and(eq(vaults.id, vaultId), isNull(vaults.deletedAt)))
+        .returning({ id: vaults.id })
+      if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Vault')
+    },
+
+    async delete(vaultId, visibility, deletedAt) {
+      const rows = await db
+        .update(vaults)
+        .set({ deletedAt, updatedAt: deletedAt })
+        .where(and(eq(vaults.id, vaultId), publicVisibilityFilter(visibility), isNull(vaults.deletedAt)))
+        .returning({ id: vaults.id })
+      return rows.length > 0
     },
 
     async hasCredentials(vaultId) {

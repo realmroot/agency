@@ -238,17 +238,6 @@ describe('[spec: console/related-resources-table] RelatedResourcesTable', () => 
     expect(screen.getByText('active')).toBeTruthy()
   })
 
-  it('renders an archived Agent row with archived status badge', () => {
-    const agent = buildAgent({ archivedAt: '2026-05-24T00:00:00.000Z' })
-    render(
-      <MemoryRouter>
-        <RelatedResourcesTable title="Agents" empty="No agents" items={[agent]} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByText('archived')).toBeTruthy()
-  })
-
   it('renders a Session row with link to /sessions/:id and id as display', () => {
     const session = buildSession()
     render(

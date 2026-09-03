@@ -108,11 +108,10 @@ export interface UpdateRunnerPatch {
   state?: 'active' | 'draining' | 'disabled'
   maxConcurrent?: number
   metadata?: Record<string, unknown>
-  archived?: boolean
 }
 
-// Updates runner management fields and the archive lifecycle. Rejects raw
-// secret material; absent fields retain their current value.
+// Updates runner management fields. Rejects raw secret material; absent fields
+// retain their current value.
 export async function updateRunner(
   deps: Deps,
   projectId: string,
@@ -123,8 +122,6 @@ export async function updateRunner(
     throw new RunnerValidationError('Runner metadata must not contain raw secret material')
   }
   const timestamp = new Date().toISOString()
-  const archivedAt =
-    patch.archived === undefined ? runner.archivedAt : patch.archived ? (runner.archivedAt ?? timestamp) : null
   return deps.runners.update(
     projectId,
     runner.id,
@@ -133,7 +130,6 @@ export async function updateRunner(
       state: patch.state ?? runner.state,
       maxConcurrent: patch.maxConcurrent ?? runner.maxConcurrent,
       metadata: patch.metadata ?? runner.metadata,
-      archivedAt,
     },
     timestamp,
   )
@@ -146,7 +142,7 @@ export interface HeartbeatPatch {
   metadata?: Record<string, unknown>
 }
 
-// Replaces the runner heartbeat singleton. Archived and disabled runners cannot
+// Replaces the runner heartbeat singleton. Deleted and disabled runners cannot
 // heartbeat; raw secret material in metadata/inventory is rejected. The state
 // defaults to 'active' when the heartbeat omits it.
 export async function recordRunnerHeartbeat(
@@ -155,8 +151,8 @@ export async function recordRunnerHeartbeat(
   runner: RunnerAuthRecord,
   patch: HeartbeatPatch,
 ): Promise<RunnerAuthRecord> {
-  if (runner.archivedAt) {
-    throw new RunnerConflictError('Archived runners cannot heartbeat')
+  if (runner.deletedAt) {
+    throw new RunnerConflictError('Deleted runners cannot heartbeat')
   }
   if (runner.state === 'disabled') {
     throw new RunnerConflictError('Disabled runners cannot heartbeat until re-enabled by an operator')

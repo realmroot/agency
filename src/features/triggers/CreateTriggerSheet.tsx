@@ -8,7 +8,6 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { isArchived } from '@/console/format'
 import { TextAreaField, TextField } from '@/console/forms'
 import { api, type RuntimeName } from '@/lib/amarpc'
 import { errorMessage } from '@/lib/errors'
@@ -62,12 +61,12 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
   const queryClient = useQueryClient()
   const [form, setForm] = useState<TriggerFormState>(emptyTrigger)
   const agentsQuery = useQuery({
-    queryKey: queryKeys.agents.list(false),
+    queryKey: queryKeys.agents.list(),
     queryFn: () => api.listAgents(),
     enabled: open,
   })
   const environmentsQuery = useQuery({
-    queryKey: queryKeys.environments.list(false),
+    queryKey: queryKeys.environments.list(),
     queryFn: () => api.listEnvironments(),
     enabled: open,
   })
@@ -76,10 +75,8 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
     queryFn: () => api.listRunners({ state: 'active' }),
     enabled: open,
   })
-  const agents = (agentsQuery.data?.data ?? EMPTY_RESOURCES).filter((agent) => !isArchived(agent))
-  const allEnvironments = (environmentsQuery.data?.data ?? EMPTY_RESOURCES).filter(
-    (environment) => !isArchived(environment),
-  )
+  const agents = agentsQuery.data?.data ?? EMPTY_RESOURCES
+  const allEnvironments = environmentsQuery.data?.data ?? EMPTY_RESOURCES
   const runners = runnersQuery.data?.data ?? EMPTY_RESOURCES
   const boundRuntime = agents.find((agent) => agent.metadata.uid === form.agentId)?.spec.identity?.runtime
   const environments = boundRuntime

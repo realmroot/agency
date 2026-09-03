@@ -154,7 +154,7 @@ async function createTrigger(
   })
   expect(res.status).toBe(201)
   return (await res.json()) as {
-    metadata: { uid: string; name: string; archivedAt: string | null }
+    metadata: { uid: string; name: string; deletedAt: string | null }
     spec: {
       source:
         | { type: 'schedule'; schedule: { intervalSeconds: number; windowSeconds: number } }
@@ -188,7 +188,7 @@ describe('[CF] /api/v1/triggers', () => {
     vi.unstubAllGlobals()
   })
 
-  it('creates, lists, reads, updates, pauses, archives, restores, and audits triggers [spec: triggers/api-crud]', async () => {
+  it('creates, lists, reads, updates, pauses, deletes, and audits triggers [spec: triggers/api-crud]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
     const environment = await createEnvironment(authorization)
@@ -210,7 +210,6 @@ describe('[CF] /api/v1/triggers', () => {
     })
     const firstId = first.metadata.uid
     expect(first.spec.suspend).toBe(false)
-    expect(first.metadata.archivedAt).toBeNull()
     expect(first).not.toHaveProperty('organizationId')
     const second = await createTrigger(authorization, agent.id, environment.id, {
       name: 'Beta heartbeat',
@@ -305,46 +304,21 @@ describe('[CF] /api/v1/triggers', () => {
     })
     expect(invalidPatchRes.status).toBe(400)
 
-    const archiveRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    await expect(archiveRes.json()).resolves.toMatchObject({
-      metadata: { uid: firstId, archivedAt: expect.any(String) },
-    })
+    const deleteRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
 
-    const archivedReadRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization)
-    expect(archivedReadRes.status).toBe(200)
-    await expect(archivedReadRes.json()).resolves.toMatchObject({
-      metadata: { uid: firstId, archivedAt: expect.any(String) },
-    })
+    const deletedReadRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization)
+    expect(deletedReadRes.status).toBe(404)
 
     const defaultListRes = await jsonFetch('/api/v1/triggers', authorization)
     const defaultList = (await defaultListRes.json()) as { data: Array<{ metadata: { uid: string } }> }
     expect(defaultList.data).not.toContainEqual(expect.objectContaining({ metadata: { uid: firstId } }))
 
-    const archivedListRes = await jsonFetch('/api/v1/triggers?archived=true', authorization)
-    const archivedList = (await archivedListRes.json()) as { data: Array<{ metadata: { uid: string } }> }
-    expect(archivedList.data).toContainEqual(
-      expect.objectContaining({ metadata: expect.objectContaining({ uid: firstId }) }),
-    )
-
-    const updateArchivedRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization, {
+    const updateDeletedRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ metadata: { name: 'Cannot touch this' } }),
     })
-    expect(updateArchivedRes.status).toBe(409)
-    await expect(updateArchivedRes.json()).resolves.toMatchObject({
-      error: { type: 'conflict', message: 'Archived triggers cannot be updated' },
-    })
-
-    const restoreRes = await jsonFetch(`/api/v1/triggers/${firstId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: false }),
-    })
-    expect(restoreRes.status).toBe(200)
-    await expect(restoreRes.json()).resolves.toMatchObject({ metadata: { uid: firstId, archivedAt: null } })
+    expect(updateDeletedRes.status).toBe(404)
 
     const auditRes = await jsonFetch('/api/v1/audit-records?action=trigger', authorization)
     expect(auditRes.status).toBe(200)
@@ -353,7 +327,6 @@ describe('[CF] /api/v1/triggers', () => {
       expect.arrayContaining([
         expect.objectContaining({ action: 'trigger.create', resourceId: firstId }),
         expect.objectContaining({ action: 'trigger.update', resourceId: secondId }),
-        expect.objectContaining({ action: 'trigger.archive', resourceId: firstId }),
       ]),
     )
   })
@@ -1287,7 +1260,7 @@ describe('[CF] /api/v1/triggers', () => {
     expect(resumed.status.sessionId).not.toBe(first.status.sessionId)
   })
 
-  it('does not dispatch paused or archived triggers [spec: triggers/inactive]', async () => {
+  it('does not dispatch paused or deleted triggers [spec: triggers/inactive]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
     const environment = await createEnvironment(authorization)
@@ -1312,8 +1285,8 @@ describe('[CF] /api/v1/triggers', () => {
       suspend: true,
     })
 
-    const archived = await createTrigger(authorization, agent.id, environment.id, {
-      name: 'Archived heartbeat',
+    const deleted = await createTrigger(authorization, agent.id, environment.id, {
+      name: 'Deleted heartbeat',
       template: {
         metadata: { labels: {}, annotations: {} },
         spec: {
@@ -1329,12 +1302,9 @@ describe('[CF] /api/v1/triggers', () => {
       },
       nextDueAt: dueAt,
     })
-    const archivedId = archived.metadata.uid
-    const archiveRes = await jsonFetch(`/api/v1/triggers/${archivedId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
+    const deletedId = deleted.metadata.uid
+    const deleteRes = await jsonFetch(`/api/v1/triggers/${deletedId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
 
     const dispatchRes = await jsonFetch('/api/v1/e2e/scheduled-agent-triggers/dispatch', authorization, {
       method: 'POST',
@@ -1345,8 +1315,7 @@ describe('[CF] /api/v1/triggers', () => {
 
     const pausedRunsRes = await jsonFetch(`/api/v1/triggers/${paused.metadata.uid}/runs`, authorization)
     await expect(pausedRunsRes.json()).resolves.toMatchObject({ data: [] })
-    const archivedRunsRes = await jsonFetch(`/api/v1/triggers/${archivedId}/runs`, authorization)
-    await expect(archivedRunsRes.json()).resolves.toMatchObject({ data: [] })
+    expect((await jsonFetch(`/api/v1/triggers/${deletedId}/runs`, authorization)).status).toBe(404)
   })
 
   it('creates an unpinned trigger and resolves a runner-capable environment at dispatch [spec: triggers/dispatch]', async () => {
@@ -1459,7 +1428,7 @@ describe('[CF] /api/v1/triggers', () => {
     })
   })
 
-  it('permanently deletes a trigger and its runs and audits it [spec: triggers/delete]', async () => {
+  it('soft-deletes a trigger, retains its runs, and hides both from product APIs [spec: triggers/delete]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)
     const environment = await createEnvironment(authorization)
@@ -1479,6 +1448,7 @@ describe('[CF] /api/v1/triggers', () => {
     const runsBeforeRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization)
     const runsBefore = (await runsBeforeRes.json()) as { data: Array<{ metadata: { uid: string } }> }
     expect(runsBefore.data).toHaveLength(1)
+    const runId = runsBefore.data[0]!.metadata.uid
 
     const deleteRes = await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization, { method: 'DELETE' })
     expect(deleteRes.status).toBe(204)
@@ -1486,13 +1456,39 @@ describe('[CF] /api/v1/triggers', () => {
 
     const readAfterRes = await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization)
     expect(readAfterRes.status).toBe(404)
+    expect(
+      (
+        await jsonFetch(`/api/v1/triggers/${triggerId}`, authorization, {
+          method: 'PATCH',
+          body: JSON.stringify({ metadata: { name: 'Cannot revive a deleted trigger' } }),
+        })
+      ).status,
+    ).toBe(404)
 
     const runsAfterRes = await jsonFetch(`/api/v1/triggers/${triggerId}/runs`, authorization)
     expect(runsAfterRes.status).toBe(404)
 
-    const archivedListRes = await jsonFetch('/api/v1/triggers?archived=true', authorization)
-    const archivedList = (await archivedListRes.json()) as { data: Array<{ metadata: { uid: string } }> }
-    expect(archivedList.data).not.toContainEqual(expect.objectContaining({ metadata: { uid: triggerId } }))
+    const listRes = await jsonFetch('/api/v1/triggers', authorization)
+    const list = (await listRes.json()) as { data: Array<{ metadata: { uid: string } }> }
+    expect(list.data).not.toContainEqual(expect.objectContaining({ metadata: { uid: triggerId } }))
+
+    await expect(
+      env.DB.prepare('SELECT deleted_at, enabled FROM triggers WHERE id = ?').bind(triggerId).first(),
+    ).resolves.toEqual(expect.objectContaining({ deleted_at: expect.any(String), enabled: 0 }))
+    await expect(env.DB.prepare('SELECT id FROM trigger_runs WHERE id = ?').bind(runId).first()).resolves.toEqual({
+      id: runId,
+    })
+    await expect(
+      env.DB.prepare(`INSERT INTO trigger_runs
+        (id, organization_id, project_id, trigger_id, scheduled_for, heartbeat_at, triggered_at, state,
+          idempotency_key, session_id, correlation_id, error_message, source_subscription_id, source_event_id,
+          metadata, created_at, updated_at)
+        SELECT ?, organization_id, project_id, trigger_id, scheduled_for, heartbeat_at, triggered_at, state,
+          ?, session_id, correlation_id, error_message, source_subscription_id, source_event_id, metadata, created_at, updated_at
+        FROM trigger_runs WHERE id = ?`)
+        .bind(`run_after_delete_${crypto.randomUUID()}`, `key_after_delete_${crypto.randomUUID()}`, runId)
+        .run(),
+    ).rejects.toThrow(/cannot dispatch a deleted trigger/)
 
     const auditRes = await jsonFetch('/api/v1/audit-records?action=trigger', authorization)
     const audit = (await auditRes.json()) as { data: Array<{ action: string; resourceId: string }> }

@@ -7,9 +7,20 @@ import {
   type ProjectRecord,
   type ProjectRepo,
 } from '@server/usecases/ports'
-import { and, asc, desc, eq, lt, or } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, lt, notExists, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { projects } from '../../db/schema'
+import {
+  agents,
+  budgets,
+  environments,
+  identities,
+  memoryStores,
+  projects,
+  runners,
+  sessions,
+  triggers,
+  vaults,
+} from '../../db/schema'
 
 type Db = ReturnType<typeof drizzle>
 type ProjectRow = typeof projects.$inferSelect
@@ -19,12 +30,63 @@ function recordFrom(row: ProjectRow): ProjectRecord {
   return { id: row.id, name: row.name, createdAt: row.createdAt, updatedAt: row.updatedAt }
 }
 
-function isForeignKeyConstraintError(error: unknown): boolean {
-  if (error instanceof Error && error.message.toLowerCase().includes('foreign key constraint failed')) return true
-  if (error && typeof error === 'object' && 'cause' in error) {
-    return isForeignKeyConstraintError((error as { cause?: unknown }).cause)
-  }
-  return false
+function hasNoLiveResources(db: Db, projectId: string) {
+  return and(
+    notExists(
+      db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(and(eq(agents.projectId, projectId), isNull(agents.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: budgets.id })
+        .from(budgets)
+        .where(and(eq(budgets.projectId, projectId), isNull(budgets.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: environments.id })
+        .from(environments)
+        .where(and(eq(environments.projectId, projectId), isNull(environments.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: identities.id })
+        .from(identities)
+        .where(and(eq(identities.projectId, projectId), isNull(identities.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: memoryStores.id })
+        .from(memoryStores)
+        .where(and(eq(memoryStores.projectId, projectId), isNull(memoryStores.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: runners.id })
+        .from(runners)
+        .where(and(eq(runners.projectId, projectId), isNull(runners.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(and(eq(sessions.projectId, projectId), isNull(sessions.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: triggers.id })
+        .from(triggers)
+        .where(and(eq(triggers.projectId, projectId), isNull(triggers.deletedAt))),
+    ),
+    notExists(
+      db
+        .select({ id: vaults.id })
+        .from(vaults)
+        .where(and(eq(vaults.projectId, projectId), isNull(vaults.managedBy), isNull(vaults.deletedAt))),
+    ),
+  )
 }
 
 function isProjectNameConstraintError(error: unknown): boolean {
@@ -44,6 +106,7 @@ export function createProjectRepo(db: Db): ProjectRepo {
     async list(query: ProjectListQuery): Promise<ListPageResult<ProjectRecord>> {
       const filters = [
         eq(projects.organizationId, query.organizationId),
+        isNull(projects.deletedAt),
         query.cursor
           ? or(
               lt(projects.createdAt, query.cursor.createdAt),
@@ -65,7 +128,7 @@ export function createProjectRepo(db: Db): ProjectRepo {
       const row = await db
         .select()
         .from(projects)
-        .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
+        .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId), isNull(projects.deletedAt)))
         .get()
       return row ? recordFrom(row) : null
     },
@@ -74,7 +137,13 @@ export function createProjectRepo(db: Db): ProjectRepo {
       const row = await db
         .select()
         .from(projects)
-        .where(and(eq(projects.organizationId, organizationId), eq(projects.name, DEFAULT_PROJECT_NAME)))
+        .where(
+          and(
+            eq(projects.organizationId, organizationId),
+            eq(projects.name, DEFAULT_PROJECT_NAME),
+            isNull(projects.deletedAt),
+          ),
+        )
         .orderBy(asc(projects.createdAt), asc(projects.id))
         .get()
       return row ? recordFrom(row) : null
@@ -85,6 +154,7 @@ export function createProjectRepo(db: Db): ProjectRepo {
         id: newPrimaryKey(),
         organizationId,
         name: DEFAULT_PROJECT_NAME,
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       }
@@ -92,7 +162,13 @@ export function createProjectRepo(db: Db): ProjectRepo {
       const project = await db
         .select()
         .from(projects)
-        .where(and(eq(projects.organizationId, organizationId), eq(projects.name, DEFAULT_PROJECT_NAME)))
+        .where(
+          and(
+            eq(projects.organizationId, organizationId),
+            eq(projects.name, DEFAULT_PROJECT_NAME),
+            isNull(projects.deletedAt),
+          ),
+        )
         .get()
       if (!project) throw new Error('Default project could not be resolved after creation')
       return recordFrom(project)
@@ -103,6 +179,7 @@ export function createProjectRepo(db: Db): ProjectRepo {
         id: newPrimaryKey(),
         organizationId,
         name,
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       }
@@ -120,7 +197,9 @@ export function createProjectRepo(db: Db): ProjectRepo {
         const row = await db
           .update(projects)
           .set({ name, updatedAt: timestamp })
-          .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
+          .where(
+            and(eq(projects.id, projectId), eq(projects.organizationId, organizationId), isNull(projects.deletedAt)),
+          )
           .returning()
           .get()
         return row ? recordFrom(row) : null
@@ -131,16 +210,26 @@ export function createProjectRepo(db: Db): ProjectRepo {
     },
 
     async delete(organizationId, projectId) {
-      try {
-        const deleted = await db
-          .delete(projects)
-          .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
-          .returning({ id: projects.id })
-        return deleted.length > 0 ? 'deleted' : 'not_found'
-      } catch (error) {
-        if (isForeignKeyConstraintError(error)) return 'not_empty'
-        throw error
-      }
+      const deletedAt = new Date().toISOString()
+      const deleted = await db
+        .update(projects)
+        .set({ deletedAt, updatedAt: deletedAt })
+        .where(
+          and(
+            eq(projects.id, projectId),
+            eq(projects.organizationId, organizationId),
+            isNull(projects.deletedAt),
+            hasNoLiveResources(db, projectId),
+          ),
+        )
+        .returning({ id: projects.id })
+      if (deleted.length > 0) return 'deleted'
+      const project = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId), isNull(projects.deletedAt)))
+        .get()
+      return project ? 'not_empty' : 'not_found'
     },
   }
 }

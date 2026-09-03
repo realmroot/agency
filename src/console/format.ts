@@ -115,17 +115,3 @@ export function matchesSearch(fields: Array<string | null | undefined>, query: s
   const normalized = query.trim().toLowerCase()
   return !normalized || fields.some((field) => field?.toLowerCase().includes(normalized))
 }
-
-type ArchivableResource = { archivedAt: string | null } | { metadata: { archivedAt: string | null } }
-
-function archivedAt(resource: ArchivableResource) {
-  return 'archivedAt' in resource ? resource.archivedAt : resource.metadata.archivedAt
-}
-
-export function isArchived(resource: ArchivableResource) {
-  return archivedAt(resource) !== null
-}
-
-export function archivedLabel(resource: ArchivableResource) {
-  return archivedAt(resource) === null ? 'active' : 'archived'
-}

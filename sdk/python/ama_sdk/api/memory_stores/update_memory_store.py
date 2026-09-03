@@ -106,7 +106,7 @@ def sync_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | MemoryStore]:
-    """ Update or archive a memory store
+    """ Update a memory store
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
@@ -143,7 +143,7 @@ def sync(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | MemoryStore | None:
-    """ Update or archive a memory store
+    """ Update a memory store
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
@@ -175,7 +175,7 @@ async def asyncio_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | MemoryStore]:
-    """ Update or archive a memory store
+    """ Update a memory store
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
@@ -212,7 +212,7 @@ async def asyncio(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | MemoryStore | None:
-    """ Update or archive a memory store
+    """ Update a memory store
 
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.

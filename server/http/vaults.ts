@@ -28,7 +28,7 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import { VaultSecretError } from '../usecases/ports'
+import { ResourceDeletedDuringMutationError, VaultSecretError } from '../usecases/ports'
 import { createCredential, rotateCredential } from '../usecases/vaults'
 import { requestId } from './request-context'
 
@@ -129,11 +129,10 @@ const UpdateVaultSchema = z
       })
       .strict()
       .optional(),
-    archived: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.spec !== undefined || body.archived !== undefined, {
-    message: 'Provide metadata, spec, or archived.',
+  .refine((body) => body.metadata !== undefined || body.spec !== undefined, {
+    message: 'Provide metadata or spec.',
   })
   .openapi('UpdateVaultRequest')
 
@@ -197,10 +196,8 @@ const versionStateQuery = z
   .openapi({ param: { name: 'state', in: 'query' }, example: 'active' })
 
 const VaultListQuerySchema = listQuerySchema()
-const CredentialListQuerySchema = listQuerySchema().omit({ archived: true }).extend({ state: credentialStateQuery })
-const CredentialVersionListQuerySchema = listQuerySchema()
-  .omit({ archived: true, search: true })
-  .extend({ state: versionStateQuery })
+const CredentialListQuerySchema = listQuerySchema().extend({ state: credentialStateQuery })
+const CredentialVersionListQuerySchema = listQuerySchema().omit({ search: true }).extend({ state: versionStateQuery })
 const VaultListResponseSchema = listResponseSchema('VaultListResponse', VaultSchema)
 const CredentialListResponseSchema = listResponseSchema('VaultCredentialListResponse', CredentialSchema)
 const CredentialVersionListResponseSchema = listResponseSchema(
@@ -262,6 +259,7 @@ const createVaultRoute = createRoute({
     201: { description: 'Created vault', content: { 'application/json': { schema: VaultSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Project deletion conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -285,8 +283,7 @@ const updateVaultRoute = createRoute({
   path: '/{vaultId}',
   operationId: 'updateVault',
   tags: ['Vaults'],
-  summary: 'Update or archive a vault',
-  description: 'Partial update. Archive with `archived: true`; restore with `archived: false`.',
+  summary: 'Update a vault',
   ...AuthenticatedOperation,
   request: {
     params: VaultParamsSchema,
@@ -298,6 +295,22 @@ const updateVaultRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Vault not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Vault scope conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteVaultRoute = createRoute({
+  method: 'delete',
+  path: '/{vaultId}',
+  operationId: 'deleteVault',
+  tags: ['Vaults'],
+  summary: 'Delete a vault',
+  description: 'Soft-deletes the vault while retaining credential history. The vault cannot be restored.',
+  ...AuthenticatedOperation,
+  request: { params: VaultParamsSchema },
+  responses: {
+    204: { description: 'Vault deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Vault not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -333,7 +346,7 @@ const createCredentialRoute = createRoute({
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Vault not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: { description: 'Vault archived', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Vault unavailable', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -441,7 +454,7 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       if (auth instanceof Response) {
         return auth
       }
-      const { archived, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
+      const { search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -451,7 +464,6 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       const page = await deps.vaults.list({
         organizationId: auth.organization.id,
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
@@ -474,16 +486,26 @@ export function registerVaultRoutes(routes: VaultRoutes) {
         return auth
       }
       const scope = body.spec.scope ?? 'project'
-      const vault = await deps.vaults.insert(
-        {
-          organizationId: auth.organization.id,
-          projectId: scope === 'project' ? auth.project.id : null,
-          name: body.metadata.name,
-          description: body.metadata.description ?? null,
-          scope,
-        },
-        new Date().toISOString(),
-      )
+      const vault = await (async () => {
+        try {
+          return await deps.vaults.insert(
+            {
+              organizationId: auth.organization.id,
+              projectId: scope === 'project' ? auth.project.id : null,
+              name: body.metadata.name,
+              description: body.metadata.description ?? null,
+              scope,
+            },
+            new Date().toISOString(),
+          )
+        } catch (error) {
+          if (error instanceof ResourceDeletedDuringMutationError) return null
+          throw error
+        }
+      })()
+      if (!vault) {
+        return c.json({ error: { type: 'conflict', message: 'Project was deleted during Vault creation' } }, 409)
+      }
       await deps.audit.record(auth, {
         action: 'vault.create',
         resourceType: 'vault',
@@ -527,20 +549,18 @@ export function registerVaultRoutes(routes: VaultRoutes) {
         )
       }
       const timestamp = new Date().toISOString()
-      const archivedAt =
-        body.archived === true
-          ? (vault.metadata.archivedAt ?? timestamp)
-          : body.archived === false
-            ? null
-            : vault.metadata.archivedAt
       const fields = {
         name: body.metadata?.name ?? vault.metadata.name,
         description: body.metadata?.description !== undefined ? body.metadata.description : vault.metadata.description,
         scope,
         projectId: scope === 'project' ? auth.project.id : null,
-        archivedAt,
       }
-      await deps.vaults.update(vault.metadata.uid, fields, timestamp)
+      try {
+        await deps.vaults.update(vault.metadata.uid, fields, timestamp)
+      } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) return vaultNotFound(c)
+        throw error
+      }
       const updated: Vault = {
         ...vault,
         metadata: {
@@ -548,14 +568,13 @@ export function registerVaultRoutes(routes: VaultRoutes) {
           pid: fields.projectId,
           name: fields.name,
           description: fields.description,
-          archivedAt: fields.archivedAt,
           updatedAt: timestamp,
         },
         spec: { ...vault.spec, scope: fields.scope },
-        status: { phase: fields.archivedAt ? 'archived' : 'active' },
+        status: { phase: 'active' },
       }
       await deps.audit.record(auth, {
-        action: body.archived === true && vault.metadata.archivedAt === null ? 'vault.archive' : 'vault.update',
+        action: 'vault.update',
         resourceType: 'vault',
         resourceId: vault.metadata.uid,
         outcome: 'success',
@@ -564,6 +583,24 @@ export function registerVaultRoutes(routes: VaultRoutes) {
         after: updated,
       })
       return c.json(serializeResource(updated), 200)
+    })
+    .openapi(deleteVaultRoute, async (c) => {
+      const { vaultId } = c.req.valid('param')
+      const deps = c.get('deps')
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const vault = await deps.vaults.find(vaultId, visibility(auth))
+      if (!vault) return vaultNotFound(c)
+      if (!(await deps.vaults.delete(vaultId, visibility(auth), new Date().toISOString()))) return vaultNotFound(c)
+      await deps.audit.record(auth, {
+        action: 'vault.delete',
+        resourceType: 'vault',
+        resourceId: vaultId,
+        outcome: 'success',
+        requestId: requestId(c),
+        before: vault,
+      })
+      return c.body(null, 204)
     })
     .openapi(listCredentialsRoute, async (c) => {
       const { vaultId } = c.req.valid('param')
@@ -611,9 +648,6 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       const vault = await deps.vaults.find(vaultId, visibility(auth))
       if (!vault) {
         return vaultNotFound(c)
-      }
-      if (vault.metadata.archivedAt !== null) {
-        return c.json({ error: { type: 'conflict', message: 'Vault is archived' } }, 409)
       }
       let result: Awaited<ReturnType<typeof createCredential>>
       try {
@@ -716,7 +750,7 @@ export function registerVaultRoutes(routes: VaultRoutes) {
       if (!vault || !credential) {
         return credentialNotFound(c)
       }
-      if (vault.metadata.archivedAt !== null || credential.status.phase !== 'active') {
+      if (vault.metadata.deletedAt !== null || credential.status.phase !== 'active') {
         return c.json({ error: { type: 'conflict', message: 'Credential is not active' } }, 409)
       }
       const before = serializeCredential(credential, await deps.vaults.activeVersion(credential))

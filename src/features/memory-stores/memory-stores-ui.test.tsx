@@ -115,25 +115,25 @@ describe('[spec: memory-stores/console] [spec: sessions/memory-store-resources] 
     expect(await screen.findByText('Create Memory Store')).toBeTruthy()
   })
 
-  it('archives a memory store from the list', async () => {
+  it('deletes a memory store from the list', async () => {
     setupMemoryStoreHandlers([store()])
     renderWithClient(<MemoryStoresPage />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Archive memory store' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Archive store' }))
-    await waitFor(() => expect(screen.queryByText('Archive memory store?')).toBeNull())
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete memory store' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete store' }))
+    await waitFor(() => expect(screen.queryByText('Delete memory store?')).toBeNull())
   })
 
-  it('keeps the list visible when archive fails', async () => {
+  it('keeps the list visible when delete fails', async () => {
     setupMemoryStoreHandlers([store({ description: null })])
     server.use(
-      http.patch('*/api/v1/memory-stores/:storeId', () =>
-        HttpResponse.json({ error: { type: 'conflict', message: 'Already archived' } }, { status: 409 }),
+      http.delete('*/api/v1/memory-stores/:storeId', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Still in use' } }, { status: 409 }),
       ),
     )
     renderWithClient(<MemoryStoresPage />)
     expect(await screen.findByText('memstore_1')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Archive memory store' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Archive store' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete memory store' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete store' }))
     await waitFor(() => expect(screen.getByRole('link', { name: 'Team memory' })).toBeTruthy())
   })
 

@@ -10,7 +10,6 @@ from ... import errors
 
 from ...models.environment_list_response import EnvironmentListResponse
 from ...models.error_response import ErrorResponse
-from ...models.list_environments_archived import ListEnvironmentsArchived
 from ...types import UNSET, Unset
 from typing import cast
 import datetime
@@ -19,7 +18,6 @@ import datetime
 
 def _get_kwargs(
     *,
-    archived: ListEnvironmentsArchived | Unset = UNSET,
     search: str | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
@@ -37,12 +35,6 @@ def _get_kwargs(
 
 
     params: dict[str, Any] = {}
-
-    json_archived: str | Unset = UNSET
-    if not isinstance(archived, Unset):
-        json_archived = archived.value
-
-    params["archived"] = json_archived
 
     params["search"] = search
 
@@ -130,7 +122,6 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient,
-    archived: ListEnvironmentsArchived | Unset = UNSET,
     search: str | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
@@ -142,8 +133,6 @@ def sync_detailed(
     """ List environments
 
     Args:
-        archived (ListEnvironmentsArchived | Unset): Filter by lifecycle. Defaults to false (live
-            resources only). Example: false.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -162,8 +151,7 @@ def sync_detailed(
 
 
     kwargs = _get_kwargs(
-        archived=archived,
-search=search,
+        search=search,
 created_from=created_from,
 created_to=created_to,
 limit=limit,
@@ -181,7 +169,6 @@ x_ama_project_id=x_ama_project_id,
 def sync(
     *,
     client: AuthenticatedClient,
-    archived: ListEnvironmentsArchived | Unset = UNSET,
     search: str | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
@@ -193,8 +180,6 @@ def sync(
     """ List environments
 
     Args:
-        archived (ListEnvironmentsArchived | Unset): Filter by lifecycle. Defaults to false (live
-            resources only). Example: false.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -214,7 +199,6 @@ def sync(
 
     return sync_detailed(
         client=client,
-archived=archived,
 search=search,
 created_from=created_from,
 created_to=created_to,
@@ -227,7 +211,6 @@ x_ama_project_id=x_ama_project_id,
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
-    archived: ListEnvironmentsArchived | Unset = UNSET,
     search: str | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
@@ -239,8 +222,6 @@ async def asyncio_detailed(
     """ List environments
 
     Args:
-        archived (ListEnvironmentsArchived | Unset): Filter by lifecycle. Defaults to false (live
-            resources only). Example: false.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -259,8 +240,7 @@ async def asyncio_detailed(
 
 
     kwargs = _get_kwargs(
-        archived=archived,
-search=search,
+        search=search,
 created_from=created_from,
 created_to=created_to,
 limit=limit,
@@ -278,7 +258,6 @@ x_ama_project_id=x_ama_project_id,
 async def asyncio(
     *,
     client: AuthenticatedClient,
-    archived: ListEnvironmentsArchived | Unset = UNSET,
     search: str | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
@@ -290,8 +269,6 @@ async def asyncio(
     """ List environments
 
     Args:
-        archived (ListEnvironmentsArchived | Unset): Filter by lifecycle. Defaults to false (live
-            resources only). Example: false.
         search (str | Unset):  Example: research.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
@@ -311,7 +288,6 @@ async def asyncio(
 
     return (await asyncio_detailed(
         client=client,
-archived=archived,
 search=search,
 created_from=created_from,
 created_to=created_to,

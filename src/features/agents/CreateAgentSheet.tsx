@@ -15,7 +15,7 @@ export function CreateAgentSheet({ open, onOpenChange }: { open: boolean; onOpen
   const queryClient = useQueryClient()
   const [form, setForm] = useState<AgentFormState>(emptyAgent)
   const identitiesQuery = useQuery({
-    queryKey: queryKeys.identities.list(false),
+    queryKey: queryKeys.identities.list(),
     queryFn: () => api.listIdentities(),
     enabled: open,
   })

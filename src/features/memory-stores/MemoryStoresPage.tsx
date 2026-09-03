@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Brain } from 'lucide-react'
+import { Brain, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import {
   TablePagination,
   TableSurface,
 } from '@/console/components'
-import { archivedLabel, formatDate } from '@/console/format'
+import { formatDate } from '@/console/format'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { api } from '@/lib/amarpc'
 import { errorMessage } from '@/lib/errors'
@@ -25,13 +25,13 @@ export function MemoryStoresPage() {
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
   const storesQuery = useQuery({
-    queryKey: queryKeys.memoryStores.list(false),
+    queryKey: queryKeys.memoryStores.list(),
     queryFn: () => api.listMemoryStores(),
   })
-  const archiveStore = useMutation({
-    mutationFn: (id: string) => api.archiveMemoryStore(id),
+  const deleteStore = useMutation({
+    mutationFn: (id: string) => api.deleteMemoryStore(id),
     onSuccess: () => {
-      toast.success('Memory store archived')
+      toast.success('Memory store deleted')
       void queryClient.invalidateQueries({ queryKey: queryKeys.memoryStores.all })
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -90,21 +90,21 @@ export function MemoryStoresPage() {
                   <DescriptionCell value={store.metadata.description} />
                 </TableCell>
                 <TableCell>
-                  <StatusBadge value={archivedLabel(store)} />
+                  <StatusBadge value={store.status.phase} />
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">{formatDate(store.metadata.createdAt)}</TableCell>
                 <TableCell className="hidden md:table-cell">{formatDate(store.metadata.updatedAt)}</TableCell>
                 <TableCell>
                   <div className="flex justify-end">
                     <ConfirmAction
-                      title="Archive memory store?"
-                      description={`Archive ${store.metadata.name}. Existing sessions keep their snapshots.`}
-                      confirmLabel="Archive store"
+                      title="Delete memory store?"
+                      description={`Delete ${store.metadata.name}. It cannot be restored; existing session snapshots are retained.`}
+                      confirmLabel="Delete store"
                       destructive
-                      onConfirm={() => archiveStore.mutate(store.metadata.uid)}
+                      onConfirm={() => deleteStore.mutate(store.metadata.uid)}
                     >
-                      <Button type="button" variant="outline" size="icon" aria-label="Archive memory store">
-                        <Archive data-icon="inline-start" />
+                      <Button type="button" variant="outline" size="icon" aria-label="Delete memory store">
+                        <Trash2 data-icon="inline-start" />
                       </Button>
                     </ConfirmAction>
                   </div>

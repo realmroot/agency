@@ -4,6 +4,7 @@ import type { InboxActivationRepo, PendingInboxActivation } from '@server/usecas
 import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, projects, sessionRoutes, triggerRuns, triggers } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 import { createTriggerRepo } from './triggers'
 
 type Db = ReturnType<typeof drizzle>
@@ -85,7 +86,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
           inboxProvisioningError: fields.errorMessage,
           updatedAt,
         })
-        .where(and(eq(triggers.projectId, projectId), eq(triggers.id, triggerId)))
+        .where(and(eq(triggers.projectId, projectId), eq(triggers.id, triggerId), isNull(triggers.deletedAt)))
       const trigger = await triggerRepo.find(projectId, triggerId)
       if (!trigger) throw new Error('Inbox trigger disappeared while updating provisioning state')
       return trigger
@@ -115,6 +116,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
         })
         return { runId, replayed: false }
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Trigger run')
         if (!uniqueConstraintError(error)) throw error
         const existing = await db
           .select({ id: triggerRuns.id })
@@ -185,7 +187,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
             or(
               and(
                 eq(triggers.enabled, true),
-                isNull(triggers.archivedAt),
+                isNull(triggers.deletedAt),
                 or(
                   eq(triggers.inboxProvisioningState, 'pending'),
                   eq(triggers.inboxProvisioningState, 'error'),
@@ -199,7 +201,7 @@ export function createInboxActivationRepo(db: Db): InboxActivationRepo {
                 ),
               ),
               and(
-                or(eq(triggers.enabled, false), isNotNull(triggers.archivedAt)),
+                or(eq(triggers.enabled, false), isNotNull(triggers.deletedAt)),
                 ne(triggers.inboxProvisioningState, 'inactive'),
               ),
             ),

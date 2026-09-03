@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import type { ResourceMetadata } from '@server/domain/resource'
 
-export const ResourcePhaseSchema = z.enum(['active', 'archived']).openapi('ResourcePhase')
+export const ResourcePhaseSchema = z.literal('active').openapi('ResourcePhase')
 
 export const ResourceMetadataSchema = z
   .object({
@@ -14,7 +14,6 @@ export const ResourceMetadataSchema = z
     createdBy: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
-    archivedAt: z.string().datetime().nullable(),
   })
   .openapi('ResourceMetadata')
 
@@ -45,7 +44,6 @@ export function serializeResourceMetadata(metadata: ResourceMetadata): z.infer<t
     createdBy: metadata.createdBy,
     createdAt: metadata.createdAt,
     updatedAt: metadata.updatedAt,
-    archivedAt: metadata.archivedAt,
   }
 }
 

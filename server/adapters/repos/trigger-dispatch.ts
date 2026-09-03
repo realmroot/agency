@@ -13,6 +13,7 @@ import type {
 import { and, asc, desc, eq, inArray, isNull, lte, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { httpTriggerPendingRuns, projects, sessions, triggerRuns, triggers } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type TriggerRow = typeof triggers.$inferSelect
@@ -105,7 +106,7 @@ async function advanceTrigger(db: Db, trigger: DueTrigger, run: ClaimedRun, time
       lastRunId: run.id,
       updatedAt: timestamp,
     })
-    .where(eq(triggers.id, triggerId(trigger)))
+    .where(and(eq(triggers.id, triggerId(trigger)), isNull(triggers.deletedAt)))
 }
 
 async function advanceRunTrigger(db: Db, trigger: DueTrigger | Trigger, run: ClaimedRun, timestamp: string) {
@@ -120,17 +121,17 @@ async function advanceRunTrigger(db: Db, trigger: DueTrigger | Trigger, run: Cla
       lastRunId: run.id,
       updatedAt: timestamp,
     })
-    .where(eq(triggers.id, triggerId(trigger)))
+    .where(and(eq(triggers.id, triggerId(trigger)), isNull(triggers.deletedAt)))
 }
 
 export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
   return {
     async dueTriggers(options): Promise<DueTrigger[]> {
       const filters = [
-        // active = enabled and not archived (status enum replaced per api-v1)
+        // active = enabled and not deleted
         eq(triggers.triggerType, 'scheduled'),
         eq(triggers.enabled, true),
-        isNull(triggers.archivedAt),
+        isNull(triggers.deletedAt),
         lte(triggers.nextDueAt, options.heartbeatAt),
         options.projectId ? eq(triggers.projectId, options.projectId) : undefined,
       ].filter((filter) => filter !== undefined)
@@ -168,6 +169,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
           updatedAt: timestamp,
         })
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Trigger run')
         if (uniqueConstraintError(error)) {
           return null
         }
@@ -201,6 +203,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
           updatedAt: triggeredAt,
         })
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Trigger run')
         if (uniqueConstraintError(error)) {
           return null
         }
@@ -249,6 +252,7 @@ export function createTriggerDispatchRepo(db: Db): TriggerDispatchRepo {
           }),
         ])
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Trigger run')
         if (!uniqueConstraintError(error)) throw error
         const existing = await db
           .select({ id: triggerRuns.id })

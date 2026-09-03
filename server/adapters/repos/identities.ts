@@ -1,9 +1,11 @@
 import type { Identity, IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
 import type { IdentityRepo } from '@server/usecases/ports'
-import { and, desc, eq, isNotNull, isNull, like, lt, lte, ne, notExists, or } from 'drizzle-orm'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, desc, eq, isNull, like, lt, lte, ne, notExists, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, identities } from '../../db/schema'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type Row = typeof identities.$inferSelect
@@ -30,11 +32,11 @@ function record(row: Row): Identity {
       description: row.description,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     }),
     spec: { username: row.username, runtime: row.runtime },
     status: {
-      phase: resourcePhase(row.archivedAt),
+      phase: resourcePhase(row.deletedAt),
       state: row.state,
       failureCode: row.failureCode,
       boundAgentId: row.boundAgentId,
@@ -48,7 +50,7 @@ export function createIdentityRepo(db: Db): IdentityRepo {
     async list(query) {
       const filters = [
         eq(identities.projectId, query.projectId),
-        query.archived ? isNotNull(identities.archivedAt) : isNull(identities.archivedAt),
+        isNull(identities.deletedAt),
         query.search
           ? or(like(identities.name, `%${query.search}%`), like(identities.username, `%${query.search}%`))
           : undefined,
@@ -71,7 +73,7 @@ export function createIdentityRepo(db: Db): IdentityRepo {
       const row = await db
         .select()
         .from(identities)
-        .where(and(eq(identities.id, identityId), eq(identities.projectId, projectId)))
+        .where(and(eq(identities.id, identityId), eq(identities.projectId, projectId), isNull(identities.deletedAt)))
         .get()
       return row ? record(row) : null
     },
@@ -83,7 +85,7 @@ export function createIdentityRepo(db: Db): IdentityRepo {
           requestFingerprint: identities.requestFingerprint,
         })
         .from(identities)
-        .where(eq(identities.id, identityId))
+        .where(and(eq(identities.id, identityId), isNull(identities.deletedAt)))
         .get()
       return row ?? null
     },
@@ -99,15 +101,22 @@ export function createIdentityRepo(db: Db): IdentityRepo {
         failureCode: null,
         provisioningOwner: owner,
         provisioningLeaseExpiresAt: leaseExpiresAt,
-        archivedAt: null,
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       }
-      const inserted = await db
-        .insert(identities)
-        .values(row)
-        .onConflictDoNothing({ target: [identities.projectId, identities.idempotencyKeyHash] })
-        .run()
+      const inserted = await (async () => {
+        try {
+          return await db
+            .insert(identities)
+            .values(row)
+            .onConflictDoNothing({ target: [identities.projectId, identities.idempotencyKeyHash] })
+            .run()
+        } catch (error) {
+          throwIfDeletedParentConstraint(error, 'Identity')
+          throw error
+        }
+      })()
       let acquired = (inserted.meta.changes ?? 0) > 0
       if (!acquired) {
         const claimed = await db
@@ -124,6 +133,7 @@ export function createIdentityRepo(db: Db): IdentityRepo {
               eq(identities.projectId, input.projectId),
               eq(identities.idempotencyKeyHash, input.idempotencyKeyHash),
               eq(identities.requestFingerprint, input.requestFingerprint),
+              isNull(identities.deletedAt),
               ne(identities.state, 'active'),
               or(
                 isNull(identities.provisioningOwner),
@@ -154,10 +164,19 @@ export function createIdentityRepo(db: Db): IdentityRepo {
             eq(identities.id, identityId),
             eq(identities.provisioningOwner, owner),
             eq(identities.state, 'provisioning'),
+            isNull(identities.deletedAt),
           ),
         )
         .run()
-      if ((result.meta.changes ?? 0) === 0) throw new Error('Identity provisioning ownership was lost')
+      if ((result.meta.changes ?? 0) === 0) {
+        const live = await db
+          .select({ id: identities.id })
+          .from(identities)
+          .where(and(eq(identities.id, identityId), isNull(identities.deletedAt)))
+          .get()
+        if (!live) throw new ResourceDeletedDuringMutationError('Identity')
+        throw new Error('Identity provisioning ownership was lost')
+      }
     },
     async activate(identityId, owner, credentialId, value, timestamp) {
       const result = await db
@@ -179,11 +198,16 @@ export function createIdentityRepo(db: Db): IdentityRepo {
             eq(identities.id, identityId),
             eq(identities.provisioningOwner, owner),
             eq(identities.state, 'provisioning'),
+            isNull(identities.deletedAt),
           ),
         )
         .run()
-      const row = await db.select().from(identities).where(eq(identities.id, identityId)).get()
-      if (!row) throw new Error('Identity disappeared while provisioning')
+      const row = await db
+        .select()
+        .from(identities)
+        .where(and(eq(identities.id, identityId), isNull(identities.deletedAt)))
+        .get()
+      if (!row) throw new ResourceDeletedDuringMutationError('Identity')
       if ((result.meta.changes ?? 0) === 0 && row.state !== 'active') {
         throw new Error('Identity provisioning ownership was lost')
       }
@@ -200,34 +224,42 @@ export function createIdentityRepo(db: Db): IdentityRepo {
           updatedAt: timestamp,
         })
         .where(
-          and(eq(identities.id, identityId), eq(identities.provisioningOwner, owner), ne(identities.state, 'active')),
+          and(
+            eq(identities.id, identityId),
+            eq(identities.provisioningOwner, owner),
+            ne(identities.state, 'active'),
+            isNull(identities.deletedAt),
+          ),
         )
     },
-    async archive(projectId, identityId, timestamp) {
+    async delete(projectId, identityId, timestamp) {
       const result = await db
         .update(identities)
-        .set({ archivedAt: timestamp, updatedAt: timestamp })
+        .set({ deletedAt: timestamp, updatedAt: timestamp })
         .where(
           and(
             eq(identities.projectId, projectId),
             eq(identities.id, identityId),
-            isNull(identities.archivedAt),
+            isNull(identities.deletedAt),
+            ne(identities.state, 'provisioning'),
             notExists(
               db
                 .select({ id: agents.id })
                 .from(agents)
-                .where(and(eq(agents.projectId, projectId), eq(agents.identityId, identities.id))),
+                .where(
+                  and(eq(agents.projectId, projectId), eq(agents.identityId, identities.id), isNull(agents.deletedAt)),
+                ),
             ),
           ),
         )
         .run()
       if ((result.meta.changes ?? 0) > 0) return true
       const row = await db
-        .select({ archivedAt: identities.archivedAt })
+        .select({ deletedAt: identities.deletedAt })
         .from(identities)
         .where(and(eq(identities.projectId, projectId), eq(identities.id, identityId)))
         .get()
-      return row?.archivedAt !== null && row?.archivedAt !== undefined
+      return row?.deletedAt !== null && row?.deletedAt !== undefined
     },
   }
 }

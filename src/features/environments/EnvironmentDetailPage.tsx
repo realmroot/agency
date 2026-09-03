@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { PageHeader } from '@/console/components'
-import { isArchived, parsePackages, parseVariables, stringifyPackages } from '@/console/format'
+import { parsePackages, parseVariables, stringifyPackages } from '@/console/format'
 import { EnvironmentForm } from '@/console/forms'
 import type { EnvironmentFormState } from '@/console/types'
 import { api, type Environment, type EnvironmentNetworking } from '@/lib/amarpc'
@@ -67,7 +67,7 @@ export function EnvironmentDetailPage() {
     enabled: Boolean(environmentId),
   })
   const sessionsQuery = useQuery({
-    queryKey: queryKeys.sessions.list(false),
+    queryKey: queryKeys.sessions.list(),
     queryFn: () => api.listSessions(),
   })
   const runnersQuery = useQuery({
@@ -106,7 +106,7 @@ export function EnvironmentDetailPage() {
           environment?.metadata.description ?? 'Inspect environment type, packages, variables, and networking.'
         }
         actions={
-          environment && !isArchived(environment) ? (
+          environment ? (
             <Button
               type="button"
               variant="outline"
@@ -125,7 +125,7 @@ export function EnvironmentDetailPage() {
         environment={environment}
         sessions={sessionsQuery.data?.data ?? []}
         runners={runnersQuery.data?.data ?? []}
-        onArchive={actions.archiveEnvironment}
+        onDelete={actions.deleteEnvironment}
       />
       <Sheet open={editing} onOpenChange={setEditing}>
         <SheetContent className="overflow-y-auto">

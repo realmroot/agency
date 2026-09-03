@@ -27,7 +27,7 @@ export function TriggersPage() {
     queryFn: () => api.listTriggers(),
   })
   const agentsQuery = useQuery({
-    queryKey: queryKeys.agents.list(false),
+    queryKey: queryKeys.agents.list(),
     queryFn: () => api.listAgents(),
   })
   const allTriggers = useMemo(() => triggersQuery.data?.data ?? [], [triggersQuery.data?.data])

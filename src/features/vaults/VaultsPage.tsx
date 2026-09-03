@@ -14,7 +14,7 @@ export function VaultsPage() {
   const [creating, setCreating] = useState(false)
   const actions = useVaultActions()
   const vaultsQuery = useQuery({
-    queryKey: queryKeys.vaults.list(false),
+    queryKey: queryKeys.vaults.list(),
     queryFn: () => api.listVaults(),
   })
   const vaults = vaultsQuery.data?.data ?? []
@@ -31,7 +31,7 @@ export function VaultsPage() {
           </Button>
         }
       />
-      <VaultsView vaults={pagination.items} pagination={pagination} onArchive={actions.archiveVault} />
+      <VaultsView vaults={pagination.items} pagination={pagination} onDelete={actions.deleteVault} />
       <CreateVaultSheet open={creating} onOpenChange={setCreating} />
     </div>
   )

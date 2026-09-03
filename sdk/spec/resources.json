@@ -22,6 +22,7 @@
           { "name": "create", "operationId": "createAgent" },
           { "name": "get", "operationId": "readAgent" },
           { "name": "update", "operationId": "updateAgent" },
+          { "name": "delete", "operationId": "deleteAgent" },
           { "name": "listVersions", "operationId": "listAgentVersions" },
           { "name": "getVersion", "operationId": "readAgentVersion" }
         ] },
@@ -29,13 +30,14 @@
           { "name": "list", "operationId": "listIdentities" },
           { "name": "create", "operationId": "createIdentity" },
           { "name": "get", "operationId": "readIdentity" },
-          { "name": "archive", "operationId": "updateIdentity" }
+          { "name": "delete", "operationId": "deleteIdentity" }
         ] },
         { "name": "environments", "methods": [
           { "name": "list", "operationId": "listEnvironments" },
           { "name": "create", "operationId": "createEnvironment" },
           { "name": "get", "operationId": "readEnvironment" },
           { "name": "update", "operationId": "updateEnvironment" },
+          { "name": "delete", "operationId": "deleteEnvironment" },
           { "name": "listVersions", "operationId": "listEnvironmentVersions" },
           { "name": "getVersion", "operationId": "readEnvironmentVersion" }
         ] },
@@ -50,7 +52,8 @@
           { "name": "list", "operationId": "listRunners" },
           { "name": "create", "operationId": "createRunner" },
           { "name": "get", "operationId": "readRunner" },
-          { "name": "update", "operationId": "updateRunner" }
+          { "name": "update", "operationId": "updateRunner" },
+          { "name": "delete", "operationId": "deleteRunner" }
         ] },
         { "name": "budgets", "methods": [
           { "name": "list", "operationId": "listBudgets" },
@@ -82,6 +85,7 @@
           { "name": "create", "operationId": "createSession" },
           { "name": "get", "operationId": "readSession" },
           { "name": "update", "operationId": "updateSession" },
+          { "name": "delete", "operationId": "deleteSession" },
           { "name": "stream", "operationId": "connectSessionSocket" },
           { "name": "listMessages", "operationId": "listSessionMessages" },
           { "name": "createMessage", "operationId": "createSessionMessage" },
@@ -96,6 +100,7 @@
           { "name": "create", "operationId": "createMemoryStore" },
           { "name": "get", "operationId": "readMemoryStore" },
           { "name": "update", "operationId": "updateMemoryStore" },
+          { "name": "delete", "operationId": "deleteMemoryStore" },
           { "name": "listMemories", "operationId": "listMemoryStoreMemories" },
           { "name": "createMemory", "operationId": "createMemoryStoreMemory" },
           { "name": "updateMemory", "operationId": "updateMemoryStoreMemory" },
@@ -106,6 +111,7 @@
           { "name": "create", "operationId": "createVault" },
           { "name": "get", "operationId": "readVault" },
           { "name": "update", "operationId": "updateVault" },
+          { "name": "delete", "operationId": "deleteVault" },
           { "name": "listCredentials", "operationId": "listVaultCredentials" },
           { "name": "createCredential", "operationId": "createVaultCredential" },
           { "name": "getCredential", "operationId": "readVaultCredential" },
@@ -131,6 +137,7 @@
           { "name": "create", "operationId": "createRunner" },
           { "name": "get", "operationId": "readRunner" },
           { "name": "update", "operationId": "updateRunner" },
+          { "name": "delete", "operationId": "deleteRunner" },
           { "name": "channel", "operationId": "connectRunnerChannel" },
           { "name": "getHeartbeat", "operationId": "readRunnerHeartbeat" },
           { "name": "putHeartbeat", "operationId": "putRunnerHeartbeat" }

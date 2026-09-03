@@ -2787,11 +2787,6 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
-          },
-          "archivedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
           }
         },
         "required": [
@@ -2803,8 +2798,7 @@
           "annotations",
           "createdBy",
           "createdAt",
-          "updatedAt",
-          "archivedAt"
+          "updatedAt"
         ]
       },
       "AgentSpec": {
@@ -3037,8 +3031,7 @@
       "ResourcePhase": {
         "type": "string",
         "enum": [
-          "active",
-          "archived"
+          "active"
         ]
       },
       "CreateAgentRequest": {
@@ -3330,11 +3323,6 @@
               }
             },
             "additionalProperties": false
-          },
-          "archived": {
-            "type": "boolean",
-            "description": "Lifecycle transition: true archives the agent, false unarchives it.",
-            "example": false
           }
         },
         "additionalProperties": false
@@ -3765,11 +3753,6 @@
               }
             },
             "additionalProperties": false
-          },
-          "archived": {
-            "type": "boolean",
-            "description": "Lifecycle transition: true archives the environment, false unarchives it.",
-            "example": false
           }
         },
         "additionalProperties": false
@@ -3949,21 +3932,6 @@
         "required": [
           "metadata",
           "spec"
-        ],
-        "additionalProperties": false
-      },
-      "UpdateIdentityRequest": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          }
-        },
-        "required": [
-          "archived"
         ],
         "additionalProperties": false
       },
@@ -4408,11 +4376,6 @@
             "nullable": true,
             "format": "date-time"
           },
-          "archivedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -4436,7 +4399,6 @@
           "runtimes",
           "metadata",
           "lastHeartbeatAt",
-          "archivedAt",
           "createdAt",
           "updatedAt"
         ]
@@ -4630,9 +4592,6 @@
             "additionalProperties": {
               "nullable": true
             }
-          },
-          "archived": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -6691,10 +6650,6 @@
               }
             },
             "additionalProperties": false
-          },
-          "archived": {
-            "type": "boolean",
-            "example": true
           }
         },
         "additionalProperties": false
@@ -6906,11 +6861,6 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
-          },
-          "archivedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
           }
         },
         "required": [
@@ -6922,8 +6872,7 @@
           "annotations",
           "createdBy",
           "createdAt",
-          "updatedAt",
-          "archivedAt"
+          "updatedAt"
         ]
       },
       "SessionSpec": {
@@ -7496,10 +7445,6 @@
               "idle"
             ],
             "example": "closed"
-          },
-          "archived": {
-            "type": "boolean",
-            "example": true
           }
         },
         "additionalProperties": false
@@ -8151,10 +8096,6 @@
             "type": "object",
             "properties": {},
             "additionalProperties": false
-          },
-          "archived": {
-            "type": "boolean",
-            "example": true
           }
         },
         "additionalProperties": false
@@ -8412,10 +8353,6 @@
               }
             },
             "additionalProperties": false
-          },
-          "archived": {
-            "type": "boolean",
-            "example": true
           }
         },
         "additionalProperties": false
@@ -9287,7 +9224,8 @@
         "tags": [
           "Projects"
         ],
-        "summary": "Delete an empty project",
+        "summary": "Delete a project with no live resources",
+        "description": "Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and history do not block deletion.",
         "security": [
           {
             "oidcAccessToken": [
@@ -9369,21 +9307,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -9722,7 +9645,7 @@
           "Agents"
         ],
         "summary": "Update an agent",
-        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.",
+        "description": "Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.",
         "security": [
           {
             "oidcAccessToken": [
@@ -9806,7 +9729,7 @@
             }
           },
           "409": {
-            "description": "Archived Agent or live Inbox Trigger prevents the requested update",
+            "description": "A live Inbox Trigger prevents the requested update",
             "content": {
               "application/json": {
                 "schema": {
@@ -9817,6 +9740,71 @@
           }
         },
         "x-cli-name": "update-agent"
+      },
+      "delete": {
+        "operationId": "deleteAgent",
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Delete an agent",
+        "description": "Soft-deletes the agent. The retained tombstone cannot be restored through the API.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "agents:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000002"
+            },
+            "required": true,
+            "name": "agentId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Agent deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-agent"
       }
     },
     "/api/v1/agents/{agentId}/versions": {
@@ -10000,21 +9988,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -10307,7 +10280,7 @@
           "Environments"
         ],
         "summary": "Update an environment",
-        "description": "Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.",
+        "description": "Partially updates a live environment.",
         "security": [
           {
             "oidcAccessToken": [
@@ -10389,9 +10362,64 @@
                 }
               }
             }
+          }
+        },
+        "x-cli-name": "update-environment"
+      },
+      "delete": {
+        "operationId": "deleteEnvironment",
+        "tags": [
+          "Environments"
+        ],
+        "summary": "Delete an environment",
+        "description": "Soft-deletes the environment. The retained tombstone cannot be restored through the API.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "environments:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000005"
+            },
+            "required": true,
+            "name": "environmentId",
+            "in": "path"
           },
-          "409": {
-            "description": "Archived environment",
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Environment deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Environment not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -10401,7 +10429,7 @@
             }
           }
         },
-        "x-cli-name": "update-environment"
+        "x-cli-name": "delete-environment"
       }
     },
     "/api/v1/environments/{environmentId}/versions": {
@@ -10585,21 +10613,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -10895,12 +10908,13 @@
         },
         "x-cli-name": "read-identity"
       },
-      "patch": {
-        "operationId": "updateIdentity",
+      "delete": {
+        "operationId": "deleteIdentity",
         "tags": [
           "Identities"
         ],
-        "summary": "Archive an identity",
+        "summary": "Delete an identity",
+        "description": "Soft-deletes the identity. The retained tombstone cannot be restored through the API.",
         "security": [
           {
             "oidcAccessToken": [
@@ -10921,31 +10935,9 @@
             "$ref": "#/components/parameters/AmaProjectId"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/merge-patch+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateIdentityRequest"
-              }
-            },
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateIdentityRequest"
-              }
-            }
-          }
-        },
         "responses": {
-          "200": {
-            "description": "Archived identity",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Identity"
-                }
-              }
-            }
+          "204": {
+            "description": "Identity deleted"
           },
           "401": {
             "description": "Authentication required",
@@ -10988,7 +10980,7 @@
             }
           }
         },
-        "x-cli-name": "archive-identity"
+        "x-cli-name": "delete-identity"
       }
     },
     "/api/v1/inbox-notifications": {
@@ -11457,21 +11449,6 @@
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "minLength": 1,
               "maxLength": 120,
               "example": "research"
@@ -11673,6 +11650,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Runner has active work",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "x-cli-name": "read-runner"
@@ -11682,7 +11669,7 @@
         "tags": [
           "Runners"
         ],
-        "summary": "Update or archive a self-hosted runner",
+        "summary": "Update a self-hosted runner",
         "security": [
           {
             "oidcAccessToken": [
@@ -11777,6 +11764,81 @@
           }
         },
         "x-cli-name": "update-runner"
+      },
+      "delete": {
+        "operationId": "deleteRunner",
+        "tags": [
+          "Runners"
+        ],
+        "summary": "Delete a self-hosted runner",
+        "description": "Soft-deletes the runner. The retained tombstone cannot be restored through the API.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "runners:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000011"
+            },
+            "required": true,
+            "name": "runnerId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Runner deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Runner not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Runner has active work",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-runner"
       }
     },
     "/api/v1/runners/{runnerId}/heartbeat": {
@@ -12804,6 +12866,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Project deletion conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "x-cli-name": "create-budget",
@@ -12983,6 +13055,7 @@
           "Governance"
         ],
         "summary": "Delete a budget",
+        "description": "Soft-deletes the budget. The retained tombstone cannot be restored through the API.",
         "security": [
           {
             "oidcAccessToken": [
@@ -13928,21 +14001,6 @@
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "minLength": 1,
               "maxLength": 120,
               "example": "research"
@@ -14144,8 +14202,7 @@
         "tags": [
           "Triggers"
         ],
-        "summary": "Update, pause, or archive a trigger",
-        "description": "Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.",
+        "summary": "Update or pause a trigger",
         "security": [
           {
             "oidcAccessToken": [
@@ -14257,7 +14314,7 @@
           "Triggers"
         ],
         "summary": "Delete a trigger",
-        "description": "Permanently deletes the trigger and its run history.",
+        "description": "Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.",
         "security": [
           {
             "oidcAccessToken": [
@@ -14773,21 +14830,6 @@
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "minLength": 1,
               "maxLength": 120,
               "example": "research"
@@ -15002,7 +15044,7 @@
           "Sessions"
         ],
         "summary": "Update a session",
-        "description": "Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and lifecycle archiving (archived: true|false).",
+        "description": "Partial update: name and metadata edits, plus close/reopen transitions (state: \"closed\"|\"idle\").",
         "security": [
           {
             "oidcAccessToken": [
@@ -15097,6 +15139,81 @@
           }
         },
         "x-cli-name": "update-session"
+      },
+      "delete": {
+        "operationId": "deleteSession",
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Delete a session",
+        "description": "Stops any live runtime and soft-deletes the session while retaining its history. It cannot be restored.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "sessions:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-00000000000e"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Runtime could not be stopped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-session"
       }
     },
     "/api/v1/sessions/{sessionId}/socket": {
@@ -16015,21 +16132,6 @@
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "minLength": 1,
               "maxLength": 120,
               "example": "research"
@@ -16211,6 +16313,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Project deletion conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "x-cli-name": "create-memory-store",
@@ -16298,7 +16410,7 @@
         "tags": [
           "Memory Stores"
         ],
-        "summary": "Update or archive a memory store",
+        "summary": "Update a memory store",
         "security": [
           {
             "oidcAccessToken": [
@@ -16383,6 +16495,71 @@
           }
         },
         "x-cli-name": "update-memory-store"
+      },
+      "delete": {
+        "operationId": "deleteMemoryStore",
+        "tags": [
+          "Memory Stores"
+        ],
+        "summary": "Delete a memory store",
+        "description": "Soft-deletes the memory store and its memories. Database history remains and cannot be restored.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "memory-stores:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-00000000000a"
+            },
+            "required": true,
+            "name": "storeId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Memory store deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-memory-store"
       }
     },
     "/api/v1/memory-stores/{storeId}/memories": {
@@ -16708,6 +16885,7 @@
           "Memory Stores"
         ],
         "summary": "Delete a memory",
+        "description": "Soft-deletes the memory. The retained tombstone cannot be restored through the API.",
         "security": [
           {
             "oidcAccessToken": [
@@ -16791,21 +16969,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Filter by lifecycle. Defaults to false (live resources only).",
-              "example": "false"
-            },
-            "required": false,
-            "description": "Filter by lifecycle. Defaults to false (live resources only).",
-            "name": "archived",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -16990,6 +17153,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Project deletion conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "x-cli-name": "create-vault",
@@ -17077,8 +17250,7 @@
         "tags": [
           "Vaults"
         ],
-        "summary": "Update or archive a vault",
-        "description": "Partial update. Archive with `archived: true`; restore with `archived: false`.",
+        "summary": "Update a vault",
         "security": [
           {
             "oidcAccessToken": [
@@ -17173,6 +17345,71 @@
           }
         },
         "x-cli-name": "update-vault"
+      },
+      "delete": {
+        "operationId": "deleteVault",
+        "tags": [
+          "Vaults"
+        ],
+        "summary": "Delete a vault",
+        "description": "Soft-deletes the vault while retaining credential history. The vault cannot be restored.",
+        "security": [
+          {
+            "oidcAccessToken": [
+              "vaults:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "0195f5d6-7c20-7000-8000-000000000007"
+            },
+            "required": true,
+            "name": "vaultId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/AmaProjectId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Vault deleted"
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The Realmroot token lacks the scope required for this resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cli-name": "delete-vault"
       }
     },
     "/api/v1/vaults/{vaultId}/credentials": {
@@ -17412,7 +17649,7 @@
             }
           },
           "409": {
-            "description": "Vault archived",
+            "description": "Vault unavailable",
             "content": {
               "application/json": {
                 "schema": {

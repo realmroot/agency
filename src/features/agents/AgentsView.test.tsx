@@ -36,7 +36,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
   it('renders empty state when no agents', () => {
     render(
       <MemoryRouter>
-        <AgentsView agents={[]} pagination={buildPagination([])} onCreateSession={vi.fn()} onArchive={vi.fn()} />
+        <AgentsView agents={[]} pagination={buildPagination([])} onCreateSession={vi.fn()} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
     expect(screen.getByText('No agents')).toBeInTheDocument()
@@ -50,7 +50,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -70,7 +70,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -85,7 +85,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -101,7 +101,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={onCreateSession}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -117,27 +117,12 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
     const nones = screen.getAllByText('None')
     expect(nones.length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('shows archived label for archived agent', () => {
-    const agent = buildAgent({ archivedAt: now })
-    render(
-      <MemoryRouter>
-        <AgentsView
-          agents={[agent]}
-          pagination={buildPagination([agent])}
-          onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-    expect(screen.getByText('archived')).toBeInTheDocument()
   })
 
   it('renders model as None/None when providerId and model are null', () => {
@@ -148,15 +133,15 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
     expect(screen.getByText('None / None')).toBeInTheDocument()
   })
 
-  it('calls onArchive with agent id when archive confirm dialog is confirmed', async () => {
-    const onArchive = vi.fn()
+  it('calls onDelete with agent id when delete confirm dialog is confirmed', async () => {
+    const onDelete = vi.fn()
     const agent = buildAgent()
     render(
       <MemoryRouter>
@@ -164,14 +149,14 @@ describe('[spec: agents/console-list] AgentsView', () => {
           agents={[agent]}
           pagination={buildPagination([agent])}
           onCreateSession={vi.fn()}
-          onArchive={onArchive}
+          onDelete={onDelete}
         />
       </MemoryRouter>,
     )
-    const archiveBtn = screen.getByRole('button', { name: 'Archive agent' })
-    fireEvent.click(archiveBtn)
-    const allArchiveBtns = await screen.findAllByRole('button', { name: 'Archive agent' })
-    fireEvent.click(allArchiveBtns[allArchiveBtns.length - 1]!)
-    expect(onArchive).toHaveBeenCalledWith('agent_1')
+    const deleteButton = screen.getByRole('button', { name: 'Delete agent' })
+    fireEvent.click(deleteButton)
+    const confirmButtons = await screen.findAllByRole('button', { name: 'Delete agent' })
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]!)
+    expect(onDelete).toHaveBeenCalledWith('agent_1')
   })
 })

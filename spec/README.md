@@ -103,7 +103,7 @@ exist but whose breadcrumbs are still being fanned out.
 | capability | status   | source `specs/product/*.feature` (merged in) |
 | ---------- | -------- | -------------------------------------------- |
 | agents     | migrated | agents-api, agents-control-plane, agents-ui, agents-update, agent-detail, agent-roles-memory |
-| sessions   | migrated | sessions-api, sessions-events, session-detail-tool-tracing, session-stop, sessions-list-bulk-archive, sessions-ui |
+| sessions   | migrated | sessions-api, sessions-events, session-detail-tool-tracing, session-stop, sessions-list-bulk-delete, sessions-ui |
 | auth       | migrated | auth, auth-flow, auth-guard, auth-tenancy, login, login-page, sso-discovery, user-initial-password, web-auth-redirect |
 | providers  | migrated | providers, providers-models, provider-access |
 | environments | migrated | environments, environments-api, environments-ui, environment-detail, environments-mcp |

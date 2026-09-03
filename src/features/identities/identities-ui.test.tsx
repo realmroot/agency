@@ -23,7 +23,6 @@ function identity(overrides: Partial<Identity> = {}): Identity {
       createdBy: 'user_1',
       createdAt: now,
       updatedAt: now,
-      archivedAt: null,
     },
     spec: { username: 'codex-operator', runtime: 'codex' },
     status: {
@@ -209,13 +208,13 @@ describe('[spec: identities/console] Identity console', () => {
     expect(screen.queryByText('error')).toBeNull()
   })
 
-  it('archives an unbound Identity only after destructive confirmation', async () => {
-    let patchBody: Record<string, unknown> | null = null
+  it('deletes an unbound Identity only after destructive confirmation', async () => {
+    let deleted = false
     server.use(
       http.get('*/api/v1/identities', () => HttpResponse.json(list([identity()]))),
-      http.patch('*/api/v1/identities/:identityId', async ({ request }) => {
-        patchBody = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(identity({ metadata: { ...identity().metadata, archivedAt: now } }))
+      http.delete('*/api/v1/identities/:identityId', () => {
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
       }),
     )
     render(
@@ -226,18 +225,18 @@ describe('[spec: identities/console] Identity console', () => {
       </QueryClientProvider>,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Archive identity' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete identity' }))
     const dialog = await screen.findByRole('alertdialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Archive identity' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete identity' }))
 
-    await waitFor(() => expect(patchBody).toEqual({ archived: true }))
+    await waitFor(() => expect(deleted).toBe(true))
   })
 
-  it('reports an archive conflict from the list page', async () => {
+  it('reports a delete conflict from the list page', async () => {
     const errorToast = vi.spyOn(toast, 'error')
     server.use(
       http.get('*/api/v1/identities', () => HttpResponse.json(list([identity()]))),
-      http.patch('*/api/v1/identities/:identityId', () =>
+      http.delete('*/api/v1/identities/:identityId', () =>
         HttpResponse.json({ error: { type: 'identity_in_use', message: 'Identity is in use' } }, { status: 409 }),
       ),
     )
@@ -248,12 +247,12 @@ describe('[spec: identities/console] Identity console', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Archive identity' }))
-    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Archive identity' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete identity' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete identity' }))
     await waitFor(() => expect(errorToast).toHaveBeenCalled())
   })
 
-  it('renders the empty list and archived/bound rows without archive actions', async () => {
+  it('renders the empty list and bound rows', async () => {
     const queryClient = client()
     server.use(http.get('*/api/v1/identities', () => HttpResponse.json(list([]))))
     const rendered = render(
@@ -271,7 +270,7 @@ describe('[spec: identities/console] Identity console', () => {
         HttpResponse.json(
           list([
             identity({
-              metadata: { ...identity().metadata, archivedAt: now, description: null },
+              metadata: { ...identity().metadata, description: null },
               status: { ...identity().status, boundAgentId: 'agent_bound' },
             }),
           ]),
@@ -286,9 +285,8 @@ describe('[spec: identities/console] Identity console', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByText('Assigned')).toBeTruthy()
-    expect(screen.getByText('Archived')).toHaveAttribute('data-variant', 'secondary')
     expect(screen.queryByText('agent_bound')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Archive identity' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Delete identity' })).toBeTruthy()
   })
 
   it('shows immutable username and Runtime metadata without credential state', async () => {

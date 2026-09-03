@@ -9,11 +9,12 @@ import {
 } from '@server/contracts/resource-contracts'
 import type { Identity } from '@server/domain/identity'
 import {
-  archiveIdentity,
   createIdentity,
+  deleteIdentity,
   IdentityConflictError,
   IdentityProvisioningError,
 } from '@server/usecases/identities'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
 import {
   AuthenticatedOperation,
   type DepsEnv,
@@ -74,10 +75,6 @@ const CreateSchema = z
   })
   .strict()
   .openapi('CreateIdentityRequest')
-const UpdateSchema = z
-  .object({ archived: z.literal(true) })
-  .strict()
-  .openapi('UpdateIdentityRequest')
 const Params = z.object({ identityId: z.string().openapi({ param: { name: 'identityId', in: 'path' } }) })
 const ListResponse = listResponseSchema('IdentityListResponse', IdentitySchema)
 
@@ -139,25 +136,17 @@ const readRoute = createRoute({
     404: { description: 'Not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
-const updateRoute = createRoute({
-  method: 'patch',
+const deleteRoute = createRoute({
+  method: 'delete',
   path: '/{identityId}',
-  operationId: 'updateIdentity',
+  operationId: 'deleteIdentity',
   tags: ['Identities'],
-  summary: 'Archive an identity',
+  summary: 'Delete an identity',
+  description: 'Soft-deletes the identity. The retained tombstone cannot be restored through the API.',
   ...AuthenticatedOperation,
-  request: {
-    params: Params,
-    body: {
-      required: true,
-      content: {
-        'application/merge-patch+json': { schema: UpdateSchema },
-        'application/json': { schema: UpdateSchema },
-      },
-    },
-  },
+  request: { params: Params },
   responses: {
-    200: { description: 'Archived identity', content: { 'application/json': { schema: IdentitySchema } } },
+    204: { description: 'Identity deleted' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: { description: 'Identity is in use', content: { 'application/json': { schema: ErrorResponseSchema } } },
@@ -175,7 +164,7 @@ export function registerIdentityRoutes(routes: Routes) {
     .openapi(listRoute, async (c) => {
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
-      const { archived, search, limit = 50, cursor } = c.req.valid('query')
+      const { search, limit = 50, cursor } = c.req.valid('query')
       let parsed = null
       try {
         parsed = cursor ? parseListCursor(cursor) : null
@@ -184,7 +173,6 @@ export function registerIdentityRoutes(routes: Routes) {
       }
       const page = await c.get('deps').identities!.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(search ? { search } : {}),
         limit,
         cursor: parsed,
@@ -233,6 +221,12 @@ export function registerIdentityRoutes(routes: Routes) {
         })
         return c.json(serializeIdentity(identity), 201)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return c.json(
+            { error: { type: 'conflict', message: 'Project was deleted while Identity creation was in progress' } },
+            409,
+          )
+        }
         if (error instanceof IdentityConflictError) {
           await c.get('deps').audit.record(auth, {
             action: 'identity.create',
@@ -267,28 +261,26 @@ export function registerIdentityRoutes(routes: Routes) {
         ? c.json(serializeIdentity(identity), 200)
         : c.json({ error: { type: 'not_found', message: 'Identity not found' } }, 404)
     })
-    .openapi(updateRoute, async (c) => {
+    .openapi(deleteRoute, async (c) => {
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
       const identity = await c.get('deps').identities!.find(auth.project.id, c.req.valid('param').identityId)
       if (!identity) return c.json({ error: { type: 'not_found', message: 'Identity not found' } }, 404)
       try {
-        await archiveIdentity(c.get('deps'), auth, identity)
+        await deleteIdentity(c.get('deps'), auth, identity)
       } catch (error) {
         if (error instanceof IdentityConflictError)
           return c.json({ error: { type: error.code, message: error.message } }, 409)
         throw error
       }
-      const archived = await c.get('deps').identities!.find(auth.project.id, identity.metadata.uid)
       await c.get('deps').audit.record(auth, {
-        action: 'identity.archive',
+        action: 'identity.delete',
         resourceType: 'identity',
         resourceId: identity.metadata.uid,
         outcome: 'success',
         requestId: requestId(c),
-        before: { archivedAt: identity.metadata.archivedAt },
-        after: { archivedAt: archived?.metadata.archivedAt ?? null },
+        before: identity,
       })
-      return c.json(serializeIdentity(archived!), 200)
+      return c.body(null, 204)
     })
 }

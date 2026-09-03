@@ -3,7 +3,7 @@ import { resourceMetadata } from '@server/domain/resource'
 import type { Credential, CredentialVersion, Vault } from '@server/domain/vault'
 import { describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
-import { archiveIdentity, createIdentity, IdentityConflictError } from './identities'
+import { createIdentity, deleteIdentity, IdentityConflictError } from './identities'
 import type { AuthScope } from './ports'
 
 const timestamp = '2026-01-01T00:00:00.000Z'
@@ -38,6 +38,7 @@ function identityRecord(
     failureCode?: string | null
     descriptor?: IdentityDescriptor | null
     boundAgentId?: string | null
+    deletedAt?: string | null
   } = {},
 ): Identity {
   return {
@@ -47,6 +48,7 @@ function identityRecord(
       name: 'Codex identity',
       createdAt: timestamp,
       updatedAt: timestamp,
+      ...(values.deletedAt === undefined ? {} : { deletedAt: values.deletedAt }),
     }),
     spec: { username: 'reviewer', runtime: 'codex' },
     status: {
@@ -136,6 +138,7 @@ function fixture(
     provisionFailure?: boolean | { value: boolean }
     exchangeFailure?: boolean | { value: boolean }
     checkpointJson?: string
+    deletedIdentity?: boolean
   } = {},
 ) {
   let currentIdentity: Identity | null = null
@@ -182,6 +185,12 @@ function fixture(
           ? { vaultId: 'vault_identity', credentialId: checkpointCredentialId, requestFingerprint }
           : null,
       claim: async (input: { id: string; idempotencyKeyHash: string; requestFingerprint: string }, owner: string) => {
+        if (options.deletedIdentity && !currentIdentity) {
+          keyHash = input.idempotencyKeyHash
+          requestFingerprint = input.requestFingerprint
+          currentIdentity = identityRecord({ id: input.id, deletedAt: timestamp })
+          return { identity: currentIdentity, acquired: false, requestFingerprint }
+        }
         if (!currentIdentity) {
           keyHash = input.idempotencyKeyHash
           requestFingerprint = input.requestFingerprint
@@ -215,7 +224,7 @@ function fixture(
         currentIdentity = identityRecord({ id: currentIdentity!.metadata.uid, state: 'error', failureCode })
         provisioningOwner = null
       },
-      archive: async () => true,
+      delete: async () => true,
     },
     realmrootEnrollment: { initialize, provision },
     realmrootManagement: { exchange },
@@ -324,6 +333,16 @@ describe('[spec: identities/provision] createIdentity', () => {
     await expect(createIdentity(fx.deps, auth, { ...input, username: 'different' })).rejects.toMatchObject({
       code: 'idempotency_conflict',
     })
+  })
+
+  it('[spec: identities/idempotent-resume] rejects replaying a key whose Identity was deleted', async () => {
+    const fx = fixture({ deletedIdentity: true })
+
+    await expect(createIdentity(fx.deps, auth, input)).rejects.toMatchObject({
+      code: 'idempotency_conflict',
+      message: 'Idempotency-Key belongs to a deleted Identity.',
+    })
+    expect(fx.initialize).not.toHaveBeenCalled()
   })
 
   it('[spec: identities/idempotent-resume] keeps a safe failure code when authorization exchange fails', async () => {
@@ -619,7 +638,7 @@ describe('[spec: identities/provision] createIdentity', () => {
   })
 })
 
-describe('[spec: identities/archive] archiveIdentity', () => {
+describe('[spec: identities/delete] deleteIdentity', () => {
   const selectedIdentity = identityRecord({
     state: 'active',
     boundAgentId: 'agent_1',
@@ -634,30 +653,30 @@ describe('[spec: identities/archive] archiveIdentity', () => {
     },
   })
 
-  function archiveDeps(selectedIdentityId: string | null) {
-    const archive = vi.fn(async () => selectedIdentityId !== 'identity_1')
+  function deleteDeps(selectedIdentityId: string | null) {
+    const remove = vi.fn(async () => selectedIdentityId !== 'identity_1')
     const deps = {
-      identities: { archive },
+      identities: { delete: remove },
       realmrootEnrollment: { initialize: vi.fn(), provision: vi.fn() },
       realmrootManagement: { exchange: vi.fn() },
     } as unknown as Deps
-    return { deps, archive }
+    return { deps, remove }
   }
 
   it('returns identity_in_use while the bound Agent is currently selecting the Identity', async () => {
-    const fx = archiveDeps('identity_1')
-    await expect(archiveIdentity(fx.deps, auth, selectedIdentity)).rejects.toMatchObject({
+    const fx = deleteDeps('identity_1')
+    await expect(deleteIdentity(fx.deps, auth, selectedIdentity)).rejects.toMatchObject({
       name: 'IdentityConflictError',
       code: 'identity_in_use',
     })
-    expect(fx.archive).toHaveBeenCalledOnce()
+    expect(fx.remove).toHaveBeenCalledOnce()
   })
 
-  it('archives an old Identity after the Agent switches without a Remote deletion call', async () => {
-    const fx = archiveDeps('identity_2')
-    await archiveIdentity(fx.deps, auth, selectedIdentity)
-    expect(fx.archive).toHaveBeenCalledOnce()
-    expect(fx.archive).toHaveBeenCalledWith('project_1', 'identity_1', expect.any(String))
+  it('soft-deletes an old Identity after the Agent switches without a Remote deletion call', async () => {
+    const fx = deleteDeps('identity_2')
+    await deleteIdentity(fx.deps, auth, selectedIdentity)
+    expect(fx.remove).toHaveBeenCalledOnce()
+    expect(fx.remove).toHaveBeenCalledWith('project_1', 'identity_1', expect.any(String))
     expect(fx.deps).not.toHaveProperty('realmrootEnrollment.delete')
   })
 })

@@ -191,6 +191,9 @@ export async function createIdentity(
     )
   }
   const identity = claim.identity
+  if (identity.metadata.deletedAt) {
+    throw new IdentityConflictError('idempotency_conflict', 'Idempotency-Key belongs to a deleted Identity.')
+  }
   if (identity.status.state === 'active') return identity
   if (!claim.acquired) {
     throw new IdentityConflictError(
@@ -341,11 +344,16 @@ export async function createIdentity(
   }
 }
 
-export async function archiveIdentity(deps: Deps, auth: AuthScope, identity: Identity) {
-  const archived = await identityDeps(deps).identities.archive(
+export async function deleteIdentity(deps: Deps, auth: AuthScope, identity: Identity) {
+  const deleted = await identityDeps(deps).identities.delete(
     auth.project.id,
     identity.metadata.uid,
     new Date().toISOString(),
   )
-  if (!archived) throw new IdentityConflictError('identity_in_use', 'Identity is currently selected by its Agent.')
+  if (!deleted) {
+    throw new IdentityConflictError(
+      'identity_in_use',
+      'Identity is currently selected by an Agent or provisioning is still in progress.',
+    )
+  }
 }

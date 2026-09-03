@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
+import { createRuntimeOrchestrationRepoFromBinding } from '@server/adapters/repos/runtime-orchestration'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
@@ -201,6 +202,33 @@ describe('[CF] /api/v1/leases', () => {
     // The lease no longer embeds the work item: details come from /work-items.
     expect(lease.workItem).toBeUndefined()
     const leaseId = lease.id as string
+    const sessionProject = await env.DB.prepare('SELECT project_id FROM sessions WHERE id = ?')
+      .bind(session.id)
+      .first<{ project_id: string }>()
+
+    const stalePendingClose = await createRuntimeOrchestrationRepoFromBinding(env.DB).updateSessionWhenState(
+      sessionProject!.project_id,
+      session.id,
+      'pending',
+      {
+        state: 'closed',
+        stateReason: 'closing',
+        closedAt: null,
+        updatedAt: new Date().toISOString(),
+      },
+    )
+    expect(stalePendingClose).toBe(false)
+    await expect(
+      runnerJsonFetch(`/api/v1/leases/${leaseId}`, authorization).then((response) => response.json()),
+    ).resolves.toMatchObject({
+      id: leaseId,
+      state: 'active',
+    })
+
+    const reservedRunnerDeleteRes = await jsonFetch(`/api/v1/runners/${runner.id}`, authorization, {
+      method: 'DELETE',
+    })
+    expect(reservedRunnerDeleteRes.status).toBe(409)
 
     const operatorRenewRes = await jsonFetch(`/api/v1/leases/${leaseId}`, authorization, {
       method: 'PATCH',
@@ -278,6 +306,51 @@ describe('[CF] /api/v1/leases', () => {
     })
   })
 
+  it('does not create an active lease after its Session is deleted or atomically marked closing', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id)
+    const deletedSession = await createSelfHostedSession(authorization, agent.id, environment.id)
+    const deletedWork = await availableWorkItem(authorization, deletedSession.id)
+    await env.DB.prepare('UPDATE sessions SET deleted_at = ? WHERE id = ?')
+      .bind(new Date().toISOString(), deletedSession.id)
+      .run()
+
+    expect((await claimLease(authorization, deletedWork.id, runner.id)).status).toBe(409)
+    await expect(
+      env.DB.prepare("SELECT count(*) AS count FROM leases WHERE work_item_id = ? AND state = 'active'")
+        .bind(deletedWork.id)
+        .first(),
+    ).resolves.toEqual({ count: 0 })
+
+    const closingSession = await createSelfHostedSession(authorization, agent.id, environment.id)
+    const closingWork = await availableWorkItem(authorization, closingSession.id)
+    const closingProject = await env.DB.prepare('SELECT project_id FROM sessions WHERE id = ?')
+      .bind(closingSession.id)
+      .first<{ project_id: string }>()
+    await expect(
+      createRuntimeOrchestrationRepoFromBinding(env.DB).updateSessionWhenState(
+        closingProject!.project_id,
+        closingSession.id,
+        'pending',
+        {
+          state: 'closed',
+          stateReason: 'closing',
+          closedAt: null,
+          updatedAt: new Date().toISOString(),
+        },
+      ),
+    ).resolves.toBe(true)
+
+    expect((await claimLease(authorization, closingWork.id, runner.id)).status).toBe(409)
+    await expect(
+      env.DB.prepare("SELECT count(*) AS count FROM leases WHERE work_item_id = ? AND state = 'active'")
+        .bind(closingWork.id)
+        .first(),
+    ).resolves.toEqual({ count: 0 })
+  })
+
   it('syncs writable memory store snapshots when self-hosted work completes', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
@@ -332,13 +405,13 @@ describe('[CF] /api/v1/leases', () => {
     })
   })
 
-  it('ignores snapshots for archived memory stores when self-hosted work completes', async () => {
+  it('ignores snapshots for deleted memory stores when self-hosted work completes', async () => {
     const authorization = await signIn()
     const environment = await createSelfHostedEnvironment(authorization)
     const agent = await createAgent(authorization)
     const memoryStoreRes = await jsonFetch('/api/v1/memory-stores', authorization, {
       method: 'POST',
-      body: JSON.stringify(createResourceBody({ name: `Archived maintainer memory ${crypto.randomUUID()}` })),
+      body: JSON.stringify(createResourceBody({ name: `Deleted maintainer memory ${crypto.randomUUID()}` })),
     })
     expect(memoryStoreRes.status).toBe(201)
     const memoryStore = (await memoryStoreRes.json()) as { metadata: { uid: string } }
@@ -353,11 +426,8 @@ describe('[CF] /api/v1/leases', () => {
     expect(claimRes.status).toBe(201)
     const lease = (await claimRes.json()) as { id: string }
 
-    const archiveRes = await jsonFetch(`/api/v1/memory-stores/${memoryStoreId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
+    const deleteRes = await jsonFetch(`/api/v1/memory-stores/${memoryStoreId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
 
     const completeRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
       method: 'PATCH',

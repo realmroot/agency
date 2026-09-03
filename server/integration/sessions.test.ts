@@ -586,7 +586,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('creates, reads, lists, connects, messages, stops, archives, and records events for a cloud session [spec: sessions/create] [spec: sessions/prompt] [spec: sessions/close] [spec: sessions/archive] [spec: sessions/connection] [spec: sessions/events-query] [spec: sessions/tool-result-redaction]', async () => {
+  it('creates, reads, lists, connects, messages, stops, deletes, and records events for a cloud session [spec: sessions/create] [spec: sessions/prompt] [spec: sessions/close] [spec: sessions/delete] [spec: sessions/connection] [spec: sessions/events-query] [spec: sessions/tool-result-redaction]', async () => {
     const authorization = await signIn()
     const githubCredential = await connectMcp(authorization, 'github')
     await connectMcp(authorization, 'linear')
@@ -616,7 +616,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(createRes.status).toBe(201)
     const created = (await createRes.json()) as {
-      metadata: { uid: string; annotations: Record<string, string>; archivedAt: string | null }
+      metadata: { uid: string; annotations: Record<string, string> }
       spec: {
         env: Record<string, string>
         envFrom: Array<{ type: 'secret'; name: string; secretRef: string }>
@@ -887,14 +887,8 @@ describe('[CF] /api/v1/sessions', () => {
     })
     expect(descendingStreamRes.status).toBe(400)
 
-    const archiveRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    const archived = (await archiveRes.json()) as { status: { phase: string }; metadata: { archivedAt: string | null } }
-    expect(archived.status.phase).toBe('closed')
-    expect(archived.metadata.archivedAt).toEqual(expect.any(String))
+    const deleteRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, { method: 'DELETE' })
+    expect(deleteRes.status).toBe(204)
 
     const liveListRes = await jsonFetch('/api/v1/sessions', authorization)
     const liveList = (await liveListRes.json()) as { data: Array<{ metadata: { uid: string } }> }
@@ -902,30 +896,19 @@ describe('[CF] /api/v1/sessions', () => {
       expect.objectContaining({ metadata: expect.objectContaining({ uid: createdId }) }),
     )
 
-    const archivedListRes = await jsonFetch('/api/v1/sessions?archived=true', authorization)
-    expect(archivedListRes.status).toBe(200)
-    const archivedList = (await archivedListRes.json()) as {
-      data: Array<{ metadata: { uid: string; archivedAt: string | null } }>
-    }
-    expect(archivedList.data).toContainEqual(
-      expect.objectContaining({
-        metadata: expect.objectContaining({ uid: createdId, archivedAt: expect.any(String) }),
-      }),
-    )
-
-    // Archived sessions reject edits but can be restored.
-    const archivedEditRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
+    expect((await jsonFetch(`/api/v1/sessions/${createdId}`, authorization)).status).toBe(404)
+    const deletedEditRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
       method: 'PATCH',
       body: JSON.stringify({ name: 'New title' }),
     })
-    expect(archivedEditRes.status).toBe(409)
-
-    const unarchiveRes = await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: false }),
-    })
-    expect(unarchiveRes.status).toBe(200)
-    await expect(unarchiveRes.json()).resolves.toMatchObject({ metadata: { uid: createdId, archivedAt: null } })
+    expect(deletedEditRes.status).toBe(404)
+    for (const suffix of ['messages', 'events', 'approvals']) {
+      expect((await jsonFetch(`/api/v1/sessions/${createdId}/${suffix}`, authorization)).status).toBe(404)
+    }
+    expect((await jsonFetch(`/api/v1/sessions/${createdId}`, authorization, { method: 'DELETE' })).status).toBe(404)
+    await expect(
+      env.DB.prepare('SELECT id, deleted_at FROM sessions WHERE id = ?').bind(createdId).first(),
+    ).resolves.toEqual({ id: createdId, deleted_at: expect.any(String) })
   }, 10_000)
 
   it('updates name and metadata without disturbing runtime-managed metadata', async () => {
@@ -2339,10 +2322,7 @@ describe('[CF] /api/v1/sessions', () => {
         method: 'PATCH',
         body: JSON.stringify({ state: 'closed' }),
       }),
-      jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie, {
-        method: 'PATCH',
-        body: JSON.stringify({ archived: true }),
-      }),
+      jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, otherCookie, { method: 'DELETE' }),
       jsonFetch(`/api/v1/sessions/${created.metadata.uid}/events`, otherCookie, {
         method: 'POST',
         body: JSON.stringify({ events: [{ type: 'turn.completed', payload: {} }] }),

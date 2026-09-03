@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { RunnerOidcContext } from '../domain/runner-queue'
 import type { Deps } from './deps'
 import { type AuthScope, type RunnerAuthRecord, RunnerConflictError, RunnerValidationError } from './ports'
@@ -42,7 +42,7 @@ function runnerRecord(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthReco
     oidcSubject: null,
     oidcClientId: null,
     lastHeartbeatAt: null,
-    archivedAt: null,
+    deletedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
@@ -58,6 +58,7 @@ function fakeDeps(repo: Partial<Deps['runners']> = {}): Deps {
     reregister: async (_p, id, input) => runnerRecord({ id, name: input.name }),
     update: async (_p, id, fields) => runnerRecord({ id, ...fields }),
     heartbeat: async (_p, id, fields) => runnerRecord({ id, ...fields, lastHeartbeatAt: '2026-02-02T00:00:00.000Z' }),
+    delete: async () => true,
     environmentUsable: async () => true,
     secretRefUsable: async () => ({ credentialMissing: false, versionMissing: false }),
     ...repo,
@@ -204,27 +205,20 @@ describe('[spec: runners/register] registerRunner', () => {
 })
 
 describe('updateRunner', () => {
-  it('archives via the archived flag', async () => {
-    const updated = await updateRunner(fakeDeps(), 'project_1', runnerRecord(), { archived: true })
-    expect(updated.archivedAt).toEqual(expect.any(String))
-  })
+  it('updates management fields while preserving omitted values', async () => {
+    const update = vi.fn(fakeDeps().runners.update)
+    const current = runnerRecord({ state: 'active', maxConcurrent: 2, metadata: { pool: 'default' } })
 
-  it('retains existing archivedAt when archiving an already-archived runner', async () => {
-    const existing = '2026-01-02T00:00:00.000Z'
-    const updated = await updateRunner(fakeDeps(), 'project_1', runnerRecord({ archivedAt: existing }), {
-      archived: true,
-    })
-    expect(updated.archivedAt).toBe(existing)
-  })
+    const result = await updateRunner(fakeDeps({ update }), 'project_1', current, { name: 'Renamed' })
 
-  it('unarchives a runner via archived:false', async () => {
-    const updated = await updateRunner(
-      fakeDeps(),
+    expect(result.name).toBe('Renamed')
+    expect(update).toHaveBeenCalledWith(
       'project_1',
-      runnerRecord({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { archived: false },
+      'runner_1',
+      expect.objectContaining({ state: 'active', maxConcurrent: 2, metadata: { pool: 'default' } }),
+      expect.any(String),
     )
-    expect(updated.archivedAt).toBeNull()
+    expect(update.mock.calls[0]?.[2]).not.toHaveProperty('deletedAt')
   })
 
   it('rejects secret material in metadata', async () => {
@@ -240,9 +234,9 @@ describe('recordRunnerHeartbeat', () => {
     expect(updated.lastHeartbeatAt).toEqual(expect.any(String))
   })
 
-  it('rejects archived runners', async () => {
+  it('rejects deleted runners', async () => {
     await expect(
-      recordRunnerHeartbeat(fakeDeps(), 'project_1', runnerRecord({ archivedAt: '2026-01-02T00:00:00.000Z' }), {
+      recordRunnerHeartbeat(fakeDeps(), 'project_1', runnerRecord({ deletedAt: '2026-01-02T00:00:00.000Z' }), {
         state: 'active',
       }),
     ).rejects.toBeInstanceOf(RunnerConflictError)

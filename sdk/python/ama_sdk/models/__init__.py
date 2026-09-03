@@ -201,27 +201,19 @@ from .json_content_block_type import JsonContentBlockType
 from .lease import Lease
 from .lease_list_response import LeaseListResponse
 from .lease_state import LeaseState
-from .list_agents_archived import ListAgentsArchived
 from .list_agents_runtime import ListAgentsRuntime
 from .list_agents_schedulable import ListAgentsSchedulable
 from .list_connectors_availability import ListConnectorsAvailability
-from .list_environments_archived import ListEnvironmentsArchived
-from .list_identities_archived import ListIdentitiesArchived
 from .list_leases_state import ListLeasesState
-from .list_memory_stores_archived import ListMemoryStoresArchived
 from .list_pagination import ListPagination
-from .list_runners_archived import ListRunnersArchived
 from .list_runners_state import ListRunnersState
 from .list_session_events_order import ListSessionEventsOrder
 from .list_session_events_type import ListSessionEventsType
-from .list_sessions_archived import ListSessionsArchived
 from .list_sessions_state import ListSessionsState
 from .list_trigger_runs_state import ListTriggerRunsState
-from .list_triggers_archived import ListTriggersArchived
 from .list_triggers_suspend import ListTriggersSuspend
 from .list_vault_credential_versions_state import ListVaultCredentialVersionsState
 from .list_vault_credentials_state import ListVaultCredentialsState
-from .list_vaults_archived import ListVaultsArchived
 from .list_work_items_state import ListWorkItemsState
 from .ls_tool_input import LsToolInput
 from .memory_store import MemoryStore
@@ -477,7 +469,6 @@ from .update_environment_request import UpdateEnvironmentRequest
 from .update_environment_request_spec import UpdateEnvironmentRequestSpec
 from .update_environment_request_spec_variables import UpdateEnvironmentRequestSpecVariables
 from .update_environment_request_spec_variables_additional_property import UpdateEnvironmentRequestSpecVariablesAdditionalProperty
-from .update_identity_request import UpdateIdentityRequest
 from .update_lease_request import UpdateLeaseRequest
 from .update_lease_request_error import UpdateLeaseRequestError
 from .update_lease_request_result import UpdateLeaseRequestResult
@@ -760,27 +751,19 @@ __all__ = (
     "Lease",
     "LeaseListResponse",
     "LeaseState",
-    "ListAgentsArchived",
     "ListAgentsRuntime",
     "ListAgentsSchedulable",
     "ListConnectorsAvailability",
-    "ListEnvironmentsArchived",
-    "ListIdentitiesArchived",
     "ListLeasesState",
-    "ListMemoryStoresArchived",
     "ListPagination",
-    "ListRunnersArchived",
     "ListRunnersState",
     "ListSessionEventsOrder",
     "ListSessionEventsType",
-    "ListSessionsArchived",
     "ListSessionsState",
     "ListTriggerRunsState",
-    "ListTriggersArchived",
     "ListTriggersSuspend",
     "ListVaultCredentialsState",
     "ListVaultCredentialVersionsState",
-    "ListVaultsArchived",
     "ListWorkItemsState",
     "LsToolInput",
     "MemoryStore",
@@ -1036,7 +1019,6 @@ __all__ = (
     "UpdateEnvironmentRequestSpec",
     "UpdateEnvironmentRequestSpecVariables",
     "UpdateEnvironmentRequestSpecVariablesAdditionalProperty",
-    "UpdateIdentityRequest",
     "UpdateLeaseRequest",
     "UpdateLeaseRequestError",
     "UpdateLeaseRequestResult",

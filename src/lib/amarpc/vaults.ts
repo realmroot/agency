@@ -44,8 +44,7 @@ export const vaultsApi = {
     rpcRequest<ListResponse<Vault>>(v1.vaults.$get(queryArg<typeof v1.vaults.$get>(options))),
   readVault: (id: string) => rpcRequest<Vault>(v1.vaults[':vaultId'].$get({ param: { vaultId: id } })),
   createVault: (input: VaultInput) => rpcRequest<Vault>(v1.vaults.$post({ json: input })),
-  archiveVault: (id: string) =>
-    rpcRequest<Vault>(v1.vaults[':vaultId'].$patch({ param: { vaultId: id }, json: { archived: true } })),
+  deleteVault: (id: string) => rpcRequest<void>(v1.vaults[':vaultId'].$delete({ param: { vaultId: id } })),
   listVaultCredentials: (id: string, options: VaultCredentialListOptions = {}) =>
     rpcRequest<ListResponse<VaultCredential>>(
       v1.vaults[':vaultId'].credentials.$get(

@@ -12,10 +12,12 @@ import type {
   RuntimeUsage,
   UpdateRunnerFields,
 } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, desc, eq, gte, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
-import { environments, runners, vaultCredentials, vaultCredentialVersions } from '../../db/schema'
+import { environments, leases, runners, vaultCredentials, vaultCredentialVersions } from '../../db/schema'
 import { credentialScopedSecretRef, credentialVersionSecretRef, secretRefIdentity } from '../../domain/vault'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type RunnerRow = typeof runners.$inferSelect
@@ -85,7 +87,7 @@ async function recordFrom(db: Db, row: RunnerRow, now = new Date()): Promise<Run
     oidcSubject: row.oidcSubject,
     oidcClientId: row.oidcClientId,
     lastHeartbeatAt: row.lastHeartbeatAt,
-    archivedAt: row.archivedAt,
+    deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -126,7 +128,7 @@ async function findRow(db: Db, projectId: string, runnerId: string): Promise<Run
     (await db
       .select()
       .from(runners)
-      .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId)))
+      .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
       .get()) ?? null
   )
 }
@@ -141,7 +143,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         query.runnerId ? eq(runners.id, query.runnerId) : undefined,
         query.oidcSubject ? eq(runners.oidcSubject, query.oidcSubject) : undefined,
         query.oidcClientId ? eq(runners.oidcClientId, query.oidcClientId) : undefined,
-        query.archived ? isNotNull(runners.archivedAt) : isNull(runners.archivedAt),
+        isNull(runners.deletedAt),
         query.state ? stateFilter(query.state as RunnerStateColumn, staleBefore) : undefined,
         query.environmentId ? eq(runners.environmentId, query.environmentId) : undefined,
         query.search ? like(runners.name, `%${query.search}%`) : undefined,
@@ -181,6 +183,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
             eq(runners.projectId, projectId),
             eq(runners.authMode, authMode),
             eq(runners.oidcSubject, oidcSubject),
+            isNull(runners.deletedAt),
             environmentId ? eq(runners.environmentId, environmentId) : isNull(runners.environmentId),
             sql`json_extract(${runners.metadata}, '$.machineId') = ${machineId}`,
           ),
@@ -198,11 +201,16 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         runtimeUsage: '[]',
         runtimes: '[]',
         lastHeartbeatAt: null,
-        archivedAt: null,
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       } satisfies typeof runners.$inferInsert
-      await db.insert(runners).values(row)
+      try {
+        await db.insert(runners).values(row)
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Runner')
+        throw error
+      }
       const inserted = await findRow(db, input.projectId, row.id)
       if (!inserted) {
         throw new Error('Inserted runner row is required')
@@ -211,10 +219,12 @@ export function createRunnerRepo(db: Db): RunnerRepo {
     },
 
     async reregister(projectId, runnerId, input, timestamp) {
-      await db
+      const updated = await db
         .update(runners)
-        .set({ ...columnsFromInput(input), archivedAt: null, updatedAt: timestamp })
-        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId)))
+        .set({ ...columnsFromInput(input), updatedAt: timestamp })
+        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
+        .returning({ id: runners.id })
+      if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Runner')
       const row = await findRow(db, projectId, runnerId)
       if (!row) {
         throw new Error('Realmroot runner registration update did not return a runner')
@@ -223,17 +233,18 @@ export function createRunnerRepo(db: Db): RunnerRepo {
     },
 
     async update(projectId, runnerId, fields: UpdateRunnerFields, timestamp) {
-      await db
+      const updated = await db
         .update(runners)
         .set({
           name: fields.name,
           state: fields.state as RunnerStateColumn,
           maxConcurrent: fields.maxConcurrent,
           metadata: stringify(fields.metadata),
-          archivedAt: fields.archivedAt,
           updatedAt: timestamp,
         })
-        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId)))
+        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
+        .returning({ id: runners.id })
+      if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Runner')
       const row = await findRow(db, projectId, runnerId)
       if (!row) {
         throw new Error('Updated runner row is required')
@@ -241,8 +252,30 @@ export function createRunnerRepo(db: Db): RunnerRepo {
       return recordFrom(db, row)
     },
 
+    async delete(projectId, runnerId, deletedAt) {
+      const rows = await db
+        .update(runners)
+        .set({ deletedAt, updatedAt: deletedAt, state: 'disabled' })
+        .where(
+          and(
+            eq(runners.id, runnerId),
+            eq(runners.projectId, projectId),
+            isNull(runners.deletedAt),
+            eq(runners.currentLoad, 0),
+            notExists(
+              db
+                .select({ id: leases.id })
+                .from(leases)
+                .where(and(eq(leases.runnerId, runnerId), eq(leases.projectId, projectId), eq(leases.state, 'active'))),
+            ),
+          ),
+        )
+        .returning({ id: runners.id })
+      return rows.length > 0
+    },
+
     async heartbeat(projectId, runnerId, fields: RunnerHeartbeatFields, timestamp) {
-      await db
+      const updated = await db
         .update(runners)
         .set({
           state: fields.state as RunnerStateColumn,
@@ -252,7 +285,9 @@ export function createRunnerRepo(db: Db): RunnerRepo {
           lastHeartbeatAt: timestamp,
           updatedAt: timestamp,
         })
-        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId)))
+        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
+        .returning({ id: runners.id })
+      if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Runner')
       const row = await findRow(db, projectId, runnerId)
       if (!row) {
         throw new Error('Heartbeat runner row is required')
@@ -268,7 +303,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
           and(
             eq(environments.id, environmentId),
             eq(environments.projectId, projectId),
-            isNull(environments.archivedAt),
+            isNull(environments.deletedAt),
           ),
         )
         .get()

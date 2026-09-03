@@ -66,7 +66,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await api.listAgents({
-      archived: true,
       search: 'research',
       createdFrom: '2026-05-01T00:00:00.000Z',
       createdTo: '2026-05-31T23:59:59.999Z',
@@ -76,7 +75,7 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/agents?archived=true&search=research&createdFrom=2026-05-01T00%3A00%3A00.000Z&createdTo=2026-05-31T23%3A59%3A59.999Z&identityAgentId=realmroot_agent_1&limit=25&cursor=cursor_value',
+      '/api/v1/agents?search=research&createdFrom=2026-05-01T00%3A00%3A00.000Z&createdTo=2026-05-31T23%3A59%3A59.999Z&identityAgentId=realmroot_agent_1&limit=25&cursor=cursor_value',
       expect.objectContaining({
         body: undefined,
         method: 'GET',
@@ -87,33 +86,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     expect(headerValue(headers, 'authorization')).toBe('Bearer e2e:api-test')
     expect(headerValue(headers, 'dpop')).toBeNull()
     expect(headerValue(headers, 'x-ama-project-id')).toBe('project_test')
-    expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
-  })
-
-  it('uses explicit list options for archived resources', async () => {
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
-      return new Response(
-        JSON.stringify({
-          data: [],
-          pagination: { limit: 50, nextCursor: null, hasMore: false },
-        }),
-        { headers: { 'content-type': 'application/json' } },
-      )
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    await api.listSessions({ archived: true })
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/sessions?archived=true',
-      expect.objectContaining({
-        body: undefined,
-        method: 'GET',
-      }),
-    )
-    const headers = fetchMock.mock.calls[0]?.[1]?.headers
-    expect(headerValue(headers, 'authorization')).toBe('Bearer e2e:api-test')
-    expect(headerValue(headers, 'dpop')).toBeNull()
     expect(headerValue(headers, 'x-ama-client')).toBe('web-rpc')
   })
 
@@ -301,22 +273,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(url).toContain('limit=10')
     })
 
-    it('includes false boolean values in the query string', async () => {
-      const fetchMock = makeJsonFetch(listPage)
-      vi.stubGlobal('fetch', fetchMock)
-      await api.listAgents({ archived: false })
-      const url = fetchMock.mock.calls[0]?.[0] as string
-      expect(url).toContain('archived=false')
-    })
-
-    it('includes true boolean values', async () => {
-      const fetchMock = makeJsonFetch(listPage)
-      vi.stubGlobal('fetch', fetchMock)
-      await api.listAgents({ archived: true })
-      const url = fetchMock.mock.calls[0]?.[0] as string
-      expect(url).toContain('archived=true')
-    })
-
     it('includes zero values and omits the query string when options are empty', async () => {
       const fetchMock = makeJsonFetch(listPage)
       vi.stubGlobal('fetch', fetchMock)
@@ -469,11 +425,11 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(url).toContain('/api/v1/agents/agent_1')
     })
 
-    it('archiveAgent patches with archived:true', async () => {
-      const fetchMock = makeJsonFetch(agent({ id: 'agent_1', archivedAt: '2026-01-01' }))
+    it('deleteAgent sends DELETE', async () => {
+      const fetchMock = makeJsonFetch({})
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.archiveAgent('agent_1')
-      expect(result.metadata.archivedAt).toBeTruthy()
+      await api.deleteAgent('agent_1')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE')
     })
 
     it('listAgentVersions calls the versions sub-resource', async () => {
@@ -529,11 +485,11 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(url).toContain('/api/v1/environments/env_1')
     })
 
-    it('archiveEnvironment patches with archived:true', async () => {
-      const fetchMock = makeJsonFetch(environment({ id: 'env_1', archivedAt: '2026-01-01' }))
+    it('deleteEnvironment sends DELETE', async () => {
+      const fetchMock = makeJsonFetch({})
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.archiveEnvironment('env_1')
-      expect(result.metadata.archivedAt).toBeTruthy()
+      await api.deleteEnvironment('env_1')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE')
     })
 
     it('listEnvironmentVersions calls the versions sub-resource', async () => {
@@ -629,14 +585,11 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(result.status.phase).toBe('idle')
     })
 
-    it('archiveSession patches with archived:true', async () => {
-      const fetchMock = makeJsonFetch({
-        ...sessionFixture,
-        metadata: { ...sessionFixture.metadata, archivedAt: '2026-01-01' },
-      })
+    it('deleteSession sends DELETE', async () => {
+      const fetchMock = makeJsonFetch({})
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.archiveSession('sess_1')
-      expect(result.metadata.archivedAt).toBeTruthy()
+      await api.deleteSession('sess_1')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE')
     })
 
     it('sendSessionMessage posts to messages sub-resource', async () => {
@@ -851,29 +804,27 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
     it('listMemoryStores serializes list options', async () => {
       const fetchMock = makeJsonFetch(listPage)
       vi.stubGlobal('fetch', fetchMock)
-      await api.listMemoryStores({ archived: true, search: 'project' })
+      await api.listMemoryStores({ search: 'project' })
       const url = fetchMock.mock.calls[0]?.[0] as string
       expect(url).toContain('/api/v1/memory-stores')
-      expect(url).toContain('archived=true')
       expect(url).toContain('search=project')
     })
 
-    it('reads, creates, updates, and archives memory stores', async () => {
+    it('reads, creates, updates, and deletes memory stores', async () => {
       const fetchMock = makeJsonFetch(memoryStoreFixture)
       vi.stubGlobal('fetch', fetchMock)
 
       await api.readMemoryStore('mem_1')
       await api.createMemoryStore({ metadata: { name: 'Project memory' }, spec: {} })
       await api.updateMemoryStore('mem_1', { metadata: { description: 'Shared facts' } })
-      await api.archiveMemoryStore('mem_1')
+      await api.deleteMemoryStore('mem_1')
 
       expect(fetchMock.mock.calls[0]?.[0] as string).toContain('/api/v1/memory-stores/mem_1')
       expect(fetchMock.mock.calls[1]?.[1]?.method).toBe('POST')
       expect(requestJson(fetchMock, 1)).toEqual({ metadata: { name: 'Project memory' }, spec: {} })
       expect(fetchMock.mock.calls[2]?.[1]?.method).toBe('PATCH')
       expect(requestJson(fetchMock, 2)).toEqual({ metadata: { description: 'Shared facts' } })
-      expect(fetchMock.mock.calls[3]?.[1]?.method).toBe('PATCH')
-      expect(requestJson(fetchMock, 3)).toEqual({ archived: true })
+      expect(fetchMock.mock.calls[3]?.[1]?.method).toBe('DELETE')
     })
 
     it('manages memory records under a memory store', async () => {
@@ -981,12 +932,11 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
       expect(requestJson(fetchMock, 0)).toEqual({ metadata: { name: 'My Vault' }, spec: {} })
     })
 
-    it('archiveVault patches with archived:true', async () => {
-      const fetchMock = makeJsonFetch(vault({ id: 'vault_1', archivedAt: '2026-01-01' }))
+    it('deleteVault sends DELETE', async () => {
+      const fetchMock = makeJsonFetch({})
       vi.stubGlobal('fetch', fetchMock)
-      const result = await api.archiveVault('vault_1')
-      expect(result.metadata.archivedAt).toBeTruthy()
-      expect(requestJson(fetchMock, 0)).toEqual({ archived: true })
+      await api.deleteVault('vault_1')
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE')
     })
 
     it('listVaultCredentials calls the credentials sub-resource', async () => {
@@ -1028,7 +978,6 @@ describe('shared API client [spec: web-console/rpc-client]', () => {
             createdBy: 'user_1',
             createdAt: '',
             updatedAt: '',
-            archivedAt: null,
           },
           spec: {
             credentialId: 'cred_1',

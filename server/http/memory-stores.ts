@@ -17,7 +17,7 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import type { MemoryStoreRepo } from '../usecases/ports'
+import { type MemoryStoreRepo, ResourceDeletedDuringMutationError } from '../usecases/ports'
 import { requestId } from './request-context'
 
 type MemoryStoreRoutes = OpenAPIHono<DepsEnv>
@@ -62,11 +62,10 @@ const UpdateMemoryStoreSchema = z
   .object({
     metadata: ResourceUpdateMetadataSchema.optional(),
     spec: EmptySpecSchema.optional(),
-    archived: z.boolean().optional().openapi({ example: true }),
   })
   .strict()
-  .refine((body) => body.metadata !== undefined || body.spec !== undefined || body.archived !== undefined, {
-    message: 'Provide metadata, spec, or archived.',
+  .refine((body) => body.metadata !== undefined || body.spec !== undefined, {
+    message: 'Provide metadata or spec.',
   })
   .openapi('UpdateMemoryStoreRequest')
 
@@ -99,7 +98,6 @@ const MemoryParamsSchema = StoreParamsSchema.extend({
 
 const StoreListQuerySchema = listQuerySchema()
 const MemoryListQuerySchema = listQuerySchema().omit({
-  archived: true,
   search: true,
   createdFrom: true,
   createdTo: true,
@@ -169,6 +167,7 @@ const createStoreRoute = createRoute({
     201: { description: 'Created memory store', content: { 'application/json': { schema: MemoryStoreSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: { description: 'Project deletion conflict', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
 })
 
@@ -192,7 +191,7 @@ const updateStoreRoute = createRoute({
   path: '/{storeId}',
   operationId: 'updateMemoryStore',
   tags: ['Memory Stores'],
-  summary: 'Update or archive a memory store',
+  summary: 'Update a memory store',
   ...AuthenticatedOperation,
   request: {
     params: StoreParamsSchema,
@@ -201,6 +200,22 @@ const updateStoreRoute = createRoute({
   responses: {
     200: { description: 'Updated memory store', content: { 'application/json': { schema: MemoryStoreSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Memory store not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteStoreRoute = createRoute({
+  method: 'delete',
+  path: '/{storeId}',
+  operationId: 'deleteMemoryStore',
+  tags: ['Memory Stores'],
+  summary: 'Delete a memory store',
+  description: 'Soft-deletes the memory store and its memories. Database history remains and cannot be restored.',
+  ...AuthenticatedOperation,
+  request: { params: StoreParamsSchema },
+  responses: {
+    204: { description: 'Memory store deleted' },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Memory store not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
   },
@@ -268,6 +283,7 @@ const deleteMemoryRoute = createRoute({
   operationId: 'deleteMemoryStoreMemory',
   tags: ['Memory Stores'],
   summary: 'Delete a memory',
+  description: 'Soft-deletes the memory. The retained tombstone cannot be restored through the API.',
   ...AuthenticatedOperation,
   request: { params: MemoryParamsSchema },
   responses: {
@@ -284,7 +300,7 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       const memoryStores = memoryStoresRepo(deps)
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
-      const { archived, search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
+      const { search, createdFrom, createdTo, limit = 50, cursor } = c.req.valid('query')
       let parsedCursor: { createdAt: string; id: string } | null = null
       try {
         parsedCursor = cursor ? parseListCursor(cursor) : null
@@ -293,7 +309,6 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       }
       const page = await memoryStores.list({
         projectId: auth.project.id,
-        archived: archived === 'true',
         ...(search ? { search } : {}),
         ...(createdFrom ? { createdFrom } : {}),
         ...(createdTo ? { createdTo } : {}),
@@ -314,14 +329,22 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       const auth = await requireAuth(c)
       if (auth instanceof Response) return auth
       const body = c.req.valid('json')
-      const store = await memoryStores.insert(
-        {
-          projectId: auth.project.id,
-          name: body.metadata.name,
-          description: body.metadata.description ?? null,
-        },
-        new Date().toISOString(),
-      )
+      const store = await (async () => {
+        try {
+          return await memoryStores.insert(
+            {
+              projectId: auth.project.id,
+              name: body.metadata.name,
+              description: body.metadata.description ?? null,
+            },
+            new Date().toISOString(),
+          )
+        } catch (error) {
+          if (error instanceof ResourceDeletedDuringMutationError) return null
+          throw error
+        }
+      })()
+      if (!store) return c.json(conflict('Project was deleted while Memory Store creation was in progress'), 409)
       await deps.audit.record(auth, {
         action: 'memory_store.create',
         resourceType: 'memory_store',
@@ -352,17 +375,23 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       const current = await memoryStores.find(auth.project.id, storeId)
       if (!current) return c.json(notFound('Memory store not found'), 404)
       const updatedAt = new Date().toISOString()
-      await memoryStores.update(
-        auth.project.id,
-        storeId,
-        {
-          name: body.metadata?.name ?? current.metadata.name,
-          description:
-            body.metadata?.description !== undefined ? body.metadata.description : current.metadata.description,
-          archivedAt: body.archived === undefined ? current.metadata.archivedAt : body.archived ? updatedAt : null,
-        },
-        updatedAt,
-      )
+      try {
+        await memoryStores.update(
+          auth.project.id,
+          storeId,
+          {
+            name: body.metadata?.name ?? current.metadata.name,
+            description:
+              body.metadata?.description !== undefined ? body.metadata.description : current.metadata.description,
+          },
+          updatedAt,
+        )
+      } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return c.json(notFound('Memory store not found'), 404)
+        }
+        throw error
+      }
       const updated = await memoryStores.find(auth.project.id, storeId)
       if (!updated) throw new Error('Updated memory store row is required')
       await deps.audit.record(auth, {
@@ -375,6 +404,27 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
         after: updated,
       })
       return c.json(serializeResource(updated), 200)
+    })
+    .openapi(deleteStoreRoute, async (c) => {
+      const deps = c.get('deps')
+      const memoryStores = memoryStoresRepo(deps)
+      const auth = await requireAuth(c)
+      if (auth instanceof Response) return auth
+      const { storeId } = c.req.valid('param')
+      const store = await memoryStores.find(auth.project.id, storeId)
+      if (!store) return c.json(notFound('Memory store not found'), 404)
+      if (!(await memoryStores.delete(auth.project.id, storeId, new Date().toISOString()))) {
+        return c.json(notFound('Memory store not found'), 404)
+      }
+      await deps.audit.record(auth, {
+        action: 'memory_store.delete',
+        resourceType: 'memory_store',
+        resourceId: storeId,
+        outcome: 'success',
+        requestId: requestId(c),
+        before: store,
+      })
+      return c.body(null, 204)
     })
     .openapi(listMemoriesRoute, async (c) => {
       const deps = c.get('deps')
@@ -408,7 +458,7 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       const { storeId } = c.req.valid('param')
       const body = c.req.valid('json')
       const store = await memoryStores.find(auth.project.id, storeId)
-      if (!store || store.metadata.archivedAt) return c.json(notFound('Memory store not found'), 404)
+      if (!store || store.metadata.deletedAt) return c.json(notFound('Memory store not found'), 404)
       const normalized = normalizePathInput(body.path)
       if ('error' in normalized) return c.json(validation('Invalid memory path', { path: normalized.error }), 400)
       try {
@@ -432,6 +482,9 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
         })
         return c.json(serializeResource(memory), 201)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) {
+          return c.json(conflict('Memory Store was deleted while Memory creation was in progress'), 409)
+        }
         if (isUniqueError(error)) return c.json(conflict('Memory path already exists'), 409)
         throw error
       }
@@ -476,6 +529,7 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
         })
         return c.json(serializeResource(updated), 200)
       } catch (error) {
+        if (error instanceof ResourceDeletedDuringMutationError) return c.json(notFound('Memory not found'), 404)
         if (isUniqueError(error)) return c.json(conflict('Memory path already exists'), 409)
         throw error
       }
@@ -488,7 +542,7 @@ export function registerMemoryStoreRoutes(routes: MemoryStoreRoutes) {
       const { storeId, memoryId } = c.req.valid('param')
       const current = await memoryStores.findMemory(auth.project.id, storeId, memoryId)
       if (!current) return c.json(notFound('Memory not found'), 404)
-      await memoryStores.deleteMemory(auth.project.id, storeId, memoryId)
+      await memoryStores.deleteMemory(auth.project.id, storeId, memoryId, new Date().toISOString())
       await deps.audit.record(auth, {
         action: 'memory_store.memory.delete',
         resourceType: 'memory_store',

@@ -58,8 +58,7 @@ export const sessionsApi = {
     rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { state: 'closed' } })),
   reopenSession: (id: string) =>
     rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { state: 'idle' } })),
-  archiveSession: (id: string) =>
-    rpcRequest<Session>(v1.sessions[':sessionId'].$patch({ param: { sessionId: id }, json: { archived: true } })),
+  deleteSession: (id: string) => rpcRequest<void>(v1.sessions[':sessionId'].$delete({ param: { sessionId: id } })),
   sendSessionMessage: (id: string, content: string) =>
     rpcRequest<SessionMessage>(
       v1.sessions[':sessionId'].messages.$post({ param: { sessionId: id }, json: { type: 'prompt', content } }),

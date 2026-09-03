@@ -1,8 +1,8 @@
-// Session close / reopen / archive / expiry lifecycle — deps-first.
+// Session close / reopen / delete / expiry lifecycle — deps-first.
 //
 // This cluster owns runtime teardown: closing cloud sessions (tearing down the
 // sandbox runtime) and self-hosted sessions (cancelling work items, leases, and
-// runner load), reopening sessions, archiving / unarchiving, and expiring pending
+// runner load), reopening sessions, soft deletion, and expiring pending
 // cloud sessions whose startup window elapsed.
 //
 // Deps-first: the store, audit, cloud runtime lifecycle, runtime workspace
@@ -212,6 +212,22 @@ async function closeSelfHostedSession(
 ): Promise<CloseSessionResult> {
   const store = deps.sessionOrchestration
   const closedAt = now()
+  const claimed = await store.updateSessionWhenState(auth.project.id, session.id, session.state, {
+    state: 'closed',
+    stateReason: 'closing',
+    closedAt: null,
+    updatedAt: closedAt,
+  })
+  if (!claimed) {
+    return {
+      ok: false,
+      error: {
+        status: 409,
+        code: 'conflict',
+        message: 'Session changed while close was being claimed',
+      },
+    }
+  }
   if (sessionSandboxBackend(session) === 'runner-sandbox') {
     await deps.runnerChannel.stopSandbox(session.id).catch(() => undefined)
   } else {
@@ -355,7 +371,7 @@ export async function reopenSession(
   return { ok: true, session: reopened }
 }
 
-export async function archiveSession(
+export async function deleteSession(
   deps: LifecycleDeps,
   auth: AuthScope,
   sessionId: string,
@@ -373,53 +389,21 @@ export async function archiveSession(
     }
   }
 
-  const archivedAt = now()
+  const deletedAt = now()
   await store.updateSession(auth.project.id, session.id, {
-    archivedAt,
-    updatedAt: archivedAt,
+    deletedAt,
+    updatedAt: deletedAt,
   })
   await deps.audit.record(auth, {
-    action: 'session.archive',
+    action: 'session.delete',
     resourceType: 'session',
     resourceId: session.id,
     outcome: 'success',
     requestId: requestIdFrom(requestId),
     sessionId: session.id,
-    metadata: { archivedAt },
+    metadata: { deletedAt },
   })
-  const archived = await store.findSession(auth.project.id, session.id)
-  if (!archived) {
-    throw new Error('Archived session row is required')
-  }
-  return { ok: true, session: archived }
-}
-
-export async function unarchiveSession(
-  deps: Pick<LifecycleDeps, 'sessionOrchestration' | 'audit'>,
-  auth: AuthScope,
-  sessionId: string,
-  requestId: string | null,
-): Promise<SessionRow> {
-  const store = deps.sessionOrchestration
-  const timestamp = now()
-  await store.updateSession(auth.project.id, sessionId, {
-    archivedAt: null,
-    updatedAt: timestamp,
-  })
-  await deps.audit.record(auth, {
-    action: 'session.unarchive',
-    resourceType: 'session',
-    resourceId: sessionId,
-    outcome: 'success',
-    requestId: requestIdFrom(requestId),
-    sessionId,
-    metadata: {},
-  })
-  const restored = await store.findSession(auth.project.id, sessionId)
-  if (!restored) {
-    throw new Error('Unarchived session row is required')
-  }
-  return restored
+  return { ok: true, session: { ...session, deletedAt, updatedAt: deletedAt } }
 }
 
 // Mark pending sessions whose cloud runtime startup window elapsed as errored.

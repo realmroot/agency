@@ -137,7 +137,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
   it('explains the reusable-template empty state when no environments exist', () => {
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={[]} pagination={pagination<Environment>([])} onArchive={vi.fn()} />
+        <EnvironmentsView environments={[]} pagination={pagination<Environment>([])} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -149,7 +149,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     const environments = [environment()]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -166,7 +166,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     const environments = [environment({ description: 'My test desc' })]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -177,29 +177,18 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     const environments = [environment({ description: null })]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
     expect(screen.getByText('env_1')).toBeTruthy()
   })
 
-  it('shows "archived" badge when environment is archived', () => {
-    const environments = [environment({ archivedAt: '2026-05-24T00:00:00.000Z' })]
-    render(
-      <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByText('archived')).toBeTruthy()
-  })
-
-  it('shows "active" badge when environment is not archived', () => {
+  it('shows "active" badge for a visible environment', () => {
     const environments = [environment()]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -212,7 +201,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     ]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -227,7 +216,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     ]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -240,29 +229,29 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
     ]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={vi.fn()} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
     expect(screen.getByText('open')).toBeTruthy()
   })
 
-  it('calls onArchive when archive confirm is submitted', async () => {
+  it('calls onDelete when delete confirm is submitted', async () => {
     stubPointerEvents()
 
-    const onArchive = vi.fn()
+    const onDelete = vi.fn()
     const environments = [environment()]
     render(
       <MemoryRouter>
-        <EnvironmentsView environments={environments} pagination={pagination(environments)} onArchive={onArchive} />
+        <EnvironmentsView environments={environments} pagination={pagination(environments)} onDelete={onDelete} />
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive environment' }))
-    await waitFor(() => expect(screen.getByText('Archive environment?')).toBeTruthy())
-    const confirmBtns = screen.getAllByRole('button', { name: 'Archive environment', hidden: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete environment' }))
+    await waitFor(() => expect(screen.getByText('Delete environment?')).toBeTruthy())
+    const confirmBtns = screen.getAllByRole('button', { name: 'Delete environment', hidden: true })
     fireEvent.click(confirmBtns[confirmBtns.length - 1] as HTMLElement)
-    await waitFor(() => expect(onArchive).toHaveBeenCalledWith('env_1'))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('env_1'))
   })
 
   it('paginates correctly with multiple environments', () => {
@@ -272,7 +261,7 @@ describe('[spec: environments/console-list] EnvironmentsView', () => {
       const pag = useClientPagination(envs)
       return (
         <MemoryRouter>
-          <EnvironmentsView environments={pag.items} pagination={pag} onArchive={vi.fn()} />
+          <EnvironmentsView environments={pag.items} pagination={pag} onDelete={vi.fn()} />
         </MemoryRouter>
       )
     }
@@ -291,7 +280,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     const session = buildSession()
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={environment()} sessions={[session]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={environment()} sessions={[session]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -308,7 +297,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
   it('shows runners bound to the environment on the runners tab', () => {
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={environment()} sessions={[]} runners={[runner()]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={environment()} sessions={[]} runners={[runner()]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -321,7 +310,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
   it('shows empty state when environment is null', () => {
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={null} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={null} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -332,7 +321,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
   it('shows "No description" when description is null', () => {
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={environment({ description: null })} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={environment({ description: null })} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -346,7 +335,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     })
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={env} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={env} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -358,7 +347,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     const env = environment({ networking: { type: 'open', allowMcpServers: true, allowPackageManagers: true } })
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={env} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={env} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -371,7 +360,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     })
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={env} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={env} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -379,28 +368,14 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     expect(screen.getAllByText('Blocked')).toHaveLength(2)
   })
 
-  it('only shows archive button for non-archived environment', () => {
+  it('shows the delete button for a visible environment', () => {
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={environment()} sessions={[]} onArchive={vi.fn()} />
+        <EnvironmentDetailView environment={environment()} sessions={[]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Archive')).toBeTruthy()
-  })
-
-  it('does not show archive button for archived environment', () => {
-    render(
-      <MemoryRouter>
-        <EnvironmentDetailView
-          environment={environment({ archivedAt: '2026-05-24T00:00:00.000Z' })}
-          sessions={[]}
-          onArchive={vi.fn()}
-        />
-      </MemoryRouter>,
-    )
-
-    expect(screen.queryByText('Archive')).toBeNull()
+    expect(screen.getByText('Delete')).toBeTruthy()
   })
 
   it('filters sessions to only those bound to the current environment', async () => {
@@ -408,11 +383,7 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     const otherSession = buildSession({ id: 'session_other', environmentId: 'env_other' })
     render(
       <MemoryRouter>
-        <EnvironmentDetailView
-          environment={environment()}
-          sessions={[boundSession, otherSession]}
-          onArchive={vi.fn()}
-        />
+        <EnvironmentDetailView environment={environment()} sessions={[boundSession, otherSession]} onDelete={vi.fn()} />
       </MemoryRouter>,
     )
 
@@ -421,21 +392,21 @@ describe('[spec: environments/console-detail] EnvironmentDetailView', () => {
     expect(screen.queryByText('session_other')).toBeNull()
   })
 
-  it('calls onArchive when archive confirm is submitted in detail view', async () => {
+  it('calls onDelete when delete confirm is submitted in detail view', async () => {
     stubPointerEvents()
 
-    const onArchive = vi.fn()
+    const onDelete = vi.fn()
     render(
       <MemoryRouter>
-        <EnvironmentDetailView environment={environment()} sessions={[]} onArchive={onArchive} />
+        <EnvironmentDetailView environment={environment()} sessions={[]} onDelete={onDelete} />
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByText('Archive'))
-    await waitFor(() => expect(screen.getByText('Archive environment?')).toBeTruthy())
-    const confirmBtns = screen.getAllByRole('button', { name: 'Archive environment', hidden: true })
+    fireEvent.click(screen.getByText('Delete'))
+    await waitFor(() => expect(screen.getByText('Delete environment?')).toBeTruthy())
+    const confirmBtns = screen.getAllByRole('button', { name: 'Delete environment', hidden: true })
     fireEvent.click(confirmBtns[confirmBtns.length - 1] as HTMLElement)
-    await waitFor(() => expect(onArchive).toHaveBeenCalledWith('env_1'))
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith('env_1'))
   })
 })
 
@@ -695,11 +666,10 @@ describe('[spec: environments/console-page] EnvironmentsPage', () => {
     expect(screen.getByRole('button', { name: /Create environment/i })).toBeTruthy()
   })
 
-  it('renders search, type filter, and status filter controls', () => {
+  it('renders search and type filter controls', () => {
     renderPage()
     expect(screen.getByRole('searchbox', { name: 'Search environments' })).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Filter by environment type' })).toBeTruthy()
-    expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeTruthy()
   })
 
   it('renders environment rows after data loads', async () => {
@@ -752,26 +722,6 @@ describe('[spec: environments/console-page] EnvironmentsPage', () => {
     await waitFor(() => expect(screen.getByText('No environments')).toBeTruthy())
   })
 
-  it('passes archived=true query when status filter is archived', async () => {
-    let requestedUrl = ''
-    server.use(
-      http.get('*/api/v1/environments', ({ request }) => {
-        requestedUrl = request.url
-        return HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } })
-      }),
-    )
-    const client = makeQueryClient()
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/?status=archived']}>
-          <EnvironmentsPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-
-    await waitFor(() => expect(requestedUrl).toContain('archived=true'))
-  })
-
   it('filters environments by type when type filter is set', async () => {
     renderPageWithEnvs(
       [
@@ -783,18 +733,6 @@ describe('[spec: environments/console-page] EnvironmentsPage', () => {
 
     expect(await screen.findByText('Cloud env')).toBeTruthy()
     await waitFor(() => expect(screen.queryByText('Self env')).toBeNull())
-  })
-
-  it('shows archived environments when status filter is set to archived with matching data', async () => {
-    const archivedEnv = environment({
-      id: 'env_archived',
-      name: 'Archived env',
-      archivedAt: '2026-05-24T00:00:00.000Z',
-    })
-    renderPageWithEnvs([archivedEnv], '/?status=archived')
-
-    expect(await screen.findByText('Archived env')).toBeTruthy()
-    expect(screen.getAllByText('archived').length).toBeGreaterThan(0)
   })
 })
 
@@ -851,12 +789,6 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
   it('shows the edit environment button for an active environment', async () => {
     renderDetailPage(environment())
     expect(await screen.findByRole('button', { name: /Edit environment/i })).toBeTruthy()
-  })
-
-  it('does not show the edit environment button for an archived environment', async () => {
-    renderDetailPage(environment({ archivedAt: '2026-05-24T00:00:00.000Z' }))
-    await screen.findByText('Node workspace')
-    expect(screen.queryByRole('button', { name: /Edit environment/i })).toBeNull()
   })
 
   it('opens the edit sheet when Edit environment is clicked', async () => {
@@ -979,10 +911,10 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
     expect(screen.queryByDisplayValue(/registry/)).toBeNull()
   })
 
-  it('archives environment via PATCH when archive flow is completed', async () => {
+  it('deletes environment via DELETE when delete flow is completed', async () => {
     stubPointerEvents()
 
-    let archiveBody: Record<string, unknown> | null = null
+    let deletedUrl = ''
     const envCollection = createCollection<Environment>([environment()])
     server.use(
       http.get('*/api/v1/environments/:id', ({ params }) => {
@@ -991,9 +923,9 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
           ? HttpResponse.json(record)
           : HttpResponse.json({ error: { type: 'not_found', message: 'Not found' } }, { status: 404 })
       }),
-      http.patch('*/api/v1/environments/:id', async ({ request }) => {
-        archiveBody = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(environment({ archivedAt: '2026-05-24T00:00:00.000Z' }))
+      http.delete('*/api/v1/environments/:id', ({ request }) => {
+        deletedUrl = request.url
+        return new HttpResponse(null, { status: 204 })
       }),
       http.get('*/api/v1/environments', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
@@ -1015,20 +947,19 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
     )
 
     await screen.findByText('Node workspace')
-    fireEvent.click(screen.getByText('Archive'))
-    await waitFor(() => expect(screen.getByText('Archive environment?')).toBeTruthy())
-    const confirmBtns = screen.getAllByRole('button', { name: 'Archive environment', hidden: true })
+    fireEvent.click(screen.getByText('Delete'))
+    await waitFor(() => expect(screen.getByText('Delete environment?')).toBeTruthy())
+    const confirmBtns = screen.getAllByRole('button', { name: 'Delete environment', hidden: true })
     fireEvent.click(confirmBtns[confirmBtns.length - 1] as HTMLElement)
-    await waitFor(() => expect(archiveBody).not.toBeNull())
-    expect(archiveBody!.archived).toBe(true)
+    await waitFor(() => expect(deletedUrl).toContain('/api/v1/environments/env_1'))
   })
 
-  it('handles archive api error without crashing', async () => {
+  it('handles delete api error without crashing', async () => {
     stubPointerEvents()
 
     server.use(
       http.get('*/api/v1/environments/:id', () => HttpResponse.json(environment())),
-      http.patch('*/api/v1/environments/:id', () => HttpResponse.json({ error: 'Archive failed' }, { status: 500 })),
+      http.delete('*/api/v1/environments/:id', () => HttpResponse.json({ error: 'Delete failed' }, { status: 500 })),
       http.get('*/api/v1/sessions', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
       ),
@@ -1046,9 +977,9 @@ describe('[spec: environments/console-detail-page] EnvironmentDetailPage', () =>
     )
 
     await screen.findByText('Node workspace')
-    fireEvent.click(screen.getByText('Archive'))
-    await waitFor(() => expect(screen.getByText('Archive environment?')).toBeTruthy())
-    const confirmBtns = screen.getAllByRole('button', { name: 'Archive environment', hidden: true })
+    fireEvent.click(screen.getByText('Delete'))
+    await waitFor(() => expect(screen.getByText('Delete environment?')).toBeTruthy())
+    const confirmBtns = screen.getAllByRole('button', { name: 'Delete environment', hidden: true })
     fireEvent.click(confirmBtns[confirmBtns.length - 1] as HTMLElement)
     // Page still renders after error
     await waitFor(() => expect(screen.getByText('Node workspace')).toBeTruthy())
@@ -1153,12 +1084,9 @@ describe('[spec: environments/actions] useEnvironmentActions', () => {
     return null
   }
 
-  it('exposes archiveEnvironment function and archiveEnvironmentPending boolean as false initially', () => {
-    // The hook calls PATCH and invalidates — register endpoints
+  it('exposes deleteEnvironment function and pending boolean as false initially', () => {
     server.use(
-      http.patch('*/api/v1/environments/:id', () =>
-        HttpResponse.json(environment({ archivedAt: new Date().toISOString() })),
-      ),
+      http.delete('*/api/v1/environments/:id', () => new HttpResponse(null, { status: 204 })),
       http.get('*/api/v1/environments', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
       ),
@@ -1181,19 +1109,17 @@ describe('[spec: environments/actions] useEnvironmentActions', () => {
       </QueryClientProvider>,
     )
 
-    expect(typeof capturedActions!.archiveEnvironment).toBe('function')
-    expect(typeof capturedActions!.archiveEnvironmentPending).toBe('boolean')
-    expect(capturedActions!.archiveEnvironmentPending).toBe(false)
+    expect(typeof capturedActions!.deleteEnvironment).toBe('function')
+    expect(typeof capturedActions!.deleteEnvironmentPending).toBe('boolean')
+    expect(capturedActions!.deleteEnvironmentPending).toBe(false)
   })
 
-  it('calls PATCH /environments/:id with archived: true when archiveEnvironment is invoked', async () => {
-    let patchedUrl = ''
-    let patchedBody: Record<string, unknown> | null = null
+  it('calls DELETE /environments/:id when deleteEnvironment is invoked', async () => {
+    let deletedUrl = ''
     server.use(
-      http.patch('*/api/v1/environments/:id', async ({ request }) => {
-        patchedUrl = request.url
-        patchedBody = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(environment({ archivedAt: new Date().toISOString() }))
+      http.delete('*/api/v1/environments/:id', ({ request }) => {
+        deletedUrl = request.url
+        return new HttpResponse(null, { status: 204 })
       }),
       http.get('*/api/v1/environments', () =>
         HttpResponse.json({ data: [], pagination: { limit: 50, hasMore: false, nextCursor: null } }),
@@ -1217,9 +1143,7 @@ describe('[spec: environments/actions] useEnvironmentActions', () => {
       </QueryClientProvider>,
     )
 
-    capturedActions!.archiveEnvironment('env_1')
-    await waitFor(() => expect(patchedBody).not.toBeNull())
-    expect(patchedBody!.archived).toBe(true)
-    expect(patchedUrl).toContain('env_1')
+    capturedActions!.deleteEnvironment('env_1')
+    await waitFor(() => expect(deletedUrl).toContain('env_1'))
   })
 })

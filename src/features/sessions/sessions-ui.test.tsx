@@ -169,7 +169,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
             pagination={pagination}
             selectedIds={[]}
             setSelectedIds={vi.fn()}
-            onArchive={vi.fn()}
+            onDelete={vi.fn()}
           />
         </MemoryRouter>
       )
@@ -220,7 +220,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           }}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -270,7 +270,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           agentNameById={new Map([['agent_1', 'Coding agent']])}
           selectedIds={[]}
           setSelectedIds={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
         />
       </MemoryRouter>,
     )
@@ -309,7 +309,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           runtime={buildRuntimeState({ messages: [], tools: [], sessionEvents: [], error: null })}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}
@@ -353,7 +353,7 @@ describe('[spec: sessions/console-detail] [spec: sessions/console-transcript] se
           runtime={buildRuntimeState({ messages: [], tools: [], sessionEvents: [], error: null })}
           onClose={vi.fn()}
           onReopen={vi.fn()}
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
           onReconnectRuntime={vi.fn()}
           chatMessage=""
           setChatMessage={vi.fn()}

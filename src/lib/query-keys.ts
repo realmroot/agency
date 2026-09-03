@@ -8,18 +8,18 @@ export const queryKeys = {
   },
   agents: {
     all: ['agents'] as const,
-    list: (includeArchived = false) => ['agents', 'list', { includeArchived }] as const,
+    list: () => ['agents', 'list'] as const,
     detail: (id: string) => ['agents', 'detail', id] as const,
     versions: (id: string) => ['agents', 'detail', id, 'versions'] as const,
   },
   identities: {
     all: ['identities'] as const,
-    list: (includeArchived = false) => ['identities', 'list', { includeArchived }] as const,
+    list: () => ['identities', 'list'] as const,
     detail: (id: string) => ['identities', 'detail', id] as const,
   },
   environments: {
     all: ['environments'] as const,
-    list: (includeArchived = false) => ['environments', 'list', { includeArchived }] as const,
+    list: () => ['environments', 'list'] as const,
     detail: (id: string) => ['environments', 'detail', id] as const,
     versions: (id: string) => ['environments', 'detail', id, 'versions'] as const,
   },
@@ -31,12 +31,12 @@ export const queryKeys = {
   },
   sessions: {
     all: ['sessions'] as const,
-    list: (includeArchived = false) => ['sessions', 'list', { includeArchived }] as const,
+    list: () => ['sessions', 'list'] as const,
     detail: (id: string) => ['sessions', 'detail', id] as const,
   },
   providers: {
     all: ['providers'] as const,
-    list: (includeArchived = false) => ['providers', 'list', { includeArchived }] as const,
+    list: () => ['providers', 'list'] as const,
     detail: (id: string) => ['providers', 'detail', id] as const,
     models: ['providers', 'models'] as const,
   },
@@ -46,15 +46,14 @@ export const queryKeys = {
   },
   vaults: {
     all: ['vaults'] as const,
-    list: (includeArchived = false) => ['vaults', 'list', { includeArchived }] as const,
+    list: () => ['vaults', 'list'] as const,
     detail: (id: string) => ['vaults', 'detail', id] as const,
-    credentials: (id: string, includeArchived = false) =>
-      ['vaults', 'detail', id, 'credentials', { includeArchived }] as const,
+    credentials: (id: string) => ['vaults', 'detail', id, 'credentials'] as const,
     audit: (id: string) => ['vaults', 'detail', id, 'audit'] as const,
   },
   memoryStores: {
     all: ['memory-stores'] as const,
-    list: (includeArchived = false) => ['memory-stores', 'list', { includeArchived }] as const,
+    list: () => ['memory-stores', 'list'] as const,
     detail: (id: string) => ['memory-stores', 'detail', id] as const,
     memories: (id: string) => ['memory-stores', 'detail', id, 'memories'] as const,
   },

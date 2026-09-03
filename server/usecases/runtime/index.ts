@@ -38,12 +38,11 @@ export {
   latestRunnerResumeToken,
 } from './session-create'
 export {
-  archiveSession,
   type CloseSessionResult,
   closeSession,
+  deleteSession,
   markExpiredPendingSessions,
   reopenSession,
-  unarchiveSession,
 } from './session-lifecycle'
 export {
   dispatchSessionPrompt,
@@ -51,14 +50,13 @@ export {
   type PromptDispatchOutcome,
 } from './session-prompt'
 export {
-  archiveSession as archiveRuntimeSession,
   closeSession as closeRuntimeSession,
   createSession as createRuntimeSession,
   decideApproval as decideRuntimeApproval,
+  deleteSession as deleteRuntimeSession,
   dispatchPrompt as dispatchRuntimePrompt,
   markExpiredPending as markRuntimeExpiredPending,
   reopenSession as reopenRuntimeSession,
-  unarchiveSession as unarchiveRuntimeSession,
 } from './sessions'
 export {
   assertRuntimeSessionRunning,

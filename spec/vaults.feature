@@ -44,7 +44,7 @@ Feature: Vaults
   @vaults/api-crud @api
   Scenario: Manage vaults and credentials over the API without exposing secrets
     Given a signed-in user has access to a project
-    When the user creates, lists, reads, updates, and archives project-scoped vaults and their credentials
+    When the user creates, lists, reads, updates, and deletes project-scoped vaults and their credentials
     Then vault and credential responses expose only safe metadata and reference fields
     And secret values are accepted only on create or rotate and are never returned
     And credential versions are read-only snapshots created by AMA when credential secret material changes

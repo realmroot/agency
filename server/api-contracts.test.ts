@@ -49,18 +49,17 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
     const updateFields = schemaFields(doc, 'UpdateAgentRequest')
 
     expect(createFields).toEqual(['metadata', 'spec'])
-    // Update is the create payload plus the lifecycle archive transition (§1.3).
-    expect(updateFields).toEqual(sortedUnique([...createFields, 'archived']))
+    expect(updateFields).toEqual(createFields)
   })
 
   it('keeps environment write fields aligned across handlers and OpenAPI schemas', async () => {
     const doc = await openApiDoc()
-    const handled = sortedUnique(bodyFields(routeSources.environments).filter((field) => field !== 'archived'))
+    const handled = sortedUnique(bodyFields(routeSources.environments))
     const createFields = schemaFields(doc, 'CreateEnvironmentRequest')
     const updateFields = schemaFields(doc, 'UpdateEnvironmentRequest')
 
     expect(handled).toEqual(createFields)
-    expect(updateFields).toEqual(sortedUnique([...createFields, 'archived']))
+    expect(updateFields).toEqual(createFields)
   })
 
   it('keeps session write fields aligned across handlers and OpenAPI schemas', async () => {
@@ -70,7 +69,6 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
     // operations: create, update, message (content), approval decision, and
     // batch event ingest (events).
     expect(sortedUnique(bodyFields(routeSources.sessions))).toEqual([
-      'archived',
       // POST /sessions/{id}/messages body.content
       'content',
       // PATCH /sessions/{id}/approvals/{id} body.decision
@@ -87,7 +85,7 @@ describe('route schema and handler alignment [spec: api-contracts/schema-alignme
     ])
 
     expect(schemaFields(doc, 'CreateSessionRequest')).toEqual(['metadata', 'prompt', 'spec'])
-    expect(schemaFields(doc, 'UpdateSessionRequest')).toEqual(['archived', 'metadata', 'state'])
+    expect(schemaFields(doc, 'UpdateSessionRequest')).toEqual(['metadata', 'state'])
     expect(schemaFields(doc, 'CreateSessionMessageRequest')).toEqual(['content', 'requestId', 'type'])
     expect(schemaFields(doc, 'SessionApprovalDecisionRequest')).toEqual(['decision', 'reason', 'result'])
   })

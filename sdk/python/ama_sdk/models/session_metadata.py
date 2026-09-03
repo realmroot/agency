@@ -36,7 +36,6 @@ class SessionMetadata:
             created_by (None | str):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            archived_at (datetime.datetime | None):
      """
 
     uid: str
@@ -48,7 +47,6 @@ class SessionMetadata:
     created_by: None | str
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    archived_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -79,12 +77,6 @@ class SessionMetadata:
 
         updated_at = self.updated_at.isoformat()
 
-        archived_at: None | str
-        if isinstance(self.archived_at, datetime.datetime):
-            archived_at = self.archived_at.isoformat()
-        else:
-            archived_at = self.archived_at
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -98,7 +90,6 @@ class SessionMetadata:
             "createdBy": created_by,
             "createdAt": created_at,
             "updatedAt": updated_at,
-            "archivedAt": archived_at,
         })
 
         return field_dict
@@ -158,24 +149,6 @@ class SessionMetadata:
 
 
 
-        def _parse_archived_at(data: object) -> datetime.datetime | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                archived_at_type_0 = datetime.datetime.fromisoformat(data)
-
-
-
-                return archived_at_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(datetime.datetime | None, data)
-
-        archived_at = _parse_archived_at(d.pop("archivedAt"))
-
-
         session_metadata = cls(
             uid=uid,
             project_id=project_id,
@@ -186,7 +159,6 @@ class SessionMetadata:
             created_by=created_by,
             created_at=created_at,
             updated_at=updated_at,
-            archived_at=archived_at,
         )
 
 

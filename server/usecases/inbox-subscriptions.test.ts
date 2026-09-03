@@ -24,7 +24,7 @@ function trigger(
       name: 'Inbox trigger',
       createdAt: timestamp,
       updatedAt: timestamp,
-      archivedAt: overrides.archived ? timestamp : null,
+      deletedAt: overrides.archived ? timestamp : null,
     }),
     spec: {
       source: inbox ? { type: 'inbox' } : { type: 'http' },

@@ -38,7 +38,7 @@ export interface SessionRow {
   metadata: string
   startedAt: string | null
   closedAt: string | null
-  archivedAt: string | null
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -75,7 +75,7 @@ export interface SessionInsert {
   metadata?: string
   startedAt?: string | null
   closedAt?: string | null
-  archivedAt?: string | null
+  deletedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -96,7 +96,7 @@ export interface AgentRow {
   mcpConnectors: string
   identityId: string | null
   identitySnapshot: string | null
-  archivedAt: string | null
+  deletedAt: string | null
   currentVersionId: string | null
   createdAt: string
   updatedAt: string
@@ -133,7 +133,7 @@ export interface EnvironmentRow {
   resourceLimits: string
   runtimeConfig: string
   metadata: string
-  archivedAt: string | null
+  deletedAt: string | null
   currentVersionId: string | null
   createdAt: string
   updatedAt: string

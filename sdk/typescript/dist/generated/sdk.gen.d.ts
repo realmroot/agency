@@ -1,5 +1,5 @@
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateIdentityData, CreateIdentityErrors, CreateIdentityResponses, CreateInboxNotificationData, CreateInboxNotificationErrors, CreateInboxNotificationResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListIdentitiesData, ListIdentitiesErrors, ListIdentitiesResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadIdentityData, ReadIdentityErrors, ReadIdentityResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateIdentityData, UpdateIdentityErrors, UpdateIdentityResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
+import type { ConnectRunnerChannelData, ConnectRunnerChannelErrors, ConnectRunnerChannelResponses, ConnectSessionSocketData, ConnectSessionSocketErrors, CreateAgentData, CreateAgentErrors, CreateAgentResponses, CreateBudgetData, CreateBudgetErrors, CreateBudgetResponses, CreateEnvironmentData, CreateEnvironmentErrors, CreateEnvironmentResponses, CreateIdentityData, CreateIdentityErrors, CreateIdentityResponses, CreateInboxNotificationData, CreateInboxNotificationErrors, CreateInboxNotificationResponses, CreateLeaseData, CreateLeaseErrors, CreateLeaseResponses, CreateMemoryStoreData, CreateMemoryStoreErrors, CreateMemoryStoreMemoryData, CreateMemoryStoreMemoryErrors, CreateMemoryStoreMemoryResponses, CreateMemoryStoreResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, CreateRunnerData, CreateRunnerErrors, CreateRunnerResponses, CreateSessionData, CreateSessionErrors, CreateSessionEventsData, CreateSessionEventsErrors, CreateSessionEventsResponses, CreateSessionMessageData, CreateSessionMessageErrors, CreateSessionMessageResponses, CreateSessionResponses, CreateTriggerData, CreateTriggerErrors, CreateTriggerResponses, CreateTriggerRunData, CreateTriggerRunErrors, CreateTriggerRunResponses, CreateVaultCredentialData, CreateVaultCredentialErrors, CreateVaultCredentialResponses, CreateVaultData, CreateVaultErrors, CreateVaultResponses, DecideSessionApprovalData, DecideSessionApprovalErrors, DecideSessionApprovalResponses, DeleteAgentData, DeleteAgentErrors, DeleteAgentResponses, DeleteBudgetData, DeleteBudgetErrors, DeleteBudgetResponses, DeleteEnvironmentData, DeleteEnvironmentErrors, DeleteEnvironmentResponses, DeleteIdentityData, DeleteIdentityErrors, DeleteIdentityResponses, DeleteMemoryStoreData, DeleteMemoryStoreErrors, DeleteMemoryStoreMemoryData, DeleteMemoryStoreMemoryErrors, DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DeleteRunnerData, DeleteRunnerErrors, DeleteRunnerResponses, DeleteSessionData, DeleteSessionErrors, DeleteSessionResponses, DeleteTriggerData, DeleteTriggerErrors, DeleteTriggerResponses, DeleteVaultData, DeleteVaultErrors, DeleteVaultResponses, ListAgentsData, ListAgentsErrors, ListAgentsResponses, ListAgentVersionsData, ListAgentVersionsErrors, ListAgentVersionsResponses, ListAuditRecordsData, ListAuditRecordsErrors, ListAuditRecordsResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListConnectorsData, ListConnectorsErrors, ListConnectorsResponses, ListEnvironmentsData, ListEnvironmentsErrors, ListEnvironmentsResponses, ListEnvironmentVersionsData, ListEnvironmentVersionsErrors, ListEnvironmentVersionsResponses, ListIdentitiesData, ListIdentitiesErrors, ListIdentitiesResponses, ListLeasesData, ListLeasesErrors, ListLeasesResponses, ListMemoryStoreMemoriesData, ListMemoryStoreMemoriesErrors, ListMemoryStoreMemoriesResponses, ListMemoryStoresData, ListMemoryStoresErrors, ListMemoryStoresResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListProjectsData, ListProjectsErrors, ListProjectsResponses, ListProviderModelsData, ListProviderModelsErrors, ListProviderModelsResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListSessionApprovalsData, ListSessionApprovalsErrors, ListSessionApprovalsResponses, ListSessionEventsData, ListSessionEventsErrors, ListSessionEventsResponses, ListSessionMessagesData, ListSessionMessagesErrors, ListSessionMessagesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListTriggerRunsData, ListTriggerRunsErrors, ListTriggerRunsResponses, ListTriggersData, ListTriggersErrors, ListTriggersResponses, ListUsageRecordsData, ListUsageRecordsErrors, ListUsageRecordsResponses, ListVaultCredentialsData, ListVaultCredentialsErrors, ListVaultCredentialsResponses, ListVaultCredentialVersionsData, ListVaultCredentialVersionsErrors, ListVaultCredentialVersionsResponses, ListVaultsData, ListVaultsErrors, ListVaultsResponses, ListWorkItemsData, ListWorkItemsErrors, ListWorkItemsResponses, PutRunnerHeartbeatData, PutRunnerHeartbeatErrors, PutRunnerHeartbeatResponses, ReadAgentData, ReadAgentErrors, ReadAgentResponses, ReadAgentVersionData, ReadAgentVersionErrors, ReadAgentVersionResponses, ReadAuditRecordData, ReadAuditRecordErrors, ReadAuditRecordResponses, ReadAuthConfigData, ReadAuthConfigResponses, ReadBudgetData, ReadBudgetErrors, ReadBudgetResponses, ReadConfigzData, ReadConfigzResponses, ReadConnectorData, ReadConnectorErrors, ReadConnectorResponses, ReadCurrentAuthSessionData, ReadCurrentAuthSessionErrors, ReadCurrentAuthSessionResponses, ReadEnvironmentData, ReadEnvironmentErrors, ReadEnvironmentResponses, ReadEnvironmentVersionData, ReadEnvironmentVersionErrors, ReadEnvironmentVersionResponses, ReadIdentityData, ReadIdentityErrors, ReadIdentityResponses, ReadLeaseData, ReadLeaseErrors, ReadLeaseResponses, ReadMemoryStoreData, ReadMemoryStoreErrors, ReadMemoryStoreResponses, ReadProjectData, ReadProjectErrors, ReadProjectResponses, ReadProviderData, ReadProviderErrors, ReadProviderResponses, ReadRunnerData, ReadRunnerErrors, ReadRunnerHeartbeatData, ReadRunnerHeartbeatErrors, ReadRunnerHeartbeatResponses, ReadRunnerResponses, ReadSessionApprovalData, ReadSessionApprovalErrors, ReadSessionApprovalResponses, ReadSessionData, ReadSessionErrors, ReadSessionMessageData, ReadSessionMessageErrors, ReadSessionMessageResponses, ReadSessionResponses, ReadTriggerData, ReadTriggerErrors, ReadTriggerResponses, ReadTriggerRunData, ReadTriggerRunErrors, ReadTriggerRunResponses, ReadUsageRecordData, ReadUsageRecordErrors, ReadUsageRecordResponses, ReadUsageSummaryData, ReadUsageSummaryErrors, ReadUsageSummaryResponses, ReadVaultCredentialData, ReadVaultCredentialErrors, ReadVaultCredentialResponses, ReadVaultCredentialVersionData, ReadVaultCredentialVersionErrors, ReadVaultCredentialVersionResponses, ReadVaultData, ReadVaultErrors, ReadVaultResponses, ReadWorkItemData, ReadWorkItemErrors, ReadWorkItemResponses, RefreshCatalogData, RefreshCatalogErrors, RefreshCatalogResponses, UpdateAgentData, UpdateAgentErrors, UpdateAgentResponses, UpdateBudgetData, UpdateBudgetErrors, UpdateBudgetResponses, UpdateEnvironmentData, UpdateEnvironmentErrors, UpdateEnvironmentResponses, UpdateLeaseData, UpdateLeaseErrors, UpdateLeaseResponses, UpdateMemoryStoreData, UpdateMemoryStoreErrors, UpdateMemoryStoreMemoryData, UpdateMemoryStoreMemoryErrors, UpdateMemoryStoreMemoryResponses, UpdateMemoryStoreResponses, UpdateProjectData, UpdateProjectErrors, UpdateProjectResponses, UpdateRunnerData, UpdateRunnerErrors, UpdateRunnerResponses, UpdateSessionData, UpdateSessionErrors, UpdateSessionResponses, UpdateTriggerData, UpdateTriggerErrors, UpdateTriggerResponses, UpdateVaultCredentialData, UpdateVaultCredentialErrors, UpdateVaultCredentialResponses, UpdateVaultCredentialSecretData, UpdateVaultCredentialSecretErrors, UpdateVaultCredentialSecretResponses, UpdateVaultData, UpdateVaultErrors, UpdateVaultResponses } from './types.gen.js';
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
      * You can provide a client instance returned by `createClient()` instead of
@@ -34,9 +34,19 @@ export declare const listProjects: <ThrowOnError extends boolean = false>(option
  */
 export declare const createProject: <ThrowOnError extends boolean = false>(options: Options<CreateProjectData, ThrowOnError>) => RequestResult<CreateProjectResponses, CreateProjectErrors, ThrowOnError>;
 /**
+ * Delete a project with no live resources
+ *
+ * Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and history do not block deletion.
+ */
+export declare const deleteProject: <ThrowOnError extends boolean = false>(options: Options<DeleteProjectData, ThrowOnError>) => RequestResult<DeleteProjectResponses, DeleteProjectErrors, ThrowOnError>;
+/**
  * Read a single project
  */
 export declare const readProject: <ThrowOnError extends boolean = false>(options: Options<ReadProjectData, ThrowOnError>) => RequestResult<ReadProjectResponses, ReadProjectErrors, ThrowOnError>;
+/**
+ * Rename a project
+ */
+export declare const updateProject: <ThrowOnError extends boolean = false>(options: Options<UpdateProjectData, ThrowOnError>) => RequestResult<UpdateProjectResponses, UpdateProjectErrors, ThrowOnError>;
 /**
  * List agents
  */
@@ -46,13 +56,19 @@ export declare const listAgents: <ThrowOnError extends boolean = false>(options?
  */
 export declare const createAgent: <ThrowOnError extends boolean = false>(options: Options<CreateAgentData, ThrowOnError>) => RequestResult<CreateAgentResponses, CreateAgentErrors, ThrowOnError>;
 /**
+ * Delete an agent
+ *
+ * Soft-deletes the agent. The retained tombstone cannot be restored through the API.
+ */
+export declare const deleteAgent: <ThrowOnError extends boolean = false>(options: Options<DeleteAgentData, ThrowOnError>) => RequestResult<DeleteAgentResponses, DeleteAgentErrors, ThrowOnError>;
+/**
  * Read an agent
  */
 export declare const readAgent: <ThrowOnError extends boolean = false>(options: Options<ReadAgentData, ThrowOnError>) => RequestResult<ReadAgentResponses, ReadAgentErrors, ThrowOnError>;
 /**
  * Update an agent
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.
+ * Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
  */
 export declare const updateAgent: <ThrowOnError extends boolean = false>(options: Options<UpdateAgentData, ThrowOnError>) => RequestResult<UpdateAgentResponses, UpdateAgentErrors, ThrowOnError>;
 /**
@@ -72,13 +88,19 @@ export declare const listEnvironments: <ThrowOnError extends boolean = false>(op
  */
 export declare const createEnvironment: <ThrowOnError extends boolean = false>(options: Options<CreateEnvironmentData, ThrowOnError>) => RequestResult<CreateEnvironmentResponses, CreateEnvironmentErrors, ThrowOnError>;
 /**
+ * Delete an environment
+ *
+ * Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+ */
+export declare const deleteEnvironment: <ThrowOnError extends boolean = false>(options: Options<DeleteEnvironmentData, ThrowOnError>) => RequestResult<DeleteEnvironmentResponses, DeleteEnvironmentErrors, ThrowOnError>;
+/**
  * Read an environment
  */
 export declare const readEnvironment: <ThrowOnError extends boolean = false>(options: Options<ReadEnvironmentData, ThrowOnError>) => RequestResult<ReadEnvironmentResponses, ReadEnvironmentErrors, ThrowOnError>;
 /**
  * Update an environment
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.
+ * Partially updates a live environment.
  */
 export declare const updateEnvironment: <ThrowOnError extends boolean = false>(options: Options<UpdateEnvironmentData, ThrowOnError>) => RequestResult<UpdateEnvironmentResponses, UpdateEnvironmentErrors, ThrowOnError>;
 /**
@@ -98,13 +120,15 @@ export declare const listIdentities: <ThrowOnError extends boolean = false>(opti
  */
 export declare const createIdentity: <ThrowOnError extends boolean = false>(options: Options<CreateIdentityData, ThrowOnError>) => RequestResult<CreateIdentityResponses, CreateIdentityErrors, ThrowOnError>;
 /**
+ * Delete an identity
+ *
+ * Soft-deletes the identity. The retained tombstone cannot be restored through the API.
+ */
+export declare const deleteIdentity: <ThrowOnError extends boolean = false>(options: Options<DeleteIdentityData, ThrowOnError>) => RequestResult<DeleteIdentityResponses, DeleteIdentityErrors, ThrowOnError>;
+/**
  * Read an identity
  */
 export declare const readIdentity: <ThrowOnError extends boolean = false>(options: Options<ReadIdentityData, ThrowOnError>) => RequestResult<ReadIdentityResponses, ReadIdentityErrors, ThrowOnError>;
-/**
- * Archive an identity
- */
-export declare const updateIdentity: <ThrowOnError extends boolean = false>(options: Options<UpdateIdentityData, ThrowOnError>) => RequestResult<UpdateIdentityResponses, UpdateIdentityErrors, ThrowOnError>;
 /**
  * Reliably receive an Inbox notification
  *
@@ -142,11 +166,17 @@ export declare const listRunners: <ThrowOnError extends boolean = false>(options
  */
 export declare const createRunner: <ThrowOnError extends boolean = false>(options: Options<CreateRunnerData, ThrowOnError>) => RequestResult<CreateRunnerResponses, CreateRunnerErrors, ThrowOnError>;
 /**
+ * Delete a self-hosted runner
+ *
+ * Soft-deletes the runner. The retained tombstone cannot be restored through the API.
+ */
+export declare const deleteRunner: <ThrowOnError extends boolean = false>(options: Options<DeleteRunnerData, ThrowOnError>) => RequestResult<DeleteRunnerResponses, DeleteRunnerErrors, ThrowOnError>;
+/**
  * Read a self-hosted runner
  */
 export declare const readRunner: <ThrowOnError extends boolean = false>(options: Options<ReadRunnerData, ThrowOnError>) => RequestResult<ReadRunnerResponses, ReadRunnerErrors, ThrowOnError>;
 /**
- * Update or archive a self-hosted runner
+ * Update a self-hosted runner
  */
 export declare const updateRunner: <ThrowOnError extends boolean = false>(options: Options<UpdateRunnerData, ThrowOnError>) => RequestResult<UpdateRunnerResponses, UpdateRunnerErrors, ThrowOnError>;
 /**
@@ -195,6 +225,8 @@ export declare const listBudgets: <ThrowOnError extends boolean = false>(options
 export declare const createBudget: <ThrowOnError extends boolean = false>(options: Options<CreateBudgetData, ThrowOnError>) => RequestResult<CreateBudgetResponses, CreateBudgetErrors, ThrowOnError>;
 /**
  * Delete a budget
+ *
+ * Soft-deletes the budget. The retained tombstone cannot be restored through the API.
  */
 export declare const deleteBudget: <ThrowOnError extends boolean = false>(options: Options<DeleteBudgetData, ThrowOnError>) => RequestResult<DeleteBudgetResponses, DeleteBudgetErrors, ThrowOnError>;
 /**
@@ -250,7 +282,7 @@ export declare const createTrigger: <ThrowOnError extends boolean = false>(optio
 /**
  * Delete a trigger
  *
- * Permanently deletes the trigger and its run history.
+ * Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
  */
 export declare const deleteTrigger: <ThrowOnError extends boolean = false>(options: Options<DeleteTriggerData, ThrowOnError>) => RequestResult<DeleteTriggerResponses, DeleteTriggerErrors, ThrowOnError>;
 /**
@@ -258,9 +290,7 @@ export declare const deleteTrigger: <ThrowOnError extends boolean = false>(optio
  */
 export declare const readTrigger: <ThrowOnError extends boolean = false>(options: Options<ReadTriggerData, ThrowOnError>) => RequestResult<ReadTriggerResponses, ReadTriggerErrors, ThrowOnError>;
 /**
- * Update, pause, or archive a trigger
- *
- * Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.
+ * Update or pause a trigger
  */
 export declare const updateTrigger: <ThrowOnError extends boolean = false>(options: Options<UpdateTriggerData, ThrowOnError>) => RequestResult<UpdateTriggerResponses, UpdateTriggerErrors, ThrowOnError>;
 /**
@@ -286,13 +316,19 @@ export declare const listSessions: <ThrowOnError extends boolean = false>(option
  */
 export declare const createSession: <ThrowOnError extends boolean = false>(options: Options<CreateSessionData, ThrowOnError>) => RequestResult<CreateSessionResponses, CreateSessionErrors, ThrowOnError>;
 /**
+ * Delete a session
+ *
+ * Stops any live runtime and soft-deletes the session while retaining its history. It cannot be restored.
+ */
+export declare const deleteSession: <ThrowOnError extends boolean = false>(options: Options<DeleteSessionData, ThrowOnError>) => RequestResult<DeleteSessionResponses, DeleteSessionErrors, ThrowOnError>;
+/**
  * Read a session
  */
 export declare const readSession: <ThrowOnError extends boolean = false>(options: Options<ReadSessionData, ThrowOnError>) => RequestResult<ReadSessionResponses, ReadSessionErrors, ThrowOnError>;
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, plus close/reopen transitions (state: "closed"|"idle").
  */
 export declare const updateSession: <ThrowOnError extends boolean = false>(options: Options<UpdateSessionData, ThrowOnError>) => RequestResult<UpdateSessionResponses, UpdateSessionErrors, ThrowOnError>;
 /**
@@ -346,11 +382,17 @@ export declare const listMemoryStores: <ThrowOnError extends boolean = false>(op
  */
 export declare const createMemoryStore: <ThrowOnError extends boolean = false>(options: Options<CreateMemoryStoreData, ThrowOnError>) => RequestResult<CreateMemoryStoreResponses, CreateMemoryStoreErrors, ThrowOnError>;
 /**
+ * Delete a memory store
+ *
+ * Soft-deletes the memory store and its memories. Database history remains and cannot be restored.
+ */
+export declare const deleteMemoryStore: <ThrowOnError extends boolean = false>(options: Options<DeleteMemoryStoreData, ThrowOnError>) => RequestResult<DeleteMemoryStoreResponses, DeleteMemoryStoreErrors, ThrowOnError>;
+/**
  * Read a memory store
  */
 export declare const readMemoryStore: <ThrowOnError extends boolean = false>(options: Options<ReadMemoryStoreData, ThrowOnError>) => RequestResult<ReadMemoryStoreResponses, ReadMemoryStoreErrors, ThrowOnError>;
 /**
- * Update or archive a memory store
+ * Update a memory store
  */
 export declare const updateMemoryStore: <ThrowOnError extends boolean = false>(options: Options<UpdateMemoryStoreData, ThrowOnError>) => RequestResult<UpdateMemoryStoreResponses, UpdateMemoryStoreErrors, ThrowOnError>;
 /**
@@ -363,6 +405,8 @@ export declare const listMemoryStoreMemories: <ThrowOnError extends boolean = fa
 export declare const createMemoryStoreMemory: <ThrowOnError extends boolean = false>(options: Options<CreateMemoryStoreMemoryData, ThrowOnError>) => RequestResult<CreateMemoryStoreMemoryResponses, CreateMemoryStoreMemoryErrors, ThrowOnError>;
 /**
  * Delete a memory
+ *
+ * Soft-deletes the memory. The retained tombstone cannot be restored through the API.
  */
 export declare const deleteMemoryStoreMemory: <ThrowOnError extends boolean = false>(options: Options<DeleteMemoryStoreMemoryData, ThrowOnError>) => RequestResult<DeleteMemoryStoreMemoryResponses, DeleteMemoryStoreMemoryErrors, ThrowOnError>;
 /**
@@ -378,13 +422,17 @@ export declare const listVaults: <ThrowOnError extends boolean = false>(options?
  */
 export declare const createVault: <ThrowOnError extends boolean = false>(options: Options<CreateVaultData, ThrowOnError>) => RequestResult<CreateVaultResponses, CreateVaultErrors, ThrowOnError>;
 /**
+ * Delete a vault
+ *
+ * Soft-deletes the vault while retaining credential history. The vault cannot be restored.
+ */
+export declare const deleteVault: <ThrowOnError extends boolean = false>(options: Options<DeleteVaultData, ThrowOnError>) => RequestResult<DeleteVaultResponses, DeleteVaultErrors, ThrowOnError>;
+/**
  * Read a vault
  */
 export declare const readVault: <ThrowOnError extends boolean = false>(options: Options<ReadVaultData, ThrowOnError>) => RequestResult<ReadVaultResponses, ReadVaultErrors, ThrowOnError>;
 /**
- * Update or archive a vault
- *
- * Partial update. Archive with `archived: true`; restore with `archived: false`.
+ * Update a vault
  */
 export declare const updateVault: <ThrowOnError extends boolean = false>(options: Options<UpdateVaultData, ThrowOnError>) => RequestResult<UpdateVaultResponses, UpdateVaultErrors, ThrowOnError>;
 /**

@@ -115,9 +115,7 @@ def sync_detailed(
 ) -> Response[Agent | ErrorResponse]:
     """ Update an agent
 
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+     Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -156,9 +154,7 @@ def sync(
 ) -> Agent | ErrorResponse | None:
     """ Update an agent
 
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+     Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -192,9 +188,7 @@ async def asyncio_detailed(
 ) -> Response[Agent | ErrorResponse]:
     """ Update an agent
 
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+     Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
@@ -233,9 +227,7 @@ async def asyncio(
 ) -> Agent | ErrorResponse | None:
     """ Update an agent
 
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+     Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.

@@ -32,7 +32,6 @@ const identity: Identity = {
     createdBy: 'user_1',
     createdAt: now,
     updatedAt: now,
-    archivedAt: null,
   },
   spec: { username: 'codex-operator', runtime: 'codex' },
   status: {

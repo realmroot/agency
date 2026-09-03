@@ -115,8 +115,7 @@ def sync_detailed(
 ) -> Response[ErrorResponse | Session]:
     r""" Update a session
 
-     Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and
-    lifecycle archiving (archived: true|false).
+     Partial update: name and metadata edits, plus close/reopen transitions (state: \"closed\"|\"idle\").
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
@@ -155,8 +154,7 @@ def sync(
 ) -> ErrorResponse | Session | None:
     r""" Update a session
 
-     Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and
-    lifecycle archiving (archived: true|false).
+     Partial update: name and metadata edits, plus close/reopen transitions (state: \"closed\"|\"idle\").
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
@@ -190,8 +188,7 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | Session]:
     r""" Update a session
 
-     Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and
-    lifecycle archiving (archived: true|false).
+     Partial update: name and metadata edits, plus close/reopen transitions (state: \"closed\"|\"idle\").
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
@@ -230,8 +227,7 @@ async def asyncio(
 ) -> ErrorResponse | Session | None:
     r""" Update a session
 
-     Partial update: name and metadata edits, close/reopen transitions (state: \"closed\"|\"idle\"), and
-    lifecycle archiving (archived: true|false).
+     Partial update: name and metadata edits, plus close/reopen transitions (state: \"closed\"|\"idle\").
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.

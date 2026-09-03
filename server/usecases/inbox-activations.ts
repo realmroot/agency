@@ -98,7 +98,7 @@ async function existingRouteSession(deps: Deps, projectId: string, sessionId: st
 }
 
 async function routeSessionNeedsReplacement(deps: Deps, session: RuntimeSessionHandle) {
-  if (session.state === 'error' || session.archivedAt !== null) return true
+  if (session.state === 'error' || session.deletedAt !== null) return true
   if (session.metadata.sandboxBackend !== 'runner-sandbox') return false
   return !(await deps.runnerChannel.isAccepted(session.id))
 }
@@ -145,7 +145,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
   const trigger = await deps.triggers.find(activation.projectId, activation.triggerId)
   if (trigger?.spec.source.type !== 'inbox') return
   const auth = activationAuth(activation)
-  if (trigger.metadata.archivedAt !== null || trigger.spec.suspend) {
+  if (trigger.metadata.deletedAt !== null || trigger.spec.suspend) {
     await deps.triggerDispatch.markRunFailed(trigger, activation.run, 'Inbox Trigger is inactive')
     return
   }

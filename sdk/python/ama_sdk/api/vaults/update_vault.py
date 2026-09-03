@@ -113,9 +113,7 @@ def sync_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Vault]:
-    """ Update or archive a vault
-
-     Partial update. Archive with `archived: true`; restore with `archived: false`.
+    """ Update a vault
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -152,9 +150,7 @@ def sync(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Vault | None:
-    """ Update or archive a vault
-
-     Partial update. Archive with `archived: true`; restore with `archived: false`.
+    """ Update a vault
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -186,9 +182,7 @@ async def asyncio_detailed(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Vault]:
-    """ Update or archive a vault
-
-     Partial update. Archive with `archived: true`; restore with `archived: false`.
+    """ Update a vault
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -225,9 +219,7 @@ async def asyncio(
     x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Vault | None:
-    """ Update or archive a vault
-
-     Partial update. Archive with `archived: true`; restore with `archived: false`.
+    """ Update a vault
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.

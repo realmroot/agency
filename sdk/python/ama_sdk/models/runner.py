@@ -44,7 +44,6 @@ class Runner:
             runtimes (list[RunnerRuntime]):
             metadata (RunnerMetadata):  Example: {'pool': 'default'}.
             last_heartbeat_at (datetime.datetime | None):
-            archived_at (datetime.datetime | None):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
      """
@@ -62,7 +61,6 @@ class Runner:
     runtimes: list[RunnerRuntime]
     metadata: RunnerMetadata
     last_heartbeat_at: datetime.datetime | None
-    archived_at: datetime.datetime | None
     created_at: datetime.datetime
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -117,12 +115,6 @@ class Runner:
         else:
             last_heartbeat_at = self.last_heartbeat_at
 
-        archived_at: None | str
-        if isinstance(self.archived_at, datetime.datetime):
-            archived_at = self.archived_at.isoformat()
-        else:
-            archived_at = self.archived_at
-
         created_at = self.created_at.isoformat()
 
         updated_at = self.updated_at.isoformat()
@@ -144,7 +136,6 @@ class Runner:
             "runtimes": runtimes,
             "metadata": metadata,
             "lastHeartbeatAt": last_heartbeat_at,
-            "archivedAt": archived_at,
             "createdAt": created_at,
             "updatedAt": updated_at,
         })
@@ -238,24 +229,6 @@ class Runner:
         last_heartbeat_at = _parse_last_heartbeat_at(d.pop("lastHeartbeatAt"))
 
 
-        def _parse_archived_at(data: object) -> datetime.datetime | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                archived_at_type_0 = datetime.datetime.fromisoformat(data)
-
-
-
-                return archived_at_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(datetime.datetime | None, data)
-
-        archived_at = _parse_archived_at(d.pop("archivedAt"))
-
-
         created_at = datetime.datetime.fromisoformat(d.pop("createdAt"))
 
 
@@ -280,7 +253,6 @@ class Runner:
             runtimes=runtimes,
             metadata=metadata,
             last_heartbeat_at=last_heartbeat_at,
-            archived_at=archived_at,
             created_at=created_at,
             updated_at=updated_at,
         )

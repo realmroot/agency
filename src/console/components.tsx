@@ -78,11 +78,7 @@ export function StatusBadge({ value, label, detail }: { value: string; label?: s
   const variant =
     value === 'error' || value === 'missing' || value === 'blocked'
       ? 'destructive'
-      : value === 'archived' ||
-          value === 'closed' ||
-          value === 'disabled' ||
-          value === 'deleted' ||
-          value === 'disconnected'
+      : value === 'closed' || value === 'disabled' || value === 'deleted' || value === 'disconnected'
         ? 'secondary'
         : 'outline'
   const badge = <UiBadge variant={variant}>{label ?? value}</UiBadge>

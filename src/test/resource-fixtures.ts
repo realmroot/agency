@@ -36,7 +36,6 @@ export function metadata(overrides: ResourceMetadataOverrides = {}): ResourceMet
     createdBy: overrides.createdBy === undefined ? 'user_1' : overrides.createdBy,
     createdAt: overrides.createdAt ?? now,
     updatedAt: overrides.updatedAt ?? now,
-    archivedAt: overrides.archivedAt === undefined ? null : overrides.archivedAt,
   }
 }
 
@@ -65,7 +64,7 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       identity: overrides.identity ?? null,
     },
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
       currentVersionId: overrides.currentVersionId === undefined ? 'agentver_1' : overrides.currentVersionId,
       version: overrides.version ?? 1,
       schedulable: false,
@@ -159,7 +158,7 @@ export function environment(overrides: EnvironmentOverrides = {}): Environment {
       variables: overrides.variables ?? {},
     },
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
       currentVersionId: overrides.currentVersionId ?? 'envver_1',
       version: overrides.version ?? 1,
     },
@@ -184,7 +183,7 @@ export function vault(overrides: VaultOverrides = {}): Vault {
       scope: overrides.scope ?? 'project',
     },
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
     },
   }
 }
@@ -271,7 +270,7 @@ export function memoryStore(overrides: MemoryStoreOverrides = {}): MemoryStore {
     metadata: metadata({ id: 'store_1', name: 'Project memory', description: 'Reusable notes', ...overrides }),
     spec: {},
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
     },
   }
 }
@@ -293,7 +292,7 @@ export function memory(overrides: MemoryOverrides = {}): MemoryStoreMemory {
       metadata: overrides.metadata ?? {},
     },
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
     },
   }
 }
@@ -334,7 +333,6 @@ export function runner(overrides: RunnerOverrides = {}): Runner {
     ],
     metadata: overrides.metadata ?? {},
     lastHeartbeatAt: overrides.lastHeartbeatAt === undefined ? now : overrides.lastHeartbeatAt,
-    archivedAt: overrides.archivedAt === undefined ? null : overrides.archivedAt,
     createdAt: overrides.createdAt ?? now,
     updatedAt: overrides.updatedAt ?? now,
   }
@@ -386,7 +384,7 @@ export function trigger(overrides: TriggerOverrides = {}): Trigger {
       },
     },
     status: {
-      phase: overrides.archivedAt ? 'archived' : 'active',
+      phase: 'active',
       nextDueAt: overrides.nextDueAt === undefined ? '2026-06-19T12:00:00.000Z' : overrides.nextDueAt,
       lastDispatchedAt:
         overrides.lastDispatchedAt === undefined ? '2026-06-18T12:00:00.000Z' : overrides.lastDispatchedAt,

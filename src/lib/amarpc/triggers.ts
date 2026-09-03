@@ -38,7 +38,7 @@ export const triggersApi = {
   createTrigger: (input: CreateTriggerInput) =>
     rpcRequest<Trigger>(v1.triggers.$post(jsonArg<typeof v1.triggers.$post>(input))),
   readTrigger: (id: string) => rpcRequest<Trigger>(v1.triggers[':triggerId'].$get({ param: { triggerId: id } })),
-  updateTrigger: (id: string, input: Partial<TriggerInput> & { archived?: boolean }) =>
+  updateTrigger: (id: string, input: Partial<TriggerInput>) =>
     rpcRequest<Trigger>(
       v1.triggers[':triggerId'].$patch({
         param: { triggerId: id },

@@ -10,15 +10,14 @@ vi.mock('./runtime/sessions', () => ({
   createSession: vi.fn(),
   closeSession: vi.fn(),
   reopenSession: vi.fn(),
-  archiveSession: vi.fn(),
-  unarchiveSession: vi.fn(),
+  deleteSession: vi.fn(),
   dispatchPrompt: vi.fn(),
   decideApproval: vi.fn(),
   markExpiredPending: vi.fn(),
 }))
 
 import * as runtimeSessions from './runtime/sessions'
-import { sendSessionMessage, updateSession } from './sessions'
+import { deleteSessionResource, sendSessionMessage, updateSession } from './sessions'
 
 // The runtime-session behaviors a test wants to override, mirroring the former
 // gateway override surface. Applied onto the mocked module by fakeDeps.
@@ -26,8 +25,7 @@ type RuntimeSessionOverrides = {
   createSession?: typeof runtimeSessions.createSession
   closeSession?: typeof runtimeSessions.closeSession
   reopenSession?: typeof runtimeSessions.reopenSession
-  archiveSession?: typeof runtimeSessions.archiveSession
-  unarchiveSession?: typeof runtimeSessions.unarchiveSession
+  deleteSession?: typeof runtimeSessions.deleteSession
   dispatchPrompt?: typeof runtimeSessions.dispatchPrompt
   decideApproval?: typeof runtimeSessions.decideApproval
   markExpiredPending?: typeof runtimeSessions.markExpiredPending
@@ -47,7 +45,7 @@ function sessionRow(overrides: Partial<RuntimeSessionHandle> = {}): RuntimeSessi
     projectId: 'project_1',
     organizationId: 'org_1',
     state: 'idle',
-    archivedAt: null,
+    deletedAt: null,
     sandboxId: null,
     metadata: {},
     ...overrides,
@@ -65,7 +63,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
       createdBy: 'user_1',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      archivedAt: null,
+      deletedAt: null,
     },
     spec: {
       agentId: 'agent_1',
@@ -174,13 +172,7 @@ function fakeDeps(
       ok: true,
       value: sessionRecord({ status: { ...sessionRecord().status, phase: 'idle' } }),
     }),
-    archiveSession: async () => ({
-      ok: true,
-      value: sessionRecord({
-        metadata: { ...sessionRecord().metadata, archivedAt: '2026-01-02T00:00:00.000Z' },
-      }),
-    }),
-    unarchiveSession: async () => sessionRecord(),
+    deleteSession: async () => ({ ok: true, value: undefined }),
     dispatchPrompt: async () => ({ ok: true, delivery: 'live', state: 'accepted' }),
     decideApproval: async () => ({
       ok: true,
@@ -206,8 +198,7 @@ function fakeDeps(
   vi.mocked(runtimeSessions.createSession).mockImplementation(runtime.createSession)
   vi.mocked(runtimeSessions.closeSession).mockImplementation(runtime.closeSession)
   vi.mocked(runtimeSessions.reopenSession).mockImplementation(runtime.reopenSession)
-  vi.mocked(runtimeSessions.archiveSession).mockImplementation(runtime.archiveSession)
-  vi.mocked(runtimeSessions.unarchiveSession).mockImplementation(runtime.unarchiveSession)
+  vi.mocked(runtimeSessions.deleteSession).mockImplementation(runtime.deleteSession)
   vi.mocked(runtimeSessions.dispatchPrompt).mockImplementation(runtime.dispatchPrompt)
   vi.mocked(runtimeSessions.decideApproval).mockImplementation(runtime.decideApproval)
   vi.mocked(runtimeSessions.markExpiredPending).mockImplementation(runtime.markExpiredPending)
@@ -267,73 +258,7 @@ function fakeDeps(
 
 // ── updateSession ────────────────────────────────────────────────────────────
 
-describe('[spec: sessions/archive] updateSession — archived session', () => {
-  it('unarchives when patch is {archived:false} and nothing else', async () => {
-    let called = false
-    const deps = fakeDeps({
-      sessionRuntime: {
-        unarchiveSession: async () => {
-          called = true
-          return sessionRecord()
-        },
-      },
-    })
-    const result = await updateSession(
-      deps,
-      auth,
-      sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { archived: false },
-      null,
-    )
-    expect(result.ok).toBe(true)
-    expect(called).toBe(true)
-  })
-
-  it('returns 409 conflict when patching an archived session with any other field', async () => {
-    const result = await updateSession(
-      fakeDeps(),
-      auth,
-      sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { name: 'New' },
-      null,
-    )
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.status).toBe(409)
-      expect(result.error.code).toBe('conflict')
-    }
-  })
-
-  it('returns 409 conflict when archived session receives a state patch', async () => {
-    const result = await updateSession(
-      fakeDeps(),
-      auth,
-      sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { state: 'closed' },
-      null,
-    )
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.status).toBe(409)
-    }
-  })
-
-  it('returns 409 conflict when archived:false is combined with another patch field', async () => {
-    const result = await updateSession(
-      fakeDeps(),
-      auth,
-      sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
-      { archived: false, name: 'oops' },
-      null,
-    )
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.code).toBe('conflict')
-    }
-  })
-})
-
-describe('[spec: sessions/archive] updateSession — name and metadata edits', () => {
+describe('[spec: sessions/delete] updateSession — name and metadata edits', () => {
   it('updates only name when name is provided', async () => {
     const updated: string[] = []
     const deps = fakeDeps({
@@ -404,7 +329,7 @@ describe('[spec: sessions/archive] updateSession — name and metadata edits', (
       },
     })
     await expect(updateSession(deps, auth, sessionRow(), { name: 'X' }, null)).rejects.toThrow(
-      'Updated session row is required',
+      'Session was deleted while the mutation was in progress',
     )
   })
 
@@ -416,7 +341,7 @@ describe('[spec: sessions/archive] updateSession — name and metadata edits', (
       },
     })
     await expect(updateSession(deps, auth, sessionRow(), { name: 'X' }, null)).rejects.toThrow(
-      'Updated session row is required',
+      'Session was deleted while the mutation was in progress',
     )
   })
 })
@@ -450,50 +375,6 @@ describe('[spec: sessions/close] updateSession — close/reopen transitions', ()
     }
   })
 
-  it('archives after close when both are requested', async () => {
-    let archived = false
-    const deps = fakeDeps({
-      sessionRuntime: {
-        closeSession: async () => ({
-          ok: true,
-          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }),
-        }),
-        archiveSession: async () => {
-          archived = true
-          return {
-            ok: true,
-            value: sessionRecord({
-              metadata: { ...sessionRecord().metadata, archivedAt: '2026-01-02T00:00:00.000Z' },
-            }),
-          }
-        },
-      },
-      sessions: {
-        findRuntimeRow: async () => sessionRow({ state: 'closed' }),
-      },
-    })
-    const result = await updateSession(deps, auth, sessionRow(), { state: 'closed', archived: true }, null)
-    expect(result.ok).toBe(true)
-    expect(archived).toBe(true)
-  })
-
-  it('throws when findRuntimeRow returns null after close+archive', async () => {
-    const deps = fakeDeps({
-      sessionRuntime: {
-        closeSession: async () => ({
-          ok: true,
-          value: sessionRecord({ status: { ...sessionRecord().status, phase: 'closed' } }),
-        }),
-      },
-      sessions: {
-        findRuntimeRow: async () => null,
-      },
-    })
-    await expect(updateSession(deps, auth, sessionRow(), { state: 'closed', archived: true }, null)).rejects.toThrow(
-      'Closed session row is required',
-    )
-  })
-
   it('reopens a closed session and returns the idle record', async () => {
     let reopened = false
     const deps = fakeDeps({
@@ -511,31 +392,44 @@ describe('[spec: sessions/close] updateSession — close/reopen transitions', ()
     expect(result.ok).toBe(true)
     expect(reopened).toBe(true)
   })
-})
 
-describe('[spec: sessions/archive] updateSession — archive without close', () => {
-  it('archives a live session when archived:true is the only patch', async () => {
-    let archived = false
-    const deps = fakeDeps({
-      sessionRuntime: {
-        archiveSession: async () => {
-          archived = true
-          return {
-            ok: true,
-            value: sessionRecord({
-              metadata: { ...sessionRecord().metadata, archivedAt: '2026-01-02T00:00:00.000Z' },
-            }),
-          }
-        },
-      },
+  it('returns the runtime error when reopen fails', async () => {
+    const expected = { status: 409 as const, code: 'conflict', message: 'Cannot reopen' }
+    const deps = fakeDeps({ sessionRuntime: { reopenSession: async () => ({ ok: false, error: expected }) } })
+
+    await expect(updateSession(deps, auth, sessionRow({ state: 'closed' }), { state: 'idle' }, null)).resolves.toEqual({
+      ok: false,
+      error: expected,
     })
-    const result = await updateSession(deps, auth, sessionRow(), { archived: true }, null)
-    expect(result.ok).toBe(true)
-    expect(archived).toBe(true)
+  })
+
+  it('requires the reopened runtime row to remain visible', async () => {
+    const deps = fakeDeps({
+      sessionRuntime: { reopenSession: async () => ({ ok: true, value: sessionRecord() }) },
+      sessions: { findRuntimeRow: async () => null },
+    })
+
+    await expect(updateSession(deps, auth, sessionRow({ state: 'closed' }), { state: 'idle' }, null)).rejects.toThrow(
+      'Reopened session row is required',
+    )
   })
 })
 
-describe('[spec: sessions/archive] updateSession — no-op patch', () => {
+describe('[spec: sessions/delete] deleteSessionResource', () => {
+  it('returns null after the runtime soft-delete succeeds', async () => {
+    const error = await deleteSessionResource(fakeDeps(), auth, sessionRow(), 'request_1')
+    expect(error).toBeNull()
+    expect(runtimeSessions.deleteSession).toHaveBeenCalledWith(expect.anything(), auth, expect.anything(), 'request_1')
+  })
+
+  it('returns the runtime error when soft-delete fails', async () => {
+    const expected = { status: 409 as const, code: 'conflict', message: 'Session is still running' }
+    const deps = fakeDeps({ sessionRuntime: { deleteSession: async () => ({ ok: false, error: expected }) } })
+    await expect(deleteSessionResource(deps, auth, sessionRow(), null)).resolves.toEqual(expected)
+  })
+})
+
+describe('[spec: sessions/delete] updateSession — no-op patch', () => {
   it('returns the current record when the patch carries no fields', async () => {
     let findCalled = false
     const deps = fakeDeps({
@@ -557,25 +451,27 @@ describe('[spec: sessions/archive] updateSession — no-op patch', () => {
         find: async () => null,
       },
     })
-    await expect(updateSession(deps, auth, sessionRow(), {}, null)).rejects.toThrow('Updated session row is required')
+    await expect(updateSession(deps, auth, sessionRow(), {}, null)).rejects.toThrow(
+      'Session was deleted while the mutation was in progress',
+    )
   })
 })
 
 // ── sendSessionMessage ───────────────────────────────────────────────────────
 
 describe('[spec: sessions/prompt] sendSessionMessage', () => {
-  it('returns archived rejection for archived sessions', async () => {
+  it('returns deleted rejection for deleted sessions', async () => {
     const result = await sendSessionMessage(
       fakeDeps(),
       auth,
-      sessionRow({ archivedAt: '2026-01-02T00:00:00.000Z' }),
+      sessionRow({ deletedAt: '2026-01-02T00:00:00.000Z' }),
       'hello',
     )
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.status).toBe(409)
-      if ('archived' in result) {
-        expect(result.archived).toBe(true)
+      if ('deleted' in result) {
+        expect(result.deleted).toBe(true)
       }
     }
   })

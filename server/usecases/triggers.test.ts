@@ -3,7 +3,7 @@ import { resourceMetadata } from '@server/domain/resource'
 import type { Trigger } from '@server/domain/trigger'
 import { describe, expect, it } from 'vitest'
 import type { Deps } from './deps'
-import { type AuthScope, type TriggerConfig, TriggerConflictError, TriggerValidationError } from './ports'
+import { type AuthScope, type TriggerConfig, TriggerValidationError } from './ports'
 import { createTrigger, deleteTrigger, updateTrigger } from './triggers'
 
 const auth: AuthScope = {
@@ -98,13 +98,13 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
       }),
     update: async (_p, id, fields, updatedAt) =>
       triggerRecord({
-        metadata: { uid: id, name: fields.config.name, archivedAt: fields.archivedAt, updatedAt },
+        metadata: { uid: id, name: fields.config.name, updatedAt },
         spec: {
           source: fields.config.source,
           suspend: fields.config.suspend,
           template: fields.config.template,
         },
-        status: { phase: fields.archivedAt ? 'archived' : 'active', nextDueAt: fields.config.nextDueAt },
+        status: { phase: 'active', nextDueAt: fields.config.nextDueAt },
       }),
     delete: async () => true,
     listRuns: async () => ({ rows: [], hasMore: false }),
@@ -380,7 +380,6 @@ describe('[spec: triggers/lifecycle] updateTrigger', () => {
     })
     expect(result.trigger.metadata.name).toBe('Renamed')
     expect(result.trigger.spec.source).toMatchObject({ type: 'schedule', schedule: { intervalSeconds: 1800 } })
-    expect(result.archived).toBe(false)
   })
 
   it('[spec: identities/runtime-constraint] re-materializes runtime when the Agent changes', async () => {
@@ -417,32 +416,6 @@ describe('[spec: triggers/lifecycle] updateTrigger', () => {
       name: 'TriggerConflictError',
       status: 404,
     })
-  })
-
-  it('archives and reports the transition', async () => {
-    const result = await updateTrigger(fakeDeps(), auth, triggerRecord(), { archived: true })
-    expect(result.archived).toBe(true)
-    expect(result.trigger.metadata.archivedAt).toEqual(expect.any(String))
-  })
-
-  it('rejects field updates on an archived trigger', async () => {
-    const archived = triggerRecord({
-      metadata: { archivedAt: '2026-02-01T00:00:00.000Z' },
-      status: { phase: 'archived' },
-    })
-    await expect(updateTrigger(fakeDeps(), auth, archived, { name: 'nope' })).rejects.toBeInstanceOf(
-      TriggerConflictError,
-    )
-  })
-
-  it('restores an archived trigger', async () => {
-    const archived = triggerRecord({
-      metadata: { archivedAt: '2026-02-01T00:00:00.000Z' },
-      status: { phase: 'archived' },
-    })
-    const result = await updateTrigger(fakeDeps(), auth, archived, { archived: false })
-    expect(result.trigger.metadata.archivedAt).toBeNull()
-    expect(result.archived).toBe(false)
   })
 
   it('re-validates references when the agent changes', async () => {

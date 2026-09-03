@@ -357,6 +357,14 @@ func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAg
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
+func (s AgentsService) Delete(ctx context.Context, agentID string) error {
+	response, err := s.client.raw.DeleteAgentWithResponse(ctx, agentID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
+}
+
 func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*AgentVersionListResponse, error) {
 	response, err := s.client.raw.ListAgentVersionsWithResponse(ctx, agentID, nil)
 	if err != nil {
@@ -401,12 +409,12 @@ func (s IdentitiesService) Get(ctx context.Context, identityID string) (*Identit
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
 }
 
-func (s IdentitiesService) Archive(ctx context.Context, identityID string, body UpdateIdentityRequest) (*Identity, error) {
-	response, err := s.client.raw.UpdateIdentityWithResponse(ctx, identityID, nil, body)
+func (s IdentitiesService) Delete(ctx context.Context, identityID string) error {
+	response, err := s.client.raw.DeleteIdentityWithResponse(ctx, identityID, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 type EnvironmentsService struct {
@@ -446,7 +454,15 @@ func (s EnvironmentsService) Update(ctx context.Context, environmentID string, b
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+}
+
+func (s EnvironmentsService) Delete(ctx context.Context, environmentID string) error {
+	response, err := s.client.raw.DeleteEnvironmentWithResponse(ctx, environmentID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s EnvironmentsService) ListVersions(ctx context.Context, environmentID string) (*EnvironmentVersionListResponse, error) {
@@ -534,7 +550,7 @@ func (s RunnersService) Get(ctx context.Context, runnerID string) (*Runner, erro
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s RunnersService) Update(ctx context.Context, runnerID string, body UpdateRunnerRequest) (*Runner, error) {
@@ -543,6 +559,14 @@ func (s RunnersService) Update(ctx context.Context, runnerID string, body Update
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
+func (s RunnersService) Delete(ctx context.Context, runnerID string) error {
+	response, err := s.client.raw.DeleteRunnerWithResponse(ctx, runnerID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 type BudgetsService struct {
@@ -562,7 +586,7 @@ func (s BudgetsService) Create(ctx context.Context, body CreateBudgetRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s BudgetsService) Get(ctx context.Context, budgetID string) (*Budget, error) {
@@ -733,6 +757,14 @@ func (s SessionsService) Update(ctx context.Context, sessionID string, body Upda
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
+func (s SessionsService) Delete(ctx context.Context, sessionID string) error {
+	response, err := s.client.raw.DeleteSessionWithResponse(ctx, sessionID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
 func (s SessionsService) Stream(ctx context.Context, sessionID string) (JSONChannel, error) {
 	return s.client.dialWebSocket(ctx, "/api/v1/sessions/"+url.PathEscape(sessionID)+"/socket")
 }
@@ -810,7 +842,7 @@ func (s MemoryStoresService) Create(ctx context.Context, body CreateMemoryStoreR
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s MemoryStoresService) Get(ctx context.Context, storeID string) (*MemoryStore, error) {
@@ -827,6 +859,14 @@ func (s MemoryStoresService) Update(ctx context.Context, storeID string, body Up
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+}
+
+func (s MemoryStoresService) Delete(ctx context.Context, storeID string) error {
+	response, err := s.client.raw.DeleteMemoryStoreWithResponse(ctx, storeID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s MemoryStoresService) ListMemories(ctx context.Context, storeID string, params *ListMemoryStoreMemoriesParams) (*MemoryStoreMemoryListResponse, error) {
@@ -878,7 +918,7 @@ func (s VaultsService) Create(ctx context.Context, body CreateVaultRequest) (*Va
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s VaultsService) Get(ctx context.Context, vaultID string) (*Vault, error) {
@@ -895,6 +935,14 @@ func (s VaultsService) Update(ctx context.Context, vaultID string, body UpdateVa
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
+func (s VaultsService) Delete(ctx context.Context, vaultID string) error {
+	response, err := s.client.raw.DeleteVaultWithResponse(ctx, vaultID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s VaultsService) ListCredentials(ctx context.Context, vaultID string, params *ListVaultCredentialsParams) (*VaultCredentialListResponse, error) {
@@ -1018,7 +1066,7 @@ func (s RunnerRunnersService) Get(ctx context.Context, runnerID string) (*Runner
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s RunnerRunnersService) Update(ctx context.Context, runnerID string, body UpdateRunnerRequest) (*Runner, error) {
@@ -1027,6 +1075,14 @@ func (s RunnerRunnersService) Update(ctx context.Context, runnerID string, body 
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
+func (s RunnerRunnersService) Delete(ctx context.Context, runnerID string) error {
+	response, err := s.client.raw.DeleteRunnerWithResponse(ctx, runnerID, nil)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s RunnerRunnersService) Channel(ctx context.Context, runnerID string) (JSONChannel, error) {

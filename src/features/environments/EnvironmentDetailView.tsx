@@ -1,4 +1,4 @@
-import { Archive } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -14,7 +14,7 @@ import {
   TableSurface,
   TruncatedTooltipText,
 } from '@/console/components'
-import { archivedLabel, formatDate, isArchived } from '@/console/format'
+import { formatDate } from '@/console/format'
 import { RelatedResourcesTable } from '@/features/console/related-resources-table'
 import type { Environment, Runner, Session } from '@/lib/amarpc'
 
@@ -36,12 +36,12 @@ export function EnvironmentDetailView({
   environment,
   sessions,
   runners = [],
-  onArchive,
+  onDelete,
 }: {
   environment: Environment | null
   sessions: Session[]
   runners?: Runner[]
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   if (!environment) {
     return <EmptyState title="Environment not found" body="The requested environment is not in the current project." />
@@ -54,22 +54,20 @@ export function EnvironmentDetailView({
         description={environment.metadata.description ?? 'No description'}
         actions={
           <>
-            <StatusBadge value={archivedLabel(environment)} />
+            <StatusBadge value={environment.status.phase} />
             <StatusBadge value={`v${environment.status.version}`} />
-            {!isArchived(environment) ? (
-              <ConfirmAction
-                title="Archive environment?"
-                description={`Archive ${environment.metadata.name}. New sessions cannot use this environment.`}
-                confirmLabel="Archive environment"
-                destructive
-                onConfirm={() => onArchive(environment.metadata.uid)}
-              >
-                <Button type="button" variant="outline">
-                  <Archive data-icon="inline-start" />
-                  Archive
-                </Button>
-              </ConfirmAction>
-            ) : null}
+            <ConfirmAction
+              title="Delete environment?"
+              description={`Delete ${environment.metadata.name}. It cannot be restored; existing session snapshots are retained.`}
+              confirmLabel="Delete environment"
+              destructive
+              onConfirm={() => onDelete(environment.metadata.uid)}
+            >
+              <Button type="button" variant="outline">
+                <Trash2 data-icon="inline-start" />
+                Delete
+              </Button>
+            </ConfirmAction>
           </>
         }
       >

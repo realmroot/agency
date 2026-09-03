@@ -116,7 +116,7 @@ function deps(bound = true) {
   const update = vi.fn(async (_projectId, _triggerId, fields) => {
     current = {
       ...current,
-      metadata: { ...current.metadata, archivedAt: fields.archivedAt },
+      metadata: { ...current.metadata, deletedAt: fields.deletedAt },
       spec: { source: fields.config.source, suspend: fields.config.suspend, template: fields.config.template },
       status: { ...current.status, nextDueAt: fields.config.nextDueAt },
     }

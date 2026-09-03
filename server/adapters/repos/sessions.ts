@@ -15,7 +15,7 @@ import {
   type AmaSessionEventType,
   isAmaSessionEventType,
 } from '@shared/session-events'
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import type { RuntimeName } from '../../contracts/environment-contracts'
 import { leases, runners, sessionApprovals, sessionEvents, sessionMessages, sessions, workItems } from '../../db/schema'
@@ -166,7 +166,7 @@ function serializeSession(row: SessionRow): Session {
       createdBy: row.createdByUserId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     },
     spec: {
       agentId: row.agentId,
@@ -260,7 +260,7 @@ function runtimeRow(row: SessionRow): RuntimeSessionHandle {
     projectId: row.projectId,
     organizationId: row.organizationId,
     state: sessionState(row.state),
-    archivedAt: row.archivedAt,
+    deletedAt: row.deletedAt,
     sandboxId: row.sandboxId,
     metadata: parseJson<Record<string, unknown>>(row.metadata) ?? {},
   }
@@ -321,7 +321,7 @@ export function createSessionRepo(db: Db): SessionRepo {
     async list(query: SessionListQuery): Promise<SessionListPage> {
       const filters = [
         eq(sessions.projectId, query.projectId),
-        query.archived ? isNotNull(sessions.archivedAt) : isNull(sessions.archivedAt),
+        isNull(sessions.deletedAt),
         query.state ? eq(sessions.state, persistedSessionState(query.state)) : undefined,
         query.search ? like(sessions.agentId, `%${query.search}%`) : undefined,
         ...labelSelectorFilters(query.labelSelector),
@@ -348,7 +348,7 @@ export function createSessionRepo(db: Db): SessionRepo {
       const row = await db
         .select()
         .from(sessions)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
         .get()
       return row ? serializeSession(row) : null
     },
@@ -360,7 +360,7 @@ export function createSessionRepo(db: Db): SessionRepo {
         .where(
           and(
             eq(sessions.projectId, projectId),
-            isNull(sessions.archivedAt),
+            isNull(sessions.deletedAt),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.source')`, 'http-trigger'),
             eq(sql<string>`json_extract(${sessions.metadata}, '$.annotations.httpTriggerId')`, triggerId),
             eq(
@@ -378,7 +378,7 @@ export function createSessionRepo(db: Db): SessionRepo {
       const row = await db
         .select()
         .from(sessions)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
         .get()
       return row ? runtimeRow(row) : null
     },
@@ -410,11 +410,11 @@ export function createSessionRepo(db: Db): SessionRepo {
           ...(fields.metadata !== undefined ? { metadata: JSON.stringify(fields.metadata) } : {}),
           updatedAt,
         })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
       const row = await db
         .select()
         .from(sessions)
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
         .get()
       return row ? serializeSession(row) : null
     },
@@ -428,7 +428,7 @@ export function createSessionRepo(db: Db): SessionRepo {
           metadata: sql`case when ${missing} then json_set(${sessions.metadata}, ${annotationPath}, ${value}) else ${sessions.metadata} end`,
           updatedAt: sql`case when ${missing} then ${updatedAt} else ${sessions.updatedAt} end`,
         })
-        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId)))
+        .where(and(eq(sessions.id, sessionId), eq(sessions.projectId, projectId), isNull(sessions.deletedAt)))
         .returning({ id: sessions.id })
       return rows.length > 0
     },

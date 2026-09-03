@@ -91,6 +91,8 @@ def sync_detailed(
 ) -> Response[Any | ErrorResponse]:
     """ Delete a budget
 
+     Soft-deletes the budget. The retained tombstone cannot be restored through the API.
+
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         x_ama_project_id (str | Unset):
@@ -125,6 +127,8 @@ def sync(
 ) -> Any | ErrorResponse | None:
     """ Delete a budget
 
+     Soft-deletes the budget. The retained tombstone cannot be restored through the API.
+
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
         x_ama_project_id (str | Unset):
@@ -153,6 +157,8 @@ async def asyncio_detailed(
 
 ) -> Response[Any | ErrorResponse]:
     """ Delete a budget
+
+     Soft-deletes the budget. The retained tombstone cannot be restored through the API.
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.
@@ -187,6 +193,8 @@ async def asyncio(
 
 ) -> Any | ErrorResponse | None:
     """ Delete a budget
+
+     Soft-deletes the budget. The retained tombstone cannot be restored through the API.
 
     Args:
         budget_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000014.

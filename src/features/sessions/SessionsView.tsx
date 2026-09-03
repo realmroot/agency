@@ -1,4 +1,4 @@
-import { Archive, ExternalLink } from 'lucide-react'
+import { ExternalLink, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,7 +12,7 @@ import {
   TableSurface,
   TruncatedTooltipText,
 } from '@/console/components'
-import { formatDate, formatDuration, isArchived } from '@/console/format'
+import { formatDate, formatDuration } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import { AgentIdentityCell } from '@/features/console/agent-identity-cell'
 import type { Session } from '@/lib/amarpc'
@@ -23,16 +23,16 @@ export function SessionsView({
   agentNameById,
   selectedIds,
   setSelectedIds,
-  onArchive,
+  onDelete,
 }: {
   sessions: Session[]
   pagination: ClientPagination<Session>
   agentNameById?: Map<string, string>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
-  onArchive: (id: string) => void
+  onDelete: (id: string) => void
 }) {
-  const selectableIds = sessions.filter((session) => !isArchived(session)).map((session) => session.metadata.uid)
+  const selectableIds = sessions.map((session) => session.metadata.uid)
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id))
   const toggleAll = (checked: boolean) => {
     setSelectedIds(checked ? selectableIds : [])
@@ -87,7 +87,6 @@ export function SessionsView({
             <TableCell>
               <Checkbox
                 checked={selectedIds.includes(session.metadata.uid)}
-                disabled={isArchived(session)}
                 aria-label={`Select ${session.metadata.name}`}
                 onCheckedChange={(checked) => toggleOne(session.metadata.uid, checked === true)}
               />
@@ -136,19 +135,17 @@ export function SessionsView({
                     <ExternalLink data-icon="inline-start" />
                   </Link>
                 </Button>
-                {!isArchived(session) ? (
-                  <ConfirmAction
-                    title="Archive session?"
-                    description="Archive the selected session from active operations while preserving persisted events."
-                    confirmLabel="Archive session"
-                    destructive
-                    onConfirm={() => onArchive(session.metadata.uid)}
-                  >
-                    <Button type="button" variant="outline" size="icon" aria-label="Archive">
-                      <Archive data-icon="inline-start" />
-                    </Button>
-                  </ConfirmAction>
-                ) : null}
+                <ConfirmAction
+                  title="Delete session?"
+                  description="Delete this session from the product while preserving persisted events. It cannot be restored."
+                  confirmLabel="Delete session"
+                  destructive
+                  onConfirm={() => onDelete(session.metadata.uid)}
+                >
+                  <Button type="button" variant="outline" size="icon" aria-label="Delete session">
+                    <Trash2 data-icon="inline-start" />
+                  </Button>
+                </ConfirmAction>
               </div>
             </TableCell>
           </TableRow>

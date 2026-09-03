@@ -40,7 +40,7 @@ function runner(overrides: Partial<RunnerAuthRecord> = {}): RunnerAuthRecord {
     oidcSubject: 'sub_1',
     oidcClientId: 'cid',
     lastHeartbeatAt: null,
-    archivedAt: null,
+    deletedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

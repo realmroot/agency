@@ -25,16 +25,14 @@ T = TypeVar("T", bound="UpdateAgentRequest")
 
 @_attrs_define
 class UpdateAgentRequest:
-    """ 
+    """
         Attributes:
             metadata (ResourceUpdateMetadata | Unset):
             spec (UpdateAgentRequestSpec | Unset):
-            archived (bool | Unset): Lifecycle transition: true archives the agent, false unarchives it.
      """
 
     metadata: ResourceUpdateMetadata | Unset = UNSET
     spec: UpdateAgentRequestSpec | Unset = UNSET
-    archived: bool | Unset = UNSET
 
 
 
@@ -51,8 +49,6 @@ class UpdateAgentRequest:
         if not isinstance(self.spec, Unset):
             spec = self.spec.to_dict()
 
-        archived = self.archived
-
 
         field_dict: dict[str, Any] = {}
 
@@ -62,8 +58,6 @@ class UpdateAgentRequest:
             field_dict["metadata"] = metadata
         if spec is not UNSET:
             field_dict["spec"] = spec
-        if archived is not UNSET:
-            field_dict["archived"] = archived
 
         return field_dict
 
@@ -94,13 +88,9 @@ class UpdateAgentRequest:
 
 
 
-        archived = d.pop("archived", UNSET)
-
         update_agent_request = cls(
             metadata=metadata,
             spec=spec,
-            archived=archived,
         )
 
         return update_agent_request
-

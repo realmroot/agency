@@ -6,17 +6,17 @@ import { queryKeys } from '@/lib/query-keys'
 
 export function useVaultActions() {
   const queryClient = useQueryClient()
-  const archiveVault = useMutation({
-    mutationFn: api.archiveVault,
+  const deleteVault = useMutation({
+    mutationFn: api.deleteVault,
     onSuccess: () => {
-      toast.success('Vault archived')
+      toast.success('Vault deleted')
       void queryClient.invalidateQueries({ queryKey: queryKeys.vaults.all })
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
 
   return {
-    archiveVault: (id: string) => archiveVault.mutate(id),
-    archiveVaultPending: archiveVault.isPending,
+    deleteVault: (id: string) => deleteVault.mutate(id),
+    deleteVaultPending: deleteVault.isPending,
   }
 }

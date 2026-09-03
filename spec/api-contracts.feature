@@ -41,7 +41,7 @@ Feature: API contracts
   Scenario: Keep route handlers aligned with OpenAPI write schemas
     Given the agent, environment, and session write handlers read request fields
     When the handled fields are compared to the OpenAPI create and update schemas
-    Then the handled fields match the published create schema plus the lifecycle archive transition
+    Then the handled fields match the published create schema and deletion uses HTTP DELETE
 
   @api-contracts/resource-entities @api
   Scenario: Publish standard resource entity responses

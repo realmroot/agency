@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader } from '@/console/components'
-import { archivedLabel } from '@/console/format'
 import { useClientPagination } from '@/console/use-client-pagination'
 import { matchesSearch, useUrlFilter } from '@/console/use-list-filters'
 import { CreateSessionSheet } from '@/features/sessions/CreateSessionSheet'
@@ -20,12 +19,10 @@ export function AgentsPage() {
   const [sessionAgentId, setSessionAgentId] = useState<string | undefined>()
   const actions = useAgentActions()
   const [search, setSearch] = useUrlFilter('search')
-  const [status, setStatus] = useUrlFilter('status', 'all')
   const [provider, setProvider] = useUrlFilter('provider', 'all')
-  const archived = status === 'archived'
   const agentsQuery = useQuery({
-    queryKey: queryKeys.agents.list(archived),
-    queryFn: () => api.listAgents({ archived }),
+    queryKey: queryKeys.agents.list(),
+    queryFn: () => api.listAgents(),
   })
   const allAgents = useMemo(() => agentsQuery.data?.data ?? [], [agentsQuery.data?.data])
   const providers = useMemo(
@@ -37,10 +34,9 @@ export function AgentsPage() {
       allAgents.filter(
         (agent) =>
           matchesSearch(search, agent.metadata.name, agent.metadata.description) &&
-          (status === 'all' || archivedLabel(agent) === status) &&
           (provider === 'all' || agent.spec.provider === provider),
       ),
-    [allAgents, search, status, provider],
+    [allAgents, search, provider],
   )
   const pagination = useClientPagination(agents)
   return (
@@ -66,18 +62,6 @@ export function AgentsPage() {
           onChange={(event) => setSearch(event.target.value)}
           className="w-full sm:w-64"
         />
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-40" aria-label="Filter by status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="active">active</SelectItem>
-              <SelectItem value="archived">archived</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
         <Select value={provider} onValueChange={setProvider}>
           <SelectTrigger className="w-full sm:w-48" aria-label="Filter by provider">
             <SelectValue />
@@ -98,7 +82,7 @@ export function AgentsPage() {
         agents={pagination.items}
         pagination={pagination}
         onCreateSession={setSessionAgentId}
-        onArchive={actions.archiveAgent}
+        onDelete={actions.deleteAgent}
       />
       <CreateAgentSheet open={creatingAgent} onOpenChange={setCreatingAgent} />
       <CreateSessionSheet

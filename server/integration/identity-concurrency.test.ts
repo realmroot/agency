@@ -373,6 +373,52 @@ describe('[CF] Identity concurrency invariants', () => {
     })
   })
 
+  it('refuses to delete provisioning state and cannot revive a deleted Identity through provisioning writes', async () => {
+    const auth = await scope()
+    const repo = createIdentityRepo(drizzle(env.DB))
+    const record = {
+      id: 'identity_delete_cas',
+      projectId: auth.project.id,
+      organizationId: auth.organization.id,
+      name: 'Delete CAS',
+      description: null,
+      username: 'reviewer',
+      runtime: 'codex' as const,
+      vaultId: 'vault_delete_cas',
+      idempotencyKeyHash: 'delete-cas-key',
+      requestFingerprint: 'delete-cas-request',
+    }
+    await repo.claim(record, 'owner_delete_cas', timestamp, '2026-08-28T00:05:00.000Z')
+
+    await expect(repo.delete(auth.project.id, record.id, timestamp)).resolves.toBe(false)
+    await expect(repo.find(auth.project.id, record.id)).resolves.toMatchObject({ status: { state: 'provisioning' } })
+
+    await repo.activate(record.id, 'owner_delete_cas', 'cred_delete_cas', descriptor(record.id), timestamp)
+    await expect(repo.delete(auth.project.id, record.id, '2026-08-28T00:01:00.000Z')).resolves.toBe(true)
+    const replay = await repo.claim(record, 'owner_replay', '2026-08-28T00:02:00.000Z', '2026-08-28T00:07:00.000Z')
+    expect(replay.acquired).toBe(false)
+    expect(replay.identity.metadata.deletedAt).toBe('2026-08-28T00:01:00.000Z')
+    await expect(repo.setCredential(record.id, 'owner_replay', 'cred_replay', timestamp)).rejects.toMatchObject({
+      name: 'ResourceDeletedDuringMutationError',
+    })
+    await expect(
+      repo.activate(record.id, 'owner_replay', 'cred_replay', descriptor(record.id), timestamp),
+    ).rejects.toMatchObject({ name: 'ResourceDeletedDuringMutationError' })
+    await expect(repo.find(auth.project.id, record.id)).resolves.toBeNull()
+    await expect(
+      env.DB.prepare('SELECT state, deleted_at FROM identities WHERE id = ?').bind(record.id).first(),
+    ).resolves.toEqual({ state: 'active', deleted_at: '2026-08-28T00:01:00.000Z' })
+
+    const replacement = await repo.claim(
+      { ...record, id: 'identity_replacement', idempotencyKeyHash: 'replacement-key' },
+      'owner_replacement',
+      timestamp,
+      '2026-08-28T00:05:00.000Z',
+    )
+    expect(replacement.acquired).toBe(true)
+    expect(replacement.identity.metadata.uid).toBe('identity_replacement')
+  })
+
   it('retries an error with the stored checkpoint instead of initializing a new key', async () => {
     const auth = await scope()
     const failProvision = { value: true }
@@ -478,7 +524,7 @@ describe('[CF] Identity concurrency invariants', () => {
     })
   })
 
-  it('serializes archive and bind in either order without an Agent pointing at an archived Identity', async () => {
+  it('serializes delete and bind in either order without an Agent pointing at a deleted Identity', async () => {
     const auth = await scope()
     const db = drizzle(env.DB)
     const identities = createIdentityRepo(db)
@@ -515,21 +561,21 @@ describe('[CF] Identity concurrency invariants', () => {
       { projectId: auth.project.id, name: 'Bound first', description: null, spec: spec('identity_bind_first') },
       timestamp,
     )
-    await expect(identities.archive(auth.project.id, 'identity_bind_first', timestamp)).resolves.toBe(false)
+    await expect(identities.delete(auth.project.id, 'identity_bind_first', timestamp)).resolves.toBe(false)
     expect((await agentRepo.find(auth.project.id, bound.agent.metadata.uid))?.spec.identity?.identityId).toBe(
       'identity_bind_first',
     )
-    expect((await identities.find(auth.project.id, 'identity_bind_first'))?.metadata.archivedAt).toBeNull()
+    expect(await identities.find(auth.project.id, 'identity_bind_first')).not.toBeNull()
 
-    await createActive('identity_archive_first')
-    await expect(identities.archive(auth.project.id, 'identity_archive_first', timestamp)).resolves.toBe(true)
+    await createActive('identity_delete_first')
+    await expect(identities.delete(auth.project.id, 'identity_delete_first', timestamp)).resolves.toBe(true)
     await expect(
       agentRepo.insertWithVersion(
-        { projectId: auth.project.id, name: 'Archive first', description: null, spec: spec('identity_archive_first') },
+        { projectId: auth.project.id, name: 'Delete first', description: null, spec: spec('identity_delete_first') },
         timestamp,
       ),
     ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError' })
-    expect((await identities.find(auth.project.id, 'identity_archive_first'))?.metadata.archivedAt).toBe(timestamp)
+    expect(await identities.find(auth.project.id, 'identity_delete_first')).toBeNull()
   })
 
   it('commits Agent/version binding atomically and leaves no orphan version after a binding race', async () => {

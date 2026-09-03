@@ -24,7 +24,7 @@ export type AgentStatus = Agent['status']
 export type AgentAllowedTool = ArrayItem<AgentSpec['allowedTools']>
 export type AgentAllowedToolInput = ArrayItem<NonNullable<AgentInput['spec']['allowedTools']>>
 export type ResourceMetadata = Agent['metadata']
-export type ResourcePhase = ResourceMetadata['archivedAt'] extends string | null ? AgentStatus['phase'] : never
+export type ResourcePhase = AgentStatus['phase']
 
 export interface AgentListOptions extends ListOptions {
   identityAgentId?: string
@@ -36,15 +36,14 @@ export const agentsApi = {
   readAgent: (id: string) => rpcRequest<Agent>(v1.agents[':agentId'].$get({ param: { agentId: id } })),
   createAgent: (input: AgentInput) =>
     rpcRequest<Agent>(v1.agents.$post({ json: input, header: { 'idempotency-key': crypto.randomUUID() } })),
-  updateAgent: (id: string, input: Partial<AgentInput> & { archived?: boolean }) =>
+  updateAgent: (id: string, input: Partial<AgentInput>) =>
     rpcRequest<Agent>(
       v1.agents[':agentId'].$patch({
         param: { agentId: id },
         json: input as RpcJson<(typeof v1.agents)[':agentId']['$patch']>,
       }),
     ),
-  archiveAgent: (id: string) =>
-    rpcRequest<Agent>(v1.agents[':agentId'].$patch({ param: { agentId: id }, json: { archived: true } })),
+  deleteAgent: (id: string) => rpcRequest<void>(v1.agents[':agentId'].$delete({ param: { agentId: id } })),
   listAgentVersions: (id: string) =>
     rpcRequest<ListResponse<AgentVersion>>(v1.agents[':agentId'].versions.$get({ param: { agentId: id } })),
 }

@@ -14,10 +14,10 @@ import { IdentitiesView } from './IdentitiesView'
 export function IdentitiesPage() {
   const [creating, setCreating] = useState(false)
   const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: queryKeys.identities.list(false), queryFn: () => api.listIdentities() })
+  const query = useQuery({ queryKey: queryKeys.identities.list(), queryFn: () => api.listIdentities() })
   const pagination = useClientPagination(query.data?.data ?? [])
-  const archive = useMutation({
-    mutationFn: api.archiveIdentity,
+  const remove = useMutation({
+    mutationFn: api.deleteIdentity,
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.identities.all }),
     onError: (error) => toast.error(errorMessage(error)),
   })
@@ -33,7 +33,7 @@ export function IdentitiesPage() {
           </Button>
         }
       />
-      <IdentitiesView identities={pagination.items} pagination={pagination} onArchive={(id) => archive.mutate(id)} />
+      <IdentitiesView identities={pagination.items} pagination={pagination} onDelete={(id) => remove.mutate(id)} />
       <CreateIdentitySheet open={creating} onOpenChange={setCreating} />
     </div>
   )

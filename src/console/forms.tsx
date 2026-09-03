@@ -24,7 +24,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { type Agent, api, type Environment, type Identity, type MemoryStore, type Vault } from '@/lib/amarpc'
 import { queryKeys } from '@/lib/query-keys'
-import { isArchived, parseTools } from './format'
+import { parseTools } from './format'
 import {
   type AgentFormState,
   ENVIRONMENT_PACKAGE_MANAGERS,
@@ -279,7 +279,6 @@ export function AgentForm({
                 {identities
                   .filter(
                     (identity) =>
-                      !identity.metadata.archivedAt &&
                       identity.status.state === 'active' &&
                       (!identity.status.boundAgentId || identity.status.boundAgentId === agentId),
                   )
@@ -447,8 +446,8 @@ export function SessionForm({
   vaults?: Vault[]
   onSubmit: (event: FormEvent) => void
 }) {
-  const activeAgents = agents.filter((agent) => !isArchived(agent))
-  const activeEnvironments = environments.filter((environment) => !isArchived(environment))
+  const activeAgents = agents
+  const activeEnvironments = environments
   const selectedAgent = activeAgents.find((agent) => agent.metadata.uid === value.agentId)
   const selectedEnvironment = activeEnvironments.find((environment) => environment.metadata.uid === value.environmentId)
   const canSubmit = Boolean(value.agentId && value.environmentId && value.prompt.trim())
@@ -556,7 +555,7 @@ function CredentialVaultsField({
   value: SessionFormState
   setValue: (value: SessionFormState) => void
 }) {
-  const activeVaults = vaults.filter((vault) => !isArchived(vault))
+  const activeVaults = vaults
   const selectedVaults = activeVaults.filter((vault) => value.credentialVaultIds.includes(vault.metadata.uid))
   const triggerLabel =
     selectedVaults.length === 0

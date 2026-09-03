@@ -106,7 +106,7 @@ describe('[CF] /api/v1/vaults', () => {
     expect(count?.count).toBe(1)
   })
 
-  it('creates, lists, reads, updates, and archives project-scoped vaults [spec: vaults/api-crud]', async () => {
+  it('creates, lists, reads, updates, and deletes project-scoped vaults [spec: vaults/api-crud]', async () => {
     const authorization = await signIn()
     const createRes = await jsonFetch('/api/v1/vaults', authorization, {
       method: 'POST',
@@ -117,13 +117,12 @@ describe('[CF] /api/v1/vaults', () => {
     })
     expect(createRes.status).toBe(201)
     const created = (await createRes.json()) as {
-      metadata: { uid: string; name: string; archivedAt: string | null }
+      metadata: { uid: string; name: string }
       spec: { scope: string }
       status: { phase: string }
     }
     const createdId = created.metadata.uid
     expect(created).toMatchObject({
-      metadata: { archivedAt: null },
       spec: { scope: 'project' },
       status: { phase: 'active' },
     })
@@ -140,17 +139,8 @@ describe('[CF] /api/v1/vaults', () => {
     expect(updateRes.status).toBe(200)
     await expect(updateRes.json()).resolves.toMatchObject({ metadata: { uid: createdId, name: 'Updated credentials' } })
 
-    const archiveRes = await jsonFetch(`/api/v1/vaults/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: true }),
-    })
-    expect(archiveRes.status).toBe(200)
-    await expect(archiveRes.json()).resolves.toMatchObject({
-      metadata: { uid: createdId, archivedAt: expect.any(String) },
-    })
-
     const deleteRes = await jsonFetch(`/api/v1/vaults/${createdId}`, authorization, { method: 'DELETE' })
-    expect(deleteRes.status).toBe(404)
+    expect(deleteRes.status).toBe(204)
 
     const defaultListRes = await jsonFetch('/api/v1/vaults', authorization)
     const defaultList = (await defaultListRes.json()) as { data: Array<{ metadata: { uid: string } }> }
@@ -158,35 +148,24 @@ describe('[CF] /api/v1/vaults', () => {
       expect.objectContaining({ metadata: expect.objectContaining({ uid: createdId }) }),
     )
 
-    const archivedListRes = await jsonFetch('/api/v1/vaults?archived=true', authorization)
-    const archivedList = (await archivedListRes.json()) as {
-      data: Array<{ metadata: { uid: string; archivedAt: string | null } }>
-    }
-    expect(archivedList.data).toContainEqual(
-      expect.objectContaining({
-        metadata: expect.objectContaining({ uid: createdId, archivedAt: expect.any(String) }),
-      }),
-    )
-
     const createCredentialRes = await jsonFetch(`/api/v1/vaults/${createdId}/credentials`, authorization, {
       method: 'POST',
       body: JSON.stringify({
-        name: 'Archived vault token',
+        name: 'Deleted vault token',
         type: 'opaque',
-        secret: { stringData: { value: 'raw-secret-for-archived-vault' } },
+        secret: { stringData: { value: 'raw-secret-for-deleted-vault' } },
       }),
     })
-    expect(createCredentialRes.status).toBe(409)
-    await expect(createCredentialRes.json()).resolves.toMatchObject({
-      error: { type: 'conflict', message: 'Vault is archived' },
-    })
-
-    const restoreRes = await jsonFetch(`/api/v1/vaults/${createdId}`, authorization, {
-      method: 'PATCH',
-      body: JSON.stringify({ archived: false }),
-    })
-    expect(restoreRes.status).toBe(200)
-    await expect(restoreRes.json()).resolves.toMatchObject({ metadata: { uid: createdId, archivedAt: null } })
+    expect(createCredentialRes.status).toBe(404)
+    expect((await jsonFetch(`/api/v1/vaults/${createdId}`, authorization)).status).toBe(404)
+    expect(
+      (
+        await jsonFetch(`/api/v1/vaults/${createdId}`, authorization, {
+          method: 'PATCH',
+          body: JSON.stringify({ metadata: { name: 'Cannot revive a deleted vault' } }),
+        })
+      ).status,
+    ).toBe(404)
   })
 
   it('stores credential secret references only, redacts every response, updates secrets, and exposes read-only versions', async () => {

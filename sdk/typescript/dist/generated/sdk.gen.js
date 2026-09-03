@@ -34,11 +34,31 @@ export const createProject = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete a project with no live resources
+ *
+ * Soft-deletes a non-default project once all product resources are deleted. Retained tombstones and history do not block deletion.
+ */
+export const deleteProject = (options) => (options.client ?? client).delete({
+    url: '/api/v1/projects/{projectId}',
+    ...options
+});
+/**
  * Read a single project
  */
 export const readProject = (options) => (options.client ?? client).get({
     url: '/api/v1/projects/{projectId}',
     ...options
+});
+/**
+ * Rename a project
+ */
+export const updateProject = (options) => (options.client ?? client).patch({
+    url: '/api/v1/projects/{projectId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 /**
  * List agents
@@ -59,6 +79,15 @@ export const createAgent = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete an agent
+ *
+ * Soft-deletes the agent. The retained tombstone cannot be restored through the API.
+ */
+export const deleteAgent = (options) => (options.client ?? client).delete({
+    url: '/api/v1/agents/{agentId}',
+    ...options
+});
+/**
  * Read an agent
  */
 export const readAgent = (options) => (options.client ?? client).get({
@@ -68,7 +97,7 @@ export const readAgent = (options) => (options.client ?? client).get({
 /**
  * Update an agent
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox Trigger exists, are rejected with 409.
+ * Partially updates a live agent. Identity rebinding while a live Inbox Trigger exists is rejected.
  */
 export const updateAgent = (options) => (options.client ?? client).patch({
     url: '/api/v1/agents/{agentId}',
@@ -111,6 +140,15 @@ export const createEnvironment = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete an environment
+ *
+ * Soft-deletes the environment. The retained tombstone cannot be restored through the API.
+ */
+export const deleteEnvironment = (options) => (options.client ?? client).delete({
+    url: '/api/v1/environments/{environmentId}',
+    ...options
+});
+/**
  * Read an environment
  */
 export const readEnvironment = (options) => (options.client ?? client).get({
@@ -120,7 +158,7 @@ export const readEnvironment = (options) => (options.client ?? client).get({
 /**
  * Update an environment
  *
- * Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived: false} unarchives. Field updates on an archived environment are rejected with 409.
+ * Partially updates a live environment.
  */
 export const updateEnvironment = (options) => (options.client ?? client).patch({
     url: '/api/v1/environments/{environmentId}',
@@ -163,22 +201,20 @@ export const createIdentity = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete an identity
+ *
+ * Soft-deletes the identity. The retained tombstone cannot be restored through the API.
+ */
+export const deleteIdentity = (options) => (options.client ?? client).delete({
+    url: '/api/v1/identities/{identityId}',
+    ...options
+});
+/**
  * Read an identity
  */
 export const readIdentity = (options) => (options.client ?? client).get({
     url: '/api/v1/identities/{identityId}',
     ...options
-});
-/**
- * Archive an identity
- */
-export const updateIdentity = (options) => (options.client ?? client).patch({
-    url: '/api/v1/identities/{identityId}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/merge-patch+json',
-        ...options.headers
-    }
 });
 /**
  * Reliably receive an Inbox notification
@@ -249,6 +285,15 @@ export const createRunner = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete a self-hosted runner
+ *
+ * Soft-deletes the runner. The retained tombstone cannot be restored through the API.
+ */
+export const deleteRunner = (options) => (options.client ?? client).delete({
+    url: '/api/v1/runners/{runnerId}',
+    ...options
+});
+/**
  * Read a self-hosted runner
  */
 export const readRunner = (options) => (options.client ?? client).get({
@@ -256,7 +301,7 @@ export const readRunner = (options) => (options.client ?? client).get({
     ...options
 });
 /**
- * Update or archive a self-hosted runner
+ * Update a self-hosted runner
  */
 export const updateRunner = (options) => (options.client ?? client).patch({
     url: '/api/v1/runners/{runnerId}',
@@ -361,6 +406,8 @@ export const createBudget = (options) => (options.client ?? client).post({
 });
 /**
  * Delete a budget
+ *
+ * Soft-deletes the budget. The retained tombstone cannot be restored through the API.
  */
 export const deleteBudget = (options) => (options.client ?? client).delete({
     url: '/api/v1/budgets/{budgetId}',
@@ -460,7 +507,7 @@ export const createTrigger = (options) => (options.client ?? client).post({
 /**
  * Delete a trigger
  *
- * Permanently deletes the trigger and its run history.
+ * Soft-deletes the trigger while retaining its run history. The trigger cannot be restored.
  */
 export const deleteTrigger = (options) => (options.client ?? client).delete({
     url: '/api/v1/triggers/{triggerId}',
@@ -474,9 +521,7 @@ export const readTrigger = (options) => (options.client ?? client).get({
     ...options
 });
 /**
- * Update, pause, or archive a trigger
- *
- * Partial update. Pause with `suspend: true`; resume with `suspend: false`; archive with `archived: true`; restore with `archived: false`.
+ * Update or pause a trigger
  */
 export const updateTrigger = (options) => (options.client ?? client).patch({
     url: '/api/v1/triggers/{triggerId}',
@@ -532,6 +577,15 @@ export const createSession = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete a session
+ *
+ * Stops any live runtime and soft-deletes the session while retaining its history. It cannot be restored.
+ */
+export const deleteSession = (options) => (options.client ?? client).delete({
+    url: '/api/v1/sessions/{sessionId}',
+    ...options
+});
+/**
  * Read a session
  */
 export const readSession = (options) => (options.client ?? client).get({
@@ -541,7 +595,7 @@ export const readSession = (options) => (options.client ?? client).get({
 /**
  * Update a session
  *
- * Partial update: name and metadata edits, close/reopen transitions (state: "closed"|"idle"), and lifecycle archiving (archived: true|false).
+ * Partial update: name and metadata edits, plus close/reopen transitions (state: "closed"|"idle").
  */
 export const updateSession = (options) => (options.client ?? client).patch({
     url: '/api/v1/sessions/{sessionId}',
@@ -651,6 +705,15 @@ export const createMemoryStore = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete a memory store
+ *
+ * Soft-deletes the memory store and its memories. Database history remains and cannot be restored.
+ */
+export const deleteMemoryStore = (options) => (options.client ?? client).delete({
+    url: '/api/v1/memory-stores/{storeId}',
+    ...options
+});
+/**
  * Read a memory store
  */
 export const readMemoryStore = (options) => (options.client ?? client).get({
@@ -658,7 +721,7 @@ export const readMemoryStore = (options) => (options.client ?? client).get({
     ...options
 });
 /**
- * Update or archive a memory store
+ * Update a memory store
  */
 export const updateMemoryStore = (options) => (options.client ?? client).patch({
     url: '/api/v1/memory-stores/{storeId}',
@@ -688,6 +751,8 @@ export const createMemoryStoreMemory = (options) => (options.client ?? client).p
 });
 /**
  * Delete a memory
+ *
+ * Soft-deletes the memory. The retained tombstone cannot be restored through the API.
  */
 export const deleteMemoryStoreMemory = (options) => (options.client ?? client).delete({
     url: '/api/v1/memory-stores/{storeId}/memories/{memoryId}',
@@ -723,6 +788,15 @@ export const createVault = (options) => (options.client ?? client).post({
     }
 });
 /**
+ * Delete a vault
+ *
+ * Soft-deletes the vault while retaining credential history. The vault cannot be restored.
+ */
+export const deleteVault = (options) => (options.client ?? client).delete({
+    url: '/api/v1/vaults/{vaultId}',
+    ...options
+});
+/**
  * Read a vault
  */
 export const readVault = (options) => (options.client ?? client).get({
@@ -730,9 +804,7 @@ export const readVault = (options) => (options.client ?? client).get({
     ...options
 });
 /**
- * Update or archive a vault
- *
- * Partial update. Archive with `archived: true`; restore with `archived: false`.
+ * Update a vault
  */
 export const updateVault = (options) => (options.client ?? client).patch({
     url: '/api/v1/vaults/{vaultId}',

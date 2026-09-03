@@ -16,11 +16,12 @@ import type {
   EnvironmentRepo,
   UpdateEnvironmentFields,
 } from '@server/usecases/ports'
-import { CreationIdempotencyConflictError } from '@server/usecases/ports'
-import { and, desc, eq, gte, isNotNull, isNull, like, lt, lte, or } from 'drizzle-orm'
+import { CreationIdempotencyConflictError, ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { and, desc, eq, gte, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { connectors, environments, environmentVersions } from '../../db/schema'
 import { DEFAULT_CONNECTORS } from '../../domain/connector'
+import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type EnvironmentRow = typeof environments.$inferSelect
@@ -140,11 +141,11 @@ function environmentRecordFrom(row: EnvironmentRow, version: number): Environmen
       description: row.description,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
+      deletedAt: row.deletedAt,
     }),
     spec: configFromRow(row),
     status: {
-      phase: resourcePhase(row.archivedAt),
+      phase: resourcePhase(row.deletedAt),
       currentVersionId: row.currentVersionId,
       version,
     },
@@ -175,6 +176,7 @@ async function findCreation(db: Db, projectId: string, creationKeyHash: string) 
     .where(and(eq(environments.projectId, projectId), eq(environments.creationKeyHash, creationKeyHash)))
     .get()
   if (!row?.creationFingerprint) return null
+  if (row.deletedAt) throw new CreationIdempotencyConflictError('Idempotency-Key belongs to a deleted Environment')
   const initialVersion = await db
     .select()
     .from(environmentVersions)
@@ -186,7 +188,7 @@ async function findCreation(db: Db, projectId: string, creationKeyHash: string) 
       ...row,
       name: row.creationName ?? row.name,
       description: row.creationDescription,
-      archivedAt: null,
+      deletedAt: null,
       currentVersionId: initialVersion.id,
       updatedAt: row.createdAt,
     },
@@ -212,7 +214,7 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
     async list(query: EnvironmentListQuery): Promise<EnvironmentListPage> {
       const filters = [
         eq(environments.projectId, query.projectId),
-        query.archived ? isNotNull(environments.archivedAt) : isNull(environments.archivedAt),
+        isNull(environments.deletedAt),
         query.search ? like(environments.name, `%${query.search}%`) : undefined,
         query.createdFrom ? gte(environments.createdAt, query.createdFrom) : undefined,
         query.createdTo ? lte(environments.createdAt, query.createdTo) : undefined,
@@ -241,7 +243,13 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
       const row = await db
         .select()
         .from(environments)
-        .where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId)))
+        .where(
+          and(
+            eq(environments.id, environmentId),
+            eq(environments.projectId, projectId),
+            isNull(environments.deletedAt),
+          ),
+        )
         .get()
       if (!row) {
         return null
@@ -269,7 +277,38 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
         createdAt,
         ...configColumns(config),
       }
-      await db.insert(environmentVersions).values(row)
+      const configRow = configColumns(config)
+      const inserted = await db
+        .insert(environmentVersions)
+        .select(
+          db
+            .select({
+              id: sql<string>`${row.id}`.as('id'),
+              environmentId: sql<string>`${row.environmentId}`.as('environment_id'),
+              projectId: sql<string>`${row.projectId}`.as('project_id'),
+              version: sql<number>`${row.version}`.as('version'),
+              packages: sql<string>`${configRow.packages}`.as('packages'),
+              variables: sql<string>`${configRow.variables}`.as('variables'),
+              hostingMode: sql<string>`${configRow.hostingMode}`.as('hosting_mode'),
+              networkPolicy: sql<string>`${configRow.networkPolicy}`.as('network_policy'),
+              mcpPolicy: sql<string>`${configRow.mcpPolicy}`.as('mcp_policy'),
+              packageManagerPolicy: sql<string>`${configRow.packageManagerPolicy}`.as('package_manager_policy'),
+              resourceLimits: sql<string>`${configRow.resourceLimits}`.as('resource_limits'),
+              runtimeConfig: sql<string>`${configRow.runtimeConfig}`.as('runtime_config'),
+              metadata: sql<string>`${configRow.metadata}`.as('metadata'),
+              createdAt: sql<string>`${createdAt}`.as('created_at'),
+            })
+            .from(environments)
+            .where(
+              and(
+                eq(environments.id, environment.metadata.uid),
+                eq(environments.projectId, row.projectId),
+                isNull(environments.deletedAt),
+              ),
+            ),
+        )
+        .returning({ id: environmentVersions.id })
+      if (inserted.length === 0) throw new ResourceDeletedDuringMutationError('Environment')
       return versionRecordFrom(row)
     },
 
@@ -305,7 +344,7 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
         projectId: input.projectId,
         name: input.name,
         description: input.description,
-        archivedAt: null,
+        deletedAt: null,
         currentVersionId: versionId,
         creationKeyHash: input.creationKeyHash ?? null,
         creationFingerprint: input.creationFingerprint ?? null,
@@ -329,6 +368,7 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
           db.insert(environmentVersions).values(versionRow),
         ])
       } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Environment')
         if (input.creationKeyHash && input.creationFingerprint) {
           const replay = await findCreation(db, input.projectId, input.creationKeyHash)
           if (replay) {
@@ -348,24 +388,39 @@ export function createEnvironmentRepo(db: Db): EnvironmentRepo {
     },
 
     async update(projectId, environmentId, fields: UpdateEnvironmentFields, updatedAt) {
-      await db
+      const updated = await db
         .update(environments)
         .set({
           name: fields.name,
           description: fields.description,
-          archivedAt: fields.archivedAt,
           currentVersionId: fields.currentVersionId,
           updatedAt,
           ...configColumns(fields.config),
         })
-        .where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId)))
+        .where(
+          and(
+            eq(environments.id, environmentId),
+            eq(environments.projectId, projectId),
+            isNull(environments.deletedAt),
+          ),
+        )
+        .returning({ id: environments.id })
+      if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Environment')
     },
 
-    async unarchive(projectId, environmentId, updatedAt) {
-      await db
+    async delete(projectId, environmentId, deletedAt) {
+      const rows = await db
         .update(environments)
-        .set({ archivedAt: null, updatedAt })
-        .where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId)))
+        .set({ deletedAt, updatedAt: deletedAt })
+        .where(
+          and(
+            eq(environments.id, environmentId),
+            eq(environments.projectId, projectId),
+            isNull(environments.deletedAt),
+          ),
+        )
+        .returning({ id: environments.id })
+      return rows.length > 0
     },
 
     async connectorAvailable(connectorId) {

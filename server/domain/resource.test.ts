@@ -14,7 +14,7 @@ describe('resourceMetadata', () => {
         createdBy: 'user_1',
         createdAt: '2026-05-23T00:00:00.000Z',
         updatedAt: '2026-05-24T00:00:00.000Z',
-        archivedAt: '2026-05-25T00:00:00.000Z',
+        deletedAt: '2026-05-25T00:00:00.000Z',
       }),
     ).toEqual({
       uid: 'agent_1',
@@ -26,7 +26,7 @@ describe('resourceMetadata', () => {
       createdBy: 'user_1',
       createdAt: '2026-05-23T00:00:00.000Z',
       updatedAt: '2026-05-24T00:00:00.000Z',
-      archivedAt: '2026-05-25T00:00:00.000Z',
+      deletedAt: '2026-05-25T00:00:00.000Z',
     })
   })
 
@@ -49,14 +49,14 @@ describe('resourceMetadata', () => {
       createdBy: null,
       createdAt: '2026-05-23T00:00:00.000Z',
       updatedAt: '2026-05-23T00:00:00.000Z',
-      archivedAt: null,
+      deletedAt: null,
     })
   })
 })
 
 describe('resourcePhase', () => {
-  it('derives active and archived lifecycle phases from archivedAt', () => {
+  it('keeps product-visible resources active regardless of persistence metadata', () => {
     expect(resourcePhase(null)).toBe('active')
-    expect(resourcePhase('2026-05-25T00:00:00.000Z')).toBe('archived')
+    expect(resourcePhase('2026-05-25T00:00:00.000Z')).toBe('active')
   })
 })

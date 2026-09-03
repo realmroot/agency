@@ -25,12 +25,12 @@ Feature: Environments
     And removed legacy fields and secret material are rejected with field-level details
 
   @environments/update @usecase
-  Scenario: Version environment changes and archive safely
+  Scenario: Version environment changes and delete safely
     Given an environment is used by existing sessions
     When the user changes a runtime-relevant field
     Then a new environment version is snapshotted and becomes current
     And changing only name or description does not create a new version
-    And archiving and unarchiving toggle availability while field edits on an archived environment are rejected
+    And deletion removes the environment from product APIs without a restore path
 
   # ── API contract (api: assembled server, real D1, OpenAPI) ──
 
@@ -38,7 +38,7 @@ Feature: Environments
   Scenario: Manage project environments through the API
     Given a signed-in user has access to a project
     When the user drives the environments API end to end
-    Then create, read, update, version history, archive, and list are supported
+    Then create, read, update, version history, soft deletion, and list are supported
     And the API enforces auth and project tenancy
     And legacy hosting and runtime fields are rejected and removed legacy fields fail validation
 
@@ -58,10 +58,10 @@ Feature: Environments
 
   @environments/api-pagination @api
   Scenario: List environments with pagination, filters, and tenant scope
-    Given a project has active and archived environments created across multiple dates
+    Given a project has live and soft-deleted environments created across multiple dates
     When the user lists environments with a page size
     Then the response includes data and cursor pagination metadata
-    And archived environments are hidden unless archived filtering is requested
+    And deleted environments are never returned by product APIs
     And created-date filters and project scope are respected
 
   @environments/api-openapi @api

@@ -22,12 +22,7 @@ export function IdentityDetailPage() {
         eyebrow="Identity"
         title={identity?.metadata.name ?? 'Identity detail'}
         titleAccessory={
-          identity ? (
-            <StatusBadge
-              value={identity.metadata.archivedAt ? 'archived' : identity.status.state}
-              label={identityStatusLabel(identity)}
-            />
-          ) : null
+          identity ? <StatusBadge value={identity.status.state} label={identityStatusLabel(identity)} /> : null
         }
         description="Identity details are safe to view. Credentials remain protected."
       />

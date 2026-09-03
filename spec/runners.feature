@@ -50,8 +50,8 @@ Feature: Runners
   @runners/register @usecase
   Scenario: Register and manage a runner with safe references
     Given an operator registers a runner with usable environment and credential references
-    When the runner is created, updated, or archived
-    Then references are validated, secret material is rejected, and archive uses the archived flag
+    When the runner is created, updated, or deleted
+    Then references are validated, secret material is rejected, and deletion leaves an irreversible tombstone
     And a machine-bound Realmroot runner re-registers instead of inserting a duplicate
 
   @runners/claim-eligibility @usecase

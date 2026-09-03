@@ -25,16 +25,14 @@ T = TypeVar("T", bound="UpdateSessionRequest")
 
 @_attrs_define
 class UpdateSessionRequest:
-    """ 
+    """
         Attributes:
             metadata (SessionUpdateMetadata | Unset):
             state (UpdateSessionRequestState | Unset):  Example: closed.
-            archived (bool | Unset):  Example: True.
      """
 
     metadata: SessionUpdateMetadata | Unset = UNSET
     state: UpdateSessionRequestState | Unset = UNSET
-    archived: bool | Unset = UNSET
 
 
 
@@ -51,8 +49,6 @@ class UpdateSessionRequest:
             state = self.state.value
 
 
-        archived = self.archived
-
 
         field_dict: dict[str, Any] = {}
 
@@ -62,8 +58,6 @@ class UpdateSessionRequest:
             field_dict["metadata"] = metadata
         if state is not UNSET:
             field_dict["state"] = state
-        if archived is not UNSET:
-            field_dict["archived"] = archived
 
         return field_dict
 
@@ -93,13 +87,9 @@ class UpdateSessionRequest:
 
 
 
-        archived = d.pop("archived", UNSET)
-
         update_session_request = cls(
             metadata=metadata,
             state=state,
-            archived=archived,
         )
 
         return update_session_request
-

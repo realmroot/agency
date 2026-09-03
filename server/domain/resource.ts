@@ -8,10 +8,10 @@ export interface ResourceMetadata {
   createdBy: string | null
   createdAt: string
   updatedAt: string
-  archivedAt: string | null
+  deletedAt: string | null
 }
 
-export type ResourcePhase = 'active' | 'archived'
+export type ResourcePhase = 'active'
 
 export function resourceMetadata(values: {
   uid: string
@@ -23,7 +23,7 @@ export function resourceMetadata(values: {
   createdBy?: string | null
   createdAt: string
   updatedAt: string
-  archivedAt?: string | null
+  deletedAt?: string | null
 }): ResourceMetadata {
   return {
     uid: values.uid,
@@ -35,10 +35,10 @@ export function resourceMetadata(values: {
     createdBy: values.createdBy ?? null,
     createdAt: values.createdAt,
     updatedAt: values.updatedAt,
-    archivedAt: values.archivedAt ?? null,
+    deletedAt: values.deletedAt ?? null,
   }
 }
 
-export function resourcePhase(archivedAt: string | null): ResourcePhase {
-  return archivedAt ? 'archived' : 'active'
+export function resourcePhase(_deletedAt: string | null): ResourcePhase {
+  return 'active'
 }
