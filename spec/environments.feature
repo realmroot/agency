@@ -56,7 +56,7 @@ Feature: Environments
   Scenario: Retry Environment creation without duplicating a Machine definition
     Given a caller supplies an Idempotency-Key when creating an Environment
     When the same project retries the same request with that key
-    Then AMA returns the originally created Environment with its original version
+    Then Enbor returns the originally created Environment with its original version
     And reusing the key for different Environment data is rejected as a conflict
 
   @environments/api-validation @api
@@ -91,7 +91,7 @@ Feature: Environments
   @environments/cloud-packages @usecase
   Scenario: Install declared packages in a cloud environment
     Given a cloud environment snapshot declares pinned Webi packages or versioned Go modules
-    When AMA prepares the Cloudflare Sandbox for a session
+    When Enbor prepares the Cloudflare Sandbox for a session
     Then each package is installed into the isolated session environment before the runtime starts
     And its bin directories are prepended to the runtime PATH
     And the cloud image provides the pinned Realmroot CLI without an Environment package declaration

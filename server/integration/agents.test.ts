@@ -477,7 +477,7 @@ describe('[CF] /api/v1/agents', () => {
     expect(oversizedRes.status).toBe(400)
   })
 
-  it('returns 409 without binding an Identity whose runtime has no registered AMA driver [spec: agents/identity-binding]', async () => {
+  it('returns 409 without binding an Identity whose runtime has no registered Enbor driver [spec: agents/identity-binding]', async () => {
     const authorization = await signIn()
     const createResponse = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
@@ -524,7 +524,7 @@ describe('[CF] /api/v1/agents', () => {
     await expect(response.json()).resolves.toEqual({
       error: {
         type: 'identity_runtime_unsupported',
-        message: 'Identity runtime is not supported by this AMA deployment: hermes.',
+        message: 'Identity runtime is not supported by this Enbor deployment: hermes.',
       },
     })
     await expect(

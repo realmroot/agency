@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AmaRuntimeEventSchema,
+  EnborRuntimeEventSchema,
   RuntimeBridgeControlMessageSchema,
   RuntimeBridgeErrorSchema,
   RuntimeBridgeInputMessageSchema,
@@ -92,7 +92,7 @@ describe('RuntimeBridgeOutputMessageSchema', () => {
     for (const output of outputs) {
       expect(RuntimeBridgeOutputMessageSchema.safeParse(output).success, output.type).toBe(true)
     }
-    expect(AmaRuntimeEventSchema.parse({ type: 'provider.custom', payload: { raw: true } })).toEqual({
+    expect(EnborRuntimeEventSchema.parse({ type: 'provider.custom', payload: { raw: true } })).toEqual({
       type: 'provider.custom',
       payload: { raw: true },
     })
@@ -106,7 +106,7 @@ describe('RuntimeBridgeOutputMessageSchema', () => {
       false,
     )
     expect(RuntimeBridgeOutputMessageSchema.safeParse({ type: 'resumeToken', requestId: 'run_1' }).success).toBe(false)
-    expect(AmaRuntimeEventSchema.safeParse([]).success).toBe(false)
+    expect(EnborRuntimeEventSchema.safeParse([]).success).toBe(false)
   })
 })
 

@@ -208,7 +208,7 @@ describe('[CF] auth v1', () => {
     await expect(response.json()).resolves.toEqual({ methods: [] })
   })
 
-  it('publishes RFC 9728 Realmroot resource metadata with the exact AMA scope catalog [spec: api-contracts/resource-discovery]', async () => {
+  it('publishes RFC 9728 Realmroot resource metadata with the exact Enbor scope catalog [spec: api-contracts/resource-discovery]', async () => {
     const res = await SELF.fetch('https://hostile.example/.well-known/oauth-protected-resource/api')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
@@ -253,7 +253,7 @@ describe('[CF] auth v1', () => {
         'work-items:write',
       ],
       bearer_methods_supported: ['header'],
-      resource_name: 'Any Managed Agents API',
+      resource_name: 'Enbor API',
       dpop_signing_alg_values_supported: ['ES256'],
       dpop_bound_access_tokens_required: false,
       realmroot_client_authentication: {
@@ -264,7 +264,7 @@ describe('[CF] auth v1', () => {
     })
   })
 
-  it('links the AMA resource root to the canonical OpenAPI service description', async () => {
+  it('links the Enbor resource root to the canonical OpenAPI service description', async () => {
     const res = await SELF.fetch('https://alias.example/api')
     expect(res.status).toBe(200)
     expect(res.headers.get('link')).toBe(
@@ -279,7 +279,7 @@ describe('[CF] auth v1', () => {
     await expect(res.json()).resolves.toEqual({
       version: 1,
       service: {
-        name: 'Any Managed Agents',
+        name: 'Enbor',
         origin: 'https://example.com',
       },
       auth: {

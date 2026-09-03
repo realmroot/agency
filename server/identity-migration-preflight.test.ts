@@ -35,7 +35,7 @@ describe('Identity migration preflight', () => {
         agent_ids: 'agent_1,agent_2',
         source_ids: 'agent:agent_1,agent:agent_2',
         resource_id: null,
-        detail: 'Realmroot credential is used by multiple AMA Agents',
+        detail: 'Realmroot credential is used by multiple Enbor Agents',
       },
       {
         category: 'trigger_runtime_mismatch',

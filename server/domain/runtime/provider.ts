@@ -19,7 +19,7 @@ export function parseRuntimeAgentSnapshot(value: string | null) {
   }
 }
 
-// Single source for the AMA cloud runtime's pinned provider + model. Runtime
+// Single source for the Enbor cloud runtime's pinned provider + model. Runtime
 // dispatch refuses an absent provider instead of inventing a platform default.
 export function resolveSessionProviderModel(
   session: { modelProvider: string | null },
@@ -28,7 +28,7 @@ export function resolveSessionProviderModel(
 ): { provider: string; model: string | null } {
   const provider = session.modelProvider ?? (typeof agentSnapshot.provider === 'string' ? agentSnapshot.provider : null)
   if (!provider) {
-    throw new Error('AMA cloud runtime requires an explicitly pinned provider')
+    throw new Error('Enbor cloud runtime requires an explicitly pinned provider')
   }
   const model =
     typeof modelConfig.model === 'string'

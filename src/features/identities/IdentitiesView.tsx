@@ -12,7 +12,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Identity } from '@/lib/amarpc'
+import type { Identity } from '@/lib/enborrpc'
 import { identityAssignmentLabel, identityStatusLabel } from './identity-display'
 
 export function IdentitiesView({

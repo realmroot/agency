@@ -28,7 +28,7 @@ const checks = [
     group_concat(DISTINCT agent_id) AS agent_ids,
     group_concat(source_id) AS source_ids,
     json_extract(descriptor, '$.agentId') AS resource_id,
-    'Remote identity is used by multiple AMA Agents' AS detail
+    'Remote identity is used by multiple Enbor Agents' AS detail
   FROM sources
   GROUP BY json_extract(descriptor, '$.agentId'), json_extract(descriptor, '$.origin')
   HAVING count(DISTINCT agent_id) > 1`,
@@ -38,7 +38,7 @@ const checks = [
     group_concat(DISTINCT agent_id) AS agent_ids,
     group_concat(source_id) AS source_ids,
     NULL AS resource_id,
-    'Realmroot credential is used by multiple AMA Agents' AS detail
+    'Realmroot credential is used by multiple Enbor Agents' AS detail
   FROM sources
   GROUP BY json_extract(descriptor, '$.credentialRef')
   HAVING count(DISTINCT agent_id) > 1`,

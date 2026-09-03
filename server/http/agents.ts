@@ -298,7 +298,7 @@ const createAgentRoute = createRoute({
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'Identity already bound or its runtime has no registered AMA driver',
+      description: 'Identity already bound or its runtime has no registered Enbor driver',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },

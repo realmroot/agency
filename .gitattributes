@@ -1,4 +1,4 @@
-cmd/ama-runner/pkg/runtimebridge/bundle.mjs linguist-generated=true
+cmd/enbor-runner/pkg/runtimebridge/bundle.mjs linguist-generated=true
 sdk/go/ama/ama.gen.go linguist-generated=true
 sdk/go/ama/client.go linguist-generated=true
 sdk/python/ama_sdk/** linguist-generated=true

@@ -31,4 +31,4 @@ skills-lock.json
 .codex/agents/
 .codex/worktrees/
 .gemini/agents/
-cmd/ama-runner/ama-runner
+cmd/enbor-runner/enbor-runner

@@ -58,7 +58,7 @@ describe('claudeCodeProvider', () => {
 })
 
 describe('ClaudeEventMapper', () => {
-  it('maps Claude Code builtin tool calls to canonical AMA runtime tools', () => {
+  it('maps Claude Code builtin tool calls to canonical Enbor runtime tools', () => {
     const mapper = new ClaudeEventMapper()
     const events = mapper.map({
       type: 'assistant',

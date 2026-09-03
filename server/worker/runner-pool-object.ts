@@ -1,4 +1,4 @@
-import { isAmaSessionEventType } from '@shared/session-events'
+import { isEnborSessionEventType } from '@shared/session-events'
 import { createDeps } from '../composition'
 import type { Env } from '../env'
 import { claimLease, materializeWorkItemPayload } from '../usecases/leases'
@@ -796,7 +796,7 @@ function relayedRunnerEventFrom(value: unknown): RelayedRunnerEvent | null {
     typeof record.sequence !== 'number' ||
     typeof record.createdAt !== 'string' ||
     typeof record.type !== 'string' ||
-    !isAmaSessionEventType(record.type)
+    !isEnborSessionEventType(record.type)
   ) {
     return null
   }

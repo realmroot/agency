@@ -18,16 +18,16 @@ through Cloudflare Workers Builds.
 
 ## OAuth 2.0 and OpenID Connect configuration
 
-AMA uses standard OAuth 2.0 and OpenID Connect protocols. Realmroot is the
-currently configured provider; it is not part of AMA's protocol contract.
+Enbor uses standard OAuth 2.0 and OpenID Connect protocols. Realmroot is the
+currently configured provider; it is not part of Enbor's protocol contract.
 
 Register these provider clients for the deployment:
 
-- one confidential Web client for the AMA backend;
+- one confidential Web client for the Enbor backend;
 - one machine client for Inbox subscription management; and
 - one public native client for Runner loopback PKCE.
 
-Register AMA as the Resource Server only after its RFC 9728 discovery document
+Register Enbor as the Resource Server only after its RFC 9728 discovery document
 and generated OpenAPI document are live.
 
 Required settings:

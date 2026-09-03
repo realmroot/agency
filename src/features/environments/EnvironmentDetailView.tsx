@@ -16,7 +16,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import { RelatedResourcesTable } from '@/features/console/related-resources-table'
-import type { Environment, Runner, Session } from '@/lib/amarpc'
+import type { Environment, Runner, Session } from '@/lib/enborrpc'
 
 function networkSummary(environment: Environment) {
   if (environment.spec.networking.type === 'limited') {

@@ -108,7 +108,7 @@ describe('session-runtime', () => {
     ])
   })
 
-  it('rejects a missing AMA cloud model instead of applying a platform default', async () => {
+  it('rejects a missing Enbor cloud model instead of applying a platform default', async () => {
     await expect(
       runSessionTurn({ AMA_RUNTIME_MODE: 'test' } as Env, {
         sessionId: 'session_123',
@@ -119,7 +119,7 @@ describe('session-runtime', () => {
         prompt: 'Do not run.',
         onEvent: async () => undefined,
       }),
-    ).rejects.toThrow('AMA cloud runtime requires an explicitly pinned model')
+    ).rejects.toThrow('Enbor cloud runtime requires an explicitly pinned model')
   })
 
   it('rejects cloud sandbox startup without an explicitly pinned model', async () => {
@@ -132,7 +132,7 @@ describe('session-runtime', () => {
         agentSnapshot: { systemPrompt: 'No defaults.' },
         environmentSnapshot: null,
       }),
-    ).rejects.toThrow('AMA cloud runtime requires an explicitly pinned model')
+    ).rejects.toThrow('Enbor cloud runtime requires an explicitly pinned model')
   })
 
   it('returns cloud-owned runtime metadata in test mode', async () => {
@@ -290,7 +290,7 @@ describe('session-runtime', () => {
     expect(JSON.stringify(events)).toContain('"type":"tool_call"')
     expect(JSON.stringify(events)).toContain('"type":"tool_result"')
     expect(JSON.stringify(events)).toContain('Tool result observed: clean')
-    expect(JSON.stringify(events)).not.toContain('Message accepted by AMA runtime.')
+    expect(JSON.stringify(events)).not.toContain('Message accepted by Enbor runtime.')
     expect(JSON.stringify(events)).not.toContain('Received:')
   })
 
@@ -476,7 +476,7 @@ describe('session-runtime', () => {
 
     expect(result).toEqual({ status: 'aborted' })
     expect(events.map((event) => event.type)).not.toContain('message.completed')
-    expect(JSON.stringify(events)).not.toContain('AMA runtime processed: Alpha durable prompt')
+    expect(JSON.stringify(events)).not.toContain('Enbor runtime processed: Alpha durable prompt')
   })
 
   it('returns an unknown-tool result to the Agent without terminalizing the turn [spec: runtime/error-termination] [spec: runtime/sandbox-toolset]', async () => {

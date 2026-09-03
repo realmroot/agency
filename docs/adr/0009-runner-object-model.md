@@ -13,16 +13,16 @@ lease lifecycle; too little separation leaks platform and protocol details.
 ## Decision
 
 The following structure fixes the target shape for the Go `enbor-runner`
-implementation. Its source module remains under `cmd/ama-runner` until the
+implementation. Its source module remains under `cmd/enbor-runner` until the
 internal identifier migration is performed separately.
 The goal is to keep the runner boring: one process that registers itself,
 polls work, keeps a relay open, executes sandbox or external-runtime work, and
-reports lease state through the Go AMA SDK.
+reports lease state through the Go Enbor SDK.
 
 ## Principles
 
 - Keep packages by capability, not by layer names.
-- Keep CLI command assembly in `cmd/ama-runner/cmd`; keep config loading and
+- Keep CLI command assembly in `cmd/enbor-runner/cmd`; keep config loading and
   credential helpers in `internal/cli` and `internal/config`.
 - Keep the daemon package responsible for runner lifecycle, lease orchestration,
   and relay wiring.
@@ -35,7 +35,7 @@ reports lease state through the Go AMA SDK.
   logical paths have identical semantics on every host.
 - Keep host-specific primitives in narrow `internal/sys/*` packages. Their
   callers must not branch on operating-system names or import OS-specific APIs.
-- Do not introduce a runner-side AMA Server client abstraction. Runner code calls
+- Do not introduce a runner-side Enbor Server client abstraction. Runner code calls
   the Go SDK facade directly.
 - Do not add objects unless they own a real lifecycle or invariant. A struct that
   only groups moved functions is not an improvement.
@@ -74,7 +74,7 @@ Native process lifecycle:
 - updates the persisted login-startup policy without interrupting a running service
 - starts, stops, restarts, and disables that service
 - waits for the daemon's first successful heartbeat readiness record
-- reports native local state separately from AMA control-plane state
+- reports native local state separately from Enbor control-plane state
 - owns local service logs without storing credentials
 
 ### `version.Info`
@@ -117,10 +117,10 @@ Single work lease orchestration:
 - checks required runner capability
 - renews the active lease
 - runs tool work through `sandbox.SandboxAdapter`
-- prepares session workspaces for AMA and CLI-backed runtime sessions
-- starts AMA runtime sessions by registering a `session.SandboxHandle` for first-party tool execution
+- prepares session workspaces for Enbor and CLI-backed runtime sessions
+- starts Enbor runtime sessions by registering a `session.SandboxHandle` for first-party tool execution
 - starts CLI-backed runtime sessions through `runtime.Runner`
-- completes, fails, cancels, or interrupts the lease through `ama.Client`
+- completes, fails, cancels, or interrupts the lease through `enbor.Client`
 
 This is intentionally one object, not a stack of lifecycle/executor/finalizer
 objects. A lease is the unit of orchestration.
@@ -133,7 +133,7 @@ Runner-hosted session relay:
 - session command routing by session id
 - event backfill from local event store
 - command delivery to CLI-backed runtime sessions
-- sandbox request execution for AMA runtime sessions
+- sandbox request execution for Enbor runtime sessions
 
 The relay lives in `internal/session` because it is runner-hosted session
 transport and server protocol wiring. It owns relay socket dispatch, live session
@@ -152,7 +152,7 @@ Persisted runner identity:
 
 Reported runtimes:
 
-- reports the first-party AMA runtime when the host supports its tool executor
+- reports the first-party Enbor runtime when the host supports its tool executor
 - detects local runtime CLIs from the runtime registry
 - asks `runtime.Bridge` to probe model availability
 - tracks usage windows
@@ -196,7 +196,7 @@ CLI-backed runtime session execution:
 - emits runtime events through a callback
 - reports whether the run timed out
 
-It does not prepare workspaces, update AMA leases, capture memory-store snapshots,
+It does not prepare workspaces, update Enbor leases, capture memory-store snapshots,
 or know about the runner relay hub. Those are lease orchestration concerns owned
 by `daemon.LeaseWorker`.
 
@@ -206,14 +206,14 @@ by `daemon.LeaseWorker`.
   forwarding abstractions.
 - Host-specific and cross-language protocol details stay behind narrow package
   boundaries.
-- The Runner calls the Go AMA SDK facade directly and does not maintain a second
+- The Runner calls the Go Enbor SDK facade directly and does not maintain a second
   control-plane client abstraction.
 - Future structural changes that overturn this ownership model require a
   superseding ADR.
 
 ## Rejected alternatives
 
-- A separate `controlplane` package inside runner: rejected because AMA Server API
+- A separate `controlplane` package inside runner: rejected because Enbor Server API
   calls belong behind the Go SDK facade, not a runner-specific adapter.
 - `LeaseLifecycle` + `ToolLeaseExecutor` + `SessionLeaseExecutor` +
   `RuntimeSession`: rejected as too fragmented. They split one lease lifecycle

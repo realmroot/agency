@@ -1,6 +1,6 @@
 # Self-Hosted Enbor Runner Operations
 
-This runbook covers installation and operation of `cmd/ama-runner`. It is not a
+This runbook covers installation and operation of `cmd/enbor-runner`. It is not a
 product or API specification. Observable Runner behavior is specified in
 [`../../spec/runners.feature`](../../spec/runners.feature) and runtime behavior
 in [`../../spec/runtime.feature`](../../spec/runtime.feature).
@@ -8,7 +8,7 @@ in [`../../spec/runtime.feature`](../../spec/runtime.feature).
 ## Build
 
 ```bash
-cd cmd/ama-runner
+cd cmd/enbor-runner
 go test ./...
 go build ./...
 ```
@@ -37,7 +37,7 @@ repository after a new Enbor Runner release is published.
 
 Authenticate with the configured OAuth 2.0 and OpenID Connect provider before
 starting the daemon. Realmroot is the current provider. Select the personal or
-organization context that owns the AMA project.
+organization context that owns the Enbor project.
 
 ```bash
 enbor-runner auth login --api-server "https://ama.example.com"
@@ -94,7 +94,7 @@ On Windows:
 
 The Enbor name changes the executable but deliberately keeps the existing
 `AMA_RUNNER_*` environment variables, `ama-runner` state directories, managed
-service identifiers, Go module paths, and `ama-runner-work` protocol identifier.
+service identifiers, and `ama-runner-work` protocol identifier.
 Existing Runner state therefore remains reusable and the control-plane protocol
 does not change as part of packaging.
 
@@ -159,7 +159,7 @@ Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For
 example, a runner can use Claude Code's model-reviewed permission mode with
 `AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values
 before provider execution. Session environment variables cannot change these
-settings because AMA reserves the `AMA_` prefix for runner-owned configuration.
+settings because Enbor reserves the `AMA_` prefix for runner-owned configuration.
 
 ## Local files
 
@@ -187,7 +187,7 @@ host. Use it only on a trusted host for trusted workloads. Use an isolated
 adapter for untrusted workloads.
 
 Install the desired runtime CLIs for the same operating-system account that
-runs the service. Keep AMA control-plane credentials and operator configuration
+runs the service. Keep Enbor control-plane credentials and operator configuration
 outside agent workspaces.
 
 ## Diagnostics

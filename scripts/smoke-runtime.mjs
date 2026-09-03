@@ -1,9 +1,9 @@
 // Smoke test for the runner-side runtime surface.
 //
-// AMA is the first-party runtime and is executed through the runner's Go tool
+// Enbor is the first-party runtime and is executed through the runner's Go tool
 // adapter. Codex, Claude Code, and Copilot are CLI-backed runtimes hosted by the
 // Node bridge. This smoke exercises that bridge in deterministic test mode and
-// asserts that AMA is not accidentally routed through the CLI-backed provider path.
+// asserts that Enbor is not accidentally routed through the CLI-backed provider path.
 //
 //   pnpm run smoke:mock
 import { spawn } from 'node:child_process'
@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import readline from 'node:readline'
 
-const BUNDLE = join(process.cwd(), 'cmd', 'ama-runner', 'pkg', 'runtimebridge', 'bundle.mjs')
+const BUNDLE = join(process.cwd(), 'cmd', 'enbor-runner', 'pkg', 'runtimebridge', 'bundle.mjs')
 let passed = 0
 let failed = 0
 
@@ -201,7 +201,7 @@ async function livePermissionFlow() {
   bridge.stop()
 }
 
-async function amaRejectedByBridge() {
+async function enborRejectedByBridge() {
   console.log('\n[ama] first-party runtime boundary')
   const bridge = startBridge()
   await bridge.waitReady()
@@ -219,7 +219,7 @@ async function main() {
   await deterministicRun('codex')
   await liveRunWithPrompt()
   await livePermissionFlow()
-  await amaRejectedByBridge()
+  await enborRejectedByBridge()
   console.log(`\n=== smoke: ${passed} passed, ${failed} failed ===`)
   process.exit(failed === 0 ? 0 : 1)
 }

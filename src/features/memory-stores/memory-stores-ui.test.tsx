@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import type { MemoryStore, MemoryStoreMemory } from '@/lib/amarpc'
+import type { MemoryStore, MemoryStoreMemory } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import {
   type MemoryOverrides,

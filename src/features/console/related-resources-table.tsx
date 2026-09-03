@@ -10,7 +10,7 @@ import {
   TableSurface,
 } from '@/console/components'
 import { formatDate } from '@/console/format'
-import type { Agent, Session } from '@/lib/amarpc'
+import type { Agent, Session } from '@/lib/enborrpc'
 
 function isAgent(item: Agent | Session): item is Agent {
   return 'systemPrompt' in item.spec

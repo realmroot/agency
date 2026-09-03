@@ -333,7 +333,7 @@ describe('[spec: identities/provision] createIdentity', () => {
     expect(fx.credentialCount()).toBe(3)
   })
 
-  it('provisions a canonical Identity runtime even when AMA has no execution driver for it', async () => {
+  it('provisions a canonical Identity runtime even when Enbor has no execution driver for it', async () => {
     const fx = fixture()
     const result = await createIdentity(fx.deps, auth, { ...input, runtime: 'antigravity' })
 

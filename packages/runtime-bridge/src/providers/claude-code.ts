@@ -1,9 +1,9 @@
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Message, MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
 import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import { query } from '@anthropic-ai/claude-agent-sdk'
+import type { Message, MessageContentBlock, ToolResult } from '@enbor/runtime-contracts/session-events'
 import {
   messageCompleted,
   messageEvent,
@@ -17,12 +17,12 @@ import {
   toolResultBlock,
   turnEnd,
   usageEvent,
-} from '../events/ama'
+} from '../events/enbor'
 import { resolveCliPath } from '../host/cli'
 import {
-  type AmaRuntimeEvent,
   agentSystemPrompt,
   createAsyncPushQueue,
+  type EnborRuntimeEvent,
   type RuntimeProvider,
   type RuntimeProviderHandle,
   type RuntimeProviderRequest,
@@ -130,7 +130,7 @@ function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
-function usageEventsFromResult(msg: Record<string, unknown>): AmaRuntimeEvent[] {
+function usageEventsFromResult(msg: Record<string, unknown>): EnborRuntimeEvent[] {
   const modelUsage = objectValue(msg.modelUsage)
   const events = Object.entries(modelUsage).flatMap(([model, value]) => {
     if (!model) return []
@@ -223,7 +223,7 @@ export class ClaudeEventMapper {
   private text = ''
   private reasoning = ''
 
-  map(msg: SDKMessage): AmaRuntimeEvent[] {
+  map(msg: SDKMessage): EnborRuntimeEvent[] {
     switch (msg.type) {
       case 'stream_event':
         return this.mapStreamEvent(msg as unknown as Record<string, unknown>)
@@ -255,7 +255,7 @@ export class ClaudeEventMapper {
     }
   }
 
-  private mapStreamEvent(msg: Record<string, unknown>): AmaRuntimeEvent[] {
+  private mapStreamEvent(msg: Record<string, unknown>): EnborRuntimeEvent[] {
     const event = objectValue(msg.event)
     if (event.type === 'message_start') {
       const message = objectValue(event.message)
@@ -288,9 +288,9 @@ export class ClaudeEventMapper {
   }
 }
 
-export function claudeCodeEventsFromJsonl(filePath: string): AmaRuntimeEvent[] {
+export function claudeCodeEventsFromJsonl(filePath: string): EnborRuntimeEvent[] {
   const mapper = new ClaudeEventMapper()
-  const events: AmaRuntimeEvent[] = []
+  const events: EnborRuntimeEvent[] = []
   let lineNumber = 0
   for (const line of readFileSync(filePath, 'utf8').split('\n')) {
     lineNumber += 1
@@ -363,8 +363,8 @@ export const claudeCodeProvider: RuntimeProvider = {
     const abortController = new AbortController()
     const claudePath = resolveCliPath('claude')
     const systemPrompt = agentSystemPrompt(request)
-    // The AMA session id is a UUID, so it doubles as Claude Code's own session id
-    // for both fresh runs and resumes — keeping the Claude session 1:1 with AMA.
+    // The Enbor session id is a UUID, so it doubles as Claude Code's own session id
+    // for both fresh runs and resumes — keeping the Claude session 1:1 with Enbor.
     let resumeToken = request.resumeToken ?? request.sessionId
     const options = {
       ...(request.resume ? { resume: request.resumeToken ?? request.sessionId } : { sessionId: request.sessionId }),

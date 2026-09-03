@@ -1,10 +1,10 @@
 import { HttpResponse, http } from 'msw'
 import { setupServer } from 'msw/node'
 
-// The web suite drives the REAL AMA RPC client (src/lib/amarpc, a Hono `hc` RPC client
+// The web suite drives the REAL Enbor RPC client (src/lib/enborrpc, a Hono `hc` RPC client
 // over relative /api/v1/* fetches). MSW intercepts at the network boundary so the
 // client's request building, error mapping, and refetch logic are exercised for
-// real — never mock @/lib/amarpc. Handlers are backed by a small in-memory store so
+// real — never mock @/lib/enborrpc. Handlers are backed by a small in-memory store so
 // a create's post-mutation refetch converges instead of flapping on a fixed body.
 export const server = setupServer(
   http.post('*/api/v1/sessions/:sessionId/socket-tickets', () =>

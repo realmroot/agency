@@ -29,7 +29,7 @@ const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 // Resolves envFrom secret handles into env values. Both
 // dispatch paths use this seam: self-hosted lease materialization and cloud
-// session startup. AMA versions decrypt the stored ciphertext.
+// session startup. Enbor versions decrypt the stored ciphertext.
 // Resolved values exist only in the runtime dispatch; they are never written
 // to D1, session events, audit records, or logs.
 export async function resolveEnvFrom(

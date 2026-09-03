@@ -30,7 +30,7 @@ class IdentityDescriptorType0:
                 legacy opaque snapshot values remain readable. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
             username (str):  Example: researcher.
             runtime (str): Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a
-                registered AMA runtime driver. Example: codex.
+                registered Enbor runtime driver. Example: codex.
      """
 
     identity_id: str

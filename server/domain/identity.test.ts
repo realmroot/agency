@@ -18,7 +18,7 @@ const descriptor: IdentityDescriptor = {
 }
 
 describe('Identity runtime resolution', () => {
-  it('accepts canonical runtime identifiers independently of AMA drivers', () => {
+  it('accepts canonical runtime identifiers independently of Enbor drivers', () => {
     expect(['hermes', 'antigravity', 'custom.runtime_1'].every(isIdentityRuntime)).toBe(true)
     expect(['', '.invalid', 'Uppercase', 'path/runtime', 'a'.repeat(65)].some(isIdentityRuntime)).toBe(false)
   })

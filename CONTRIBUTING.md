@@ -1,10 +1,10 @@
-# Contributing to Any Managed Agents
+# Contributing to Enbor
 
-Thanks for helping improve Any Managed Agents. This guide covers local development, verification, and contribution expectations. Product positioning and the non-normative project overview belong in [README.md](README.md); product and API behavior belong only in `spec/*.feature`.
+Thanks for helping improve Enbor. This guide covers local development, verification, and contribution expectations. Product positioning and the non-normative project overview belong in [README.md](README.md); product and API behavior belong only in `spec/*.feature`.
 
 ## Project Boundaries
 
-Any Managed Agents is a Cloudflare-native Managed Agent control plane.
+Enbor is a Cloudflare-native Managed Agent control plane.
 
 - Read `docs/adr/` for architecture rationale and ownership boundaries.
 - Read `spec/*.feature` for every observable product and API behavior.
@@ -26,8 +26,8 @@ This is a clean-room implementation. Do not copy source, specs, UI text, databas
 ## Local Setup
 
 ```bash
-git clone https://github.com/saltbo/any-managed-agents.git
-cd any-managed-agents
+git clone https://github.com/realmroot/enbor.git
+cd enbor
 pnpm install
 cp .env.example .dev.vars
 pnpm dev
@@ -87,7 +87,7 @@ server/db/         D1 schema and persistence helpers
 server/runtime/    Cloudflare Sandbox and Pi runtime integration
 src/app/           React providers and router setup
 src/features/      Route-level console features
-src/console/       Shared AMA console components and view models
+src/console/       Shared Enbor console components and view models
 src/components/ui/ shadcn-generated primitives
 spec/              Product and API behavior in Gherkin, one Feature per capability
 e2e/               Native Playwright crowns (*.spec.ts), fixtures, and local harnesses (@e2e)
@@ -107,7 +107,7 @@ hand-written Markdown API reference or SDK usage documentation.
 
 ## Authentication
 
-AMA is an OAuth protected Resource with OpenID Connect identity:
+Enbor is an OAuth protected Resource with OpenID Connect identity:
 
 - `oauth4webapi` in the Worker for authorization-code PKCE, callback, and confidential client handling.
 - `jose` in the Worker for JWT/JWKS and RFC 9449 DPoP verification.
@@ -129,7 +129,7 @@ Expected configuration names use generic OIDC terminology, for example:
 Describe visible console behavior in `spec/web-console.feature` or the owning
 capability Feature before implementation.
 
-- Compose route pages from shadcn primitives and shared AMA components.
+- Compose route pages from shadcn primitives and shared Enbor components.
 - Use React Query for server state.
 - Keep primary resources URL-routed and deep-linkable.
 - Use shared formatting and confirmation-dialog helpers.

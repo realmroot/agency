@@ -2,12 +2,12 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFil
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
-import { SessionEventSchema, type SessionEvent } from '@ama/runtime-contracts/session-events'
+import { SessionEventSchema, type SessionEvent } from '@enbor/runtime-contracts/session-events'
 import {
   runtimeEventsFromSource,
   type RuntimeReplaySourceFormat,
 } from '../packages/runtime-bridge/src/replay'
-import type { AmaRuntimeEvent, RuntimeBridgeRunMessage } from '../packages/runtime-bridge/src/protocol'
+import type { EnborRuntimeEvent, RuntimeBridgeRunMessage } from '../packages/runtime-bridge/src/protocol'
 
 type ExternalRuntimeName = RuntimeBridgeRunMessage['runtime']
 
@@ -69,7 +69,7 @@ export function rebuildSessionEvents(input: RebuildInput): RebuildResult {
 }
 
 export function buildSessionRecords(
-  events: AmaRuntimeEvent[],
+  events: EnborRuntimeEvent[],
   sessionId: string,
   baseCreatedAt: string,
 ): SessionEvent[] {
@@ -137,14 +137,14 @@ Options:
   --runtime <name>          Runtime when provider-events records do not declare one: codex, claude-code, copilot
   --source <path>           Source JSONL path. Defaults to provider-events.jsonl next to the target events.jsonl.
   --source-format <format>  auto, provider-events, bridge-ndjson (default: auto)
-  --session-id <id>         AMA session id. Default target is the runner store for this session.
+  --session-id <id>         Enbor session id. Default target is the runner store for this session.
   --events <path>           Exact target events.jsonl path. Session id is inferred from its parent directory unless --session-id is set.
-  --work-dir <path>         AMA Runner work dir. Required unless AMA_RUNNER_WORK_DIR is set.
+  --work-dir <path>         Enbor Runner work dir. Required unless AMA_RUNNER_WORK_DIR is set.
   --dry-run                 Build and validate without writing
   --no-backup               Replace target without backing up the existing file
 
 Source formats:
-  provider-events  Captured provider SDK stream records written by the AMA runner.
+  provider-events  Captured provider SDK stream records written by the Enbor runner.
   bridge-ndjson     Captured runtime bridge stdout; provider.event frames are extracted.
 `
 }

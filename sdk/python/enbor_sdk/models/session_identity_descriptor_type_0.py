@@ -30,7 +30,7 @@ class SessionIdentityDescriptorType0:
                 legacy opaque snapshot values remain readable.
             username (str):
             runtime (str): Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a
-                registered AMA runtime driver. Example: codex.
+                registered Enbor runtime driver. Example: codex.
      """
 
     identity_id: str

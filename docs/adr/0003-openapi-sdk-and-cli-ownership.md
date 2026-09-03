@@ -26,7 +26,7 @@ would allow the public contract to drift.
   metadata and invoke operations described by OpenAPI.
 - Agent-facing skills point clients to standard discovery, authorization, and
   OpenAPI mechanisms rather than copying the API into Markdown. Realmroot
-  Toolbox is the currently supported client implementation, not part of the AMA
+  Toolbox is the currently supported client implementation, not part of the Enbor
   protocol contract.
 
 Observable SDK, client, and API behavior is specified in
@@ -39,5 +39,5 @@ Observable SDK, client, and API behavior is specified in
 - The web console keeps project-local type inference without redefining the
   external contract.
 - CLI functionality evolves through the protected-resource and OpenAPI
-  contracts rather than a second AMA command surface or a provider-specific
+  contracts rather than a second Enbor command surface or a provider-specific
   protocol.

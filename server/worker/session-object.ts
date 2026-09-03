@@ -2,9 +2,9 @@
 // runner events are written into this DO's SQLite store, then fanned out to the
 // browser sockets watching the same session.
 
-import type { SessionSocketClientMessage } from '@ama/runtime-contracts/session-socket'
-import { sessionSocketClientMessageFrom } from '@ama/runtime-contracts/session-socket'
-import type { AmaEvent } from '@shared/session-events'
+import type { SessionSocketClientMessage } from '@enbor/runtime-contracts/session-socket'
+import { sessionSocketClientMessageFrom } from '@enbor/runtime-contracts/session-socket'
+import type { EnborEvent } from '@shared/session-events'
 import { createDeps } from '../composition'
 import type { Env } from '../env'
 import type { AuthScope, EventPage, EventQuery } from '../usecases/ports'
@@ -24,7 +24,7 @@ import {
 
 type AppendBody = {
   scope: EventWriteContext
-  canonicalEvent: AmaEvent
+  canonicalEvent: EnborEvent
 }
 
 type RelayAppendBody = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionEvent } from '@/lib/amarpc'
+import type { SessionEvent } from '@/lib/enborrpc'
 import { buildSessionToolTrace, summarizeToolValue } from './session-tool-trace'
 
 let sequence = 0

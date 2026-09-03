@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import type { MessageContentBlock, ToolResult } from '@ama/runtime-contracts/session-events'
+import type { MessageContentBlock, ToolResult } from '@enbor/runtime-contracts/session-events'
 import '@github/copilot/sdk'
 import { approveAll, CopilotClient } from '@github/copilot-sdk'
 import {
@@ -16,11 +16,11 @@ import {
   toolResultMessage,
   turnEnd,
   usageEvent,
-} from '../events/ama'
+} from '../events/enbor'
 import { resolveCliPath } from '../host/cli'
 import {
-  type AmaRuntimeEvent,
   agentSystemPrompt,
+  type EnborRuntimeEvent,
   type RuntimeProvider,
   type RuntimeProviderHandle,
   type RuntimeProviderRequest,
@@ -100,7 +100,7 @@ export class CopilotEventMapper {
   private text = ''
   private reasoning = ''
 
-  map(event: CopilotEvent): AmaRuntimeEvent[] {
+  map(event: CopilotEvent): EnborRuntimeEvent[] {
     switch (event.type) {
       case 'assistant.turn.started':
         return [runtimeEvent('turn.started')]
@@ -161,11 +161,11 @@ export class CopilotEventMapper {
     }
   }
 
-  private messageDelta(event: CopilotEvent, kind: 'text' | 'reasoning'): AmaRuntimeEvent[] {
+  private messageDelta(event: CopilotEvent, kind: 'text' | 'reasoning'): EnborRuntimeEvent[] {
     const delta = event.data.deltaContent
     if (!delta) return []
     const id = this.activeMessageId ?? event.data.messageId ?? randomId('msg')
-    const events: AmaRuntimeEvent[] = []
+    const events: EnborRuntimeEvent[] = []
     if (!this.activeMessageId) {
       this.activeMessageId = id
       events.push(messageStarted({ id, role: 'assistant', content: [] }))
@@ -187,9 +187,9 @@ export class CopilotEventMapper {
   }
 }
 
-export function copilotEventsFromJsonl(filePath: string): AmaRuntimeEvent[] {
+export function copilotEventsFromJsonl(filePath: string): EnborRuntimeEvent[] {
   const mapper = new CopilotEventMapper()
-  const events: AmaRuntimeEvent[] = []
+  const events: EnborRuntimeEvent[] = []
   let lineNumber = 0
   for (const line of readFileSync(filePath, 'utf8').split('\n')) {
     lineNumber += 1
@@ -261,7 +261,7 @@ export const copilotProvider: RuntimeProvider = {
         ? await client.resumeSession(request.resumeToken, sessionConfig)
         : await client.createSession({ sessionId: request.sessionId, ...sessionConfig })
 
-    const queue: AmaRuntimeEvent[] = []
+    const queue: EnborRuntimeEvent[] = []
     const mapper = new CopilotEventMapper()
     let done = false
     let queueError: unknown

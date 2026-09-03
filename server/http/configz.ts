@@ -7,7 +7,7 @@ type ConfigzRoutes = OpenAPIHono<DepsEnv>
 
 const PublicServiceConfigSchema = z
   .object({
-    name: z.literal('Any Managed Agents').openapi({ example: 'Any Managed Agents' }),
+    name: z.literal('Enbor').openapi({ example: 'Enbor' }),
     origin: z.string().url().openapi({ example: 'https://ama.example.com' }),
   })
   .openapi('PublicServiceConfig')
@@ -72,7 +72,7 @@ export function publicConfig(
   requestUrl: string,
 ) {
   const origin = new URL(requestUrl).origin
-  const service = { name: 'Any Managed Agents', origin } as const
+  const service = { name: 'Enbor', origin } as const
   try {
     const { issuer } = requireOidcConfig(env as Env)
     const runnerClientId = env.OIDC_RUNNER_CLIENT_ID?.trim()

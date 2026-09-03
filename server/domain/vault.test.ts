@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  amaSecretRef,
   credentialDataKeys,
   credentialScopedSecretRef,
   credentialVersionSecretRef,
+  enborSecretRef,
   parseRealmrootAgentState,
   secretReference,
   secretRefIdentity,
@@ -266,7 +266,7 @@ describe('[spec: identities/provision] strict Realmroot v0.4.2 state parsing', (
       { context: { alpha: 1, zeta: 2 }, type: 'realmroot_resource' },
     ]
     const state = realmrootState({
-      name: 'AMA Agent',
+      name: 'Enbor Agent',
       registration_approval: {
         verification_uri_complete: 'https://realmroot.example.com/approve?code=abc',
         expires_at: '2026-09-01T00:00:00.000Z',
@@ -277,7 +277,7 @@ describe('[spec: identities/provision] strict Realmroot v0.4.2 state parsing', (
         issuer: 'https://realmroot.example.com/api/auth',
         subject: 'rr_agent_1',
         username: 'ama-agent',
-        name: 'AMA Agent',
+        name: 'Enbor Agent',
         runtime: 'ama',
       },
       credential_sources: {
@@ -537,7 +537,7 @@ describe('[spec: vaults/secret-reference] secretRefIdentity', () => {
   })
 
   it('rejects malformed secret refs and extracts vault ids', () => {
-    expect(amaSecretRef('vault 1')).toBe('ama://vaults/vault%201')
+    expect(enborSecretRef('vault 1')).toBe('ama://vaults/vault%201')
     expect(credentialVersionSecretRef({ vaultId: 'vault_1', credentialId: 'cred_1', versionId: 'ver_1' })).toBe(
       'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
     )

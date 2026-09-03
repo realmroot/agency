@@ -1,4 +1,4 @@
-import type { Session, SessionAgentSnapshot, SessionEnvironmentSnapshot, SessionState } from '@/lib/amarpc'
+import type { Session, SessionAgentSnapshot, SessionEnvironmentSnapshot, SessionState } from '@/lib/enborrpc'
 
 type SessionFixtureFields = {
   id: string

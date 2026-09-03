@@ -1,1 +1,1 @@
-export * from '@ama/runtime-contracts/session-events'
+export * from '@enbor/runtime-contracts/session-events'

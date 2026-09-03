@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router'
 import { toast } from 'sonner'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AuthContext, Project } from '@/lib/amarpc'
+import type { AuthContext, Project } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import { ConsoleContextProvider } from '../console/console-context'
 import { ProjectsPage } from './ProjectsPage'

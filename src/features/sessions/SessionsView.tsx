@@ -15,7 +15,7 @@ import {
 import { formatDate, formatDuration } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import { AgentIdentityCell } from '@/features/console/agent-identity-cell'
-import type { Session } from '@/lib/amarpc'
+import type { Session } from '@/lib/enborrpc'
 
 export function SessionsView({
   sessions,

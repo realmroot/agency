@@ -54,7 +54,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
 
     expect(typescript).toContain('Runner WebSocket factory with Bearer header support is required')
     expect(typescript).toContain("name.toLowerCase() !== 'dpop'")
-    expect(typescript).toContain('Realmroot DPoP authorizer is required for AMA WebSocket connections')
+    expect(typescript).toContain('Realmroot DPoP authorizer is required for Enbor WebSocket connections')
     expect(python).toContain('def _runner_websocket_headers')
     expect(python).toContain('Runner WebSocket requires an Authorization: Bearer header')
     expect(python).toContain('def _dpop_websocket_headers')
@@ -74,7 +74,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
   })
 
   it('keeps the web console on the shared Hono RPC client', () => {
-    const apiClient = readFileSync('src/lib/amarpc/core.ts', 'utf8')
+    const apiClient = readFileSync('src/lib/enborrpc/core.ts', 'utf8')
 
     expect(apiClient).toMatch(/hc<AppType>/)
     expect(apiClient).toMatch(/x-ama-client['"]?: ['"]web-rpc/)

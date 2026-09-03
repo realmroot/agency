@@ -13,7 +13,7 @@ import {
 } from '@/console/components'
 import { formatDate } from '@/console/format'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Agent } from '@/lib/amarpc'
+import type { Agent } from '@/lib/enborrpc'
 
 export function AgentsView({
   agents,

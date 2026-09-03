@@ -14,7 +14,7 @@ import type {
   UsageSummary,
   Vault,
   VaultCredential,
-} from './lib/amarpc'
+} from './lib/enborrpc'
 import {
   type AgentOverrides,
   agentVersion,
@@ -228,7 +228,7 @@ function event(overrides: SessionEventOverrides = {}): SessionEvent {
     type = 'message.completed',
     payload = {
       type: 'message.completed',
-      message: { id: 'msg_1', role: 'assistant', content: [{ type: 'text', text: 'AMA message completed' }] },
+      message: { id: 'msg_1', role: 'assistant', content: [{ type: 'text', text: 'Enbor message completed' }] },
     },
     event: eventOverride,
     ...recordOverrides
@@ -659,7 +659,7 @@ describe('App', () => {
     await waitFor(() => expect(socketUrls.length).toBeGreaterThan(0))
 
     fireEvent.change(screen.getByPlaceholderText('Send a message to the agent'), {
-      target: { value: 'Create ama-message.txt with exactly: AMA message completed' },
+      target: { value: 'Create ama-message.txt with exactly: Enbor message completed' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(await screen.findByText(/Received: Create ama-message/)).toBeTruthy()

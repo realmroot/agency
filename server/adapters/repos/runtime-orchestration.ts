@@ -38,7 +38,7 @@ import {
 } from '../../db/schema'
 import { domainSessionState, persistedSessionState, persistedSessionStates } from '../../db/session-state'
 import { type ConnectorCatalogEntry, DEFAULT_CONNECTORS } from '../../domain/connector'
-import { amaMemoryRef, memoryStoreMountPath } from '../../domain/memory-store'
+import { enborMemoryRef, memoryStoreMountPath } from '../../domain/memory-store'
 import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
@@ -598,7 +598,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         .orderBy(asc(memoryStoreMemories.path))
       return {
         type: 'memory',
-        memoryRef: amaMemoryRef(storeId),
+        memoryRef: enborMemoryRef(storeId),
         name: store.name,
         description: store.description,
         mountPath: memoryStoreMountPath(storeId),

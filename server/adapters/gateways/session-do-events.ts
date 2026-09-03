@@ -4,7 +4,7 @@
 
 import type { SessionEvent } from '@server/domain/session'
 import type { EventPage, EventQuery } from '@server/usecases/ports'
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 import type { Env } from '../../env'
 
 export interface EventWriteContext {
@@ -42,7 +42,7 @@ async function callRunnerPool<T>(env: Env, environmentId: string, path: string, 
 export interface SessionDoEventStore {
   append(
     scope: EventWriteContext,
-    canonicalEvent: AmaEvent,
+    canonicalEvent: EnborEvent,
   ): Promise<{ id: string; sequence: number; record: SessionEvent }>
   query(sessionId: string, query: EventQuery): Promise<EventPage>
   relayQuery(

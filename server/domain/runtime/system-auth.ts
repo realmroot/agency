@@ -19,7 +19,7 @@ export function cloudTurnSystemAuth(message: { organizationId: string; projectId
 // runner-ingested permission requests.
 export function channelSystemAuth(state: { organizationId: string; projectId: string; runnerId: string }) {
   return {
-    user: { id: 'system:runner-channel', email: '', name: 'AMA runner channel', avatarUrl: null },
+    user: { id: 'system:runner-channel', email: '', name: 'Enbor runner channel', avatarUrl: null },
     organization: { id: state.organizationId, name: state.organizationId },
     project: { id: state.projectId, name: state.projectId },
     roles: ['system'],

@@ -1,4 +1,4 @@
-import type { Identity } from '@/lib/amarpc'
+import type { Identity } from '@/lib/enborrpc'
 
 export function identityStatusLabel(identity: Identity) {
   switch (identity.status.state) {

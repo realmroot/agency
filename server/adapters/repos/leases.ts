@@ -241,7 +241,7 @@ async function bindSessionResumeToken(
   if (!runtimeUsesProviderAssignedSessionId(runtime)) {
     if (resumeToken !== workItem.sessionId) {
       throw new RunnerConflictError(
-        `Runtime ${runtime} must use AMA session ${workItem.sessionId} as its resume token; got ${resumeToken}`,
+        `Runtime ${runtime} must use Enbor session ${workItem.sessionId} as its resume token; got ${resumeToken}`,
       )
     }
     return
@@ -274,10 +274,10 @@ async function bindSessionResumeToken(
   }
   if (existing?.resumeToken) {
     throw new RunnerConflictError(
-      `AMA session ${workItem.sessionId} is already bound to resume token ${runtime}:${existing.resumeToken}`,
+      `Enbor session ${workItem.sessionId} is already bound to resume token ${runtime}:${existing.resumeToken}`,
     )
   }
-  throw new RunnerConflictError(`Unable to bind AMA session ${workItem.sessionId} to resume token`)
+  throw new RunnerConflictError(`Unable to bind Enbor session ${workItem.sessionId} to resume token`)
 }
 
 // Re-queues a work item whose runner stopped mid-flight so the session can be
@@ -338,7 +338,7 @@ async function requeueWorkItemForRecovery(
       (await sessionHasRunnerStarted(db, projectId, workItem.sessionId))
     if (payload?.type === 'session.start' && !payload.resume && runnerStarted) {
       // Resume the runtime in place. claude-code resumes from its own session id
-      // (the AMA session id), so a null token still continues the conversation;
+      // (the Enbor session id), so a null token still continues the conversation;
       // other runtimes fall back to a fresh start when no token was captured.
       payload.resume = true
       payloadJson = stringify(payload)

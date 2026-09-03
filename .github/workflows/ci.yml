@@ -101,7 +101,7 @@ jobs:
       - name: Check embedded runtime bridge bundle
         run: |
           pnpm run bridge:build
-          git diff --exit-code -- cmd/ama-runner/pkg/runtimebridge/bundle.mjs
+          git diff --exit-code -- cmd/enbor-runner/pkg/runtimebridge/bundle.mjs
       - run: pnpm run lint
       - run: pnpm run lint:arch
       - run: pnpm run lint:spec
@@ -130,7 +130,7 @@ jobs:
           go-version: '1.25'
           cache: true
           cache-dependency-path: |
-            cmd/ama-runner/go.sum
+            cmd/enbor-runner/go.sum
             sdk/go/go.sum
       - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
       - run: pnpm install --frozen-lockfile
@@ -212,9 +212,9 @@ jobs:
         with:
           go-version: '1.25'
           cache: true
-          cache-dependency-path: cmd/ama-runner/go.sum
+          cache-dependency-path: cmd/enbor-runner/go.sum
       - name: Check Enbor Runner coverage and races
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         run: |
           go test -race ./... -coverprofile=/tmp/enbor-runner.cover
           python3 - <<'PY'
@@ -222,7 +222,7 @@ jobs:
           import subprocess
           import sys
 
-          ignored = ("protocol_gen.go", "session_events_gen.go", "/cmd/ama-runner/main.go")
+          ignored = ("protocol_gen.go", "session_events_gen.go", "/cmd/enbor-runner/main.go")
           with open("/tmp/enbor-runner.cover") as source, open("/tmp/enbor-runner.filtered.cover", "w") as target:
               target.write(next(source))
               for line in source:
@@ -261,28 +261,28 @@ jobs:
         with:
           go-version: '1.25'
           cache: true
-          cache-dependency-path: cmd/ama-runner/go.sum
+          cache-dependency-path: cmd/enbor-runner/go.sum
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
       - name: Run macOS Enbor Runner tests
         if: runner.os == 'macOS'
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         run: go test -race ./...
       - name: Run Windows Enbor Runner tests
         if: runner.os == 'Windows'
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         run: go test ./...
       - name: Smoke macOS Enbor Runner binary
         if: runner.os == 'macOS'
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         shell: bash
         run: |
           go build -o "$RUNNER_TEMP/enbor-runner" .
           "$RUNNER_TEMP/enbor-runner" version --json
       - name: Smoke Windows Enbor Runner binary
         if: runner.os == 'Windows'
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         shell: pwsh
         run: |
           go build -o "$env:RUNNER_TEMP/enbor-runner.exe" .
@@ -326,7 +326,7 @@ jobs:
         with:
           go-version: '1.25'
           cache: true
-          cache-dependency-path: cmd/ama-runner/go.sum
+          cache-dependency-path: cmd/enbor-runner/go.sum
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
@@ -337,7 +337,7 @@ jobs:
       - name: Validate GoReleaser configuration
         run: goreleaser check
       - name: Compile-check Windows arm64
-        working-directory: cmd/ama-runner
+        working-directory: cmd/enbor-runner
         run: CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -o /tmp/enbor-runner-windows-arm64.exe .
       - name: Build and verify release archives
         shell: bash
@@ -370,7 +370,7 @@ jobs:
               --platform "linux/$platform" \
               --load \
               --tag "enbor-runner:ci-$platform" \
-              --file cmd/ama-runner/Dockerfile.runner \
+              --file cmd/enbor-runner/Dockerfile.runner \
               "$context"
             docker run --rm --platform "linux/$platform" "enbor-runner:ci-$platform" version --json | grep -Fq '"name":"enbor-runner"'
           done

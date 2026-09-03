@@ -667,7 +667,7 @@ describe('[CF] OpenAPI documentation', () => {
 
   it('exposes project selection to Toolbox only on project-scoped operations [spec: api-contracts/realmroot-toolbox]', async () => {
     const doc = await fetchOpenApi()
-    const selector = { $ref: '#/components/parameters/AmaProjectId' }
+    const selector = { $ref: '#/components/parameters/EnborProjectId' }
     const projectScopedResources = new Set([
       'agents',
       'budgets',
@@ -684,7 +684,7 @@ describe('[CF] OpenAPI documentation', () => {
       'work-items',
     ])
 
-    expect(doc.components?.parameters?.AmaProjectId).toMatchObject({
+    expect(doc.components?.parameters?.EnborProjectId).toMatchObject({
       name: 'X-AMA-Project-ID',
       in: 'header',
       required: false,

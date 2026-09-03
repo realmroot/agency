@@ -196,7 +196,7 @@ async function createEnvironment(authorization: string, data: Record<string, unk
     method: 'POST',
     headers: projectHeaders(projectId),
     body: JSON.stringify({
-      metadata: { name: typeof name === 'string' ? name : `AMA workspace ${crypto.randomUUID()}` },
+      metadata: { name: typeof name === 'string' ? name : `Enbor workspace ${crypto.randomUUID()}` },
       spec: {
         type: hostingMode === 'self_hosted' ? 'self_hosted' : 'cloud',
         networking,
@@ -223,10 +223,10 @@ async function createAgent(authorization: string, data: Record<string, unknown> 
     body: JSON.stringify({
       metadata: { name: 'Cloud session agent' },
       spec: {
-        systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : 'Work through AMA runtime.',
+        systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : 'Work through Enbor runtime.',
         skills: Array.isArray(skills) ? skills : ['ama@cloud-session'],
         mcpConnectors: Array.isArray(mcpConnectors) ? mcpConnectors : ['github'],
-        // Most session tests exercise the AMA runtime, which requires an
+        // Most session tests exercise the Enbor runtime, which requires an
         // explicit provider/model pin. The runtime-default case below creates
         // its own unpinned Agent instead of relying on this fixture.
         provider: typeof provider === 'string' ? provider : 'workers-ai',
@@ -473,7 +473,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(JSON.parse(work?.payload ?? 'null')).not.toHaveProperty('provider')
   })
 
-  it('rejects an unpinned AMA cloud session without inventing defaults [spec: sessions/cloud-requires-model]', async () => {
+  it('rejects an unpinned Enbor cloud session without inventing defaults [spec: sessions/cloud-requires-model]', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, {
       hostingMode: 'cloud',
@@ -666,7 +666,7 @@ describe('[CF] /api/v1/sessions', () => {
           agent: {
             versionId: agent.currentVersionId,
             snapshot: {
-              systemPrompt: 'Work through AMA runtime.',
+              systemPrompt: 'Work through Enbor runtime.',
               skills: ['ama@cloud-session'],
               mcpConnectors: ['github'],
               provider: 'workers-ai',
@@ -1521,7 +1521,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('serializes stored canonical runtime event rows as AMA session events [spec: sessions/events-canonical]', async () => {
+  it('serializes stored canonical runtime event rows as Enbor session events [spec: sessions/events-canonical]', async () => {
     const authorization = await signIn()
     await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization)
@@ -2066,7 +2066,9 @@ describe('[CF] /api/v1/sessions', () => {
       )
     })
     expect(successfulAssistantCompletions).toEqual([])
-    expect(JSON.stringify(events.data)).not.toContain('AMA runtime processed: Wait for cancellation before completing')
+    expect(JSON.stringify(events.data)).not.toContain(
+      'Enbor runtime processed: Wait for cancellation before completing',
+    )
   })
 
   it('creates a session and dispatches an initial prompt through the API [spec: sessions/initial-prompt]', async () => {
@@ -2484,7 +2486,7 @@ describe('[CF] /api/v1/sessions', () => {
         bindings: {
           agent: {
             snapshot: {
-              systemPrompt: 'Work through AMA runtime.',
+              systemPrompt: 'Work through Enbor runtime.',
               version: 1,
               skills: ['ama@cloud-session'],
               mcpConnectors: ['github'],

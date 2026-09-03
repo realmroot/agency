@@ -1,4 +1,4 @@
-import type { CredentialType } from '@/lib/amarpc'
+import type { CredentialType } from '@/lib/enborrpc'
 
 export interface CredentialFormState {
   name: string

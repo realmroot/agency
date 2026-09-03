@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { DetailSection, EmptyState, Meta, MetaGrid, PageHeader, StatusBadge } from '@/console/components'
 import { formatDate } from '@/console/format'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { queryKeys } from '@/lib/query-keys'
 import { identityAssignmentLabel, identityStatusLabel } from './identity-display'
 

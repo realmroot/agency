@@ -1,7 +1,7 @@
-import { AMA_SANDBOX_TOOL_NAMES } from '@ama/runtime-contracts/agent-tools'
+import { ENBOR_SANDBOX_TOOL_NAMES } from '@enbor/runtime-contracts/agent-tools'
 import type { AgentFormState, EnvironmentFormState, SessionFormState, VaultFormState } from './types'
 
-const DEFAULT_ALLOWED_TOOLS = AMA_SANDBOX_TOOL_NAMES.join('\n')
+const DEFAULT_ALLOWED_TOOLS = ENBOR_SANDBOX_TOOL_NAMES.join('\n')
 
 export const emptyEnvironment: EnvironmentFormState = {
   name: 'Node workspace',

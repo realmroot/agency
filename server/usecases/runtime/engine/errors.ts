@@ -24,7 +24,7 @@ export class RuntimeTurnCancelledError extends Error {
   }
 }
 
-// A tool call was denied by AMA policy. The turn fails, but the session stays
+// A tool call was denied by Enbor policy. The turn fails, but the session stays
 // usable: a governance denial is an expected product outcome, not a runtime
 // fault, so callers park the session back to idle instead of error.
 export class RuntimePolicyDeniedError extends Error {

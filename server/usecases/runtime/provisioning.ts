@@ -30,7 +30,7 @@ export async function validateRuntimeProviderModel(
   if (!driver.supportsHostingMode(hostingMode)) {
     return false
   }
-  // AMA's in-Worker model client has no provider-owned default-selection
+  // Enbor's in-Worker model client has no provider-owned default-selection
   // protocol. A Cloudflare model is therefore an explicit Agent pin, while
   // external CLI runtimes remain free to resolve their own defaults.
   if (runtime === 'ama') {

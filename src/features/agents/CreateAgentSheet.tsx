@@ -7,7 +7,7 @@ import { emptyAgent } from '@/console/defaults'
 import { parseTools, providerPatch } from '@/console/format'
 import { AgentForm } from '@/console/forms'
 import type { AgentFormState } from '@/console/types'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 

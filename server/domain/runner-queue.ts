@@ -37,7 +37,7 @@ export function hasSecretMaterial(value: unknown): boolean {
 }
 
 // The runtime a work item requires of a runner, if any. Session
-// starts declare it explicitly; local AMA tool calls are recognized by shape.
+// starts declare it explicitly; local Enbor tool calls are recognized by shape.
 export function workRuntimeRequirement(payload: Record<string, unknown>): RuntimeRequirement | null {
   const requirement = payload.runtimeRequirement
   if (requirement && typeof requirement === 'object' && !Array.isArray(requirement)) {

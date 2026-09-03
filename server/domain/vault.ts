@@ -130,7 +130,7 @@ export function credentialScopedSecretRef(identity: { vaultId: string; credentia
   return `ama://vaults/${uriPathSegment(identity.vaultId)}/credentials/${uriPathSegment(identity.credentialId)}`
 }
 
-export function amaSecretRef(vaultId: string) {
+export function enborSecretRef(vaultId: string) {
   return `ama://vaults/${uriPathSegment(vaultId)}`
 }
 

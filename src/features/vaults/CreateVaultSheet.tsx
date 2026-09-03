@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { emptyVault } from '@/console/defaults'
 import { VaultForm } from '@/console/forms'
 import type { VaultFormState } from '@/console/types'
-import { api } from '@/lib/amarpc'
+import { api } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 

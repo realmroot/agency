@@ -45,22 +45,22 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
 
   await page.addInitScript(() => {
     type ConnectionEvent = { kind: 'ticket-response' | 'socket'; url: string; protocols?: string[] }
-    const target = window as typeof window & { __amaConnectionEvents?: ConnectionEvent[] }
-    target.__amaConnectionEvents = []
+    const target = window as typeof window & { __enborConnectionEvents?: ConnectionEvent[] }
+    target.__enborConnectionEvents = []
     const nativeFetch = window.fetch.bind(window)
     window.fetch = async (...args) => {
       const response = await nativeFetch(...args)
       const input = args[0]
       const url = typeof input === 'string' || input instanceof URL ? String(input) : input.url
       if (new URL(url, window.location.href).pathname.endsWith('/socket-tickets')) {
-        target.__amaConnectionEvents?.push({ kind: 'ticket-response', url: response.url })
+        target.__enborConnectionEvents?.push({ kind: 'ticket-response', url: response.url })
       }
       return response
     }
     window.WebSocket = new Proxy(window.WebSocket, {
       construct(WebSocketConstructor, args: [string | URL, string | string[] | undefined]) {
         const [url, protocols] = args
-        target.__amaConnectionEvents?.push({
+        target.__enborConnectionEvents?.push({
           kind: 'socket',
           url: String(url),
           protocols: typeof protocols === 'string' ? [protocols] : (protocols ?? []),
@@ -87,13 +87,13 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
       page.evaluate((sessionId) => {
         const events = (
           window as typeof window & {
-            __amaConnectionEvents?: Array<{
+            __enborConnectionEvents?: Array<{
               kind: 'ticket-response' | 'socket'
               url: string
               protocols?: string[]
             }>
           }
-        ).__amaConnectionEvents
+        ).__enborConnectionEvents
         return (
           events?.filter(
             (event) =>
@@ -106,13 +106,13 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
   const connectionEvents = await page.evaluate((sessionId) => {
     const events = (
       window as typeof window & {
-        __amaConnectionEvents?: Array<{
+        __enborConnectionEvents?: Array<{
           kind: 'ticket-response' | 'socket'
           url: string
           protocols?: string[]
         }>
       }
-    ).__amaConnectionEvents
+    ).__enborConnectionEvents
     return events?.filter((event) => {
       const path = new URL(event.url).pathname
       return path === `/api/v1/sessions/${sessionId}/socket-tickets` || path === `/api/v1/sessions/${sessionId}/socket`

@@ -25,10 +25,10 @@ export interface Env {
   OIDC_ISSUER?: string
   OIDC_CLIENT_ID?: string
   OIDC_CLIENT_SECRET?: string
-  // Realmroot management Resource used when exchanging the current User's AMA
+  // Realmroot management Resource used when exchanging the current User's Enbor
   // grant for the agents:write audience.
   REALMROOT_MANAGEMENT_RESOURCE?: string
-  // Inbox protected-resource base used by the AMA service identity to manage
+  // Inbox protected-resource base used by the Enbor service identity to manage
   // Trigger-owned Subscriptions through PUT/DELETE /subscriptions/{id}.
   INBOX_RESOURCE?: string
   // Dedicated Realmroot machine Application used only for Inbox Subscription

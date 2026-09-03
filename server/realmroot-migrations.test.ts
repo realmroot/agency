@@ -270,7 +270,7 @@ describe('irreversible resource soft-delete migration', () => {
 })
 
 describe('[spec: identities/provision] open Identity runtime migration', () => {
-  it('preserves existing bindings while accepting canonical runtimes outside the AMA driver catalog', () => {
+  it('preserves existing bindings while accepting canonical runtimes outside the Enbor driver catalog', () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys = ON')
     applyThrough(db, '0039_environment_runner_lifecycle.sql')

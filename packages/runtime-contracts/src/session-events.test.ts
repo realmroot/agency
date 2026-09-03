@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AMA_SESSION_EVENT_TYPES,
-  type AmaEvent,
-  AmaEventSchema,
-  amaSessionEventTypeFromPayload,
-  isAmaSessionEventType,
+  ENBOR_SESSION_EVENT_TYPES,
+  type EnborEvent,
+  EnborEventSchema,
+  enborSessionEventTypeFromPayload,
+  isEnborSessionEventType,
   type Message,
   MessageContentBlockSchema,
-  normalizeAmaEvent,
+  normalizeEnborEvent,
   SessionEventSchema,
   type ToolResult,
 } from './session-events'
@@ -31,7 +31,7 @@ const toolResult: ToolResult = {
   exitCode: 0,
 }
 
-const eventFixtures: AmaEvent[] = [
+const eventFixtures: EnborEvent[] = [
   { type: 'runtime.started', payload: {} },
   { type: 'runtime.completed', payload: { reason: 'done' } },
   { type: 'turn.started', payload: { status: 'running', message } },
@@ -61,28 +61,28 @@ const eventFixtures: AmaEvent[] = [
   },
 ]
 
-describe('AmaEventSchema', () => {
+describe('EnborEventSchema', () => {
   it('accepts every canonical event with its typed payload', () => {
-    expect(eventFixtures.map((event) => event.type)).toEqual(AMA_SESSION_EVENT_TYPES)
+    expect(eventFixtures.map((event) => event.type)).toEqual(ENBOR_SESSION_EVENT_TYPES)
     for (const event of eventFixtures) {
-      expect(AmaEventSchema.safeParse(event).success, event.type).toBe(true)
+      expect(EnborEventSchema.safeParse(event).success, event.type).toBe(true)
     }
   })
 
   it('rejects invalid event names, payload fields, metadata fields, and non-json leaves', () => {
-    expect(AmaEventSchema.safeParse({ type: 'message.delta', payload: {} }).success).toBe(false)
-    expect(AmaEventSchema.safeParse({ type: 'message.completed', payload: { message, delta: 'x' } }).success).toBe(
+    expect(EnborEventSchema.safeParse({ type: 'message.delta', payload: {} }).success).toBe(false)
+    expect(EnborEventSchema.safeParse({ type: 'message.completed', payload: { message, delta: 'x' } }).success).toBe(
       false,
     )
     expect(
-      AmaEventSchema.safeParse({ type: 'turn.completed', payload: {}, metadata: { runnerId: 'runner_1' } }).success,
+      EnborEventSchema.safeParse({ type: 'turn.completed', payload: {}, metadata: { runnerId: 'runner_1' } }).success,
     ).toBe(false)
     expect(
       MessageContentBlockSchema.safeParse({ type: 'tool_call', toolCall: { ...toolCall, input: () => undefined } })
         .success,
     ).toBe(false)
     expect(
-      AmaEventSchema.safeParse({ type: 'usage.recorded', payload: { provider: 'openai', totalTokens: 1 } }).success,
+      EnborEventSchema.safeParse({ type: 'usage.recorded', payload: { provider: 'openai', totalTokens: 1 } }).success,
     ).toBe(false)
     expect(MessageContentBlockSchema.safeParse({ type: 'unknown', value: { raw: true } }).success).toBe(false)
     expect(
@@ -92,7 +92,7 @@ describe('AmaEventSchema', () => {
 
   it('keeps extensibility inside details and structured content only', () => {
     expect(
-      AmaEventSchema.parse({
+      EnborEventSchema.parse({
         type: 'message.completed',
         payload: {
           message: {
@@ -141,7 +141,7 @@ describe('MessageContentBlockSchema', () => {
     }
   })
 
-  it('requires canonical schemas for reserved AMA runtime tools', () => {
+  it('requires canonical schemas for reserved Enbor runtime tools', () => {
     expect(MessageContentBlockSchema.safeParse({ type: 'tool_call', toolCall: agentToolCall }).success).toBe(true)
     expect(
       MessageContentBlockSchema.safeParse({
@@ -153,7 +153,7 @@ describe('MessageContentBlockSchema', () => {
 })
 
 describe('SessionEventSchema', () => {
-  it('accepts a canonical AMA event with session log fields', () => {
+  it('accepts a canonical Enbor event with session log fields', () => {
     expect(
       SessionEventSchema.parse({
         id: 'evt_1',
@@ -320,16 +320,16 @@ describe('SessionEventSchema', () => {
 
 describe('event helpers', () => {
   it('recognizes event types and reports unknown payload types', () => {
-    expect(isAmaSessionEventType('runtime.started')).toBe(true)
-    expect(isAmaSessionEventType('not.real')).toBe(false)
-    expect(amaSessionEventTypeFromPayload({ type: 'message.completed' })).toBe('message.completed')
-    expect(amaSessionEventTypeFromPayload({ type: '' })).toBe('unknown')
-    expect(amaSessionEventTypeFromPayload({ type: 1 })).toBe('unknown')
-    expect(amaSessionEventTypeFromPayload({})).toBe('unknown')
+    expect(isEnborSessionEventType('runtime.started')).toBe(true)
+    expect(isEnborSessionEventType('not.real')).toBe(false)
+    expect(enborSessionEventTypeFromPayload({ type: 'message.completed' })).toBe('message.completed')
+    expect(enborSessionEventTypeFromPayload({ type: '' })).toBe('unknown')
+    expect(enborSessionEventTypeFromPayload({ type: 1 })).toBe('unknown')
+    expect(enborSessionEventTypeFromPayload({})).toBe('unknown')
   })
 
   it('normalizes events without adding transport metadata', () => {
-    expect(normalizeAmaEvent({ type: 'turn.completed', payload: {} })).toEqual({
+    expect(normalizeEnborEvent({ type: 'turn.completed', payload: {} })).toEqual({
       type: 'turn.completed',
       payload: {},
     })

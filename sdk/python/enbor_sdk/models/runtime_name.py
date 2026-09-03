@@ -1,7 +1,7 @@
 from enum import Enum
 
 class RuntimeName(str, Enum):
-    AMA = "ama"
+    ENBOR = "ama"
     CLAUDE_CODE = "claude-code"
     CODEX = "codex"
     COPILOT = "copilot"

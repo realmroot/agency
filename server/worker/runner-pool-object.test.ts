@@ -526,7 +526,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(socket.sent).toEqual([])
   })
 
-  it('[spec: runners/ama-sandbox-channel] routes sandbox requests after AMA startup but retires normal completions', async () => {
+  it('[spec: runners/ama-sandbox-channel] routes sandbox requests after Enbor startup but retires normal completions', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     await internals.handleRunnerMessage(
       connection,
@@ -570,7 +570,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect((await requestSandbox(pool)).status).toBe(409)
   })
 
-  it('[spec: runners/ama-sandbox-channel] does not create an absent AMA route from active completion alone', async () => {
+  it('[spec: runners/ama-sandbox-channel] does not create an absent Enbor route from active completion alone', async () => {
     const { pool, internals, connection } = createPool(true)
     internals.sessionRunners.delete('session_1')
     internals.sessionBackfillRunners.delete('session_1')
@@ -615,7 +615,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.get('session_1')).toBe(runnerB)
   })
 
-  it('[spec: runners/ama-sandbox-channel] restores completed AMA sandbox routing after runner reconnect', async () => {
+  it('[spec: runners/ama-sandbox-channel] restores completed Enbor sandbox routing after runner reconnect', async () => {
     const { pool, internals, connection } = createPool(true)
     internals.closeRunner(connection)
     const replacement: TestConnection = { ...connection, socket: createSocket() }

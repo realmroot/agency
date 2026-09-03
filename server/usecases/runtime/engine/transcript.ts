@@ -24,7 +24,7 @@ export function isPersistedMessage(value: unknown): value is AgentMessage {
   return role === 'user' || role === 'assistant' || role === 'toolResult'
 }
 
-function amaMessageFromValue(value: unknown): Message | null {
+function enborMessageFromValue(value: unknown): Message | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null
   }
@@ -64,7 +64,7 @@ function piToolResultContentBlocks(blocks: ToolResultValueContentBlock[]): Array
   })
 }
 
-function agentMessageFromAmaMessage(message: Message): AgentMessage | null {
+function agentMessageFromEnborMessage(message: Message): AgentMessage | null {
   const timestamp = Date.now()
   if (message.role === 'user') {
     return { role: 'user', content: textFromContent(message.content), timestamp }
@@ -141,8 +141,8 @@ export function runtimeMessagesFromEvents(
     if (core.type !== 'message.completed') {
       continue
     }
-    const amaMessage = amaMessageFromValue(core.payload.message)
-    const message = amaMessage ? agentMessageFromAmaMessage(amaMessage) : null
+    const enborMessage = enborMessageFromValue(core.payload.message)
+    const message = enborMessage ? agentMessageFromEnborMessage(enborMessage) : null
     if (!message) {
       continue
     }

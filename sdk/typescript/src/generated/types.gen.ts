@@ -619,7 +619,7 @@ export type PublicConfig = {
 };
 
 export type PublicServiceConfig = {
-    name: 'Any Managed Agents';
+    name: 'Enbor';
     origin: string;
 };
 
@@ -771,7 +771,7 @@ export type IdentityDescriptor = {
 } | null;
 
 /**
- * Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered AMA runtime driver.
+ * Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a registered Enbor runtime driver.
  */
 export type IdentityRuntime = string;
 
@@ -1858,10 +1858,10 @@ export type SessionEventsAccepted = {
 };
 
 export type CreateSessionEventsRequest = {
-    events: Array<AmaEvent>;
+    events: Array<EnborEvent>;
 };
 
-export type AmaEvent = {
+export type EnborEvent = {
     type: 'runtime.started';
     payload: RuntimeLifecyclePayload;
 } | {
@@ -2144,9 +2144,9 @@ export type VaultCredentialVersionListResponse = {
 };
 
 /**
- * Selects an AMA project in the authenticated organization. Omit to use the default project.
+ * Selects an Enbor project in the authenticated organization. Omit to use the default project.
  */
-export type AmaProjectId = string;
+export type EnborProjectId = string;
 
 export type ReadConfigzData = {
     body?: never;
@@ -2401,7 +2401,7 @@ export type ListAgentsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2442,7 +2442,7 @@ export type ListAgentsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -2463,7 +2463,7 @@ export type CreateAgentData = {
     headers?: {
         'idempotency-key'?: string;
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2486,11 +2486,11 @@ export type CreateAgentErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
-     * Identity already bound or its runtime has no registered AMA driver
+     * Identity already bound or its runtime has no registered Enbor driver
      */
     409: ErrorResponse;
 };
@@ -2510,7 +2510,7 @@ export type DeleteAgentData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2551,7 +2551,7 @@ export type ReadAgentData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2592,7 +2592,7 @@ export type UpdateAgentData = {
     body: UpdateAgentRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2641,7 +2641,7 @@ export type ListAgentVersionsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2682,7 +2682,7 @@ export type ReadAgentVersionData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2728,7 +2728,7 @@ export type ListEnvironmentsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2757,7 +2757,7 @@ export type ListEnvironmentsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -2778,7 +2778,7 @@ export type CreateEnvironmentData = {
     headers?: {
         'idempotency-key'?: string;
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2801,7 +2801,7 @@ export type CreateEnvironmentErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -2825,7 +2825,7 @@ export type DeleteEnvironmentData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2870,7 +2870,7 @@ export type ReadEnvironmentData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2911,7 +2911,7 @@ export type UpdateEnvironmentData = {
     body: UpdateEnvironmentRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2956,7 +2956,7 @@ export type ListEnvironmentVersionsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -2997,7 +2997,7 @@ export type ReadEnvironmentVersionData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3043,7 +3043,7 @@ export type ListIdentitiesData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3072,7 +3072,7 @@ export type ListIdentitiesErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -3093,7 +3093,7 @@ export type CreateIdentityData = {
     headers: {
         'idempotency-key': string;
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3116,7 +3116,7 @@ export type CreateIdentityErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -3144,7 +3144,7 @@ export type DeleteIdentityData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3189,7 +3189,7 @@ export type ReadIdentityData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3420,7 +3420,7 @@ export type ListRunnersData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3451,7 +3451,7 @@ export type ListRunnersErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -3471,7 +3471,7 @@ export type CreateRunnerData = {
     body: CreateRunnerRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3494,7 +3494,7 @@ export type CreateRunnerErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -3518,7 +3518,7 @@ export type DeleteRunnerData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3563,7 +3563,7 @@ export type ReadRunnerData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3608,7 +3608,7 @@ export type UpdateRunnerData = {
     body: UpdateRunnerRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3657,7 +3657,7 @@ export type ReadRunnerHeartbeatData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3698,7 +3698,7 @@ export type PutRunnerHeartbeatData = {
     body: PutRunnerHeartbeatRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3747,7 +3747,7 @@ export type ConnectRunnerChannelData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3792,7 +3792,7 @@ export type ListWorkItemsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3824,7 +3824,7 @@ export type ListWorkItemsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -3844,7 +3844,7 @@ export type ReadWorkItemData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3889,7 +3889,7 @@ export type ListLeasesData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3917,7 +3917,7 @@ export type ListLeasesErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -3937,7 +3937,7 @@ export type CreateLeaseData = {
     body: CreateLeaseRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -3984,7 +3984,7 @@ export type ReadLeaseData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4025,7 +4025,7 @@ export type UpdateLeaseData = {
     body: UpdateLeaseRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4074,7 +4074,7 @@ export type ListBudgetsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4093,7 +4093,7 @@ export type ListBudgetsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -4113,7 +4113,7 @@ export type CreateBudgetData = {
     body: CreateBudgetRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4136,7 +4136,7 @@ export type CreateBudgetErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -4160,7 +4160,7 @@ export type DeleteBudgetData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4201,7 +4201,7 @@ export type ReadBudgetData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4242,7 +4242,7 @@ export type UpdateBudgetData = {
     body: UpdateBudgetRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4363,7 +4363,7 @@ export type ListUsageRecordsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4395,7 +4395,7 @@ export type ListUsageRecordsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -4415,7 +4415,7 @@ export type ReadUsageRecordData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4456,7 +4456,7 @@ export type ReadUsageSummaryData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4483,7 +4483,7 @@ export type ReadUsageSummaryErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -4582,7 +4582,7 @@ export type ListTriggersData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4615,7 +4615,7 @@ export type ListTriggersErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -4635,7 +4635,7 @@ export type CreateTriggerData = {
     body: CreateTriggerRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4686,7 +4686,7 @@ export type DeleteTriggerData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4731,7 +4731,7 @@ export type ReadTriggerData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4772,7 +4772,7 @@ export type UpdateTriggerData = {
     body: UpdateTriggerRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4825,7 +4825,7 @@ export type ListTriggerRunsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4877,7 +4877,7 @@ export type CreateTriggerRunData = {
     body: CreateHttpTriggerRunRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4926,7 +4926,7 @@ export type ReadTriggerRunData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4968,7 +4968,7 @@ export type ListSessionsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -4999,7 +4999,7 @@ export type ListSessionsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -5019,7 +5019,7 @@ export type CreateSessionData = {
     body: CreateSessionRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5066,7 +5066,7 @@ export type DeleteSessionData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5111,7 +5111,7 @@ export type ReadSessionData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5152,7 +5152,7 @@ export type UpdateSessionData = {
     body: UpdateSessionRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5201,7 +5201,7 @@ export type ConnectSessionSocketData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5237,7 +5237,7 @@ export type ListSessionMessagesData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5285,7 +5285,7 @@ export type CreateSessionMessageData = {
     body: CreateSessionMessageRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5338,7 +5338,7 @@ export type ReadSessionMessageData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5380,7 +5380,7 @@ export type ListSessionEventsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5432,7 +5432,7 @@ export type CreateSessionEventsData = {
     body: CreateSessionEventsRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5477,7 +5477,7 @@ export type ListSessionApprovalsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5518,7 +5518,7 @@ export type ReadSessionApprovalData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5560,7 +5560,7 @@ export type DecideSessionApprovalData = {
     body: SessionApprovalDecisionRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5606,7 +5606,7 @@ export type ListMemoryStoresData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5635,7 +5635,7 @@ export type ListMemoryStoresErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -5655,7 +5655,7 @@ export type CreateMemoryStoreData = {
     body: CreateMemoryStoreRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5678,7 +5678,7 @@ export type CreateMemoryStoreErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -5702,7 +5702,7 @@ export type DeleteMemoryStoreData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5743,7 +5743,7 @@ export type ReadMemoryStoreData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5784,7 +5784,7 @@ export type UpdateMemoryStoreData = {
     body: UpdateMemoryStoreRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5829,7 +5829,7 @@ export type ListMemoryStoreMemoriesData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5877,7 +5877,7 @@ export type CreateMemoryStoreMemoryData = {
     body: CreateMemoryStoreMemoryRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5926,7 +5926,7 @@ export type DeleteMemoryStoreMemoryData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -5968,7 +5968,7 @@ export type UpdateMemoryStoreMemoryData = {
     body: UpdateMemoryStoreMemoryRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6018,7 +6018,7 @@ export type ListVaultsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6047,7 +6047,7 @@ export type ListVaultsErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
 };
@@ -6067,7 +6067,7 @@ export type CreateVaultData = {
     body: CreateVaultRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6090,7 +6090,7 @@ export type CreateVaultErrors = {
      */
     403: ErrorResponse;
     /**
-     * The selected AMA project does not exist in the authenticated organization
+     * The selected Enbor project does not exist in the authenticated organization
      */
     404: ErrorResponse;
     /**
@@ -6114,7 +6114,7 @@ export type DeleteVaultData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6155,7 +6155,7 @@ export type ReadVaultData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6196,7 +6196,7 @@ export type UpdateVaultData = {
     body: UpdateVaultRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6245,7 +6245,7 @@ export type ListVaultCredentialsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6297,7 +6297,7 @@ export type CreateVaultCredentialData = {
     body: CreateVaultCredentialRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6346,7 +6346,7 @@ export type ReadVaultCredentialData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6388,7 +6388,7 @@ export type UpdateVaultCredentialData = {
     body: UpdateVaultCredentialRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6434,7 +6434,7 @@ export type UpdateVaultCredentialSecretData = {
     body: UpdateVaultCredentialSecretRequest;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6484,7 +6484,7 @@ export type ListVaultCredentialVersionsData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };
@@ -6536,7 +6536,7 @@ export type ReadVaultCredentialVersionData = {
     body?: never;
     headers?: {
         /**
-         * Selects an AMA project in the authenticated organization. Omit to use the default project.
+         * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */
         'X-AMA-Project-ID'?: string;
     };

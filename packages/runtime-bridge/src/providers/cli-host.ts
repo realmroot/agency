@@ -53,7 +53,7 @@ export type ProviderUsage = {
 /**
  * Canonical token-usage normalization across the SDK providers: coalesces the
  * snake_case and camelCase (and OpenAI prompt_/completion_) variants into the
- * AMA usage shape. totalTokens falls back to input+output when absent.
+ * Enbor usage shape. totalTokens falls back to input+output when absent.
  */
 export function normalizeProviderUsage(raw: Record<string, unknown>): ProviderUsage {
   const inputTokens = Number(raw.input_tokens ?? raw.inputTokens ?? raw.prompt_tokens ?? 0)

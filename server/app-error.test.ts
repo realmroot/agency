@@ -38,7 +38,7 @@ describe('app error handling', () => {
       requestId: 'req_logging_error',
       method: 'GET',
       path: '/api/v1/projects',
-      amaProjectId: 'project_logging',
+      enborProjectId: 'project_logging',
       error: {
         name: 'TypeError',
         message: expect.stringContaining('Cannot read properties of undefined'),

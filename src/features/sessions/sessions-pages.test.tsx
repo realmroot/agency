@@ -4,14 +4,14 @@
  * empty-state / delete branches), SessionRuntimePanel (connection-badge / canSend
  * branches), SessionToolTrace (empty / running / orphan branches).
  *
- * Uses MSW + the REAL api client. No vi.spyOn / vi.mock of @/lib/amarpc.
+ * Uses MSW + the REAL api client. No vi.spyOn / vi.mock of @/lib/enborrpc.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Agent, Environment, ListResponse, MemoryStore, Session, SessionEvent } from '@/lib/amarpc'
-import { ApiError } from '@/lib/amarpc'
+import type { Agent, Environment, ListResponse, MemoryStore, Session, SessionEvent } from '@/lib/enborrpc'
+import { ApiError } from '@/lib/enborrpc'
 import { HttpResponse, http, server } from '@/test/msw'
 import {
   type AgentOverrides,
@@ -1184,7 +1184,7 @@ describe('SessionRuntimePanel — toolbar and busy state', () => {
     expect(screen.getByText('persisted_debug_1')).toBeTruthy()
   })
 
-  it('renders persisted AMA events in the debug panel', async () => {
+  it('renders persisted Enbor events in the debug panel', async () => {
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: vi.fn(() => false),
       configurable: true,

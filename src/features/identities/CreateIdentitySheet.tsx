@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { api, type IdentityRuntime } from '@/lib/amarpc'
+import { api, type IdentityRuntime } from '@/lib/enborrpc'
 import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -94,7 +94,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="ama">AMA</SelectItem>
+                    <SelectItem value="ama">Enbor</SelectItem>
                     <SelectItem value="codex">Codex</SelectItem>
                     <SelectItem value="claude-code">Claude Code</SelectItem>
                     <SelectItem value="copilot">Copilot</SelectItem>

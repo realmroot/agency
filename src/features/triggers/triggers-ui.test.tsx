@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import { useClientPagination } from '@/console/use-client-pagination'
-import type { Agent, Environment, Trigger } from '@/lib/amarpc'
+import type { Agent, Environment, Trigger } from '@/lib/enborrpc'
 import { createCollection, HttpResponse, http, resourceHandlers, server } from '@/test/msw'
 import {
   type AgentOverrides,

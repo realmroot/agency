@@ -1,7 +1,7 @@
 import { resourceMetadata } from '@server/domain/resource'
 import type { Session, SessionMessage } from '@server/domain/session'
 import type { Trigger } from '@server/domain/trigger'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
 import type {
@@ -260,7 +260,7 @@ function runtimeSession(overrides: Partial<RuntimeSessionHandle> = {}): RuntimeS
     metadata: {
       source: 'http-trigger',
       httpTriggerId: 'http_trigger_1',
-      annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: 'key_hash' },
+      annotations: { [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: 'key_hash' },
     },
     ...overrides,
   }
@@ -341,7 +341,7 @@ function fakeDeps(
     cloudRuntime: undefined as unknown as Deps['cloudRuntime'],
     runtimeWorkspace: undefined as unknown as Deps['runtimeWorkspace'],
     sandboxExecutor: undefined as unknown as Deps['sandboxExecutor'],
-    amaTurnExecutor: undefined as unknown as Deps['amaTurnExecutor'],
+    enborTurnExecutor: undefined as unknown as Deps['enborTurnExecutor'],
     sessionOrchestration: {
       findSession: async () => null,
       ...overrides.sessionOrchestration,
@@ -976,7 +976,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         retained: 'true',
         externalUrl: 'https://github.com/owner/repo/issues/123',
-        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
+        [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
       },
       labels: { maintainerId: 'maintainer_1', subject: 'github-issue' },
     })
@@ -1070,7 +1070,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       sessions: {
         findReusableHttpTriggerSession: async (_projectId, _triggerId, keyHash) =>
           keyHash === issueKeyHash
-            ? runtimeSession({ metadata: { annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } } })
+            ? runtimeSession({ metadata: { annotations: { [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } } })
             : null,
         insertMessage: async (record) => {
           messageContent = record.content
@@ -1151,7 +1151,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         source: 'http-trigger',
         httpTriggerId: 'http_trigger_1',
-        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: pullKeyHash,
+        [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: pullKeyHash,
         reusedSession: 'true',
         externalUrl: 'https://github.com/owner/repo/pull/456',
       },
@@ -1179,7 +1179,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
                 metadata: {
                   source: 'http-trigger',
                   httpTriggerId: 'http_trigger_1',
-                  annotations: { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
+                  annotations: { [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash },
                 },
               })
             : null,
@@ -1405,7 +1405,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       annotations: {
         source: 'http-trigger',
         httpTriggerId: 'http_trigger_1',
-        [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
+        [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: issueKeyHash,
       },
     })
   })

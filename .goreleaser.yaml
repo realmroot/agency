@@ -4,7 +4,7 @@ project_name: enbor-runner
 
 builds:
   - id: enbor-runner
-    dir: cmd/ama-runner
+    dir: cmd/enbor-runner
     main: .
     binary: enbor-runner
     env:
@@ -52,7 +52,7 @@ dockers_v2:
   - id: enbor-runner
     ids:
       - enbor-runner
-    dockerfile: cmd/ama-runner/Dockerfile.runner
+    dockerfile: cmd/enbor-runner/Dockerfile.runner
     images:
       - ghcr.io/realmroot/enbor-runner
     tags:
@@ -64,14 +64,14 @@ dockers_v2:
     labels:
       org.opencontainers.image.title: Enbor Runner
       org.opencontainers.image.description: Self-hosted runtime runner for Enbor
-      org.opencontainers.image.source: https://github.com/realmroot/agency
+      org.opencontainers.image.source: https://github.com/realmroot/enbor
       org.opencontainers.image.licenses: Apache-2.0
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.version: "{{ .Version }}"
     annotations:
       org.opencontainers.image.title: Enbor Runner
       org.opencontainers.image.description: Self-hosted runtime runner for Enbor
-      org.opencontainers.image.source: https://github.com/realmroot/agency
+      org.opencontainers.image.source: https://github.com/realmroot/enbor
       org.opencontainers.image.licenses: Apache-2.0
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.version: "{{ .Version }}"

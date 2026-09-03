@@ -24,7 +24,7 @@ class RunnerVolumeMount:
     """
         Attributes:
             name (str):  Example: source.
-            mount_path (str):  Example: /workspace/repos/saltbo/any-managed-agents.
+            mount_path (str):  Example: /workspace/repos/realmroot/enbor.
             read_only (bool | Unset):
      """
 

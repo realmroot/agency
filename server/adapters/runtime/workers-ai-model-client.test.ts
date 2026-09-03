@@ -869,7 +869,7 @@ describe('workersAiModelClient — test mode bypass', () => {
       .filter((b) => b.type === 'text')
       .map((b) => (b as { type: 'text'; text: string }).text)
       .join('')
-    expect(text).toContain('AMA runtime processed:')
+    expect(text).toContain('Enbor runtime processed:')
   })
 
   it('returns "none" when there is no previous user prompt in the history', async () => {

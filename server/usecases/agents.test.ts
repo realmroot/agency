@@ -150,7 +150,7 @@ function fakeDeps(overrides: { repo?: Partial<Deps['agents']>; audit?: AuditEntr
     cloudRuntime: undefined as unknown as Deps['cloudRuntime'],
     runtimeWorkspace: undefined as unknown as Deps['runtimeWorkspace'],
     sandboxExecutor: undefined as unknown as Deps['sandboxExecutor'],
-    amaTurnExecutor: undefined as unknown as Deps['amaTurnExecutor'],
+    enborTurnExecutor: undefined as unknown as Deps['enborTurnExecutor'],
     sessionOrchestration: undefined as unknown as Deps['sessionOrchestration'],
     sessionEventStore: undefined as unknown as Deps['sessionEventStore'],
     sessions: undefined as unknown as Deps['sessions'],
@@ -355,7 +355,7 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
     ).rejects.toMatchObject({ name: 'IdentityAlreadyBoundError', code: 'identity_already_bound' })
   })
 
-  it('rejects binding an Identity whose runtime has no registered AMA driver', async () => {
+  it('rejects binding an Identity whose runtime has no registered Enbor driver', async () => {
     await expect(
       createAgent(withIdentity(fakeDeps(), null, 'hermes'), auth, {
         name: 'Hermes identity agent',

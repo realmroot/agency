@@ -24,7 +24,7 @@ class IdentitySpec:
         Attributes:
             username (str):
             runtime (str): Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a
-                registered AMA runtime driver. Example: codex.
+                registered Enbor runtime driver. Example: codex.
      """
 
     username: str

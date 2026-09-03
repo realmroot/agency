@@ -52,7 +52,7 @@ export const GitRepositoryVolumeSchema = z
   .object({
     name: VolumeNameSchema.openapi({ example: 'source' }),
     type: z.literal('git_repository'),
-    url: GitRepositoryUrlSchema.openapi({ example: 'https://github.com/saltbo/any-managed-agents.git' }),
+    url: GitRepositoryUrlSchema.openapi({ example: 'https://github.com/realmroot/enbor.git' }),
     ref: GitRefSchema.optional(),
     secretRef: SecretRefSchema.optional(),
     items: z.array(SecretItemSchema).max(50).optional(),

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientPagination } from '@/console/use-client-pagination'
 import { McpView } from '@/features/mcp/McpView'
-import type { Connector } from '@/lib/amarpc'
+import type { Connector } from '@/lib/enborrpc'
 
 function pagination<T>(items: T[]): ClientPagination<T> {
   return {

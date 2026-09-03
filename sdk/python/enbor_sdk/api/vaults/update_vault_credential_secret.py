@@ -117,7 +117,7 @@ def sync_detailed(
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Update a vault credential secret
 
-     Updates credential secret material. AMA records version snapshots internally for auditability.
+     Updates credential secret material. Enbor records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -159,7 +159,7 @@ def sync(
 ) -> ErrorResponse | VaultCredential | None:
     """ Update a vault credential secret
 
-     Updates credential secret material. AMA records version snapshots internally for auditability.
+     Updates credential secret material. Enbor records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -196,7 +196,7 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Update a vault credential secret
 
-     Updates credential secret material. AMA records version snapshots internally for auditability.
+     Updates credential secret material. Enbor records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
@@ -238,7 +238,7 @@ async def asyncio(
 ) -> ErrorResponse | VaultCredential | None:
     """ Update a vault credential secret
 
-     Updates credential secret material. AMA records version snapshots internally for auditability.
+     Updates credential secret material. Enbor records version snapshots internally for auditability.
 
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.

@@ -971,7 +971,7 @@ export const updateVaultCredential = <ThrowOnError extends boolean = false>(opti
 /**
  * Update a vault credential secret
  *
- * Updates credential secret material. AMA records version snapshots internally for auditability.
+ * Updates credential secret material. Enbor records version snapshots internally for auditability.
  */
 export const updateVaultCredentialSecret = <ThrowOnError extends boolean = false>(options: Options<UpdateVaultCredentialSecretData, ThrowOnError>): RequestResult<UpdateVaultCredentialSecretResponses, UpdateVaultCredentialSecretErrors, ThrowOnError> => (options.client ?? client).put<UpdateVaultCredentialSecretResponses, UpdateVaultCredentialSecretErrors, ThrowOnError>({
     url: '/api/v1/vaults/{vaultId}/credentials/{credentialId}',

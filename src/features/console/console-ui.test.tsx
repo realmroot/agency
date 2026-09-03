@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { delay } from 'msw'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Agent, AuthContext, Project, Session } from '@/lib/amarpc'
+import type { Agent, AuthContext, Project, Session } from '@/lib/enborrpc'
 import { HttpResponse, http, server } from '@/test/msw'
 import { type AgentOverrides, agent as resourceAgent } from '@/test/resource-fixtures'
 import { buildTestSession, type TestSessionOverrides } from '@/testing/session'
@@ -336,7 +336,7 @@ describe('[spec: console/shell] ConsoleShell', () => {
 
   it('renders the app brand name', () => {
     renderShell()
-    expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0)
   })
 
   it('renders desktop nav links for all sections', () => {
@@ -627,8 +627,8 @@ describe('[spec: web-console/project-switcher] CreateProjectSheet', () => {
 // ConsoleLayout calls getCurrentUser() (from @/lib/oidc) and api.listProjects()
 // (which hits GET /api/v1/projects). The e2e localStorage token set by setup.ts
 // makes getCurrentUser fast-path to an e2e user, so happy-path tests need no spy.
-// Error/null-user tests spy only on @/lib/oidc (allowed — not @/lib/amarpc).
-// The projects endpoint is handled by MSW — no @/lib/amarpc mock ever.
+// Error/null-user tests spy only on @/lib/oidc (allowed — not @/lib/enborrpc).
+// The projects endpoint is handled by MSW — no @/lib/enborrpc mock ever.
 //
 // IMPORTANT: the e2e token in localStorage is also used by getAuthHeaders() for
 // API request headers. Never remove it — only spy on getCurrentUser when you need
@@ -654,7 +654,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
   it('renders ConsoleShell with nav when authenticated with projects', async () => {
     server.use(projectsHandler([buildProject()]))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
     expect(screen.getAllByRole('link', { name: 'Agents' }).length).toBeGreaterThan(0)
   })
 
@@ -668,7 +668,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
   it('shows console unavailable when projects query returns 401', async () => {
     server.use(projectsErrorHandler(401, 'Unauthorized'))
     renderLayout()
-    await waitFor(() => expect(screen.getByText('Any Managed Agents')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Enbor')).toBeTruthy())
     expect(screen.getByText(/Sign in through OIDC provider/)).toBeTruthy()
   })
 
@@ -694,7 +694,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     // Register a fallback so onUnhandledRequest:'error' doesn't fire if timing varies.
     server.use(projectsHandler([]))
     renderLayout()
-    await waitFor(() => expect(screen.getByText('Any Managed Agents')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Enbor')).toBeTruthy())
     expect(screen.getByText(/Sign in through OIDC provider/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Continue with OIDC provider' })).toBeTruthy()
   })
@@ -703,7 +703,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     vi.spyOn(await import('@/lib/oidc'), 'getCurrentUser').mockRejectedValue(new Error('Auth failed'))
     server.use(projectsHandler([]))
     renderLayout()
-    await waitFor(() => expect(screen.getByText('Any Managed Agents')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Enbor')).toBeTruthy())
     expect(screen.getByText(/Sign in through OIDC provider/)).toBeTruthy()
   })
 
@@ -727,7 +727,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
     expect(screen.getAllByText('My Org').length).toBeGreaterThan(0)
   })
 
@@ -738,7 +738,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
     expect(screen.getAllByText('Personal workspace').length).toBeGreaterThan(0)
   })
 
@@ -760,7 +760,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     })
     server.use(projectsHandler([buildProject()]))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
   })
 
   it('selects first project when no stored project id matches', async () => {
@@ -769,7 +769,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     window.localStorage.removeItem('ama:selected-project-id')
     server.use(projectsHandler(projects))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
     expect(screen.getAllByText('First').length).toBeGreaterThan(0)
   })
 
@@ -780,7 +780,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     } as never)
     server.use(projectsHandler([buildProject()]))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
     expect(screen.getAllByText('User').length).toBeGreaterThan(0)
   })
 
@@ -788,13 +788,13 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
     const projects = [buildProject({ id: 'p1', name: 'Alpha' }), buildProject({ id: 'p2', name: 'Beta' })]
     server.use(projectsHandler(projects))
     renderLayout()
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
 
     expect(() => {
       window.dispatchEvent(new Event('ama:selected-project-changed'))
     }).not.toThrow()
 
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
   })
 
   it('dispatches signIn when sign-in button is clicked', async () => {
@@ -825,7 +825,7 @@ describe('[spec: web-console/shell] ConsoleLayout', () => {
       </QueryClientProvider>,
     )
 
-    await waitFor(() => expect(screen.getAllByText('Any Managed Agents').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Enbor').length).toBeGreaterThan(0))
 
     const trigger = screen.getAllByLabelText('Switch project')[0]!
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerId: 1, pointerType: 'mouse' })

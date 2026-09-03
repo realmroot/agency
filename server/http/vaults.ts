@@ -391,7 +391,7 @@ const updateCredentialSecretRoute = createRoute({
   operationId: 'updateVaultCredentialSecret',
   tags: ['Vaults'],
   summary: 'Update a vault credential secret',
-  description: 'Updates credential secret material. AMA records version snapshots internally for auditability.',
+  description: 'Updates credential secret material. Enbor records version snapshots internally for auditability.',
   ...AuthenticatedOperation,
   request: {
     params: CredentialParamsSchema,

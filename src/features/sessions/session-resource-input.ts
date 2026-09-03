@@ -1,5 +1,5 @@
 import type { SessionFormState } from '@/console/types'
-import type { SessionInput } from '@/lib/amarpc'
+import type { SessionInput } from '@/lib/enborrpc'
 
 export function sessionResourcesInput(form: SessionFormState): Pick<SessionInput['spec'], 'volumes' | 'volumeMounts'> {
   const volumes: NonNullable<SessionInput['spec']['volumes']> = []

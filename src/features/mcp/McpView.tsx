@@ -10,7 +10,7 @@ import {
   TruncatedTooltipText,
 } from '@/console/components'
 import type { ClientPagination } from '@/console/use-client-pagination'
-import type { Connector } from '@/lib/amarpc'
+import type { Connector } from '@/lib/enborrpc'
 
 export function connectorDisabledReason(connector: Connector) {
   if (connector.availability === 'unavailable') {

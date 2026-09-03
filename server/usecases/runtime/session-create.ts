@@ -21,7 +21,7 @@ import {
   IdentityRuntimeUnsupportedError,
   resolveIdentityRuntime,
 } from '@server/domain/identity'
-import { amaMemoryRef, memoryStoreIdFromRef } from '@server/domain/memory-store'
+import { enborMemoryRef, memoryStoreIdFromRef } from '@server/domain/memory-store'
 import { runtimeDriverName, runtimeNameForIdentity } from '@server/domain/runtime/driver'
 import type {
   EnvFromEntry,
@@ -117,7 +117,7 @@ async function resolveMemoryVolumes(
     resolved.push({
       name: volume.name,
       type: 'memory',
-      memoryRef: amaMemoryRef(storeId),
+      memoryRef: enborMemoryRef(storeId),
     } satisfies MemoryVolume)
   }
   return { volumes: resolved }

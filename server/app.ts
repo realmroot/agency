@@ -1,7 +1,7 @@
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { oidcAudience, requireOidcConfig } from './auth/oidc'
-import { AMA_RESOURCE_DESCRIPTION, AMA_RESOURCE_NAME, protectedResourceMetadata } from './auth/scopes'
+import { ENBOR_RESOURCE_DESCRIPTION, ENBOR_RESOURCE_NAME, protectedResourceMetadata } from './auth/scopes'
 import { createDeps } from './composition'
 import { RUNNER_PROTOCOL_SCHEMAS } from './contracts/runner-protocol'
 import type { Env } from './env'
@@ -101,7 +101,7 @@ export function createApp() {
     const resource = oidcAudience(c.env, c.req.url)
     const serviceDescription = `${resource}/v1/openapi.json`
     c.header('Link', `<${serviceDescription}>; rel="service-desc"; type="application/openapi+json"`)
-    return c.json({ resource, name: AMA_RESOURCE_NAME, description: AMA_RESOURCE_DESCRIPTION })
+    return c.json({ resource, name: ENBOR_RESOURCE_NAME, description: ENBOR_RESOURCE_DESCRIPTION })
   })
 
   const routes = app

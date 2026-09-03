@@ -1,7 +1,7 @@
 Feature: Sessions
   A session is a tenant-scoped run of an agent version in a selected runtime.
   It snapshots its agent and environment, owns canonical events, and exposes a
-  lifecycle (create, prompt, close, reopen, delete) behind AMA endpoints only.
+  lifecycle (create, prompt, close, reopen, delete) behind Enbor endpoints only.
 
   # ── State rules (domain: pure, no runtime) ──
 
@@ -44,9 +44,9 @@ Feature: Sessions
     And the runtime receives no pinned provider or model requirement
 
   @sessions/cloud-requires-model @api
-  Scenario: Require an explicit model for the AMA cloud runtime
+  Scenario: Require an explicit model for the Enbor cloud runtime
     Given an active agent version does not pin a provider or model
-    When a session selects the AMA cloud runtime
+    When a session selects the Enbor cloud runtime
     Then session creation is rejected without inventing a platform provider or model
 
   @sessions/live-state-refresh @web
@@ -66,7 +66,7 @@ Feature: Sessions
   @sessions/identity-materialization @usecase
   Scenario: Materialize a bound Agent Identity for one session
     Given the selected agent version references an active Identity credential
-    When AMA launches the session in a cloud or self-hosted runtime
+    When Enbor launches the session in a cloud or self-hosted runtime
     Then an emptyDir volume declaratively seeds the credential through the existing secret boundary
     And the writable state directory is materialized by the generic workspace volume implementation
     And the provider issuer and selected Identity runtime are supplied without exposing the credential
@@ -79,7 +79,7 @@ Feature: Sessions
 	  Scenario: Create a session with attached memory stores
 	    Given a project has an active memory store with memories
 	    When the user creates a session with memory volumes and readOnly volumeMounts
-    Then AMA stores memory references in volumes and readOnly settings in volumeMounts
+    Then Enbor stores memory references in volumes and readOnly settings in volumeMounts
     And runtime materialization mounts the current memory store contents
     And memory volumeMount readOnly settings and mount paths are included in the runtime system prompt context
     And memory contents are mounted as files instead of injected into the prompt
@@ -95,7 +95,7 @@ Feature: Sessions
   Scenario: Launch a session with an initial prompt over the API
     Given a project has an active agent and active environments
     When an external scheduler creates a session with an initial prompt and run correlation metadata
-    Then the prompt is dispatched to the AMA-owned runtime without a browser socket
+    Then the prompt is dispatched to the Enbor-owned runtime without a browser socket
     And the initial-prompt dispatch is recorded as an audit event
     And workspace resource context is supplied through the session runtime snapshot
 
@@ -142,7 +142,7 @@ Feature: Sessions
     Then the request is rejected and no cross-project data is returned
 
   @sessions/connection @api
-  Scenario: Expose live browser traffic only through the AMA session socket
+  Scenario: Expose live browser traffic only through the Enbor session socket
     Given a session exists in cloud or self-hosted hosting
     When a browser opens the session socket
     Then the Console exchanges its Bearer credential for a short-lived single-use socket ticket after auth and tenancy checks
@@ -160,7 +160,7 @@ Feature: Sessions
 
   @sessions/events-query @api
   Scenario: Query session events with stable pagination and filters
-    Given an AMA-loop session has Session DO events or a self-hosted external runtime has runner-local events
+    Given an Enbor-loop session has Session DO events or a self-hosted external runtime has runner-local events
     When the client lists events with limit, order, type filter, or cursor
     Then the response returns a deterministic page with sequence boundaries
     And only external-runtime self-hosted history is read through the owning runner
@@ -176,7 +176,7 @@ Feature: Sessions
   @sessions/events-hierarchy @domain
   Scenario: Preserve event hierarchy for product consumers
     Given a runtime emits nested turns, messages, tool calls, and substeps
-    When AMA stores the session events
+    When Enbor stores the session events
     Then every event has a stable id and monotonically increasing sequence
     And related events share turn, message, tool-call, and span identifiers with parent references
     And sub-agent work is represented as an agent tool call whose child events reference that tool call through parentToolCallId

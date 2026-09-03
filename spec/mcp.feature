@@ -1,5 +1,5 @@
 Feature: MCP
-  Platform MCP connectors are a static catalog of MCP servers. AMA does not
+  Platform MCP connectors are a static catalog of MCP servers. Enbor does not
   expose a connection resource, does not bind credentials to connectors, and
   does not proxy MCP tool calls.
 

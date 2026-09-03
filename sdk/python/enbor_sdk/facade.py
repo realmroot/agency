@@ -109,9 +109,9 @@ from .api.work_items import list_work_items as list_work_items_api
 from .api.work_items import read_work_item as read_work_item_api
 
 
-class AmaApiError(Exception):
+class EnborApiError(Exception):
     def __init__(self, status: int | None, response_text: str, body: Any) -> None:
-        super().__init__(f"AMA API request failed{'' if status is None else f' with HTTP {status}'}")
+        super().__init__(f"Enbor API request failed{'' if status is None else f' with HTTP {status}'}")
         self.status = status
         self.response_text = response_text
         self.body = body
@@ -251,7 +251,7 @@ class _ClientCore:
         return self.client
 
 
-class AmaClient:
+class EnborClient:
     def __init__(
         self,
         base_url: str,
@@ -283,7 +283,7 @@ class AmaClient:
         return self._core.raw
 
 
-class AmaRunnerClient:
+class EnborRunnerClient:
     def __init__(
         self,
         base_url: str,
@@ -303,23 +303,23 @@ class AmaRunnerClient:
         return self._core.raw
 
 
-def create_ama_client(
+def create_enbor_client(
     base_url: str,
     project_id: str | None = None,
     headers: dict[str, str] | None = None,
     client: Client | None = None,
     websocket_authorizer: Callable[[str, str], dict[str, str]] | None = None,
-) -> AmaClient:
-    return AmaClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)
+) -> EnborClient:
+    return EnborClient(base_url=base_url, project_id=project_id, headers=headers, client=client, websocket_authorizer=websocket_authorizer)
 
 
-def create_ama_runner_client(
+def create_enbor_runner_client(
     base_url: str,
     project_id: str | None = None,
     headers: dict[str, str] | None = None,
     client: Client | None = None,
-) -> AmaRunnerClient:
-    return AmaRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client)
+) -> EnborRunnerClient:
+    return EnborRunnerClient(base_url=base_url, project_id=project_id, headers=headers, client=client)
 
 
 def _websocket_url(base_url: str, path: str) -> str:
@@ -329,7 +329,7 @@ def _websocket_url(base_url: str, path: str) -> str:
     elif parsed.scheme == "http":
         scheme = "ws"
     else:
-        raise ValueError("AMA base URL must use http or https")
+        raise ValueError("Enbor base URL must use http or https")
     return urlunparse((scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
@@ -362,7 +362,7 @@ def _unwrap(response: Any) -> Any:
         text = response_text.message
     else:
         text = response.content.decode("utf-8", errors="replace") if response.content else ""
-    raise AmaApiError(status, text, body)
+    raise EnborApiError(status, text, body)
 
 
 class _ConfigzResource:

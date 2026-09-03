@@ -29,7 +29,7 @@ test('server changes include real integration checks', () => {
 })
 
 test('Runner changes select native and release-package checks', () => {
-  assert.deepEqual(enabled(classifyChanges(['cmd/ama-runner/cmd/root.go'])), ['runner', 'packaging'])
+  assert.deepEqual(enabled(classifyChanges(['cmd/enbor-runner/cmd/root.go'])), ['runner', 'packaging'])
 })
 
 test('runtime bridge changes cover both Node and embedded Runner consumers', () => {

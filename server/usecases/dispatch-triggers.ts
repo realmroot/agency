@@ -1,7 +1,7 @@
 import type { ResourceMetadata } from '@server/domain/resource'
 import { parseJson } from '@server/domain/runtime/session-snapshot'
 import type { Trigger } from '@server/domain/trigger'
-import { AMA_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
+import { ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH } from '@server/metadata-keys'
 import type { Deps } from './deps'
 import {
   type HttpTriggerTemplateContext,
@@ -405,7 +405,7 @@ export async function dispatchHttpTrigger(
     annotations: {
       ...trigger.spec.template.metadata.annotations,
       ...requestMetadata.annotations,
-      ...(keyHash ? { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } : {}),
+      ...(keyHash ? { [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: keyHash } : {}),
       source: 'http-trigger',
       httpTriggerId: trigger.metadata.uid,
       httpRunId: run.id,
@@ -572,7 +572,7 @@ async function dispatchClaimedSerialHttpRun(
     annotations: {
       ...trigger.spec.template.metadata.annotations,
       ...(requestMetadata.annotations ?? {}),
-      ...(pending.routingKeyHash ? { [AMA_ANNOTATION_KEY_ROUTING_KEY_HASH]: pending.routingKeyHash } : {}),
+      ...(pending.routingKeyHash ? { [ENBOR_ANNOTATION_KEY_ROUTING_KEY_HASH]: pending.routingKeyHash } : {}),
       source: 'http-trigger',
       httpTriggerId: trigger.metadata.uid,
       httpRunId: pending.run.id,

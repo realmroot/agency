@@ -3,7 +3,7 @@ import { runtimeMessagesFromEvents } from './transcript'
 
 const text = (value: string) => [{ type: 'text' as const, text: value }]
 
-describe('AMA runtime transcript', () => {
+describe('Enbor runtime transcript', () => {
   it('rebuilds context from completed canonical messages only', () => {
     const messages = runtimeMessagesFromEvents([
       {

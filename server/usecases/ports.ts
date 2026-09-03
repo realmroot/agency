@@ -31,7 +31,7 @@ import type {
   VersionState,
 } from '@server/domain/vault'
 import type { WorkspaceManifest } from '@server/domain/workspace'
-import type { AmaEvent } from '@shared/session-events'
+import type { EnborEvent } from '@shared/session-events'
 
 export type {
   EnvFromEntry,
@@ -1784,9 +1784,9 @@ export interface RunnerChannel {
   isAccepted(sessionId: string): Promise<boolean>
   // Dispatches a command to the runner over the channel; true when accepted.
   dispatch(sessionId: string, command: Record<string, unknown>, requestId?: string | null): Promise<boolean>
-  // Executes one sandbox tool against the runner-owned workspace for AMA cloud-loop sessions.
+  // Executes one sandbox tool against the runner-owned workspace for Enbor cloud-loop sessions.
   executeSandboxTool(input: ToolExecutionInput): Promise<ToolExecutionResult>
-  // Stops a runner-owned sandbox workspace for AMA cloud-loop sessions.
+  // Stops a runner-owned sandbox workspace for Enbor cloud-loop sessions.
   stopSandbox(sessionId: string): Promise<void>
   // Reads writable memory-store files from a runner-owned sandbox workspace.
   readMemoryStoreMemories(input: {
@@ -1798,7 +1798,7 @@ export interface RunnerChannel {
 
 // --- sandbox runtime host (cloud session execution) ---
 
-// ports.ts may name the AMA cloud-loop execution contract. The engine lives
+// ports.ts may name the Enbor cloud-loop execution contract. The engine lives
 // under usecases/runtime because it is server-owned business execution, while
 // stable tool/event shapes come from packages/runtime-contracts.
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
@@ -1882,14 +1882,14 @@ export type SessionTurnInput = {
   // Checked before each model call after the first; returning true pauses the run.
   shouldPause?: () => boolean
   ensureActive?: () => Promise<void>
-  onEvent: (event: AmaEvent) => Promise<void>
+  onEvent: (event: EnborEvent) => Promise<void>
   approveToolCall?: (input: RuntimeToolPolicyInput) => Promise<RuntimeToolPolicyDecision>
   // Supplies a caller-provided tool result (e.g. an approved custom tool
   // outcome) instead of executing the tool in the sandbox.
   resolveToolResult?: (input: RuntimeToolPolicyInput) => Promise<Record<string, unknown> | null>
 }
 
-// Starts and tears down cloud-owned AMA session sandboxes. Runner-owned
+// Starts and tears down cloud-owned Enbor session sandboxes. Runner-owned
 // sandboxes are closed through RunnerChannel because their lifecycle is owned
 // by the self-hosted runner channel.
 export interface CloudRuntimeLifecycle {
@@ -1918,9 +1918,9 @@ export interface SessionSandboxExecutor {
   executeTool(input: ToolExecutionInput): Promise<ToolExecutionResult>
 }
 
-// Runs one AMA cloud-loop model turn. This is server-owned runtime behavior:
-// runner AMA mode only supplies the sandbox where tools execute.
-export interface AmaTurnExecutor {
+// Runs one Enbor cloud-loop model turn. This is server-owned runtime behavior:
+// runner Enbor mode only supplies the sandbox where tools execute.
+export interface EnborTurnExecutor {
   runTurn(input: SessionTurnInput): Promise<SessionTurnResult>
 }
 
@@ -2192,11 +2192,14 @@ export interface EventPage {
 // pre-migration cloud + self-hosted CLI sessions on D1. One contract over both
 // backends; the read shape (SessionEvent/Page) is identical either way.
 export interface EventStore {
-  appendEvent(scope: { organizationId: string; projectId: string; sessionId: string }, event: AmaEvent): Promise<string>
+  appendEvent(
+    scope: { organizationId: string; projectId: string; sessionId: string },
+    event: EnborEvent,
+  ): Promise<string>
   // Batch ingest (the POST /events endpoint). Returns the count.
   insertEvents(
     scope: { organizationId: string; projectId: string; sessionId: string },
-    events: AmaEvent[],
+    events: EnborEvent[],
   ): Promise<number>
   queryEvents(sessionId: string, query: EventQuery): Promise<EventPage>
   eventStream(sessionId: string): Promise<{ type: string; payload: string }[]>
@@ -2281,7 +2284,7 @@ export interface SessionRepo {
   queryEvents(sessionId: string, query: EventQuery): Promise<EventPage>
   insertEvents(
     scope: { organizationId: string; projectId: string; sessionId: string },
-    events: AmaEvent[],
+    events: EnborEvent[],
   ): Promise<number>
 
   listApprovals(projectId: string, sessionId: string): Promise<SessionApproval[]>

@@ -7,7 +7,7 @@ Feature: Auth
 
   @auth/oidc-claims @domain
   Scenario: Resolve a tenant scope from OIDC claims
-    Given a valid provider-issued access token with OIDC claims and the exact AMA resource audience
+    Given a valid provider-issued access token with OIDC claims and the exact Enbor resource audience
     When the platform resolves the request context
     Then it derives user, organization, and project context from the claims
     And deterministic runner tokens require a configured runner client
@@ -17,23 +17,23 @@ Feature: Auth
   @auth/oidc-audience @domain
   Scenario: Reject an access token issued for another resource
     Given a signed access token from the configured issuer
-    When its audience does not identify the AMA resource
+    When its audience does not identify the Enbor resource
     Then authentication fails closed before tenant context is resolved
 
   # ── Session and context API (api: assembled server, real D1) ──
 
   @auth/credential-mode @api
   Scenario: Select the credential mode from the verified OAuth client
-    Given the authorization server issued an RFC 9068 access token for the exact AMA resource
-    When a direct Console client sends Bearer authentication or the browser sends its opaque AMA session cookie
+    Given the authorization server issued an RFC 9068 access token for the exact Enbor resource
+    When a direct Console client sends Bearer authentication or the browser sends its opaque Enbor session cookie
     Then both credentials resolve through the same exact-scope authorization context without a proof-of-possession requirement
-    And an allowed OAuth client may present an ordinary Bearer token issued for the exact AMA resource without a local client allowlist
+    And an allowed OAuth client may present an ordinary Bearer token issued for the exact Enbor resource without a local client allowlist
     And sender-constrained tokens require DPoP while the runner uses Bearer and an Agent client requires a fresh DPoP proof whose key matches cnf.jkt
     And using a client through the wrong credential mode fails closed without fallback
 
   @auth/dpop @api
   Scenario: Require proof of possession for Agent requests
-    Given the authorization server issued a DPoP-bound Agent token for the exact AMA resource
+    Given the authorization server issued a DPoP-bound Agent token for the exact Enbor resource
     When the caller omits the DPoP proof, replays it, changes its method or URL, or uses another key
     Then authentication fails closed with a DPoP challenge
     And a fresh proof whose key matches cnf.jkt is accepted once
@@ -60,17 +60,17 @@ Feature: Auth
 
   @auth/sso-discovery @api
   Scenario: Discover an organization's sign-in methods
-    Given the public AMA configuration
+    Given the public Enbor configuration
     When the user requests the discovery config
-    Then the confidential AMA backend sign-in method is returned only when its client secret and session encryption key are configured
+    Then the confidential Enbor backend sign-in method is returned only when its client secret and session encryption key are configured
     And public configuration returns the OIDC issuer, runner client, exact resource, and runner scopes without exposing browser credentials
 
   @auth/callback @api
   Scenario: Complete a server-owned browser authorization response
     Given the browser created a state, nonce, and PKCE-bound authorization attempt
-    When the configured provider returns a valid authorization code to the AMA backend
-    Then AMA consumes the attempt once and authenticates the confidential client with client_secret_basic
-    And AMA stores the access token as authenticated ciphertext in D1
+    When the configured provider returns a valid authorization code to the Enbor backend
+    Then Enbor consumes the attempt once and authenticates the confidential client with client_secret_basic
+    And Enbor stores the access token as authenticated ciphertext in D1
     And the browser receives only an opaque HttpOnly SameSite cookie
     And invalid, expired, replayed, or cross-browser responses fail without creating a session
     And browser authorization-attempt, authorization-response, and cookie-session mutation routes remain internal and absent from OpenAPI
@@ -78,9 +78,9 @@ Feature: Auth
 
   @auth/delegated-bootstrap @api
   Scenario: Delegate first-admin bootstrap to the OIDC provider
-    Given AMA starts without local users or organizations
+    Given Enbor starts without local users or organizations
     Then the configured OIDC provider remains responsible for first-admin bootstrap and credential rotation
-    And AMA accepts only validated identity and authority claims for product access
+    And Enbor accepts only validated identity and authority claims for product access
 
   # ── Web console (web: login action and auth redirect) ──
 

@@ -1,14 +1,9 @@
-// The AMA turn-execution core. It drives the pi-agent-core loop,
+// The Enbor turn-execution core. It drives the pi-agent-core loop,
 // gates tools through the policy port, emits runtime events to the sink, and
 // reaches the model and the sandbox only through the ModelClient / ToolExecutor
-// ports. The loop runs in the cloud control plane; self-hosted AMA sessions use
+// ports. The loop runs in the cloud control plane; self-hosted Enbor sessions use
 // the same cloud loop with a runner-backed sandbox executor.
 
-import {
-  amaSandboxToolInputJsonSchema,
-  parseAmaSandboxToolInput,
-  parseAmaSandboxToolOutput,
-} from '@ama/runtime-contracts/tool-contracts'
 import {
   Agent,
   type AgentEvent,
@@ -26,10 +21,15 @@ import {
   type ToolCall,
   type Usage,
 } from '@earendil-works/pi-ai'
-import { AMA_SANDBOX_TOOL_NAMES, type AmaSandboxToolName } from '@shared/agent-tools'
+import {
+  enborSandboxToolInputJsonSchema,
+  parseEnborSandboxToolInput,
+  parseEnborSandboxToolOutput,
+} from '@enbor/runtime-contracts/tool-contracts'
+import { ENBOR_SANDBOX_TOOL_NAMES, type EnborSandboxToolName } from '@shared/agent-tools'
 import type {
-  AmaEvent,
-  ToolCall as AmaToolCall,
+  EnborEvent,
+  ToolCall as EnborToolCall,
   Message,
   MessageContentBlock,
   ToolResult,
@@ -155,7 +155,8 @@ function stringifyToolOutput(result: Record<string, unknown>) {
 function runtimeSystemPrompt(snapshot: Record<string, unknown>) {
   const systemPrompt = typeof snapshot.systemPrompt === 'string' ? snapshot.systemPrompt.trim() : ''
   return (
-    systemPrompt || 'You are an AMA cloud-owned coding agent. Use tools when workspace inspection or edits are needed.'
+    systemPrompt ||
+    'You are an Enbor cloud-owned coding agent. Use tools when workspace inspection or edits are needed.'
   )
 }
 
@@ -173,19 +174,19 @@ function runtimeTools(
 ) {
   const ensure = (signal: AbortSignal | undefined) =>
     ensureTurnActive(signal ?? values.engineSignal, () => values.liveness.ensureActive())
-  const tool = (name: AmaSandboxToolName, label: string, description: string): AgentTool =>
+  const tool = (name: EnborSandboxToolName, label: string, description: string): AgentTool =>
     ({
       name,
       label,
       description,
-      parameters: amaSandboxToolInputJsonSchema(name) as AgentTool['parameters'],
+      parameters: enborSandboxToolInputJsonSchema(name) as AgentTool['parameters'],
       executionMode: 'sequential',
       async execute(toolCallId, params, signal): Promise<AgentToolResult<Record<string, unknown>>> {
-        const input = parseAmaSandboxToolInput(name, params)
+        const input = parseEnborSandboxToolInput(name, params)
         await ensure(signal)
         const decision = await values.policy.approve({ toolCallId, toolName: name, input })
         if (!decision.allowed) {
-          throw new RuntimePolicyDeniedError(decision.reason ?? `Tool call blocked by AMA policy: ${name}`)
+          throw new RuntimePolicyDeniedError(decision.reason ?? `Tool call blocked by Enbor policy: ${name}`)
         }
         await ensure(signal)
         const providedResult = await values.toolResults.resolve({ toolCallId, toolName: name, input })
@@ -210,7 +211,7 @@ function runtimeTools(
         if (result.error) {
           throw new Error(JSON.stringify(result.error))
         }
-        const output = parseAmaSandboxToolOutput(name, result.output)
+        const output = parseEnborSandboxToolOutput(name, result.output)
         return {
           content: [{ type: 'text', text: stringifyToolOutput(output) }],
           details: { ...output, durationMs: result.durationMs },
@@ -220,7 +221,7 @@ function runtimeTools(
 
   const allowedTools = Array.isArray(values.agentSnapshot.allowedTools)
     ? values.agentSnapshot.allowedTools.filter((tool): tool is string => typeof tool === 'string')
-    : [...AMA_SANDBOX_TOOL_NAMES]
+    : [...ENBOR_SANDBOX_TOOL_NAMES]
   const allowsTool = (toolName: string) => allowedTools.includes(toolName)
 
   return [
@@ -291,7 +292,7 @@ function createTurnStreamFn(
   }
 }
 
-function usageEvent(message: AgentMessage, model: string): AmaEvent<'usage.recorded'> | null {
+function usageEvent(message: AgentMessage, model: string): EnborEvent<'usage.recorded'> | null {
   if (message.role !== 'assistant') {
     return null
   }
@@ -311,7 +312,7 @@ class PiAgentEventMapper {
   private lastMessageId: string | null = null
   private readonly toolMessageIds = new Map<string, string>()
 
-  map(event: AgentEvent): AmaEvent[] {
+  map(event: AgentEvent): EnborEvent[] {
     switch (event.type) {
       case 'agent_start':
         return [{ type: 'runtime.started', payload: {} }]
@@ -323,32 +324,32 @@ class PiAgentEventMapper {
         return [
           {
             type: 'turn.completed',
-            payload: { message: amaMessage(event.message, this.messageIdFor(event.message, this.lastMessageId)) },
+            payload: { message: enborMessage(event.message, this.messageIdFor(event.message, this.lastMessageId)) },
           },
         ]
       case 'message_start': {
         const id = this.startMessage(event.message)
-        return [{ type: 'message.started', payload: { message: amaMessage(event.message, id) } }]
+        return [{ type: 'message.started', payload: { message: enborMessage(event.message, id) } }]
       }
       case 'message_update':
         return [
           {
             type: 'message.updated',
-            payload: { message: amaMessage(event.message, this.messageIdFor(event.message, this.activeMessageId)) },
+            payload: { message: enborMessage(event.message, this.messageIdFor(event.message, this.activeMessageId)) },
           },
         ]
       case 'message_end': {
         const id = this.messageIdFor(event.message, this.activeMessageId)
         this.lastMessageId = id
         this.activeMessageId = null
-        return [{ type: 'message.completed', payload: { message: amaMessage(event.message, id) } }]
+        return [{ type: 'message.completed', payload: { message: enborMessage(event.message, id) } }]
       }
       case 'tool_execution_update':
         return [
           {
             type: 'message.updated',
             payload: {
-              message: amaToolResultMessage(
+              message: enborToolResultMessage(
                 {
                   toolCallId: event.toolCallId,
                   result: agentToolResult(event.partialResult),
@@ -389,7 +390,7 @@ class PiAgentEventMapper {
   }
 }
 
-function amaMessage(message: AgentMessage, id?: string): Message {
+function enborMessage(message: AgentMessage, id?: string): Message {
   if (message.role !== 'user' && message.role !== 'assistant' && message.role !== 'toolResult') {
     return {
       id: id ?? crypto.randomUUID(),
@@ -400,7 +401,7 @@ function amaMessage(message: AgentMessage, id?: string): Message {
   return {
     id: messageId(message, id),
     role: message.role === 'toolResult' ? 'tool' : message.role,
-    content: amaContentBlocks(message),
+    content: enborContentBlocks(message),
     ...(message.role === 'assistant' ? { stopReason: message.stopReason } : {}),
     ...(message.role === 'toolResult' && typeof message.toolCallId === 'string'
       ? { parentToolCallId: message.toolCallId }
@@ -413,13 +414,13 @@ function messageId(message: AgentMessage, fallback?: string) {
   return typeof id === 'string' && id ? id : (fallback ?? crypto.randomUUID())
 }
 
-function amaContentBlocks(message: AgentMessage): MessageContentBlock[] {
+function enborContentBlocks(message: AgentMessage): MessageContentBlock[] {
   if (message.role !== 'user' && message.role !== 'assistant' && message.role !== 'toolResult') {
     return [{ type: 'text', text: JSON.stringify(message) }]
   }
   if (message.role === 'toolResult') {
     const toolCallId = typeof message.toolCallId === 'string' ? message.toolCallId : ''
-    const result = amaToolResult(message)
+    const result = enborToolResult(message)
     return [
       {
         type: 'tool_result',
@@ -441,7 +442,7 @@ function amaContentBlocks(message: AgentMessage): MessageContentBlock[] {
       return [{ type: 'reasoning', text: block.thinking }]
     }
     if (block.type === 'toolCall') {
-      return [{ type: 'tool_call', toolCall: amaToolCall(block) }]
+      return [{ type: 'tool_call', toolCall: enborToolCall(block) }]
     }
     if (block.type === 'image') {
       return [{ type: 'image', data: block.data, mediaType: block.mimeType }]
@@ -450,15 +451,15 @@ function amaContentBlocks(message: AgentMessage): MessageContentBlock[] {
   })
 }
 
-function amaToolCall(block: ToolCall): AmaToolCall {
+function enborToolCall(block: ToolCall): EnborToolCall {
   return { id: block.id, name: block.name, input: block.arguments }
 }
 
-function amaToolResultMessage(
+function enborToolResultMessage(
   event: { toolCallId: string; result: AgentToolResult<unknown>; isError?: boolean },
   id: string = crypto.randomUUID(),
 ): Message {
-  const result = amaToolResultFromAgentResult(event.result)
+  const result = enborToolResultFromAgentResult(event.result)
   return {
     id,
     role: 'tool',
@@ -474,7 +475,7 @@ function amaToolResultMessage(
   }
 }
 
-function amaToolResult(message: Extract<AgentMessage, { role: 'toolResult' }>): ToolResult {
+function enborToolResult(message: Extract<AgentMessage, { role: 'toolResult' }>): ToolResult {
   return {
     content: message.content.flatMap((block): ToolResultValueContentBlock[] => {
       if (block.type === 'text') {
@@ -489,7 +490,7 @@ function amaToolResult(message: Extract<AgentMessage, { role: 'toolResult' }>): 
   }
 }
 
-function amaToolResultFromAgentResult(result: AgentToolResult<unknown>): ToolResult {
+function enborToolResultFromAgentResult(result: AgentToolResult<unknown>): ToolResult {
   return {
     content: result.content.flatMap((block): ToolResultValueContentBlock[] => {
       if (block.type === 'text') {
@@ -583,7 +584,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
           approve: async (toolCall) => {
             const decision = await input.policy.approve(toolCall)
             if (!decision.allowed) {
-              policyFailure = decision.reason ?? 'Tool call blocked by AMA policy'
+              policyFailure = decision.reason ?? 'Tool call blocked by Enbor policy'
             }
             return decision
           },
@@ -641,8 +642,8 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
         eventFailure === CANCELLATION_REASON ? { type: 'cancel' } : { type: 'fail', message: eventFailure },
       )
     }
-    for (const amaEvent of eventMapper.map(event)) {
-      await input.sink.emit(amaEvent)
+    for (const enborEvent of eventMapper.map(event)) {
+      await input.sink.emit(enborEvent)
     }
     if (event.type === 'message_end') {
       const usage = usageEvent(event.message, modelId)

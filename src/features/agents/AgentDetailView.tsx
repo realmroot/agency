@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmAction, DetailSection, EmptyState, Meta, MetaGrid, StatusBadge } from '@/console/components'
 import { formatDate } from '@/console/format'
 import { RelatedResourcesTable } from '@/features/console/related-resources-table'
-import type { Agent, AgentVersion, Session } from '@/lib/amarpc'
+import type { Agent, AgentVersion, Session } from '@/lib/enborrpc'
 
 export function AgentDetailView({
   agent,

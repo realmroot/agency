@@ -1,4 +1,4 @@
-import { AMA_SANDBOX_TOOL_NAMES, isAmaSandboxToolName } from '@shared/agent-tools'
+import { ENBOR_SANDBOX_TOOL_NAMES, isEnborSandboxToolName } from '@shared/agent-tools'
 import type { IdentityDescriptor } from './identity'
 import type { ResourceMetadata, ResourcePhase } from './resource'
 
@@ -87,7 +87,7 @@ export function hasSecretMaterial(value: unknown): boolean {
 }
 
 export function defaultAllowedTools() {
-  return [...AMA_SANDBOX_TOOL_NAMES]
+  return [...ENBOR_SANDBOX_TOOL_NAMES]
 }
 
 export function validateAllowedTools(tools: string[]): FieldErrors | null {
@@ -97,8 +97,8 @@ export function validateAllowedTools(tools: string[]): FieldErrors | null {
       return { allowedTools: `Tool is listed more than once: ${tool}` }
     }
     names.add(tool)
-    if (!isAmaSandboxToolName(tool)) {
-      return { allowedTools: `Tool is not supported by the AMA runtime: ${tool}` }
+    if (!isEnborSandboxToolName(tool)) {
+      return { allowedTools: `Tool is not supported by the Enbor runtime: ${tool}` }
     }
   }
   return null

@@ -1,5 +1,5 @@
 import type * as types from './generated/types.gen.js';
-export interface AmaClientConfig {
+export interface EnborClientConfig {
     baseUrl: string;
     projectId?: string;
     headers?: Record<string, string>;
@@ -8,13 +8,13 @@ export interface AmaClientConfig {
         dpopProof: string;
     }>;
 }
-export interface AmaRunnerClientConfig {
+export interface EnborRunnerClientConfig {
     baseUrl: string;
     projectId?: string;
     headers?: Record<string, string>;
     webSocketFactory?: (url: string, headers: Record<string, string>) => WebSocket | Promise<WebSocket>;
 }
-export declare class AmaApiError extends Error {
+export declare class EnborApiError extends Error {
     readonly status: number | undefined;
     readonly responseText: string;
     readonly body: unknown;
@@ -35,8 +35,8 @@ export interface RunnerChannel {
     send(message: types.RunnerChannelMessage): Promise<void>;
     close(): void;
 }
-export type AmaClient = ReturnType<typeof createAmaClient>;
-export declare function createAmaClient(config: AmaClientConfig): {
+export type EnborClient = ReturnType<typeof createEnborClient>;
+export declare function createEnborClient(config: EnborClientConfig): {
     raw: import("./generated/client/types.gen.js").Client;
     configz: {
         get: () => Promise<types.PublicConfig>;
@@ -167,8 +167,8 @@ export declare function createAmaClient(config: AmaClientConfig): {
         getSummary: (query?: types.ReadUsageSummaryData["query"]) => Promise<types.UsageSummary>;
     };
 };
-export type AmaRunnerClient = ReturnType<typeof createAmaRunnerClient>;
-export declare function createAmaRunnerClient(config: AmaRunnerClientConfig): {
+export type EnborRunnerClient = ReturnType<typeof createEnborRunnerClient>;
+export declare function createEnborRunnerClient(config: EnborRunnerClientConfig): {
     raw: import("./generated/client/types.gen.js").Client;
     configz: {
         get: () => Promise<types.PublicConfig>;

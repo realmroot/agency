@@ -28,7 +28,7 @@ function validateConfig(config: EnvironmentConfig, validateBundledPackages = tru
       packages:
         config.type === 'cloud'
           ? `Realmroot Toolbox ${BUNDLED_REALMROOT_GO_PACKAGE} (${BUNDLED_REALMROOT_WEBI_PACKAGE}) is already provided by the cloud image.`
-          : 'Self-hosted Environment packages are not installed by AMA; commands are resolved from the Runner host at execution time.',
+          : 'Self-hosted Environment packages are not installed by Enbor; commands are resolved from the Runner host at execution time.',
     })
   }
 }
