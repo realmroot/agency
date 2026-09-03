@@ -25,9 +25,9 @@ and trade-offs need to survive beyond the implementation that introduced them.
 - Valid statuses are `Proposed`, `Accepted`, `Deprecated`, and `Superseded`.
 - Accepted ADRs are immutable historical records. A changed decision gets a new
   ADR; the old ADR links to its replacement and becomes `Superseded`.
-- Product behavior belongs in `spec/`, detailed implementation guidance belongs
-  in the relevant `docs/product/` or `docs/infra/` guide, and API shapes belong
-  in OpenAPI and `docs/api-v1-design.md`.
+- Product and API behavior belongs exclusively in `spec/*.feature`. Exact API
+  shapes belong in generated OpenAPI. ADRs record rationale and trade-offs, not
+  endpoint catalogs, request/response documentation, or acceptance criteria.
 
 ## Template
 

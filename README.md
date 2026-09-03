@@ -4,7 +4,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OpenAPI](https://img.shields.io/badge/API-OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](docs/product/sdk.md)
+[![OpenAPI](https://img.shields.io/badge/API-OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](sdk/openapi.json)
 
 **The open infrastructure for durable agents.**
 
@@ -103,11 +103,14 @@ The repository, package, Resource Server, and runtime identifiers currently reta
 
 ## Documentation
 
+This README is a non-normative project overview. Product and API behavior is
+defined only by the Gherkin Features under `spec/`.
+
 - [Documentation Index](docs/README.md) - documentation map and content ownership.
 - [Contributor Guide](CONTRIBUTING.md) - local setup, verification, contribution workflow, and engineering rules.
-- [Product Spec](docs/product/spec.md) - product model, architecture boundary, and acceptance criteria.
+- [Product and API Specifications](spec/) - normative behavior in Gherkin Features.
 - [Architecture Decision Records](docs/adr/) - accepted architecture decisions, context, and consequences.
-- [SDK and API Boundary](docs/product/sdk.md) - protected-resource discovery, OpenAPI, and generated SDK usage.
+- [Generated OpenAPI](sdk/openapi.json) - exact API paths, methods, and schemas.
 - [Cloudflare Deployment](docs/infra/cloudflare-deploy.md) - Cloudflare resources, OIDC, runtime, and deployment notes.
 
 ## Verification

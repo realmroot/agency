@@ -11,7 +11,7 @@ import {
 import { type ProjectRecord, ProjectReservedNameError } from '../usecases/ports'
 import { createProject, deleteProject, listProjects, updateProject } from '../usecases/projects'
 
-// Mounted at /api/v1/projects (docs/api-v1-design.md §2 Projects).
+// Mounted at /api/v1/projects (spec/projects.feature).
 
 type ProjectRoutes = OpenAPIHono<DepsEnv>
 

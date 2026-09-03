@@ -64,13 +64,15 @@ Feature: Sessions
     And volume items project selected secret keys to the runtime-facing names
 
   @sessions/identity-materialization @usecase
-  Scenario: Materialize a bound Realmroot Agent Identity for one session
+  Scenario: Materialize a bound Agent Identity for one session
     Given the selected agent version references an active Identity credential
     When AMA launches the session in a cloud or self-hosted runtime
     Then an emptyDir volume declaratively seeds the credential through the existing secret boundary
     And the writable state directory is materialized by the generic workspace volume implementation
-    And the Realmroot issuer and selected Identity runtime are supplied without exposing the credential
-    And neither the cloud host nor the self-hosted runner interprets Realmroot state
+    And the provider issuer and selected Identity runtime are supplied without exposing the credential
+    And neither the cloud host nor the self-hosted runner interprets provider identity state
+    And only the bound credential is copied into a private Session-local writable state directory when the provider client requires one
+    And the writable copy is deleted with the Session workspace
     And a revoked or missing credential fails session creation before runtime allocation
 
 	  @sessions/memory-store-resources @api

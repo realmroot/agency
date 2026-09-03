@@ -17,32 +17,17 @@ contract.
   and OpenID Connect identity provider. It follows the OAuth 2.0 Security Best
   Current Practice in RFC 9700 and does not implement a parallel authentication
   system or local user and organization directories.
-- The verified OAuth `client_id` selects the permitted credential profile.
-  Direct clients use OAuth access tokens as Bearer credentials or as
-  sender-constrained credentials with RFC 9449 DPoP. A credential presented
-  through the wrong client profile is rejected without fallback.
-- Browser clients use the authorization code flow with PKCE. The server-side
-  application owns the callback and client authentication and must keep OAuth
-  credentials out of URLs and ordinary logs. Browser JavaScript receives only
-  the credential form defined by the selected web-client profile.
-- JWT access tokens follow the RFC 9068 profile where JWT access tokens are
-  used. AMA validates issuer, audience, expiry, client binding, and exact scopes
-  before producing one normalized authorization context.
-- Console Session WebSockets exchange the authenticated browser session for an
-  opaque 30-second, single-use ticket bound to the exact Session and browser
-  Origin. Agent SDK WebSockets continue to use DPoP.
-- Native runner daemons use the authorization code flow with PKCE and an exact
-  loopback redirect URI, short-lived access tokens, rotating refresh
-  credentials, exact audience validation, and least-privilege scopes. Static
-  runner tokens are unsupported.
-- The protected Resource is `https://ama.tftt.cc/api`. Missing scopes grant no
-  implicit owner authority.
-- The HTTP authentication wall maps `GET` and `HEAD` to `<resource>:read` and
-  mutations to `<resource>:write`; the exact scope authorizes the operation.
-  Runner credentials remain limited to their registered runner workflow.
+- Browser, native, and Agent clients use standard OAuth profiles appropriate to
+  their execution environment. Sender-constrained Agent access uses RFC 9449
+  DPoP, and JWT access tokens use RFC 9068 when selected by the provider.
+- All credential profiles normalize into one authorization context before AMA
+  applies tenant and resource authorization.
 - Realmroot is the currently configured OAuth/OIDC provider. Provider-specific
   endpoints, claims, and client registration are adapter and deployment
   concerns, not AMA authentication semantics.
+
+Observable authentication and authorization behavior is specified in
+`spec/auth.feature`.
 
 ## Consequences
 

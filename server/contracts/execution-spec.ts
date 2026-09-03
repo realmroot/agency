@@ -3,7 +3,7 @@ import { normalizeGitRepositoryUrl } from '../domain/git-repository'
 import { RuntimeSchema } from './environment-contracts'
 
 // Shared execution-spec building blocks that Session and Trigger both use
-// (docs/api-v1-design.md §1.7). Volumes are the single mountable resource model:
+// ([spec: sessions/create-explicit-inputs]). Volumes are the single mountable resource model:
 // repository, memory, and secret inputs all declare a volume and are
 // attached with volumeMounts.
 

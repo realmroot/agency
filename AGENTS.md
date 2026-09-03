@@ -11,22 +11,24 @@
 
 - Enbor is Cloudflare-native infrastructure for developers building agent products: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
-- A configured OAuth 2.0 authorization server and OpenID Connect provider own authentication, users, and organizations. Follow RFC 9700 security practices. The AMA backend completes authorization-code PKCE flows; direct protected requests use Bearer or RFC 9449 DPoP-bound access tokens. All client profiles enforce exact AMA scopes through the same authorization context. Realmroot is the current OAuth/OIDC provider, not part of the AMA protocol contract.
-- Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
-- AMA owns the control plane: OIDC-backed tenancy and OAuth scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
+- Architecture rationale and ownership boundaries live in `docs/adr/`. Observable product and API behavior lives only in `spec/*.feature`; do not restate either in this file.
 - AMA is infrastructure for downstream products and must not depend on or recognize any one of them. Do not add downstream-product names, client IDs, environment variables, routes, query parameters, authorization branches, fixtures, or compatibility behavior to AMA; expose generic resource capabilities and let each consumer own its business binding.
-- AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.
-- Cloudflare Agents SDK is not the v1.0 runtime contract. It may be added later as an adapter, but v1.0 must not require `/agents/*` compatibility.
-- Command-line automation uses RFC 9728 protected-resource discovery and the published OpenAPI document. Realmroot Toolbox is the current client implementation. Do not expose raw-token workflows.
-- Agent-facing skills use the provider-neutral AMA Agent Identity contract and OpenAPI-described control-plane operations while preserving the Pi runtime boundary. Realmroot is the current Agent identity provider adapter.
-- Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators use a protected-resource/OpenAPI client or DPoP-aware SDK; Realmroot Toolbox is the current CLI client.
-- Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, secret references, and authenticated ciphertext only; browser OAuth tokens must be encrypted before persistence.
+- Use standard protocols at external boundaries and keep provider-specific implementation behind adapters. Do not turn a current provider into the AMA protocol contract.
 
 ## Workflow: Spec-Traced, Verified At The Cheapest Layer
 
 Specs are BDD-lite (see `spec/README.md`). `spec/*.feature` is the product source of
 truth — documentation only, one file per capability — and is NOT executed; there is
 no Cucumber runner. Tests trace back to scenarios with `[spec: <id>]` breadcrumbs.
+
+Product behavior and API behavior MUST NOT be specified in Markdown documents.
+Write every observable requirement in the owning `spec/*.feature` file. The generated
+OpenAPI document is the machine-readable API shape; do not maintain Markdown endpoint
+catalogs, API design specifications, request/response examples, or product specs.
+Markdown is limited to architecture decisions, contributor workflow, operational
+runbooks, and implementation guidance that does not define product behavior. When a
+Markdown file contains normative behavior, migrate it to Gherkin and delete the
+Markdown source in the same change.
 
 1. Write or update a scenario in the capability's `spec/<capability>.feature`. Give it
    a stable id `@<capability>/<slug>` and one layer tag (`@domain`/`@usecase`/`@web`/
@@ -44,8 +46,9 @@ no Cucumber runner. Tests trace back to scenarios with `[spec: <id>]` breadcrumb
 Scenarios describe business behaviour. Selectors, fixtures, and platform details
 belong in the home test and its helpers.
 
-If implementation discovers a missing product decision, stop widening the code change
-and update the relevant `spec/` scenario or product doc first.
+If implementation discovers missing product behavior, stop widening the code change
+and update the relevant `spec/` scenario first. Record only consequential,
+hard-to-reverse architecture decisions in `docs/adr/`.
 
 ## Spec And Test Layering Rules
 
@@ -88,37 +91,26 @@ and update the relevant `spec/` scenario or product doc first.
 - `spec/` - Product behaviour in Gherkin (BDD-lite). One `.feature` per capability; tests trace back via `[spec: id]`. See `spec/README.md`.
 - `e2e/` - Native Playwright crowns (`*.spec.ts`), fixtures, browser helpers, and local e2e harnesses for `@e2e` scenarios.
 - `docs/adr/` - Accepted architecture decisions, their context, and consequences.
-- `docs/product/` - Product behavior, UI/UX standards, API/SDK boundaries, and implementation notes.
 - `docs/infra/` - Cloudflare deployment and infrastructure notes.
 
 ## UI/UX Rules
 
-- Follow `docs/product/ui-ux-standards.md` for all visible console work.
+- Describe visible console behavior in `spec/web-console.feature` or the owning capability Feature before implementation.
 - `src/App.tsx` should compose providers and `RouterProvider`; primary route definitions belong in `src/app/router.tsx`.
-- Primary resources must be URL-routed and deep-linkable. Do not drive major pages only through local view state.
 - Use React Query for server state. Do not add feature-level `useEffect + useState` API loading loops.
 - Use the shared Hono RPC client for browser control-plane calls. Do not add ad hoc `fetch('/api/...')` clients in feature code.
 - Compose route pages from shadcn primitives and shared AMA components. Do not recreate local button, input, card, panel, or field systems.
 - Forms use shadcn `Field` primitives for labels, descriptions, errors, and validation layout.
 - Date and time display uses the shared dayjs-backed formatter in `src/console/format.ts`.
-- Destructive actions use the shared confirmation dialog.
-- For visible UI changes, check desktop and 390px mobile behavior. Avoid horizontal scrolling, truncated mobile nav labels, card-in-card layouts, and marketing-style hero surfaces inside the console.
+- For visible UI changes, run the proof layer selected by the owning Feature on desktop and 390px mobile where applicable.
 
 ## API And OpenAPI Rules
 
-- Control-plane API behavior must be represented in OpenAPI generated from route schemas.
+- Control-plane API shapes must be represented in OpenAPI generated from route schemas; observable behavior belongs in the owning Feature.
 - Keep route handlers, validation schemas, tests, and OpenAPI output aligned in the same change.
 - Stable error envelopes matter; do not replace structured API errors with ad hoc strings.
 - OpenAPI and RFC 9728 protected-resource metadata are the contract for external CLI and generated SDK workflows.
 - OpenAPI is the external contract. It should not become the internal browser client implementation when Hono RPC can provide the project-local API entrypoint.
-
-## Runtime And Session Rules
-
-- A running session owns exactly one sandbox.
-- Environments are reusable configuration and policy snapshots, not running containers.
-- A session binds immutable agent and environment snapshots for runtime execution.
-- Session events, transcript, tool calls, usage, policy decisions, and safe runtime errors must remain inspectable after completion or failure.
-- Do not expose raw sandbox ports or preview URLs as the product surface.
 
 ## Verification
 

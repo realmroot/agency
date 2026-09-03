@@ -11,16 +11,19 @@ durable or broadly observable surfaces.
 
 ## Decision
 
-- Secret values are stored in Cloudflare Secrets or an approved external Vault.
-- D1 stores secret metadata, references, policy, snapshots, and authenticated
-  ciphertext only where a protocol requires server-side persistence.
-- Browser OAuth tokens are encrypted before D1 persistence.
-- API responses, events, logs, and UI views never expose raw secret values.
+- Dedicated secret providers own raw secret material. Durable domain resources
+  carry references or authenticated ciphertext only when a protocol requires
+  server-side recovery.
+- Product, transport, and observability layers operate on safe references rather
+  than reusable credentials.
+
+Observable secret validation, storage, projection, and redaction behavior is
+specified in `spec/vaults.feature`, `spec/sessions.feature`, and
+`spec/auth.feature`.
 
 ## Consequences
 
 - Resource models carry safe references instead of reusable credentials.
-- Runtime setup must resolve secret references at the execution boundary.
 - Secret rotation does not require rewriting ordinary domain rows.
 - Features that require recoverable ciphertext must explicitly own encryption,
   key management, and lifetime policy.

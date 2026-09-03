@@ -13,6 +13,8 @@ Feature: Web console
     Then the sidebar shows agents, environments, sessions, providers, vaults, MCP, usage, audit, and settings
     And the current organization and project context are visible
     And an Organization claim is never mislabeled as a personal workspace when its display name is absent
+    And desktop keeps navigation in the left shell while mobile exposes full non-ellipsized route labels
+    And route labels, page headings, and browser URLs agree
 
   @web-console/project-switcher @web
   Scenario: Switch and create projects from the sidebar header
@@ -28,6 +30,8 @@ Feature: Web console
     When the user navigates the console and opens detail pages
     Then each resource list and its detail page render from the control-plane responses
     And raw secret values are never rendered in detail pages
+    And primary resources are deep-linkable without relying on in-memory navigation state
+    And desktop and 390px mobile layouts avoid horizontal page scrolling
 
   # ── Resource list rendering (web: list rows and errors) ──
 
@@ -37,6 +41,8 @@ Feature: Web console
     When the user opens the provider and MCP lists
     Then each row renders on one line with pagination counts
     And error and disabled detail is exposed through tooltips instead of inline overflow
+    And loading regions use scoped progress while empty states explain what is missing
+    And status remains understandable without color alone
 
   # ── Destructive operations (web: confirm + audit) ──
 
@@ -46,6 +52,7 @@ Feature: Web console
     When the user triggers a close or archive from the console
     Then a confirmation dialog names the resource and consequence before the action runs
     And archived resources expose no further destructive action
+    And the pending operation disables duplicate submission and reports completion through shared feedback
 
   # ── Shared API client (web: single Hono RPC client) ──
 

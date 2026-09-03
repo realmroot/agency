@@ -1,8 +1,9 @@
 Feature: API contracts
   The control plane is automated through a single OpenAPI document generated from
   the Hono routes under /api/v1. Errors use a stable envelope, lists paginate and
-  filter consistently, the document drives Realmroot Toolbox and generated SDKs, and runtime
-  session traffic stays on AMA endpoints rather than a bespoke CLI protocol.
+  filter consistently, the document drives protected-resource clients and generated
+  SDKs, and runtime Session traffic stays on AMA endpoints rather than a bespoke CLI
+  protocol.
 
   # ── Health probe and OpenAPI generation (api: assembled server) ──
 
@@ -19,14 +20,15 @@ Feature: API contracts
     Given the Worker app is initialized
     When the OpenAPI document is requested
     Then it is generated from Hono route schemas and stays entirely under /api/v1
-    And every operation has a unique id, summary, tags, a documented success response, and scoped Realmroot auth on protected paths
+    And every operation has a unique id, summary, tags, a documented success response, and scoped OAuth auth on protected paths
+    And its path and method inventory comes from route schemas rather than a hand-maintained endpoint catalog
     And it does not describe a replacement for AMA runtime session traffic
 
   @api-contracts/resource-discovery @api
-  Scenario: Publish the Realmroot protected Resource contract
+  Scenario: Publish the OAuth protected Resource contract
     Given the Worker app is initialized
     When a client discovers the exact AMA Resource
-    Then RFC 9728 metadata publishes the exact resource, Realmroot issuer, supported Bearer and DPoP modes, and complete scope catalog
+    Then RFC 9728 metadata publishes the exact resource, configured authorization server, supported Bearer and DPoP modes, and complete scope catalog
     And the Resource response links the live OpenAPI document with service-desc
     And every OpenAPI operation scope belongs to the published catalog
 
@@ -47,6 +49,8 @@ Feature: API contracts
     When the OpenAPI document is requested
     Then agent, environment, vault, memory, trigger, and child-resource responses use metadata, spec, and status
     And every resource response exposes its stable uid in metadata.uid
+    And responses omit raw organization ownership, runtime placement details, and deprecated top-level compatibility fields
+    And create and update requests use their business input schemas instead of requiring complete resource entities
 
   @api-contracts/resource-identifiers @api
   Scenario: Generate opaque time-ordered resource identifiers
@@ -62,7 +66,8 @@ Feature: API contracts
   Scenario: Page through API resources
     Given more resources exist than fit on one page
     When the API client requests the next page
-    Then the API uses stable cursor metadata
+    Then the response contains data and pagination with limit, hasMore, and nextCursor
+    And the API uses a stable cursor rather than first or last item metadata
 
   @api-contracts/date-filters @e2e
   Scenario: Filter API resources by date range
@@ -70,12 +75,12 @@ Feature: API contracts
     When the API client requests a date range
     Then only matching resources are returned
 
-  # ── Realmroot Toolbox and generated SDKs ──
+  # ── Protected-resource clients and generated SDKs ──
 
   @api-contracts/realmroot-toolbox @api
-  Scenario: Drive the control plane through Realmroot Toolbox over the published contract
+  Scenario: Drive the control plane through a protected-resource client over the published contract
     Given a control-plane harness exposes /api/v1/openapi.json
-    When Realmroot discovers operations and runs the core environment, agent, and session workflow
+    When the current Toolbox client discovers operations and runs the core environment, Agent, and Session workflow
     Then it discovers the documented resource groups and exercises the workflow over documented /api/v1 paths
     And project-scoped operations expose an optional project selector while organization and global operations do not
     And the project selector keeps the "X-AMA-Project-ID" wire name while Toolbox exposes it as "project-id"
@@ -88,5 +93,7 @@ Feature: API contracts
   Scenario: Generate external SDKs from the API contract
     When the generated SDK artifacts are checked
     Then the TypeScript, Go, and Python SDKs align with the canonical OpenAPI snapshot and Hono routes
+    And public control-plane and runner clients expose only the operations owned by their audience
+    And REST-shaped SDK behavior is generated while non-HTTP Session transport helpers remain thin hand-written adapters
     And the web console uses the shared Hono RPC client instead of the published SDK
     And the SDKs do not define a replacement runtime protocol

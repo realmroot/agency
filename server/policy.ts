@@ -110,7 +110,7 @@ export async function evaluateProviderPolicy(
     }
   }
 
-  // Budgets live only in the budgets table (docs/api-v1-design.md).
+  // Budgets live only in the budgets table ([spec: governance/budget-api]).
   const budgetDecision = evaluateBudgets(
     await repo.enabledBudgets(auth.project.id),
     await repo.successfulUsage(auth.project.id),
