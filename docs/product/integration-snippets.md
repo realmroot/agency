@@ -11,9 +11,9 @@ curl -fsS "$AMA_ORIGIN/api/v1/openapi.json"
 
 The document contains `/api/v1` paths for config discovery, agents, environments, sessions, providers, vaults, budgets, usage, audit, connectors, and auth. It is the source of truth for request fields, response fields, auth, and machine-readable output.
 
-## Realmroot Toolbox
+## Current Realmroot Toolbox client
 
-Realmroot discovers AMA, obtains controller-approved least-privilege scopes, and signs each request with a fresh DPoP proof. Do not copy access tokens into shell variables.
+The CLI contract uses RFC 9728 discovery, OAuth authorization, OpenAPI operations, and a fresh RFC 9449 DPoP proof. Realmroot Toolbox is the current implementation. Do not copy access tokens into shell variables.
 
 ```bash
 realmroot toolbox sync any-managed-agents
@@ -25,7 +25,7 @@ realmroot toolbox post any-managed-agents/api/v1/agents \
 
 ## Direct HTTP and generated SDKs
 
-Agent-facing direct clients must supply a request-aware Realmroot DPoP authorizer (TypeScript), an authenticated `http.Client` transport (Go), or an `httpx.Auth` implementation (Python). Runner clients use an authenticated transport that supplies their Realmroot Bearer credential; the SDKs intentionally do not accept a raw access-token constructor option.
+Agent-facing direct clients must supply a request-aware DPoP authorizer (TypeScript), an authenticated `http.Client` transport (Go), or an `httpx.Auth` implementation (Python). Runner clients use an authenticated transport that supplies their OAuth Bearer credential; the SDKs intentionally do not accept a raw access-token constructor option.
 
 The local e2e check exercises protected-resource discovery plus the core environment, Agent, and Session workflow:
 

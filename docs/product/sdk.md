@@ -1,12 +1,12 @@
 # SDK and API Boundary
 
-This repository publishes the Enbor control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. These interfaces are for developers embedding durable Agent resources and Session execution in their own products; they are not an end-user Agent API. Agent-facing clients require request-aware Realmroot DPoP authentication, while runner clients receive Bearer authentication through their configured transport; none accepts a raw access-token constructor shortcut. Command-line automation uses Realmroot Toolbox against the protected Resource and the same OpenAPI document.
+This repository publishes the Enbor control-plane OpenAPI contract and generates the `sdk/` clients from it with standard community generators. These interfaces are for developers embedding durable Agent resources and Session execution in their own products; they are not an end-user Agent API. Agent-facing clients require request-aware RFC 9449 DPoP authentication, while runner clients receive OAuth Bearer authentication through their configured transport; none accepts a raw access-token constructor shortcut. Command-line automation uses RFC 9728 protected-resource discovery and the same OpenAPI document.
 
 ## SDK Layers
 
 ```txt
 User application
-  -> Realmroot Toolbox, an Agent DPoP SDK, or a runner Bearer SDK
+  -> OpenAPI CLI, an Agent DPoP SDK, or a runner Bearer SDK
   -> Enbor OpenAPI control-plane API
   -> AMA session endpoint
   -> selected session runtime
@@ -53,9 +53,9 @@ pnpm --filter @any-managed-agents/sdk run typecheck
 
 `pnpm run openapi:generate` re-emits `sdk/openapi.json` from the Hono routes and then drives each language's generator. Do not edit generated code or the OpenAPI snapshot by hand.
 
-## Realmroot Toolbox Boundary
+## Protected-resource CLI boundary
 
-The CLI path is Realmroot Toolbox over RFC 9728 discovery and OpenAPI. Realmroot owns Agent identity, controller approval, token acquisition, and DPoP signing.
+The CLI contract is RFC 9728 discovery, OAuth authorization, RFC 9449 DPoP when required by the client profile, and OpenAPI operations. Realmroot Toolbox is the current client implementation; it does not define an AMA protocol.
 
 Restish is configured from the deployment document:
 
@@ -64,25 +64,25 @@ realmroot toolbox sync any-managed-agents
 realmroot toolbox get any-managed-agents/api/v1/configz
 ```
 
-Use the protected Resource URL `https://ama.tftt.cc/api`. Realmroot Toolbox and generated Agent SDK usage require a Realmroot-issued DPoP-bound token and a fresh proof for every request. The browser Console uses an HttpOnly AMA session and exchanges it for a single-use session socket ticket; the native runner authenticates its control-plane channel with its own Realmroot Bearer access token.
+Use the protected Resource URL `https://ama.tftt.cc/api`. Agent CLI and generated SDK usage require a provider-issued DPoP-bound access token and a fresh proof for every request. The browser Console uses an HttpOnly AMA session and exchanges it for a single-use Session socket ticket; the native runner authenticates its control-plane channel with its own OAuth Bearer access token.
 
 This repository includes:
 
-- [Integration snippets](integration-snippets.md) for Realmroot Toolbox and generated SDK examples.
-- [AMA Realmroot Toolbox skill](../agent-skills/ama-realmroot-toolbox/SKILL.md) for automation agents.
+- [Integration snippets](integration-snippets.md) for the current Realmroot Toolbox client and generated SDK examples.
+- [AMA Realmroot Toolbox skill](../agent-skills/ama-realmroot-toolbox/SKILL.md) for automation Agents using the current provider.
 - `scripts/generate-openapi-and-sdks.ts` for reproducible SDK regeneration.
 
 The skill is guidance for automation agents, not a separate command surface. It references OpenAPI operations or documented paths rather than inventing project-specific CLI commands.
 
 ## Web Console Boundary
 
-The web console should not use OpenAPI as its internal client implementation. It calls the same Hono routes through the shared Hono RPC client. OpenAPI remains the external contract for Realmroot Toolbox and DPoP-aware generated SDKs.
+The web console should not use OpenAPI as its internal client implementation. It calls the same Hono routes through the shared Hono RPC client. OpenAPI remains the external contract for protected-resource CLI clients and DPoP-aware generated SDKs.
 
 ## Runtime Protocol
 
 AMA session endpoints and canonical AMA session events are the v1.0 UI/API/session-state protocol surface. Agent products run through the runtime selected by the session's environment.
 
-Realmroot Toolbox is control-plane only. It manages API resources through OpenAPI-described `/api` operations; it does not replace AMA runtime traffic.
+Protected-resource CLI clients are control-plane only. They manage API resources through OpenAPI-described `/api` operations; they do not replace AMA runtime traffic.
 
 The platform must not create a second client-facing runtime protocol for RPC, session events, prompts, abort, follow-up, steering, or tool calls. Runtime session traffic goes through AMA session endpoints, and observed state comes from canonical AMA session events.
 

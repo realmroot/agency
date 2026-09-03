@@ -11,15 +11,15 @@
 
 - Enbor is Cloudflare-native infrastructure for developers building agent products: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
-- Realmroot owns authentication, stable Agent identity, users, and organizations. The AMA backend completes the browser authorization-code PKCE flow and issues an opaque HttpOnly session; direct protected requests use Realmroot-issued Bearer or DPoP-bound access tokens. Both paths enforce exact AMA scopes through the same authorization context.
+- A configured OAuth 2.0 authorization server and OpenID Connect provider own authentication, users, and organizations. Follow RFC 9700 security practices. The AMA backend completes authorization-code PKCE flows; direct protected requests use Bearer or RFC 9449 DPoP-bound access tokens. All client profiles enforce exact AMA scopes through the same authorization context. Realmroot is the current OAuth/OIDC provider, not part of the AMA protocol contract.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
-- AMA owns the control plane: Realmroot-backed tenancy and scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
+- AMA owns the control plane: OIDC-backed tenancy and OAuth scope enforcement, projects, agents, environments, sessions, providers, vaults, governance, usage, audit, OpenAPI, UI, sandbox lifecycle, and runtime proxy metadata. AMA must not maintain local user or organization tables.
 - AMA is infrastructure for downstream products and must not depend on or recognize any one of them. Do not add downstream-product names, client IDs, environment variables, routes, query parameters, authorization branches, fixtures, or compatibility behavior to AMA; expose generic resource capabilities and let each consumer own its business binding.
 - AMA must not invent a competing runtime protocol, sandbox SDK, or agent loop. Runtime traffic uses Pi protocol directly or a transparent AMA proxy.
 - Cloudflare Agents SDK is not the v1.0 runtime contract. It may be added later as an adapter, but v1.0 must not require `/agents/*` compatibility.
-- Command-line automation uses `realmroot toolbox` against the published protected-resource metadata and OpenAPI document. Do not expose raw token or Bearer-token workflows.
-- Agent-facing skills must use Realmroot Agent identity and OpenAPI-described control-plane operations while preserving the Pi runtime boundary.
-- Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators use Realmroot Toolbox or DPoP-aware SDKs against the published OpenAPI document.
+- Command-line automation uses RFC 9728 protected-resource discovery and the published OpenAPI document. Realmroot Toolbox is the current client implementation. Do not expose raw-token workflows.
+- Agent-facing skills use the provider-neutral AMA Agent Identity contract and OpenAPI-described control-plane operations while preserving the Pi runtime boundary. Realmroot is the current Agent identity provider adapter.
+- Web UI code is an internal product entrypoint and should call the control plane through the shared Hono RPC client. External operators use a protected-resource/OpenAPI client or DPoP-aware SDK; Realmroot Toolbox is the current CLI client.
 - Secret values belong in Cloudflare Secrets or an approved external vault. D1 stores metadata, policy, snapshots, secret references, and authenticated ciphertext only; browser OAuth tokens must be encrypted before persistence.
 
 ## Workflow: Spec-Traced, Verified At The Cheapest Layer
@@ -77,7 +77,7 @@ and update the relevant `spec/` scenario or product doc first.
 
 - `server/` - Cloudflare Worker backend, Hono routes, auth, D1 access, runtime orchestration, and Pi bridge code.
 - `server/routes/` - API routes and OpenAPI-backed control-plane surfaces.
-- `server/auth/` - Realmroot OIDC, DPoP, scope, and session integration.
+- `server/auth/` - OAuth/OIDC, DPoP, scope, session, and provider integration.
 - `server/db/` - D1 schema and persistence helpers.
 - `server/runtime/` - Cloudflare Sandbox and Pi runtime integration.
 - `src/app/` - React application providers and router setup.
@@ -87,7 +87,8 @@ and update the relevant `spec/` scenario or product doc first.
 - `src/components/ui/` - shadcn-generated primitives. Prefer these before writing custom primitives.
 - `spec/` - Product behaviour in Gherkin (BDD-lite). One `.feature` per capability; tests trace back via `[spec: id]`. See `spec/README.md`.
 - `e2e/` - Native Playwright crowns (`*.spec.ts`), fixtures, browser helpers, and local e2e harnesses for `@e2e` scenarios.
-- `docs/product/` - Product decisions, UI/UX standards, API/SDK boundaries, and implementation notes.
+- `docs/adr/` - Accepted architecture decisions, their context, and consequences.
+- `docs/product/` - Product behavior, UI/UX standards, API/SDK boundaries, and implementation notes.
 - `docs/infra/` - Cloudflare deployment and infrastructure notes.
 
 ## UI/UX Rules
@@ -108,7 +109,7 @@ and update the relevant `spec/` scenario or product doc first.
 - Control-plane API behavior must be represented in OpenAPI generated from route schemas.
 - Keep route handlers, validation schemas, tests, and OpenAPI output aligned in the same change.
 - Stable error envelopes matter; do not replace structured API errors with ad hoc strings.
-- OpenAPI and protected-resource metadata are the contract for Realmroot Toolbox and generated SDK workflows.
+- OpenAPI and RFC 9728 protected-resource metadata are the contract for external CLI and generated SDK workflows.
 - OpenAPI is the external contract. It should not become the internal browser client implementation when Hono RPC can provide the project-local API entrypoint.
 
 ## Runtime And Session Rules

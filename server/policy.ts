@@ -61,7 +61,7 @@ export async function toolPolicyRequiresApproval(db: PolicyDb, auth: AuthScope, 
 //
 // Effective governance policy merges organization → team → project scope rows
 // with deterministic most-restrictive semantics (the merge + level selection
-// live in domain/policy.ts; documented in docs/product/decisions.md). Team rows
+// live in domain/policy.ts; documented in docs/adr/0006-governance-policy-hierarchy.md). Team rows
 // apply only when the caller's OIDC-asserted team memberships include the row's
 // team id.
 

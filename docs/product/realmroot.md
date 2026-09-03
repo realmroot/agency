@@ -1,8 +1,10 @@
-# Realmroot Agent integration
+# Realmroot Agent identity provider adapter
 
-AMA binds an Agent directly to one Realmroot Agent. There is no identity broker
-and no AMA-issued Realmroot token: the Realmroot CLI uses the enrolled Agent
-identity to obtain controller-approved authority from Realmroot.
+AMA has a provider-neutral Agent Identity contract because no adopted standard
+protocol currently defines Agent enrollment and authority. Realmroot is the
+current provider adapter. It binds an AMA Agent to one Realmroot Agent; there is
+no identity broker and no AMA-issued Realmroot token. The Realmroot CLI uses the
+enrolled Agent identity to obtain controller-approved authority from Realmroot.
 
 ## Enroll and store the identity
 
