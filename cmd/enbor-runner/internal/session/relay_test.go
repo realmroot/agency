@@ -623,7 +623,7 @@ func TestRelayHandlesSandboxRequest(t *testing.T) {
 	}
 }
 
-// [spec: runners/ama-sandbox-channel]
+// [spec: runners/enbor-sandbox-channel]
 func TestRelayReconnectAdvertisesAllActiveSessions(t *testing.T) {
 	opener := &fakeOpener{}
 	hub := NewRelay(opener, "runner_1", t.TempDir())
@@ -653,7 +653,7 @@ func TestRelayReconnectAdvertisesAllActiveSessions(t *testing.T) {
 	}
 }
 
-// [spec: runners/ama-sandbox-channel]
+// [spec: runners/enbor-sandbox-channel]
 func TestRelaySandboxStopRetiresOnlyAfterSuccess(t *testing.T) {
 	t.Run("successful stop unregisters and emits inactive", func(t *testing.T) {
 		channel := newFakeChannel()

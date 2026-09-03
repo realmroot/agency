@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 const temporaryDirectories: string[] = []
 
 function runPreflight(results: unknown[]) {
-  const directory = mkdtempSync(join(tmpdir(), 'ama-identity-preflight-'))
+  const directory = mkdtempSync(join(tmpdir(), 'enbor-identity-preflight-'))
   temporaryDirectories.push(directory)
   const wrangler = join(directory, 'wrangler')
   writeFileSync(wrangler, '#!/bin/sh\nprintf \'%s\' "$PREFLIGHT_FIXTURE"\n')
@@ -42,7 +42,7 @@ describe('Identity migration preflight', () => {
         agent_ids: 'agent_1',
         source_ids: 'trigger:trigger_7',
         resource_id: 'trigger_7',
-        detail: 'Active Trigger runtime codex conflicts with migrated Identity runtime ama',
+        detail: 'Active Trigger runtime codex conflicts with migrated Identity runtime enbor',
       },
     ])
 
@@ -51,7 +51,7 @@ describe('Identity migration preflight', () => {
     expect(result.stderr).toContain('agent_1,agent_2')
     expect(result.stderr).toContain('trigger_runtime_mismatch')
     expect(result.stderr).toContain('trigger_7')
-    expect(`${result.stdout}${result.stderr}`).not.toContain('ama://vaults/')
+    expect(`${result.stdout}${result.stderr}`).not.toContain('enbor://vaults/')
     expect(`${result.stdout}${result.stderr}`).not.toContain('credentialRef')
   })
 

@@ -39,7 +39,7 @@ function templateContext(context: HttpTriggerTemplateContext): Record<string, un
   return {
     body: context.body,
     header: context.header,
-    ama: {
+    enbor: {
       run: context.run ?? {
         session_reused: false,
         session_id: null,

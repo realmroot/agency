@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://ama.tftt.cc"
+      "url": "https://enbor.realmroot.dev"
     }
   ],
   "components": {
@@ -1679,7 +1679,7 @@
           },
           "memoryRef": {
             "type": "string",
-            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
+            "example": "enbor://memories/0195f5d6-7c20-7000-8000-00000000000a"
           },
           "description": {
             "type": "string",
@@ -1755,7 +1755,7 @@
           },
           "memoryRef": {
             "type": "string",
-            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
+            "example": "enbor://memories/0195f5d6-7c20-7000-8000-00000000000a"
           }
         },
         "required": [
@@ -1824,7 +1824,7 @@
           "protocol": {
             "type": "string",
             "enum": [
-              "ama-runner-work"
+              "enbor-runner-work"
             ],
             "x-enum-varnames": [
               "EnborRunnerWork"
@@ -1929,7 +1929,7 @@
           "runtime": {
             "type": "string",
             "enum": [
-              "ama",
+              "enbor",
               "claude-code",
               "codex",
               "copilot"
@@ -2393,7 +2393,7 @@
           "origin": {
             "type": "string",
             "format": "uri",
-            "example": "https://ama.example.com"
+            "example": "https://enbor.example.com"
           }
         },
         "required": [
@@ -2424,7 +2424,7 @@
           "resource": {
             "type": "string",
             "format": "uri",
-            "example": "https://ama.example.com"
+            "example": "https://enbor.example.com"
           },
           "runner": {
             "$ref": "#/components/schemas/PublicOidcClientConfig"
@@ -2827,7 +2827,7 @@
               "type": "string"
             },
             "example": [
-              "ama@code-review"
+              "enbor@code-review"
             ]
           },
           "subagents": {
@@ -2846,7 +2846,7 @@
                   "grep"
                 ],
                 "skills": [
-                  "ama@code-review"
+                  "enbor@code-review"
                 ],
                 "mcpConnectors": [
                   "github"
@@ -2929,7 +2929,7 @@
               "type": "string"
             },
             "example": [
-              "ama@code-review"
+              "enbor@code-review"
             ]
           },
           "mcpConnectors": {
@@ -3075,7 +3075,7 @@
                 },
                 "maxItems": 100,
                 "example": [
-                  "ama@code-review"
+                  "enbor@code-review"
                 ]
               },
               "subagents": {
@@ -3214,7 +3214,7 @@
             },
             "maxItems": 100,
             "example": [
-              "ama@code-review"
+              "enbor@code-review"
             ]
           },
           "mcpConnectors": {
@@ -3273,7 +3273,7 @@
                 },
                 "maxItems": 100,
                 "example": [
-                  "ama@code-review"
+                  "enbor@code-review"
                 ]
               },
               "subagents": {
@@ -4400,7 +4400,7 @@
         "type": "string",
         "nullable": true,
         "minLength": 1,
-        "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
+        "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
       },
       "RuntimeUsage": {
         "type": "object",
@@ -4511,7 +4511,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "authMode": {
             "type": "string",
@@ -5881,7 +5881,7 @@
       "RuntimeName": {
         "type": "string",
         "enum": [
-          "ama",
+          "enbor",
           "claude-code",
           "codex",
           "copilot"
@@ -5917,7 +5917,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "key": {
             "type": "string",
@@ -5976,7 +5976,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "items": {
             "type": "array",
@@ -6045,7 +6045,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007"
           },
           "items": {
             "type": "array",
@@ -6081,7 +6081,7 @@
           "memoryRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://memories/0195f5d6-7c20-7000-8000-00000000000a"
+            "example": "enbor://memories/0195f5d6-7c20-7000-8000-00000000000a"
           }
         },
         "required": [
@@ -6133,7 +6133,7 @@
           "secretRef": {
             "type": "string",
             "minLength": 1,
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008"
           },
           "items": {
             "type": "array",
@@ -6162,7 +6162,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "example": "/workspace/.ama/secrets/project"
+            "example": "/workspace/.enbor/secrets/project"
           },
           "readOnly": {
             "type": "boolean",
@@ -8402,12 +8402,12 @@
             "type": "string",
             "enum": [
               "opaque",
-              "ama.dev/basic-auth",
-              "ama.dev/ssh-auth",
-              "ama.dev/tls",
-              "ama.dev/private-key-jwk",
-              "ama.dev/oauth-token",
-              "ama.dev/realmroot-agent-state"
+              "enbor.dev/basic-auth",
+              "enbor.dev/ssh-auth",
+              "enbor.dev/tls",
+              "enbor.dev/private-key-jwk",
+              "enbor.dev/oauth-token",
+              "enbor.dev/realmroot-agent-state"
             ],
             "example": "opaque",
             "x-enum-varnames": [
@@ -8524,17 +8524,17 @@
           "provider": {
             "type": "string",
             "enum": [
-              "ama"
+              "enbor"
             ],
-            "example": "ama"
+            "example": "enbor"
           },
           "secretRef": {
             "type": "string",
-            "example": "ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009"
+            "example": "enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009"
           },
           "referenceName": {
             "type": "string",
-            "example": "AMA_PROJECT_ABC123_TOKEN_V2"
+            "example": "ENBOR_PROJECT_ABC123_TOKEN_V2"
           },
           "hasSecret": {
             "type": "boolean",
@@ -8619,12 +8619,12 @@
             "type": "string",
             "enum": [
               "opaque",
-              "ama.dev/basic-auth",
-              "ama.dev/ssh-auth",
-              "ama.dev/tls",
-              "ama.dev/private-key-jwk",
-              "ama.dev/oauth-token",
-              "ama.dev/realmroot-agent-state"
+              "enbor.dev/basic-auth",
+              "enbor.dev/ssh-auth",
+              "enbor.dev/tls",
+              "enbor.dev/private-key-jwk",
+              "enbor.dev/oauth-token",
+              "enbor.dev/realmroot-agent-state"
             ],
             "example": "opaque",
             "x-enum-varnames": [
@@ -8664,7 +8664,7 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 160,
-                "example": "AMA_PROJECT_TOKEN"
+                "example": "ENBOR_PROJECT_TOKEN"
               },
               "metadata": {
                 "type": "object",
@@ -8738,7 +8738,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 160,
-            "example": "AMA_PROJECT_TOKEN"
+            "example": "ENBOR_PROJECT_TOKEN"
           },
           "metadata": {
             "type": "object",
@@ -8776,7 +8776,7 @@
     },
     "parameters": {
       "EnborProjectId": {
-        "name": "X-AMA-Project-ID",
+        "name": "X-Enbor-Project-ID",
         "in": "header",
         "required": false,
         "x-cli-name": "project-id",
@@ -9371,7 +9371,7 @@
             "schema": {
               "type": "string",
               "enum": [
-                "ama",
+                "enbor",
                 "codex",
                 "claude-code",
                 "copilot"

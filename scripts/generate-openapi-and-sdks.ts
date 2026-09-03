@@ -103,7 +103,7 @@ async function normalizeGeneratedPython(directory: string) {
     if (!entry.name.endsWith('.py')) continue
     const content = await readFile(entryPath, 'utf8')
     const normalized = content
-      .replace(/^    AMA = "ama"$/gm, '    ENBOR = "ama"')
+      .replace(/^    Enbor = "enbor"$/gm, '    ENBOR = "enbor"')
       .replace(/[ \t]+\n/g, '\n')
       .replace(/\n*$/, '\n')
     if (normalized !== content) await writeFile(entryPath, normalized)
@@ -119,7 +119,7 @@ async function routeGeneratedOpenApi() {
   const env = {
     OIDC_RESOURCE: ENBOR_CANONICAL_RESOURCE,
     OIDC_ISSUER: 'https://id.realmroot.dev/api/auth',
-    OIDC_CLIENT_ID: 'ama-console',
+    OIDC_CLIENT_ID: 'enbor-console',
   } as Env
   const response = await app.fetch(new Request('https://example.test/api/v1/openapi.json'), env)
   if (!response.ok) {

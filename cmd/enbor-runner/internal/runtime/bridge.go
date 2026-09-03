@@ -175,7 +175,7 @@ func (b Bridge) Inventory(ctx context.Context, includeUsage bool) (*InventorySna
 	result, err := b.bridgeRequest(ctx, requestID, runtimebridge.RuntimeBridgeInventoryMessage{
 		Type:         runtimebridge.BridgeMessageTypeInventory,
 		RequestID:    requestID,
-		Env:          map[string]string{"AMA_RUNTIME_BRIDGE_HOST_HOME": hostHome},
+		Env:          map[string]string{"ENBOR_RUNTIME_BRIDGE_HOST_HOME": hostHome},
 		IncludeUsage: includeUsage,
 	}, runtimesTimeout)
 	if err != nil {
@@ -268,23 +268,23 @@ func commandEnvironment(request Request) ([]string, error) {
 		return nil, err
 	}
 	env = append(env,
-		"AMA_SESSION_ID="+request.SessionID,
-		"AMA_RUNTIME="+request.Runtime,
-		"AMA_WORKSPACE="+request.WorkDir,
-		"AMA_RUNTIME_CONFIG="+string(config),
+		"ENBOR_SESSION_ID="+request.SessionID,
+		"ENBOR_RUNTIME="+request.Runtime,
+		"ENBOR_WORKSPACE="+request.WorkDir,
+		"ENBOR_RUNTIME_CONFIG="+string(config),
 	)
 	if request.Provider != "" {
-		env = append(env, "AMA_PROVIDER="+request.Provider)
+		env = append(env, "ENBOR_PROVIDER="+request.Provider)
 	}
 	if request.AgentSnapshot != nil {
 		snapshot, err := json.Marshal(request.AgentSnapshot)
 		if err != nil {
 			return nil, err
 		}
-		env = append(env, "AMA_AGENT_SNAPSHOT="+string(snapshot))
+		env = append(env, "ENBOR_AGENT_SNAPSHOT="+string(snapshot))
 	}
 	if request.Model != "" {
-		env = append(env, "AMA_MODEL="+request.Model)
+		env = append(env, "ENBOR_MODEL="+request.Model)
 	}
 	for key, value := range request.Env {
 		if key == "" || strings.Contains(key, "=") {
@@ -299,7 +299,7 @@ func commandEnvironment(request Request) ([]string, error) {
 }
 
 func isReservedEnvKey(key string) bool {
-	return len(key) >= len("AMA_") && strings.EqualFold(key[:len("AMA_")], "AMA_")
+	return len(key) >= len("ENBOR_") && strings.EqualFold(key[:len("ENBOR_")], "ENBOR_")
 }
 
 func exitCode(err error) int {
@@ -372,7 +372,7 @@ func envMap(env []string) map[string]string {
 
 func appendRuntimeBridgeHostEnv(env []string) []string {
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		env = append(env, "AMA_RUNTIME_BRIDGE_HOST_HOME="+home)
+		env = append(env, "ENBOR_RUNTIME_BRIDGE_HOST_HOME="+home)
 	}
 	for _, key := range []string{
 		"PATHEXT",
@@ -385,10 +385,10 @@ func appendRuntimeBridgeHostEnv(env []string) []string {
 		"NODE_PATH",
 		"PNPM_HOME",
 		"NVM_DIR",
-		"AMA_RUNTIME_BRIDGE_TEST_MODE",
-		"AMA_CODEX_SANDBOX_MODE",
-		"AMA_CODEX_APPROVAL_POLICY",
-		"AMA_CLAUDE_CODE_PERMISSION_MODE",
+		"ENBOR_RUNTIME_BRIDGE_TEST_MODE",
+		"ENBOR_CODEX_SANDBOX_MODE",
+		"ENBOR_CODEX_APPROVAL_POLICY",
+		"ENBOR_CLAUDE_CODE_PERMISSION_MODE",
 	} {
 		if value, ok := os.LookupEnv(key); ok && value != "" {
 			env = append(env, key+"="+value)

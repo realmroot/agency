@@ -118,7 +118,7 @@ Feature: Runners
     And losing lease ownership cancels local work and records a cancelled outcome
     And control-plane cancellation of already running self-hosted work is not available until a cancellation resource is defined
 
-  @runners/ama-sandbox-channel @api
+  @runners/enbor-sandbox-channel @api
   Scenario: Keep an Enbor sandbox channel after startup work completes
     Given a self-hosted Enbor session has completed its startup lease
     When the Enbor runtime executes a sandbox tool for that session

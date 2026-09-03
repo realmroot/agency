@@ -8,7 +8,7 @@
  *   - server/auth        OIDC/session auth module: owns its tables, is the auth
  *                        wall, spans layers by design (the skill's accepted
  *                        auth-module exception).
- *   - server/http/e2e.ts e2e test fixture (gated by AMA_E2E_TEST_AUTH): reads
+ *   - server/http/e2e.ts e2e test fixture (gated by ENBOR_E2E_TEST_AUTH): reads
  *                        raw persisted vault rows incl. ciphertext for
  *                        encryption-at-rest scenarios — storage-level inspection
  *                        is its whole purpose, so it holds drizzle rather than

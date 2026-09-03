@@ -25,7 +25,7 @@ export default tseslint.config(
       '**/*.test.ts',
       // Excluded from tsconfig.server.json, so typed linting cannot resolve them.
       'server/integration/**',
-      // AMA_E2E_TEST_AUTH-gated test endpoint; design §1.8 exempts /api/e2e/* from
+      // E2E_TEST_AUTH-gated test endpoint; design §1.8 exempts /api/e2e/* from
       // the v1 contract, and it builds partial test fixtures like real test files.
       'server/http/e2e.ts',
     ],

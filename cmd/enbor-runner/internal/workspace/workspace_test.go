@@ -63,7 +63,7 @@ func TestPrepareWorkspaceSeedsWritableEmptyDirOnce(t *testing.T) {
 	mount := protocol.WorkspaceMount{
 		Type:      "empty_dir",
 		Name:      "runtime-state",
-		MountPath: "/workspace/.ama/runtime-state",
+		MountPath: "/workspace/.enbor/runtime-state",
 		ReadOnly:  false,
 		Files: []protocol.WorkspaceFile{{
 			Path:    "identities/issuer/runtime.json",
@@ -76,7 +76,7 @@ func TestPrepareWorkspaceSeedsWritableEmptyDirOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare empty directory: %v", err)
 	}
-	statePath := filepath.Join(prepared.Root, ".ama", "runtime-state", "identities", "issuer", "runtime.json")
+	statePath := filepath.Join(prepared.Root, ".enbor", "runtime-state", "identities", "issuer", "runtime.json")
 	if err := os.WriteFile(statePath, []byte("runtime-mutated"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestPrepareWorkspaceRejectsEmptyDirSymlinkOnReuse(t *testing.T) {
 		t.Fatal(err)
 	}
 	outside := t.TempDir()
-	mountPath := filepath.Join(workspace.Root, ".ama", "runtime-state")
+	mountPath := filepath.Join(workspace.Root, ".enbor", "runtime-state")
 	if err := os.MkdirAll(filepath.Dir(mountPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestPrepareWorkspaceRejectsEmptyDirSymlinkOnReuse(t *testing.T) {
 		WorkDir:   workDir,
 		SessionID: "session_1",
 		Manifest: workspaceManifest(protocol.WorkspaceMount{
-			Type: "empty_dir", Name: "runtime-state", MountPath: "/workspace/.ama/runtime-state",
+			Type: "empty_dir", Name: "runtime-state", MountPath: "/workspace/.enbor/runtime-state",
 			Files: []protocol.WorkspaceFile{{Path: "state.json", Content: "secret"}},
 		}),
 	})
@@ -142,19 +142,19 @@ func TestPrepareWorkspaceRejectsEmptyDirSymlinkOnReuse(t *testing.T) {
 func TestWorkspaceRuntimeEnvMapsVirtualWorkspacePaths(t *testing.T) {
 	workspace := &Workspace{Root: filepath.Join(t.TempDir(), "workspace")}
 	input := map[string]string{
-		"STATE_DIR": "/workspace/.ama/runtime-state",
+		"STATE_DIR": "/workspace/.enbor/runtime-state",
 		"WORKSPACE": "/workspace",
 		"UNCHANGED": "value",
 	}
 	resolved := workspace.RuntimeEnv(input)
-	expected := filepath.Join(workspace.Root, ".ama", "runtime-state")
+	expected := filepath.Join(workspace.Root, ".enbor", "runtime-state")
 	if resolved["STATE_DIR"] != expected {
 		t.Fatalf("expected mapped workspace path %q, got %q", expected, resolved["STATE_DIR"])
 	}
 	if resolved["WORKSPACE"] != workspace.Root {
 		t.Fatalf("expected workspace root %q, got %q", workspace.Root, resolved["WORKSPACE"])
 	}
-	if resolved["UNCHANGED"] != "value" || input["STATE_DIR"] != "/workspace/.ama/runtime-state" {
+	if resolved["UNCHANGED"] != "value" || input["STATE_DIR"] != "/workspace/.enbor/runtime-state" {
 		t.Fatalf("expected input to remain immutable, input=%#v resolved=%#v", input, resolved)
 	}
 }
@@ -218,7 +218,7 @@ func TestPrepareWorkspaceMountsGitRepositoryWorktree(t *testing.T) {
 	if gitFile.IsDir() {
 		t.Fatal("expected git worktree metadata file, got a full clone")
 	}
-	if _, err := os.Stat(filepath.Join(workspace.Root, ".ama", "resources.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(workspace.Root, ".enbor", "resources.json")); !os.IsNotExist(err) {
 		t.Fatalf("expected no legacy workspace manifest, got err=%v", err)
 	}
 	state, err := os.ReadFile(filepath.Join(workspace.Dir, SessionStateFileName))
@@ -260,7 +260,7 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected workspace preparation success, got %v", err)
 	}
-	memoryPath := filepath.Join(workspace.Root, ".ama", "memory-stores", "memstore_1", "downstream-heartbeat.md")
+	memoryPath := filepath.Join(workspace.Root, ".enbor", "memory-stores", "memstore_1", "downstream-heartbeat.md")
 	data, err := os.ReadFile(memoryPath)
 	if err != nil || string(data) != "initial heartbeat\n" {
 		t.Fatalf("expected mounted memory content, got %q err=%v", string(data), err)
@@ -272,13 +272,13 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected memory snapshot readback, got %v", err)
 	}
-	if len(snapshots) != 1 || snapshots[0].MemoryRef != "ama://memories/memstore_1" || len(snapshots[0].Memories) != 1 {
+	if len(snapshots) != 1 || snapshots[0].MemoryRef != "enbor://memories/memstore_1" || len(snapshots[0].Memories) != 1 {
 		t.Fatalf("expected one memory store snapshot, got %#v", snapshots)
 	}
 	if got := snapshots[0].Memories[0]; got.Path != "downstream-heartbeat.md" || got.Content != "updated heartbeat\n" {
 		t.Fatalf("expected updated memory snapshot, got %#v", got)
 	}
-	if _, err := os.Stat(filepath.Join(workspace.Root, ".ama", "resources.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(workspace.Root, ".enbor", "resources.json")); !os.IsNotExist(err) {
 		t.Fatalf("expected no legacy workspace manifest, got err=%v", err)
 	}
 	state, err := os.ReadFile(filepath.Join(workspace.Dir, SessionStateFileName))
@@ -286,7 +286,7 @@ func TestPrepareWorkspaceMountsMemoryStoreFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(state), `"type": "memory"`) ||
-		!strings.Contains(string(state), `"memoryRef": "ama://memories/memstore_1"`) ||
+		!strings.Contains(string(state), `"memoryRef": "enbor://memories/memstore_1"`) ||
 		!strings.Contains(string(state), `"status": "mounted"`) ||
 		strings.Contains(string(state), `"description"`) ||
 		strings.Contains(string(state), `"memories"`) ||
@@ -302,7 +302,7 @@ func TestPrepareWorkspaceMountsSecretFiles(t *testing.T) {
 		Manifest: workspaceManifest(protocol.WorkspaceMount{
 			Type:      "secret",
 			Name:      "vault",
-			MountPath: "/workspace/.ama/secrets/vault",
+			MountPath: "/workspace/.enbor/secrets/vault",
 			ReadOnly:  true,
 			Files: []protocol.WorkspaceFile{{
 				Path:    "TOKEN",
@@ -326,7 +326,7 @@ func TestPrepareWorkspaceMountsSecretFiles(t *testing.T) {
 			return nil
 		})
 	})
-	secretPath := filepath.Join(workspace.Root, ".ama", "secrets", "vault", "TOKEN")
+	secretPath := filepath.Join(workspace.Root, ".enbor", "secrets", "vault", "TOKEN")
 	data, err := os.ReadFile(secretPath)
 	if err != nil || string(data) != "secret-value" {
 		t.Fatalf("expected secret content, got %q err=%v", data, err)
@@ -357,7 +357,7 @@ func TestPrepareWorkspaceReturnsMountErrors(t *testing.T) {
 			name: "memory",
 			manifest: workspaceManifest(protocol.WorkspaceMount{
 				Type:      "memory",
-				MemoryRef: "ama://memories/store_1",
+				MemoryRef: "enbor://memories/store_1",
 				MountPath: "/outside",
 			}),
 		},
@@ -365,7 +365,7 @@ func TestPrepareWorkspaceReturnsMountErrors(t *testing.T) {
 			name: "secret",
 			manifest: workspaceManifest(protocol.WorkspaceMount{
 				Type:      "secret",
-				MountPath: "/workspace/.ama/secrets",
+				MountPath: "/workspace/.enbor/secrets",
 				Files:     []protocol.WorkspaceFile{{Path: "../TOKEN", Content: "bad"}},
 			}),
 		},
@@ -420,7 +420,7 @@ func TestWorkspaceReadsWritableMemoryStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected workspace preparation success, got %v", err)
 	}
-	updatedPath := filepath.Join(workspace.Root, ".ama", "memory-stores", "memstore_1", "notes", "plan.md")
+	updatedPath := filepath.Join(workspace.Root, ".enbor", "memory-stores", "memstore_1", "notes", "plan.md")
 	if err := os.WriteFile(updatedPath, []byte("updated plan\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +429,7 @@ func TestWorkspaceReadsWritableMemoryStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected memory store read success, got %v", err)
 	}
-	if len(stores) != 1 || stores[0].MemoryRef != "ama://memories/memstore_1" || len(stores[0].Memories) != 1 {
+	if len(stores) != 1 || stores[0].MemoryRef != "enbor://memories/memstore_1" || len(stores[0].Memories) != 1 {
 		t.Fatalf("expected one memory store, got %#v", stores)
 	}
 	if got := stores[0].Memories[0]; got.Path != "notes/plan.md" || got.Content != "updated plan\n" {
@@ -442,7 +442,7 @@ func TestWorkspaceReadWritableMemoryStoresNilAndReadOnly(t *testing.T) {
 		t.Fatalf("expected nil workspace error, got %v", err)
 	}
 	if _, err := (&Workspace{memoryStores: []preparedMemoryStore{{
-		memoryRef: "ama://memories/missing",
+		memoryRef: "enbor://memories/missing",
 		path:      filepath.Join(t.TempDir(), "missing"),
 		readOnly:  false,
 	}}}).ReadWritableMemoryStores(); err == nil {
@@ -543,7 +543,7 @@ func TestWorkspacePrepareUsesDefaultRootAndRecoversMountedState(t *testing.T) {
 		t.Fatalf("unexpected prepared root %q", prepared.Root)
 	}
 	recovered := staleWorkspace(workDir, prepared.Dir)
-	if len(recovered.memoryStores) != 1 || recovered.memoryStores[0].memoryRef != "ama://memories/memstore_1" {
+	if len(recovered.memoryStores) != 1 || recovered.memoryStores[0].memoryRef != "enbor://memories/memstore_1" {
 		t.Fatalf("expected stale workspace to restore memory store, got %#v", recovered.memoryStores)
 	}
 }
@@ -570,11 +570,11 @@ func TestAddMountedVolumesSkipsInvalidEntries(t *testing.T) {
 	workspace := &Workspace{}
 	addMountedVolumes(workDir, workspace, []mountedVolume{
 		{Type: "git_repository", URL: "https://github.com/saltbo/slink.git", LocalPath: "/tmp/repo"},
-		{Type: "memory", MemoryRef: "ama://memories/store_1", ReadOnly: false},
+		{Type: "memory", MemoryRef: "enbor://memories/store_1", ReadOnly: false},
 		{Type: "git_repository", URL: "bad-url", LocalPath: "/tmp/repo"},
-		{Type: "memory", MemoryRef: "ama://memories/store_2", ReadOnly: true, LocalPath: "/tmp/memory"},
+		{Type: "memory", MemoryRef: "enbor://memories/store_2", ReadOnly: true, LocalPath: "/tmp/memory"},
 	})
-	if len(workspace.memoryStores) != 1 || workspace.memoryStores[0].memoryRef != "ama://memories/store_2" {
+	if len(workspace.memoryStores) != 1 || workspace.memoryStores[0].memoryRef != "enbor://memories/store_2" {
 		t.Fatalf("expected only valid local path memory mount, got %#v", workspace.memoryStores)
 	}
 	if len(workspace.worktrees) != 1 || workspace.worktrees[0].path != "/tmp/repo" {
@@ -649,10 +649,10 @@ func TestWorkspacePathValidationHelpers(t *testing.T) {
 }
 
 func TestWorkspaceReferenceParsing(t *testing.T) {
-	if id, err := memoryStoreIDFromRef("ama://memories/store%201"); err != nil || id != "store 1" {
+	if id, err := memoryStoreIDFromRef("enbor://memories/store%201"); err != nil || id != "store 1" {
 		t.Fatalf("expected decoded memory id, id=%q err=%v", id, err)
 	}
-	for _, ref := range []string{"", "https://example.test/store", "ama://memories", "ama://memories/a/b", "ama://memories/%zz"} {
+	for _, ref := range []string{"", "https://example.test/store", "enbor://memories", "enbor://memories/a/b", "enbor://memories/%zz"} {
 		if _, err := memoryStoreIDFromRef(ref); err == nil {
 			t.Fatalf("expected invalid memory ref error for %q", ref)
 		}
@@ -938,7 +938,7 @@ func TestStaleWorkspaceRestoresMountedVolumesFromState(t *testing.T) {
 	state := `{
 		"volumes": [
 			{"type":"git_repository","url":"https://github.com/saltbo/zpan.git","localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "repo")) + `"},
-			{"type":"memory","memoryRef":"ama://memories/store_1","readOnly":false,"localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "memory")) + `"},
+			{"type":"memory","memoryRef":"enbor://memories/store_1","readOnly":false,"localPath":"` + filepath.ToSlash(filepath.Join(workspaceRoot, "memory")) + `"},
 			{"type":"git_repository","url":"not-url","localPath":"ignored"},
 			{"type":"memory","memoryRef":"missing-path"}
 		]
@@ -973,8 +973,8 @@ func memoryMount(readOnly bool, description string, files ...protocol.WorkspaceF
 	mount := protocol.WorkspaceMount{
 		Type:      "memory",
 		Name:      "maintainer-memory",
-		MountPath: "/workspace/.ama/memory-stores/memstore_1",
-		MemoryRef: "ama://memories/memstore_1",
+		MountPath: "/workspace/.enbor/memory-stores/memstore_1",
+		MemoryRef: "enbor://memories/memstore_1",
 		ReadOnly:  readOnly,
 		Files:     files,
 	}

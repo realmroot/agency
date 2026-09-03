@@ -30,7 +30,7 @@ class CreateRunnerRequest:
             name (str):  Example: mac-mini-build-runner.
             environment_id (str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             secret_ref (str | Unset):  Example:
-                ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
+                enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
             auth_mode (CreateRunnerRequestAuthMode | Unset):  Example: realmroot.
             max_concurrent (int | Unset):  Example: 2.
             metadata (CreateRunnerRequestMetadata | Unset):  Example: {'pool': 'default'}.

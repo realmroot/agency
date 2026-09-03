@@ -66,7 +66,7 @@ function dueTrigger(overrides: Partial<DueTrigger> = {}): DueTrigger {
       spec: {
         agentId: 'agent_1',
         environmentId: 'env_1',
-        runtime: 'ama',
+        runtime: 'enbor',
         promptTemplate: 'Run the analysis',
         env: {},
         envFrom: [],
@@ -108,7 +108,7 @@ function httpTrigger(
         spec: {
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Handle {{ .body.ticket.id }} from {{ .body.source }}',
           env: {},
           envFrom: [],
@@ -187,7 +187,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
     spec: {
       agentId: 'agent_1',
       environmentId: 'env_1',
-      runtime: 'ama',
+      runtime: 'enbor',
       env: {},
       envFrom: [],
       volumes: [],
@@ -217,7 +217,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
           },
         },
         environment: { id: 'env_1', versionId: null, snapshot: null },
-        runtime: 'ama',
+        runtime: 'enbor',
       },
       placement: {
         hostingMode: 'cloud',
@@ -630,7 +630,7 @@ describe('[spec: triggers/dispatch] dispatchDueScheduledTriggers — environment
       {
         type: 'secret' as const,
         name: 'DOWNSTREAM_AGENT_KEY',
-        secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+        secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
       },
     ]
     const trigger = dueTrigger({
@@ -879,7 +879,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             spec: {
               ...baseTrigger.spec.template.spec,
               promptTemplate:
-                '{% if .ama.run.session_reused == false %}New{% else %}Reused{% endif %} {{ .body.ticket.id }} from {{ .body.source }}',
+                '{% if .enbor.run.session_reused == false %}New{% else %}Reused{% endif %} {{ .body.ticket.id }} from {{ .body.source }}',
             },
           },
         },
@@ -1091,7 +1091,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
             spec: {
               ...baseTrigger.spec.template.spec,
               promptTemplate:
-                '{% if .ama.run.session_reused %}Reused {{ .ama.run.session_id }} {{ .ama.run.session_state }}{% else %}New{% endif %} {{ .body.ticket.id }}',
+                '{% if .enbor.run.session_reused %}Reused {{ .enbor.run.session_id }} {{ .enbor.run.session_state }}{% else %}New{% endif %} {{ .body.ticket.id }}',
             },
           },
         },
@@ -1348,7 +1348,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
       {
         type: 'secret' as const,
         name: 'DOWNSTREAM_AGENT_KEY',
-        secretRef: 'ama://vaults/vault_1/credentials/cred_1/versions/ver_1',
+        secretRef: 'enbor://vaults/vault_1/credentials/cred_1/versions/ver_1',
       },
     ]
     const trigger = httpTrigger({
@@ -1522,7 +1522,7 @@ describe('[spec: triggers/http-dispatch] dispatchHttpTrigger', () => {
               spec: {
                 agentId: 'agent_1',
                 environmentId: 'env_1',
-                runtime: 'ama',
+                runtime: 'enbor',
                 promptTemplate: '{% if .body.ticket.id %}Ticket',
                 env: {},
                 envFrom: [],

@@ -6,16 +6,16 @@
 import { type IdentityRuntime, isIdentityRuntime } from './identity'
 import type { ResourceMetadata, ResourcePhase } from './resource'
 
-export const SECRET_PROVIDERS = ['ama'] as const
+export const SECRET_PROVIDERS = ['enbor'] as const
 export const VAULT_SCOPES = ['project', 'organization'] as const
 export const CREDENTIAL_TYPES = [
   'opaque',
-  'ama.dev/basic-auth',
-  'ama.dev/ssh-auth',
-  'ama.dev/tls',
-  'ama.dev/private-key-jwk',
-  'ama.dev/oauth-token',
-  'ama.dev/realmroot-agent-state',
+  'enbor.dev/basic-auth',
+  'enbor.dev/ssh-auth',
+  'enbor.dev/tls',
+  'enbor.dev/private-key-jwk',
+  'enbor.dev/oauth-token',
+  'enbor.dev/realmroot-agent-state',
 ] as const
 export const CREDENTIAL_STATES = ['active', 'revoked'] as const
 export const VERSION_STATES = ['active', 'superseded', 'revoked'] as const
@@ -115,7 +115,7 @@ export interface CredentialVersionStatus {
 }
 
 function secretReferenceName(credentialId: string, version: number, requestedName: string | undefined) {
-  return requestedName ?? `AMA_${credentialId.toUpperCase()}_V${version}`
+  return requestedName ?? `ENBOR_${credentialId.toUpperCase()}_V${version}`
 }
 
 function uriPathSegment(value: string) {
@@ -123,15 +123,15 @@ function uriPathSegment(value: string) {
 }
 
 export function credentialVersionSecretRef(identity: SecretIdentity) {
-  return `ama://vaults/${uriPathSegment(identity.vaultId)}/credentials/${uriPathSegment(identity.credentialId)}/versions/${uriPathSegment(identity.versionId)}`
+  return `enbor://vaults/${uriPathSegment(identity.vaultId)}/credentials/${uriPathSegment(identity.credentialId)}/versions/${uriPathSegment(identity.versionId)}`
 }
 
 export function credentialScopedSecretRef(identity: { vaultId: string; credentialId: string }) {
-  return `ama://vaults/${uriPathSegment(identity.vaultId)}/credentials/${uriPathSegment(identity.credentialId)}`
+  return `enbor://vaults/${uriPathSegment(identity.vaultId)}/credentials/${uriPathSegment(identity.credentialId)}`
 }
 
 export function enborSecretRef(vaultId: string) {
-  return `ama://vaults/${uriPathSegment(vaultId)}`
+  return `enbor://vaults/${uriPathSegment(vaultId)}`
 }
 
 export function vaultIdFromRef(secretRef: string): string | null {
@@ -141,7 +141,7 @@ export function vaultIdFromRef(secretRef: string): string | null {
   } catch {
     return null
   }
-  if (parsed.protocol !== 'ama:' || parsed.hostname !== 'vaults') {
+  if (parsed.protocol !== 'enbor:' || parsed.hostname !== 'vaults') {
     return null
   }
   const [vaultId, ...rest] = parsed.pathname.split('/').filter(Boolean)
@@ -155,7 +155,7 @@ export function secretRefIdentity(secretRef: string): SecretRefIdentity | null {
   } catch {
     return null
   }
-  if (parsed.protocol !== 'ama:' || parsed.hostname !== 'vaults') {
+  if (parsed.protocol !== 'enbor:' || parsed.hostname !== 'vaults') {
     return null
   }
   const segments = parsed.pathname.split('/').filter(Boolean).map(decodeURIComponent)
@@ -175,23 +175,23 @@ function requiredKeys(type: CredentialType): string[] {
   switch (type) {
     case 'opaque':
       return []
-    case 'ama.dev/basic-auth':
+    case 'enbor.dev/basic-auth':
       return ['username', 'password']
-    case 'ama.dev/ssh-auth':
+    case 'enbor.dev/ssh-auth':
       return ['ssh-privatekey']
-    case 'ama.dev/tls':
+    case 'enbor.dev/tls':
       return ['tls.crt', 'tls.key']
-    case 'ama.dev/private-key-jwk':
+    case 'enbor.dev/private-key-jwk':
       return ['jwk']
-    case 'ama.dev/oauth-token':
+    case 'enbor.dev/oauth-token':
       return ['access-token']
-    case 'ama.dev/realmroot-agent-state':
+    case 'enbor.dev/realmroot-agent-state':
       return ['state.json']
   }
 }
 
 function optionalKeys(type: CredentialType): string[] {
-  return type === 'ama.dev/oauth-token' ? ['refresh-token', 'token-type', 'expires-at', 'scopes'] : []
+  return type === 'enbor.dev/oauth-token' ? ['refresh-token', 'token-type', 'expires-at', 'scopes'] : []
 }
 
 export function validateSecretData(type: CredentialType, stringData: Record<string, string>) {
@@ -220,10 +220,10 @@ export function validateSecretData(type: CredentialType, stringData: Record<stri
       }
     }
   }
-  if (type === 'ama.dev/private-key-jwk') {
+  if (type === 'enbor.dev/private-key-jwk') {
     const jwk = stringData.jwk
     if (!jwk) {
-      return { 'stringData.jwk': 'Credential type ama.dev/private-key-jwk requires jwk.' }
+      return { 'stringData.jwk': 'Credential type enbor.dev/private-key-jwk requires jwk.' }
     }
     try {
       const parsed: unknown = JSON.parse(jwk)
@@ -234,7 +234,7 @@ export function validateSecretData(type: CredentialType, stringData: Record<stri
       return { 'stringData.jwk': 'JWK must be valid JSON.' }
     }
   }
-  if (type === 'ama.dev/realmroot-agent-state') {
+  if (type === 'enbor.dev/realmroot-agent-state') {
     try {
       parseRealmrootAgentState(stringData['state.json'] ?? '')
     } catch (error) {
@@ -565,7 +565,7 @@ export function secretReference(
   }
   const referenceName = secretReferenceName(identity.credentialId, version, values.referenceName)
   return {
-    provider: 'ama',
+    provider: 'enbor',
     secretRef: credentialVersionSecretRef(identity),
     referenceName,
     hasSecret: true,

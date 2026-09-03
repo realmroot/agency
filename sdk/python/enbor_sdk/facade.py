@@ -239,7 +239,7 @@ class _ClientCore:
     ) -> None:
         merged_headers = dict(headers or {})
         if project_id:
-            merged_headers["x-ama-project-id"] = project_id
+            merged_headers["x-enbor-project-id"] = project_id
         self.base_url = base_url
         self.websocket_authorizer = websocket_authorizer
         self.project_id = project_id
@@ -338,7 +338,7 @@ def _dpop_websocket_headers(owner: _ClientCore, url: str) -> dict[str, str]:
         raise RuntimeError("Realmroot DPoP WebSocket authorizer is required")
     result = {**owner.headers, **owner.websocket_authorizer(url.replace("ws", "http", 1), "GET")}
     if owner.project_id:
-        result["x-ama-project-id"] = owner.project_id
+        result["x-enbor-project-id"] = owner.project_id
     return result
 
 
@@ -348,7 +348,7 @@ def _runner_websocket_headers(owner: _ClientCore) -> dict[str, str]:
     if authorization is None or len(authorization.split(" ")) != 2 or not authorization.startswith("Bearer "):
         raise RuntimeError("Runner WebSocket requires an Authorization: Bearer header")
     if owner.project_id:
-        result["x-ama-project-id"] = owner.project_id
+        result["x-enbor-project-id"] = owner.project_id
     return result
 
 

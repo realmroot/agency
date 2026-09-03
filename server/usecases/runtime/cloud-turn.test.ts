@@ -14,7 +14,7 @@ import { RuntimePolicyDeniedError, RuntimeTurnCancelledError } from './engine/er
 
 // Characterization (golden-master) tests for the cloud-command / queue turn
 // path: consumeCloudTurnQueueMessage → executeCloudSessionTurn. The integration
-// suite runs turns INLINE (AMA_RUNTIME_MODE=test ⇒ cloudTurnsRunInline), so the
+// suite runs turns INLINE (RUNTIME_MODE=test ⇒ cloudTurnsRunInline), so the
 // paused→enqueue continuation branch is unreachable there. These pin it (and
 // the provider/model selection the Phase 1 TurnEngine unification must
 // preserve) before that refactor moves the code.
@@ -75,7 +75,7 @@ const {
   incrementContinuationDepthMock: vi.fn(async () => 1),
 }))
 
-const env = { DB: {}, AMA_RUNTIME_MODE: 'production' } as never
+const env = { DB: {}, RUNTIME_MODE: 'production' } as never
 
 // The queue gateway is env-bound (enqueue(env, message, opts)); the usecase
 // drives it through deps.cloudTurnQueue.enqueue(message, opts). Bridge the two so
@@ -226,7 +226,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] parks a completed turn idle and sleeps its existing sandbox', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '300' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '300' } }) }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
 
@@ -248,19 +248,19 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
     { metadata: JSON.stringify({}), label: 'missing annotations' },
     { metadata: JSON.stringify({ annotations: {} }), label: 'missing annotation key' },
     {
-      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '0' } }),
+      metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '0' } }),
       label: 'zero annotation',
     },
     {
-      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '-1' } }),
+      metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '-1' } }),
       label: 'negative annotation',
     },
     {
-      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '1.5' } }),
+      metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '1.5' } }),
       label: 'non-integer annotation',
     },
     {
-      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': 'later' } }),
+      metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': 'later' } }),
       label: 'non-numeric annotation',
     },
   ])('[spec: runtime/idle-retention] sleeps the sandbox for 60 seconds for $label', async ({ metadata }) => {
@@ -280,7 +280,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] audits sandbox idle failure without blocking completed-turn settlement', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '60' } }) }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
     idleCloudSessionMock.mockRejectedValue(new Error('sandbox idle unavailable'))
@@ -328,7 +328,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
         volumes: JSON.stringify(volumes),
         volumeMounts: JSON.stringify(volumeMounts),
         environmentSnapshot: JSON.stringify({ runtimeConfig: { old: true } }),
-        metadata: JSON.stringify({ runtime: 'ama', runtimeConfig: { image: 'ama-tool-executor' } }),
+        metadata: JSON.stringify({ runtime: 'enbor', runtimeConfig: { image: 'enbor-tool-executor' } }),
       }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'idle' })
@@ -347,8 +347,8 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
         sandboxId: 'sandbox_1',
         provider: 'anthropic',
         model: '@cf/x',
-        runtime: 'ama',
-        environmentSnapshot: expect.objectContaining({ runtimeConfig: { image: 'ama-tool-executor' } }),
+        runtime: 'enbor',
+        environmentSnapshot: expect.objectContaining({ runtimeConfig: { image: 'enbor-tool-executor' } }),
         volumes,
         volumeMounts,
         workspaceManifest,
@@ -360,7 +360,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it.each([
     { annotations: undefined, label: 'the default timeout' },
-    { annotations: { 'ama.dev/idle-timeout-seconds': '300' }, label: 'an explicit timeout' },
+    { annotations: { 'enbor.dev/idle-timeout-seconds': '300' }, label: 'an explicit timeout' },
   ])('[spec: runtime/idle-retention] skips cloud lifecycle for a runner-backed sandbox turn with $label', async ({
     annotations,
   }) => {
@@ -432,7 +432,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] sleeps the existing sandbox when policy denial parks the session idle', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '60' } }) }),
     )
     runSessionTurnMock.mockRejectedValue(new RuntimePolicyDeniedError('blocked by sandbox policy'))
 
@@ -449,7 +449,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] sleeps the existing sandbox when a turn pauses for required action', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '60' } }) }),
     )
     runSessionTurnMock.mockRejectedValue(new RuntimeTurnCancelledError())
     const requiresActionDeps: CloudTurnDeps = {
@@ -492,7 +492,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] sleeps the existing sandbox when the continuation cap parks idle', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '60' } }) }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'paused' })
     incrementContinuationDepthMock.mockResolvedValue(25)
@@ -513,7 +513,7 @@ describe('consumeCloudTurnQueueMessage — cloud-command turn path [spec: runtim
 
   it('[spec: runtime/idle-retention] audits sandbox idle failure without blocking continuation-cap settlement', async () => {
     findSessionMock.mockResolvedValue(
-      fakeSession({ metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '60' } }) }),
+      fakeSession({ metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '60' } }) }),
     )
     runSessionTurnMock.mockResolvedValue({ status: 'paused' })
     incrementContinuationDepthMock.mockResolvedValue(25)
@@ -685,7 +685,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -708,7 +708,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -739,7 +739,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -773,7 +773,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
         pending: pendingRow() as never,
         agentSnapshot,
         environmentSnapshot: null,
-        runtime: 'ama',
+        runtime: 'enbor',
         runtimeConfig: {},
         env: {},
         envFrom: [],
@@ -805,7 +805,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       prompt: 'hello',
     })
@@ -822,7 +822,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -842,14 +842,14 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
   })
 
   it('[spec: runtime/idle-retention] starts without a prompt, sleeps the same sandbox, and retains its id', async () => {
-    const metadata = JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '300' } })
+    const metadata = JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '300' } })
     findSessionMock.mockResolvedValue(pendingRow({ metadata }))
 
     await startSessionRuntimeForRow(startupDeps, auth, {
       pending: pendingRow({ metadata }) as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -882,7 +882,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
     findSessionMock.mockResolvedValue(
       pendingRow({
         metadata: JSON.stringify({
-          annotations: { 'ama.dev/idle-timeout-seconds': '60' },
+          annotations: { 'enbor.dev/idle-timeout-seconds': '60' },
           inboxBackfill: 'preserved',
         }),
       }),
@@ -892,7 +892,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow({ metadata: JSON.stringify({ beforeStartup: true }) }) as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -912,7 +912,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
   it.each([
     { metadata: null, label: 'missing annotation' },
     {
-      metadata: JSON.stringify({ annotations: { 'ama.dev/idle-timeout-seconds': '0' } }),
+      metadata: JSON.stringify({ annotations: { 'enbor.dev/idle-timeout-seconds': '0' } }),
       label: 'explicit zero',
     },
   ])('[spec: runtime/idle-retention] starts idle with the 60-second default for $label', async ({ metadata }) => {
@@ -920,7 +920,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow({ metadata }) as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
       env: {},
       envFrom: [],
@@ -949,7 +949,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow() as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
     })
 
@@ -977,7 +977,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
         stateReason: 'Environment package installation failed at webi-install:realmroot@0.4.2',
       }),
       expect.objectContaining({
-        runtimeBackend: 'ama-cloud',
+        runtimeBackend: 'enbor-cloud',
         error: expect.objectContaining({ code: 'environment_package_installation_failed' }),
       }),
     )
@@ -993,7 +993,7 @@ describe('startSessionRuntimeForRow — startup partial-failure (H5 FIX 1)', () 
       pending: pendingRow({ metadata: JSON.stringify({ annotations: { source: 'inbox' } }) }) as never,
       agentSnapshot,
       environmentSnapshot: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       runtimeConfig: {},
     })
 

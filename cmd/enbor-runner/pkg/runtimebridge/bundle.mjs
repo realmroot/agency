@@ -37878,7 +37878,7 @@ function Z_($, Q) {
 
 // packages/runtime-bridge/src/providers/cli-host.ts
 function hostHome(env2) {
-  return typeof env2.AMA_RUNTIME_BRIDGE_HOST_HOME === "string" && env2.AMA_RUNTIME_BRIDGE_HOST_HOME ? env2.AMA_RUNTIME_BRIDGE_HOST_HOME : void 0;
+  return typeof env2.ENBOR_RUNTIME_BRIDGE_HOST_HOME === "string" && env2.ENBOR_RUNTIME_BRIDGE_HOST_HOME ? env2.ENBOR_RUNTIME_BRIDGE_HOST_HOME : void 0;
 }
 function sdkEnv(request3) {
   const home = hostHome(request3.env);
@@ -37887,7 +37887,7 @@ function sdkEnv(request3) {
     ...request3.env,
     ...home ? {
       HOME: home,
-      AMA_WORKSPACE_HOME: sessionHome,
+      ENBOR_WORKSPACE_HOME: sessionHome,
       GH_CONFIG_DIR: `${sessionHome}/.config/gh`,
       GIT_CONFIG_GLOBAL: `${sessionHome}/.gitconfig`,
       GIT_CONFIG_NOSYSTEM: "1"
@@ -37910,14 +37910,14 @@ function environmentChoice(env2, name, values, fallback) {
 }
 function codexPermissionPolicy(env2 = process.env) {
   return {
-    sandboxMode: environmentChoice(env2, "AMA_CODEX_SANDBOX_MODE", CODEX_SANDBOX_MODES, "danger-full-access"),
-    approvalPolicy: environmentChoice(env2, "AMA_CODEX_APPROVAL_POLICY", CODEX_APPROVAL_POLICIES, "never")
+    sandboxMode: environmentChoice(env2, "ENBOR_CODEX_SANDBOX_MODE", CODEX_SANDBOX_MODES, "danger-full-access"),
+    approvalPolicy: environmentChoice(env2, "ENBOR_CODEX_APPROVAL_POLICY", CODEX_APPROVAL_POLICIES, "never")
   };
 }
 function claudeCodePermissionPolicy(env2 = process.env) {
   const permissionMode = environmentChoice(
     env2,
-    "AMA_CLAUDE_CODE_PERMISSION_MODE",
+    "ENBOR_CLAUDE_CODE_PERMISSION_MODE",
     CLAUDE_CODE_PERMISSION_MODES,
     "bypassPermissions"
   );
@@ -39333,7 +39333,7 @@ var codexProvider = {
     const shellEnvironment = Object.fromEntries(
       [
         "HOME",
-        "AMA_WORKSPACE_HOME",
+        "ENBOR_WORKSPACE_HOME",
         "GH_CONFIG_DIR",
         "GIT_CONFIG_GLOBAL",
         "GIT_CONFIG_NOSYSTEM",
@@ -218178,7 +218178,7 @@ var TEST_MODE_RUNTIME_MODELS = {
   copilot: ["copilot-cli"]
 };
 function isE2eBridgeTest(request3) {
-  return process.env.AMA_RUNTIME_BRIDGE_TEST_MODE === "1" && request3.runtimeConfig?.e2eBridgeTest === true;
+  return process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === "1" && request3.runtimeConfig?.e2eBridgeTest === true;
 }
 function probeFailureStatus(message) {
   if (/unauthoriz|forbidden|\b403\b/i.test(message)) return "unauthorized";
@@ -218270,10 +218270,10 @@ function deterministicBridgeTestEvents(request3) {
     `session:${request3.sessionId}`,
     `runtime:${request3.runtime}`,
     `workspace:${request3.cwd}`,
-    `workspaceEnv:${request3.env.AMA_WORKSPACE}`,
+    `workspaceEnv:${request3.env.ENBOR_WORKSPACE}`,
     `home:${request3.env.HOME}`,
     `tmpdir:${request3.env.TMPDIR}`,
-    `hasRunnerCredential:${Object.hasOwn(request3.env, "AMA_RUNNER_CREDENTIALS")}`,
+    `hasRunnerCredential:${Object.hasOwn(request3.env, "ENBOR_RUNNER_CREDENTIALS")}`,
     `leakedToken:${Object.values(request3.env).includes("raw-secret-value") ? "raw-secret-value" : "none"}`
   ].join("\n");
   return [
@@ -218451,7 +218451,7 @@ async function run(request3) {
 }
 async function inventory(request3) {
   const runtimes = [];
-  const bridgeTestMode = process.env.AMA_RUNTIME_BRIDGE_TEST_MODE === "1";
+  const bridgeTestMode = process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === "1";
   for (const provider of listProviders()) {
     const installed = bridgeTestMode || Boolean(resolveCliPath(provider.binary));
     if (!installed) {

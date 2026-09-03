@@ -201,7 +201,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     vi.unstubAllGlobals()
   })
 
-  it('[spec: runners/ama-sandbox-channel] rejects live events forged for a session owned by another runner', async () => {
+  it('[spec: runners/enbor-sandbox-channel] rejects live events forged for a session owned by another runner', async () => {
     const { env, relay } = relayEnv()
     const { internals, connection } = createPool(true, env)
     const runnerB: TestConnection = {
@@ -216,7 +216,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(relay).not.toHaveBeenCalled()
   })
 
-  it('[spec: runners/ama-sandbox-channel] rejects live events whose inner session differs from the envelope', async () => {
+  it('[spec: runners/enbor-sandbox-channel] rejects live events whose inner session differs from the envelope', async () => {
     const { env, relay } = relayEnv()
     const { internals, connection } = createPool(true, env)
 
@@ -225,7 +225,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(relay).not.toHaveBeenCalled()
   })
 
-  it('[spec: runners/ama-sandbox-channel] binds backfill responses to the exact connection and session', async () => {
+  it('[spec: runners/enbor-sandbox-channel] binds backfill responses to the exact connection and session', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     const responsePromise = requestBackfill(pool)
     await vi.waitFor(() => expect(socket.sent).toHaveLength(1))
@@ -526,7 +526,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(socket.sent).toEqual([])
   })
 
-  it('[spec: runners/ama-sandbox-channel] routes sandbox requests after Enbor startup but retires normal completions', async () => {
+  it('[spec: runners/enbor-sandbox-channel] routes sandbox requests after Enbor startup but retires normal completions', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     await internals.handleRunnerMessage(
       connection,
@@ -570,7 +570,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect((await requestSandbox(pool)).status).toBe(409)
   })
 
-  it('[spec: runners/ama-sandbox-channel] does not create an absent Enbor route from active completion alone', async () => {
+  it('[spec: runners/enbor-sandbox-channel] does not create an absent Enbor route from active completion alone', async () => {
     const { pool, internals, connection } = createPool(true)
     internals.sessionRunners.delete('session_1')
     internals.sessionBackfillRunners.delete('session_1')
@@ -590,7 +590,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect((await requestSandbox(pool)).status).toBe(409)
   })
 
-  it('[spec: runners/ama-sandbox-channel] does not overwrite another runner owner from active completion', async () => {
+  it('[spec: runners/enbor-sandbox-channel] does not overwrite another runner owner from active completion', async () => {
     const { internals, connection } = createPool(true)
     const runnerB: TestConnection = {
       ...connection,
@@ -615,7 +615,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.get('session_1')).toBe(runnerB)
   })
 
-  it('[spec: runners/ama-sandbox-channel] restores completed Enbor sandbox routing after runner reconnect', async () => {
+  it('[spec: runners/enbor-sandbox-channel] restores completed Enbor sandbox routing after runner reconnect', async () => {
     const { pool, internals, connection } = createPool(true)
     internals.closeRunner(connection)
     const replacement: TestConnection = { ...connection, socket: createSocket() }
@@ -651,7 +651,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     await expect((await responsePromise).json()).resolves.toEqual({ ok: true, result: { restored: true } })
   })
 
-  it('[spec: runners/ama-sandbox-channel] does not restore stale sessions after the runner advertises its authoritative set', async () => {
+  it('[spec: runners/enbor-sandbox-channel] does not restore stale sessions after the runner advertises its authoritative set', async () => {
     const { internals, connection } = createPool(true)
     let resolveRestore!: (page: { rows: Array<{ environmentId: string; sessionId: string }> }) => void
     const restorePage = new Promise<{ rows: Array<{ environmentId: string; sessionId: string }> }>((resolve) => {
@@ -682,7 +682,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.has('session_stale')).toBe(false)
   })
 
-  it('[spec: runners/ama-sandbox-channel] rejects an advertised session without a matching persisted assignment', async () => {
+  it('[spec: runners/enbor-sandbox-channel] rejects an advertised session without a matching persisted assignment', async () => {
     const { internals, connection } = createPool(true)
 
     await internals.handleRunnerMessage(
@@ -695,7 +695,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.has('session_arbitrary')).toBe(false)
   })
 
-  it('[spec: runners/ama-sandbox-channel] rejects historical runner ownership when the latest assignment belongs to another runner', async () => {
+  it('[spec: runners/enbor-sandbox-channel] rejects historical runner ownership when the latest assignment belongs to another runner', async () => {
     const { pool, internals, connection } = createPool(true)
     const findLatestBySessions = vi
       .fn()
@@ -712,7 +712,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     await expect((await sessionStatus(pool, 'session_1')).json()).resolves.toEqual({ active: false })
   })
 
-  it('[spec: runners/ama-sandbox-channel] closes the runner without a leased-route fallback when ownership validation fails', async () => {
+  it('[spec: runners/enbor-sandbox-channel] closes the runner without a leased-route fallback when ownership validation fails', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     const pendingRejects = seedPendingRequests(internals, connection)
     const list = vi.fn().mockResolvedValue({ rows: [] })
@@ -745,7 +745,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     await expect((await requestBackfill(pool)).json()).resolves.toMatchObject({ runnerUnavailable: true, rows: [] })
   })
 
-  it('[spec: runners/ama-sandbox-channel] closes oversized advertisements before querying ownership or changing routes', async () => {
+  it('[spec: runners/enbor-sandbox-channel] closes oversized advertisements before querying ownership or changing routes', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     const pendingRejects = seedPendingRequests(internals, connection)
 
@@ -774,7 +774,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     await expect((await requestBackfill(pool)).json()).resolves.toMatchObject({ runnerUnavailable: true, rows: [] })
   })
 
-  it('[spec: runners/ama-sandbox-channel] keeps existing routes available until every advertised session is validated', async () => {
+  it('[spec: runners/enbor-sandbox-channel] keeps existing routes available until every advertised session is validated', async () => {
     const { pool, internals, connection } = createPool(true)
     let resolveValidation!: (rows: Array<{ runnerId: string; environmentId: string; sessionId: string }>) => void
     const validation = new Promise<Array<{ runnerId: string; environmentId: string; sessionId: string }>>((resolve) => {
@@ -802,7 +802,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionRunners.get('session_2')).toBe(connection)
   })
 
-  it('[spec: runners/ama-sandbox-channel] keeps omitted sessions inactive while a replacement connection validates its advertisement', async () => {
+  it('[spec: runners/enbor-sandbox-channel] keeps omitted sessions inactive while a replacement connection validates its advertisement', async () => {
     const { pool, internals, connection } = createPool(true)
     internals.sessionRunners.set('session_2', connection)
     internals.sessionBackfillRunners.set('session_2', connection)
@@ -840,7 +840,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionRunners.get('session_2')).toBe(connection)
   })
 
-  it('[spec: runners/ama-sandbox-channel] ignores an asynchronous restore from a superseded connection', async () => {
+  it('[spec: runners/enbor-sandbox-channel] ignores an asynchronous restore from a superseded connection', async () => {
     const { internals, connection } = createPool(true)
     let resolveRestore!: (page: { rows: Array<{ environmentId: string; sessionId: string }> }) => void
     const restorePage = new Promise<{ rows: Array<{ environmentId: string; sessionId: string }> }>((resolve) => {
@@ -860,7 +860,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.has('session_stale')).toBe(false)
   })
 
-  it('[spec: runners/ama-sandbox-channel] does not overwrite another runner owner while restoring leased sessions', async () => {
+  it('[spec: runners/enbor-sandbox-channel] does not overwrite another runner owner while restoring leased sessions', async () => {
     const { internals, connection } = createPool(true)
     const runnerB: TestConnection = {
       ...connection,
@@ -882,7 +882,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.get('session_foreign')).toBe(runnerB)
   })
 
-  it('[spec: runners/ama-sandbox-channel] ignores route replacement and retirement from an invalid runner context', async () => {
+  it('[spec: runners/enbor-sandbox-channel] ignores route replacement and retirement from an invalid runner context', async () => {
     const { internals, connection } = createPool(true)
     const replacement: TestConnection = { ...connection, socket: createSocket() }
     internals.runners.set('runner_1', replacement)
@@ -901,7 +901,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionBackfillRunners.get('session_1')).toBe(connection)
   })
 
-  it('[spec: runners/ama-sandbox-channel] retires an inactive live route while preserving backfill', async () => {
+  it('[spec: runners/enbor-sandbox-channel] retires an inactive live route while preserving backfill', async () => {
     const { pool, internals, connection } = createPool(true)
 
     await internals.handleRunnerMessage(
@@ -914,7 +914,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect((await requestSandbox(pool)).status).toBe(409)
   })
 
-  it('[spec: runners/ama-sandbox-channel] preserves a route owned by another runner across late terminal and active frames', async () => {
+  it('[spec: runners/enbor-sandbox-channel] preserves a route owned by another runner across late terminal and active frames', async () => {
     const { internals, connection } = createPool(true)
     const runnerB: TestConnection = {
       ...connection,
@@ -944,7 +944,7 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     expect(internals.sessionRunners.get('session_1')).toBe(runnerB)
   })
 
-  it('[spec: runners/ama-sandbox-channel] binds pending sandbox requests to the exact connection across replacement', async () => {
+  it('[spec: runners/enbor-sandbox-channel] binds pending sandbox requests to the exact connection across replacement', async () => {
     const { pool, internals, connection, socket } = createPool(true)
     const supersededResponsePromise = requestSandbox(pool)
     await vi.waitFor(() => expect(socket.sent).toHaveLength(1))

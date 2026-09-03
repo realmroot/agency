@@ -236,7 +236,7 @@ async function openBrowserSocket(authorization: string, sessionId: string) {
     headers: {
       Upgrade: 'websocket',
       Origin: 'https://example.com',
-      'Sec-WebSocket-Protocol': `ama-ticket, ama-ticket.${ticket}`,
+      'Sec-WebSocket-Protocol': `enbor-ticket, enbor-ticket.${ticket}`,
     },
   })
   if (res.status !== 101 || !res.webSocket) throw new Error(`Browser socket upgrade failed: ${res.status}`)

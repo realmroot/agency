@@ -9,7 +9,7 @@ import {
 
 // The session metadata stamp that routes a session's canonical event firehose to
 // the per-session Session DO (SQLite hot + R2 cold). Written by the cloud-loop
-// (ama) start path; read by the event-store router. Absent means events live on
+// (enbor) start path; read by the event-store router. Absent means events live on
 // D1 for self-hosted runner sessions.
 export const SESSION_DO_EVENT_STORE = 'session-do'
 

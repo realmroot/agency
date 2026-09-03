@@ -29,16 +29,16 @@ vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
 
 vi.mock('./cli-host', () => ({
   arrayValue: (value: unknown) => (Array.isArray(value) ? value : []),
-  hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
+  hostHome: (env: Record<string, string>) => env.ENBOR_RUNTIME_BRIDGE_HOST_HOME,
   normalizeProviderUsage: (value: Record<string, unknown>) => value,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
   sdkEnv: (request: RuntimeProviderRequest) => {
-    const hostHome = request.env.AMA_RUNTIME_BRIDGE_HOST_HOME
+    const hostHome = request.env.ENBOR_RUNTIME_BRIDGE_HOST_HOME
     return hostHome
       ? {
           ...request.env,
           HOME: hostHome,
-          AMA_WORKSPACE_HOME: request.env.HOME,
+          ENBOR_WORKSPACE_HOME: request.env.HOME,
           GH_CONFIG_DIR: `${request.env.HOME}/.config/gh`,
           GIT_CONFIG_GLOBAL: `${request.env.HOME}/.gitconfig`,
           GIT_CONFIG_NOSYSTEM: '1',
@@ -261,8 +261,8 @@ afterEach(() => {
 
 describe('codexProvider', () => {
   it('[spec: runtime/provider-permission-policy] applies runner-owned Codex permission settings', async () => {
-    vi.stubEnv('AMA_CODEX_SANDBOX_MODE', 'workspace-write')
-    vi.stubEnv('AMA_CODEX_APPROVAL_POLICY', 'on-request')
+    vi.stubEnv('ENBOR_CODEX_SANDBOX_MODE', 'workspace-write')
+    vi.stubEnv('ENBOR_CODEX_APPROVAL_POLICY', 'on-request')
     runStreamedMock.mockResolvedValue({ events: events() })
     startThreadMock.mockReturnValue({ runStreamed: runStreamedMock })
 
@@ -334,7 +334,7 @@ describe('codexProvider', () => {
   })
 
   it('passes an explicitly configured model when the host uses ChatGPT authentication', async () => {
-    const hostHome = mkdtempSync(join(tmpdir(), 'ama-codex-provider-'))
+    const hostHome = mkdtempSync(join(tmpdir(), 'enbor-codex-provider-'))
     mkdirSync(join(hostHome, '.codex'))
     writeFileSync(join(hostHome, '.codex', 'auth.json'), JSON.stringify({ tokens: { access_token: 'test-token' } }))
     runStreamedMock.mockResolvedValue({ events: events() })
@@ -343,7 +343,7 @@ describe('codexProvider', () => {
     try {
       const handle = await codexProvider.execute(
         request({
-          env: { HOME: '/home/agent', AMA_RUNTIME_BRIDGE_HOST_HOME: hostHome },
+          env: { HOME: '/home/agent', ENBOR_RUNTIME_BRIDGE_HOST_HOME: hostHome },
           model: 'gpt-5.3-codex-spark',
         }),
       )
@@ -368,7 +368,7 @@ describe('codexProvider', () => {
           TMPDIR: '/session/tmp',
           TEMP: '/session/tmp',
           TMP: '/session/tmp',
-          AMA_RUNTIME_BRIDGE_HOST_HOME: '/host/home',
+          ENBOR_RUNTIME_BRIDGE_HOST_HOME: '/host/home',
         },
       }),
     )
@@ -379,7 +379,7 @@ describe('codexProvider', () => {
     expect(codexConstructorMock).toHaveBeenCalledWith({
       env: expect.objectContaining({
         HOME: '/host/home',
-        AMA_WORKSPACE_HOME: '/session/home',
+        ENBOR_WORKSPACE_HOME: '/session/home',
         GH_CONFIG_DIR: '/session/home/.config/gh',
         GIT_CONFIG_GLOBAL: '/session/home/.gitconfig',
       }),

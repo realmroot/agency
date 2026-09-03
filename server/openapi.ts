@@ -111,7 +111,7 @@ export function finalizeOpenApiDocument<T extends { paths: object; components?: 
   mutable.components ??= {}
   mutable.components.parameters ??= {}
   mutable.components.parameters.EnborProjectId = {
-    name: 'X-AMA-Project-ID',
+    name: 'X-Enbor-Project-ID',
     in: 'header',
     required: false,
     'x-cli-name': 'project-id',
@@ -140,7 +140,7 @@ export function finalizeOpenApiDocument<T extends { paths: object; components?: 
           },
         }
       }
-      const scope = requiredScope(method.toUpperCase(), `https://ama.invalid${path}`)
+      const scope = requiredScope(method.toUpperCase(), `https://enbor.invalid${path}`)
       const sessionSocketTicket = operation.security.some((requirement) =>
         Object.hasOwn(requirement, 'sessionSocketTicket'),
       )
@@ -201,7 +201,7 @@ export function listResponseSchema<T extends z.ZodType>(name: string, itemSchema
 }
 
 export const SecretRefSchema = z.string().min(1).openapi({
-  example: 'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
+  example: 'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008',
 })
 
 export const NullableSecretRefSchema = SecretRefSchema.nullable().openapi('NullableSecretRef')

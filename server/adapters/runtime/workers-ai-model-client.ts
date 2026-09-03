@@ -164,7 +164,7 @@ function testToolCallMessage(model: Model<string>, toolCall: ToolCall) {
   })
 }
 
-// Deterministic tool-call grammar for AMA_RUNTIME_MODE=test prompts, so e2e
+// Deterministic tool-call grammar for RUNTIME_MODE=test prompts, so e2e
 // scenarios can drive specific sandbox operations through the real agent loop.
 function testPromptToolCall(prompt: string): ToolCall | null {
   const write = prompt.match(/write the file (\S+) with content (.+)$/i)
@@ -306,7 +306,7 @@ function isRetryableProviderError(error: ProviderCallError): boolean {
 export function workersAiModelClient(env: Env): ModelClient {
   return {
     async complete(model, context, signal) {
-      if (env.AMA_RUNTIME_MODE === 'test') {
+      if (env.RUNTIME_MODE === 'test') {
         try {
           const latestUser = [...context.messages].reverse().find((message) => message.role === 'user')
           const prompt = latestUser && latestUser.role === 'user' ? textContent(latestUser.content) : ''
@@ -325,7 +325,7 @@ export function workersAiModelClient(env: Env): ModelClient {
           throw new ProviderCallError(normalizeProviderError(providerFamily(model.provider), error))
         }
       }
-      const gateway = aiGatewayFor(model.id, env.AMA_AI_GATEWAY_ID)
+      const gateway = aiGatewayFor(model.id, env.AI_GATEWAY_ID)
       let lastError: ProviderCallError | null = null
       for (let attempt = 1; attempt <= PROVIDER_MAX_ATTEMPTS; attempt += 1) {
         if (signal?.aborted) {

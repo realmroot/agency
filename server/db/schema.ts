@@ -388,12 +388,12 @@ export const vaultCredentials = sqliteTable(
     type: text('type', {
       enum: [
         'opaque',
-        'ama.dev/basic-auth',
-        'ama.dev/ssh-auth',
-        'ama.dev/tls',
-        'ama.dev/private-key-jwk',
-        'ama.dev/oauth-token',
-        'ama.dev/realmroot-agent-state',
+        'enbor.dev/basic-auth',
+        'enbor.dev/ssh-auth',
+        'enbor.dev/tls',
+        'enbor.dev/private-key-jwk',
+        'enbor.dev/oauth-token',
+        'enbor.dev/realmroot-agent-state',
       ],
     }).notNull(),
     metadata: text('metadata').notNull().default('{}'),
@@ -420,13 +420,13 @@ export const vaultCredentials = sqliteTable(
         table.vaultId,
         sql`json_extract(${table.metadata}, '$.managedBy')`,
         sql`json_extract(${table.metadata}, '$.identityId')`,
-        sql`coalesce(json_extract(${table.metadata}, '$.purpose'), case when ${table.type} = 'ama.dev/realmroot-agent-state' then 'agent-state' end)`,
+        sql`coalesce(json_extract(${table.metadata}, '$.purpose'), case when ${table.type} = 'enbor.dev/realmroot-agent-state' then 'agent-state' end)`,
       )
       .where(sql`json_extract(${table.metadata}, '$.managedBy') = 'identity'`),
     check('ck_vault_credentials_state', sql`${table.state} in ('active','revoked')`),
     check(
       'ck_vault_credentials_type',
-      sql`${table.type} in ('opaque','ama.dev/basic-auth','ama.dev/ssh-auth','ama.dev/tls','ama.dev/private-key-jwk','ama.dev/oauth-token','ama.dev/realmroot-agent-state')`,
+      sql`${table.type} in ('opaque','enbor.dev/basic-auth','enbor.dev/ssh-auth','enbor.dev/tls','enbor.dev/private-key-jwk','enbor.dev/oauth-token','enbor.dev/realmroot-agent-state')`,
     ),
   ],
 )
@@ -446,7 +446,7 @@ export const vaultCredentialVersions = sqliteTable(
     projectId: text('project_id').references(() => projects.id),
     version: integer('version').notNull(),
     // Mirrors SECRET_PROVIDERS (server/domain/vault.ts).
-    provider: text('provider', { enum: ['ama'] }).notNull(),
+    provider: text('provider', { enum: ['enbor'] }).notNull(),
     secretRef: text('secret_ref').notNull(),
     referenceName: text('reference_name').notNull(),
     // Mirrors VERSION_STATES (server/domain/vault.ts).
@@ -465,7 +465,7 @@ export const vaultCredentialVersions = sqliteTable(
     uniqueIndex('idx_vault_credential_versions_unique_credential_version').on(table.credentialId, table.version),
     index('idx_vault_credential_versions_vault_created').on(table.vaultId, table.createdAt, table.id),
     check('ck_vault_credential_versions_state', sql`${table.state} in ('active','superseded','revoked')`),
-    check('ck_vault_credential_versions_provider', sql`${table.provider} in ('ama')`),
+    check('ck_vault_credential_versions_provider', sql`${table.provider} in ('enbor')`),
   ],
 )
 
@@ -642,7 +642,7 @@ export const triggers = sqliteTable(
       .notNull()
       .default('parallel'),
     // Mirrors RuntimeSchema (server/contracts/environment-contracts.ts) — keep in lockstep.
-    runtime: text('runtime', { enum: ['ama', 'claude-code', 'codex', 'copilot'] }).notNull(),
+    runtime: text('runtime', { enum: ['enbor', 'claude-code', 'codex', 'copilot'] }).notNull(),
     name: text('name').notNull(),
     promptTemplate: text('prompt_template').notNull(),
     env: text('env').notNull().default('{}'),
@@ -681,7 +681,7 @@ export const triggers = sqliteTable(
     index('idx_triggers_due').on(table.enabled, table.nextDueAt, table.id),
     // enum types the column; check enforces it in D1/SQLite, in parity with every
     // other hardened enum column. Mirrors RuntimeSchema (contracts/environment-contracts).
-    check('ck_triggers_runtime', sql`${table.runtime} in ('ama','claude-code','codex','copilot')`),
+    check('ck_triggers_runtime', sql`${table.runtime} in ('enbor','claude-code','codex','copilot')`),
     check('ck_triggers_type', sql`${table.triggerType} in ('scheduled','http','inbox')`),
     check('ck_triggers_http_concurrency', sql`${table.httpConcurrencyMode} in ('parallel','serial')`),
     check(

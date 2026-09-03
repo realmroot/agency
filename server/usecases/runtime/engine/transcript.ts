@@ -73,9 +73,9 @@ function agentMessageFromEnborMessage(message: Message): AgentMessage | null {
     return {
       role: 'assistant',
       content: piTextContentBlocks(message.content),
-      api: 'ama',
-      provider: 'ama',
-      model: 'ama',
+      api: 'enbor',
+      provider: 'enbor',
+      model: 'enbor',
       usage: ZERO_USAGE,
       stopReason: message.stopReason === 'aborted' || message.stopReason === 'error' ? message.stopReason : 'stop',
       timestamp,

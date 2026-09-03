@@ -46,7 +46,7 @@ describe('[spec: sessions/workspace-safety] secret material detection', () => {
     expect(hasSecretMaterial({ apiKey: 'x' })).toBe(true)
     expect(hasSecretMaterial({ nested: [{ password: 'x' }] })).toBe(true)
     expect(hasSecretMaterial({ plain: 'value' })).toBe(false)
-    expect(hasSecretMaterial({ secretRef: 'ama://vaults/vault_1/credentials/token/versions/ver_1' })).toBe(false)
+    expect(hasSecretMaterial({ secretRef: 'enbor://vaults/vault_1/credentials/token/versions/ver_1' })).toBe(false)
   })
 
   it('flags urls carrying embedded credentials', () => {
@@ -60,13 +60,13 @@ describe('mergeSessionUserMetadata', () => {
   it('merges labels and annotations without disturbing runtime metadata', () => {
     expect(
       mergeSessionUserMetadata(
-        { runtime: 'ama', labels: { lane: 'old' }, annotations: { keep: 'yes', remove: 'old' } },
-        { labels: { lane: 'new' }, annotations: { remove: null, ticket: 'AMA-1' } },
+        { runtime: 'enbor', labels: { lane: 'old' }, annotations: { keep: 'yes', remove: 'old' } },
+        { labels: { lane: 'new' }, annotations: { remove: null, ticket: 'Enbor-1' } },
       ),
     ).toEqual({
-      runtime: 'ama',
+      runtime: 'enbor',
       labels: { lane: 'new' },
-      annotations: { keep: 'yes', ticket: 'AMA-1' },
+      annotations: { keep: 'yes', ticket: 'Enbor-1' },
     })
   })
 
@@ -75,7 +75,7 @@ describe('mergeSessionUserMetadata', () => {
       sessionUserMetadata({
         labels: { team: 'runtime', ignored: 1 },
         annotations: { note: 'keep', ignored: false },
-        ticket: 'AMA-1',
+        ticket: 'Enbor-1',
         count: 2,
         nullable: null,
       }),

@@ -18,12 +18,12 @@ def _get_kwargs(
     store_id: str,
     memory_id: str,
     *,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -88,7 +88,7 @@ def sync_detailed(
     memory_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[Any | ErrorResponse]:
     """ Delete a memory
@@ -98,7 +98,7 @@ def sync_detailed(
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -112,7 +112,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         store_id=store_id,
 memory_id=memory_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -127,7 +127,7 @@ def sync(
     memory_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Any | ErrorResponse | None:
     """ Delete a memory
@@ -137,7 +137,7 @@ def sync(
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -152,7 +152,7 @@ def sync(
         store_id=store_id,
 memory_id=memory_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -161,7 +161,7 @@ async def asyncio_detailed(
     memory_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[Any | ErrorResponse]:
     """ Delete a memory
@@ -171,7 +171,7 @@ async def asyncio_detailed(
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -185,7 +185,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         store_id=store_id,
 memory_id=memory_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -200,7 +200,7 @@ async def asyncio(
     memory_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Any | ErrorResponse | None:
     """ Delete a memory
@@ -210,7 +210,7 @@ async def asyncio(
     Args:
         store_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000a.
         memory_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000b.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -225,6 +225,6 @@ async def asyncio(
         store_id=store_id,
 memory_id=memory_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

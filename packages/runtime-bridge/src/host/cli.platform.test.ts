@@ -23,15 +23,15 @@ afterEach(() => {
 
 describe('[spec: runners/heartbeat] resolveCliPath platform lookup', () => {
   it('resolves a host CLI using native PATH and PATHEXT rules', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'ama-runtime-path-'))
-    const name = 'ama-runtime-probe'
+    const directory = mkdtempSync(join(tmpdir(), 'enbor-runtime-path-'))
+    const name = 'enbor-runtime-probe'
     const executable = join(directory, process.platform === 'win32' ? `${name}.CMD` : name)
-    const script = join(directory, 'node_modules', 'ama-runtime-probe', 'cli.js')
+    const script = join(directory, 'node_modules', 'enbor-runtime-probe', 'cli.js')
     try {
       if (process.platform === 'win32') {
-        mkdirSync(join(directory, 'node_modules', 'ama-runtime-probe'), { recursive: true })
+        mkdirSync(join(directory, 'node_modules', 'enbor-runtime-probe'), { recursive: true })
         writeFileSync(script, 'process.exit(0)\r\n')
-        writeFileSync(executable, '@echo off\r\nnode "%~dp0\\node_modules\\ama-runtime-probe\\cli.js" %*\r\n')
+        writeFileSync(executable, '@echo off\r\nnode "%~dp0\\node_modules\\enbor-runtime-probe\\cli.js" %*\r\n')
       } else {
         writeFileSync(executable, '#!/bin/sh\nexit 0\n')
         chmodSync(executable, 0o755)
@@ -54,7 +54,7 @@ describe('[spec: runners/heartbeat] resolveCliPath platform lookup', () => {
 
   const windowsIt = process.platform === 'win32' ? it : it.skip
   windowsIt('resolves the native Codex executable behind the npm command shim', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'ama-codex-path-'))
+    const directory = mkdtempSync(join(tmpdir(), 'enbor-codex-path-'))
     const scope = join(directory, 'node_modules', '@openai')
     const codexRoot = join(scope, 'codex')
     const codexScript = join(codexRoot, 'bin', 'codex.js')

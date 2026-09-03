@@ -121,7 +121,7 @@ describe('[CF] Realmroot toolbox/OpenAPI control-plane path [spec: api-contracts
       method: 'POST',
       body: JSON.stringify({
         prompt: 'Run restish contract test',
-        spec: { agentId, environmentId, runtime: 'ama' },
+        spec: { agentId, environmentId, runtime: 'enbor' },
       }),
     })
     expect(sessionRes.status).toBe(201)

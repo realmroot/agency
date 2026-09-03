@@ -141,7 +141,7 @@ function schedulableExpression() {
             and cloud_environment.deleted_at is null
             and cloud_environment.current_version_id is not null
             and cloud_environment.hosting_mode = 'cloud'
-            and scheduling_trigger.runtime = 'ama'
+            and scheduling_trigger.runtime = 'enbor'
         )
         or exists (
           select 1
@@ -161,7 +161,7 @@ function schedulableExpression() {
             and json_extract(scheduling_runtime.value, '$.runtime') = scheduling_trigger.runtime
             and json_extract(scheduling_runtime.value, '$.state') = 'ready'
             and (
-              scheduling_trigger.runtime = 'ama'
+              scheduling_trigger.runtime = 'enbor'
               or ${model} is null
               or exists (
                 select 1

@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi'
 const ALLOWED_HOST_PATTERN = /^[a-z0-9.-]+$/
 
 export const EnvironmentHostingModeSchema = z.enum(['cloud', 'self_hosted']).openapi('EnvironmentHostingMode')
-export const RuntimeSchema = z.enum(['ama', 'claude-code', 'codex', 'copilot']).openapi('RuntimeName')
+export const RuntimeSchema = z.enum(['enbor', 'claude-code', 'codex', 'copilot']).openapi('RuntimeName')
 export const EnvironmentScopeSchema = z.enum(['project', 'organization']).openapi('EnvironmentScope')
 export const EnvironmentTypeSchema = z.enum(['cloud', 'self_hosted']).openapi('EnvironmentType')
 export const EnvironmentPackageListSchema = z.array(z.string().min(1).max(160)).max(200)

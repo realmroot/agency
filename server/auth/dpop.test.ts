@@ -33,7 +33,7 @@ async function accessTokenHash(value: string) {
 
 async function fixture() {
   const accessToken = 'header.payload.signature'
-  const target = 'https://ama.example.com/api/v1/agents/agent_1'
+  const target = 'https://enbor.example.com/api/v1/agents/agent_1'
   const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true })
   const publicJwk = await exportJWK(publicKey)
   const thumbprint = await calculateJwkThumbprint(publicJwk)
@@ -77,7 +77,7 @@ describe('[spec: auth/dpop] [spec: auth/dpop-proof] Realmroot DPoP proof validat
   })
 
   it.each([
-    ['htu', { htu: 'https://ama.example.com/api/v1/agents/other' }],
+    ['htu', { htu: 'https://enbor.example.com/api/v1/agents/other' }],
     ['htm', { htm: 'POST' }],
     ['ath', { ath: 'wrong-access-token-hash' }],
   ] as const)('rejects a proof with the wrong %s binding', async (_name, override) => {

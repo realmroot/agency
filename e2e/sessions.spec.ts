@@ -36,7 +36,7 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
       spec: {
         agentId: agent.metadata.uid,
         environmentId: environment.metadata.uid,
-        runtime: 'ama',
+        runtime: 'enbor',
       },
     },
   })
@@ -125,8 +125,8 @@ test('exchanges an HttpOnly browser session for an opaque session socket ticket 
   expect(socketUrl.pathname).toBe(`/api/v1/sessions/${session.metadata.uid}/socket`)
   expect(socketUrl.search).toBe('')
   expect(socketAttempt!.protocols).toHaveLength(2)
-  expect(socketAttempt!.protocols?.[0]).toBe('ama-ticket')
-  expect(socketAttempt!.protocols?.[1]).toMatch(/^ama-ticket\.[A-Za-z0-9_-]{43}$/)
-  expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('ama-access.'))).toBe(false)
-  expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('ama-proof.'))).toBe(false)
+  expect(socketAttempt!.protocols?.[0]).toBe('enbor-ticket')
+  expect(socketAttempt!.protocols?.[1]).toMatch(/^enbor-ticket\.[A-Za-z0-9_-]{43}$/)
+  expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('enbor-access.'))).toBe(false)
+  expect(socketAttempt!.protocols?.some((protocol) => protocol.startsWith('enbor-proof.'))).toBe(false)
 })

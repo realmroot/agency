@@ -2,7 +2,7 @@ import { SELF } from 'cloudflare:test'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
-const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
+const DEFAULT_ENBOR_RUNNER_CAPABILITY = 'enbor'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] } as const
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
@@ -52,7 +52,7 @@ async function createAgent(authorization: string) {
           name: `Runner-backed agent ${crypto.randomUUID()}`,
         },
         {
-          systemPrompt: 'Use AMA-owned self-hosted runner work.',
+          systemPrompt: 'Use Enbor-owned self-hosted runner work.',
           allowedTools: ['bash'],
           provider: 'workers-ai',
           model: '@cf/moonshotai/kimi-k2.6',
@@ -98,7 +98,7 @@ async function createSelfHostedSession(
       spec: {
         agentId,
         environmentId,
-        runtime: 'ama',
+        runtime: 'enbor',
         ...executionOverrides,
       },
     }),
@@ -127,7 +127,7 @@ async function registerActiveRunner(authorization: string, environmentId: string
       state: 'active',
       runtimes: [
         {
-          runtime: DEFAULT_AMA_RUNNER_CAPABILITY,
+          runtime: DEFAULT_ENBOR_RUNNER_CAPABILITY,
           models: ['@cf/moonshotai/kimi-k2.6'],
           state: 'ready',
         },
@@ -172,7 +172,7 @@ describe('[CF] /api/v1/work-items', () => {
         payload: expect.objectContaining({
           type: 'session.start',
           sessionId: session.id,
-          runtimeRequirement: { runtime: DEFAULT_AMA_RUNNER_CAPABILITY },
+          runtimeRequirement: { runtime: DEFAULT_ENBOR_RUNNER_CAPABILITY },
           envFrom,
         }),
       }),

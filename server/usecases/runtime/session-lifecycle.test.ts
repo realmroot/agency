@@ -179,7 +179,7 @@ describe('session lifecycle maintenance', () => {
       sandboxId: 'sandbox_1',
       stateReason: 'closing',
       closedAt: null,
-      metadata: JSON.stringify({ runtime: 'ama' }),
+      metadata: JSON.stringify({ runtime: 'enbor' }),
     }
     const updateSessionWhenState = vi.fn()
     const deps = {
@@ -206,14 +206,14 @@ describe('session lifecycle maintenance', () => {
       envFrom: '[]',
       volumes: '[]',
       volumeMounts: '[]',
-      metadata: JSON.stringify({ runtime: 'ama', sandboxDestroyedAt: '2026-09-03T00:01:00.000Z' }),
+      metadata: JSON.stringify({ runtime: 'enbor', sandboxDestroyedAt: '2026-09-03T00:01:00.000Z' }),
     }
     const reopened = {
       ...closed,
       state: 'pending',
       startedAt: '2026-09-03T00:02:00.000Z',
       closedAt: null,
-      metadata: JSON.stringify({ runtime: 'ama' }),
+      metadata: JSON.stringify({ runtime: 'enbor' }),
     }
     const claimSessionReopen = vi.fn<SessionOrchestrationStore['claimSessionReopen']>(async () => true)
     const deps = {
@@ -236,7 +236,7 @@ describe('session lifecycle maintenance', () => {
           state: 'pending',
           sandboxId: 'sandbox_1',
           startedAt,
-          metadata: JSON.stringify({ runtime: 'ama' }),
+          metadata: JSON.stringify({ runtime: 'enbor' }),
         }),
       }),
     )

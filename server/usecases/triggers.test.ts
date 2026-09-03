@@ -24,7 +24,7 @@ function baseConfig(overrides: Partial<TriggerConfig> = {}): TriggerConfig {
       spec: {
         agentId: 'agent_1',
         environmentId: 'env_1',
-        runtime: 'ama',
+        runtime: 'enbor',
         promptTemplate: 'Do work.',
         env: {},
         envFrom: [],
@@ -136,7 +136,7 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
   return { triggers, agents: { find: async () => agent } } as unknown as Deps
 }
 
-function identityAgent(runtime: 'ama' | 'codex' | 'claude-code' | 'copilot'): Agent {
+function identityAgent(runtime: 'enbor' | 'codex' | 'claude-code' | 'copilot'): Agent {
   return {
     metadata: resourceMetadata({
       uid: 'agent_1',
@@ -160,7 +160,7 @@ function identityAgent(runtime: 'ama' | 'codex' | 'claude-code' | 'copilot'): Ag
         subject: 'rr_agent_1',
         username: 'runner',
         runtime,
-        credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+        credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
       },
     },
     status: { phase: 'active', currentVersionId: 'agentver_1', version: 1, schedulable: false },
@@ -183,7 +183,7 @@ describe('[spec: triggers/create] createTrigger', () => {
   })
 
   it.each([
-    'ama',
+    'enbor',
     'codex',
     'claude-code',
     'copilot',

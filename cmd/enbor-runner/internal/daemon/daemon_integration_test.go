@@ -50,7 +50,7 @@ func TestDaemonRunOnceExecutesSandboxWorkThroughControlPlane(t *testing.T) {
 		CommandTimeout:        5 * time.Second,
 		ShutdownGraceInterval: 10 * time.Millisecond,
 	}
-	daemon, err := New(config, version.Info{Name: "ama-runner", Version: "test", Commit: "test", BuildDate: "test"})
+	daemon, err := New(config, version.Info{Name: "enbor-runner", Version: "test", Commit: "test", BuildDate: "test"})
 	if err != nil {
 		t.Fatalf("create daemon: %v", err)
 	}
@@ -142,7 +142,7 @@ func (p *runnerIntegrationControlPlane) ServeHTTP(w http.ResponseWriter, r *http
 		writeRunnerIntegrationJSON(w, http.StatusOK, enbor.PublicConfig{
 			Version: enbor.N1,
 			Service: enbor.PublicServiceConfig{
-				Name:   enbor.Enbor,
+				Name:   enbor.PublicServiceConfigNameEnbor,
 				Origin: "https://enbor.example.test",
 			},
 		})
@@ -233,7 +233,7 @@ func (p *runnerIntegrationControlPlane) workItem() enbor.WorkItem {
 		MaxAttempts: 1,
 		SessionId:   lo.ToPtr(p.sessionID),
 		Payload: map[string]any{
-			"protocol":   "ama-runner-work",
+			"protocol":   "enbor-runner-work",
 			"approved":   true,
 			"sessionId":  p.sessionID,
 			"toolCallId": "tool_integration",

@@ -66,14 +66,14 @@ exit 0
 	if err := os.WriteFile(installed, []byte("# Review\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := installAgentSkill(context.Background(), cwd, "codex", "ama@review"); err != nil {
+	if err := installAgentSkill(context.Background(), cwd, "codex", "enbor@review"); err != nil {
 		t.Fatalf("expected installed skill refresh success: %v", err)
 	}
 	args, err := os.ReadFile(filepath.Join(cwd, "npx.args"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(args), "skills add ama --skill review --agent universal -y") {
+	if !strings.Contains(string(args), "skills add enbor --skill review --agent universal -y") {
 		t.Fatalf("expected npx skills add args, got %q", string(args))
 	}
 }
@@ -84,11 +84,11 @@ func TestRefreshAgentSkillReportsLockChanges(t *testing.T) {
 printf '{"review":"v1"}' > skills-lock.json
 exit 0
 `)
-		change, err := refreshAgentSkill(context.Background(), t.TempDir(), "codex", "ama@review")
+		change, err := refreshAgentSkill(context.Background(), t.TempDir(), "codex", "enbor@review")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if change == nil || change.Ref != "ama@review" || change.Status != "installed" {
+		if change == nil || change.Ref != "enbor@review" || change.Status != "installed" {
 			t.Fatalf("expected installed change, got %#v", change)
 		}
 	})
@@ -102,11 +102,11 @@ exit 0
 		if err := os.WriteFile(filepath.Join(cwd, SkillsLockFileName), []byte(`{"review":"v1"}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "ama@review")
+		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "enbor@review")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if change == nil || change.Ref != "ama@review" || change.Status != "updated" {
+		if change == nil || change.Ref != "enbor@review" || change.Status != "updated" {
 			t.Fatalf("expected updated change, got %#v", change)
 		}
 	})
@@ -120,7 +120,7 @@ exit 0
 		if err := os.WriteFile(filepath.Join(cwd, SkillsLockFileName), []byte(`{"review":"v1"}`), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "ama@review")
+		change, err := refreshAgentSkill(context.Background(), cwd, "codex", "enbor@review")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -136,7 +136,7 @@ func TestInstallAgentSkillRunsNpxAndReportsFailures(t *testing.T) {
 echo install failed
 exit 9
 `)
-		err := installAgentSkill(context.Background(), t.TempDir(), "claude-code", "ama@review")
+		err := installAgentSkill(context.Background(), t.TempDir(), "claude-code", "enbor@review")
 		if err == nil || !strings.Contains(err.Error(), "install failed") {
 			t.Fatalf("expected npx failure output, got %v", err)
 		}
@@ -146,7 +146,7 @@ exit 9
 exit 0
 `)
 		cwd := t.TempDir()
-		if err := installAgentSkill(context.Background(), cwd, "codex", "ama@review"); err != nil {
+		if err := installAgentSkill(context.Background(), cwd, "codex", "enbor@review"); err != nil {
 			t.Fatalf("expected npx install success, got %v", err)
 		}
 		if _, err := os.Stat(filepath.Join(cwd, ".gitignore")); err != nil {
@@ -242,8 +242,8 @@ func TestMaterializeSubagentsByRuntime(t *testing.T) {
 			}
 		})
 	}
-	if err := materializeSubagents(t.TempDir(), "ama", profiles); err != nil {
-		t.Fatalf("ama runtime should not materialize subagents: %v", err)
+	if err := materializeSubagents(t.TempDir(), "enbor", profiles); err != nil {
+		t.Fatalf("enbor runtime should not materialize subagents: %v", err)
 	}
 	if err := materializeSubagents(t.TempDir(), "unknown", profiles); err == nil {
 		t.Fatal("expected unsupported runtime error")

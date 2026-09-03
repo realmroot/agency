@@ -80,10 +80,10 @@ const checks = [
     a.id AS agent_ids,
     'trigger:' || t.id AS source_ids,
     t.id AS resource_id,
-    'Active Trigger runtime ' || t.runtime || ' conflicts with migrated Identity runtime ama' AS detail
+    'Active Trigger runtime ' || t.runtime || ' conflicts with migrated Identity runtime enbor' AS detail
   FROM triggers t
   JOIN agents a ON a.id = t.agent_id
-  WHERE a.realmroot IS NOT NULL AND t.enabled = 1 AND t.archived_at IS NULL AND t.runtime <> 'ama'
+  WHERE a.realmroot IS NOT NULL AND t.enabled = 1 AND t.archived_at IS NULL AND t.runtime <> 'enbor'
   `,
 ]
 

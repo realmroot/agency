@@ -1,4 +1,4 @@
-// E2E test fixture (gated by AMA_E2E_TEST_AUTH). It reads the raw persisted
+// E2E test fixture (gated by E2E_TEST_AUTH). It reads the raw persisted
 // vault credential rows — including ciphertext — so encryption-at-rest scenarios
 // can assert real storage behaviour. That storage-level inspection is the
 // fixture's whole reason to exist, so it holds drizzle directly and carries a
@@ -23,7 +23,7 @@ function newId(prefix: string) {
 }
 
 function vaultEncryptionKeyConfigured(env: Env) {
-  return typeof env.AMA_VAULT_ENCRYPTION_KEY === 'string' && env.AMA_VAULT_ENCRYPTION_KEY.length >= 32
+  return typeof env.VAULT_ENCRYPTION_KEY === 'string' && env.VAULT_ENCRYPTION_KEY.length >= 32
 }
 
 function flipFirstCharacter(value: string) {
@@ -33,7 +33,7 @@ function flipFirstCharacter(value: string) {
 
 const routes = app
   .post('/auth/token', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true') {
+    if (c.env.E2E_TEST_AUTH !== 'true') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
 
@@ -50,7 +50,7 @@ const routes = app
     )
   })
   .post('/auth/session', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+    if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
     const body = await c.req.json<{ accessToken?: string }>().catch(() => ({}) as { accessToken?: string })
@@ -62,16 +62,16 @@ const routes = app
     return c.body(null, 204)
   })
   .get('/ready', (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true') {
+    if (c.env.E2E_TEST_AUTH !== 'true') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
-    return c.json({ ok: true, runtimeMode: c.env.AMA_RUNTIME_MODE ?? null })
+    return c.json({ ok: true, runtimeMode: c.env.RUNTIME_MODE ?? null })
   })
   // Seeds the global vendor catalog (a provider + one model) so browser journeys
   // can pin a provider/model on an agent and create a session. Discovery hits
   // external feeds, so e2e seeds the catalog directly instead. Idempotent.
   .post('/catalog/seed', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+    if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
     const auth = await requireAuth(c)
@@ -105,7 +105,7 @@ const routes = app
   // assert real storage behavior without direct database access. Never enabled
   // outside the local e2e harness.
   .get('/vault-credential-versions/:versionId/storage', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+    if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
     const db = drizzle(c.env.DB)
@@ -131,7 +131,7 @@ const routes = app
   // Performs a real AES-GCM round trip against the persisted ciphertext and a
   // tampered copy of it inside the Worker, reporting only booleans back.
   .post('/vault-credential-versions/:versionId/encryption-check', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+    if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
     const db = drizzle(c.env.DB)
@@ -178,7 +178,7 @@ const routes = app
     )
   })
   .post('/scheduled-agent-triggers/dispatch', async (c) => {
-    if (c.env.AMA_E2E_TEST_AUTH !== 'true' || c.env.AMA_RUNTIME_MODE !== 'test') {
+    if (c.env.E2E_TEST_AUTH !== 'true' || c.env.RUNTIME_MODE !== 'test') {
       return errorResponse(c, 404, 'not_found', 'Not found')
     }
     const auth = await requireAuth(c)

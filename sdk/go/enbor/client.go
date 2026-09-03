@@ -116,7 +116,7 @@ func newClientCore(config ClientConfig) (*clientCore, error) {
 	opts := []ClientOption{
 		WithRequestEditorFn(func(ctx context.Context, request *http.Request) error {
 			if config.ProjectID != "" {
-				request.Header.Set("x-ama-project-id", config.ProjectID)
+				request.Header.Set("x-enbor-project-id", config.ProjectID)
 			}
 			for key, value := range headers {
 				request.Header.Set(key, value)
@@ -211,7 +211,7 @@ func (c *clientCore) dialWebSocket(ctx context.Context, path string) (JSONChanne
 		headers.Set(key, value)
 	}
 	if c.projectID != "" {
-		headers.Set("x-ama-project-id", c.projectID)
+		headers.Set("x-enbor-project-id", c.projectID)
 	}
 	conn, _, err := websocket.Dial(ctx, endpoint, &websocket.DialOptions{HTTPClient: c.httpClient, HTTPHeader: headers})
 	if err != nil {

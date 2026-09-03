@@ -12,14 +12,14 @@ describe('[spec: auth/oidc-claims] synthesized personal E2E authorization', () =
     })
 
     const response = await app.request(
-      'https://ama.example.com/auth-context',
+      'https://enbor.example.com/auth-context',
       { headers: { authorization: 'Bearer e2e:user_issuer;personal=1' } },
       {
-        AMA_RUNTIME_MODE: 'test',
-        AMA_E2E_TEST_AUTH: 'true',
+        RUNTIME_MODE: 'test',
+        E2E_TEST_AUTH: 'true',
         OIDC_ISSUER: 'https://realmroot.example/api/auth/',
-        OIDC_CLIENT_ID: 'ama',
-        OIDC_RESOURCE: 'https://ama.example.com',
+        OIDC_CLIENT_ID: 'enbor',
+        OIDC_RESOURCE: 'https://enbor.example.com',
       } as Env,
     )
 

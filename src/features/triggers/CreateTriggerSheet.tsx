@@ -41,7 +41,7 @@ const emptyTrigger: TriggerFormState = {
   name: '',
   agentId: '',
   environmentId: '',
-  runtime: 'ama',
+  runtime: 'enbor',
   promptTemplate: '',
   intervalValue: '1',
   intervalUnit: 'days',
@@ -83,7 +83,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
   const environments = boundRuntime
     ? allEnvironments.filter((environment) =>
         environment.spec.type === 'cloud'
-          ? boundRuntime === 'ama'
+          ? boundRuntime === 'enbor'
           : runners.some(
               (runner) =>
                 runner.environmentId === environment.metadata.uid &&
@@ -275,7 +275,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="ama">Enbor</SelectItem>
+                      <SelectItem value="enbor">Enbor</SelectItem>
                       <SelectItem value="claude-code">Claude Code</SelectItem>
                       <SelectItem value="codex">Codex</SelectItem>
                       <SelectItem value="copilot">Copilot</SelectItem>

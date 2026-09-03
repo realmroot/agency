@@ -11,7 +11,7 @@ import (
 func TestParseWorkPayloadAcceptsSessionStart(t *testing.T) {
 	prompt := "hello"
 	payload, err := ParseWorkPayload(enbor.JSON{
-		"protocol":           "ama-runner-work",
+		"protocol":           "enbor-runner-work",
 		"type":               "session.start",
 		"sessionId":          "session_1",
 		"hostingMode":        "self_hosted",
@@ -31,7 +31,7 @@ func TestParseWorkPayloadAcceptsSessionStart(t *testing.T) {
 
 func TestParseWorkPayloadAcceptsRuntimeSelectedProviderAndModel(t *testing.T) {
 	payload, err := ParseWorkPayload(enbor.JSON{
-		"protocol":           "ama-runner-work",
+		"protocol":           "enbor-runner-work",
 		"type":               "session.start",
 		"sessionId":          "session_1",
 		"hostingMode":        "self_hosted",
@@ -49,7 +49,7 @@ func TestParseWorkPayloadAcceptsRuntimeSelectedProviderAndModel(t *testing.T) {
 
 func TestParseWorkPayloadNormalizesApprovedToolCall(t *testing.T) {
 	payload, err := ParseWorkPayload(enbor.JSON{
-		"protocol": "ama-runner-work",
+		"protocol": "enbor-runner-work",
 		"type":     "tool.execute",
 		"toolCall": enbor.JSON{
 			"id":        "call_1",
@@ -68,7 +68,7 @@ func TestParseWorkPayloadNormalizesApprovedToolCall(t *testing.T) {
 
 func TestParseWorkPayloadNormalizesNestedToolCallInput(t *testing.T) {
 	payload, err := ParseWorkPayload(enbor.JSON{
-		"protocol": "ama-runner-work",
+		"protocol": "enbor-runner-work",
 		"type":     "tool.execute",
 		"toolCall": enbor.JSON{
 			"id":       "call_1",
@@ -94,7 +94,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 		{
 			name: "missing session id",
 			payload: enbor.JSON{
-				"protocol":           "ama-runner-work",
+				"protocol":           "enbor-runner-work",
 				"type":               "session.start",
 				"hostingMode":        "self_hosted",
 				"runtime":            "codex",
@@ -107,7 +107,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 		{
 			name: "cloud hosting mode",
 			payload: enbor.JSON{
-				"protocol":           "ama-runner-work",
+				"protocol":           "enbor-runner-work",
 				"type":               "session.start",
 				"sessionId":          "session_1",
 				"hostingMode":        "cloud",
@@ -121,7 +121,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 		{
 			name: "missing runtime",
 			payload: enbor.JSON{
-				"protocol":           "ama-runner-work",
+				"protocol":           "enbor-runner-work",
 				"type":               "session.start",
 				"sessionId":          "session_1",
 				"hostingMode":        "self_hosted",
@@ -134,7 +134,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 		{
 			name: "missing runtime requirement",
 			payload: enbor.JSON{
-				"protocol":      "ama-runner-work",
+				"protocol":      "enbor-runner-work",
 				"type":          "session.start",
 				"sessionId":     "session_1",
 				"hostingMode":   "self_hosted",
@@ -157,7 +157,7 @@ func TestParseWorkPayloadRejectsInvalidSessionStart(t *testing.T) {
 
 func TestParseWorkPayloadRejectsUnsafeToolWork(t *testing.T) {
 	_, err := ParseWorkPayload(enbor.JSON{
-		"protocol": "ama-runner-work",
+		"protocol": "enbor-runner-work",
 		"type":     "tool.execute",
 		"toolCall": enbor.JSON{
 			"id":       "call_1",
@@ -190,7 +190,7 @@ func TestParseWorkPayloadRejectsMalformedToolWork(t *testing.T) {
 		{
 			name: "missing tool call id",
 			payload: enbor.JSON{
-				"protocol": "ama-runner-work",
+				"protocol": "enbor-runner-work",
 				"type":     "tool.execute",
 				"approved": true,
 				"toolName": "bash",
@@ -201,7 +201,7 @@ func TestParseWorkPayloadRejectsMalformedToolWork(t *testing.T) {
 		{
 			name: "missing input",
 			payload: enbor.JSON{
-				"protocol":   "ama-runner-work",
+				"protocol":   "enbor-runner-work",
 				"type":       "tool.execute",
 				"approved":   true,
 				"toolCallId": "call_1",
@@ -222,7 +222,7 @@ func TestParseWorkPayloadRejectsMalformedToolWork(t *testing.T) {
 
 func TestParseWorkPayloadRejectsUnsupportedSandboxTool(t *testing.T) {
 	_, err := ParseWorkPayload(enbor.JSON{
-		"protocol":   "ama-runner-work",
+		"protocol":   "enbor-runner-work",
 		"type":       "tool.execute",
 		"approved":   true,
 		"toolCallId": "call_1",
@@ -238,7 +238,7 @@ func TestParseWorkPayloadMapsWorkspaceManifest(t *testing.T) {
 	prompt := "work"
 	description := "repo"
 	payload, err := ParseWorkPayload(enbor.JSON{
-		"protocol":           "ama-runner-work",
+		"protocol":           "enbor-runner-work",
 		"type":               "session.start",
 		"sessionId":          "session_1",
 		"hostingMode":        "self_hosted",
@@ -301,7 +301,7 @@ func TestRunnerChannelMessageAccessors(t *testing.T) {
 			Name:      "repo",
 			Url:       ptr("https://example.test/repo.git"),
 			Ref:       ptr("main"),
-			SecretRef: ptr("ama-secret://vault/git"),
+			SecretRef: ptr("enbor-secret://vault/git"),
 		},
 	}
 	mounts := []enbor.RunnerVolumeMount{{Name: "repo", MountPath: "/workspace/repo", ReadOnly: &readOnly}}

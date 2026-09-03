@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const enborRuntimeCapability = "ama"
+const enborRuntimeCapability = "enbor"
 
 // fakeWork pairs a v1 lease with the work item the runner fetches after
 // claiming it; the lease no longer embeds the work item.
@@ -35,7 +35,7 @@ type fakeWork struct {
 	workItem *enbor.WorkItem
 }
 
-type fakeAMAServer struct {
+type fakeEnborServer struct {
 	mu                sync.Mutex
 	creates           []enbor.CreateRunnerRequest
 	heartbeats        []enbor.PutRunnerHeartbeatRequest
@@ -63,7 +63,7 @@ type fakeAMAServer struct {
 	sdk               *enbor.RunnerClient
 }
 
-func (f *fakeAMAServer) sdkClient() *enbor.RunnerClient {
+func (f *fakeEnborServer) sdkClient() *enbor.RunnerClient {
 	if f.sdk != nil {
 		return f.sdk
 	}
@@ -80,13 +80,13 @@ func fakePublicConfig() enbor.PublicConfig {
 	return enbor.PublicConfig{
 		Version: enbor.N1,
 		Service: enbor.PublicServiceConfig{
-			Name:   enbor.Enbor,
+			Name:   enbor.PublicServiceConfigNameEnbor,
 			Origin: "https://enbor.example.test",
 		},
 	}
 }
 
-func (f *fakeAMAServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (f *fakeEnborServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/configz":
 		if f.configErr != nil {
@@ -261,7 +261,7 @@ func fakeRunnerResource(id string, name string) enbor.Runner {
 	}
 }
 
-func (f *fakeAMAServer) Channel(context.Context, string) (runnersession.Channel, error) {
+func (f *fakeEnborServer) Channel(context.Context, string) (runnersession.Channel, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.opens += 1
@@ -546,7 +546,7 @@ func (a *fakeRuntimeAdapter) lastRequest() runtime.Request {
 }
 
 func TestRunOnceSendsHeartbeatAndCompletesApprovedToolWork(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok", "stderr": "", "exitCode": 0}}}
 	daemon := testDaemon(client, adapter)
 	if err := daemon.RunOnce(context.Background()); err != nil {
@@ -571,7 +571,7 @@ func TestRunOnceSendsHeartbeatAndCompletesApprovedToolWork(t *testing.T) {
 
 // [spec: runners/heartbeat]
 func TestRunOnceProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	var callsMu sync.Mutex
 	var includeUsageCalls []bool
@@ -596,7 +596,7 @@ func TestRunOnceProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
 }
 
 func TestRunOnceRejectsConcurrentProcessForSameStateDir(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	releaseLock, err := acquireStateDirLock(daemon.Config.StateDir)
 	if err != nil {
@@ -614,7 +614,7 @@ func TestRunOnceRejectsConcurrentProcessForSameStateDir(t *testing.T) {
 }
 
 func TestRunOnceRegistersRunnerWhenIDIsMissing(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease(), runnerID: "runner_registered"}
+	client := &fakeEnborServer{lease: approvedLease(), runnerID: "runner_registered"}
 	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: map[string]any{"stdout": "ok", "stderr": "", "exitCode": 0}}}
 	daemon := testDaemon(client, adapter)
 	daemon.RunnerID = ""
@@ -652,7 +652,7 @@ func TestRunOnceCancelsSessionChannelWhenContextIsCancelled(t *testing.T) {
 	// All runtimes now relay over the per-runner hub channel. Seed it so the hub
 	// connects immediately and the relay path is live when the session starts.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: codexSessionStartLease("run until cancelled"), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: codexSessionStartLease("run until cancelled"), hubChannel: hubChannel}
 	daemon := testDaemon(client, &fakeAdapter{})
 	// CLI-backed runtimes run via the bridge runtime adapter; block it until the run context is
 	// cancelled so this exercises the channel cancellation path.
@@ -694,17 +694,17 @@ func TestRunOnceDispatchesCodexRuntimeThroughAdapterAndCompletesSessionLease(t *
 	// not a per-lease channel. Seed the hub channel with runner.channel.accepted
 	// so the hub connects without delay.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: lease, hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: lease, hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: enbor.JSON{"exitCode": 0, "providerThreadId": "codex_thread_1"},
 		inspect: func(request runtime.Request) error {
-			if _, err := os.Stat(filepath.Join(request.WorkDir, ".ama", "agent.json")); !os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(request.WorkDir, ".enbor", "agent.json")); !os.IsNotExist(err) {
 				return fmt.Errorf("expected no agent snapshot manifest in workspace, got err=%v", err)
 			}
-			if _, err := os.Stat(filepath.Join(request.WorkDir, ".ama", "system-prompt.md")); !os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(request.WorkDir, ".enbor", "system-prompt.md")); !os.IsNotExist(err) {
 				return fmt.Errorf("expected no system prompt file in workspace, got err=%v", err)
 			}
-			if _, err := os.Stat(filepath.Join(request.WorkDir, ".ama", "resources.json")); !os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(request.WorkDir, ".enbor", "resources.json")); !os.IsNotExist(err) {
 				return fmt.Errorf("expected no legacy workspace manifest, got err=%v", err)
 			}
 			return nil
@@ -767,7 +767,7 @@ func TestRunOnceDispatchesCodexRuntimeThroughAdapterAndCompletesSessionLease(t *
 	}
 	assertRunnerEventMessages(t, hubChannel.writtenMessages())
 	serializedEvents := mustJSON(t, hubChannel.writtenMessages())
-	if strings.Contains(serializedEvents, "AMA_TOKEN") {
+	if strings.Contains(serializedEvents, "ENBOR_TOKEN") {
 		t.Fatalf("expected safe codex environment, got %s", serializedEvents)
 	}
 	if !strings.Contains(serializedEvents, "prompt:build the feature") ||
@@ -787,8 +787,8 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 		"mounts": []any{enbor.JSON{
 			"type":      "memory",
 			"name":      "maintainer-memory",
-			"mountPath": "/workspace/.ama/memory-stores/memstore_1",
-			"memoryRef": "ama://memories/memstore_1",
+			"mountPath": "/workspace/.enbor/memory-stores/memstore_1",
+			"memoryRef": "enbor://memories/memstore_1",
 			"readOnly":  false,
 			"files": []any{enbor.JSON{
 				"path":    "downstream-heartbeat.md",
@@ -797,11 +797,11 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 		}},
 	}
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: lease, hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: lease, hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: enbor.JSON{"exitCode": 0},
 		inspect: func(request runtime.Request) error {
-			memoryPath := filepath.Join(request.WorkDir, ".ama", "memory-stores", "memstore_1", "downstream-heartbeat.md")
+			memoryPath := filepath.Join(request.WorkDir, ".enbor", "memory-stores", "memstore_1", "downstream-heartbeat.md")
 			data, err := os.ReadFile(memoryPath)
 			if err != nil {
 				return err
@@ -829,7 +829,7 @@ func TestRunOnceCompletesSessionLeaseWithWritableMemoryStoreSnapshot(t *testing.
 		t.Fatalf("expected memoryStores result, got %#v", updateResult(client.updates[0]))
 	}
 	store, ok := stores[0].(map[string]any)
-	if !ok || store["memoryRef"] != "ama://memories/memstore_1" {
+	if !ok || store["memoryRef"] != "enbor://memories/memstore_1" {
 		t.Fatalf("expected one memstore snapshot, got %#v", stores)
 	}
 	memories, ok := store["memories"].([]any)
@@ -847,7 +847,7 @@ func TestRunOnceFailsCodexLeaseOnRuntimeAdapterFailure(t *testing.T) {
 	lease := codexSessionStartLease("fail")
 	// Codex is a CLI relay runtime: events flow over the per-runner hub channel.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: lease, hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: lease, hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: enbor.JSON{"exitCode": 7, "stderr": "bad failure"},
 		err:    errors.New("codex runtime bridge failed"),
@@ -880,12 +880,12 @@ func TestRuntimeSessionWorkspaceFailureFinalizesLease(t *testing.T) {
 		"root": "/workspace",
 		"mounts": []map[string]any{{
 			"type":      "memory",
-			"memoryRef": "ama://memories/store_1",
+			"memoryRef": "enbor://memories/store_1",
 			"mountPath": "/outside",
 		}},
 	}
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: work, hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: work, hubChannel: hubChannel}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeAdapter = &fakeRuntimeAdapter{}
 	if err := daemon.RunOnce(context.Background()); err == nil {
@@ -918,7 +918,7 @@ func TestCodexSessionWorkspaceRejectsTraversalBeforeCreatingDirectory(t *testing
 func TestRunOnceLaunchesClaudeCodeRuntimeAndCompletesLease(t *testing.T) {
 	// Claude-code is a CLI relay runtime: events flow over the per-runner hub channel.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: claudeCodeSessionStartLease(), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: claudeCodeSessionStartLease(), hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{result: enbor.JSON{"exitCode": 0}}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeAdapter = runtimeAdapter
@@ -961,7 +961,7 @@ func TestRunOnceCompletesExternalRuntimeWhenSuccessfulResultHasCompletionWarning
 			// All runtimes relay over the per-runner hub channel. Seed it so the hub
 			// connects immediately.
 			hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-			client := &fakeAMAServer{lease: claudeCodeSessionStartLease(), hubChannel: hubChannel}
+			client := &fakeEnborServer{lease: claudeCodeSessionStartLease(), hubChannel: hubChannel}
 			runtimeAdapter := &fakeRuntimeAdapter{
 				result: result,
 				err:    errors.New("failed to get reader: failed to read frame header: EOF"),
@@ -1040,7 +1040,7 @@ func waitForRuntimeRequest(t *testing.T, adapter *fakeRuntimeAdapter, done <-cha
 }
 
 func TestStartRegistersRunnerAndSendsOfflineHeartbeatOnShutdown(t *testing.T) {
-	client := &fakeAMAServer{runnerID: "runner_registered"}
+	client := &fakeEnborServer{runnerID: "runner_registered"}
 	adapter := &fakeAdapter{}
 	daemon := testDaemon(client, adapter)
 	daemon.RunnerID = ""
@@ -1085,7 +1085,7 @@ func TestStartRegistersRunnerAndSendsOfflineHeartbeatOnShutdown(t *testing.T) {
 
 // [spec: runners/heartbeat]
 func TestStartProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	var callsMu sync.Mutex
 	var includeUsageCalls []bool
@@ -1132,15 +1132,15 @@ func TestStartProbesRuntimeUsageBeforeFirstHeartbeat(t *testing.T) {
 	}
 }
 
-func TestStartFailsFastOnAMAServerSetupErrors(t *testing.T) {
+func TestStartFailsFastOnEnborServerSetupErrors(t *testing.T) {
 	tests := []struct {
 		name   string
-		client *fakeAMAServer
+		client *fakeEnborServer
 		want   string
 	}{
-		{"configz", &fakeAMAServer{configErr: errors.New("bad config")}, "bad config"},
-		{"create", &fakeAMAServer{createErr: errors.New("create failed")}, "create failed"},
-		{"heartbeat", &fakeAMAServer{heartbeatErr: errors.New("heartbeat failed")}, "heartbeat failed"},
+		{"configz", &fakeEnborServer{configErr: errors.New("bad config")}, "bad config"},
+		{"create", &fakeEnborServer{createErr: errors.New("create failed")}, "create failed"},
+		{"heartbeat", &fakeEnborServer{heartbeatErr: errors.New("heartbeat failed")}, "heartbeat failed"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1156,7 +1156,7 @@ func TestStartFailsFastOnAMAServerSetupErrors(t *testing.T) {
 
 func TestStartFailsOnCleanupAndIncompatibleConfig(t *testing.T) {
 	t.Run("cleanup stale", func(t *testing.T) {
-		client := &fakeAMAServer{}
+		client := &fakeEnborServer{}
 		daemon := testDaemon(client, &fakeAdapter{})
 		sessionsPath := filepath.Join(daemon.Config.WorkDir, workspace.SessionsDirName)
 		if err := os.WriteFile(sessionsPath, []byte("not a dir"), 0o600); err != nil {
@@ -1169,7 +1169,7 @@ func TestStartFailsOnCleanupAndIncompatibleConfig(t *testing.T) {
 	t.Run("incompatible config", func(t *testing.T) {
 		config := fakePublicConfig()
 		config.Service.Name = "Other"
-		client := &fakeAMAServer{config: &config}
+		client := &fakeEnborServer{config: &config}
 		daemon := testDaemon(client, &fakeAdapter{})
 		if err := daemon.Start(context.Background()); err == nil {
 			t.Fatal("expected incompatible config error")
@@ -1178,7 +1178,7 @@ func TestStartFailsOnCleanupAndIncompatibleConfig(t *testing.T) {
 }
 
 func TestStartDoesNotPollForWorkItems(t *testing.T) {
-	client := &fakeAMAServer{claimErr: errors.New("claim failed")}
+	client := &fakeEnborServer{claimErr: errors.New("claim failed")}
 	daemon := testDaemon(client, &fakeAdapter{})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -1199,7 +1199,7 @@ func TestStartDoesNotPollForWorkItems(t *testing.T) {
 }
 
 func TestStartExitsAfterConsecutiveHeartbeatFailures(t *testing.T) {
-	client := &fakeAMAServer{
+	client := &fakeEnborServer{
 		heartbeatErr:      errors.New("network down"),
 		heartbeatErrAfter: 1,
 	}
@@ -1218,7 +1218,7 @@ func TestStartExitsAfterConsecutiveHeartbeatFailures(t *testing.T) {
 }
 
 func TestStartReRegistersWhenHeartbeatReportsRunnerGone(t *testing.T) {
-	client := &fakeAMAServer{
+	client := &fakeEnborServer{
 		runnerID:          "runner_recovered",
 		heartbeatErrAfter: 1,
 		heartbeatStatuses: []int{http.StatusNotFound},
@@ -1261,7 +1261,7 @@ func TestStartReRegistersWhenHeartbeatReportsRunnerGone(t *testing.T) {
 func TestStartRunsPushedWorkAssignments(t *testing.T) {
 	work := approvedLease()
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: work, hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: work, hubChannel: hubChannel}
 	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: enbor.JSON{"ok": true}}}
 	daemon := testDaemon(client, adapter)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1296,7 +1296,7 @@ func TestStartRunsPushedWorkAssignments(t *testing.T) {
 
 func TestStartRecoversActiveAssignedWork(t *testing.T) {
 	work := approvedLease()
-	client := &fakeAMAServer{lease: work, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
+	client := &fakeEnborServer{lease: work, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
 	adapter := &fakeAdapter{result: sandbox.ToolResult{Output: enbor.JSON{"ok": true}}}
 	daemon := testDaemon(client, adapter)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1330,7 +1330,7 @@ func TestStartRecoversActiveAssignedWork(t *testing.T) {
 
 func TestRunAssignedWorkDeduplicatesActiveLease(t *testing.T) {
 	work := approvedLease()
-	client := &fakeAMAServer{lease: work}
+	client := &fakeEnborServer{lease: work}
 	adapter := &fakeAdapter{waitForCancel: true}
 	daemon := testDaemon(client, adapter)
 	daemon.Config.MaxConcurrent = 2
@@ -1355,7 +1355,7 @@ func TestRunAssignedWorkDeduplicatesActiveLease(t *testing.T) {
 }
 
 func TestRunOnceReturnsWhenNoLeaseIsAvailable(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	adapter := &fakeAdapter{}
 	daemon := testDaemon(client, adapter)
 	if err := daemon.RunOnce(context.Background()); err != nil {
@@ -1366,12 +1366,12 @@ func TestRunOnceReturnsWhenNoLeaseIsAvailable(t *testing.T) {
 	}
 }
 
-func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
-	if !host.SupportsAMARuntime() {
+func TestRunOnceCompletesEnborSandboxSessionStart(t *testing.T) {
+	if !host.SupportsEnborRuntime() {
 		t.Skip("Enbor runtime is unavailable on this host")
 	}
 	lease := sessionStartLease()
-	client := &fakeAMAServer{lease: lease, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
+	client := &fakeEnborServer{lease: lease, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
 	daemon := testDaemon(client, &fakeAdapter{})
 
 	if err := daemon.RunOnce(context.Background()); err != nil {
@@ -1381,7 +1381,7 @@ func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
 		t.Fatalf("expected completed lease update, got %#v", client.updates)
 	}
 	result := updateResult(client.updates[0])
-	if result["sessionId"] != "session_1" || result["runtime"] != "ama" || result["sandboxReady"] != true {
+	if result["sessionId"] != "session_1" || result["runtime"] != "enbor" || result["sandboxReady"] != true {
 		t.Fatalf("expected sandbox-ready session result, got %#v", result)
 	}
 	if len(client.events) != 1 || client.events[0][0]["type"] != "runtime.started" {
@@ -1389,12 +1389,12 @@ func TestRunOnceCompletesAMASandboxSessionStart(t *testing.T) {
 	}
 }
 
-func TestRunOnceFailsAMASandboxSessionWhenAdapterMissing(t *testing.T) {
-	if !host.SupportsAMARuntime() {
+func TestRunOnceFailsEnborSandboxSessionWhenAdapterMissing(t *testing.T) {
+	if !host.SupportsEnborRuntime() {
 		t.Skip("Enbor runtime is unavailable on this host")
 	}
 	lease := sessionStartLease()
-	client := &fakeAMAServer{lease: lease, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
+	client := &fakeEnborServer{lease: lease, hubChannel: newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})}
 	daemon := testDaemon(client, nil)
 
 	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "sandbox adapter") {
@@ -1406,7 +1406,7 @@ func TestRunOnceFailsAMASandboxSessionWhenAdapterMissing(t *testing.T) {
 }
 
 func TestRunOnceReturnsClaimErrors(t *testing.T) {
-	client := &fakeAMAServer{claimErr: errors.New("claim failed")}
+	client := &fakeEnborServer{claimErr: errors.New("claim failed")}
 	daemon := testDaemon(client, &fakeAdapter{})
 	err := daemon.RunOnce(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "claim failed") {
@@ -1415,7 +1415,7 @@ func TestRunOnceReturnsClaimErrors(t *testing.T) {
 }
 
 func TestDaemonSlotAccountingAndDefaults(t *testing.T) {
-	daemon := testDaemon(&fakeAMAServer{}, &fakeAdapter{})
+	daemon := testDaemon(&fakeEnborServer{}, &fakeAdapter{})
 	daemon.Config.MaxConcurrent = 1
 	if daemon.activeLoad() != 0 {
 		t.Fatalf("expected no active leases, got %d", daemon.activeLoad())
@@ -1444,7 +1444,7 @@ func TestDaemonSlotAccountingAndDefaults(t *testing.T) {
 }
 
 func TestRecoverRunnerIdentityClearsStoredRunnerAndRegistersFresh(t *testing.T) {
-	client := &fakeAMAServer{runnerID: "runner_fresh"}
+	client := &fakeEnborServer{runnerID: "runner_fresh"}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RunnerID = "runner_stale"
 	store := daemon.identityStore()
@@ -1468,7 +1468,7 @@ func TestRecoverRunnerIdentityClearsStoredRunnerAndRegistersFresh(t *testing.T) 
 }
 
 func TestHeartbeatOrRecoverReRegistersWhenRunnerIsGone(t *testing.T) {
-	client := &fakeAMAServer{
+	client := &fakeEnborServer{
 		heartbeatErr:    errors.New("runner gone"),
 		heartbeatStatus: http.StatusNotFound,
 		runnerID:        "runner_recovered",
@@ -1503,14 +1503,14 @@ func TestNewDaemonWiresSDKClientAndAdapters(t *testing.T) {
 		CommandTimeout:        time.Second,
 		ShutdownGraceInterval: time.Millisecond,
 	}
-	daemon, err := New(config, version.Info{Name: "ama-runner", Version: "test"})
+	daemon, err := New(config, version.Info{Name: "enbor-runner", Version: "test"})
 	if err != nil {
 		t.Fatalf("expected daemon construction success, got %v", err)
 	}
 	if daemon.Client == nil || daemon.Channels == nil {
 		t.Fatalf("expected daemon dependencies wired, got %#v", daemon)
 	}
-	if (daemon.Adapter != nil) != host.SupportsAMARuntime() {
+	if (daemon.Adapter != nil) != host.SupportsEnborRuntime() {
 		t.Fatalf("expected daemon adapter availability to match host support, got %T", daemon.Adapter)
 	}
 	if daemon.Build.Version != "test" {
@@ -1537,7 +1537,7 @@ func TestRunnerRuntimeUsageMapsWindows(t *testing.T) {
 }
 
 func TestRunOnceMarksExecutorFailureAsFailedLease(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	adapter := &fakeAdapter{
 		result: sandbox.ToolResult{Output: map[string]any{"stdout": "", "stderr": "no", "exitCode": 2}},
 		err:    errors.New("command failed"),
@@ -1552,7 +1552,7 @@ func TestRunOnceMarksExecutorFailureAsFailedLease(t *testing.T) {
 }
 
 func TestRunOnceReturnsEventUploadErrors(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease(), eventErr: errors.New("event failed")}
+	client := &fakeEnborServer{lease: approvedLease(), eventErr: errors.New("event failed")}
 	daemon := testDaemon(client, &fakeAdapter{})
 	err := daemon.RunOnce(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "event failed") {
@@ -1563,7 +1563,7 @@ func TestRunOnceReturnsEventUploadErrors(t *testing.T) {
 func TestRunOnceFailsFastOnUnapprovedWorkAfterMarkingLeaseFailed(t *testing.T) {
 	lease := approvedLease()
 	lease.workItem.Payload["approved"] = false
-	client := &fakeAMAServer{lease: lease}
+	client := &fakeEnborServer{lease: lease}
 	adapter := &fakeAdapter{}
 	daemon := testDaemon(client, adapter)
 	err := daemon.RunOnce(context.Background())
@@ -1578,7 +1578,7 @@ func TestRunOnceFailsFastOnUnapprovedWorkAfterMarkingLeaseFailed(t *testing.T) {
 func TestRunOnceFailsLeaseWhenRuntimeRequirementDoesNotMatch(t *testing.T) {
 	lease := sessionStartLease()
 	lease.workItem.Payload["runtimeRequirement"] = enbor.JSON{"runtime": "missing-runtime", "model": "model"}
-	client := &fakeAMAServer{lease: lease}
+	client := &fakeEnborServer{lease: lease}
 	daemon := testDaemon(client, &fakeAdapter{})
 	if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "runtime requirement") {
 		t.Fatalf("expected runtime requirement error, got %v", err)
@@ -1593,7 +1593,7 @@ func TestRunOnceFailsLeaseWhenRuntimeRequirementDoesNotMatch(t *testing.T) {
 }
 
 func TestLeaseRenewalFailureCancelsLocalWorkWithoutCompletionRetry(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease(), updateErr: errors.New("lease lost")}
+	client := &fakeEnborServer{lease: approvedLease(), updateErr: errors.New("lease lost")}
 	adapter := &fakeAdapter{waitForCancel: true}
 	daemon := testDaemon(client, adapter)
 	daemon.Config.RenewInterval = time.Millisecond
@@ -1610,7 +1610,7 @@ func TestLeaseRenewalFailureCancelsLocalWorkWithoutCompletionRetry(t *testing.T)
 }
 
 func TestContextCancellationMarksLeaseCancelled(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	adapter := &fakeAdapter{waitForCancel: true}
 	daemon := testDaemon(client, adapter)
 	daemon.Config.RenewInterval = time.Hour
@@ -1631,7 +1631,7 @@ func TestContextCancellationMarksLeaseCancelled(t *testing.T) {
 }
 
 func TestDaemonStartReturnsWorkDirError(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	workDirFile := filepath.Join(t.TempDir(), "work-file")
 	if err := os.WriteFile(workDirFile, []byte("x"), 0o600); err != nil {
@@ -1676,7 +1676,7 @@ func TestDaemonRuntimeCatalogDefaultsAndUsageRefresh(t *testing.T) {
 }
 
 func TestDaemonIdentityAndRelayHelpers(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	store := IdentityStore{Config: daemon.Config}
 	daemon.IdentityStore = &store
@@ -1695,7 +1695,7 @@ func TestDaemonIdentityAndRelayHelpers(t *testing.T) {
 
 func TestDaemonIdentityErrorPaths(t *testing.T) {
 	t.Run("stored runner id", func(t *testing.T) {
-		client := &fakeAMAServer{}
+		client := &fakeEnborServer{}
 		daemon := testDaemon(client, &fakeAdapter{})
 		store := daemon.identityStore()
 		if err := store.StoreRunnerID("runner_stored"); err != nil {
@@ -1710,7 +1710,7 @@ func TestDaemonIdentityErrorPaths(t *testing.T) {
 		}
 	})
 	t.Run("store runner id failure", func(t *testing.T) {
-		client := &fakeAMAServer{runnerID: "runner_new"}
+		client := &fakeEnborServer{runnerID: "runner_new"}
 		daemon := testDaemon(client, &fakeAdapter{})
 		stateFile := filepath.Join(t.TempDir(), "state-file")
 		if err := os.WriteFile(stateFile, []byte("x"), 0o600); err != nil {
@@ -1723,7 +1723,7 @@ func TestDaemonIdentityErrorPaths(t *testing.T) {
 		}
 	})
 	t.Run("recover clear failure", func(t *testing.T) {
-		daemon := testDaemon(&fakeAMAServer{}, &fakeAdapter{})
+		daemon := testDaemon(&fakeEnborServer{}, &fakeAdapter{})
 		stateFile := filepath.Join(t.TempDir(), "state-file")
 		if err := os.WriteFile(stateFile, []byte("x"), 0o600); err != nil {
 			t.Fatal(err)
@@ -1734,7 +1734,7 @@ func TestDaemonIdentityErrorPaths(t *testing.T) {
 		}
 	})
 	t.Run("heartbeat machine id failure", func(t *testing.T) {
-		daemon := testDaemon(&fakeAMAServer{}, &fakeAdapter{})
+		daemon := testDaemon(&fakeEnborServer{}, &fakeAdapter{})
 		stateFile := filepath.Join(t.TempDir(), "state-file")
 		if err := os.WriteFile(stateFile, []byte("x"), 0o600); err != nil {
 			t.Fatal(err)
@@ -1747,7 +1747,7 @@ func TestDaemonIdentityErrorPaths(t *testing.T) {
 }
 
 func TestRunOnceSkipsClaimWhenAtCapacity(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.Config.MaxConcurrent = 0
 	if err := daemon.RunOnce(context.Background()); err != nil {
@@ -1760,7 +1760,7 @@ func TestRunOnceSkipsClaimWhenAtCapacity(t *testing.T) {
 
 func TestRunOnceFailsBeforeClaimOnIdentityOrHeartbeatError(t *testing.T) {
 	t.Run("identity", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease()}
+		client := &fakeEnborServer{lease: approvedLease()}
 		daemon := testDaemon(client, &fakeAdapter{})
 		stateFile := filepath.Join(t.TempDir(), "state-file")
 		if err := os.WriteFile(stateFile, []byte("x"), 0o600); err != nil {
@@ -1776,7 +1776,7 @@ func TestRunOnceFailsBeforeClaimOnIdentityOrHeartbeatError(t *testing.T) {
 		}
 	})
 	t.Run("heartbeat", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease(), heartbeatErr: errors.New("heartbeat down")}
+		client := &fakeEnborServer{lease: approvedLease(), heartbeatErr: errors.New("heartbeat down")}
 		daemon := testDaemon(client, &fakeAdapter{})
 		if err := daemon.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "heartbeat down") {
 			t.Fatalf("expected heartbeat error, got %v", err)
@@ -1788,7 +1788,7 @@ func TestRunOnceFailsBeforeClaimOnIdentityOrHeartbeatError(t *testing.T) {
 }
 
 func TestRunAssignedWorkSkipsWhenAtCapacity(t *testing.T) {
-	client := &fakeAMAServer{lease: approvedLease()}
+	client := &fakeEnborServer{lease: approvedLease()}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.activeLeases = daemon.Config.MaxConcurrent
 	daemon.runAssignedWork(context.Background(), client.lease.lease, client.lease.workItem)
@@ -1800,7 +1800,7 @@ func TestRunAssignedWorkSkipsWhenAtCapacity(t *testing.T) {
 
 func TestClaimLeaseHandlesRaceAndCreateErrors(t *testing.T) {
 	t.Run("race skips candidate", func(t *testing.T) {
-		client := &fakeAMAServer{
+		client := &fakeEnborServer{
 			lease:          approvedLease(),
 			leaseCreateErr: errors.New("already claimed"),
 			leaseStatus:    http.StatusConflict,
@@ -1814,7 +1814,7 @@ func TestClaimLeaseHandlesRaceAndCreateErrors(t *testing.T) {
 		}
 	})
 	t.Run("create error fails", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease(), leaseCreateErr: errors.New("database down")}
+		client := &fakeEnborServer{lease: approvedLease(), leaseCreateErr: errors.New("database down")}
 		daemon := testDaemon(client, &fakeAdapter{})
 		if err := daemon.RunOnce(context.Background()); err == nil {
 			t.Fatal("expected lease create error")
@@ -1824,7 +1824,7 @@ func TestClaimLeaseHandlesRaceAndCreateErrors(t *testing.T) {
 
 func TestFinalizeRuntimeSessionBranches(t *testing.T) {
 	t.Run("successful output with warning completes", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease()}
+		client := &fakeEnborServer{lease: approvedLease()}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		err := worker.finalizeRuntimeSession(
@@ -1846,7 +1846,7 @@ func TestFinalizeRuntimeSessionBranches(t *testing.T) {
 		}
 	})
 	t.Run("timeout fails and writes runtime error", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease()}
+		client := &fakeEnborServer{lease: approvedLease()}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		var runtimeError enbor.JSON
@@ -1869,7 +1869,7 @@ func TestFinalizeRuntimeSessionBranches(t *testing.T) {
 		}
 	})
 	t.Run("request cancellation interrupts", func(t *testing.T) {
-		client := &fakeAMAServer{lease: approvedLease()}
+		client := &fakeEnborServer{lease: approvedLease()}
 		daemon := testDaemon(client, &fakeAdapter{})
 		worker := daemon.leaseWorker()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -1896,8 +1896,8 @@ func TestFinalizeRuntimeSessionBranches(t *testing.T) {
 	})
 }
 
-func testDaemon(client *fakeAMAServer, adapter sandbox.SandboxAdapter) Daemon {
-	workDir, err := os.MkdirTemp("", "ama-runner-test-*")
+func testDaemon(client *fakeEnborServer, adapter sandbox.SandboxAdapter) Daemon {
+	workDir, err := os.MkdirTemp("", "enbor-runner-test-*")
 	if err != nil {
 		panic(err)
 	}
@@ -1983,7 +1983,7 @@ func approvedLease() *fakeWork {
 			Type:      "tool.execute",
 			State:     enbor.WorkItemStateLeased,
 			Payload: enbor.JSON{
-				"protocol":   "ama-runner-work",
+				"protocol":   "enbor-runner-work",
 				"type":       "tool.execute",
 				"approved":   true,
 				"toolCallId": "call_1",
@@ -2008,15 +2008,15 @@ func sessionStartLease() *fakeWork {
 			Type:      "session.start",
 			State:     enbor.WorkItemStateLeased,
 			Payload: enbor.JSON{
-				"protocol":           "ama-runner-work",
+				"protocol":           "enbor-runner-work",
 				"type":               "session.start",
 				"sessionId":          "session_1",
 				"hostingMode":        "self_hosted",
-				"runtime":            "ama",
+				"runtime":            "enbor",
 				"runtimeConfig":      map[string]any{},
 				"provider":           "workers-ai",
 				"model":              "@cf/moonshotai/kimi-k2.6",
-				"runtimeDriver":      "ama-self-hosted",
+				"runtimeDriver":      "enbor-self-hosted",
 				"runtimeRequirement": enbor.JSON{"runtime": enborRuntimeCapability},
 			},
 		},
@@ -2116,7 +2116,7 @@ func externalRuntimeSessionStartLease(runtimeName string, provider string, model
 }
 
 func TestHeartbeatRefreshesRuntimesFromBridge(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"))
 	if err := daemon.heartbeat(context.Background()); err != nil {
@@ -2146,7 +2146,7 @@ func TestHeartbeatRefreshesRuntimesFromBridge(t *testing.T) {
 }
 
 func TestHeartbeatAdvertisesEnumeratedBridgeModels(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, []string{"gpt-5.3-codex", "gpt-5.3-codex-mini"}, "ready", "0.42.0", "host CLI enumerated 2 models"))
 	for range 2 {
@@ -2164,7 +2164,7 @@ func TestHeartbeatAdvertisesEnumeratedBridgeModels(t *testing.T) {
 }
 
 func TestHeartbeatReportsRuntimeCatalogWithStatusAndDiagnostics(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor(
 		runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, []string{"gpt-5.3-codex"}, "ready", "0.42.0", "host CLI enumerated 1 models"),
@@ -2179,11 +2179,11 @@ func TestHeartbeatReportsRuntimeCatalogWithStatusAndDiagnostics(t *testing.T) {
 	for _, entry := range inventory {
 		byRuntime[entry.Runtime] = entry
 	}
-	if host.SupportsAMARuntime() {
-		if got := byRuntime["ama"]; got.State != "ready" || stringValue(got.Detail) == "" {
-			t.Fatalf("expected ready ama runtime declaration, got %#v", got)
+	if host.SupportsEnborRuntime() {
+		if got := byRuntime["enbor"]; got.State != "ready" || stringValue(got.Detail) == "" {
+			t.Fatalf("expected ready enbor runtime declaration, got %#v", got)
 		}
-	} else if _, ok := byRuntime["ama"]; ok {
+	} else if _, ok := byRuntime["enbor"]; ok {
 		t.Fatal("expected host without Enbor support to omit its inventory entry")
 	}
 	if got := byRuntime["codex"]; got.State != "ready" || stringValue(got.Version) != "0.42.0" || stringValue(got.Detail) == "" {
@@ -2201,7 +2201,7 @@ func TestHeartbeatReportsRuntimeCatalogWithStatusAndDiagnostics(t *testing.T) {
 }
 
 func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, []string{"claude-sonnet-4-6"}, "ready", "2.1.185", "host CLI enumerated 1 models"))
 	usageUnavailableDetail := "Claude Code quota usage unavailable; scheduling paused until the usage probe succeeds"
@@ -2227,7 +2227,7 @@ func TestHeartbeatMarksClaudeCodeLimitedWhenUsageProbeUnavailable(t *testing.T) 
 }
 
 func TestHeartbeatAdvertisesOnlyHostRuntimesWhenNoCLIRuntimesAreInstalled(t *testing.T) {
-	client := &fakeAMAServer{}
+	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor()
 	if err := daemon.heartbeat(context.Background()); err != nil {
@@ -2235,7 +2235,7 @@ func TestHeartbeatAdvertisesOnlyHostRuntimesWhenNoCLIRuntimesAreInstalled(t *tes
 	}
 	got := heartbeatRuntimes(client.heartbeats[0])
 	var want []string
-	if host.SupportsAMARuntime() {
+	if host.SupportsEnborRuntime() {
 		want = []string{enborRuntimeCapability}
 	}
 	gotNames := lo.Map(got, func(entry enbor.RunnerRuntime, _ int) string { return entry.Runtime })
@@ -2246,7 +2246,7 @@ func TestHeartbeatAdvertisesOnlyHostRuntimesWhenNoCLIRuntimesAreInstalled(t *tes
 
 func TestRunOnceFailsLeaseWhenRuntimeCLIIsMissing(t *testing.T) {
 	lease := codexSessionStartLease("build")
-	client := &fakeAMAServer{lease: lease}
+	client := &fakeEnborServer{lease: lease}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeCatalog = runtimesFor(
 		runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "ready", "", "ready"),
@@ -2267,7 +2267,7 @@ func TestRunOnceFailsLeaseWhenRuntimeCLIIsMissing(t *testing.T) {
 func TestRunOnceFailsLeaseWhenSessionExceedsMaxDuration(t *testing.T) {
 	// Codex is a CLI relay runtime: events flow over the per-runner hub channel.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: codexSessionStartLease("runaway"), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: codexSessionStartLease("runaway"), hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{waitForCancel: true}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeAdapter = runtimeAdapter
@@ -2297,7 +2297,7 @@ func TestRunOnceFailsLeaseWhenSessionExceedsMaxDuration(t *testing.T) {
 func TestRunOnceDisablesSessionDeadlineWhenMaxDurationIsZero(t *testing.T) {
 	// Codex is a CLI relay runtime: events flow over the per-runner hub channel.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: codexSessionStartLease("build"), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: codexSessionStartLease("build"), hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{result: enbor.JSON{"exitCode": 0}}
 	daemon := testDaemon(client, &fakeAdapter{})
 	daemon.RuntimeAdapter = runtimeAdapter
@@ -2334,7 +2334,7 @@ func TestRunOnceDispatchesCopilotRuntimeThroughAdapter(t *testing.T) {
 	// Copilot is a CLI relay runtime: events flow over the per-runner hub channel,
 	// not a per-lease channel. Seed the hub channel so the hub connects immediately.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: copilotSessionStartLease("copilot prompt"), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: copilotSessionStartLease("copilot prompt"), hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: enbor.JSON{"exitCode": 0, "providerThreadId": "copilot_thread_1"},
 		events: []RuntimeEvent{
@@ -2398,7 +2398,7 @@ func TestRunOnceDispatchesCopilotRuntimeThroughAdapter(t *testing.T) {
 			t.Fatalf("expected %q in copilot events, got %s", want, serializedEvents)
 		}
 	}
-	if strings.Contains(serializedEvents, "AMA_TOKEN") || strings.Contains(serializedEvents, "secret://providers") {
+	if strings.Contains(serializedEvents, "ENBOR_TOKEN") || strings.Contains(serializedEvents, "secret://providers") {
 		t.Fatalf("expected safe copilot events, got %s", serializedEvents)
 	}
 }
@@ -2406,7 +2406,7 @@ func TestRunOnceDispatchesCopilotRuntimeThroughAdapter(t *testing.T) {
 func TestRunOnceFailsCopilotLeaseOnRuntimeAdapterFailure(t *testing.T) {
 	// Copilot is a CLI relay runtime: events flow over the per-runner hub channel.
 	hubChannel := newFakeSessionChannel(enbor.JSON{"type": "runner.channel.accepted"})
-	client := &fakeAMAServer{lease: copilotSessionStartLease("fail"), hubChannel: hubChannel}
+	client := &fakeEnborServer{lease: copilotSessionStartLease("fail"), hubChannel: hubChannel}
 	runtimeAdapter := &fakeRuntimeAdapter{
 		result: enbor.JSON{"exitCode": 7, "stderr": "bad failure"},
 		err:    errors.New("copilot runtime bridge failed"),

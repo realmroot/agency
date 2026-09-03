@@ -127,7 +127,7 @@ function CredentialSecretFields({
   switch (form.type) {
     case 'opaque':
       return <OpaqueSecretFields form={form} setForm={setForm} />
-    case 'ama.dev/basic-auth':
+    case 'enbor.dev/basic-auth':
       return (
         <>
           <SecretInput label="Username" value={form.data.username!} onChange={(value) => setData('username', value)} />
@@ -139,7 +139,7 @@ function CredentialSecretFields({
           />
         </>
       )
-    case 'ama.dev/ssh-auth':
+    case 'enbor.dev/ssh-auth':
       return (
         <SecretTextarea
           label="SSH private key"
@@ -147,7 +147,7 @@ function CredentialSecretFields({
           onChange={(value) => setData('ssh-privatekey', value)}
         />
       )
-    case 'ama.dev/tls':
+    case 'enbor.dev/tls':
       return (
         <>
           <SecretTextarea
@@ -162,9 +162,9 @@ function CredentialSecretFields({
           />
         </>
       )
-    case 'ama.dev/private-key-jwk':
+    case 'enbor.dev/private-key-jwk':
       return <SecretTextarea label="JWK" value={form.data.jwk!} onChange={(value) => setData('jwk', value)} />
-    case 'ama.dev/oauth-token':
+    case 'enbor.dev/oauth-token':
       return (
         <>
           <SecretInput
@@ -192,7 +192,7 @@ function CredentialSecretFields({
           <SecretInput label="Scopes" value={form.data.scopes!} onChange={(value) => setData('scopes', value)} />
         </>
       )
-    case 'ama.dev/realmroot-agent-state':
+    case 'enbor.dev/realmroot-agent-state':
       return null
   }
 }

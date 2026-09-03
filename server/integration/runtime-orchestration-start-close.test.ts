@@ -112,7 +112,7 @@ describe('[CF] cloud Session startup and close claims', () => {
     const currentMetadata = {
       beforeStartup: true,
       concurrentField: 'preserved',
-      annotations: { 'ama.dev/idle-timeout-seconds': '60' },
+      annotations: { 'enbor.dev/idle-timeout-seconds': '60' },
     }
     await env.DB.prepare('UPDATE sessions SET metadata = ? WHERE id = ?')
       .bind(JSON.stringify(currentMetadata), seeded.sessionId)
@@ -132,7 +132,7 @@ describe('[CF] cloud Session startup and close claims', () => {
           startedAt: timestamp,
           updatedAt: timestamp,
         },
-        { runtimeMode: 'live', runtimeBackend: 'ama-cloud' },
+        { runtimeMode: 'live', runtimeBackend: 'enbor-cloud' },
       ),
     ).resolves.toBe(true)
 
@@ -140,7 +140,7 @@ describe('[CF] cloud Session startup and close claims', () => {
     expect(JSON.parse(started?.metadata ?? '{}')).toEqual({
       ...currentMetadata,
       runtimeMode: 'live',
-      runtimeBackend: 'ama-cloud',
+      runtimeBackend: 'enbor-cloud',
     })
   })
 
@@ -158,7 +158,7 @@ describe('[CF] cloud Session startup and close claims', () => {
     const currentMetadata = {
       beforeStartup: true,
       concurrentField: 'preserved',
-      annotations: { 'ama.dev/idle-timeout-seconds': '60' },
+      annotations: { 'enbor.dev/idle-timeout-seconds': '60' },
     }
     await env.DB.prepare('UPDATE sessions SET metadata = ? WHERE id = ?')
       .bind(JSON.stringify(currentMetadata), seeded.sessionId)
@@ -171,7 +171,7 @@ describe('[CF] cloud Session startup and close claims', () => {
         null,
         startupId,
         { state: 'error', stateReason: 'startup failed', updatedAt: timestamp },
-        { runtimeBackend: 'ama-cloud', error: { message: 'startup failed' } },
+        { runtimeBackend: 'enbor-cloud', error: { message: 'startup failed' } },
       ),
     ).resolves.toBe(true)
 
@@ -179,7 +179,7 @@ describe('[CF] cloud Session startup and close claims', () => {
     expect(failed).toMatchObject({ state: 'error', stateReason: 'startup failed' })
     expect(JSON.parse(failed?.metadata ?? '{}')).toEqual({
       ...currentMetadata,
-      runtimeBackend: 'ama-cloud',
+      runtimeBackend: 'enbor-cloud',
       error: { message: 'startup failed' },
     })
   })
@@ -215,7 +215,7 @@ describe('[CF] cloud Session startup and close claims', () => {
   })
 
   it('[spec: sessions/close] lets the startup lease atomically fence close until expiry', async () => {
-    const seeded = await seedPendingSession({ runtime: 'ama' })
+    const seeded = await seedPendingSession({ runtime: 'enbor' })
     const startupId = id('startup')
     await seeded.repo.acquirePendingStartupLease(
       seeded.projectId,
@@ -237,7 +237,7 @@ describe('[CF] cloud Session startup and close claims', () => {
         turnLeaseExpiresAt: '2026-09-03T00:05:00.000Z',
         updatedAt: timestamp,
       },
-      { runtimeBackend: 'ama-cloud' },
+      { runtimeBackend: 'enbor-cloud' },
     )
 
     await expect(
@@ -306,8 +306,8 @@ describe('[CF] cloud Session startup and close claims', () => {
       sandboxId: seeded.sandboxId,
       closedAt: '2026-09-03T00:07:00.000Z',
       metadata: JSON.stringify({
-        runtime: 'ama',
-        runtimeBackend: 'ama-cloud',
+        runtime: 'enbor',
+        runtimeBackend: 'enbor-cloud',
         sandboxDestroyedAt: '2026-09-03T00:07:00.000Z',
       }),
     })
@@ -347,7 +347,7 @@ describe('[CF] cloud Session startup and close claims', () => {
   })
 
   it('[spec: runtime/idle-retention] lets one approval atomically acquire idle and fence duplicate approval and close', async () => {
-    const seeded = await seedPendingSession({ runtime: 'ama' })
+    const seeded = await seedPendingSession({ runtime: 'enbor' })
     await env.DB.prepare("UPDATE sessions SET state = 'idle' WHERE id = ?").bind(seeded.sessionId).run()
 
     await expect(

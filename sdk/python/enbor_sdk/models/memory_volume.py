@@ -25,7 +25,7 @@ class MemoryVolume:
         Attributes:
             name (str):  Example: team-memory.
             type_ (MemoryVolumeType):
-            memory_ref (str):  Example: ama://memories/0195f5d6-7c20-7000-8000-00000000000a.
+            memory_ref (str):  Example: enbor://memories/0195f5d6-7c20-7000-8000-00000000000a.
      """
 
     name: str

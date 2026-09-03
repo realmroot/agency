@@ -73,7 +73,7 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
     expect(screen.getByText('@cf/moonshotai/kimi-k2.6')).toBeInTheDocument()
     expect(screen.getByText('System prompt')).toBeInTheDocument()
     expect(screen.getByText('Act as the project coding agent.')).toBeInTheDocument()
-    expect(screen.getByText('ama@coding-agent')).toBeInTheDocument()
+    expect(screen.getByText('enbor@coding-agent')).toBeInTheDocument()
     expect(screen.getByText('read, write')).toBeInTheDocument()
     expect(screen.queryByText(/"systemPrompt"/)).toBeNull()
   })
@@ -126,7 +126,7 @@ describe('[spec: agents/console-detail] AgentDetailView', () => {
 
     expect(screen.getByText('codex-operator')).toBeInTheDocument()
     expect(screen.getByText('codex')).toBeInTheDocument()
-    expect(screen.queryByText(/credentialRef|ama-secret|private_key|access_token/i)).toBeNull()
+    expect(screen.queryByText(/credentialRef|enbor-secret|private_key|access_token/i)).toBeNull()
   })
 
   it('falls back to agent fields when versions list is empty', () => {

@@ -1,4 +1,4 @@
-export const RUNTIME_NAMES = ['ama', 'claude-code', 'codex', 'copilot'] as const
+export const RUNTIME_NAMES = ['enbor', 'claude-code', 'codex', 'copilot'] as const
 export type RuntimeName = (typeof RUNTIME_NAMES)[number]
 
 export const EXTERNAL_RUNTIME_NAMES = ['claude-code', 'codex', 'copilot'] as const

@@ -53,7 +53,7 @@ export const TEST_MODE_RUNTIME_MODELS: Record<string, string[]> = {
 
 /** True when the bridge is running an e2e deterministic test request. */
 export function isE2eBridgeTest(request: RunRequest): boolean {
-  return process.env.AMA_RUNTIME_BRIDGE_TEST_MODE === '1' && request.runtimeConfig?.e2eBridgeTest === true
+  return process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === '1' && request.runtimeConfig?.e2eBridgeTest === true
 }
 
 // Classifies a host runtime probe failure into a safe inventory status. The
@@ -158,10 +158,10 @@ export function deterministicBridgeTestEvents(request: RunRequest): EnborRuntime
     `session:${request.sessionId}`,
     `runtime:${request.runtime}`,
     `workspace:${request.cwd}`,
-    `workspaceEnv:${request.env.AMA_WORKSPACE}`,
+    `workspaceEnv:${request.env.ENBOR_WORKSPACE}`,
     `home:${request.env.HOME}`,
     `tmpdir:${request.env.TMPDIR}`,
-    `hasRunnerCredential:${Object.hasOwn(request.env, 'AMA_RUNNER_CREDENTIALS')}`,
+    `hasRunnerCredential:${Object.hasOwn(request.env, 'ENBOR_RUNNER_CREDENTIALS')}`,
     `leakedToken:${Object.values(request.env).includes('raw-secret-value') ? 'raw-secret-value' : 'none'}`,
   ].join('\n')
   return [

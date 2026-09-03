@@ -4,7 +4,7 @@ import { createRuntimeOrchestrationRepoFromBinding } from '@server/adapters/repo
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
-const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
+const DEFAULT_ENBOR_RUNNER_CAPABILITY = 'enbor'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] } as const
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
@@ -56,7 +56,7 @@ async function createAgent(authorization: string) {
           name: `Runner-backed agent ${crypto.randomUUID()}`,
         },
         {
-          systemPrompt: 'Use AMA-owned self-hosted runner work.',
+          systemPrompt: 'Use Enbor-owned self-hosted runner work.',
           allowedTools: ['bash'],
           provider: 'workers-ai',
           model: '@cf/moonshotai/kimi-k2.6',
@@ -102,7 +102,7 @@ async function createSelfHostedSession(
       spec: {
         agentId,
         environmentId,
-        runtime: 'ama',
+        runtime: 'enbor',
         ...executionOverrides,
       },
     }),
@@ -123,7 +123,7 @@ async function registerActiveRunner(
   environmentId: string,
   options: { runtimeNames?: string[]; maxConcurrent?: number } = {},
 ) {
-  const runtimeNames = options.runtimeNames ?? [DEFAULT_AMA_RUNNER_CAPABILITY]
+  const runtimeNames = options.runtimeNames ?? [DEFAULT_ENBOR_RUNNER_CAPABILITY]
   const runnerAuthorization = asRunnerAuthorization(authorization)
   const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
     method: 'POST',
@@ -369,8 +369,10 @@ describe('[CF] /api/v1/leases', () => {
     expect(memoryRes.status).toBe(201)
     const runner = await registerActiveRunner(authorization, environment.id)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
-      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `enbor://memories/${memoryStoreId}` }],
+      volumeMounts: [
+        { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
+      ],
     })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -385,7 +387,7 @@ describe('[CF] /api/v1/leases', () => {
           exitCode: 0,
           memoryStores: [
             {
-              memoryRef: `ama://memories/${memoryStoreId}`,
+              memoryRef: `enbor://memories/${memoryStoreId}`,
               memories: [{ path: 'downstream-operator-heartbeat.md', content: 'updated heartbeat\n' }],
             },
           ],
@@ -418,8 +420,10 @@ describe('[CF] /api/v1/leases', () => {
     const memoryStoreId = memoryStore.metadata.uid
     const runner = await registerActiveRunner(authorization, environment.id)
     const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
-      volumes: [{ name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` }],
-      volumeMounts: [{ name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false }],
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `enbor://memories/${memoryStoreId}` }],
+      volumeMounts: [
+        { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
+      ],
     })
     const workItem = await availableWorkItem(authorization, session.id)
     const claimRes = await claimLease(authorization, workItem.id, runner.id)
@@ -437,7 +441,7 @@ describe('[CF] /api/v1/leases', () => {
           exitCode: 0,
           memoryStores: [
             {
-              memoryRef: `ama://memories/${memoryStoreId}`,
+              memoryRef: `enbor://memories/${memoryStoreId}`,
               memories: [{ path: 'downstream-operator-heartbeat.md', content: 'late heartbeat\n' }],
             },
           ],
@@ -561,7 +565,7 @@ describe('[CF] /api/v1/leases', () => {
       method: 'POST',
       body: JSON.stringify({
         prompt: 'Do not route this session to a crashed runner.',
-        spec: { agentId: agent.id, runtime: 'ama' },
+        spec: { agentId: agent.id, runtime: 'enbor' },
       }),
     })
     expect(sessionRes.status).toBe(409)

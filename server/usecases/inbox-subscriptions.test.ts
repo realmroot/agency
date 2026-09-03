@@ -34,7 +34,7 @@ function trigger(
         spec: {
           agentId: 'agent_1',
           environmentId: null,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Triage it.',
           env: {},
           envFrom: [],

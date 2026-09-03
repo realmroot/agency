@@ -141,18 +141,18 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
       const parsed = volume
       const storeId = typeof parsed.memoryRef === 'string' ? memoryStoreIdFromRef(parsed.memoryRef) : null
       if (!storeId) {
-        return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use ama://memories/{storeId}.' } }
+        return { fields: { [`volumes.${index}.memoryRef`]: 'Memory reference must use enbor://memories/{storeId}.' } }
       }
       const mountIndex = normalizedMounts.findIndex((mount) => mount.name === parsed.name)
       if (mountIndex === -1) {
         return { fields: { [`volumes.${index}.name`]: 'Memory store volume must have a matching volume mount.' } }
       }
       const mountPath = normalizedMounts[mountIndex]!.mountPath
-      if (!mountPath.startsWith('/workspace/.ama/memory-stores/')) {
+      if (!mountPath.startsWith('/workspace/.enbor/memory-stores/')) {
         return {
           fields: {
             [`volumeMounts.${mountIndex}.mountPath`]:
-              'Memory store mounts must stay under /workspace/.ama/memory-stores.',
+              'Memory store mounts must stay under /workspace/.enbor/memory-stores.',
           },
         }
       }
@@ -177,11 +177,11 @@ export function normalizeWorkspaceSpec(spec: WorkspaceSpec) {
       return { fields: { [`volumes.${index}.name`]: 'Repository volume must have a matching volume mount.' } }
     }
     const mountPath = normalizedMounts[mountIndex]!.mountPath
-    if (!mountPath.startsWith('/workspace/') || mountPath.startsWith('/workspace/.ama/')) {
+    if (!mountPath.startsWith('/workspace/') || mountPath.startsWith('/workspace/.enbor/')) {
       return {
         fields: {
           [`volumeMounts.${mountIndex}.mountPath`]:
-            'Repository mount path must stay under /workspace outside /workspace/.ama.',
+            'Repository mount path must stay under /workspace outside /workspace/.enbor.',
         },
       }
     }

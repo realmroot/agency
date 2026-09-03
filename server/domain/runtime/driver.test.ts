@@ -3,10 +3,10 @@ import { runtimeDriver, runtimeDriverName, runtimeNameForIdentity, runtimePlacem
 
 describe('[spec: runtime/driver-select] runtime drivers', () => {
   it('selects supported runtime drivers and rejects unknown names', () => {
-    expect(runtimeDriver('ama')).toMatchObject({
-      runtime: 'ama',
-      cloudBackend: 'ama-cloud',
-      cloudProtocol: 'ama-runtime-rpc',
+    expect(runtimeDriver('enbor')).toMatchObject({
+      runtime: 'enbor',
+      cloudBackend: 'enbor-cloud',
+      cloudProtocol: 'enbor-runtime-rpc',
     })
     expect(runtimeDriver('codex')).toMatchObject({
       runtime: 'codex',
@@ -23,8 +23,8 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
   })
 
   it('names cloud and self-hosted runtime drivers canonically', () => {
-    expect(runtimeDriverName('ama', 'cloud')).toBe('ama-cloud')
-    expect(runtimeDriverName('ama', 'self_hosted')).toBe('ama-cloud')
+    expect(runtimeDriverName('enbor', 'cloud')).toBe('enbor-cloud')
+    expect(runtimeDriverName('enbor', 'self_hosted')).toBe('enbor-cloud')
     expect(runtimeDriverName('claude-code', 'self_hosted')).toBe('claude-code-self-hosted')
     expect(runtimeDriverName('codex', 'self_hosted')).toBe('codex-self-hosted')
     expect(runtimeDriverName('copilot', 'self_hosted')).toBe('copilot-self-hosted')
@@ -34,20 +34,20 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
     expect(
       runtimePlacement({
         hostingMode: 'cloud',
-        runtime: 'ama',
-        runtimeConfig: { image: 'ama-tool-executor' },
+        runtime: 'enbor',
+        runtimeConfig: { image: 'enbor-tool-executor' },
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
       }),
     ).toEqual({
       hostingMode: 'cloud',
-      runtime: 'ama',
-      runtimeConfig: { image: 'ama-tool-executor' },
+      runtime: 'enbor',
+      runtimeConfig: { image: 'enbor-tool-executor' },
       provider: 'workers-ai',
       model: '@cf/moonshotai/kimi-k2.6',
-      driver: 'ama-cloud',
-      backend: 'ama-cloud',
-      protocol: 'ama-runtime-rpc',
+      driver: 'enbor-cloud',
+      backend: 'enbor-cloud',
+      protocol: 'enbor-runtime-rpc',
     })
   })
 
@@ -59,7 +59,7 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
         runtimeConfig: { mode: 'sdk-bridge' },
         provider: 'provider_codex',
         model: 'gpt-5.3-codex',
-        metadata: { runnerProtocol: 'ama-runner-work' },
+        metadata: { runnerProtocol: 'enbor-runner-work' },
       }),
     ).toEqual({
       hostingMode: 'self_hosted',
@@ -69,7 +69,7 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
       model: 'gpt-5.3-codex',
       driver: 'codex-self-hosted',
       backend: null,
-      protocol: 'ama-runner-work',
+      protocol: 'enbor-runner-work',
     })
   })
 
@@ -77,18 +77,18 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
     expect(
       runtimePlacement({
         hostingMode: 'cloud',
-        runtime: 'ama',
+        runtime: 'enbor',
         runtimeConfig: {},
         provider: 'workers-ai',
         model: '@cf/moonshotai/kimi-k2.6',
         metadata: {
-          runtimeDriver: 'custom-ama-cloud',
+          runtimeDriver: 'custom-enbor-cloud',
           runtimeBackend: 'custom-backend',
           runtimeProtocol: 'custom-protocol',
         },
       }),
     ).toMatchObject({
-      driver: 'custom-ama-cloud',
+      driver: 'custom-enbor-cloud',
       backend: 'custom-backend',
       protocol: 'custom-protocol',
     })

@@ -35,7 +35,7 @@ class Runner:
             name (str):  Example: mac-mini-build-runner.
             environment_id (None | str):  Example: 0195f5d6-7c20-7000-8000-000000000005.
             secret_ref (None | str):  Example:
-                ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
+                enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
             auth_mode (RunnerAuthMode):  Example: realmroot.
             state (RunnerState):  Example: active.
             current_load (int):

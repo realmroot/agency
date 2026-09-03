@@ -120,9 +120,9 @@ Expected configuration names use generic OIDC terminology, for example:
 - `OIDC_CLIENT_ID`
 - `OIDC_CLIENT_SECRET`
 - `OIDC_RESOURCE`
-- `AMA_WEB_SESSION_ENCRYPTION_KEY`
+- `WEB_SESSION_ENCRYPTION_KEY`
 - `OIDC_BROWSER_SCOPES`
-- `AMA_VAULT_ENCRYPTION_KEY`
+- `VAULT_ENCRYPTION_KEY`
 
 ## UI Contributions
 

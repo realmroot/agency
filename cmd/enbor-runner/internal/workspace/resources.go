@@ -184,7 +184,7 @@ func materializeEmptyDirMount(sessionRoot string, volume protocol.WorkspaceMount
 	if err := os.MkdirAll(parent, 0o700); err != nil {
 		return "", err
 	}
-	stagingPath, err := os.MkdirTemp(parent, ".ama-empty-dir-")
+	stagingPath, err := os.MkdirTemp(parent, ".enbor-empty-dir-")
 	if err != nil {
 		return "", err
 	}
@@ -405,7 +405,7 @@ func defaultMemoryStoreMountPath(volume protocol.WorkspaceMount) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return pathpkg.Join(".ama", "memory-stores", storeID), nil
+	return pathpkg.Join(".enbor", "memory-stores", storeID), nil
 }
 
 func coalesce(value string, fallback string) string {
@@ -420,19 +420,19 @@ func memoryStoreIDFromRef(memoryRef string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if parsed.Scheme != "ama" || parsed.Host != "memories" {
-		return "", fmt.Errorf("memory volume must include memoryRef ama://memories/{storeId}")
+	if parsed.Scheme != "enbor" || parsed.Host != "memories" {
+		return "", fmt.Errorf("memory volume must include memoryRef enbor://memories/{storeId}")
 	}
 	storeID := strings.TrimPrefix(parsed.EscapedPath(), "/")
 	if storeID == "" || strings.Contains(storeID, "/") {
-		return "", fmt.Errorf("memory volume must include memoryRef ama://memories/{storeId}")
+		return "", fmt.Errorf("memory volume must include memoryRef enbor://memories/{storeId}")
 	}
 	decoded, err := url.PathUnescape(storeID)
 	if err != nil {
 		return "", err
 	}
 	if strings.TrimSpace(decoded) == "" || strings.Contains(decoded, "/") {
-		return "", fmt.Errorf("memory volume must include memoryRef ama://memories/{storeId}")
+		return "", fmt.Errorf("memory volume must include memoryRef enbor://memories/{storeId}")
 	}
 	return decoded, nil
 }

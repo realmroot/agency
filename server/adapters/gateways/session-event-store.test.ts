@@ -35,7 +35,7 @@ describe('createCloudLoopChecker', () => {
 
   it('returns false when the session is unstamped, missing, or has no metadata', async () => {
     expect(
-      await createCloudLoopChecker(fakeStampDb({ metadata: JSON.stringify({ runtime: 'ama' }) }) as never)('s'),
+      await createCloudLoopChecker(fakeStampDb({ metadata: JSON.stringify({ runtime: 'enbor' }) }) as never)('s'),
     ).toBe(false)
     expect(await createCloudLoopChecker(fakeStampDb({ metadata: null }) as never)('s')).toBe(false)
     expect(await createCloudLoopChecker(fakeStampDb(undefined) as never)('s')).toBe(false)

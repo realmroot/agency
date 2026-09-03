@@ -9,12 +9,12 @@ interface CurrentUser {
 }
 
 export async function getAuthHeaders() {
-  const accessToken = window.localStorage.getItem('ama:e2e-access-token')
+  const accessToken = window.localStorage.getItem('enbor:e2e-access-token')
   return accessToken ? { authorization: `Bearer ${accessToken}` } : {}
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const e2eToken = window.localStorage.getItem('ama:e2e-access-token')
+  const e2eToken = window.localStorage.getItem('enbor:e2e-access-token')
   if (e2eToken) return e2eUser(e2eToken)
 
   const response = await fetch('/api/v1/auth/sessions/current', { headers: { accept: 'application/json' } })
@@ -46,7 +46,7 @@ export async function signIn(returnTo: string) {
 }
 
 export async function signOut() {
-  window.localStorage.removeItem('ama:e2e-access-token')
+  window.localStorage.removeItem('enbor:e2e-access-token')
   const response = await fetch('/api/v1/auth/sessions/current', { method: 'DELETE' })
   if (!response.ok && response.status !== 401) throw new Error('Failed to sign out')
   window.location.assign('/')

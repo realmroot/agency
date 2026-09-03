@@ -9,7 +9,7 @@ import { dispatchNextSerialHttpTrigger, recoverSerialHttpTriggers } from '@serve
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn, signInUser } from './auth'
 
-const AMA_RUNNER_CAPABILITY = 'ama'
+const ENBOR_RUNNER_CAPABILITY = 'enbor'
 const EMPTY_PACKAGES = { type: 'packages', apt: [], cargo: [], gem: [], go: [], npm: [], pip: [], webi: [] } as const
 
 function createResourceBody(metadata: { name: string; description?: string }, spec: Record<string, unknown> = {}) {
@@ -112,7 +112,7 @@ async function registerActiveRunner(authorization: string, environmentId: string
     method: 'PUT',
     body: JSON.stringify({
       state: 'active',
-      runtimes: [{ runtime: AMA_RUNNER_CAPABILITY, models: [], state: 'ready' }],
+      runtimes: [{ runtime: ENBOR_RUNNER_CAPABILITY, models: [], state: 'ready' }],
     }),
   })
   expect(heartbeatRes.status).toBe(200)
@@ -140,7 +140,7 @@ async function createTrigger(
           spec: {
             agentId,
             environmentId,
-            runtime: 'ama',
+            runtime: 'enbor',
             promptTemplate: 'Run scheduled work.',
             env: {},
             envFrom: [],
@@ -199,7 +199,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -220,7 +220,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -382,7 +382,7 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Should not persist.',
               env: {},
               envFrom: [],
@@ -420,7 +420,7 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Should not persist either.',
               env: { DOWNSTREAM_API_TOKEN: 'raw-token-value' },
               envFrom: [],
@@ -450,7 +450,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Run scheduled work.',
           env: {},
           envFrom: [],
@@ -514,7 +514,7 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: environment.id,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Research current Canadian banking bonus offers.',
               volumes: [
                 { name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' },
@@ -940,7 +940,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Handle ticket {{ .body.ticket.id }} from {{ .body.source }} via {{ .header["x-source"] }}.',
           env: {},
           envFrom: [],
@@ -1016,7 +1016,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: '{% if .body.ticket.id %}Ticket',
           env: {},
           envFrom: [],
@@ -1053,7 +1053,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Handle {{ .body.event }} {{ .body.routing_key }}: {{ .body.comment.body }}.',
           env: {},
           envFrom: [],
@@ -1114,7 +1114,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Handle {{ .body.event }} for {{ .body.routing_key }}.',
           env: {},
           envFrom: [],
@@ -1198,7 +1198,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Handle {{ .body.routing_key }}.',
           env: {},
           envFrom: [],
@@ -1273,7 +1273,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Do not run.',
           env: {},
           envFrom: [],
@@ -1292,7 +1292,7 @@ describe('[CF] /api/v1/triggers', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Do not run either.',
           env: {},
           envFrom: [],
@@ -1337,7 +1337,7 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: null,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Run scheduled work.',
               env: {},
               envFrom: [],
@@ -1392,7 +1392,7 @@ describe('[CF] /api/v1/triggers', () => {
             spec: {
               agentId: agent.id,
               environmentId: null,
-              runtime: 'ama',
+              runtime: 'enbor',
               promptTemplate: 'Run scheduled work.',
               env: {},
               envFrom: [],

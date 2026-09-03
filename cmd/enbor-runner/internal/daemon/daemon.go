@@ -3,7 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerauth "github.com/realmroot/enbor/cmd/enbor-runner/internal/auth"
 	runnerconfig "github.com/realmroot/enbor/cmd/enbor-runner/internal/config"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/runtime"
@@ -22,7 +22,7 @@ import (
 
 type Daemon struct {
 	Config         runnerconfig.Config
-	Client         *ama.RunnerClient
+	Client         *enbor.RunnerClient
 	Channels       runnersession.Opener
 	Adapter        sandbox.SandboxAdapter
 	RuntimeAdapter runtime.Adapter
@@ -262,7 +262,7 @@ func (d *Daemon) runOneLease(ctx context.Context) error {
 	return d.leaseWorker().RunOne(ctx)
 }
 
-func (d *Daemon) runAssignedWork(ctx context.Context, lease *ama.Lease, workItem *ama.WorkItem) {
+func (d *Daemon) runAssignedWork(ctx context.Context, lease *enbor.Lease, workItem *enbor.WorkItem) {
 	if !d.tryAcquireLeaseSlotFor(lease.Id) {
 		slog.Warn("runner received work assignment while at local capacity", "workItemId", workItem.Id, "leaseId", lease.Id)
 		return
@@ -289,11 +289,11 @@ func (d *Daemon) recoverAssignedWork(ctx context.Context) {
 		return
 	}
 	runnerID := d.RunnerID
-	state := ama.ListLeasesParamsStateActive
+	state := enbor.ListLeasesParamsStateActive
 	limit := 100
 	var cursor *string
 	for {
-		leases, err := d.Client.Leases.List(ctx, &ama.ListLeasesParams{
+		leases, err := d.Client.Leases.List(ctx, &enbor.ListLeasesParams{
 			RunnerId: &runnerID,
 			State:    &state,
 			Limit:    &limit,
@@ -438,11 +438,11 @@ func (d *Daemon) ensureRunner(ctx context.Context) (string, error) {
 	}
 	build := d.buildInfo()
 	hostInfo := host.Current()
-	runner, err := d.Client.Runners.Create(ctx, ama.CreateRunnerRequest{
+	runner, err := d.Client.Runners.Create(ctx, enbor.CreateRunnerRequest{
 		Name:          displayName(),
 		EnvironmentId: lo.EmptyableToPtr(d.Config.EnvironmentID),
 		MaxConcurrent: lo.ToPtr(d.Config.MaxConcurrent),
-		Metadata: lo.ToPtr(ama.JSON{
+		Metadata: lo.ToPtr(enbor.JSON{
 			"sandboxAdapter":         sandbox.HostAdapterName(),
 			"commandAcknowledgement": true,
 			"os":                     hostInfo.OS,
@@ -468,11 +468,11 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 	runtimes := d.refreshRuntimes()
 	build := d.buildInfo()
 	hostInfo := host.Current()
-	_, err = d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, ama.PutRunnerHeartbeatRequest{
-		State:        lo.ToPtr(ama.PutRunnerHeartbeatRequestStateActive),
+	_, err = d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, enbor.PutRunnerHeartbeatRequest{
+		State:        lo.ToPtr(enbor.PutRunnerHeartbeatRequestStateActive),
 		RuntimeUsage: lo.ToPtr(runnerRuntimeUsage(d.getRuntimeUsage())),
 		Runtimes:     lo.ToPtr(runnerRuntimes(runtimes)),
-		Metadata: lo.ToPtr(ama.JSON{
+		Metadata: lo.ToPtr(enbor.JSON{
 			"sandboxAdapter":         sandbox.HostAdapterName(),
 			"commandAcknowledgement": true,
 			"os":                     hostInfo.OS,
@@ -489,18 +489,18 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 }
 
 func (d *Daemon) sendOfflineHeartbeat(ctx context.Context) error {
-	_, err := d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, ama.PutRunnerHeartbeatRequest{
-		State: lo.ToPtr(ama.PutRunnerHeartbeatRequestStateOffline),
+	_, err := d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, enbor.PutRunnerHeartbeatRequest{
+		State: lo.ToPtr(enbor.PutRunnerHeartbeatRequestStateOffline),
 	})
 	return err
 }
 
 func (d *Daemon) refreshRuntimes() []runtime.RunnerRuntime {
-	return withAMARuntime(d.runtimes().RefreshRuntimes(), host.SupportsAMARuntime())
+	return withEnborRuntime(d.runtimes().RefreshRuntimes(), host.SupportsEnborRuntime())
 }
 
 func (d *Daemon) currentRuntimes() []runtime.RunnerRuntime {
-	return withAMARuntime(d.runtimes().CurrentRuntimes(), host.SupportsAMARuntime())
+	return withEnborRuntime(d.runtimes().CurrentRuntimes(), host.SupportsEnborRuntime())
 }
 
 func (d *Daemon) setRuntimeUsageSnapshot(snapshot *runtime.UsageSnapshot) {
@@ -519,36 +519,36 @@ func (d *Daemon) runUsageCollector(ctx context.Context) {
 	d.runtimes().RunUsageCollector(ctx)
 }
 
-func withAMARuntime(inventory []runtime.RunnerRuntime, supportsAMA bool) []runtime.RunnerRuntime {
-	if !supportsAMA || lo.ContainsBy(inventory, func(entry runtime.RunnerRuntime) bool { return entry.Runtime == "ama" }) {
+func withEnborRuntime(inventory []runtime.RunnerRuntime, supportsEnbor bool) []runtime.RunnerRuntime {
+	if !supportsEnbor || lo.ContainsBy(inventory, func(entry runtime.RunnerRuntime) bool { return entry.Runtime == "enbor" }) {
 		return inventory
 	}
 	return append([]runtime.RunnerRuntime{{
-		Runtime: "ama",
+		Runtime: "enbor",
 		Models:  []string{},
 		State:   runtime.RuntimeStateReady,
 		Detail:  "Enbor runtime is available",
 	}}, inventory...)
 }
 
-func runnerRuntimes(runtimes []runtime.RunnerRuntime) []ama.RunnerRuntime {
-	return lo.Map(runtimes, func(entry runtime.RunnerRuntime, _ int) ama.RunnerRuntime {
-		return ama.RunnerRuntime{
+func runnerRuntimes(runtimes []runtime.RunnerRuntime) []enbor.RunnerRuntime {
+	return lo.Map(runtimes, func(entry runtime.RunnerRuntime, _ int) enbor.RunnerRuntime {
+		return enbor.RunnerRuntime{
 			Runtime: entry.Runtime,
 			Models:  entry.Models,
 			Version: lo.EmptyableToPtr(entry.Version),
-			State:   ama.RunnerRuntimeState(entry.State),
+			State:   enbor.RunnerRuntimeState(entry.State),
 			Detail:  lo.ToPtr(entry.Detail),
 		}
 	})
 }
 
-func runnerRuntimeUsage(usage []runtime.RuntimeUsage) []ama.RuntimeUsage {
-	return lo.Map(usage, func(item runtime.RuntimeUsage, _ int) ama.RuntimeUsage {
-		return ama.RuntimeUsage{
+func runnerRuntimeUsage(usage []runtime.RuntimeUsage) []enbor.RuntimeUsage {
+	return lo.Map(usage, func(item runtime.RuntimeUsage, _ int) enbor.RuntimeUsage {
+		return enbor.RuntimeUsage{
 			Runtime: item.Runtime,
-			Windows: lo.Map(item.Windows, func(window runtime.UsageWindow, _ int) ama.RuntimeUsageWindow {
-				return ama.RuntimeUsageWindow{
+			Windows: lo.Map(item.Windows, func(window runtime.UsageWindow, _ int) enbor.RuntimeUsageWindow {
+				return enbor.RuntimeUsageWindow{
 					Label:       window.Label,
 					Utilization: window.Utilization,
 					ResetsAt:    window.ResetsAt,

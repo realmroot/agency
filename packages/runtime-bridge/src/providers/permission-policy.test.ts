@@ -16,21 +16,21 @@ describe('[spec: runtime/provider-permission-policy] provider permission environ
   it('accepts provider-supported permission modes', () => {
     expect(
       codexPermissionPolicy({
-        AMA_CODEX_SANDBOX_MODE: 'workspace-write',
-        AMA_CODEX_APPROVAL_POLICY: 'on-request',
+        ENBOR_CODEX_SANDBOX_MODE: 'workspace-write',
+        ENBOR_CODEX_APPROVAL_POLICY: 'on-request',
       }),
     ).toEqual({ sandboxMode: 'workspace-write', approvalPolicy: 'on-request' })
-    expect(claudeCodePermissionPolicy({ AMA_CLAUDE_CODE_PERMISSION_MODE: 'auto' })).toEqual({
+    expect(claudeCodePermissionPolicy({ ENBOR_CLAUDE_CODE_PERMISSION_MODE: 'auto' })).toEqual({
       permissionMode: 'auto',
     })
   })
 
   it('rejects unsupported values and names the invalid variable', () => {
-    expect(() => codexPermissionPolicy({ AMA_CODEX_SANDBOX_MODE: 'host-write' })).toThrow(
-      'AMA_CODEX_SANDBOX_MODE must be one of read-only, workspace-write, danger-full-access',
+    expect(() => codexPermissionPolicy({ ENBOR_CODEX_SANDBOX_MODE: 'host-write' })).toThrow(
+      'ENBOR_CODEX_SANDBOX_MODE must be one of read-only, workspace-write, danger-full-access',
     )
-    expect(() => claudeCodePermissionPolicy({ AMA_CLAUDE_CODE_PERMISSION_MODE: 'approve' })).toThrow(
-      'AMA_CLAUDE_CODE_PERMISSION_MODE must be one of default, acceptEdits, bypassPermissions, plan, dontAsk, auto',
+    expect(() => claudeCodePermissionPolicy({ ENBOR_CLAUDE_CODE_PERMISSION_MODE: 'approve' })).toThrow(
+      'ENBOR_CLAUDE_CODE_PERMISSION_MODE must be one of default, acceptEdits, bypassPermissions, plan, dontAsk, auto',
     )
   })
 })

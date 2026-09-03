@@ -109,9 +109,9 @@ function inferSessionId(eventsPath: string): string {
 }
 
 function defaultWorkDir(): string {
-  if (process.env.AMA_RUNNER_WORK_DIR) return process.env.AMA_RUNNER_WORK_DIR
+  if (process.env.ENBOR_RUNNER_WORK_DIR) return process.env.ENBOR_RUNNER_WORK_DIR
   throw new Error(
-    'Runner work directories are isolated by API Server and Environment; pass --work-dir or AMA_RUNNER_WORK_DIR',
+    'Runner work directories are isolated by API Server and Environment; pass --work-dir or ENBOR_RUNNER_WORK_DIR',
   )
 }
 
@@ -131,7 +131,7 @@ function timestampForPath(): string {
 
 function usage(): string {
   return `Usage:
-  pnpm exec tsx scripts/rebuild-session-events.ts --session-id <ama-session-id>
+  pnpm exec tsx scripts/rebuild-session-events.ts --session-id <enbor-session-id>
 
 Options:
   --runtime <name>          Runtime when provider-events records do not declare one: codex, claude-code, copilot
@@ -139,7 +139,7 @@ Options:
   --source-format <format>  auto, provider-events, bridge-ndjson (default: auto)
   --session-id <id>         Enbor session id. Default target is the runner store for this session.
   --events <path>           Exact target events.jsonl path. Session id is inferred from its parent directory unless --session-id is set.
-  --work-dir <path>         Enbor Runner work dir. Required unless AMA_RUNNER_WORK_DIR is set.
+  --work-dir <path>         Enbor Runner work dir. Required unless ENBOR_RUNNER_WORK_DIR is set.
   --dry-run                 Build and validate without writing
   --no-backup               Replace target without backing up the existing file
 

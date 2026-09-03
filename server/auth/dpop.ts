@@ -42,7 +42,7 @@ export async function verifyDpopCredential(
   verifyAccessToken: (accessToken: string) => Promise<JWTPayload & { sub: string }>,
 ): Promise<VerifiedDpopCredential> {
   const accessToken = dpopAccessToken(request)
-  const explicitE2eMode = env.AMA_RUNTIME_MODE === 'test' && env.AMA_E2E_TEST_AUTH === 'true'
+  const explicitE2eMode = env.RUNTIME_MODE === 'test' && env.E2E_TEST_AUTH === 'true'
   if (explicitE2eMode && accessToken.startsWith('e2e')) {
     const proof = request.headers.get('dpop')
     if (proof !== `e2e-proof:${request.method.toUpperCase()}:${normalizedDpopUrl(request.url)}`) {

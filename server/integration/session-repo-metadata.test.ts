@@ -26,7 +26,7 @@ describe('[CF] Session repository metadata annotations', () => {
     ])
     const initialMissing = JSON.stringify({ annotations: { source: 'inbox-trigger' }, revision: 'initial' })
     const explicitZero = JSON.stringify({
-      annotations: { source: 'inbox-trigger', 'ama.dev/idle-timeout-seconds': '0' },
+      annotations: { source: 'inbox-trigger', 'enbor.dev/idle-timeout-seconds': '0' },
       retained: 'explicit',
     })
     await env.DB.batch([
@@ -67,14 +67,14 @@ describe('[CF] Session repository metadata annotations', () => {
     await repo.setMetadataAnnotationIfMissing(
       projectId,
       missingSessionId,
-      'ama.dev/idle-timeout-seconds',
+      'enbor.dev/idle-timeout-seconds',
       '60',
       timestamp,
     )
     await repo.setMetadataAnnotationIfMissing(
       projectId,
       explicitSessionId,
-      'ama.dev/idle-timeout-seconds',
+      'enbor.dev/idle-timeout-seconds',
       '60',
       timestamp,
     )
@@ -85,11 +85,11 @@ describe('[CF] Session repository metadata annotations', () => {
     const metadataById = Object.fromEntries(rows.results.map((row) => [row.id, JSON.parse(row.metadata)]))
     expect(metadataById).toEqual({
       [missingSessionId]: {
-        annotations: { source: 'inbox-trigger', 'ama.dev/idle-timeout-seconds': '60' },
+        annotations: { source: 'inbox-trigger', 'enbor.dev/idle-timeout-seconds': '60' },
         revision: 'concurrent-current',
       },
       [explicitSessionId]: {
-        annotations: { source: 'inbox-trigger', 'ama.dev/idle-timeout-seconds': '0' },
+        annotations: { source: 'inbox-trigger', 'enbor.dev/idle-timeout-seconds': '0' },
         retained: 'explicit',
       },
     })

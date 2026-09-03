@@ -31,7 +31,7 @@ function inboxTrigger(subscriptionPhase: 'pending' | 'active' | 'inactive' | 'er
         spec: {
           agentId: 'agent_1',
           environmentId: 'env_1',
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Triage the referenced message.',
           env: {},
           envFrom: [],
@@ -339,7 +339,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
   it.each([
     { templateAnnotations: {}, expectedIdleTimeout: '60' },
     {
-      templateAnnotations: { 'ama.dev/idle-timeout-seconds': '0' },
+      templateAnnotations: { 'enbor.dev/idle-timeout-seconds': '0' },
       expectedIdleTimeout: '0',
     },
   ])('defaults Inbox Session idle retention when missing while preserving template annotation metadata %#', async ({
@@ -359,7 +359,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
         options: expect.objectContaining({
           metadata: expect.objectContaining({
             annotations: expect.objectContaining({
-              'ama.dev/idle-timeout-seconds': expectedIdleTimeout,
+              'enbor.dev/idle-timeout-seconds': expectedIdleTimeout,
             }),
           }),
         }),
@@ -413,7 +413,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
 
   it.each([
     { annotations: {}, expectedBackfill: true },
-    { annotations: { 'ama.dev/idle-timeout-seconds': '0' }, expectedBackfill: false },
+    { annotations: { 'enbor.dev/idle-timeout-seconds': '0' }, expectedBackfill: false },
   ])('backfills a missing Inbox annotation before reuse while preserving existing annotation metadata %#', async ({
     annotations,
     expectedBackfill,
@@ -430,7 +430,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       expect(fake.setMetadataAnnotationIfMissing).toHaveBeenCalledWith(
         'project_1',
         existing.id,
-        'ama.dev/idle-timeout-seconds',
+        'enbor.dev/idle-timeout-seconds',
         '60',
         expect.any(String),
       )

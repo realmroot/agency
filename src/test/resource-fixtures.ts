@@ -57,7 +57,7 @@ export function agent(overrides: AgentOverrides = {}): Agent {
       systemPrompt: overrides.systemPrompt === undefined ? 'Do the work' : overrides.systemPrompt,
       provider: overrides.provider === undefined ? 'workers-ai' : overrides.provider,
       model: overrides.model === undefined ? '@cf/moonshotai/kimi-k2.6' : overrides.model,
-      skills: overrides.skills ?? ['ama@coding-agent'],
+      skills: overrides.skills ?? ['enbor@coding-agent'],
       subagents: overrides.subagents ?? [],
       allowedTools: overrides.allowedTools ?? ['read', 'write'],
       mcpConnectors: overrides.mcpConnectors ?? [],
@@ -193,7 +193,7 @@ export type VaultCredentialVersionOverrides = ResourceMetadataOverrides & {
   vaultId?: string
   organizationId?: string
   version?: number
-  provider?: 'ama'
+  provider?: 'enbor'
   secretRef?: string
   referenceName?: string
   hasSecret?: boolean
@@ -212,9 +212,9 @@ export function vaultCredentialVersion(overrides: VaultCredentialVersionOverride
       vaultId: overrides.vaultId ?? 'vault_1',
       organizationId: overrides.organizationId ?? 'org_1',
       version: overrides.version ?? 1,
-      provider: overrides.provider ?? 'ama',
-      secretRef: overrides.secretRef ?? 'ama-secret://vault_1/vaultcred_1',
-      referenceName: overrides.referenceName ?? 'AMA_VAULTCRED_1_V1',
+      provider: overrides.provider ?? 'enbor',
+      secretRef: overrides.secretRef ?? 'enbor-secret://vault_1/vaultcred_1',
+      referenceName: overrides.referenceName ?? 'ENBOR_VAULTCRED_1_V1',
       hasSecret: overrides.hasSecret ?? true,
       dataKeys: overrides.dataKeys ?? ['value'],
       metadata: overrides.metadata ?? {},

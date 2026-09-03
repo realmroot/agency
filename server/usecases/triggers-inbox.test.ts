@@ -57,8 +57,8 @@ function agent(bound: boolean): Agent {
             issuer: 'https://id.realmroot.dev/api/auth',
             subject: '019ff41a-7da6-708f-8b05-49a4cc6d5300',
             username: 'agent',
-            runtime: 'ama',
-            credentialRef: 'ama://vaults/vault_1/credentials/credential_1',
+            runtime: 'enbor',
+            credentialRef: 'enbor://vaults/vault_1/credentials/credential_1',
           }
         : null,
     },
@@ -84,7 +84,7 @@ function record(source: Trigger['spec']['source'] = { type: 'inbox' }): Trigger 
         spec: {
           agentId: 'agent_1',
           environmentId: null,
-          runtime: 'ama',
+          runtime: 'enbor',
           promptTemplate: 'Triage it.',
           env: {},
           envFrom: [],

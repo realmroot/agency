@@ -170,8 +170,8 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
 
   it('completes the fake enrollment flow, persists its checkpoint, and resumes an enrolled checkpoint', async () => {
     const gateway = createRealmrootEnrollmentGateway({
-      AMA_E2E_TEST_AUTH: 'true',
-      AMA_E2E_FAKE_REALMROOT_ENROLLMENT: 'true',
+      E2E_TEST_AUTH: 'true',
+      E2E_FAKE_REALMROOT_ENROLLMENT: 'true',
     } as never)
     const initialized = await gateway.initialize({
       origin: `${origin}/path-is-normalized`,
@@ -333,7 +333,7 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
         origin,
         name: 'Reviewer',
         username: 'reviewer',
-        runtime: 'ama',
+        runtime: 'enbor',
         idempotencyKey: 'idem-other',
         checkpoint,
         managementCredential: { headers: async () => ({}) },
@@ -343,7 +343,7 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
   })
 
   it.each([
-    'ama',
+    'enbor',
     'codex',
     'claude-code',
     'copilot',
@@ -363,7 +363,7 @@ describe('[spec: identities/provision] Realmroot enrollment boundary', () => {
             issuer: configuration.issuer,
             subject: 'rr_agent_1',
             username: 'reviewer',
-            runtime: runtime === 'codex' ? 'ama' : 'codex',
+            runtime: runtime === 'codex' ? 'enbor' : 'codex',
             status: 'active',
           })
         }

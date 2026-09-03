@@ -26,21 +26,21 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
-          [{ name: 'memory-memstore_1', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: true }],
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'enbor://memories/memstore_1' }],
+          [{ name: 'memory-memstore_1', mountPath: '/workspace/.enbor/memory-stores/memstore_1', readOnly: true }],
         ),
       ).volumes,
-    ).toEqual([{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }])
+    ).toEqual([{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'enbor://memories/memstore_1' }])
 
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'enbor://memories/memstore_1' }],
           [{ name: 'memory-memstore_1', mountPath: '/workspace/custom' }],
         ),
       ),
     ).toEqual({
-      fields: { 'volumeMounts.0.mountPath': 'Memory store mounts must stay under /workspace/.ama/memory-stores.' },
+      fields: { 'volumeMounts.0.mountPath': 'Memory store mounts must stay under /workspace/.enbor/memory-stores.' },
     })
   })
 
@@ -48,10 +48,10 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
     expect(
       normalizeWorkspaceSpec(
         workspaceSpec(
-          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'ama://memories/memstore_1' }],
+          [{ name: 'memory-memstore_1', type: 'memory', memoryRef: 'enbor://memories/memstore_1' }],
           [
             JSON.parse(
-              '{ "name": "memory-memstore_1", "mountPath": "/workspace/.ama/memory-stores/memstore_1", "readOnly": "bad" }',
+              '{ "name": "memory-memstore_1", "mountPath": "/workspace/.enbor/memory-stores/memstore_1", "readOnly": "bad" }',
             ),
           ],
         ),
@@ -61,12 +61,12 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
       normalizeWorkspaceSpec(
         workspaceSpec(
           [
-            { name: 'memory-a', type: 'memory', memoryRef: 'ama://memories/memstore_1' },
-            { name: 'memory-b', type: 'memory', memoryRef: 'ama://memories/memstore_1' },
+            { name: 'memory-a', type: 'memory', memoryRef: 'enbor://memories/memstore_1' },
+            { name: 'memory-b', type: 'memory', memoryRef: 'enbor://memories/memstore_1' },
           ],
           [
-            { name: 'memory-a', mountPath: '/workspace/.ama/memory-stores/memstore_1' },
-            { name: 'memory-b', mountPath: '/workspace/.ama/memory-stores/memstore_1' },
+            { name: 'memory-a', mountPath: '/workspace/.enbor/memory-stores/memstore_1' },
+            { name: 'memory-b', mountPath: '/workspace/.enbor/memory-stores/memstore_1' },
           ],
         ),
       ),
@@ -86,12 +86,12 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
         {
           name: 'Team memory',
           type: 'memory',
-          memoryRef: 'ama://memories/memstore_1',
+          memoryRef: 'enbor://memories/memstore_1',
         },
       ],
       [
         { name: 'source', mountPath: '/workspace/repos/saltbo/downstream-service' },
-        { name: 'Team memory', mountPath: '/workspace/.ama/memory-stores/memstore_1', readOnly: false },
+        { name: 'Team memory', mountPath: '/workspace/.enbor/memory-stores/memstore_1', readOnly: false },
       ],
     )
     expect(augmented.systemPrompt).toContain('Base instructions.')
@@ -100,7 +100,7 @@ describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
       'https://github.com/saltbo/downstream-service.git at repos/saltbo/downstream-service',
     )
     expect(augmented.systemPrompt).toContain('Team memory')
-    expect(augmented.systemPrompt).toContain('.ama/memory-stores/memstore_1')
+    expect(augmented.systemPrompt).toContain('.enbor/memory-stores/memstore_1')
   })
 })
 
@@ -115,7 +115,7 @@ describe('[spec: sessions/identity-materialization] Realmroot workspace context'
           subject: 'rr_agent_1',
           username: 'runner',
           runtime: 'codex',
-          credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+          credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
         },
       }),
       [],
@@ -123,6 +123,6 @@ describe('[spec: sessions/identity-materialization] Realmroot workspace context'
     )
 
     expect(augmented.systemPrompt).toContain('Realmroot Toolbox')
-    expect(augmented.systemPrompt).not.toContain('ama://vaults/')
+    expect(augmented.systemPrompt).not.toContain('enbor://vaults/')
   })
 })

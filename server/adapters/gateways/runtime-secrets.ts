@@ -130,7 +130,7 @@ export async function resolveRuntimeWorkspaceManifest(
       mounts.push({
         type: 'empty_dir',
         name: volume.name,
-        mountPath: mountPath ?? `/workspace/.ama/empty-dirs/${volume.name}`,
+        mountPath: mountPath ?? `/workspace/.enbor/empty-dirs/${volume.name}`,
         readOnly: false,
         files,
       })
@@ -141,7 +141,7 @@ export async function resolveRuntimeWorkspaceManifest(
       mounts.push({
         type: 'secret',
         name: volume.name,
-        mountPath: mountPath ?? `/workspace/.ama/secrets/${volume.name}`,
+        mountPath: mountPath ?? `/workspace/.enbor/secrets/${volume.name}`,
         readOnly: true,
         files: resolved,
       })

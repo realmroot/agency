@@ -175,7 +175,7 @@ func displayName() string {
 	if err == nil && strings.TrimSpace(hostname) != "" {
 		return hostname
 	}
-	return "ama-runner"
+	return "enbor-runner"
 }
 
 func newMachineID() (string, error) {

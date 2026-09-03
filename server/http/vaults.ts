@@ -61,12 +61,12 @@ const CredentialVersionSchema = z
         vaultId: z.string().openapi({ example: '0195f5d6-7c20-7000-8000-000000000007' }),
         organizationId: z.string().openapi({ example: 'org_abc123' }),
         version: z.number().int().openapi({ example: 2 }),
-        provider: SecretProviderSchema.openapi({ example: 'ama' }),
+        provider: SecretProviderSchema.openapi({ example: 'enbor' }),
         secretRef: z.string().openapi({
           example:
-            'ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009',
+            'enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009',
         }),
-        referenceName: z.string().openapi({ example: 'AMA_PROJECT_ABC123_TOKEN_V2' }),
+        referenceName: z.string().openapi({ example: 'ENBOR_PROJECT_ABC123_TOKEN_V2' }),
         hasSecret: z.boolean().openapi({ example: true }),
         dataKeys: z.array(z.string()).openapi({ example: ['token'] }),
         metadata: VaultJsonObjectSchema.openapi({ example: { rotatedBy: 'operator' } }),
@@ -142,7 +142,7 @@ const SecretMaterialSchema = z
       .record(z.string(), z.string().min(1).max(16000))
       .refine((value) => Object.keys(value).length > 0, 'At least one data key is required.')
       .openapi({ example: { token: 'redacted-input-only' } }),
-    referenceName: z.string().min(1).max(160).optional().openapi({ example: 'AMA_PROJECT_TOKEN' }),
+    referenceName: z.string().min(1).max(160).optional().openapi({ example: 'ENBOR_PROJECT_TOKEN' }),
     metadata: JsonObjectSchema.optional().openapi({ example: { source: 'console' } }),
   })
   .strict()

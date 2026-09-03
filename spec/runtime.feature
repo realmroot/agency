@@ -41,7 +41,7 @@ Feature: Runtime
     And a startup failure mutates, destroys, and reports only while it owns the same pending generation
     And an approval decision atomically leases an idle Session before tool execution or continuation so duplicate approval and close cannot race it
 
-  @runtime/self-hosted-ama-cloud-loop @usecase
+  @runtime/self-hosted-enbor-cloud-loop @usecase
   Scenario: Run self-hosted Enbor through the cloud turn loop with a runner sandbox
     Given an Enbor session uses a self-hosted environment
     When the runner claims the session work
@@ -55,9 +55,16 @@ Feature: Runtime
     When the agent runtime starts in the session workspace
     Then the current working directory is the agent-visible workspace root
     And repositories are mounted under workspace-relative repos/<owner>/<repo> paths
-    And memory stores are mounted under workspace-relative .ama/memory-stores/<store-id> paths
+    And memory stores are mounted under workspace-relative .enbor/memory-stores/<store-id> paths
     And runner-owned state, credentials, process home, process temp, event logs, and control-plane manifests remain outside the agent-visible workspace
     And the runtime prompt describes the workspace layout using workspace-relative paths
+
+  @runtime/enbor-contract-cutover @migration
+  Scenario: Migrate persisted runtime contracts to Enbor
+    Given persisted resources still use AMA runtime names, references, domains, and environment keys
+    When the Enbor contract migration is applied
+    Then the persisted runtime, runner protocol, credential, and reference values use Enbor
+    And database constraints reject the retired AMA runtime and credential contracts
 
   @runtime/cooperative-cancellation @usecase
   Scenario: Cancel a running session without starting more work

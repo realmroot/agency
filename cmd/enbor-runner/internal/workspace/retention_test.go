@@ -365,12 +365,12 @@ func installRetryableScriptedGit(t *testing.T) string {
 	dir := t.TempDir()
 	failureMarker := filepath.Join(dir, "fail-worktree-cleanup")
 	writeFile(t, failureMarker, []byte("fail"))
-	t.Setenv("AMA_TEST_GIT_FAILURE_MARKER", failureMarker)
+	t.Setenv("ENBOR_TEST_GIT_FAILURE_MARKER", failureMarker)
 	script := `#!/bin/sh
 set -eu
 case "$*" in
   *"worktree remove"*|*"worktree prune"*)
-    if [ -f "$AMA_TEST_GIT_FAILURE_MARKER" ]; then
+    if [ -f "$ENBOR_TEST_GIT_FAILURE_MARKER" ]; then
       exit 9
     fi
     ;;

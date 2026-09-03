@@ -29,14 +29,14 @@ export interface MemoryStatus {
   phase: ResourcePhase
 }
 
-export const MEMORY_STORE_MOUNT_ROOT = '/workspace/.ama/memory-stores'
+export const MEMORY_STORE_MOUNT_ROOT = '/workspace/.enbor/memory-stores'
 
 function uriPathSegment(value: string) {
   return encodeURIComponent(value)
 }
 
 export function enborMemoryRef(storeId: string) {
-  return `ama://memories/${uriPathSegment(storeId)}`
+  return `enbor://memories/${uriPathSegment(storeId)}`
 }
 
 export function memoryStoreIdFromRef(memoryRef: string): string | null {
@@ -46,7 +46,7 @@ export function memoryStoreIdFromRef(memoryRef: string): string | null {
   } catch {
     return null
   }
-  if (parsed.protocol !== 'ama:' || parsed.hostname !== 'memories') {
+  if (parsed.protocol !== 'enbor:' || parsed.hostname !== 'memories') {
     return null
   }
   const [storeId, ...rest] = parsed.pathname.split('/').filter(Boolean)
@@ -72,9 +72,9 @@ export function normalizeMemoryPath(path: string): string {
   if (
     segments.length === 0 ||
     segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..') ||
-    segments[0] === '.ama'
+    segments[0] === '.enbor'
   ) {
-    throw new Error('Memory path must use clean relative segments outside .ama.')
+    throw new Error('Memory path must use clean relative segments outside .enbor.')
   }
   if (!segments.every((segment) => /^[A-Za-z0-9._-]+$/.test(segment))) {
     throw new Error('Memory path segments may contain only letters, numbers, dots, underscores, and hyphens.')

@@ -354,7 +354,7 @@ describe('materializeWorkItemPayload', () => {
         rawPayload: async () => ({
           type: 'session.start',
           env: { EXISTING: 'a' },
-          envFrom: [{ type: 'secret', name: 'TOKEN', secretRef: 'ama://vaults/v/credentials/c/versions/ver' }],
+          envFrom: [{ type: 'secret', name: 'TOKEN', secretRef: 'enbor://vaults/v/credentials/c/versions/ver' }],
         }),
       },
       resolveEnv: async () => ({ TOKEN: 'secret' }),
@@ -369,7 +369,7 @@ describe('materializeWorkItemPayload', () => {
       workItems: {
         rawPayload: async () => ({
           type: 'session.start',
-          envFrom: [{ type: 'secret', name: 'API_KEY', secretRef: 'ama://vaults/v/credentials/c/versions/ver' }],
+          envFrom: [{ type: 'secret', name: 'API_KEY', secretRef: 'enbor://vaults/v/credentials/c/versions/ver' }],
         }),
       },
       resolveEnv: async () => ({ API_KEY: 'mysecret' }),

@@ -67,7 +67,7 @@ describe('[CF] /api/v1/vaults', () => {
         scope.organization_id,
         scope.project_id,
         'Legacy Realmroot Agent state',
-        'ama.dev/realmroot-agent-state',
+        'enbor.dev/realmroot-agent-state',
         JSON.stringify({ managedBy: 'identity', identityId }),
         'active',
         now,
@@ -90,7 +90,7 @@ describe('[CF] /api/v1/vaults', () => {
           scope.organization_id,
           scope.project_id,
           'Duplicate Realmroot Agent state',
-          'ama.dev/realmroot-agent-state',
+          'enbor.dev/realmroot-agent-state',
           JSON.stringify({ managedBy: 'identity', identityId, purpose: 'agent-state' }),
           'active',
           now,
@@ -379,35 +379,35 @@ describe('[CF] /api/v1/vaults', () => {
     const cases = [
       {
         name: 'basic-auth',
-        type: 'ama.dev/basic-auth',
+        type: 'enbor.dev/basic-auth',
         stringData: { username: 'service-user', password: 'service-password' },
         dataKeys: ['password', 'username'],
         raw: 'service-password',
       },
       {
         name: 'ssh-auth',
-        type: 'ama.dev/ssh-auth',
+        type: 'enbor.dev/ssh-auth',
         stringData: { 'ssh-privatekey': '-----BEGIN OPENSSH PRIVATE KEY-----' },
         dataKeys: ['ssh-privatekey'],
         raw: '-----BEGIN OPENSSH PRIVATE KEY-----',
       },
       {
         name: 'tls',
-        type: 'ama.dev/tls',
+        type: 'enbor.dev/tls',
         stringData: { 'tls.crt': '-----BEGIN CERTIFICATE-----', 'tls.key': '-----BEGIN PRIVATE KEY-----' },
         dataKeys: ['tls.crt', 'tls.key'],
         raw: '-----BEGIN PRIVATE KEY-----',
       },
       {
         name: 'oauth-token',
-        type: 'ama.dev/oauth-token',
+        type: 'enbor.dev/oauth-token',
         stringData: { 'access-token': 'oauth-access-token', 'refresh-token': 'oauth-refresh-token' },
         dataKeys: ['access-token', 'refresh-token'],
         raw: 'oauth-access-token',
       },
       {
         name: 'private-key-jwk',
-        type: 'ama.dev/private-key-jwk',
+        type: 'enbor.dev/private-key-jwk',
         stringData: { jwk: '{"kty":"OKP","crv":"Ed25519","x":"public","d":"jwk-secret-material"}' },
         dataKeys: ['jwk'],
         raw: 'jwk-secret-material',
@@ -438,7 +438,7 @@ describe('[CF] /api/v1/vaults', () => {
       method: 'POST',
       body: JSON.stringify({
         name: 'bad-basic-auth',
-        type: 'ama.dev/basic-auth',
+        type: 'enbor.dev/basic-auth',
         secret: { stringData: { username: 'service-user' } },
       }),
     })
@@ -451,7 +451,7 @@ describe('[CF] /api/v1/vaults', () => {
       method: 'POST',
       body: JSON.stringify({
         name: 'bad-tls',
-        type: 'ama.dev/tls',
+        type: 'enbor.dev/tls',
         secret: { stringData: { 'tls.crt': 'crt', 'tls.key': 'key', token: 'not-allowed' } },
       }),
     })
@@ -504,12 +504,12 @@ describe('[CF] /api/v1/vaults', () => {
       )
       .run()
     const projectReadRes = await jsonFetch(`/api/v1/vaults/${projectVaultId}`, authorization, {
-      headers: { 'x-ama-project-id': alternateProjectId },
+      headers: { 'x-enbor-project-id': alternateProjectId },
     })
     expect(projectReadRes.status).toBe(404)
 
     const orgReadRes = await jsonFetch(`/api/v1/vaults/${orgVaultId}`, authorization, {
-      headers: { 'x-ama-project-id': alternateProjectId },
+      headers: { 'x-enbor-project-id': alternateProjectId },
     })
     expect(orgReadRes.status).toBe(200)
     await expect(orgReadRes.json()).resolves.toMatchObject({

@@ -33,7 +33,7 @@ export async function validateRuntimeProviderModel(
   // Enbor's in-Worker model client has no provider-owned default-selection
   // protocol. A Cloudflare model is therefore an explicit Agent pin, while
   // external CLI runtimes remain free to resolve their own defaults.
-  if (runtime === 'ama') {
+  if (runtime === 'enbor') {
     return Boolean(provider && model && (await deps.providers.findModel(provider, model)))
   }
   if (hostingMode === 'cloud') {

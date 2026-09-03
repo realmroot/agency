@@ -39,9 +39,9 @@ function fakeD1ForProjectHint(row: ProjectRawRow) {
 function envFor(issuer: string, overrides: Partial<Env> = {}) {
   return {
     OIDC_ISSUER: issuer,
-    OIDC_CLIENT_ID: 'ama',
+    OIDC_CLIENT_ID: 'enbor',
     OIDC_CLIENT_SECRET: 'secret',
-    OIDC_RESOURCE: 'https://ama.example.com',
+    OIDC_RESOURCE: 'https://enbor.example.com',
     OIDC_USE_SERVICE_BINDING: 'false',
     ...overrides,
   } as Env
@@ -51,7 +51,7 @@ async function signedToken({
   issuer,
   subject = 'user_real',
   claims = {},
-  audience = 'https://ama.example.com',
+  audience = 'https://enbor.example.com',
 }: {
   issuer: string
   subject?: string | null
@@ -64,7 +64,7 @@ async function signedToken({
   jwk.alg = 'RS256'
   jwk.use = 'sig'
 
-  let jwt = new SignJWT({ client_id: 'ama', scope: 'agents:read', cnf: { jkt: 'test-thumbprint' }, ...claims })
+  let jwt = new SignJWT({ client_id: 'enbor', scope: 'agents:read', cnf: { jkt: 'test-thumbprint' }, ...claims })
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key', typ: 'at+jwt' })
     .setIssuer(issuer)
     .setIssuedAt()
@@ -106,18 +106,18 @@ function requestedPaths(fetchMock: ReturnType<typeof vi.fn>) {
 
 function testAuthEnv(overrides: Partial<Env> = {}) {
   return {
-    AMA_RUNTIME_MODE: 'test',
-    AMA_E2E_TEST_AUTH: 'true',
+    RUNTIME_MODE: 'test',
+    E2E_TEST_AUTH: 'true',
     OIDC_ISSUER: 'https://id-e2e.test/api/auth',
-    OIDC_CLIENT_ID: 'ama',
-    OIDC_RUNNER_CLIENT_ID: 'ama-runner',
-    OIDC_RESOURCE: 'https://ama.example.com',
+    OIDC_CLIENT_ID: 'enbor',
+    OIDC_RUNNER_CLIENT_ID: 'enbor-runner',
+    OIDC_RESOURCE: 'https://enbor.example.com',
     ...overrides,
   } as Env
 }
 
 function e2eDpopRequest(accessToken: string, path = '/api/v1/runners') {
-  const url = `https://ama.example.com${path}`
+  const url = `https://enbor.example.com${path}`
   return new Request(url, {
     headers: {
       authorization: `DPoP ${accessToken}`,
@@ -159,11 +159,11 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     await expect(
       getBearerClaims(
         env,
-        new Request('https://ama.example.com/api/v1/agents', {
+        new Request('https://enbor.example.com/api/v1/agents', {
           headers: { authorization: 'Bearer e2e:console' },
         }),
       ),
-    ).resolves.toMatchObject({ client_id: 'ama' })
+    ).resolves.toMatchObject({ client_id: 'enbor' })
     await expect(getDpopClaims(env, e2eDpopRequest('e2e:console'))).rejects.toMatchObject({
       message: 'Realmroot Console and runner clients require Bearer authentication',
     })
@@ -183,7 +183,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     await expect(
       getBearerClaims(
         envFor(issuer),
-        new Request('https://ama.example.com/api/v1/agents', {
+        new Request('https://enbor.example.com/api/v1/agents', {
           headers: { authorization: `Bearer ${token}` },
         }),
       ),
@@ -195,7 +195,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     const { token, jwks } = await signedToken({
       issuer,
       claims: {
-        client_id: 'ama',
+        client_id: 'enbor',
         cnf: { jkt: 'console-bound-key-thumbprint' },
       },
     })
@@ -204,7 +204,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     await expect(
       getBearerClaims(
         envFor(issuer),
-        new Request('https://ama.example.com/api/v1/agents', {
+        new Request('https://enbor.example.com/api/v1/agents', {
           headers: { authorization: `Bearer ${token}` },
         }),
       ),
@@ -219,11 +219,11 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
     await expect(
       getBearerClaims(
         env,
-        new Request('https://ama.example.com/api/v1/runners', {
+        new Request('https://enbor.example.com/api/v1/runners', {
           headers: { authorization: 'Bearer e2e-runner:runner' },
         }),
       ),
-    ).resolves.toMatchObject({ client_id: 'ama-runner', roles: ['runner'] })
+    ).resolves.toMatchObject({ client_id: 'enbor-runner', roles: ['runner'] })
     await expect(getDpopClaims(env, e2eDpopRequest('e2e-runner:runner'))).rejects.toMatchObject({
       message: 'Realmroot Console and runner clients require Bearer authentication',
     })
@@ -243,7 +243,7 @@ describe('[spec: auth/credential-mode] Realmroot credential modes', () => {
       },
     })
     stubJwks(jwks)
-    const url = 'https://ama.example.com/api/v1/agents'
+    const url = 'https://enbor.example.com/api/v1/agents'
     const proof = await new SignJWT({
       htu: url,
       htm: 'GET',
@@ -279,7 +279,7 @@ describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () 
   it('requires a configured runner client for deterministic runner tokens', async () => {
     await expect(
       getAccessTokenClaims(
-        { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'ama-test' } as Env,
+        { RUNTIME_MODE: 'test', E2E_TEST_AUTH: 'true', OIDC_CLIENT_ID: 'enbor-test' } as Env,
         'e2e-runner:missing-client',
       ),
     ).rejects.toBeInstanceOf(OidcError)
@@ -313,7 +313,7 @@ describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () 
     const issuer = 'https://id-real-user.test/api/auth'
     const { token, jwks } = await signedToken({
       issuer,
-      claims: { client_id: 'ama' },
+      claims: { client_id: 'enbor' },
     })
     const fetchMock = stubJwks(jwks)
 
@@ -330,7 +330,7 @@ describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () 
     const { token, jwks } = await signedToken({
       issuer,
       claims: {
-        client_id: 'ama',
+        client_id: 'enbor',
         'urn:realmroot:params:oauth:org': 'org_canonical',
       },
     })
@@ -347,7 +347,7 @@ describe('[spec: auth/oidc-claims] Realmroot access-token claim resolution', () 
     const { token, jwks } = await signedToken({
       issuer,
       claims: {
-        client_id: 'ama',
+        client_id: 'enbor',
         org_id: 'org_legacy',
         organization_id: 'org_legacy_fallback',
       },
@@ -424,7 +424,7 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
     ['wrong', 'https://other-api.example.com'],
   ])('rejects a signed JWT with %s Enbor audience', async (_name, audience) => {
     const issuer = `https://id-audience-${_name}.test/api/auth`
-    const resource = 'https://ama.example.com'
+    const resource = 'https://enbor.example.com'
     const { token, jwks } = await signedToken({ issuer, audience })
     stubJwks(jwks)
 
@@ -435,7 +435,7 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
 
   it('accepts the configured Enbor audience and does not invent owner or wildcard authority', async () => {
     const issuer = 'https://id-audience-correct.test/api/auth'
-    const resource = 'https://ama.example.com'
+    const resource = 'https://enbor.example.com'
     const { token, jwks } = await signedToken({ issuer, audience: resource })
     stubJwks(jwks)
 
@@ -447,40 +447,40 @@ describe('[spec: auth/oidc-audience] OIDC resource audience enforcement', () => 
 
   it.each([
     {},
-    { AMA_RUNTIME_MODE: 'production' },
-    { AMA_RUNTIME_MODE: 'tests', AMA_E2E_TEST_AUTH: 'true' },
-    { AMA_RUNTIME_MODE: 'test' },
-    { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'false' },
-    { AMA_RUNTIME_MODE: 'live', AMA_E2E_TEST_AUTH: 'true' },
+    { RUNTIME_MODE: 'production' },
+    { RUNTIME_MODE: 'tests', E2E_TEST_AUTH: 'true' },
+    { RUNTIME_MODE: 'test' },
+    { RUNTIME_MODE: 'test', E2E_TEST_AUTH: 'false' },
+    { RUNTIME_MODE: 'live', E2E_TEST_AUTH: 'true' },
   ])('fails closed without OIDC_RESOURCE for runtime flags %j', (values) => {
-    expect(() => oidcAudience(values as Env, 'https://ama.example.com/api/v1/agents')).toThrow(
+    expect(() => oidcAudience(values as Env, 'https://enbor.example.com/api/v1/agents')).toThrow(
       'OIDC_RESOURCE is required',
     )
   })
 
   it('getAccessTokenClaims fails closed in live mode without an explicit OIDC_RESOURCE', async () => {
-    const liveEnv = envFor('https://id-live-resource.test/api/auth', { AMA_RUNTIME_MODE: 'live' })
+    const liveEnv = envFor('https://id-live-resource.test/api/auth', { RUNTIME_MODE: 'live' })
     delete liveEnv.OIDC_RESOURCE
     await expect(
-      getAccessTokenClaims(liveEnv, 'opaque-token', 'https://ama.example.com/api/v1/agents'),
+      getAccessTokenClaims(liveEnv, 'opaque-token', 'https://enbor.example.com/api/v1/agents'),
     ).rejects.toMatchObject({ message: expect.stringContaining('OIDC_RESOURCE is required') })
   })
 
   it('uses request origin fallback only in explicit e2e test mode', () => {
     expect(
       oidcAudience(
-        { AMA_RUNTIME_MODE: 'test', AMA_E2E_TEST_AUTH: 'true' } as Env,
-        'https://ama.example.com/api/v1/agents?limit=10',
+        { RUNTIME_MODE: 'test', E2E_TEST_AUTH: 'true' } as Env,
+        'https://enbor.example.com/api/v1/agents?limit=10',
       ),
-    ).toBe('https://ama.example.com')
+    ).toBe('https://enbor.example.com')
   })
 
   it('does not accept synthesized e2e tokens in live mode even when the test-auth flag is set', async () => {
     await expect(
       getAccessTokenClaims(
         envFor('https://id-live-e2e.test/api/auth', {
-          AMA_RUNTIME_MODE: 'live',
-          AMA_E2E_TEST_AUTH: 'true',
+          RUNTIME_MODE: 'live',
+          E2E_TEST_AUTH: 'true',
         }),
         'e2e:user_1',
       ),

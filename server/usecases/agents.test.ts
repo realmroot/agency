@@ -40,7 +40,7 @@ const identityDescriptor = {
   subject: 'rr_agent_1',
   username: 'reviewer',
   runtime: 'codex' as const,
-  credentialRef: 'ama://vaults/vault_1/credentials/cred_1',
+  credentialRef: 'enbor://vaults/vault_1/credentials/cred_1',
 }
 
 function agentRecord(

@@ -94,7 +94,7 @@ describe('CreateAgentSheet', () => {
     expect(screen.getByText('Create Agent')).toBeInTheDocument()
     expect(screen.getByText('Save agent')).toBeInTheDocument()
     expect(screen.getByLabelText('Skills')).toHaveValue('')
-    expect(screen.queryByText('ama@coding-agent')).toBeNull()
+    expect(screen.queryByText('enbor@coding-agent')).toBeNull()
   })
 
   it('calls API and closes sheet on successful submission', async () => {

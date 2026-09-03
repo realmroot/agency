@@ -1,4 +1,4 @@
-// The session event store router. "Storage follows the loop": cloud-loop (ama)
+// The session event store router. "Storage follows the loop": cloud-loop (enbor)
 // sessions keep their event firehose in the per-session Session DO (SQLite hot +
 // R2 cold). Self-hosted/external runtime sessions keep durable history on the
 // runner only; the cloud relays live events and backfill reads but does not store

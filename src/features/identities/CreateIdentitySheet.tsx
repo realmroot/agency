@@ -94,7 +94,7 @@ export function CreateIdentitySheet({ open, onOpenChange }: { open: boolean; onO
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="ama">Enbor</SelectItem>
+                    <SelectItem value="enbor">Enbor</SelectItem>
                     <SelectItem value="codex">Codex</SelectItem>
                     <SelectItem value="claude-code">Claude Code</SelectItem>
                     <SelectItem value="copilot">Copilot</SelectItem>

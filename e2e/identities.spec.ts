@@ -3,7 +3,7 @@ import { type E2eToken, expect, gotoAuthed, test } from './fixtures'
 function apiHeaders(token: E2eToken) {
   return {
     authorization: `Bearer ${token.accessToken}`,
-    'x-ama-project-id': token.projectId,
+    'x-enbor-project-id': token.projectId,
   }
 }
 
@@ -29,7 +29,7 @@ test('creates a Codex Identity, binds an Agent, and locks the Session Runtime [s
   const environment = (await environmentResponse.json()) as { metadata: { uid: string } }
   const runnerHeaders = {
     authorization: `Bearer ${token.accessToken.replace(/^e2e:/, 'e2e-runner:')}`,
-    'x-ama-project-id': token.projectId,
+    'x-enbor-project-id': token.projectId,
   }
   const runnerResponse = await page.request.post('/api/v1/runners', {
     headers: runnerHeaders,
@@ -197,7 +197,7 @@ test('rejects a Session Runtime that conflicts with its bound Identity [spec: se
       spec: {
         agentId: agent.metadata.uid,
         environmentId: environment.metadata.uid,
-        runtime: 'ama',
+        runtime: 'enbor',
       },
     },
   })

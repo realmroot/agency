@@ -14,28 +14,28 @@ export const emptyCredential: CredentialFormState = {
 
 export const credentialTypes: Array<{ type: CredentialType; label: string }> = [
   { type: 'opaque', label: 'Opaque' },
-  { type: 'ama.dev/basic-auth', label: 'Basic auth' },
-  { type: 'ama.dev/ssh-auth', label: 'SSH auth' },
-  { type: 'ama.dev/tls', label: 'TLS' },
-  { type: 'ama.dev/private-key-jwk', label: 'Private key JWK' },
-  { type: 'ama.dev/oauth-token', label: 'OAuth token' },
+  { type: 'enbor.dev/basic-auth', label: 'Basic auth' },
+  { type: 'enbor.dev/ssh-auth', label: 'SSH auth' },
+  { type: 'enbor.dev/tls', label: 'TLS' },
+  { type: 'enbor.dev/private-key-jwk', label: 'Private key JWK' },
+  { type: 'enbor.dev/oauth-token', label: 'OAuth token' },
 ]
 
 export function defaultCredentialData(type: CredentialType): Record<string, string> {
   switch (type) {
     case 'opaque':
       return { value: '' }
-    case 'ama.dev/basic-auth':
+    case 'enbor.dev/basic-auth':
       return { username: '', password: '' }
-    case 'ama.dev/ssh-auth':
+    case 'enbor.dev/ssh-auth':
       return { 'ssh-privatekey': '' }
-    case 'ama.dev/tls':
+    case 'enbor.dev/tls':
       return { 'tls.crt': '', 'tls.key': '' }
-    case 'ama.dev/private-key-jwk':
+    case 'enbor.dev/private-key-jwk':
       return { jwk: '' }
-    case 'ama.dev/oauth-token':
+    case 'enbor.dev/oauth-token':
       return { 'access-token': '', 'refresh-token': '', 'token-type': '', 'expires-at': '', scopes: '' }
-    case 'ama.dev/realmroot-agent-state':
+    case 'enbor.dev/realmroot-agent-state':
       return { 'state.json': '' }
   }
 }
@@ -60,17 +60,17 @@ function requiredCredentialDataKeys(type: CredentialType) {
   switch (type) {
     case 'opaque':
       return []
-    case 'ama.dev/basic-auth':
+    case 'enbor.dev/basic-auth':
       return ['username', 'password']
-    case 'ama.dev/ssh-auth':
+    case 'enbor.dev/ssh-auth':
       return ['ssh-privatekey']
-    case 'ama.dev/tls':
+    case 'enbor.dev/tls':
       return ['tls.crt', 'tls.key']
-    case 'ama.dev/private-key-jwk':
+    case 'enbor.dev/private-key-jwk':
       return ['jwk']
-    case 'ama.dev/oauth-token':
+    case 'enbor.dev/oauth-token':
       return ['access-token']
-    case 'ama.dev/realmroot-agent-state':
+    case 'enbor.dev/realmroot-agent-state':
       return ['state.json']
   }
 }

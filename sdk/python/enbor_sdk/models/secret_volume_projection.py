@@ -29,7 +29,7 @@ class SecretVolumeProjection:
         Attributes:
             type_ (SecretVolumeProjectionType):
             secret_ref (str):  Example:
-                ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
+                enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-8000-000000000008.
             items (list[SecretItem] | Unset):
      """
 

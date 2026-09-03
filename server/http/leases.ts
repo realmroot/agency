@@ -345,7 +345,7 @@ export function registerLeaseRoutes(routes: LeaseRoutes) {
       if (
         requestedState === 'completed' &&
         rawPayload?.type === 'session.start' &&
-        rawPayload.runtime === 'ama' &&
+        rawPayload.runtime === 'enbor' &&
         typeof rawPayload.sessionId === 'string' &&
         typeof rawPayload.prompt === 'string' &&
         rawPayload.prompt

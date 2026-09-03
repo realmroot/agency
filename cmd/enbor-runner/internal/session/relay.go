@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/protocol"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/workspace"
 )
 
-type Channel = ama.JSONChannel
-type AssignmentHandler func(context.Context, *ama.Lease, *ama.WorkItem)
+type Channel = enbor.JSONChannel
+type AssignmentHandler func(context.Context, *enbor.Lease, *enbor.WorkItem)
 
 // Opener dials the per-runner relay channel
 // (GET /api/v1/runners/{runnerId}/channel).
@@ -130,7 +130,7 @@ func (h *Relay) advertiseActiveSessions(ctx context.Context, conn Channel) error
 
 	h.writeMu.Lock()
 	defer h.writeMu.Unlock()
-	return conn.WriteJSON(ctx, ama.JSON{
+	return conn.WriteJSON(ctx, enbor.JSON{
 		"type":       "runner.sessions.active",
 		"runnerId":   h.runnerID,
 		"sessionIds": sessionIDs,
@@ -193,8 +193,8 @@ func (h *Relay) handleWorkAssigned(ctx context.Context, raw json.RawMessage) {
 		return
 	}
 	var frame struct {
-		Lease    ama.Lease    `json:"lease"`
-		WorkItem ama.WorkItem `json:"workItem"`
+		Lease    enbor.Lease    `json:"lease"`
+		WorkItem enbor.WorkItem `json:"workItem"`
 	}
 	if err := json.Unmarshal(raw, &frame); err != nil {
 		slog.Warn("runner relay work assignment is invalid; dropping", "error", err)
@@ -210,7 +210,7 @@ func (h *Relay) handleWorkAssigned(ctx context.Context, raw json.RawMessage) {
 func (h *Relay) handleSandboxRequest(ctx context.Context, conn Channel, message protocol.RunnerChannelMessage) {
 	sessionID := protocol.MessageSessionID(message)
 	request := protocol.MessageSandboxRequest(message)
-	response := ama.JSON{
+	response := enbor.JSON{
 		"type":      "sandbox.response",
 		"requestId": protocol.MessageRequestID(message),
 		"sessionId": sessionID,
@@ -244,7 +244,7 @@ func (h *Relay) handleSandboxRequest(ctx context.Context, conn Channel, message 
 	}
 	h.writeResponse(ctx, conn, response, "runner failed to write sandbox response", sessionID)
 	if response["ok"] == true && protocol.SandboxRequestType(request) == "sandbox.stop" {
-		h.writeResponse(ctx, conn, ama.JSON{
+		h.writeResponse(ctx, conn, enbor.JSON{
 			"type":      "runner.session.inactive",
 			"runnerId":  h.runnerID,
 			"sessionId": sessionID,
@@ -271,7 +271,7 @@ func (h *Relay) routeCommand(ctx context.Context, conn Channel, message protocol
 		if requestID == "" {
 			return
 		}
-		response := ama.JSON{
+		response := enbor.JSON{
 			"type":      "session.command.result",
 			"requestId": requestID,
 			"sessionId": sessionID,
@@ -365,16 +365,16 @@ func livePromptMessage(command protocol.RunnerSessionCommand) (string, bool) {
 	return *frame.Message, true
 }
 
-func livePromptPayload(message string) (ama.JSON, error) {
+func livePromptPayload(message string) (enbor.JSON, error) {
 	id, err := newEventID()
 	if err != nil {
 		return nil, err
 	}
-	return ama.JSON{
-		"message": ama.JSON{
+	return enbor.JSON{
+		"message": enbor.JSON{
 			"id":   "msg_" + strings.TrimPrefix(id, "event_"),
 			"role": "user",
-			"content": []ama.JSON{
+			"content": []enbor.JSON{
 				{"type": "text", "text": message},
 			},
 		},
@@ -382,17 +382,17 @@ func livePromptPayload(message string) (ama.JSON, error) {
 }
 
 func (h *Relay) recordLivePromptEvent(sessionID string, message string) {
-	h.recordStoredEvent(sessionID, ama.JSON{"type": "message.completed", "payload": mustLivePromptPayload(message)})
+	h.recordStoredEvent(sessionID, enbor.JSON{"type": "message.completed", "payload": mustLivePromptPayload(message)})
 }
 
-func mustLivePromptPayload(message string) ama.JSON {
+func mustLivePromptPayload(message string) enbor.JSON {
 	payload, err := livePromptPayload(message)
 	if err != nil {
-		return ama.JSON{
-			"message": ama.JSON{
+		return enbor.JSON{
+			"message": enbor.JSON{
 				"id":   "msg_live_prompt_unavailable",
 				"role": "user",
-				"content": []ama.JSON{
+				"content": []enbor.JSON{
 					{"type": "text", "text": message},
 				},
 			},
@@ -402,16 +402,16 @@ func mustLivePromptPayload(message string) ama.JSON {
 }
 
 func (h *Relay) recordRuntimeErrorEvent(sessionID string, message string, code string) {
-	h.recordStoredEvent(sessionID, ama.JSON{
+	h.recordStoredEvent(sessionID, enbor.JSON{
 		"type": "runtime.error",
-		"payload": ama.JSON{
+		"payload": enbor.JSON{
 			"message": message,
 			"code":    code,
 		},
 	})
 }
 
-func (h *Relay) recordStoredEvent(sessionID string, event ama.JSON) {
+func (h *Relay) recordStoredEvent(sessionID string, event enbor.JSON) {
 	store, err := OpenEventLog(filepath.Join(h.storeDir, sessionID), sessionID)
 	if err != nil {
 		slog.Warn("runner failed to open session event log for live command", "sessionId", sessionID, "error", err)
@@ -435,7 +435,7 @@ func (h *Relay) recordStoredEvent(sessionID string, event ama.JSON) {
 // and paginates; the runner's contract is "the whole log for that session".
 func (h *Relay) handleBackfillRequest(ctx context.Context, conn Channel, message protocol.RunnerChannelMessage) {
 	sessionID := protocol.MessageSessionID(message)
-	response := ama.JSON{
+	response := enbor.JSON{
 		"type":      "session.backfill_response",
 		"eventId":   protocol.MessageEventID(message),
 		"sessionId": sessionID,
@@ -457,7 +457,7 @@ func (h *Relay) handleBackfillRequest(ctx context.Context, conn Channel, message
 	}
 }
 
-func (h *Relay) writeResponse(ctx context.Context, conn Channel, response ama.JSON, message string, sessionID string) {
+func (h *Relay) writeResponse(ctx context.Context, conn Channel, response enbor.JSON, message string, sessionID string) {
 	h.writeMu.Lock()
 	err := conn.WriteJSON(ctx, response)
 	h.writeMu.Unlock()
@@ -492,13 +492,13 @@ func (h *Relay) Unregister(sessionID string) {
 // disconnect drops only the live fan, never the run. The stored id/sequence/time
 // ride along so the cloud fans it with the same identity the runner backfill
 // serves (the browser dedups by them).
-func (h *Relay) RelayEvent(ctx context.Context, sessionID string, event ama.JSON, relay *RelayStamp) {
+func (h *Relay) RelayEvent(ctx context.Context, sessionID string, event enbor.JSON, relay *RelayStamp) {
 	recordID, err := newEventID()
 	if err != nil {
 		slog.Warn("runner failed to create relay event id", "sessionId", sessionID, "error", err)
 		return
 	}
-	record := ama.JSON{
+	record := enbor.JSON{
 		"id":        recordID,
 		"sessionId": sessionID,
 		"sequence":  time.Now().UnixMilli(),
@@ -511,7 +511,7 @@ func (h *Relay) RelayEvent(ctx context.Context, sessionID string, event ama.JSON
 		record["sequence"] = relay.Sequence
 		record["createdAt"] = relay.CreatedAt
 	}
-	message := ama.JSON{
+	message := enbor.JSON{
 		"type":      "runner.event",
 		"sessionId": sessionID,
 		"record":    record,
@@ -542,7 +542,7 @@ func (h *Relay) NotifyWorkFinished(ctx context.Context, sessionID string, leaseI
 	if h.conn == nil {
 		return
 	}
-	if err := h.conn.WriteJSON(ctx, ama.JSON{
+	if err := h.conn.WriteJSON(ctx, enbor.JSON{
 		"type":          frameType,
 		"sessionId":     sessionID,
 		"leaseId":       leaseID,

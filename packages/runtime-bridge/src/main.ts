@@ -97,7 +97,7 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
 
 async function inventory(request: Extract<RuntimeBridgeInputMessage, { type: 'inventory' }>) {
   const runtimes: RuntimeInventoryEntry[] = []
-  const bridgeTestMode = process.env.AMA_RUNTIME_BRIDGE_TEST_MODE === '1'
+  const bridgeTestMode = process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === '1'
   for (const provider of listProviders()) {
     const installed = bridgeTestMode || Boolean(resolveCliPath(provider.binary))
     if (!installed) {

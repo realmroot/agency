@@ -20,8 +20,8 @@ export const rpc = hc<AppType>('/', {
     const projectId = getSelectedProjectId()
     return {
       accept: 'application/json',
-      ...(projectId ? { 'x-ama-project-id': projectId } : {}),
-      'x-ama-client': 'web-rpc',
+      ...(projectId ? { 'x-enbor-project-id': projectId } : {}),
+      'x-enbor-client': 'web-rpc',
     }
   },
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {

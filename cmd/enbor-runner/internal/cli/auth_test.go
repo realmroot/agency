@@ -19,10 +19,10 @@ import (
 
 func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
 		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		Email:       "one@example.test",
 		Name:        "One",
 		AccessToken: "token-1",
@@ -31,7 +31,7 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	})
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
 		AccountID:   "acct_2",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		Email:       "two@example.test",
 		Name:        "Two",
 		AccessToken: "token-2",
@@ -50,16 +50,16 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	if err := RunAuthStatus(&output); err != nil {
 		t.Fatalf("expected status, got %v", err)
 	}
-	if !strings.Contains(output.String(), "https://ama.example.test acct_2 <two@example.test>") ||
+	if !strings.Contains(output.String(), "https://enbor.example.test acct_2 <two@example.test>") ||
 		!strings.Contains(output.String(), "* https://other.example.test acct_3") {
 		t.Fatalf("unexpected status output: %s", output.String())
 	}
 
 	output.Reset()
-	if err := RunAuthSwitch(authSwitchTestCommand(t, "--api-server", "https://ama.example.test"), []string{"one@example.test"}, &output); err != nil {
+	if err := RunAuthSwitch(authSwitchTestCommand(t, "--api-server", "https://enbor.example.test"), []string{"one@example.test"}, &output); err != nil {
 		t.Fatalf("expected switch, got %v", err)
 	}
-	if !strings.Contains(output.String(), "Switched to https://ama.example.test acct_1") {
+	if !strings.Contains(output.String(), "Switched to https://enbor.example.test acct_1") {
 		t.Fatalf("unexpected switch output: %s", output.String())
 	}
 
@@ -70,7 +70,7 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 	if !strings.Contains(output.String(), "Logged out") {
 		t.Fatalf("unexpected logout output: %s", output.String())
 	}
-	if profile, err := runnerconfig.LoadCredentialProfile(credentialPath, "https://ama.example.test"); err != nil || profile != nil {
+	if profile, err := runnerconfig.LoadCredentialProfile(credentialPath, "https://enbor.example.test"); err != nil || profile != nil {
 		t.Fatalf("expected profile to be removed, profile=%#v err=%v", profile, err)
 	}
 	output.Reset()
@@ -81,7 +81,7 @@ func TestRunAuthCommandsUseCredentialStore(t *testing.T) {
 
 func TestRunAuthRefreshUpdatesActiveCredential(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	server := authRefreshServer(t)
 	defer server.Close()
 	saveCredential(t, credentialPath, runnerconfig.CredentialProfile{
@@ -111,7 +111,7 @@ func TestRunAuthRefreshUpdatesActiveCredential(t *testing.T) {
 
 func TestRunAuthLoginValidatesConfigBeforeLoopbackPKCE(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("AMA_API_SERVER", "")
+	t.Setenv("ENBOR_API_SERVER", "")
 	var output bytes.Buffer
 	err := RunAuthLogin(context.Background(), authLoginTestCommand(t), &output)
 	if err == nil || !strings.Contains(err.Error(), "Enbor API server URL is required") {
@@ -120,7 +120,7 @@ func TestRunAuthLoginValidatesConfigBeforeLoopbackPKCE(t *testing.T) {
 }
 
 func TestRunAuthRequiresLogin(t *testing.T) {
-	t.Setenv("AMA_RUNNER_CREDENTIALS", filepath.Join(t.TempDir(), "missing.json"))
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", filepath.Join(t.TempDir(), "missing.json"))
 	var output bytes.Buffer
 	if err := RunAuthStatus(&output); err == nil || !strings.Contains(err.Error(), "not logged in") {
 		t.Fatalf("expected status login error, got %v", err)
@@ -135,7 +135,7 @@ func TestRunAuthRequiresLogin(t *testing.T) {
 
 func TestRunAuthReportsCredentialStoreErrors(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := os.WriteFile(credentialPath, []byte(`not json`), 0o600); err != nil {
 		t.Fatal(err)
 	}

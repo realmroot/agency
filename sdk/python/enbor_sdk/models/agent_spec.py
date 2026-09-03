@@ -29,10 +29,10 @@ class AgentSpec:
             system_prompt (str):  Example: Answer with citations..
             provider (None | str):  Example: workers-ai.
             model (None | str):  Example: @cf/moonshotai/kimi-k2.6.
-            skills (list[str]):  Example: ['ama@code-review'].
+            skills (list[str]):  Example: ['enbor@code-review'].
             subagents (list[AgentSubagent]):  Example: [{'name': 'reviewer', 'description': 'Reviews proposed changes for
                 correctness and risk.', 'systemPrompt': 'Review the proposed changes and report risks.', 'model': None,
-                'allowedTools': ['read', 'grep'], 'skills': ['ama@code-review'], 'mcpConnectors': ['github']}].
+                'allowedTools': ['read', 'grep'], 'skills': ['enbor@code-review'], 'mcpConnectors': ['github']}].
             allowed_tools (list[str]):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str]):  Example: ['github'].
             identity (IdentityDescriptorType0 | None):

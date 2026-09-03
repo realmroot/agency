@@ -23,7 +23,7 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 		case "/api/v1/configz":
 			_ = json.NewEncoder(w).Encode(testPublicConfig(
 				"http://"+r.Host+"/issuer",
-				"https://ama.example.test",
+				"https://enbor.example.test",
 				"runner-client",
 				[]string{"openid", "profile", "email", "offline_access"},
 			))
@@ -45,7 +45,7 @@ func TestTokenSourceRefreshesExpiredSavedToken(t *testing.T) {
 			if r.FormValue("grant_type") != RefreshGrantType ||
 				r.FormValue("client_id") != "runner-client" ||
 				r.FormValue("refresh_token") != "old-refresh-token" ||
-				r.FormValue("resource") != "https://ama.example.test" {
+				r.FormValue("resource") != "https://enbor.example.test" {
 				t.Fatalf("unexpected refresh form: %s", r.Form.Encode())
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -283,7 +283,7 @@ func TestNewTokenSourceReturnsCredentialLoadErrors(t *testing.T) {
 	if err := os.WriteFile(credentialPath, []byte(`not json`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewTokenSource(runnerconfig.Config{CredentialPath: credentialPath, APIServer: "https://ama.example.test"}, nil); err == nil {
+	if _, err := NewTokenSource(runnerconfig.Config{CredentialPath: credentialPath, APIServer: "https://enbor.example.test"}, nil); err == nil {
 		t.Fatal("expected invalid credential file error")
 	}
 }
@@ -291,7 +291,7 @@ func TestNewTokenSourceReturnsCredentialLoadErrors(t *testing.T) {
 func TestNewTokenSourceWithoutSavedBearerProfileFailsClosed(t *testing.T) {
 	_, err := NewTokenSource(runnerconfig.Config{
 		CredentialPath: filepath.Join(t.TempDir(), "missing.json"),
-		APIServer:      "https://ama.example.test",
+		APIServer:      "https://enbor.example.test",
 	}, nil)
 	if err == nil {
 		t.Fatal("expected missing Realmroot Bearer login error")
@@ -302,8 +302,8 @@ func TestNewTokenSourceWithoutSavedBearerProfileFailsClosed(t *testing.T) {
 func TestTokenSourceUsesPinnedAccountWhenAPIServerHasMultipleProfiles(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	for _, profile := range []runnerconfig.CredentialProfile{
-		{AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "token-1", TokenType: "Bearer"},
-		{AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "token-2", TokenType: "Bearer"},
+		{AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "token-1", TokenType: "Bearer"},
+		{AccountID: "acct_2", APIServer: "https://enbor.example.test", AccessToken: "token-2", TokenType: "Bearer"},
 	} {
 		if err := runnerconfig.SaveCredentialProfile(credentialPath, profile); err != nil {
 			t.Fatal(err)
@@ -312,7 +312,7 @@ func TestTokenSourceUsesPinnedAccountWhenAPIServerHasMultipleProfiles(t *testing
 	source, err := NewTokenSource(runnerconfig.Config{
 		CredentialPath:      credentialPath,
 		CredentialAccountID: "acct_1",
-		APIServer:           "https://ama.example.test",
+		APIServer:           "https://enbor.example.test",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -326,10 +326,10 @@ func TestTokenSourceUsesPinnedAccountWhenAPIServerHasMultipleProfiles(t *testing
 func TestNewTokenSourceRejectsLegacyDPoPProfile(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := os.WriteFile(credentialPath, []byte(`{
-  "active": "https://ama.example.test#acct_1",
+  "active": "https://enbor.example.test#acct_1",
   "profiles": [{
     "accountId": "acct_1",
-    "apiServer": "https://ama.example.test",
+    "apiServer": "https://enbor.example.test",
     "accessToken": "legacy-token",
     "tokenType": "DPoP",
     "dpopPrivateKey": "legacy-key"
@@ -337,7 +337,7 @@ func TestNewTokenSourceRejectsLegacyDPoPProfile(t *testing.T) {
 }`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := NewTokenSource(runnerconfig.Config{CredentialPath: credentialPath, APIServer: "https://ama.example.test"}, nil)
+	_, err := NewTokenSource(runnerconfig.Config{CredentialPath: credentialPath, APIServer: "https://enbor.example.test"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "Realmroot Bearer login") {
 		t.Fatalf("expected legacy DPoP profile to require a fresh Bearer login, got %v", err)
 	}

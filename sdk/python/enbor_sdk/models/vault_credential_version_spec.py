@@ -30,10 +30,10 @@ class VaultCredentialVersionSpec:
             vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
             organization_id (str):  Example: org_abc123.
             version (int):  Example: 2.
-            provider (VaultCredentialVersionSpecProvider):  Example: ama.
-            secret_ref (str):  Example: ama://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-
+            provider (VaultCredentialVersionSpecProvider):  Example: enbor.
+            secret_ref (str):  Example: enbor://vaults/0195f5d6-7c20-7000-8000-000000000007/credentials/0195f5d6-7c20-7000-
                 8000-000000000008/versions/0195f5d6-7c20-7000-8000-000000000009.
-            reference_name (str):  Example: AMA_PROJECT_ABC123_TOKEN_V2.
+            reference_name (str):  Example: ENBOR_PROJECT_ABC123_TOKEN_V2.
             has_secret (bool):  Example: True.
             data_keys (list[str]):  Example: ['token'].
             metadata (VaultJsonObject):  Example: {'rotatedBy': 'operator'}.

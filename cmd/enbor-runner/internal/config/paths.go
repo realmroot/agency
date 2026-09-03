@@ -12,7 +12,7 @@ import (
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/sys/userdirs"
 )
 
-const appDirectoryName = "ama-runner"
+const appDirectoryName = "enbor-runner"
 
 const instanceIDPrefix = "runner_"
 

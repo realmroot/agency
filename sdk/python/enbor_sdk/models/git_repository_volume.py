@@ -31,7 +31,7 @@ class GitRepositoryVolume:
             type_ (GitRepositoryVolumeType):
             url (str):  Example: https://github.com/realmroot/enbor.git.
             ref (str | Unset):
-            secret_ref (str | Unset):  Example: ama://vaults/0195f5d6-7c20-7000-8000-000000000007.
+            secret_ref (str | Unset):  Example: enbor://vaults/0195f5d6-7c20-7000-8000-000000000007.
             items (list[SecretItem] | Unset):
      """
 

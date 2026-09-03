@@ -109,7 +109,7 @@ func TestAuthTransportReturnsBaseErrors(t *testing.T) {
 	transport := AuthTransport{Base: roundTripperFunc(func(*http.Request) (*http.Response, error) {
 		return nil, expected
 	})}
-	request, err := http.NewRequest(http.MethodGet, "https://ama.example.test", nil)
+	request, err := http.NewRequest(http.MethodGet, "https://enbor.example.test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestAuthTransportDoesNotRetryUnauthorizedWithoutRefreshToken(t *testing.T) 
 			}, nil
 		}),
 	}
-	request, err := http.NewRequest(http.MethodGet, "https://ama.example.test/secure", nil)
+	request, err := http.NewRequest(http.MethodGet, "https://enbor.example.test/secure", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestAuthTransportReturnsGetBodyErrorWhenAuthorizingRequest(t *testing.T) {
 		AccessToken: "saved-token",
 	}}
 	transport := AuthTransport{Tokens: source}
-	request, err := http.NewRequest(http.MethodPost, "https://ama.example.test/secure", strings.NewReader("body"))
+	request, err := http.NewRequest(http.MethodPost, "https://enbor.example.test/secure", strings.NewReader("body"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestAuthTransportUsesBearerAndStripsLegacyDPoPHeader(t *testing.T) {
 	source := &TokenSource{saved: &runnerconfig.CredentialProfile{
 		AccessToken: "e2e-token",
 	}}
-	request, err := http.NewRequest(http.MethodPatch, "https://ama.example.test/api/v1/runners/runner_1/heartbeat?ignored=yes#fragment", nil)
+	request, err := http.NewRequest(http.MethodPatch, "https://enbor.example.test/api/v1/runners/runner_1/heartbeat?ignored=yes#fragment", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

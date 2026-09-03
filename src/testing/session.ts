@@ -73,7 +73,7 @@ export function buildTestSession(overrides: TestSessionOverrides = {}): Session 
       ? (overrides.status?.bindings?.environment?.snapshot ??
         (environmentId === null ? null : defaultEnvironmentSnapshot(environmentId)))
       : overrides.environmentSnapshot
-  const runtime = overrides.spec?.runtime ?? 'ama'
+  const runtime = overrides.spec?.runtime ?? 'enbor'
   const baseBindings = {
     agent: { versionId: 'agentver_1', snapshot: agentSnapshot },
     environment: {
@@ -147,7 +147,7 @@ function defaultAgentSnapshot(agentId: string): SessionAgentSnapshot {
     systemPrompt: 'Do the work',
     provider: 'workers-ai',
     model: '@cf/moonshotai/kimi-k2.6',
-    skills: ['ama@coding-agent'],
+    skills: ['enbor@coding-agent'],
     subagents: [],
     allowedTools: ['read', 'write'],
     mcpConnectors: [],

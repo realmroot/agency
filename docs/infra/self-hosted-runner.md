@@ -40,7 +40,7 @@ starting the daemon. Realmroot is the current provider. Select the personal or
 organization context that owns the Enbor project.
 
 ```bash
-enbor-runner auth login --api-server "https://ama.example.com"
+enbor-runner auth login --api-server "https://enbor.example.com"
 ```
 
 The provider registration must allow the runner's fixed loopback redirect URI:
@@ -50,7 +50,7 @@ The provider registration must allow the runner's fixed loopback redirect URI:
 
 ```bash
 enbor-runner start \
-  --api-server "https://ama.example.com" \
+  --api-server "https://enbor.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
   --allow-unsafe-process
@@ -77,7 +77,7 @@ manager owns the process:
 
 ```bash
 enbor-runner run \
-  --api-server "https://ama.example.com" \
+  --api-server "https://enbor.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
   --allow-unsafe-process
@@ -87,14 +87,14 @@ On Windows:
 
 ```powershell
 .\enbor-runner.exe run `
-  --api-server $env:AMA_API_SERVER `
-  --project-id $env:AMA_PROJECT_ID `
-  --environment-id $env:AMA_ENVIRONMENT_ID
+  --api-server $env:ENBOR_API_SERVER `
+  --project-id $env:ENBOR_PROJECT_ID `
+  --environment-id $env:ENBOR_ENVIRONMENT_ID
 ```
 
 The Enbor name changes the executable but deliberately keeps the existing
-`AMA_RUNNER_*` environment variables, `ama-runner` state directories, managed
-service identifiers, and `ama-runner-work` protocol identifier.
+`ENBOR_RUNNER_*` environment variables, `enbor-runner` state directories, managed
+service identifiers, and `enbor-runner-work` protocol identifier.
 Existing Runner state therefore remains reusable and the control-plane protocol
 does not change as part of packaging.
 
@@ -112,12 +112,12 @@ docker run --rm \
   --name enbor-runner \
   --user "$(id -u):$(id -g)" \
   --env HOME=/tmp \
-  --env AMA_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
-  --volume "$HOME/.config/ama-runner:/enbor/config" \
+  --env ENBOR_RUNNER_CREDENTIALS=/enbor/config/credentials.json \
+  --volume "$HOME/.config/enbor-runner:/enbor/config" \
   --volume "$HOME/.local/state/enbor-runner-container:/enbor/state" \
   --volume "$PWD/.enbor-work:/workspace" \
   ghcr.io/realmroot/enbor-runner:latest run \
-  --api-server "https://ama.example.com" \
+  --api-server "https://enbor.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
   --state-dir /enbor/state \
@@ -138,18 +138,18 @@ reads them from its process environment.
 
 | Variable | Allowed values | Default |
 | --- | --- | --- |
-| `AMA_CODEX_SANDBOX_MODE` | `read-only`, `workspace-write`, `danger-full-access` | `danger-full-access` |
-| `AMA_CODEX_APPROVAL_POLICY` | `never`, `on-request`, `untrusted`; deprecated `on-failure` remains accepted for the pinned SDK | `never` |
-| `AMA_CLAUDE_CODE_PERMISSION_MODE` | `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto` | `bypassPermissions` |
+| `ENBOR_CODEX_SANDBOX_MODE` | `read-only`, `workspace-write`, `danger-full-access` | `danger-full-access` |
+| `ENBOR_CODEX_APPROVAL_POLICY` | `never`, `on-request`, `untrusted`; deprecated `on-failure` remains accepted for the pinned SDK | `never` |
+| `ENBOR_CLAUDE_CODE_PERMISSION_MODE` | `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto` | `bypassPermissions` |
 
 Codex enterprise users can keep the workspace sandbox and send escalations
 through their configured reviewer:
 
 ```bash
-AMA_CODEX_SANDBOX_MODE=workspace-write \
-AMA_CODEX_APPROVAL_POLICY=on-request \
+ENBOR_CODEX_SANDBOX_MODE=workspace-write \
+ENBOR_CODEX_APPROVAL_POLICY=on-request \
 enbor-runner start \
-  --api-server "https://ama.example.com" \
+  --api-server "https://enbor.example.com" \
   --project-id "project_..." \
   --environment-id "env_..." \
   --allow-unsafe-process
@@ -157,9 +157,9 @@ enbor-runner start \
 
 Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For
 example, a runner can use Claude Code's model-reviewed permission mode with
-`AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values
+`ENBOR_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values
 before provider execution. Session environment variables cannot change these
-settings because Enbor reserves the `AMA_` prefix for runner-owned configuration.
+settings because Enbor reserves the `ENBOR_` prefix for runner-owned configuration.
 
 ## Local files
 
@@ -168,8 +168,8 @@ logs, and session events use the platform-native configuration and state roots.
 The following environment variables override the shared defaults where
 supported:
 
-- `AMA_RUNNER_CONFIG`
-- `AMA_RUNNER_CREDENTIALS`
+- `ENBOR_RUNNER_CONFIG`
+- `ENBOR_RUNNER_CREDENTIALS`
 - `XDG_CONFIG_HOME`
 
 Do not print, copy into logs, or commit provider access and refresh credentials.

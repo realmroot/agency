@@ -69,7 +69,7 @@ func materializeSubagents(cwd string, runtimeName string, subagents []subagentPr
 	}
 	var gitignoreEntry string
 	switch runtimeName {
-	case "ama":
+	case "enbor":
 		return nil
 	case "claude-code":
 		gitignoreEntry = ".claude/agents/"

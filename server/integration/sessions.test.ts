@@ -16,7 +16,7 @@ import {
 } from './auth'
 import { seedPolicy } from './policy-seed'
 
-const DEFAULT_AMA_RUNNER_CAPABILITY = 'ama'
+const DEFAULT_ENBOR_RUNNER_CAPABILITY = 'enbor'
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 async function jsonFetch(path: string, authorization: string, init: RequestInit = {}) {
@@ -50,7 +50,7 @@ async function createBrowserSessionCookie(authorization: string) {
       now.toISOString(),
     )
     .run()
-  return `__Host-ama_session=${sessionId}`
+  return `__Host-enbor_session=${sessionId}`
 }
 
 async function issueBrowserSocketTicket(sessionId: string, cookie: string, projectId?: string) {
@@ -59,7 +59,7 @@ async function issueBrowserSocketTicket(sessionId: string, cookie: string, proje
     headers: {
       cookie,
       Origin: 'https://example.com',
-      ...(projectId ? { 'X-AMA-Project-ID': projectId } : {}),
+      ...(projectId ? { 'X-Enbor-Project-ID': projectId } : {}),
     },
   })
   expect(response.status).toBe(201)
@@ -74,7 +74,7 @@ function browserTicketUpgradeHeaders(ticket: string, origin = 'https://example.c
   return {
     Upgrade: 'websocket',
     Origin: origin,
-    'Sec-WebSocket-Protocol': `ama-ticket, ama-ticket.${ticket}`,
+    'Sec-WebSocket-Protocol': `enbor-ticket, enbor-ticket.${ticket}`,
   }
 }
 
@@ -153,7 +153,7 @@ async function createProject(authorization: string) {
 }
 
 function projectHeaders(projectId?: string): HeadersInit {
-  return projectId ? { 'x-ama-project-id': projectId } : {}
+  return projectId ? { 'x-enbor-project-id': projectId } : {}
 }
 
 async function createEnvironment(authorization: string, data: Record<string, unknown> = {}, projectId?: string) {
@@ -224,7 +224,7 @@ async function createAgent(authorization: string, data: Record<string, unknown> 
       metadata: { name: 'Cloud session agent' },
       spec: {
         systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : 'Work through Enbor runtime.',
-        skills: Array.isArray(skills) ? skills : ['ama@cloud-session'],
+        skills: Array.isArray(skills) ? skills : ['enbor@cloud-session'],
         mcpConnectors: Array.isArray(mcpConnectors) ? mcpConnectors : ['github'],
         // Most session tests exercise the Enbor runtime, which requires an
         // explicit provider/model pin. The runtime-default case below creates
@@ -408,14 +408,14 @@ describe('[CF] /api/v1/sessions', () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, { mcpPolicy: { allowedConnectors: [] } })
     const agent = await createAgent(authorization, { mcpConnectors: [] })
-    const runner = await registerRunner(authorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
-    await heartbeatRunner(authorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const runner = await registerRunner(authorization, environment.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
+    await heartbeatRunner(authorization, runner.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
         agentId: agent.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Unpinned session',
         prompt: 'Resolve environment',
       }),
@@ -494,7 +494,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.metadata.uid,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'This must not select a platform model.',
       }),
     })
@@ -502,7 +502,7 @@ describe('[CF] /api/v1/sessions', () => {
     await expect(createRes.json()).resolves.toMatchObject({
       error: {
         type: 'conflict',
-        details: { runtime: 'ama', hostingMode: 'cloud', provider: null, model: null },
+        details: { runtime: 'enbor', hostingMode: 'cloud', provider: null, model: null },
       },
     })
   })
@@ -517,7 +517,7 @@ describe('[CF] /api/v1/sessions', () => {
       method: 'POST',
       body: JSON.stringify({
         agentId: agent.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Unpinned session',
         prompt: 'Resolve environment',
       }),
@@ -537,7 +537,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Package failure condition',
         prompt: 'Start after a Runner becomes available.',
       }),
@@ -598,10 +598,10 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Ship the first task',
         prompt: 'Ship the first task',
-        metadata: { annotations: { ticket: 'AMA-1' } },
+        metadata: { annotations: { ticket: 'Enbor-1' } },
         volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/downstream-service.git' }],
         volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service', readOnly: true }],
         env: { DOWNSTREAM_API_URL: 'https://downstream.example.com', DOWNSTREAM_AGENT_ID: 'agent_123' },
@@ -646,7 +646,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(created).toMatchObject({
       metadata: {
         name: 'Ship the first task',
-        annotations: { ticket: 'AMA-1' },
+        annotations: { ticket: 'Enbor-1' },
       },
       spec: {
         env: { DOWNSTREAM_API_URL: 'https://downstream.example.com', DOWNSTREAM_AGENT_ID: 'agent_123' },
@@ -667,7 +667,7 @@ describe('[CF] /api/v1/sessions', () => {
             versionId: agent.currentVersionId,
             snapshot: {
               systemPrompt: 'Work through Enbor runtime.',
-              skills: ['ama@cloud-session'],
+              skills: ['enbor@cloud-session'],
               mcpConnectors: ['github'],
               provider: 'workers-ai',
             },
@@ -921,10 +921,10 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Before rename',
         prompt: 'Create a session for rename coverage',
-        metadata: { annotations: { ticket: 'AMA-1' } },
+        metadata: { annotations: { ticket: 'Enbor-1' } },
       }),
     })
     expect(createRes.status).toBe(201)
@@ -932,13 +932,13 @@ describe('[CF] /api/v1/sessions', () => {
 
     const patchRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}`, authorization, {
       method: 'PATCH',
-      body: JSON.stringify({ name: 'After rename', metadata: { annotations: { ticket: 'AMA-2', extra: 'true' } } }),
+      body: JSON.stringify({ name: 'After rename', metadata: { annotations: { ticket: 'Enbor-2', extra: 'true' } } }),
     })
     expect(patchRes.status).toBe(200)
     await expect(patchRes.json()).resolves.toMatchObject({
       metadata: {
         name: 'After rename',
-        annotations: { ticket: 'AMA-2', extra: 'true' },
+        annotations: { ticket: 'Enbor-2', extra: 'true' },
       },
     })
 
@@ -955,7 +955,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(emptyPatchRes.status).toBe(400)
   })
 
-  it('queues self-hosted sessions for runner lease support [spec: sessions/memory-store-resources] [spec: runtime/self-hosted-ama-cloud-loop]', async () => {
+  it('queues self-hosted sessions for runner lease support [spec: sessions/memory-store-resources] [spec: runtime/self-hosted-enbor-cloud-loop]', async () => {
     const authorization = await signIn()
     const runnerAuthorization = asRunnerAuthorization(authorization)
     const credential = await connectMcp(authorization, 'github')
@@ -968,7 +968,7 @@ describe('[CF] /api/v1/sessions', () => {
       runtimeConfig: {},
       packages: [],
     })
-    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
     const agent = await createAgent(authorization, {
       name: 'Self-hosted session agent',
       systemPrompt: 'Wait for a self-hosted runner.',
@@ -993,7 +993,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         volumes: [
           {
             name: 'repo',
@@ -1001,11 +1001,11 @@ describe('[CF] /api/v1/sessions', () => {
             url: 'https://github.com/saltbo/downstream-service.git',
             ref: 'main',
           },
-          { name: 'memory', type: 'memory', memoryRef: `ama://memories/${memoryStoreId}` },
+          { name: 'memory', type: 'memory', memoryRef: `enbor://memories/${memoryStoreId}` },
         ],
         volumeMounts: [
           { name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service' },
-          { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
+          { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
         ],
         envFrom: [
           {
@@ -1036,13 +1036,13 @@ describe('[CF] /api/v1/sessions', () => {
     expect(created.spec.volumes).toContainEqual(
       expect.objectContaining({
         type: 'memory',
-        memoryRef: `ama://memories/${memoryStoreId}`,
+        memoryRef: `enbor://memories/${memoryStoreId}`,
         name: 'memory',
       }),
     )
     expect(created.spec.volumeMounts).toContainEqual({
       name: 'memory',
-      mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`,
+      mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`,
       readOnly: false,
     })
     expect(created).toMatchObject({
@@ -1099,19 +1099,19 @@ describe('[CF] /api/v1/sessions', () => {
       {
         name: 'memory',
         type: 'memory',
-        memoryRef: `ama://memories/${memoryStoreId}`,
+        memoryRef: `enbor://memories/${memoryStoreId}`,
       },
     ])
     expect(storedPayload.volumeMounts).toEqual([
       { name: 'repo', mountPath: '/workspace/repos/saltbo/downstream-service', readOnly: true },
-      { name: 'memory', mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`, readOnly: false },
+      { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
     ])
     expect(storedPayload.agentSnapshot.systemPrompt).toContain('Workspace layout:')
     expect(storedPayload.agentSnapshot.systemPrompt).toContain(
       'https://github.com/saltbo/downstream-service.git at repos/saltbo/downstream-service',
     )
     expect(storedPayload.agentSnapshot.systemPrompt).toContain('memory (writable)')
-    expect(storedPayload.agentSnapshot.systemPrompt).toContain(`.ama/memory-stores/${memoryStoreId}`)
+    expect(storedPayload.agentSnapshot.systemPrompt).toContain(`.enbor/memory-stores/${memoryStoreId}`)
     expect(storedPayload.agentSnapshot.systemPrompt).not.toContain('Review for correctness first.')
     expect(storedPayload.provider).toBe('workers-ai')
     expect(storedPayload.env).not.toHaveProperty('DOWNSTREAM_AGENT_KEY')
@@ -1119,7 +1119,7 @@ describe('[CF] /api/v1/sessions', () => {
       { type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
     ])
 
-    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
     const lease = await claimLease(runnerAuthorization, runner.id)
     expect(lease).toBeTruthy()
     const consoleWorkItem = await readWorkItem(authorization, lease!.workItemId)
@@ -1140,8 +1140,8 @@ describe('[CF] /api/v1/sessions', () => {
     expect(payload.workspaceManifest.mounts).toContainEqual({
       type: 'memory',
       name: 'memory',
-      mountPath: `/workspace/.ama/memory-stores/${memoryStoreId}`,
-      memoryRef: `ama://memories/${memoryStoreId}`,
+      mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`,
+      memoryRef: `enbor://memories/${memoryStoreId}`,
       readOnly: false,
       files: [{ path: 'guides/review.md', content: 'Review for correctness first.' }],
     })
@@ -1158,18 +1158,18 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Prepare repository workspace',
         volumes: [
           {
             name: 'repo',
             type: 'git_repository',
-            url: 'https://github.com/saltbo/any-managed-agents.git',
+            url: 'https://github.com/saltbo/enbor.git',
             ref: 'feature/session-resources',
             secretRef: credential.activeVersion.secretRef,
           },
         ],
-        volumeMounts: [{ name: 'repo', mountPath: 'repos/ama' }],
+        volumeMounts: [{ name: 'repo', mountPath: 'repos/enbor' }],
       }),
     })
     expect(createRes.status).toBe(201)
@@ -1179,12 +1179,12 @@ describe('[CF] /api/v1/sessions', () => {
           {
             name: 'repo',
             type: 'git_repository',
-            url: 'https://github.com/saltbo/any-managed-agents.git',
+            url: 'https://github.com/saltbo/enbor.git',
             ref: 'feature/session-resources',
             secretRef: credential.activeVersion.secretRef,
           },
         ],
-        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/ama', readOnly: true }],
+        volumeMounts: [{ name: 'repo', mountPath: '/workspace/repos/enbor', readOnly: true }],
       },
     })
 
@@ -1193,9 +1193,9 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reject unsafe workspace path',
-        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/any-managed-agents.git' }],
+        volumes: [{ name: 'repo', type: 'git_repository', url: 'https://github.com/saltbo/enbor.git' }],
         volumeMounts: [{ name: 'repo', mountPath: '../escape' }],
       }),
     })
@@ -1212,7 +1212,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reject duplicate workspace mount',
         volumes: [
           { name: 'one', type: 'git_repository', url: 'https://github.com/saltbo/one.git' },
@@ -1239,7 +1239,7 @@ describe('[CF] /api/v1/sessions', () => {
       runtimeConfig: {},
       packages: [],
     })
-    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    const runner = await registerRunner(runnerAuthorization, environment.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
     const agent = await createAgent(authorization, {
       name: 'Credential-backed workspace agent',
       systemPrompt: 'Use prepared workspace mounts.',
@@ -1259,18 +1259,18 @@ describe('[CF] /api/v1/sessions', () => {
     })
     await createCredential(authorization, vault.id, {
       name: 'tls-cert',
-      type: 'ama.dev/tls',
+      type: 'enbor.dev/tls',
       stringData: { 'tls.crt': '-----BEGIN CERTIFICATE-----', 'tls.key': '-----BEGIN PRIVATE KEY-----' },
     })
-    const gitSecretRef = `ama://vaults/${vault.id}/credentials/${gitCredential.id}`
-    const appSecretRef = `ama://vaults/${vault.id}/credentials/${appSecret.id}`
+    const gitSecretRef = `enbor://vaults/${vault.id}/credentials/${gitCredential.id}`
+    const appSecretRef = `enbor://vaults/${vault.id}/credentials/${appSecret.id}`
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
       method: 'POST',
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Prepare credential-backed workspace',
         envFrom: [
           {
@@ -1296,18 +1296,18 @@ describe('[CF] /api/v1/sessions', () => {
             ],
           },
           { name: 'single-secret', type: 'secret', secretRef: appSecretRef },
-          { name: 'vault-secrets', type: 'secret', secretRef: `ama://vaults/${vault.id}` },
+          { name: 'vault-secrets', type: 'secret', secretRef: `enbor://vaults/${vault.id}` },
         ],
         volumeMounts: [
           { name: 'repo', mountPath: '/workspace/repos/saltbo/slink' },
-          { name: 'single-secret', mountPath: '/workspace/.ama/secrets/app' },
-          { name: 'vault-secrets', mountPath: '/workspace/.ama/secrets/project' },
+          { name: 'single-secret', mountPath: '/workspace/.enbor/secrets/app' },
+          { name: 'vault-secrets', mountPath: '/workspace/.enbor/secrets/project' },
         ],
       }),
     })
     expect(createRes.status).toBe(201)
 
-    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    await heartbeatRunner(runnerAuthorization, runner.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
     const lease = await claimLease(runnerAuthorization, runner.id)
     expect(lease).toBeTruthy()
     const consoleWorkItem = await readWorkItem(authorization, lease!.workItemId)
@@ -1355,7 +1355,7 @@ describe('[CF] /api/v1/sessions', () => {
     const singleSecretMount = payload.workspaceManifest.mounts.find((mount) => mount.name === 'single-secret')
     expect(singleSecretMount).toMatchObject({
       type: 'secret',
-      mountPath: '/workspace/.ama/secrets/app',
+      mountPath: '/workspace/.enbor/secrets/app',
       files: [
         { path: 'alpha', content: 'secret-alpha' },
         { path: 'beta', content: 'secret-beta' },
@@ -1365,7 +1365,7 @@ describe('[CF] /api/v1/sessions', () => {
     const vaultMount = payload.workspaceManifest.mounts.find((mount) => mount.name === 'vault-secrets')
     expect(vaultMount).toMatchObject({
       type: 'secret',
-      mountPath: '/workspace/.ama/secrets/project',
+      mountPath: '/workspace/.enbor/secrets/project',
     })
     expect(vaultMount?.files).toEqual(
       expect.arrayContaining([
@@ -1390,13 +1390,13 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Resolve wrong env secret version',
         envFrom: [
           {
             type: 'secret',
             name: 'DOWNSTREAM_AGENT_KEY',
-            secretRef: 'ama://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
+            secretRef: 'enbor://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
           },
         ],
       }),
@@ -1414,13 +1414,13 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reject duplicate env secret names',
         envFrom: [
           {
             type: 'secret',
             name: 'DOWNSTREAM_AGENT_KEY',
-            secretRef: 'ama://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
+            secretRef: 'enbor://vaults/vault_missing/credentials/cred_missing/versions/ver_missing',
           },
         ],
       }),
@@ -1438,7 +1438,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reject duplicate env secret names',
         envFrom: [
           { type: 'secret', name: 'DOWNSTREAM_AGENT_KEY', secretRef: credential.activeVersion.secretRef },
@@ -1461,7 +1461,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reject unnamed env secret key projection',
         envFrom: [{ type: 'secret', key: 'GH_TOKEN', secretRef: credential.activeVersion.secretRef }],
       }),
@@ -1481,7 +1481,7 @@ describe('[CF] /api/v1/sessions', () => {
     const environment = await createEnvironment(authorization, {
       name: `Canonical snapshot workspace ${crypto.randomUUID()}`,
       hostingMode: 'cloud',
-      runtimeConfig: { image: 'ama-runtime', timeoutSeconds: 120 },
+      runtimeConfig: { image: 'enbor-runtime', timeoutSeconds: 120 },
       networkPolicy: { mode: 'restricted', allowedHosts: ['registry.npmjs.org'] },
     })
     const agent = await createAgent(authorization)
@@ -1490,7 +1490,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Capture snapshot',
       }),
     })
@@ -1501,7 +1501,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(readRes.status).toBe(200)
     const body = await readRes.json()
     expect(body).toMatchObject({
-      spec: { runtime: 'ama' },
+      spec: { runtime: 'enbor' },
       status: {
         bindings: {
           environment: {
@@ -1531,14 +1531,14 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Record event contract',
       }),
     })
     expect(createRes.status).toBe(201)
     const created = (await createRes.json()) as { id: string; projectId: string }
 
-    // The cloud ama session stores its events in the Session DO; seed through the
+    // The cloud enbor session stores its events in the Session DO; seed through the
     // ingest endpoint (which routes to that store) rather than D1 directly.
     const ingestStartRes = await jsonFetch(`/api/v1/sessions/${created.metadata.uid}/events`, authorization, {
       method: 'POST',
@@ -1627,7 +1627,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Accept event ingest',
       }),
     })
@@ -1671,7 +1671,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(emptyBatchRes.status).toBe(400)
   })
 
-  it('archives a cloud ama session event log to R2 on stop', async () => {
+  it('archives a cloud enbor session event log to R2 on stop', async () => {
     const authorization = await signIn()
     await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization)
@@ -1681,7 +1681,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Archive event log',
       }),
     })
@@ -1723,7 +1723,7 @@ describe('[CF] /api/v1/sessions', () => {
     expect(events.some((record) => record.type === 'turn.completed')).toBe(true)
   })
 
-  it('keeps self-hosted ama browser backfill in the Session DO without runner scope', async () => {
+  it('keeps self-hosted enbor browser backfill in the Session DO without runner scope', async () => {
     const authorization = await signIn()
     await connectMcp(authorization, 'github')
     const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
@@ -1733,7 +1733,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Stream session events',
       }),
     })
@@ -1830,7 +1830,7 @@ describe('[CF] /api/v1/sessions', () => {
         spec: {
           agentId: agent.id,
           environmentId: environment.id,
-          runtime: 'ama',
+          runtime: 'enbor',
         },
         prompt: 'Open socket without project scope',
       }),
@@ -1858,7 +1858,7 @@ describe('[CF] /api/v1/sessions', () => {
         headers: {
           cookie: browserCookie,
           Origin: 'https://example.com',
-          'X-AMA-Project-ID': otherProjectId,
+          'X-Enbor-Project-ID': otherProjectId,
         },
       },
     )
@@ -1932,7 +1932,7 @@ describe('[CF] /api/v1/sessions', () => {
       headers: {
         Upgrade: 'websocket',
         Origin: 'https://example.com',
-        'Sec-WebSocket-Protocol': 'ama-ticket.not-valid',
+        'Sec-WebSocket-Protocol': 'enbor-ticket.not-valid',
       },
     })
     expect(malformed.status).toBe(401)
@@ -1976,7 +1976,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Queue self hosted work',
       }),
     })
@@ -1984,7 +1984,7 @@ describe('[CF] /api/v1/sessions', () => {
     await expect(queuedRes.json()).resolves.toMatchObject({
       status: { phase: 'pending', reason: 'waiting-for-runner' },
     })
-    await registerRunner(authorization, environment.id, [DEFAULT_AMA_RUNNER_CAPABILITY])
+    await registerRunner(authorization, environment.id, [DEFAULT_ENBOR_RUNNER_CAPABILITY])
     await setProjectPolicy(authorization, { sandboxPolicy: { enabled: false } })
 
     const createRes = await jsonFetch('/api/v1/sessions', authorization, {
@@ -1992,13 +1992,13 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Queue self hosted work',
       }),
     })
     expect(createRes.status).toBe(201)
     await expect(createRes.json()).resolves.toMatchObject({
-      spec: { runtime: 'ama' },
+      spec: { runtime: 'enbor' },
       status: {
         phase: 'pending',
         reason: 'waiting-for-runner',
@@ -2018,7 +2018,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Cancellation boundary',
         prompt: 'Start cancellation boundary session',
       }),
@@ -2082,7 +2082,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         name: 'Scheduled banking bonus research',
         metadata: {
           annotations: {
@@ -2169,7 +2169,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: '',
       }),
     })
@@ -2194,7 +2194,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'List first session',
       }),
     })
@@ -2204,7 +2204,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'List second session',
       }),
     })
@@ -2257,7 +2257,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Create maintainer A session',
         metadata: { labels: { maintainerId: 'maintainer_a' } },
       }),
@@ -2268,7 +2268,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Create maintainer B session',
         metadata: { labels: { maintainerId: 'maintainer_b' } },
       }),
@@ -2298,7 +2298,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Check tenancy',
       }),
     })
@@ -2346,7 +2346,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Check sandbox policy',
       }),
     })
@@ -2389,7 +2389,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Inspect repository status',
       }),
     })
@@ -2461,7 +2461,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Reread snapshots',
       }),
     })
@@ -2488,7 +2488,7 @@ describe('[CF] /api/v1/sessions', () => {
             snapshot: {
               systemPrompt: 'Work through Enbor runtime.',
               version: 1,
-              skills: ['ama@cloud-session'],
+              skills: ['enbor@cloud-session'],
               mcpConnectors: ['github'],
             },
           },
@@ -2522,7 +2522,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Validate runtime catalog',
       }),
     })
@@ -2535,7 +2535,7 @@ describe('[CF] /api/v1/sessions', () => {
         details: {
           resourceType: 'runtime_catalog',
           hostingMode: 'cloud',
-          runtime: 'ama',
+          runtime: 'enbor',
           provider: providerId,
           model,
         },
@@ -2714,7 +2714,7 @@ describe('[CF] /api/v1/sessions', () => {
     })
   })
 
-  it('rejects ama runtime sessions for configured external providers even without a pinned model', async () => {
+  it('rejects enbor runtime sessions for configured external providers even without a pinned model', async () => {
     const authorization = await signIn()
     // Cloud validation with no pinned model checks the GLOBAL catalog via
     // findBySlug(provider). Seed a provider whose row id (what the agent pins)
@@ -2730,7 +2730,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'Validate provider catalog',
       }),
     })
@@ -2739,7 +2739,7 @@ describe('[CF] /api/v1/sessions', () => {
       error: {
         type: 'conflict',
         message: 'Unsupported runtime provider/model combination',
-        details: { resourceType: 'runtime_catalog', runtime: 'ama', provider: providerId },
+        details: { resourceType: 'runtime_catalog', runtime: 'enbor', provider: providerId },
       },
     })
   })
@@ -2787,7 +2787,7 @@ describe('[CF] /api/v1/sessions', () => {
       body: JSON.stringify({
         agentId: agent.id,
         environmentId: environment.id,
-        runtime: 'ama',
+        runtime: 'enbor',
         prompt: 'List approvals',
       }),
     })

@@ -18,12 +18,12 @@ import (
 func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.json")
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CONFIG", configPath)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
+	t.Setenv("ENBOR_RUNNER_CONFIG", configPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
+	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://enbor.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		AccessToken: "saved-token",
 		TokenType:   "Bearer",
 		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
@@ -39,7 +39,7 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected run config, got %v", err)
 	}
-	if config.APIServer != "https://ama.example.test" || config.EnvironmentID != "env_1" {
+	if config.APIServer != "https://enbor.example.test" || config.EnvironmentID != "env_1" {
 		t.Fatalf("expected saved login and config file values, got %#v", config)
 	}
 	if config.CredentialPath != credentialPath || config.CredentialAccountID != "acct_1" || config.ConfigPath != configPath {
@@ -50,14 +50,14 @@ func TestLoadRunConfigAppliesSavedLoginAndFlags(t *testing.T) {
 func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.json")
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "saved-token",
 		TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
+	writeRunConfig(t, configPath, map[string]any{"apiServer": "https://enbor.example.test", "environmentId": "env_1", "allowUnsafeProcess": true})
 	command := runConfigTestCommand(t,
 		"--config", configPath,
 		"--work-dir", t.TempDir(),
@@ -65,7 +65,7 @@ func TestLoadRunConfigUsesDurationFlagAndConfigFlag(t *testing.T) {
 		"--max-concurrent", "3",
 	)
 	command.Flags().Duration("test-duration", time.Second, "test duration")
-	runConfigOptions = append(runConfigOptions, runConfigOption{Key: "testDuration", Flag: "test-duration", Env: "AMA_RUNNER_TEST_DURATION", Default: time.Second, Usage: "test duration"})
+	runConfigOptions = append(runConfigOptions, runConfigOption{Key: "testDuration", Flag: "test-duration", Env: "ENBOR_RUNNER_TEST_DURATION", Default: time.Second, Usage: "test duration"})
 	t.Cleanup(func() { runConfigOptions = runConfigOptions[:len(runConfigOptions)-1] })
 	config, err := LoadRunConfig(command)
 	if err != nil {
@@ -85,8 +85,8 @@ func TestLoadRunConfigScopesDefaultStorageByAPIServerAndEnvironment(t *testing.T
 	configRoot := filepath.Join(t.TempDir(), "config")
 	t.Setenv("XDG_CONFIG_HOME", configRoot)
 	t.Setenv("APPDATA", configRoot)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	for index, apiServer := range []string{"https://ama.example.test", "https://ama-staging.example.test"} {
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
+	for index, apiServer := range []string{"https://enbor.example.test", "https://enbor-staging.example.test"} {
 		if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 			AccountID:   fmt.Sprintf("acct_%d", index),
 			APIServer:   apiServer,
@@ -109,8 +109,8 @@ func TestLoadRunConfigScopesDefaultStorageByAPIServerAndEnvironment(t *testing.T
 		}
 		return config
 	}
-	production := load("https://ama.example.test")
-	staging := load("https://ama-staging.example.test")
+	production := load("https://enbor.example.test")
+	staging := load("https://enbor-staging.example.test")
 	if production.StateDir == staging.StateDir || production.WorkDir == staging.WorkDir {
 		t.Fatalf("API Servers share storage: production=%#v staging=%#v", production, staging)
 	}
@@ -118,7 +118,7 @@ func TestLoadRunConfigScopesDefaultStorageByAPIServerAndEnvironment(t *testing.T
 		t.Fatalf("work directories must be nested under state directories: production=%#v staging=%#v", production, staging)
 	}
 	otherEnvironmentCommand := runConfigTestCommand(t,
-		"--api-server", "https://ama.example.test",
+		"--api-server", "https://enbor.example.test",
 		"--environment-id", "env_2",
 		"--allow-unsafe-process",
 	)
@@ -137,7 +137,7 @@ func TestLoadRunConfigScopesDefaultStorageByAPIServerAndEnvironment(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if active.APIServer != "https://ama-staging.example.test" || active.StateDir != staging.StateDir || active.WorkDir != staging.WorkDir {
+	if active.APIServer != "https://enbor-staging.example.test" || active.StateDir != staging.StateDir || active.WorkDir != staging.WorkDir {
 		t.Fatalf("saved active API Server did not select its storage: active=%#v staging=%#v", active, staging)
 	}
 }
@@ -147,16 +147,16 @@ func TestLoadRunConfigPreservesExplicitStorageOverrides(t *testing.T) {
 	configRoot := filepath.Join(t.TempDir(), "config")
 	t.Setenv("XDG_CONFIG_HOME", configRoot)
 	t.Setenv("APPDATA", configRoot)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "saved-token", TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	stateDir := filepath.Join(t.TempDir(), "custom-state")
 	workDir := filepath.Join(t.TempDir(), "custom-work")
 	command := runConfigTestCommand(t,
-		"--api-server", "https://ama.example.test",
+		"--api-server", "https://enbor.example.test",
 		"--environment-id", "env_1",
 		"--allow-unsafe-process",
 		"--state-dir", stateDir,
@@ -173,7 +173,7 @@ func TestLoadRunConfigPreservesExplicitStorageOverrides(t *testing.T) {
 
 func TestRegisterRunFlagsSupportsDurationOptions(t *testing.T) {
 	original := runConfigOptions
-	runConfigOptions = append(runConfigOptions, runConfigOption{Key: "testDuration", Flag: "test-duration", Env: "AMA_RUNNER_TEST_DURATION", Default: time.Second, Usage: "test duration"})
+	runConfigOptions = append(runConfigOptions, runConfigOption{Key: "testDuration", Flag: "test-duration", Env: "ENBOR_RUNNER_TEST_DURATION", Default: time.Second, Usage: "test duration"})
 	t.Cleanup(func() { runConfigOptions = original })
 	command := &cobra.Command{}
 	RegisterRunFlags(command)
@@ -207,15 +207,15 @@ func TestManagedStartConfigAlwaysUsesDerivedStorage(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	t.Setenv("AMA_RUNNER_STATE_DIR", filepath.Join(t.TempDir(), "env-state"))
-	t.Setenv("AMA_RUNNER_WORKDIR", filepath.Join(t.TempDir(), "env-work"))
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_STATE_DIR", filepath.Join(t.TempDir(), "env-state"))
+	t.Setenv("ENBOR_RUNNER_WORKDIR", filepath.Join(t.TempDir(), "env-work"))
 	writeRunConfig(t, configPath, map[string]any{
-		"apiServer": "https://ama.example.test", "environmentId": "env_1", "allowUnsafeProcess": true,
+		"apiServer": "https://enbor.example.test", "environmentId": "env_1", "allowUnsafeProcess": true,
 		"stateDir": filepath.Join(t.TempDir(), "config-state"), "workDir": filepath.Join(t.TempDir(), "config-work"),
 	})
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "saved-token", TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +245,7 @@ func TestApplySavedLoginFillsServerFromBearerProfile(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID:   "acct_1",
-		APIServer:   "https://ama.example.test",
+		APIServer:   "https://enbor.example.test",
 		AccessToken: "saved-token",
 		TokenType:   "Bearer",
 		ExpiresAt:   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
@@ -256,7 +256,7 @@ func TestApplySavedLoginFillsServerFromBearerProfile(t *testing.T) {
 	if err := applySavedLogin(&config); err != nil {
 		t.Fatalf("apply saved login: %v", err)
 	}
-	if config.APIServer != "https://ama.example.test" || config.CredentialAccountID != "acct_1" {
+	if config.APIServer != "https://enbor.example.test" || config.CredentialAccountID != "acct_1" {
 		t.Fatalf("expected saved server, got %#v", config)
 	}
 }
@@ -292,7 +292,7 @@ func TestAuthConfigPathAndProfileAPIServer(t *testing.T) {
 	if got != "https://config.example.test" {
 		t.Fatalf("unexpected api server %q", got)
 	}
-	t.Setenv("AMA_RUNNER_CONFIG", configPath)
+	t.Setenv("ENBOR_RUNNER_CONFIG", configPath)
 	if got := authLoginConfigPath(authLoginTestCommand(t)); got != configPath {
 		t.Fatalf("expected auth login config env path, got %q", got)
 	}
@@ -310,8 +310,8 @@ func writeRunConfig(t *testing.T, path string, value map[string]any) {
 }
 
 func TestAuthLoginAndSwitchConfigUseEnvironment(t *testing.T) {
-	t.Setenv("AMA_API_SERVER", "https://env.example.test")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", filepath.Join(t.TempDir(), "credentials.json"))
+	t.Setenv("ENBOR_API_SERVER", "https://env.example.test")
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", filepath.Join(t.TempDir(), "credentials.json"))
 
 	login, err := LoadAuthLoginConfig(authLoginTestCommand(t))
 	if err != nil {
@@ -368,20 +368,20 @@ func runConfigTestCommand(t *testing.T, args ...string) *cobra.Command {
 }
 
 func TestCredentialPathDefaultAndEnvironment(t *testing.T) {
-	t.Setenv("AMA_RUNNER_CREDENTIALS", "")
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", "")
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	if got := credentialPath(); !strings.HasSuffix(got, filepath.Join("ama-runner", "credentials.json")) {
+	if got := credentialPath(); !strings.HasSuffix(got, filepath.Join("enbor-runner", "credentials.json")) {
 		t.Fatalf("expected default credential path, got %q", got)
 	}
 	custom := filepath.Join(t.TempDir(), "creds.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", " "+custom+" ")
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", " "+custom+" ")
 	if got := credentialPath(); got != custom {
 		t.Fatalf("expected trimmed custom credential path, got %q", got)
 	}
 }
 
 func TestRunConfigPathUsesDefaultWhenUnset(t *testing.T) {
-	t.Setenv("AMA_RUNNER_CONFIG", "")
+	t.Setenv("ENBOR_RUNNER_CONFIG", "")
 	configHome := filepath.Join(t.TempDir(), "config")
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("APPDATA", configHome)

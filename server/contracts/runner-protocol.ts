@@ -28,7 +28,7 @@ export const RunnerWorkspaceMountSchema = z
     url: z.string().optional().openapi({ example: 'https://github.com/realmroot/enbor.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
     credential: RunnerGitCredentialSchema.optional(),
-    memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
+    memoryRef: z.string().optional().openapi({ example: 'enbor://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
     description: z.string().nullable().optional(),
     readOnly: z.boolean().optional(),
     files: z.array(RunnerWorkspaceFileSchema).optional(),
@@ -51,7 +51,7 @@ export const RunnerVolumeSchema = z
     secretRef: z.string().optional(),
     url: z.string().optional().openapi({ example: 'https://github.com/realmroot/enbor.git' }),
     ref: z.string().optional().openapi({ example: 'main' }),
-    memoryRef: z.string().optional().openapi({ example: 'ama://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
+    memoryRef: z.string().optional().openapi({ example: 'enbor://memories/0195f5d6-7c20-7000-8000-00000000000a' }),
   })
   .strict()
   .openapi('RunnerVolume')
@@ -78,7 +78,7 @@ export const RunnerToolCallSchema = z
 
 export const RunnerWorkPayloadSchema = z
   .object({
-    protocol: z.literal('ama-runner-work').optional(),
+    protocol: z.literal('enbor-runner-work').optional(),
     type: z.string().optional().openapi({ example: 'session.start' }),
     sessionId: z.string().optional().openapi({ example: '0195f5d6-7c20-7000-8000-00000000000e' }),
     hostingMode: z.string().optional().openapi({ example: 'self_hosted' }),
@@ -91,7 +91,7 @@ export const RunnerWorkPayloadSchema = z
     runtimeDriver: z.string().optional().openapi({ example: 'codex-self-hosted' }),
     runtimeRequirement: z
       .object({
-        runtime: z.enum(['ama', 'claude-code', 'codex', 'copilot']),
+        runtime: z.enum(['enbor', 'claude-code', 'codex', 'copilot']),
         model: z.string().min(1).optional(),
       })
       .strict()

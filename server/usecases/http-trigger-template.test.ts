@@ -4,7 +4,7 @@ import { PromptTemplateRenderError, renderHttpPromptTemplate } from './http-trig
 describe('renderHttpPromptTemplate', () => {
   it('renders body, header, and Enbor run variables', () => {
     const prompt = renderHttpPromptTemplate(
-      'Handle {{ .body.ticket.id }} for {{ .body.team }} via {{ .header["x-source"] }} reused={{ .ama.run.session_reused }}.',
+      'Handle {{ .body.ticket.id }} for {{ .body.team }} via {{ .header["x-source"] }} reused={{ .enbor.run.session_reused }}.',
       {
         body: { ticket: { id: 'T-123' }, team: 'support' },
         header: { 'x-source': 'webhook' },

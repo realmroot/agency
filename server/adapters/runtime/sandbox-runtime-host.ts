@@ -179,7 +179,7 @@ export function workspaceVolumeManifest(manifest: WorkspaceManifest = { root: '/
 }
 
 const GIT_CLONE_TIMEOUT_MS = 120_000
-const RUNTIME_READY_MARKER = '/tmp/.ama-runtime-ready'
+const RUNTIME_READY_MARKER = '/tmp/.enbor-runtime-ready'
 const IDLE_LIFECYCLE_ATTEMPTS = 3
 
 type CloudWorkspaceSandbox = {
@@ -273,7 +273,7 @@ async function prepareCloudWorkspace(
     (mount): mount is Extract<WorkspaceManifestMount, { type: 'memory' }> => mount.type === 'memory',
   )) {
     const mountPath = mount.mountPath
-    if (!mountPath.startsWith('/workspace/.ama/memory-stores/')) {
+    if (!mountPath.startsWith('/workspace/.enbor/memory-stores/')) {
       throw new Error(`Invalid memory mount path: ${mountPath}`)
     }
     await execOrThrow(sandbox, `mkdir -p ${shellQuote(mountPath)}`)
@@ -339,7 +339,7 @@ async function materializeCloudEmptyDir(
     throw new Error(`Empty directory volume mount path is not a directory: ${mount.mountPath}`)
   }
   const parentPath = mount.mountPath.slice(0, mount.mountPath.lastIndexOf('/'))
-  const stagingPath = `${parentPath}/.ama-empty-dir-${crypto.randomUUID()}`
+  const stagingPath = `${parentPath}/.enbor-empty-dir-${crypto.randomUUID()}`
   await execOrThrow(sandbox, `umask 077 && mkdir -p ${shellQuote(parentPath)} && mkdir ${shellQuote(stagingPath)}`)
   try {
     for (const file of mount.files) {
@@ -393,8 +393,8 @@ async function rejectCloudWorkspaceSymlinks(sandbox: CloudWorkspaceSandbox, moun
   await execOrThrow(sandbox, prefixes.map((path) => `[ ! -L ${shellQuote(path)} ]`).join(' && '))
 }
 
-const CLOUD_ENVIRONMENT_BIN = '/workspace/.ama/environment/bin'
-const CLOUD_ENVIRONMENT_HOME = '/workspace/.ama/environment'
+const CLOUD_ENVIRONMENT_BIN = '/workspace/.enbor/environment/bin'
+const CLOUD_ENVIRONMENT_HOME = '/workspace/.enbor/environment'
 const CLOUD_WEBI_BIN = `${CLOUD_ENVIRONMENT_HOME}/.local/bin`
 const PINNED_WEBI_PACKAGE = /^[a-z0-9][a-z0-9._-]*@v?[0-9][a-zA-Z0-9._-]*$/
 
@@ -488,7 +488,7 @@ export async function startSessionRuntime(
   if (!input.model) {
     throw new Error('Enbor cloud runtime requires an explicitly pinned model')
   }
-  if (env.AMA_RUNTIME_MODE !== 'test') {
+  if (env.RUNTIME_MODE !== 'test') {
     const getSandbox = await getSandboxBinding()
     const sandbox = getSandbox(env.SANDBOX, input.sandboxId, {
       enableDefaultSession: false,
@@ -514,10 +514,10 @@ export async function startSessionRuntime(
   return {
     sandboxId: input.sandboxId,
     metadata: {
-      runtimeMode: env.AMA_RUNTIME_MODE === 'test' ? 'test' : 'live',
-      runtimeDriver: 'ama-cloud',
-      runtimeBackend: 'ama-cloud',
-      runtimeProtocol: 'ama-runtime-rpc',
+      runtimeMode: env.RUNTIME_MODE === 'test' ? 'test' : 'live',
+      runtimeDriver: 'enbor-cloud',
+      runtimeBackend: 'enbor-cloud',
+      runtimeProtocol: 'enbor-runtime-rpc',
       loop: 'cloud-session-runtime',
       executor: 'cloudflare-sandbox',
       piCorePackage: '@earendil-works/pi-agent-core',
@@ -526,7 +526,7 @@ export async function startSessionRuntime(
 }
 
 export async function activateSessionRuntime(env: Env, input: SessionRuntimeStartInput) {
-  if (env.AMA_RUNTIME_MODE === 'test') return
+  if (env.RUNTIME_MODE === 'test') return
   const getSandbox = await getSandboxBinding()
   const sandbox = getSandbox(env.SANDBOX, input.sandboxId, {
     enableDefaultSession: false,
@@ -543,7 +543,7 @@ export async function stopSessionRuntime(env: Env, sandboxId: string) {
 }
 
 export async function idleSessionRuntime(env: Env, sandboxId: string, sleepAfterSeconds: number) {
-  if (env.AMA_RUNTIME_MODE === 'test') return
+  if (env.RUNTIME_MODE === 'test') return
   const getSandbox = await getSandboxBinding()
   const sandbox = getSandbox(env.SANDBOX, sandboxId, { enableDefaultSession: false, normalizeId: true })
   for (let attempt = 1; attempt <= IDLE_LIFECYCLE_ATTEMPTS; attempt += 1) {
@@ -561,7 +561,7 @@ export async function readMemoryStoreMemories(
   env: Env,
   input: { sandboxId: string; volumes: MemoryVolume[]; volumeMounts: VolumeMount[] },
 ) {
-  if (env.AMA_RUNTIME_MODE === 'test') {
+  if (env.RUNTIME_MODE === 'test') {
     return []
   }
   const getSandbox = await getSandboxBinding()
@@ -577,7 +577,7 @@ export async function readMemoryStoreMemories(
     }
     const storeId = memoryStoreIdFromRef(volume.memoryRef)
     const mountPath = String(volumeMountPath(volume.name, input.volumeMounts) ?? '')
-    if (!storeId || !mountPath.startsWith('/workspace/.ama/memory-stores/')) {
+    if (!storeId || !mountPath.startsWith('/workspace/.enbor/memory-stores/')) {
       continue
     }
     const listed = await sandbox.exec(`find ${shellQuote(mountPath)} -type f -print | sort`)
@@ -651,7 +651,7 @@ function fallbackModel(model: string): Model<string> {
   return {
     id: model,
     name: model,
-    api: 'ama-workers-ai',
+    api: 'enbor-workers-ai',
     provider: 'cloudflare-workers-ai',
     baseUrl: 'cloudflare-ai-binding://AI',
     reasoning: false,

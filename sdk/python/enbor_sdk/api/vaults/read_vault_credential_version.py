@@ -20,12 +20,12 @@ def _get_kwargs(
     credential_id: str,
     version_id: str,
     *,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -107,7 +107,7 @@ def sync_detailed(
     version_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | None | VaultCredentialVersionType0]:
     """ Read a vault credential version
@@ -116,7 +116,7 @@ def sync_detailed(
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -131,7 +131,7 @@ def sync_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
 version_id=version_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -147,7 +147,7 @@ def sync(
     version_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | None | VaultCredentialVersionType0 | None:
     """ Read a vault credential version
@@ -156,7 +156,7 @@ def sync(
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -172,7 +172,7 @@ def sync(
 credential_id=credential_id,
 version_id=version_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -182,7 +182,7 @@ async def asyncio_detailed(
     version_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | None | VaultCredentialVersionType0]:
     """ Read a vault credential version
@@ -191,7 +191,7 @@ async def asyncio_detailed(
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -206,7 +206,7 @@ async def asyncio_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
 version_id=version_id,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -222,7 +222,7 @@ async def asyncio(
     version_id: str,
     *,
     client: AuthenticatedClient,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | None | VaultCredentialVersionType0 | None:
     """ Read a vault credential version
@@ -231,7 +231,7 @@ async def asyncio(
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
         version_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000009.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -247,6 +247,6 @@ async def asyncio(
 credential_id=credential_id,
 version_id=version_id,
 client=client,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

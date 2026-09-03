@@ -11,7 +11,7 @@ vi.mock('@github/copilot-sdk', () => ({
 vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
 
 vi.mock('./cli-host', () => ({
-  hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
+  hostHome: (env: Record<string, string>) => env.ENBOR_RUNTIME_BRIDGE_HOST_HOME,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
   sdkEnv: (request: RuntimeProviderRequest) => request.env,
 }))
@@ -35,7 +35,7 @@ describe('CopilotEventMapper', () => {
             arguments: { file_path: 'out.txt', old_text: 'old', new_text: 'new' },
           },
           { toolCallId: 'tool_fetch', name: 'url', arguments: { url: 'https://example.com' } },
-          { toolCallId: 'tool_search', name: 'web_search', arguments: { query: 'ama runtime' } },
+          { toolCallId: 'tool_search', name: 'web_search', arguments: { query: 'enbor runtime' } },
         ],
       },
     })
@@ -55,7 +55,7 @@ describe('CopilotEventMapper', () => {
         },
       },
       { type: 'tool_call', toolCall: { id: 'tool_fetch', name: 'fetch', input: { url: 'https://example.com' } } },
-      { type: 'tool_call', toolCall: { id: 'tool_search', name: 'web_search', input: { query: 'ama runtime' } } },
+      { type: 'tool_call', toolCall: { id: 'tool_search', name: 'web_search', input: { query: 'enbor runtime' } } },
     ])
   })
 })

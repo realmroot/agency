@@ -40,5 +40,5 @@ export function gitRepositoryMountPath(url: string): string {
 
 export function gitCredentialEnvName(volumeName: string): string {
   const safeName = volumeName.replace(/[^A-Za-z0-9]/g, '_').toUpperCase()
-  return `AMA_GIT_TOKEN_${safeName}`
+  return `ENBOR_GIT_TOKEN_${safeName}`
 }

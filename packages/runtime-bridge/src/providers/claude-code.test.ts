@@ -10,7 +10,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 vi.mock('../host/cli', () => ({ resolveCliPath: () => undefined }))
 
 vi.mock('./cli-host', () => ({
-  hostHome: (env: Record<string, string>) => env.AMA_RUNTIME_BRIDGE_HOST_HOME,
+  hostHome: (env: Record<string, string>) => env.ENBOR_RUNTIME_BRIDGE_HOST_HOME,
   objectValue: (value: unknown) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
   sdkEnv: (request: RuntimeProviderRequest) => request.env,
 }))
@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe('claudeCodeProvider', () => {
   it('[spec: runtime/provider-permission-policy] applies runner-owned Claude Code permission settings', async () => {
-    vi.stubEnv('AMA_CLAUDE_CODE_PERMISSION_MODE', 'auto')
+    vi.stubEnv('ENBOR_CLAUDE_CODE_PERMISSION_MODE', 'auto')
     const close = vi.fn()
     queryMock.mockReturnValue({
       async *[Symbol.asyncIterator]() {},
@@ -83,7 +83,7 @@ describe('ClaudeEventMapper', () => {
           },
           { type: 'tool_use', id: 'tool_glob', name: 'Glob', input: { pattern: '*.ts', path: 'src' } },
           { type: 'tool_use', id: 'tool_fetch', name: 'WebFetch', input: { url: 'https://example.com' } },
-          { type: 'tool_use', id: 'tool_search', name: 'WebSearch', input: { query: 'ama runtime' } },
+          { type: 'tool_use', id: 'tool_search', name: 'WebSearch', input: { query: 'enbor runtime' } },
           {
             type: 'tool_use',
             id: 'tool_agent',
@@ -118,7 +118,7 @@ describe('ClaudeEventMapper', () => {
       },
       { type: 'tool_call', toolCall: { id: 'tool_glob', name: 'find', input: { glob: '*.ts', path: 'src' } } },
       { type: 'tool_call', toolCall: { id: 'tool_fetch', name: 'fetch', input: { url: 'https://example.com' } } },
-      { type: 'tool_call', toolCall: { id: 'tool_search', name: 'web_search', input: { query: 'ama runtime' } } },
+      { type: 'tool_call', toolCall: { id: 'tool_search', name: 'web_search', input: { query: 'enbor runtime' } } },
       {
         type: 'tool_call',
         toolCall: {

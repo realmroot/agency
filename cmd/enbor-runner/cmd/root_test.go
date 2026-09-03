@@ -30,7 +30,7 @@ import (
 
 func TestRunFailsOnInvalidConfig(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
 		AccountID: "acct_1", APIServer: "://bad", AccessToken: "e2e-runner:test",
 		TokenType: "Bearer",
@@ -58,7 +58,7 @@ func TestRunVersionPrintsBuildMetadata(t *testing.T) {
 }
 
 func TestRunRootVersionIgnoresRunnerEnvironmentValidation(t *testing.T) {
-	t.Setenv("AMA_RUNNER_LEASE_SECONDS", "soon")
+	t.Setenv("ENBOR_RUNNER_LEASE_SECONDS", "soon")
 	var output bytes.Buffer
 	err := execute(context.Background(), []string{"--version"}, testBuild(), &output, nil)
 	if err != nil {
@@ -108,7 +108,7 @@ func TestRootCommandDoesNotImplicitlyRunDaemon(t *testing.T) {
 	if !strings.Contains(output.String(), "Available Commands") || !strings.Contains(output.String(), "run") {
 		t.Fatalf("unexpected root help %q", output.String())
 	}
-	if err := execute(context.Background(), []string{"--api-server", "https://ama.example.test"}, testBuild(), nil, nil); err == nil {
+	if err := execute(context.Background(), []string{"--api-server", "https://enbor.example.test"}, testBuild(), nil, nil); err == nil {
 		t.Fatal("legacy implicit foreground flags must be rejected")
 	}
 }
@@ -175,9 +175,9 @@ func TestManagedLifecycleCommands(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "saved-token", TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestManagedLifecycleCommands(t *testing.T) {
 
 	base := []string{"--registry-dir", registryDir}
 	var output bytes.Buffer
-	startArgs := append(append([]string{}, base...), "start", "--api-server", "https://ama.example.test", "--project-id", "project_1", "--environment-id", "env_1", "--allow-unsafe-process", "--max-concurrent", "1")
+	startArgs := append(append([]string{}, base...), "start", "--api-server", "https://enbor.example.test", "--project-id", "project_1", "--environment-id", "env_1", "--allow-unsafe-process", "--max-concurrent", "1")
 	if err := execute(context.Background(), startArgs, testBuild(), &output, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestManagedLifecycleCommands(t *testing.T) {
 		t.Fatalf("repeated start was not idempotently delegated: %#v", fake.started)
 	}
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_2", APIServer: "https://ama.example.test", AccessToken: "other-token", TokenType: "Bearer",
+		AccountID: "acct_2", APIServer: "https://enbor.example.test", AccessToken: "other-token", TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -468,12 +468,12 @@ func managedCommandTestRecord(t *testing.T) (string, instance.Record) {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
-	stateDir, err := runnerconfig.DefaultStateDirForInstance("https://ama.example.test", "env_1")
+	stateDir, err := runnerconfig.DefaultStateDirForInstance("https://enbor.example.test", "env_1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	config := runnerconfig.Config{
-		APIServer: "https://ama.example.test", ProjectID: "project_1", EnvironmentID: "env_1", AllowUnsafeProcess: true,
+		APIServer: "https://enbor.example.test", ProjectID: "project_1", EnvironmentID: "env_1", AllowUnsafeProcess: true,
 		StateDir: stateDir, WorkDir: runnerconfig.DefaultWorkDirForStateDir(stateDir), MaxConcurrent: 1,
 		HeartbeatInterval: 20 * time.Second, LeaseDurationSeconds: 60, RenewInterval: 20 * time.Second,
 		CommandTimeout: 10 * time.Minute, ShutdownGraceInterval: 5 * time.Second, MaxSessionDuration: 2 * time.Hour,
@@ -496,9 +496,9 @@ func TestManagedStartCanExplicitlyEnableLoginStartupForANewInstance(t *testing.T
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	t.Setenv("XDG_STATE_HOME", stateRoot)
 	t.Setenv("LOCALAPPDATA", stateRoot)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "saved-token", TokenType: "Bearer",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "saved-token", TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -510,7 +510,7 @@ func TestManagedStartCanExplicitlyEnableLoginStartupForANewInstance(t *testing.T
 	err := execute(context.Background(), []string{
 		"--registry-dir", registryDir,
 		"start",
-		"--api-server", "https://ama.example.test",
+		"--api-server", "https://enbor.example.test",
 		"--project-id", "project_1",
 		"--environment-id", "env_1",
 		"--allow-unsafe-process",
@@ -652,7 +652,7 @@ func TestRunLoginCompletesLoopbackPKCEAndStoresToken(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- execute(context.Background(), []string{"auth", "login", "--api-server", server.URL}, testBuild(), output, nil)
@@ -708,12 +708,12 @@ func lockRunnerCallbackPort(t *testing.T) {
 
 func TestRunAuthStatusCommand(t *testing.T) {
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
 	data := `{
-  "active": "https://ama.example.test#acct_1",
+  "active": "https://enbor.example.test#acct_1",
   "profiles": [{
     "accountId": "acct_1",
-    "apiServer": "https://ama.example.test",
+    "apiServer": "https://enbor.example.test",
     "accessToken": "token",
     "tokenType": "Bearer"
   }]
@@ -725,7 +725,7 @@ func TestRunAuthStatusCommand(t *testing.T) {
 	if err := execute(context.Background(), []string{"auth", "status"}, testBuild(), &output, nil); err != nil {
 		t.Fatalf("expected auth status command, got %v", err)
 	}
-	if !strings.Contains(output.String(), "* https://ama.example.test acct_1") {
+	if !strings.Contains(output.String(), "* https://enbor.example.test acct_1") {
 		t.Fatalf("unexpected auth status output %q", output.String())
 	}
 }
@@ -737,7 +737,7 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 		w.Header().Set("content-type", "application/json")
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/configz":
-			_, _ = w.Write([]byte(`{"version":1,"service":{"name":"Enbor","origin":"https://ama.example.test"},"auth":{"oidc":{"issuer":"https://issuer.example.test","resource":"https://ama.example.test","browser":{"clientId":"browser-client","scopes":["openid","email","profile"]},"runner":{"clientId":"runner-client","scopes":["openid","profile","email","offline_access"]}}}}`))
+			_, _ = w.Write([]byte(`{"version":1,"service":{"name":"Enbor","origin":"https://enbor.example.test"},"auth":{"oidc":{"issuer":"https://issuer.example.test","resource":"https://enbor.example.test","browser":{"clientId":"browser-client","scopes":["openid","email","profile"]},"runner":{"clientId":"runner-client","scopes":["openid","profile","email","offline_access"]}}}}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runners":
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"id":"runner_1","name":"runner","runtimes":[],"state":"offline","currentLoad":0,"maxConcurrent":1}`))
@@ -775,10 +775,10 @@ func TestRunWithContextWiresSDKDaemonAndStops(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("AMA_API_SERVER", server.URL)
-	t.Setenv("AMA_RUNNER_CREDENTIALS", credentialPath)
-	t.Setenv("AMA_ENVIRONMENT_ID", "env_1")
-	t.Setenv("AMA_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
+	t.Setenv("ENBOR_API_SERVER", server.URL)
+	t.Setenv("ENBOR_RUNNER_CREDENTIALS", credentialPath)
+	t.Setenv("ENBOR_ENVIRONMENT_ID", "env_1")
+	t.Setenv("ENBOR_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	err := execute(ctx, []string{"run"}, testBuild(), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "context canceled") {

@@ -27,12 +27,12 @@ def _get_kwargs(
     type_: ListSessionEventsType | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -148,7 +148,7 @@ def sync_detailed(
     type_: ListSessionEventsType | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionEventListResponse]:
     """ List session events
@@ -164,7 +164,7 @@ def sync_detailed(
         type_ (ListSessionEventsType | Unset):  Example: message.completed.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -183,7 +183,7 @@ limit=limit,
 type_=type_,
 created_from=created_from,
 created_to=created_to,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -203,7 +203,7 @@ def sync(
     type_: ListSessionEventsType | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionEventListResponse | None:
     """ List session events
@@ -219,7 +219,7 @@ def sync(
         type_ (ListSessionEventsType | Unset):  Example: message.completed.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -239,7 +239,7 @@ limit=limit,
 type_=type_,
 created_from=created_from,
 created_to=created_to,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -253,7 +253,7 @@ async def asyncio_detailed(
     type_: ListSessionEventsType | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionEventListResponse]:
     """ List session events
@@ -269,7 +269,7 @@ async def asyncio_detailed(
         type_ (ListSessionEventsType | Unset):  Example: message.completed.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -288,7 +288,7 @@ limit=limit,
 type_=type_,
 created_from=created_from,
 created_to=created_to,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -308,7 +308,7 @@ async def asyncio(
     type_: ListSessionEventsType | Unset = UNSET,
     created_from: datetime.datetime | Unset = UNSET,
     created_to: datetime.datetime | Unset = UNSET,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionEventListResponse | None:
     """ List session events
@@ -324,7 +324,7 @@ async def asyncio(
         type_ (ListSessionEventsType | Unset):  Example: message.completed.
         created_from (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         created_to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -344,6 +344,6 @@ limit=limit,
 type_=type_,
 created_from=created_from,
 created_to=created_to,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

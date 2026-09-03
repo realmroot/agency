@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 // Event is one canonical event in the runner's local log. The id and sequence
@@ -27,7 +27,7 @@ type Event struct {
 	Sequence  int64    `json:"sequence"`
 	CreatedAt string   `json:"createdAt"`
 	Type      string   `json:"type"`
-	Payload   ama.JSON `json:"payload"`
+	Payload   enbor.JSON `json:"payload"`
 }
 
 // EventLog is the runner's local, durable, per-session event log for
@@ -86,7 +86,7 @@ func newEventID() (string, error) {
 
 // Append durably records one event and returns it (with its stable id/sequence)
 // so the caller can both relay it live upstream and serve it on backfill.
-func (s *EventLog) Append(body ama.JSON) (Event, error) {
+func (s *EventLog) Append(body enbor.JSON) (Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	pathLock := eventLogPathLock(s.path)
@@ -110,13 +110,13 @@ func (s *EventLog) Append(body ama.JSON) (Event, error) {
 	if !ok || eventType == "" {
 		return Event{}, fmt.Errorf("session event is missing type")
 	}
-	payload, ok := body["payload"].(ama.JSON)
+	payload, ok := body["payload"].(enbor.JSON)
 	if !ok {
 		payloadRecord, ok := body["payload"].(map[string]any)
 		if !ok {
-			payload = ama.JSON{}
+			payload = enbor.JSON{}
 		} else {
-			payload = ama.JSON(payloadRecord)
+			payload = enbor.JSON(payloadRecord)
 		}
 	}
 	event := Event{
@@ -142,8 +142,8 @@ func (s *EventLog) Append(body ama.JSON) (Event, error) {
 	return event, nil
 }
 
-func (e Event) EnborEvent() ama.JSON {
-	return ama.JSON{"type": e.Type, "payload": e.Payload}
+func (e Event) EnborEvent() enbor.JSON {
+	return enbor.JSON{"type": e.Type, "payload": e.Payload}
 }
 
 // ReadAll returns the full ordered log. The server applies the cursor/type/

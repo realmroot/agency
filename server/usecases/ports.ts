@@ -2188,7 +2188,7 @@ export interface EventPage {
 }
 
 // "Storage follows the loop": the canonical event store that routes cloud-loop
-// (ama) sessions to the per-session Session DO (SQLite hot + R2 cold) and leaves
+// (enbor) sessions to the per-session Session DO (SQLite hot + R2 cold) and leaves
 // pre-migration cloud + self-hosted CLI sessions on D1. One contract over both
 // backends; the read shape (SessionEvent/Page) is identical either way.
 export interface EventStore {

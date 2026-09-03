@@ -22,19 +22,19 @@ type runConfigOption struct {
 }
 
 var runConfigOptions = []runConfigOption{
-	{Key: "apiServer", Flag: "api-server", Env: "AMA_API_SERVER", Usage: "Enbor API server URL"},
-	{Key: "projectId", Flag: "project-id", Env: "AMA_PROJECT_ID", Usage: "Enbor project id"},
-	{Key: "environmentId", Flag: "environment-id", Env: "AMA_ENVIRONMENT_ID", Usage: "Enbor environment id"},
-	{Key: "allowUnsafeProcess", Flag: "allow-unsafe-process", Env: "AMA_RUNNER_ALLOW_UNSAFE_PROCESS", Default: false, Usage: "acknowledge unsafe process adapter"},
-	{Key: "stateDir", Flag: "state-dir", Env: "AMA_RUNNER_STATE_DIR", Usage: "override foreground runner state directory (default: isolated by API server and environment)"},
-	{Key: "workDir", Flag: "work-dir", Env: "AMA_RUNNER_WORKDIR", Usage: "override local work directory (default: state directory/work)"},
-	{Key: "maxConcurrent", Flag: "max-concurrent", Env: "AMA_RUNNER_MAX_CONCURRENT", Default: 5, Usage: "max concurrent leases"},
-	{Key: "heartbeatInterval", Env: "AMA_RUNNER_HEARTBEAT_INTERVAL", Default: 20 * time.Second},
-	{Key: "leaseDurationSeconds", Env: "AMA_RUNNER_LEASE_SECONDS", Default: 60},
-	{Key: "renewInterval", Env: "AMA_RUNNER_RENEW_INTERVAL", Default: 20 * time.Second},
-	{Key: "commandTimeout", Env: "AMA_RUNNER_COMMAND_TIMEOUT", Default: 10 * time.Minute},
-	{Key: "shutdownGraceInterval", Env: "AMA_RUNNER_SHUTDOWN_GRACE", Default: 5 * time.Second},
-	{Key: "maxSessionDuration", Env: "AMA_RUNNER_MAX_SESSION_DURATION", Default: 2 * time.Hour},
+	{Key: "apiServer", Flag: "api-server", Env: "ENBOR_API_SERVER", Usage: "Enbor API server URL"},
+	{Key: "projectId", Flag: "project-id", Env: "ENBOR_PROJECT_ID", Usage: "Enbor project id"},
+	{Key: "environmentId", Flag: "environment-id", Env: "ENBOR_ENVIRONMENT_ID", Usage: "Enbor environment id"},
+	{Key: "allowUnsafeProcess", Flag: "allow-unsafe-process", Env: "ENBOR_RUNNER_ALLOW_UNSAFE_PROCESS", Default: false, Usage: "acknowledge unsafe process adapter"},
+	{Key: "stateDir", Flag: "state-dir", Env: "ENBOR_RUNNER_STATE_DIR", Usage: "override foreground runner state directory (default: isolated by API server and environment)"},
+	{Key: "workDir", Flag: "work-dir", Env: "ENBOR_RUNNER_WORKDIR", Usage: "override local work directory (default: state directory/work)"},
+	{Key: "maxConcurrent", Flag: "max-concurrent", Env: "ENBOR_RUNNER_MAX_CONCURRENT", Default: 5, Usage: "max concurrent leases"},
+	{Key: "heartbeatInterval", Env: "ENBOR_RUNNER_HEARTBEAT_INTERVAL", Default: 20 * time.Second},
+	{Key: "leaseDurationSeconds", Env: "ENBOR_RUNNER_LEASE_SECONDS", Default: 60},
+	{Key: "renewInterval", Env: "ENBOR_RUNNER_RENEW_INTERVAL", Default: 20 * time.Second},
+	{Key: "commandTimeout", Env: "ENBOR_RUNNER_COMMAND_TIMEOUT", Default: 10 * time.Minute},
+	{Key: "shutdownGraceInterval", Env: "ENBOR_RUNNER_SHUTDOWN_GRACE", Default: 5 * time.Second},
+	{Key: "maxSessionDuration", Env: "ENBOR_RUNNER_MAX_SESSION_DURATION", Default: 2 * time.Hour},
 }
 
 func RegisterRunFlags(command *cobra.Command) {
@@ -90,7 +90,7 @@ func loadRunConfig(command *cobra.Command, managed bool) (runnerconfig.Config, e
 	if err != nil {
 		return runnerconfig.Config{}, err
 	}
-	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("AMA_RUNNER_CONFIG")) != ""); err != nil {
+	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CONFIG")) != ""); err != nil {
 		return runnerconfig.Config{}, err
 	}
 	var config runnerconfig.Config
@@ -184,14 +184,14 @@ func runConfigPath(command *cobra.Command) (string, error) {
 	if flag != nil && flag.Changed {
 		return flag.Value.String(), nil
 	}
-	if value := strings.TrimSpace(os.Getenv("AMA_RUNNER_CONFIG")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CONFIG")); value != "" {
 		return value, nil
 	}
 	return runnerconfig.DefaultConfigPath(), nil
 }
 
 func credentialPath() string {
-	if value := strings.TrimSpace(os.Getenv("AMA_RUNNER_CREDENTIALS")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CREDENTIALS")); value != "" {
 		return value
 	}
 	return runnerconfig.DefaultCredentialPath()
@@ -226,14 +226,14 @@ func RegisterAuthSwitchFlags(command *cobra.Command) {
 
 func LoadAuthLoginConfig(command *cobra.Command) (runnerauth.LoginCommand, error) {
 	values := viper.New()
-	if err := values.BindEnv("apiServer", "AMA_API_SERVER"); err != nil {
+	if err := values.BindEnv("apiServer", "ENBOR_API_SERVER"); err != nil {
 		return runnerauth.LoginCommand{}, err
 	}
 	if err := values.BindPFlag("apiServer", command.Flags().Lookup("api-server")); err != nil {
 		return runnerauth.LoginCommand{}, err
 	}
 	configPath := authLoginConfigPath(command)
-	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("AMA_RUNNER_CONFIG")) != ""); err != nil {
+	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CONFIG")) != ""); err != nil {
 		return runnerauth.LoginCommand{}, err
 	}
 	return runnerauth.ValidateLoginCommand(runnerauth.LoginCommand{
@@ -247,7 +247,7 @@ func authLoginConfigPath(command *cobra.Command) string {
 	if flag != nil && flag.Changed {
 		return flag.Value.String()
 	}
-	if value := strings.TrimSpace(os.Getenv("AMA_RUNNER_CONFIG")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CONFIG")); value != "" {
 		return value
 	}
 	return runnerconfig.DefaultConfigPath()
@@ -259,14 +259,14 @@ func AuthCredentialPath() string {
 
 func AuthProfileAPIServer(command *cobra.Command) (string, error) {
 	values := viper.New()
-	if err := values.BindEnv("apiServer", "AMA_API_SERVER"); err != nil {
+	if err := values.BindEnv("apiServer", "ENBOR_API_SERVER"); err != nil {
 		return "", err
 	}
 	if err := values.BindPFlag("apiServer", command.Flags().Lookup("api-server")); err != nil {
 		return "", err
 	}
 	configPath := authLoginConfigPath(command)
-	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("AMA_RUNNER_CONFIG")) != ""); err != nil {
+	if err := readConfigFile(values, configPath, configFlagChanged(command) || strings.TrimSpace(os.Getenv("ENBOR_RUNNER_CONFIG")) != ""); err != nil {
 		return "", err
 	}
 	return values.GetString("apiServer"), nil

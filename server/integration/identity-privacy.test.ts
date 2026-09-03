@@ -72,7 +72,7 @@ describe('[CF] Identity privacy boundaries', () => {
     const authorization = await signIn()
     const scope = await currentScope(authorization)
     const now = '2026-08-28T00:00:00.000Z'
-    const privateRef = 'ama://vaults/vault_identity_private/credentials/cred_private_state'
+    const privateRef = 'enbor://vaults/vault_identity_private/credentials/cred_private_state'
     const descriptor = {
       identityId: 'identity_1',
       agentId: 'rr_identity_1',

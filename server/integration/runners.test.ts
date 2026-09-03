@@ -159,7 +159,7 @@ describe('[CF] /api/v1/runners', () => {
       method: 'POST',
       body: JSON.stringify({
         name: 'Bad credential runner',
-        secretRef: 'ama://vaults/vault_missing/credentials/cred_missing',
+        secretRef: 'enbor://vaults/vault_missing/credentials/cred_missing',
       }),
     })
     expect(res.status).toBe(400)

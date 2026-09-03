@@ -20,12 +20,12 @@ def _get_kwargs(
     agent_id: str,
     *,
     body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
+    if not isinstance(x_enbor_project_id, Unset):
+        headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
 
 
@@ -110,7 +110,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Update an agent
@@ -119,7 +119,7 @@ def sync_detailed(
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (UpdateAgentRequest):
 
     Raises:
@@ -134,7 +134,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         agent_id=agent_id,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -149,7 +149,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Update an agent
@@ -158,7 +158,7 @@ def sync(
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (UpdateAgentRequest):
 
     Raises:
@@ -174,7 +174,7 @@ def sync(
         agent_id=agent_id,
 client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
 
@@ -183,7 +183,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Update an agent
@@ -192,7 +192,7 @@ async def asyncio_detailed(
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (UpdateAgentRequest):
 
     Raises:
@@ -207,7 +207,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         agent_id=agent_id,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )
 
@@ -222,7 +222,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Update an agent
@@ -231,7 +231,7 @@ async def asyncio(
 
     Args:
         agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
+        x_enbor_project_id (str | Unset):
         body (UpdateAgentRequest):
 
     Raises:
@@ -247,6 +247,6 @@ async def asyncio(
         agent_id=agent_id,
 client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
+x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

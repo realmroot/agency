@@ -24,7 +24,7 @@ describe('redactToolResultsFromPayload', () => {
               structuredContent: {
                 apiKey: 'raw-api-key',
                 nested: { accessToken: 'raw-access-token' },
-                envFromShape: { type: 'secret', secretRef: 'ama://vaults/v/credentials/c/versions/ver' },
+                envFromShape: { type: 'secret', secretRef: 'enbor://vaults/v/credentials/c/versions/ver' },
               },
             },
             error: { message: 'password="raw-password"' },
@@ -54,7 +54,7 @@ describe('redactToolResultsFromPayload', () => {
               structuredContent: {
                 apiKey: '[REDACTED]',
                 nested: { accessToken: '[REDACTED]' },
-                envFromShape: { type: 'secret', secretRef: 'ama://vaults/v/credentials/c/versions/ver' },
+                envFromShape: { type: 'secret', secretRef: 'enbor://vaults/v/credentials/c/versions/ver' },
               },
             },
             error: { message: 'password="[REDACTED]"' },

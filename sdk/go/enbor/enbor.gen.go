@@ -434,13 +434,13 @@ func (e CreateTriggerRequestSpecSource2Type) Valid() bool {
 
 // Defines values for CreateVaultCredentialRequestType.
 const (
-	CreateVaultCredentialRequestTypeBasicAuth           CreateVaultCredentialRequestType = "ama.dev/basic-auth"
-	CreateVaultCredentialRequestTypeOauthToken          CreateVaultCredentialRequestType = "ama.dev/oauth-token"
+	CreateVaultCredentialRequestTypeBasicAuth           CreateVaultCredentialRequestType = "enbor.dev/basic-auth"
+	CreateVaultCredentialRequestTypeOauthToken          CreateVaultCredentialRequestType = "enbor.dev/oauth-token"
 	CreateVaultCredentialRequestTypeOpaque              CreateVaultCredentialRequestType = "opaque"
-	CreateVaultCredentialRequestTypePrivateKeyJwk       CreateVaultCredentialRequestType = "ama.dev/private-key-jwk"
-	CreateVaultCredentialRequestTypeRealmrootAgentState CreateVaultCredentialRequestType = "ama.dev/realmroot-agent-state"
-	CreateVaultCredentialRequestTypeSshAuth             CreateVaultCredentialRequestType = "ama.dev/ssh-auth"
-	CreateVaultCredentialRequestTypeTls                 CreateVaultCredentialRequestType = "ama.dev/tls"
+	CreateVaultCredentialRequestTypePrivateKeyJwk       CreateVaultCredentialRequestType = "enbor.dev/private-key-jwk"
+	CreateVaultCredentialRequestTypeRealmrootAgentState CreateVaultCredentialRequestType = "enbor.dev/realmroot-agent-state"
+	CreateVaultCredentialRequestTypeSshAuth             CreateVaultCredentialRequestType = "enbor.dev/ssh-auth"
+	CreateVaultCredentialRequestTypeTls                 CreateVaultCredentialRequestType = "enbor.dev/tls"
 )
 
 // Valid indicates whether the value is a known member of the CreateVaultCredentialRequestType enum.
@@ -1202,13 +1202,13 @@ func (e PublicConfigVersion) Valid() bool {
 
 // Defines values for PublicServiceConfigName.
 const (
-	Enbor PublicServiceConfigName = "Enbor"
+	PublicServiceConfigNameEnbor PublicServiceConfigName = "Enbor"
 )
 
 // Valid indicates whether the value is a known member of the PublicServiceConfigName enum.
 func (e PublicServiceConfigName) Valid() bool {
 	switch e {
-	case Enbor:
+	case PublicServiceConfigNameEnbor:
 		return true
 	default:
 		return false
@@ -1541,22 +1541,22 @@ func (e RunnerRuntimeState) Valid() bool {
 
 // Defines values for RunnerRuntimeRequirementRuntime.
 const (
-	RunnerRuntimeRequirementRuntimeAma        RunnerRuntimeRequirementRuntime = "ama"
 	RunnerRuntimeRequirementRuntimeClaudeCode RunnerRuntimeRequirementRuntime = "claude-code"
 	RunnerRuntimeRequirementRuntimeCodex      RunnerRuntimeRequirementRuntime = "codex"
 	RunnerRuntimeRequirementRuntimeCopilot    RunnerRuntimeRequirementRuntime = "copilot"
+	RunnerRuntimeRequirementRuntimeEnbor      RunnerRuntimeRequirementRuntime = "enbor"
 )
 
 // Valid indicates whether the value is a known member of the RunnerRuntimeRequirementRuntime enum.
 func (e RunnerRuntimeRequirementRuntime) Valid() bool {
 	switch e {
-	case RunnerRuntimeRequirementRuntimeAma:
-		return true
 	case RunnerRuntimeRequirementRuntimeClaudeCode:
 		return true
 	case RunnerRuntimeRequirementRuntimeCodex:
 		return true
 	case RunnerRuntimeRequirementRuntimeCopilot:
+		return true
+	case RunnerRuntimeRequirementRuntimeEnbor:
 		return true
 	default:
 		return false
@@ -1610,7 +1610,7 @@ func (e RunnerVolumeType) Valid() bool {
 
 // Defines values for RunnerWorkPayloadProtocol.
 const (
-	EnborRunnerWork RunnerWorkPayloadProtocol = "ama-runner-work"
+	EnborRunnerWork RunnerWorkPayloadProtocol = "enbor-runner-work"
 )
 
 // Valid indicates whether the value is a known member of the RunnerWorkPayloadProtocol enum.
@@ -1664,22 +1664,22 @@ func (e RunnerWorkspaceMountType) Valid() bool {
 
 // Defines values for RuntimeName.
 const (
-	RuntimeNameAma        RuntimeName = "ama"
 	RuntimeNameClaudeCode RuntimeName = "claude-code"
 	RuntimeNameCodex      RuntimeName = "codex"
 	RuntimeNameCopilot    RuntimeName = "copilot"
+	RuntimeNameEnbor      RuntimeName = "enbor"
 )
 
 // Valid indicates whether the value is a known member of the RuntimeName enum.
 func (e RuntimeName) Valid() bool {
 	switch e {
-	case RuntimeNameAma:
-		return true
 	case RuntimeNameClaudeCode:
 		return true
 	case RuntimeNameCodex:
 		return true
 	case RuntimeNameCopilot:
+		return true
+	case RuntimeNameEnbor:
 		return true
 	default:
 		return false
@@ -2618,13 +2618,13 @@ func (e UsageSummaryGroupBy) Valid() bool {
 
 // Defines values for VaultCredentialSpecType.
 const (
-	VaultCredentialTypeBasicAuth           VaultCredentialSpecType = "ama.dev/basic-auth"
-	VaultCredentialTypeOauthToken          VaultCredentialSpecType = "ama.dev/oauth-token"
+	VaultCredentialTypeBasicAuth           VaultCredentialSpecType = "enbor.dev/basic-auth"
+	VaultCredentialTypeOauthToken          VaultCredentialSpecType = "enbor.dev/oauth-token"
 	VaultCredentialTypeOpaque              VaultCredentialSpecType = "opaque"
-	VaultCredentialTypePrivateKeyJwk       VaultCredentialSpecType = "ama.dev/private-key-jwk"
-	VaultCredentialTypeRealmrootAgentState VaultCredentialSpecType = "ama.dev/realmroot-agent-state"
-	VaultCredentialTypeSshAuth             VaultCredentialSpecType = "ama.dev/ssh-auth"
-	VaultCredentialTypeTls                 VaultCredentialSpecType = "ama.dev/tls"
+	VaultCredentialTypePrivateKeyJwk       VaultCredentialSpecType = "enbor.dev/private-key-jwk"
+	VaultCredentialTypeRealmrootAgentState VaultCredentialSpecType = "enbor.dev/realmroot-agent-state"
+	VaultCredentialTypeSshAuth             VaultCredentialSpecType = "enbor.dev/ssh-auth"
+	VaultCredentialTypeTls                 VaultCredentialSpecType = "enbor.dev/tls"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialSpecType enum.
@@ -2669,13 +2669,13 @@ func (e VaultCredentialStatusPhase) Valid() bool {
 
 // Defines values for VaultCredentialVersionSpecProvider.
 const (
-	VaultCredentialVersionSpecProviderAma VaultCredentialVersionSpecProvider = "ama"
+	VaultCredentialVersionSpecProviderEnbor VaultCredentialVersionSpecProvider = "enbor"
 )
 
 // Valid indicates whether the value is a known member of the VaultCredentialVersionSpecProvider enum.
 func (e VaultCredentialVersionSpecProvider) Valid() bool {
 	switch e {
-	case VaultCredentialVersionSpecProviderAma:
+	case VaultCredentialVersionSpecProviderEnbor:
 		return true
 	default:
 		return false
@@ -2750,22 +2750,22 @@ func (e WorkItemState) Valid() bool {
 
 // Defines values for ListAgentsParamsRuntime.
 const (
-	ListAgentsParamsRuntimeAma        ListAgentsParamsRuntime = "ama"
-	ListAgentsParamsRuntimeClaudeCode ListAgentsParamsRuntime = "claude-code"
-	ListAgentsParamsRuntimeCodex      ListAgentsParamsRuntime = "codex"
-	ListAgentsParamsRuntimeCopilot    ListAgentsParamsRuntime = "copilot"
+	ClaudeCode ListAgentsParamsRuntime = "claude-code"
+	Codex      ListAgentsParamsRuntime = "codex"
+	Copilot    ListAgentsParamsRuntime = "copilot"
+	Enbor      ListAgentsParamsRuntime = "enbor"
 )
 
 // Valid indicates whether the value is a known member of the ListAgentsParamsRuntime enum.
 func (e ListAgentsParamsRuntime) Valid() bool {
 	switch e {
-	case ListAgentsParamsRuntimeAma:
+	case ClaudeCode:
 		return true
-	case ListAgentsParamsRuntimeClaudeCode:
+	case Codex:
 		return true
-	case ListAgentsParamsRuntimeCodex:
+	case Copilot:
 		return true
-	case ListAgentsParamsRuntimeCopilot:
+	case Enbor:
 		return true
 	default:
 		return false
@@ -5928,8 +5928,8 @@ type ListAgentsParams struct {
 	// Schedulable Filter by current Inbox scheduling readiness.
 	Schedulable *ListAgentsParamsSchedulable `form:"schedulable,omitempty" json:"schedulable,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListAgentsParamsRuntime defines parameters for ListAgents.
@@ -5942,38 +5942,38 @@ type ListAgentsParamsSchedulable string
 type CreateAgentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteAgentParams defines parameters for DeleteAgent.
 type DeleteAgentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadAgentParams defines parameters for ReadAgent.
 type ReadAgentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateAgentParams defines parameters for UpdateAgent.
 type UpdateAgentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListAgentVersionsParams defines parameters for ListAgentVersions.
 type ListAgentVersionsParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadAgentVersionParams defines parameters for ReadAgentVersion.
 type ReadAgentVersionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
@@ -5997,32 +5997,32 @@ type ReadAuthConfigParams struct {
 
 // ListBudgetsParams defines parameters for ListBudgets.
 type ListBudgetsParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateBudgetParams defines parameters for CreateBudget.
 type CreateBudgetParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteBudgetParams defines parameters for DeleteBudget.
 type DeleteBudgetParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadBudgetParams defines parameters for ReadBudget.
 type ReadBudgetParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateBudgetParams defines parameters for UpdateBudget.
 type UpdateBudgetParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -6047,46 +6047,46 @@ type ListEnvironmentsParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateEnvironmentParams defines parameters for CreateEnvironment.
 type CreateEnvironmentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteEnvironmentParams defines parameters for DeleteEnvironment.
 type DeleteEnvironmentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadEnvironmentParams defines parameters for ReadEnvironment.
 type ReadEnvironmentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateEnvironmentParams defines parameters for UpdateEnvironment.
 type UpdateEnvironmentParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListEnvironmentVersionsParams defines parameters for ListEnvironmentVersions.
 type ListEnvironmentVersionsParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadEnvironmentVersionParams defines parameters for ReadEnvironmentVersion.
 type ReadEnvironmentVersionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListIdentitiesParams defines parameters for ListIdentities.
@@ -6097,28 +6097,28 @@ type ListIdentitiesParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateIdentityParams defines parameters for CreateIdentity.
 type CreateIdentityParams struct {
 	IdempotencyKey string `json:"idempotency-key"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteIdentityParams defines parameters for DeleteIdentity.
 type DeleteIdentityParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadIdentityParams defines parameters for ReadIdentity.
 type ReadIdentityParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListLeasesParams defines parameters for ListLeases.
@@ -6128,8 +6128,8 @@ type ListLeasesParams struct {
 	Limit    *int                   `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor   *string                `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListLeasesParamsState defines parameters for ListLeases.
@@ -6137,20 +6137,20 @@ type ListLeasesParamsState string
 
 // CreateLeaseParams defines parameters for CreateLease.
 type CreateLeaseParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadLeaseParams defines parameters for ReadLease.
 type ReadLeaseParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateLeaseParams defines parameters for UpdateLease.
 type UpdateLeaseParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListMemoryStoresParams defines parameters for ListMemoryStores.
@@ -6161,32 +6161,32 @@ type ListMemoryStoresParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateMemoryStoreParams defines parameters for CreateMemoryStore.
 type CreateMemoryStoreParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteMemoryStoreParams defines parameters for DeleteMemoryStore.
 type DeleteMemoryStoreParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadMemoryStoreParams defines parameters for ReadMemoryStore.
 type ReadMemoryStoreParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateMemoryStoreParams defines parameters for UpdateMemoryStore.
 type UpdateMemoryStoreParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListMemoryStoreMemoriesParams defines parameters for ListMemoryStoreMemories.
@@ -6194,26 +6194,26 @@ type ListMemoryStoreMemoriesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateMemoryStoreMemoryParams defines parameters for CreateMemoryStoreMemory.
 type CreateMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteMemoryStoreMemoryParams defines parameters for DeleteMemoryStoreMemory.
 type DeleteMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateMemoryStoreMemoryParams defines parameters for UpdateMemoryStoreMemory.
 type UpdateMemoryStoreMemoryParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListProjectsParams defines parameters for ListProjects.
@@ -6232,8 +6232,8 @@ type ListRunnersParams struct {
 	State         *ListRunnersParamsState `form:"state,omitempty" json:"state,omitempty"`
 	EnvironmentId *string                 `form:"environmentId,omitempty" json:"environmentId,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListRunnersParamsState defines parameters for ListRunners.
@@ -6241,44 +6241,44 @@ type ListRunnersParamsState string
 
 // CreateRunnerParams defines parameters for CreateRunner.
 type CreateRunnerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteRunnerParams defines parameters for DeleteRunner.
 type DeleteRunnerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadRunnerParams defines parameters for ReadRunner.
 type ReadRunnerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateRunnerParams defines parameters for UpdateRunner.
 type UpdateRunnerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ConnectRunnerChannelParams defines parameters for ConnectRunnerChannel.
 type ConnectRunnerChannelParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadRunnerHeartbeatParams defines parameters for ReadRunnerHeartbeat.
 type ReadRunnerHeartbeatParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // PutRunnerHeartbeatParams defines parameters for PutRunnerHeartbeat.
 type PutRunnerHeartbeatParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionsParams defines parameters for ListSessions.
@@ -6291,8 +6291,8 @@ type ListSessionsParams struct {
 	State         *ListSessionsParamsState `form:"state,omitempty" json:"state,omitempty"`
 	LabelSelector *string                  `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionsParamsState defines parameters for ListSessions.
@@ -6300,44 +6300,44 @@ type ListSessionsParamsState string
 
 // CreateSessionParams defines parameters for CreateSession.
 type CreateSessionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteSessionParams defines parameters for DeleteSession.
 type DeleteSessionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadSessionParams defines parameters for ReadSession.
 type ReadSessionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateSessionParams defines parameters for UpdateSession.
 type UpdateSessionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionApprovalsParams defines parameters for ListSessionApprovals.
 type ListSessionApprovalsParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadSessionApprovalParams defines parameters for ReadSessionApproval.
 type ReadSessionApprovalParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DecideSessionApprovalParams defines parameters for DecideSessionApproval.
 type DecideSessionApprovalParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionEventsParams defines parameters for ListSessionEvents.
@@ -6349,8 +6349,8 @@ type ListSessionEventsParams struct {
 	CreatedFrom *time.Time                    `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
 	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionEventsParamsOrder defines parameters for ListSessionEvents.
@@ -6361,8 +6361,8 @@ type ListSessionEventsParamsType string
 
 // CreateSessionEventsParams defines parameters for CreateSessionEvents.
 type CreateSessionEventsParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListSessionMessagesParams defines parameters for ListSessionMessages.
@@ -6370,26 +6370,26 @@ type ListSessionMessagesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateSessionMessageParams defines parameters for CreateSessionMessage.
 type CreateSessionMessageParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadSessionMessageParams defines parameters for ReadSessionMessage.
 type ReadSessionMessageParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ConnectSessionSocketParams defines parameters for ConnectSessionSocket.
 type ConnectSessionSocketParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListTriggersParams defines parameters for ListTriggers.
@@ -6403,8 +6403,8 @@ type ListTriggersParams struct {
 	// Suspend Filter by the operational toggle.
 	Suspend *ListTriggersParamsSuspend `form:"suspend,omitempty" json:"suspend,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListTriggersParamsSuspend defines parameters for ListTriggers.
@@ -6412,26 +6412,26 @@ type ListTriggersParamsSuspend string
 
 // CreateTriggerParams defines parameters for CreateTrigger.
 type CreateTriggerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteTriggerParams defines parameters for DeleteTrigger.
 type DeleteTriggerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadTriggerParams defines parameters for ReadTrigger.
 type ReadTriggerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateTriggerParams defines parameters for UpdateTrigger.
 type UpdateTriggerParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListTriggerRunsParams defines parameters for ListTriggerRuns.
@@ -6443,8 +6443,8 @@ type ListTriggerRunsParams struct {
 	Cursor      *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListTriggerRunsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListTriggerRunsParamsState defines parameters for ListTriggerRuns.
@@ -6452,14 +6452,14 @@ type ListTriggerRunsParamsState string
 
 // CreateTriggerRunParams defines parameters for CreateTriggerRun.
 type CreateTriggerRunParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadTriggerRunParams defines parameters for ReadTriggerRun.
 type ReadTriggerRunParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListUsageRecordsParams defines parameters for ListUsageRecords.
@@ -6473,14 +6473,14 @@ type ListUsageRecordsParams struct {
 	Limit      *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor     *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadUsageRecordParams defines parameters for ReadUsageRecord.
 type ReadUsageRecordParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParams defines parameters for ReadUsageSummary.
@@ -6489,8 +6489,8 @@ type ReadUsageSummaryParams struct {
 	From    *time.Time                     `form:"from,omitempty" json:"from,omitempty"`
 	To      *time.Time                     `form:"to,omitempty" json:"to,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParamsGroupBy defines parameters for ReadUsageSummary.
@@ -6504,32 +6504,32 @@ type ListVaultsParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateVaultParams defines parameters for CreateVault.
 type CreateVaultParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // DeleteVaultParams defines parameters for DeleteVault.
 type DeleteVaultParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadVaultParams defines parameters for ReadVault.
 type ReadVaultParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateVaultParams defines parameters for UpdateVault.
 type UpdateVaultParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialsParams defines parameters for ListVaultCredentials.
@@ -6541,8 +6541,8 @@ type ListVaultCredentialsParams struct {
 	Cursor      *string                          `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialsParamsState defines parameters for ListVaultCredentials.
@@ -6550,26 +6550,26 @@ type ListVaultCredentialsParamsState string
 
 // CreateVaultCredentialParams defines parameters for CreateVaultCredential.
 type CreateVaultCredentialParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ReadVaultCredentialParams defines parameters for ReadVaultCredential.
 type ReadVaultCredentialParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateVaultCredentialParams defines parameters for UpdateVaultCredential.
 type UpdateVaultCredentialParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // UpdateVaultCredentialSecretParams defines parameters for UpdateVaultCredentialSecret.
 type UpdateVaultCredentialSecretParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialVersionsParams defines parameters for ListVaultCredentialVersions.
@@ -6580,8 +6580,8 @@ type ListVaultCredentialVersionsParams struct {
 	Cursor      *string                                 `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialVersionsParamsState `form:"state,omitempty" json:"state,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialVersionsParamsState defines parameters for ListVaultCredentialVersions.
@@ -6589,8 +6589,8 @@ type ListVaultCredentialVersionsParamsState string
 
 // ReadVaultCredentialVersionParams defines parameters for ReadVaultCredentialVersion.
 type ReadVaultCredentialVersionParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListWorkItemsParams defines parameters for ListWorkItems.
@@ -6604,8 +6604,8 @@ type ListWorkItemsParams struct {
 	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // ListWorkItemsParamsState defines parameters for ListWorkItems.
@@ -6613,8 +6613,8 @@ type ListWorkItemsParamsState string
 
 // ReadWorkItemParams defines parameters for ReadWorkItem.
 type ReadWorkItemParams struct {
-	// XAMAProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
-	XAMAProjectID *EnborProjectId `json:"X-AMA-Project-ID,omitempty"`
+	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
+	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
 
 // CreateAgentJSONRequestBody defines body for CreateAgent for application/json ContentType.
@@ -11279,15 +11279,15 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11345,15 +11345,15 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 			req.Header.Set("idempotency-key", headerParam0)
 		}
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam1 string
 
-			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam1)
+			req.Header.Set("X-Enbor-Project-ID", headerParam1)
 		}
 
 	}
@@ -11394,15 +11394,15 @@ func NewDeleteAgentRequest(server string, agentId string, params *DeleteAgentPar
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11443,15 +11443,15 @@ func NewReadAgentRequest(server string, agentId string, params *ReadAgentParams)
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11505,15 +11505,15 @@ func NewUpdateAgentRequestWithBody(server string, agentId string, params *Update
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11554,15 +11554,15 @@ func NewListAgentVersionsRequest(server string, agentId string, params *ListAgen
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11610,15 +11610,15 @@ func NewReadAgentVersionRequest(server string, agentId string, version int, para
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11929,15 +11929,15 @@ func NewListBudgetsRequest(server string, params *ListBudgetsParams) (*http.Requ
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -11984,15 +11984,15 @@ func NewCreateBudgetRequestWithBody(server string, params *CreateBudgetParams, c
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12033,15 +12033,15 @@ func NewDeleteBudgetRequest(server string, budgetId string, params *DeleteBudget
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12082,15 +12082,15 @@ func NewReadBudgetRequest(server string, budgetId string, params *ReadBudgetPara
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12144,15 +12144,15 @@ func NewUpdateBudgetRequestWithBody(server string, budgetId string, params *Upda
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12448,15 +12448,15 @@ func NewListEnvironmentsRequest(server string, params *ListEnvironmentsParams) (
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12514,15 +12514,15 @@ func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmen
 			req.Header.Set("idempotency-key", headerParam0)
 		}
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam1 string
 
-			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam1)
+			req.Header.Set("X-Enbor-Project-ID", headerParam1)
 		}
 
 	}
@@ -12563,15 +12563,15 @@ func NewDeleteEnvironmentRequest(server string, environmentId string, params *De
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12612,15 +12612,15 @@ func NewReadEnvironmentRequest(server string, environmentId string, params *Read
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12674,15 +12674,15 @@ func NewUpdateEnvironmentRequestWithBody(server string, environmentId string, pa
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12723,15 +12723,15 @@ func NewListEnvironmentVersionsRequest(server string, environmentId string, para
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12779,15 +12779,15 @@ func NewReadEnvironmentVersionRequest(server string, environmentId string, versi
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12896,15 +12896,15 @@ func NewListIdentitiesRequest(server string, params *ListIdentitiesParams) (*htt
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -12960,15 +12960,15 @@ func NewCreateIdentityRequestWithBody(server string, params *CreateIdentityParam
 
 		req.Header.Set("idempotency-key", headerParam0)
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam1 string
 
-			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam1)
+			req.Header.Set("X-Enbor-Project-ID", headerParam1)
 		}
 
 	}
@@ -13009,15 +13009,15 @@ func NewDeleteIdentityRequest(server string, identityId string, params *DeleteId
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13058,15 +13058,15 @@ func NewReadIdentityRequest(server string, identityId string, params *ReadIdenti
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13203,15 +13203,15 @@ func NewListLeasesRequest(server string, params *ListLeasesParams) (*http.Reques
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13258,15 +13258,15 @@ func NewCreateLeaseRequestWithBody(server string, params *CreateLeaseParams, con
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13307,15 +13307,15 @@ func NewReadLeaseRequest(server string, leaseId string, params *ReadLeaseParams)
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13369,15 +13369,15 @@ func NewUpdateLeaseRequestWithBody(server string, leaseId string, params *Update
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13486,15 +13486,15 @@ func NewListMemoryStoresRequest(server string, params *ListMemoryStoresParams) (
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13541,15 +13541,15 @@ func NewCreateMemoryStoreRequestWithBody(server string, params *CreateMemoryStor
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13590,15 +13590,15 @@ func NewDeleteMemoryStoreRequest(server string, storeId string, params *DeleteMe
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13639,15 +13639,15 @@ func NewReadMemoryStoreRequest(server string, storeId string, params *ReadMemory
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13701,15 +13701,15 @@ func NewUpdateMemoryStoreRequestWithBody(server string, storeId string, params *
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13789,15 +13789,15 @@ func NewListMemoryStoreMemoriesRequest(server string, storeId string, params *Li
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13851,15 +13851,15 @@ func NewCreateMemoryStoreMemoryRequestWithBody(server string, storeId string, pa
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13907,15 +13907,15 @@ func NewDeleteMemoryStoreMemoryRequest(server string, storeId string, memoryId s
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -13976,15 +13976,15 @@ func NewUpdateMemoryStoreMemoryRequestWithBody(server string, storeId string, me
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14487,15 +14487,15 @@ func NewListRunnersRequest(server string, params *ListRunnersParams) (*http.Requ
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14542,15 +14542,15 @@ func NewCreateRunnerRequestWithBody(server string, params *CreateRunnerParams, c
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14591,15 +14591,15 @@ func NewDeleteRunnerRequest(server string, runnerId string, params *DeleteRunner
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14640,15 +14640,15 @@ func NewReadRunnerRequest(server string, runnerId string, params *ReadRunnerPara
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14702,15 +14702,15 @@ func NewUpdateRunnerRequestWithBody(server string, runnerId string, params *Upda
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14751,15 +14751,15 @@ func NewConnectRunnerChannelRequest(server string, runnerId string, params *Conn
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14800,15 +14800,15 @@ func NewReadRunnerHeartbeatRequest(server string, runnerId string, params *ReadR
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -14862,15 +14862,15 @@ func NewPutRunnerHeartbeatRequestWithBody(server string, runnerId string, params
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15003,15 +15003,15 @@ func NewListSessionsRequest(server string, params *ListSessionsParams) (*http.Re
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15058,15 +15058,15 @@ func NewCreateSessionRequestWithBody(server string, params *CreateSessionParams,
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15107,15 +15107,15 @@ func NewDeleteSessionRequest(server string, sessionId string, params *DeleteSess
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15156,15 +15156,15 @@ func NewReadSessionRequest(server string, sessionId string, params *ReadSessionP
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15218,15 +15218,15 @@ func NewUpdateSessionRequestWithBody(server string, sessionId string, params *Up
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15267,15 +15267,15 @@ func NewListSessionApprovalsRequest(server string, sessionId string, params *Lis
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15323,15 +15323,15 @@ func NewReadSessionApprovalRequest(server string, sessionId string, approvalId s
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15392,15 +15392,15 @@ func NewDecideSessionApprovalRequestWithBody(server string, sessionId string, ap
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15528,15 +15528,15 @@ func NewListSessionEventsRequest(server string, sessionId string, params *ListSe
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15590,15 +15590,15 @@ func NewCreateSessionEventsRequestWithBody(server string, sessionId string, para
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15678,15 +15678,15 @@ func NewListSessionMessagesRequest(server string, sessionId string, params *List
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15740,15 +15740,15 @@ func NewCreateSessionMessageRequestWithBody(server string, sessionId string, par
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15796,15 +15796,15 @@ func NewReadSessionMessageRequest(server string, sessionId string, messageId str
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15845,15 +15845,15 @@ func NewConnectSessionSocketRequest(server string, sessionId string, params *Con
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -15974,15 +15974,15 @@ func NewListTriggersRequest(server string, params *ListTriggersParams) (*http.Re
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16029,15 +16029,15 @@ func NewCreateTriggerRequestWithBody(server string, params *CreateTriggerParams,
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16078,15 +16078,15 @@ func NewDeleteTriggerRequest(server string, triggerId string, params *DeleteTrig
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16127,15 +16127,15 @@ func NewReadTriggerRequest(server string, triggerId string, params *ReadTriggerP
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16189,15 +16189,15 @@ func NewUpdateTriggerRequestWithBody(server string, triggerId string, params *Up
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16325,15 +16325,15 @@ func NewListTriggerRunsRequest(server string, triggerId string, params *ListTrig
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16387,15 +16387,15 @@ func NewCreateTriggerRunRequestWithBody(server string, triggerId string, params 
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16443,15 +16443,15 @@ func NewReadTriggerRunRequest(server string, triggerId string, runId string, par
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16596,15 +16596,15 @@ func NewListUsageRecordsRequest(server string, params *ListUsageRecordsParams) (
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16645,15 +16645,15 @@ func NewReadUsageRecordRequest(server string, recordId string, params *ReadUsage
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16738,15 +16738,15 @@ func NewReadUsageSummaryRequest(server string, params *ReadUsageSummaryParams) (
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16855,15 +16855,15 @@ func NewListVaultsRequest(server string, params *ListVaultsParams) (*http.Reques
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16910,15 +16910,15 @@ func NewCreateVaultRequestWithBody(server string, params *CreateVaultParams, con
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -16959,15 +16959,15 @@ func NewDeleteVaultRequest(server string, vaultId string, params *DeleteVaultPar
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17008,15 +17008,15 @@ func NewReadVaultRequest(server string, vaultId string, params *ReadVaultParams)
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17070,15 +17070,15 @@ func NewUpdateVaultRequestWithBody(server string, vaultId string, params *Update
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17206,15 +17206,15 @@ func NewListVaultCredentialsRequest(server string, vaultId string, params *ListV
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17268,15 +17268,15 @@ func NewCreateVaultCredentialRequestWithBody(server string, vaultId string, para
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17324,15 +17324,15 @@ func NewReadVaultCredentialRequest(server string, vaultId string, credentialId s
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17393,15 +17393,15 @@ func NewUpdateVaultCredentialRequestWithBody(server string, vaultId string, cred
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17462,15 +17462,15 @@ func NewUpdateVaultCredentialSecretRequestWithBody(server string, vaultId string
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17593,15 +17593,15 @@ func NewListVaultCredentialVersionsRequest(server string, vaultId string, creden
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17656,15 +17656,15 @@ func NewReadVaultCredentialVersionRequest(server string, vaultId string, credent
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17809,15 +17809,15 @@ func NewListWorkItemsRequest(server string, params *ListWorkItemsParams) (*http.
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}
@@ -17858,15 +17858,15 @@ func NewReadWorkItemRequest(server string, workItemId string, params *ReadWorkIt
 
 	if params != nil {
 
-		if params.XAMAProjectID != nil {
+		if params.XEnborProjectID != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-AMA-Project-ID", headerParam0)
+			req.Header.Set("X-Enbor-Project-ID", headerParam0)
 		}
 
 	}

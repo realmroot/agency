@@ -8,7 +8,7 @@ import type { Env } from '../../env'
 export function createCloudTurnQueue(env: Env): CloudTurnQueue {
   return {
     runsInline(): boolean {
-      return env.AMA_RUNTIME_MODE === 'test' || !env.CLOUD_TURNS
+      return env.RUNTIME_MODE === 'test' || !env.CLOUD_TURNS
     },
 
     async enqueue(message: CloudTurnQueueMessage, opts?: { delaySeconds?: number }): Promise<void> {

@@ -56,7 +56,7 @@ describe('[spec: agents/console-list] AgentsView', () => {
     )
     expect(screen.getByText('Coding agent')).toBeInTheDocument()
     expect(screen.getByText('workers-ai / @cf/moonshotai/kimi-k2.6')).toBeInTheDocument()
-    expect(screen.getByText('ama@coding-agent')).toBeInTheDocument()
+    expect(screen.getByText('enbor@coding-agent')).toBeInTheDocument()
     expect(screen.getByText('read, write')).toBeInTheDocument()
     expect(screen.getByText('active')).toBeInTheDocument()
     expect(screen.getByText('v1')).toBeInTheDocument()

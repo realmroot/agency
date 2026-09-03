@@ -91,8 +91,8 @@ func TestProcessCommandEnvironmentUsesSessionPrivateDirs(t *testing.T) {
 	if !strings.Contains(joined, "\nHOME="+filepath.Join(sessionDir, ".home")+"\n") {
 		t.Fatalf("expected session-private HOME in env: %v", env)
 	}
-	if !strings.Contains(joined, "\nAMA_WORKSPACE_HOME="+filepath.Join(sessionDir, ".home")+"\n") {
-		t.Fatalf("expected session-private AMA_WORKSPACE_HOME in env: %v", env)
+	if !strings.Contains(joined, "\nENBOR_WORKSPACE_HOME="+filepath.Join(sessionDir, ".home")+"\n") {
+		t.Fatalf("expected session-private ENBOR_WORKSPACE_HOME in env: %v", env)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestProcessAdapterMergesRequestEnvironment(t *testing.T) {
 
 func TestProcessAdapterRejectsReservedRequestEnvironment(t *testing.T) {
 	adapter := ProcessAdapter{CommandTimeout: time.Second, ShutdownGraceInterval: time.Millisecond}
-	for _, key := range []string{"AMA_SESSION_ID", "ama_codex_sandbox_mode", "Ama_Claude_Code_Permission_Mode"} {
+	for _, key := range []string{"ENBOR_SESSION_ID", "enbor_codex_sandbox_mode", "Enbor_Claude_Code_Permission_Mode"} {
 		_, err := adapter.Execute(context.Background(), ToolRequest{
 			ToolName: "bash",
 			Input:    map[string]any{"command": "env"},
@@ -441,15 +441,15 @@ func TestProcessAdapterBoundsStructuredFailureOutputWithoutLeakingItInError(t *t
 	}
 }
 
-func TestProcessAdapterDoesNotExposeDaemonAMAEnvironment(t *testing.T) {
+func TestProcessAdapterDoesNotExposeDaemonEnborEnvironment(t *testing.T) {
 	requireProcessAdapter(t)
 	operatorHome := t.TempDir()
-	t.Setenv("AMA_TOKEN", "secret-token")
-	t.Setenv("AMA_ORIGIN", "https://ama.example.com")
-	t.Setenv("AMA_RUNNER_NAME", "operator-runner")
-	t.Setenv("AMA_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
-	t.Setenv("AMA_RUNNER_OPERATOR_SECRET", "runner-operator-secret")
-	t.Setenv("AMA_CUSTOM_SECRET", "custom-operator-secret")
+	t.Setenv("ENBOR_TOKEN", "secret-token")
+	t.Setenv("ENBOR_ORIGIN", "https://enbor.example.com")
+	t.Setenv("ENBOR_RUNNER_NAME", "operator-runner")
+	t.Setenv("ENBOR_RUNNER_ALLOW_UNSAFE_PROCESS", "true")
+	t.Setenv("ENBOR_RUNNER_OPERATOR_SECRET", "runner-operator-secret")
+	t.Setenv("ENBOR_CUSTOM_SECRET", "custom-operator-secret")
 	t.Setenv("HOME", operatorHome)
 
 	workDir := t.TempDir()
@@ -464,12 +464,12 @@ func TestProcessAdapterDoesNotExposeDaemonAMAEnvironment(t *testing.T) {
 	}
 	stdout, _ := result.Output["stdout"].(string)
 	for _, leaked := range []string{
-		"AMA_TOKEN=", "secret-token",
-		"AMA_ORIGIN=",
-		"AMA_RUNNER_NAME=", "operator-runner",
-		"AMA_RUNNER_ALLOW_UNSAFE_PROCESS=",
-		"AMA_RUNNER_OPERATOR_SECRET=", "runner-operator-secret",
-		"AMA_CUSTOM_SECRET=", "custom-operator-secret",
+		"ENBOR_TOKEN=", "secret-token",
+		"ENBOR_ORIGIN=",
+		"ENBOR_RUNNER_NAME=", "operator-runner",
+		"ENBOR_RUNNER_ALLOW_UNSAFE_PROCESS=",
+		"ENBOR_RUNNER_OPERATOR_SECRET=", "runner-operator-secret",
+		"ENBOR_CUSTOM_SECRET=", "custom-operator-secret",
 		operatorHome,
 	} {
 		if strings.Contains(stdout, leaked) {
@@ -511,7 +511,7 @@ func TestProcessCommandEnvironmentUsesSessionPrivateDirsForRuntimeWorkspace(t *t
 	joined := strings.Join(env, "\n")
 	for _, expected := range []string{
 		"HOME=" + sessionHome,
-		"AMA_WORKSPACE_HOME=" + sessionHome,
+		"ENBOR_WORKSPACE_HOME=" + sessionHome,
 		"GH_CONFIG_DIR=" + filepath.Join(sessionHome, ".config", "gh"),
 		"GIT_CONFIG_GLOBAL=" + filepath.Join(sessionHome, ".gitconfig"),
 		"GIT_CONFIG_NOSYSTEM=1",
@@ -788,7 +788,7 @@ func TestProcessAdapterReportsCommandFailureAndTimeout(t *testing.T) {
 
 func requireProcessAdapter(t *testing.T) {
 	t.Helper()
-	if !host.SupportsAMARuntime() {
+	if !host.SupportsEnborRuntime() {
 		t.Skip("process adapter is unavailable on this host")
 	}
 }

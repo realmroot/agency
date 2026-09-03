@@ -123,7 +123,7 @@ describe('[CF] /api/v1/agents', () => {
       body: JSON.stringify(
         agentBody('Research assistant', {
           systemPrompt: 'Answer with citations.',
-          skills: ['ama@research'],
+          skills: ['enbor@research'],
           allowedTools: ['read', 'fetch'],
           subagents: [
             {
@@ -163,7 +163,7 @@ describe('[CF] /api/v1/agents', () => {
       spec: {
         provider: null,
         systemPrompt: 'Answer with citations.',
-        skills: ['ama@research'],
+        skills: ['enbor@research'],
         allowedTools: ['read', 'fetch'],
         subagents: [
           {
@@ -185,7 +185,7 @@ describe('[CF] /api/v1/agents', () => {
       method: 'PATCH',
       body: JSON.stringify({
         metadata: { description: 'Updated description' },
-        spec: { skills: ['ama@research', 'ama@review'] },
+        spec: { skills: ['enbor@research', 'enbor@review'] },
       }),
     })
     expect(updateRes.status).toBe(200)
@@ -198,7 +198,7 @@ describe('[CF] /api/v1/agents', () => {
     expect(updated.status.currentVersionId).not.toBe(created.status.currentVersionId)
     expect(updated).toMatchObject({
       metadata: { description: 'Updated description' },
-      spec: { skills: ['ama@research', 'ama@review'] },
+      spec: { skills: ['enbor@research', 'enbor@review'] },
     })
 
     const updatePromptRes = await jsonFetch(`/api/v1/agents/${createdId}`, authorization, {
@@ -656,7 +656,7 @@ describe('[CF] /api/v1/agents', () => {
     await expect(listRes.json()).resolves.toMatchObject({
       data: [{ metadata: { uid: agent.metadata.uid }, status: { schedulable: true } }],
     })
-    const otherRuntime = await jsonFetch('/api/v1/agents?runtime=ama', authorization)
+    const otherRuntime = await jsonFetch('/api/v1/agents?runtime=enbor', authorization)
     await expect(otherRuntime.json()).resolves.toMatchObject({ data: [] })
 
     await env.DB.prepare("UPDATE runners SET state = 'offline' WHERE id = ?").bind('runner_schedulable_codex').run()
@@ -779,7 +779,7 @@ describe('[CF] /api/v1/agents', () => {
           defaultClaims().organizationId,
           username,
           username,
-          'ama',
+          'enbor',
           'active',
           `vault_${id}`,
           `credential_${id}`,
@@ -825,7 +825,7 @@ describe('[CF] /api/v1/agents', () => {
         project.id,
         agent.metadata.uid,
         'inbox',
-        'ama',
+        'enbor',
         'Inbox guard',
         'Handle the message.',
         1,
@@ -958,7 +958,7 @@ describe('[CF] /api/v1/agents', () => {
 
     const rawSecretSkillRes = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
-      body: JSON.stringify(agentBody('Raw secret skill agent', { skills: ['ama@raw-secret-token'] })),
+      body: JSON.stringify(agentBody('Raw secret skill agent', { skills: ['enbor@raw-secret-token'] })),
     })
     expect(rawSecretSkillRes.status).toBe(400)
     await expect(rawSecretSkillRes.json()).resolves.toMatchObject({

@@ -912,7 +912,7 @@ describe('sessionSocketConnection', () => {
     expect(connection.url).toContain('/api/v1/sessions/s1/socket')
     expect(connection.url.startsWith('wss:')).toBe(true)
     expect(connection.url).not.toContain('test_token_xyz')
-    expect(connection.protocols).toEqual(['ama-ticket', `ama-ticket.${ticket}`])
+    expect(connection.protocols).toEqual(['enbor-ticket', `enbor-ticket.${ticket}`])
     expect(connection.protocols.join(',')).not.toContain('test_token_xyz')
   })
 

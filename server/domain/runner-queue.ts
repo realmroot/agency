@@ -54,7 +54,7 @@ export function workRuntimeRequirement(payload: Record<string, unknown>): Runtim
     (typeof payload.toolName === 'string' ||
       (payload.toolCall !== null && typeof payload.toolCall === 'object' && !Array.isArray(payload.toolCall)))
   ) {
-    return { runtime: 'ama' }
+    return { runtime: 'enbor' }
   }
   return null
 }

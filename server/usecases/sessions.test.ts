@@ -68,7 +68,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
     spec: {
       agentId: 'agent_1',
       environmentId: null,
-      runtime: 'ama',
+      runtime: 'enbor',
       env: {},
       envFrom: [],
       volumes: [],
@@ -98,7 +98,7 @@ function sessionRecord(overrides: Partial<Session> = {}): Session {
           },
         },
         environment: { id: null, versionId: null, snapshot: null },
-        runtime: 'ama',
+        runtime: 'enbor',
       },
       placement: {
         hostingMode: 'cloud',
@@ -308,18 +308,18 @@ describe('[spec: sessions/delete] updateSession — name and metadata edits', ()
           return sessionRecord()
         },
         findRuntimeRow: async () =>
-          sessionRow({ metadata: { runtime: 'ama', annotations: { keep: 'yes', remove: 'old' } } }),
+          sessionRow({ metadata: { runtime: 'enbor', annotations: { keep: 'yes', remove: 'old' } } }),
         find: async () => sessionRecord(),
       },
     })
     await updateSession(
       deps,
       auth,
-      sessionRow({ metadata: { runtime: 'ama', annotations: { keep: 'yes', remove: 'old' } } }),
+      sessionRow({ metadata: { runtime: 'enbor', annotations: { keep: 'yes', remove: 'old' } } }),
       { metadata: { annotations: { remove: null } } },
       null,
     )
-    expect(mergedMetadata).toEqual({ runtime: 'ama', labels: {}, annotations: { keep: 'yes' } })
+    expect(mergedMetadata).toEqual({ runtime: 'enbor', labels: {}, annotations: { keep: 'yes' } })
   })
 
   it('throws when updateFields returns null', async () => {

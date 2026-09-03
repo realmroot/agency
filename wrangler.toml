@@ -1,11 +1,11 @@
-name = "any-managed-agents"
+name = "enbor"
 main = "./server/worker.ts"
 compatibility_date = "2026-05-07"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 preview_urls = true
 routes = [
-  { pattern = "ama.tftt.cc", custom_domain = true },
+  { pattern = "enbor.realmroot.dev", custom_domain = true },
 ]
 
 [assets]
@@ -15,12 +15,12 @@ not_found_handling = "single-page-application"
 run_worker_first = ["/api", "/api/*", "/runtime/*", "/.well-known/*"]
 
 [vars]
-AMA_ALLOWED_ORIGINS = "https://ama.tftt.cc,https://any-managed-agents.saltbo.workers.dev"
-AMA_RUNTIME_MODE = "live"
+ALLOWED_ORIGINS = "https://enbor.realmroot.dev,https://enbor.saltbo.workers.dev"
+RUNTIME_MODE = "live"
 SANDBOX_TRANSPORT = "rpc"
-AMA_AI_GATEWAY_ID = "ama"
+AI_GATEWAY_ID = "enbor"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
-OIDC_RESOURCE = "https://ama.tftt.cc/api"
+OIDC_RESOURCE = "https://enbor.realmroot.dev/api"
 OIDC_BROWSER_SCOPES = "openid profile email agents:read agents:write audit-records:read audit-records:write auth:read auth:write budgets:read budgets:write connectors:read connectors:write environments:read environments:write identities:read identities:write leases:read leases:write memory-stores:read memory-stores:write projects:read projects:write providers:read providers:write runners:read runners:write sessions:read sessions:write triggers:read triggers:write usage-records:read usage-records:write usage-summary:read usage-summary:write vaults:read vaults:write work-items:read work-items:write"
 OIDC_RUNNER_CLIENT_ID = "01a01c2c-b25f-76fa-bc6f-edfc51f235e1"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access runners:read runners:write work-items:read work-items:write leases:read leases:write sessions:write"
@@ -43,42 +43,42 @@ simple = { limit = 100, period = 60 }
 
 [[queues.producers]]
 binding = "CLOUD_TURNS"
-queue = "ama-cloud-turns"
+queue = "enbor-cloud-turns"
 
 [[queues.producers]]
 binding = "TRIGGER_DISPATCHES"
-queue = "ama-trigger-dispatches"
+queue = "enbor-trigger-dispatches"
 
 [[queues.consumers]]
-queue = "ama-cloud-turns"
+queue = "enbor-cloud-turns"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "ama-cloud-turns-dlq"
+dead_letter_queue = "enbor-cloud-turns-dlq"
 
 # A cloud turn that keeps failing (infra / DB / queue errors) lands here after
 # max_retries instead of being silently dropped, stranding the session. The DLQ
 # consumer marks the session errored so clients recover. Provision the queue with
-# `wrangler queues create ama-cloud-turns-dlq` before deploying.
+# `wrangler queues create enbor-cloud-turns-dlq` before deploying.
 [[queues.consumers]]
-queue = "ama-cloud-turns-dlq"
+queue = "enbor-cloud-turns-dlq"
 max_batch_size = 1
 max_retries = 1
 
 [[queues.consumers]]
-queue = "ama-trigger-dispatches"
+queue = "enbor-trigger-dispatches"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "ama-trigger-dispatches-dlq"
+dead_letter_queue = "enbor-trigger-dispatches-dlq"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db"
+database_name = "enbor-db"
 database_id = "1b821d59-c74b-47e4-9af3-3d83de81dc1c"
 migrations_dir = "./migrations"
 
 [[r2_buckets]]
 binding = "SESSION_EVENTS"
-bucket_name = "ama-session-events"
+bucket_name = "enbor-session-events"
 
 [[durable_objects.bindings]]
 name = "SANDBOX"
@@ -125,7 +125,7 @@ new_sqlite_classes = ["RunnerPoolObject"]
 
 [[containers]]
 class_name = "Sandbox"
-name = "any-managed-agents-sandbox"
+name = "enbor-sandbox"
 image = "./Dockerfile"
 max_instances = 20
 
@@ -138,19 +138,19 @@ head_sampling_rate = 0.05
 
 [env.staging]
 routes = [
-  { pattern = "ama-staging.tftt.cc", custom_domain = true },
+  { pattern = "enbor-staging.realmroot.dev", custom_domain = true },
 ]
 
 [env.staging.vars]
-AMA_RUNTIME_MODE = "live"
+RUNTIME_MODE = "live"
 SANDBOX_TRANSPORT = "rpc"
-AMA_AI_GATEWAY_ID = "ama"
+AI_GATEWAY_ID = "enbor"
 OIDC_ISSUER = "https://id.realmroot.dev/api/auth"
-OIDC_RESOURCE = "https://ama-staging.tftt.cc/api"
+OIDC_RESOURCE = "https://enbor-staging.realmroot.dev/api"
 OIDC_BROWSER_SCOPES = "openid profile email agents:read agents:write audit-records:read audit-records:write auth:read auth:write budgets:read budgets:write connectors:read connectors:write environments:read environments:write identities:read identities:write leases:read leases:write memory-stores:read memory-stores:write projects:read projects:write providers:read providers:write runners:read runners:write sessions:read sessions:write triggers:read triggers:write usage-records:read usage-records:write usage-summary:read usage-summary:write vaults:read vaults:write work-items:read work-items:write"
 OIDC_RUNNER_CLIENT_ID = "01a01c2c-b25f-76fa-bc6f-edfc51f235e1"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access runners:read runners:write work-items:read work-items:write leases:read leases:write sessions:write"
-AMA_ALLOWED_ORIGINS = "https://ama-staging.tftt.cc,https://any-managed-agents-staging.saltbo.workers.dev"
+ALLOWED_ORIGINS = "https://enbor-staging.realmroot.dev,https://enbor-staging.saltbo.workers.dev"
 
 [env.staging.triggers]
 crons = ["* * * * *"]
@@ -170,38 +170,38 @@ simple = { limit = 100, period = 60 }
 
 [[env.staging.queues.producers]]
 binding = "CLOUD_TURNS"
-queue = "ama-cloud-turns-staging"
+queue = "enbor-cloud-turns-staging"
 
 [[env.staging.queues.producers]]
 binding = "TRIGGER_DISPATCHES"
-queue = "ama-trigger-dispatches-staging"
+queue = "enbor-trigger-dispatches-staging"
 
 [[env.staging.queues.consumers]]
-queue = "ama-cloud-turns-staging"
+queue = "enbor-cloud-turns-staging"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "ama-cloud-turns-staging-dlq"
+dead_letter_queue = "enbor-cloud-turns-staging-dlq"
 
 [[env.staging.queues.consumers]]
-queue = "ama-cloud-turns-staging-dlq"
+queue = "enbor-cloud-turns-staging-dlq"
 max_batch_size = 1
 max_retries = 1
 
 [[env.staging.queues.consumers]]
-queue = "ama-trigger-dispatches-staging"
+queue = "enbor-trigger-dispatches-staging"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "ama-trigger-dispatches-staging-dlq"
+dead_letter_queue = "enbor-trigger-dispatches-staging-dlq"
 
 [[env.staging.d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db-staging-v2"
+database_name = "enbor-db-staging-v2"
 database_id = "68036380-0b48-4ed4-95c6-a1cc001e4a64"
 migrations_dir = "./migrations"
 
 [[env.staging.r2_buckets]]
 binding = "SESSION_EVENTS"
-bucket_name = "ama-session-events-staging"
+bucket_name = "enbor-session-events-staging"
 
 [[env.staging.durable_objects.bindings]]
 name = "SANDBOX"
@@ -217,24 +217,25 @@ class_name = "RunnerPoolObject"
 
 [[env.staging.containers]]
 class_name = "Sandbox"
-name = "any-managed-agents-staging-sandbox"
+name = "enbor-staging-sandbox"
 image = "./Dockerfile"
 max_instances = 20
 
 [env.e2e]
+routes = []
 
 [env.e2e.vars]
 SANDBOX_TRANSPORT = "rpc"
 OIDC_ISSUER = "https://oidc.test/api/auth"
-OIDC_CLIENT_ID = "ama-e2e"
-OIDC_RUNNER_CLIENT_ID = "ama-runner-e2e"
+OIDC_CLIENT_ID = "enbor-e2e"
+OIDC_RUNNER_CLIENT_ID = "enbor-runner-e2e"
 OIDC_RUNNER_SCOPES = "openid profile email offline_access"
-AMA_ALLOWED_ORIGINS = "http://localhost:5173"
-AMA_E2E_TEST_AUTH = "true"
-AMA_E2E_FAKE_REALMROOT_ENROLLMENT = "true"
-AMA_RUNTIME_MODE = "test"
-AMA_VAULT_ENCRYPTION_KEY = "e2e-local-vault-encryption-key-not-for-production"
-AMA_WEB_SESSION_ENCRYPTION_KEY = "e2e-local-web-session-key-not-for-production"
+ALLOWED_ORIGINS = "http://localhost:5173"
+E2E_TEST_AUTH = "true"
+E2E_FAKE_REALMROOT_ENROLLMENT = "true"
+RUNTIME_MODE = "test"
+VAULT_ENCRYPTION_KEY = "e2e-local-vault-encryption-key-not-for-production"
+WEB_SESSION_ENCRYPTION_KEY = "e2e-local-web-session-key-not-for-production"
 OIDC_CLIENT_SECRET = "e2e-local-confidential-client-secret"
 
 [env.e2e.triggers]
@@ -255,13 +256,13 @@ simple = { limit = 100, period = 60 }
 
 [[env.e2e.d1_databases]]
 binding = "DB"
-database_name = "any-managed-agents-db-staging-v2"
+database_name = "enbor-db-staging-v2"
 database_id = "68036380-0b48-4ed4-95c6-a1cc001e4a64"
 migrations_dir = "./migrations"
 
 [[env.e2e.r2_buckets]]
 binding = "SESSION_EVENTS"
-bucket_name = "ama-session-events-staging"
+bucket_name = "enbor-session-events-staging"
 
 [[env.e2e.durable_objects.bindings]]
 name = "SANDBOX"
@@ -277,6 +278,6 @@ class_name = "RunnerPoolObject"
 
 [[env.e2e.containers]]
 class_name = "Sandbox"
-name = "any-managed-agents-e2e-sandbox"
+name = "enbor-e2e-sandbox"
 image = "./Dockerfile"
 max_instances = 1

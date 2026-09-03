@@ -18,7 +18,7 @@ func EnsureCompatibleConfig(config *enborsdk.PublicConfig) error {
 	if config == nil {
 		return fmt.Errorf("Enbor config response is empty")
 	}
-	if config.Version != enborsdk.N1 || config.Service.Name != enborsdk.Enbor {
+	if config.Version != enborsdk.N1 || config.Service.Name != enborsdk.PublicServiceConfigNameEnbor {
 		return fmt.Errorf("incompatible Enbor control plane: %s/%v", config.Service.Name, config.Version)
 	}
 	return nil

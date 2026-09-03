@@ -39,7 +39,7 @@ var testRSAKey = sync.OnceValue(func() *rsa.PrivateKey {
 func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 	// [spec: runners/auth-binding]
 	lockRunnerCallbackPort(t)
-	credentialPath := filepath.Join(t.TempDir(), "ama-runner", "credentials.json")
+	credentialPath := filepath.Join(t.TempDir(), "enbor-runner", "credentials.json")
 	fixture := newOIDCLoginFixture(t)
 	defer fixture.Close()
 	output := newLockedBuffer()
@@ -48,9 +48,9 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 	go func() {
 		defer close(done)
 		login, err := LoginWithAuthorizationCode(context.Background(), OAuthClient{HTTPClient: fixture.Client()}, AuthorizationCodeLoginOptions{
-			APIServer:      "https://ama.example.test/",
+			APIServer:      "https://enbor.example.test/",
 			Issuer:         fixture.URL(),
-			Resource:       "https://ama.example.test/api/",
+			Resource:       "https://enbor.example.test/api/",
 			ClientID:       "runner-client",
 			Scopes:         testRunnerScopes,
 			CredentialPath: credentialPath,
@@ -82,7 +82,7 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 	if completed.Err != nil {
 		t.Fatalf("expected loopback login success, got %v", completed.Err)
 	}
-	if completed.Result.APIServer != "https://ama.example.test" || completed.Result.CredentialPath != credentialPath {
+	if completed.Result.APIServer != "https://enbor.example.test" || completed.Result.CredentialPath != credentialPath {
 		t.Fatalf("unexpected login result %#v", completed.Result)
 	}
 	waitForCallbackPortRelease(t)
@@ -94,7 +94,7 @@ func TestLoginWithAuthorizationCodeLoopbackPKCE(t *testing.T) {
 		"client_id":     {"runner-client"},
 		"redirect_uri":  {"http://127.0.0.1:49174/oauth/callback"},
 		"code_verifier": {form.Get("code_verifier")},
-		"resource":      {"https://ama.example.test/api"},
+		"resource":      {"https://enbor.example.test/api"},
 	}
 	if form.Encode() != wantForm.Encode() {
 		t.Fatalf("unexpected token exchange form: %s", form.Encode())
@@ -515,13 +515,13 @@ func TestRefreshTokenValidationAndDefaults(t *testing.T) {
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		if request.FormValue("grant_type") != "refresh_token" || request.FormValue("refresh_token") != "refresh" ||
-			request.FormValue("client_id") != "runner-client" || request.FormValue("resource") != "https://ama.example.test" {
+			request.FormValue("client_id") != "runner-client" || request.FormValue("resource") != "https://enbor.example.test" {
 			t.Fatalf("unexpected refresh form: %s", request.Form.Encode())
 		}
 		_, _ = w.Write([]byte(`{"access_token":"fresh","refresh_token":"rotated","token_type":"Bearer"}`))
 	}))
 	defer server.Close()
-	token, err := (OAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner-client", "refresh", "https://ama.example.test/")
+	token, err := (OAuthClient{HTTPClient: server.Client()}).RefreshToken(t.Context(), server.URL, "runner-client", "refresh", "https://enbor.example.test/")
 	if err != nil || token.AccessToken != "fresh" || token.RefreshToken != "rotated" {
 		t.Fatalf("expected refresh success, token=%#v err=%v", token, err)
 	}
@@ -531,13 +531,13 @@ func TestLoginCommandAndCredentialValidation(t *testing.T) {
 	if _, err := ValidateLoginCommand(LoginCommand{}); err == nil || !strings.Contains(err.Error(), "URL is required") {
 		t.Fatalf("expected missing API server error, got %v", err)
 	}
-	command, err := ValidateLoginCommand(LoginCommand{APIServer: "https://ama.example.test", CredentialPath: "/tmp/credentials.json"})
-	if err != nil || command.APIServer != "https://ama.example.test" {
+	command, err := ValidateLoginCommand(LoginCommand{APIServer: "https://enbor.example.test", CredentialPath: "/tmp/credentials.json"})
+	if err != nil || command.APIServer != "https://enbor.example.test" {
 		t.Fatalf("unexpected validated command %#v err=%v", command, err)
 	}
 	credentialPath := filepath.Join(t.TempDir(), "credentials.json")
 	if err := runnerconfig.SaveCredentialProfile(credentialPath, runnerconfig.CredentialProfile{
-		AccountID: "acct_1", APIServer: "https://ama.example.test", AccessToken: "expired", TokenType: "Bearer",
+		AccountID: "acct_1", APIServer: "https://enbor.example.test", AccessToken: "expired", TokenType: "Bearer",
 		ExpiresAt: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
 	}); err != nil {
 		t.Fatal(err)
@@ -617,7 +617,7 @@ func (fixture *oidcLoginFixture) TokenRequest() (url.Values, string) {
 
 func loginOptions(fixture *oidcLoginFixture, credentialPath string, output io.Writer) AuthorizationCodeLoginOptions {
 	return AuthorizationCodeLoginOptions{
-		APIServer: "https://ama.example.test", Issuer: fixture.URL(), Resource: "https://ama.example.test/api",
+		APIServer: "https://enbor.example.test", Issuer: fixture.URL(), Resource: "https://enbor.example.test/api",
 		ClientID: "runner-client", Scopes: testRunnerScopes, CredentialPath: credentialPath, Output: output,
 	}
 }
@@ -629,7 +629,7 @@ func assertAuthorizationURL(t *testing.T, authorize *url.URL, endpoint string) {
 	}
 	query := authorize.Query()
 	if query.Get("response_type") != "code" || query.Get("client_id") != "runner-client" ||
-		query.Get("redirect_uri") != "http://127.0.0.1:49174/oauth/callback" || query.Get("resource") != "https://ama.example.test/api" ||
+		query.Get("redirect_uri") != "http://127.0.0.1:49174/oauth/callback" || query.Get("resource") != "https://enbor.example.test/api" ||
 		query.Get("scope") != testRunnerScopes || query.Get("code_challenge_method") != "S256" {
 		t.Fatalf("unexpected authorization query %s", query.Encode())
 	}

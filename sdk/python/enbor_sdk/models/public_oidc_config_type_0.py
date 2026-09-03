@@ -27,7 +27,7 @@ class PublicOidcConfigType0:
     """
         Attributes:
             issuer (str):  Example: https://id.example.com/api/auth.
-            resource (str):  Example: https://ama.example.com.
+            resource (str):  Example: https://enbor.example.com.
             runner (PublicOidcClientConfig | Unset):
      """
 

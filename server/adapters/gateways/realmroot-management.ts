@@ -17,8 +17,8 @@ function credential(accessToken: string): RealmrootManagementCredential {
 export function createRealmrootManagementAuthority(env: Env): RealmrootManagementAuthority {
   return {
     async exchange(input) {
-      if (env.AMA_E2E_TEST_AUTH === 'true' && env.AMA_E2E_FAKE_REALMROOT_ENROLLMENT === 'true') {
-        return credential(`ama-e2e-fixture:${input.subject}`)
+      if (env.E2E_TEST_AUTH === 'true' && env.E2E_FAKE_REALMROOT_ENROLLMENT === 'true') {
+        return credential(`enbor-e2e-fixture:${input.subject}`)
       }
       const issuer = required(env.OIDC_ISSUER, 'OIDC_ISSUER').replace(/\/$/, '')
       const discoveryResponse = await fetch(`${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`, {

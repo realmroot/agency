@@ -52,14 +52,14 @@ export function createApp() {
       origin: (origin, c) => {
         // hono's cors() erases the binding type on c, so env reads as `any`
         // here; re-attach the worker Env to keep the read type-checked.
-        const allowedOrigins = (c.env as Env).AMA_ALLOWED_ORIGINS
+        const allowedOrigins = (c.env as Env).ALLOWED_ORIGINS
         if (!allowedOrigins) {
           return null
         }
         return allowedOrigins.split(',').includes(origin) ? origin : null
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-AMA-Project-ID', 'Idempotency-Key'],
+      allowHeaders: ['Content-Type', 'Authorization', 'DPoP', 'X-Enbor-Project-ID', 'Idempotency-Key'],
     }),
   )
 

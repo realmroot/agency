@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	ama "github.com/realmroot/enbor/sdk/go/enbor"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/protocol"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/runtime"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/sandbox"
@@ -30,7 +30,7 @@ type AcknowledgedCommandHandler interface {
 
 type SandboxHandler interface {
 	Handle
-	ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (ama.JSON, error)
+	ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (enbor.JSON, error)
 }
 
 type HostHandle struct {
@@ -143,7 +143,7 @@ func (h *SandboxHandle) Close(ctx context.Context) error {
 	return nil
 }
 
-func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (ama.JSON, error) {
+func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.RunnerSandboxRequest) (enbor.JSON, error) {
 	h.mu.Lock()
 	closed := h.workspaceClosed
 	workspace := h.workspace
@@ -168,24 +168,24 @@ func (h *SandboxHandle) ExecuteSandbox(ctx context.Context, request protocol.Run
 			WorkDir:    workspace.Cwd,
 			Env:        env,
 		})
-		response := ama.JSON{
+		response := enbor.JSON{
 			"toolCallId": toolCallID,
 			"toolName":   toolName,
 			"output":     result.Output,
 			"durationMs": time.Since(started).Milliseconds(),
 		}
 		if err != nil {
-			response["error"] = ama.JSON{"message": err.Error()}
+			response["error"] = enbor.JSON{"message": err.Error()}
 		}
 		return response, nil
 	case "sandbox.stop":
-		return ama.JSON{"ok": true}, h.Close(ctx)
+		return enbor.JSON{"ok": true}, h.Close(ctx)
 	case "sandbox.readMemoryStores":
 		stores, err := workspace.ReadWritableMemoryStores()
 		if err != nil {
 			return nil, err
 		}
-		return ama.JSON{"stores": stores}, nil
+		return enbor.JSON{"stores": stores}, nil
 	default:
 		return nil, errors.New("unsupported runner sandbox request")
 	}

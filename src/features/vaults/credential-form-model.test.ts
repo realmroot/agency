@@ -12,11 +12,11 @@ describe('credential form model', () => {
   it('defines default secret fields for every credential type', () => {
     const expected = {
       opaque: { value: '' },
-      'ama.dev/basic-auth': { username: '', password: '' },
-      'ama.dev/ssh-auth': { 'ssh-privatekey': '' },
-      'ama.dev/tls': { 'tls.crt': '', 'tls.key': '' },
-      'ama.dev/private-key-jwk': { jwk: '' },
-      'ama.dev/oauth-token': {
+      'enbor.dev/basic-auth': { username: '', password: '' },
+      'enbor.dev/ssh-auth': { 'ssh-privatekey': '' },
+      'enbor.dev/tls': { 'tls.crt': '', 'tls.key': '' },
+      'enbor.dev/private-key-jwk': { jwk: '' },
+      'enbor.dev/oauth-token': {
         'access-token': '',
         'refresh-token': '',
         'token-type': '',
@@ -26,7 +26,7 @@ describe('credential form model', () => {
     } satisfies Partial<Record<CredentialType, Record<string, string>>>
 
     expect(Object.fromEntries(credentialTypes.map(({ type }) => [type, defaultCredentialData(type)]))).toEqual(expected)
-    expect(credentialTypes.map(({ type }) => type)).not.toContain('ama.dev/realmroot-agent-state')
+    expect(credentialTypes.map(({ type }) => type)).not.toContain('enbor.dev/realmroot-agent-state')
   })
 
   it('filters blank values and trims keys before submitting secret data', () => {
@@ -43,63 +43,63 @@ describe('credential form model', () => {
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/basic-auth',
+        type: 'enbor.dev/basic-auth',
         data: { username: 'user', password: '' },
       }),
     ).toBe(false)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/basic-auth',
+        type: 'enbor.dev/basic-auth',
         data: { username: 'user', password: 'pass' },
       }),
     ).toBe(true)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/ssh-auth',
+        type: 'enbor.dev/ssh-auth',
         data: { 'ssh-privatekey': 'key' },
       }),
     ).toBe(true)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/tls',
+        type: 'enbor.dev/tls',
         data: { 'tls.crt': 'cert', 'tls.key': 'key' },
       }),
     ).toBe(true)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/private-key-jwk',
+        type: 'enbor.dev/private-key-jwk',
         data: { jwk: '{"kty":"OKP"}' },
       }),
     ).toBe(true)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/oauth-token',
+        type: 'enbor.dev/oauth-token',
         data: { 'access-token': 'token' },
       }),
     ).toBe(true)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/realmroot-agent-state',
+        type: 'enbor.dev/realmroot-agent-state',
         data: { 'state.json': '' },
       }),
     ).toBe(false)
     expect(
       hasValidCredentialSecretData({
         ...emptyCredential,
-        type: 'ama.dev/realmroot-agent-state',
+        type: 'enbor.dev/realmroot-agent-state',
         data: {
           'state.json': JSON.stringify({
             version: 18,
             agent_id: 'rr_agent_1',
             origin: 'https://realmroot.example.com',
             issuer: 'https://realmroot.example.com/api/auth',
-            runtime: 'ama',
+            runtime: 'enbor',
             host_id: 'host_1',
             agent_key_id: 'key_1',
             agent_private_key: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw',
