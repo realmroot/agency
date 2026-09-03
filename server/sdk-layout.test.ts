@@ -27,7 +27,7 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     expect(sdkPackage).toMatchObject({
       name: '@realmroot/enbor-sdk',
       private: false,
-      publishConfig: { registry: 'https://npm.pkg.github.com' },
+      publishConfig: { registry: 'https://registry.npmjs.org' },
       repository: { url: 'https://github.com/realmroot/enbor.git', directory: 'sdk/typescript' },
     })
     expect(readFileSync('sdk/go/go.mod', 'utf8')).toMatch(/^module github\.com\/realmroot\/enbor\/sdk\/go/m)
@@ -86,9 +86,11 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     const workflow = readFileSync('.github/workflows/enbor-sdk-release.yml', 'utf8')
 
     expect(workflow).toContain('enbor-sdk-v*')
-    expect(workflow).toContain('packages: write')
     expect(workflow).toContain('id-token: write')
-    expect(workflow).toContain('pnpm --filter @realmroot/enbor-sdk publish')
+    expect(workflow).toContain('registry-url: https://registry.npmjs.org')
+    expect(workflow).toContain('pnpm --filter @realmroot/enbor-sdk publish --no-git-checks --access public')
+    expect(workflow).not.toContain('packages: write')
+    expect(workflow).not.toContain('NODE_AUTH_TOKEN')
     expect(workflow).toContain('pypa/gh-action-pypi-publish@')
     expect(workflow).toContain('packages-dir: sdk/python/dist/')
     expect(workflow).toMatch(/sdk\/go\/v\$\{version\}/)

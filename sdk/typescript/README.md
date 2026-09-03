@@ -3,12 +3,8 @@
 This directory is generated from [`../openapi.json`](../openapi.json). Do not
 edit generated files by hand or treat this README as API documentation.
 
-Published versions are available from GitHub Packages as
-`@realmroot/enbor-sdk`:
-
-```ini
-@realmroot:registry=https://npm.pkg.github.com
-```
+Published versions are available from the public npm registry as
+`@realmroot/enbor-sdk`.
 
 ```sh
 pnpm add @realmroot/enbor-sdk
