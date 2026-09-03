@@ -1,2 +1,8 @@
 cmd/ama-runner/pkg/runtimebridge/bundle.mjs linguist-generated=true
+sdk/go/ama/ama.gen.go linguist-generated=true
+sdk/go/ama/client.go linguist-generated=true
+sdk/python/ama_sdk/** linguist-generated=true
 sdk/typescript/dist/** linguist-generated=true
+sdk/typescript/src/client.ts linguist-generated=true
+sdk/typescript/src/generated/** linguist-generated=true
+sdk/typescript/src/index.ts linguist-generated=true
