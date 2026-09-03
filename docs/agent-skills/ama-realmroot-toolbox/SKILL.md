@@ -1,11 +1,11 @@
 ---
 name: ama-realmroot-toolbox
-description: Operate Any Managed Agents through Realmroot Agent identity, controller-approved scopes, and the published OpenAPI contract.
+description: Operate Enbor through Realmroot Agent identity, controller-approved scopes, and the published OpenAPI contract.
 ---
 
 # AMA Realmroot Toolbox
 
-Use this skill for terminal automation against Any Managed Agents. AMA is the Realmroot native Resource Server `https://ama.tftt.cc/api`; raw tokens, manual authorization headers, generic OpenAPI credentials, and user-identity fallback are forbidden.
+Use this skill for terminal automation against Enbor. AMA remains the Realmroot native Resource Server identifier at `https://ama.tftt.cc/api`; raw tokens, manual authorization headers, generic OpenAPI credentials, and user-identity fallback are forbidden.
 
 ## Setup
 

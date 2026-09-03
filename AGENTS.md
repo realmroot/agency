@@ -1,4 +1,4 @@
-# Any Managed Agents Development Guide
+# Enbor Development Guide
 
 ## Clean-Room Boundary
 
@@ -9,7 +9,7 @@
 
 ## Product Boundaries
 
-- Any Managed Agents is Cloudflare-native: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
+- Enbor is Cloudflare-native infrastructure for developers building agent products: Workers, D1, Durable Objects, Cloudflare Sandbox, Workers AI, and Cloudflare Secrets are the default platform assumptions.
 - Prefer mature community libraries for established protocols and hard problems instead of reimplementing them locally. This applies to auth protocols, OpenAPI tooling, validation, crypto, date/time handling, UI primitives, routing, data fetching, and runtime integrations.
 - Realmroot owns authentication, stable Agent identity, users, and organizations. The AMA backend completes the browser authorization-code PKCE flow and issues an opaque HttpOnly session; direct protected requests use Realmroot-issued Bearer or DPoP-bound access tokens. Both paths enforce exact AMA scopes through the same authorization context.
 - Pi coding agent is the v1.0 runtime inside one Cloudflare Sandbox per running session.
