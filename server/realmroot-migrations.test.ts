@@ -43,6 +43,26 @@ function expectResolvableIdentitySnapshot(
   ).toEqual({ id: expected.credentialId })
 }
 
+describe('[spec: projects/lifecycle] default Project naming migration', () => {
+  it('renames stored default Projects without changing custom Projects', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0034_creation_idempotency.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('project_default', 'org_1', 'Default project', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('project_custom', 'org_1', 'Control Plane', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+    `)
+
+    apply(db, '0035_rename_default_project.sql')
+
+    expect(db.prepare('SELECT id, name FROM projects ORDER BY id').all()).toEqual([
+      { id: 'project_custom', name: 'Control Plane' },
+      { id: 'project_default', name: 'Default' },
+    ])
+    db.close()
+  })
+})
+
 describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {
   it('adds original creation metadata and project-scoped idempotency indexes for Agents and Environments', () => {
     const db = new DatabaseSync(':memory:')

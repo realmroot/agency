@@ -305,7 +305,7 @@ describe('[CF] auth v1', () => {
     expect(body).toMatchObject({
       user: { id: expect.stringMatching(/^user_e2e_/) },
       organization: { id: expect.stringMatching(/^org_e2e_/) },
-      project: { name: 'Default project' },
+      project: { name: 'Default' },
     })
     expect(body.project).not.toHaveProperty('organizationId')
   })
@@ -771,7 +771,7 @@ describe('[CF] projects v1', () => {
     expect(body.data).toHaveLength(1)
     expect(body.data[0]).toMatchObject({
       id: expect.stringMatching(UUID_V7),
-      name: 'Default project',
+      name: 'Default',
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
     })

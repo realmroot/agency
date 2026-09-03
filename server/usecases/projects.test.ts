@@ -14,7 +14,7 @@ const auth: AuthScope = {
 function projectRecord(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
   return {
     id: 'project_1',
-    name: 'Default project',
+    name: 'Default',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
@@ -37,7 +37,7 @@ describe('listProjects [spec: projects/lifecycle]', () => {
     const page = await listProjects(fakeDeps({ insert }), auth, { limit: 50, cursor: null })
     expect(insert).toHaveBeenCalledOnce()
     expect(page.rows).toHaveLength(1)
-    expect(page.rows[0]?.name).toBe('Default project')
+    expect(page.rows[0]?.name).toBe('Default')
   })
 
   it('does not auto-create when paging past the first page', async () => {
