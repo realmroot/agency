@@ -133,6 +133,15 @@ describe('deleteProject', () => {
     expect(result).toBe('default_project')
     expect(remove).not.toHaveBeenCalled()
   })
+
+  it('returns not found without deleting an unknown project', async () => {
+    const remove = vi.fn(async () => 'deleted' as const)
+
+    const result = await deleteProject(fakeDeps({ find: async () => null, delete: remove }), auth, 'project_missing')
+
+    expect(result).toBe('not_found')
+    expect(remove).not.toHaveBeenCalled()
+  })
 })
 
 describe('updateProject [spec: projects/rename]', () => {
@@ -199,5 +208,23 @@ describe('updateProject [spec: projects/rename]', () => {
 
     expect(result).toEqual({ status: 'not_found' })
     expect(updateName).not.toHaveBeenCalled()
+  })
+
+  it('returns not found when the project disappears before the rename is persisted', async () => {
+    const updateName = vi.fn(async () => null)
+
+    const result = await updateProject(
+      fakeDeps({
+        find: async () => projectRecord({ id: 'project_2', name: 'Workspace' }),
+        findDefault: async () => projectRecord({ id: 'project_1' }),
+        updateName,
+      }),
+      auth,
+      'project_2',
+      'Renamed workspace',
+    )
+
+    expect(result).toEqual({ status: 'not_found' })
+    expect(updateName).toHaveBeenCalledWith('org_1', 'project_2', 'Renamed workspace', expect.any(String))
   })
 })
