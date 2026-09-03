@@ -32,8 +32,55 @@ export const AuthenticatedOperation = {
 }
 
 type OpenApiOperation = {
+  operationId?: string
   security?: Array<Record<string, string[]>>
+  parameters?: Array<Record<string, unknown>>
   responses?: Record<string, unknown>
+  'x-cli-ignore'?: boolean
+  'x-cli-name'?: string
+}
+
+type MutableOpenApiDocument = {
+  paths: object
+  components?: {
+    parameters?: Record<string, unknown>
+  }
+}
+
+const PROJECT_SCOPED_RESOURCES = new Set([
+  'agents',
+  'budgets',
+  'environments',
+  'identities',
+  'leases',
+  'memory-stores',
+  'runners',
+  'sessions',
+  'triggers',
+  'usage-records',
+  'usage-summary',
+  'vaults',
+  'work-items',
+])
+
+const AMA_PROJECT_ID_PARAMETER = '#/components/parameters/AmaProjectId'
+
+const CLI_OPERATION_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+  createInboxNotification: 'receive-inbox-notification',
+  createLease: 'claim-work-item',
+  createSessionEvents: 'append-session-events',
+  createSessionMessage: 'send-session-message',
+  createTriggerRun: 'run-trigger',
+  putRunnerHeartbeat: 'update-runner-heartbeat',
+  readAuthConfig: 'auth-methods',
+  readConfigz: 'config',
+  readCurrentAuthSession: 'whoami',
+  refreshCatalog: 'refresh-model-catalog',
+  updateIdentity: 'archive-identity',
+}
+
+function cliOperationName(operationId: string) {
+  return CLI_OPERATION_NAME_OVERRIDES[operationId] ?? operationId.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 }
 
 type OpenApiIdentityProviderDocument = {
@@ -60,12 +107,40 @@ export function configureOpenApiIdentityProvider<T extends OpenApiIdentityProvid
   return document
 }
 
-export function finalizeOpenApiDocument<T extends { paths: object }>(document: T) {
-  for (const [path, operations] of Object.entries(document.paths) as Array<
-    [string, Record<string, OpenApiOperation>]
-  >) {
+export function finalizeOpenApiDocument<T extends { paths: object; components?: unknown }>(document: T): T {
+  const mutable = document as T & MutableOpenApiDocument
+  mutable.components ??= {}
+  mutable.components.parameters ??= {}
+  mutable.components.parameters.AmaProjectId = {
+    name: 'X-AMA-Project-ID',
+    in: 'header',
+    required: false,
+    'x-cli-name': 'project-id',
+    description: 'Selects an AMA project in the authenticated organization. Omit to use the default project.',
+    schema: { type: 'string', minLength: 1 },
+  }
+  for (const [path, operations] of Object.entries(mutable.paths) as Array<[string, Record<string, OpenApiOperation>]>) {
     for (const [method, operation] of Object.entries(operations)) {
+      if (operation.operationId && operation['x-cli-ignore'] !== true) {
+        operation['x-cli-name'] ??= cliOperationName(operation.operationId)
+      }
       if (!operation.security?.some((requirement) => Object.hasOwn(requirement, 'oidcAccessToken'))) continue
+      const resource = path.split('/')[3]
+      if (resource && PROJECT_SCOPED_RESOURCES.has(resource)) {
+        operation.parameters ??= []
+        if (!operation.parameters.some((parameter) => parameter.$ref === AMA_PROJECT_ID_PARAMETER)) {
+          operation.parameters.push({ $ref: AMA_PROJECT_ID_PARAMETER })
+        }
+        operation.responses ??= {}
+        operation.responses['404'] ??= {
+          description: 'The selected AMA project does not exist in the authenticated organization',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        }
+      }
       const scope = requiredScope(method.toUpperCase(), `https://ama.invalid${path}`)
       const sessionSocketTicket = operation.security.some((requirement) =>
         Object.hasOwn(requirement, 'sessionSocketTicket'),

@@ -120,8 +120,11 @@ GET              /api/v1/auth/sessions/current            当前会话上下文 
 
 ```
 GET|POST         /api/v1/projects
-GET              /api/v1/projects/{projectId}
+GET|DELETE       /api/v1/projects/{projectId}             DELETE 仅允许空且非 Default 的 Project（否则 409）
 ```
+
+每个租户恰有一个由系统维护的 `Default` Project。`Default` 是保留名称，
+不能通过 Projects API 创建、修改或删除；数据库唯一约束保证并发请求也不能产生第二个。
 
 ### Agents
 

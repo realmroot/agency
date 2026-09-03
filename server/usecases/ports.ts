@@ -1356,13 +1356,25 @@ export interface ProjectListQuery {
   cursor: { createdAt: string; id: string } | null
 }
 
+export type ProjectDeleteResult = 'deleted' | 'not_found' | 'not_empty' | 'default_project'
+
+export class ProjectReservedNameError extends Error {
+  constructor() {
+    super('Default is a reserved project name')
+    this.name = 'ProjectReservedNameError'
+  }
+}
+
 // DB boundary for projects. organizationId stays in the DB for tenancy but is
 // never exposed on ProjectRecord. The only implementation lives in
 // adapters/repos.
 export interface ProjectRepo {
   list(query: ProjectListQuery): Promise<ListPageResult<ProjectRecord>>
   find(organizationId: string, projectId: string): Promise<ProjectRecord | null>
+  findDefault(organizationId: string): Promise<ProjectRecord | null>
+  ensureDefault(organizationId: string, timestamp: string): Promise<ProjectRecord>
   insert(organizationId: string, name: string, timestamp: string): Promise<ProjectRecord>
+  delete(organizationId: string, projectId: string): Promise<ProjectDeleteResult>
 }
 
 // --- runners, work items, leases (self-hosted runner queue) ---

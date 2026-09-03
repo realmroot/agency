@@ -635,6 +635,29 @@ describe('[spec: agents/update] updateAgent', () => {
     expect(result.agent.metadata.archivedAt).toEqual(expect.any(String))
   })
 
+  it('[spec: agents/api-archive] archives without revalidating legacy runtime configuration', async () => {
+    const legacyAgent = agentRecord({
+      spec: {
+        subagents: [
+          {
+            name: 'Maya Lin',
+            description: 'Legacy persisted sub-agent name.',
+            systemPrompt: 'Review the work.',
+            model: null,
+            allowedTools: [],
+            skills: [],
+            mcpConnectors: [],
+          },
+        ],
+      },
+    })
+
+    await expect(updateAgent(fakeDeps(), auth, legacyAgent, { archived: true })).resolves.toMatchObject({
+      archived: true,
+      agent: { metadata: { archivedAt: expect.any(String) }, status: { phase: 'archived' } },
+    })
+  })
+
   it('rejects field updates on an archived agent', async () => {
     await expect(
       updateAgent(

@@ -5,12 +5,13 @@ from urllib.parse import quote
 import httpx
 
 from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET, Unset
+from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.identity import Identity
 from ...models.update_identity_request import UpdateIdentityRequest
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     identity_id: str,
     *,
     body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -103,12 +108,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Identity]:
     """ Archive an identity
 
     Args:
         identity_id (str):
+        x_ama_project_id (str | Unset):
         body (UpdateIdentityRequest):
         body (UpdateIdentityRequest):
 
@@ -124,6 +131,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         identity_id=identity_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -138,12 +146,14 @@ def sync(
     *,
     client: AuthenticatedClient,
     body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Identity | None:
     """ Archive an identity
 
     Args:
         identity_id (str):
+        x_ama_project_id (str | Unset):
         body (UpdateIdentityRequest):
         body (UpdateIdentityRequest):
 
@@ -160,6 +170,7 @@ def sync(
         identity_id=identity_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -168,12 +179,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Identity]:
     """ Archive an identity
 
     Args:
         identity_id (str):
+        x_ama_project_id (str | Unset):
         body (UpdateIdentityRequest):
         body (UpdateIdentityRequest):
 
@@ -189,6 +202,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         identity_id=identity_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -203,12 +217,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body:    UpdateIdentityRequest  |     UpdateIdentityRequest  | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Identity | None:
     """ Archive an identity
 
     Args:
         identity_id (str):
+        x_ama_project_id (str | Unset):
         body (UpdateIdentityRequest):
         body (UpdateIdentityRequest):
 
@@ -225,5 +241,6 @@ async def asyncio(
         identity_id=identity_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

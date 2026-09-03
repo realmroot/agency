@@ -109,6 +109,8 @@ Feature: Agents
     Given an agent exists with existing sessions
     When the user archives the agent
     Then it is hidden from default lists and creation flows
+    And an archive-only request does not revalidate legacy runtime configuration
+    And a legacy sub-agent configuration is normalized to the current response contract
     And new sessions cannot be created from it while existing sessions stay readable
     And the archive operation records an audit event
 

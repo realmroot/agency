@@ -50,6 +50,7 @@ from .api.memory_stores import read_memory_store as read_memory_store_api
 from .api.memory_stores import update_memory_store as update_memory_store_api
 from .api.memory_stores import update_memory_store_memory as update_memory_store_memory_api
 from .api.projects import create_project as create_project_api
+from .api.projects import delete_project as delete_project_api
 from .api.projects import list_projects as list_projects_api
 from .api.projects import read_project as read_project_api
 from .api.providers import list_models as list_models_api
@@ -389,6 +390,9 @@ class _ProjectsResource:
 
     def get(self, project_id: str) -> Any:
         return _unwrap(read_project_api.sync_detailed(project_id=project_id, client=self._client))
+
+    def delete(self, project_id: str) -> Any:
+        return _unwrap(delete_project_api.sync_detailed(project_id=project_id, client=self._client))
 
 class _AgentsResource:
     def __init__(self, owner: _ClientCore) -> None:

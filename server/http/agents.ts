@@ -6,7 +6,13 @@ import {
   ResourceUpdateMetadataSchema,
   serializeResource,
 } from '@server/contracts/resource-contracts'
-import { type Agent, type AgentSpec, type AgentVersion, defaultAllowedTools } from '@server/domain/agent'
+import {
+  type Agent,
+  type AgentSpec,
+  type AgentSubagent,
+  type AgentVersion,
+  defaultAllowedTools,
+} from '@server/domain/agent'
 import { requireAuth } from '../auth/session'
 import {
   AuthenticatedOperation,
@@ -593,12 +599,47 @@ function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): A
 
 function serializeAgent(agent: Agent) {
   const resource = serializeResource(agent)
-  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
+  return {
+    ...resource,
+    spec: {
+      ...resource.spec,
+      subagents: serializeSubagents(resource.spec.subagents),
+      identity: publicIdentity(resource.spec.identity),
+    },
+  }
 }
 
 function serializeAgentVersion(version: AgentVersion) {
   const resource = serializeResource(version)
-  return { ...resource, spec: { ...resource.spec, identity: publicIdentity(resource.spec.identity) } }
+  return {
+    ...resource,
+    spec: {
+      ...resource.spec,
+      subagents: serializeSubagents(resource.spec.subagents),
+      identity: publicIdentity(resource.spec.identity),
+    },
+  }
+}
+
+function serializeSubagents(subagents: AgentSpec['subagents']): AgentSpec['subagents'] {
+  return subagents.map((subagent) => {
+    const legacy = subagent as AgentSubagent & { bio?: unknown; instructions?: unknown }
+    return {
+      name: typeof legacy.name === 'string' ? legacy.name : '',
+      description:
+        typeof legacy.description === 'string' ? legacy.description : typeof legacy.bio === 'string' ? legacy.bio : '',
+      systemPrompt:
+        typeof legacy.systemPrompt === 'string'
+          ? legacy.systemPrompt
+          : typeof legacy.instructions === 'string'
+            ? legacy.instructions
+            : '',
+      model: typeof legacy.model === 'string' ? legacy.model : null,
+      allowedTools: Array.isArray(legacy.allowedTools) ? legacy.allowedTools : [],
+      skills: Array.isArray(legacy.skills) ? legacy.skills : [],
+      mcpConnectors: Array.isArray(legacy.mcpConnectors) ? legacy.mcpConnectors : [],
+    }
+  })
 }
 
 function publicIdentity(identity: Agent['spec']['identity']) {

@@ -10,13 +10,21 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-o
 // - organization_id stays in the DB for tenancy but is never exposed in API
 //   payloads.
 
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  name: text('name').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-})
+export const projects = sqliteTable(
+  'projects',
+  {
+    id: text('id').primaryKey(),
+    organizationId: text('organization_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_projects_one_default_per_organization')
+      .on(table.organizationId)
+      .where(sql`${table.name} = 'Default'`),
+  ],
+)
 
 // Browser login state and sessions are server-owned. Cookies contain only
 // opaque random values; Realmroot tokens are encrypted before entering D1.

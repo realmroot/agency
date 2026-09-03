@@ -8,19 +8,15 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
-from ...models.create_project_request import CreateProjectRequest
 from ...models.error_response import ErrorResponse
-from ...models.project import Project
 from typing import cast
 
 
 
 def _get_kwargs(
-    *,
-    body: CreateProjectRequest,
+    project_id: str,
 
 ) -> dict[str, Any]:
-    headers: dict[str, Any] = {}
 
 
 
@@ -28,26 +24,19 @@ def _get_kwargs(
 
 
     _kwargs: dict[str, Any] = {
-        "method": "post",
-        "url": "/api/v1/projects",
+        "method": "delete",
+        "url": "/api/v1/projects/{project_id}".format(project_id=quote(str(project_id), safe=""),),
     }
 
-    _kwargs["json"] = body.to_dict()
 
-    headers["Content-Type"] = "application/json"
-
-    _kwargs["headers"] = headers
     return _kwargs
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | Project | None:
-    if response.status_code == 201:
-        response_201 = Project.from_dict(response.json())
-
-
-
-        return response_201
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | ErrorResponse | None:
+    if response.status_code == 204:
+        response_204 = cast(Any, None)
+        return response_204
 
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
@@ -63,6 +52,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
@@ -76,7 +72,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | Project]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | ErrorResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -86,27 +82,27 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
 def sync_detailed(
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: CreateProjectRequest,
 
-) -> Response[ErrorResponse | Project]:
-    """ Create a project in the current organization
+) -> Response[Any | ErrorResponse]:
+    """ Delete an empty project
 
     Args:
-        body (CreateProjectRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | Project]
+        Response[Any | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        body=body,
+        project_id=project_id,
 
     )
 
@@ -117,53 +113,53 @@ def sync_detailed(
     return _build_response(client=client, response=response)
 
 def sync(
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: CreateProjectRequest,
 
-) -> ErrorResponse | Project | None:
-    """ Create a project in the current organization
+) -> Any | ErrorResponse | None:
+    """ Delete an empty project
 
     Args:
-        body (CreateProjectRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | Project
+        Any | ErrorResponse
      """
 
 
     return sync_detailed(
-        client=client,
-body=body,
+        project_id=project_id,
+client=client,
 
     ).parsed
 
 async def asyncio_detailed(
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: CreateProjectRequest,
 
-) -> Response[ErrorResponse | Project]:
-    """ Create a project in the current organization
+) -> Response[Any | ErrorResponse]:
+    """ Delete an empty project
 
     Args:
-        body (CreateProjectRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | Project]
+        Response[Any | ErrorResponse]
      """
 
 
     kwargs = _get_kwargs(
-        body=body,
+        project_id=project_id,
 
     )
 
@@ -174,27 +170,27 @@ async def asyncio_detailed(
     return _build_response(client=client, response=response)
 
 async def asyncio(
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: CreateProjectRequest,
 
-) -> ErrorResponse | Project | None:
-    """ Create a project in the current organization
+) -> Any | ErrorResponse | None:
+    """ Delete an empty project
 
     Args:
-        body (CreateProjectRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | Project
+        Any | ErrorResponse
      """
 
 
     return (await asyncio_detailed(
-        client=client,
-body=body,
+        project_id=project_id,
+client=client,
 
     )).parsed

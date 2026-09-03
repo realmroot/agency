@@ -270,6 +270,7 @@ export function createAmaClient(config: AmaClientConfig) {
       list: (query?: types.ListProjectsData['query']) => unwrap(ops.listProjects({ client, query })),
       create: (body: types.CreateProjectRequest) => unwrap(ops.createProject({ client, body })),
       get: (projectId: string) => unwrap(ops.readProject({ client, path: { projectId } })),
+      delete: (projectId: string) => unwrap(ops.deleteProject({ client, path: { projectId } })),
     },
 
     agents: {

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.trigger import Trigger
 from ...models.update_trigger_request import UpdateTriggerRequest
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     trigger_id: str,
     *,
     body: UpdateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -112,6 +117,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
     """ Update, pause, or archive a trigger
@@ -121,6 +127,7 @@ def sync_detailed(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (UpdateTriggerRequest):
 
     Raises:
@@ -135,6 +142,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         trigger_id=trigger_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -149,6 +157,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
     """ Update, pause, or archive a trigger
@@ -158,6 +167,7 @@ def sync(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (UpdateTriggerRequest):
 
     Raises:
@@ -173,6 +183,7 @@ def sync(
         trigger_id=trigger_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -181,6 +192,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Trigger]:
     """ Update, pause, or archive a trigger
@@ -190,6 +202,7 @@ async def asyncio_detailed(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (UpdateTriggerRequest):
 
     Raises:
@@ -204,6 +217,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         trigger_id=trigger_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -218,6 +232,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateTriggerRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Trigger | None:
     """ Update, pause, or archive a trigger
@@ -227,6 +242,7 @@ async def asyncio(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (UpdateTriggerRequest):
 
     Raises:
@@ -242,5 +258,6 @@ async def asyncio(
         trigger_id=trigger_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

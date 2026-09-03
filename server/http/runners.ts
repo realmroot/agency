@@ -321,6 +321,7 @@ const connectRunnerChannelRoute = createRoute({
   method: 'get',
   path: '/{runnerId}/channel',
   operationId: 'connectRunnerChannel',
+  'x-cli-ignore': true,
   tags: ['Runners'],
   summary: 'Open the runner relay WebSocket channel',
   ...AuthenticatedOperation,

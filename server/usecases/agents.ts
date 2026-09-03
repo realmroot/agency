@@ -238,7 +238,9 @@ export async function updateAgent(
     mcpConnectors: fields.mcpConnectors ?? agent.spec.mcpConnectors,
     identity: nextIdentity,
   }
-  await validateConfig(deps, auth, next)
+  if (hasFieldUpdates) {
+    await validateConfig(deps, auth, next)
+  }
 
   const updatedAt = new Date().toISOString()
   const runtimeChanged = RUNTIME_CONFIG_FIELDS.some((field) => fields[field] !== undefined)

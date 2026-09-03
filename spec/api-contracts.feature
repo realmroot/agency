@@ -77,6 +77,11 @@ Feature: API contracts
     Given a control-plane harness exposes /api/v1/openapi.json
     When Realmroot discovers operations and runs the core environment, agent, and session workflow
     Then it discovers the documented resource groups and exercises the workflow over documented /api/v1 paths
+    And project-scoped operations expose an optional project selector while organization and global operations do not
+    And the project selector keeps the "X-AMA-Project-ID" wire name while Toolbox exposes it as "project-id"
+    And an explicit unknown, empty, or foreign-organization project selector is concealed as not found
+    And WebSocket upgrade operations remain in OpenAPI and SDKs but are excluded from Toolbox commands while REST and SSE operations remain available
+    And every Toolbox-visible operation publishes a unique stable command name with friendly names for core actions
     And the OpenAPI document remains the single source of truth for command discovery, fields, and auth
 
   @api-contracts/sdk-layout @api

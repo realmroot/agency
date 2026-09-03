@@ -61,6 +61,39 @@ describe('[spec: projects/lifecycle] default Project naming migration', () => {
     ])
     db.close()
   })
+
+  it('keeps the oldest legacy Default per organization and enforces uniqueness', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0035_rename_default_project.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at) VALUES
+        ('old_default', 'org_1', 'Default', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ('new_default', 'org_1', 'Default', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z'),
+        ('other_default', 'org_2', 'Default', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z'),
+        ('custom_only', 'org_3', 'Workspace', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+    `)
+
+    apply(db, '0036_one_default_project_per_organization.sql')
+
+    expect(
+      db.prepare("SELECT id, organization_id, name FROM projects WHERE organization_id != 'org_3' ORDER BY id").all(),
+    ).toEqual([
+      { id: 'new_default', organization_id: 'org_1', name: 'Default Copy new_defa' },
+      { id: 'old_default', organization_id: 'org_1', name: 'Default' },
+      { id: 'other_default', organization_id: 'org_2', name: 'Default' },
+    ])
+    expect(db.prepare("SELECT id, name FROM projects WHERE organization_id = 'org_3' ORDER BY name").all()).toEqual([
+      { id: expect.stringMatching(/^default_[0-9a-f]{32}$/), name: 'Default' },
+      { id: 'custom_only', name: 'Workspace' },
+    ])
+    expect(() =>
+      db.exec(`
+        INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+        VALUES ('duplicate_default', 'org_1', 'Default', '2026-01-04T00:00:00.000Z', '2026-01-04T00:00:00.000Z');
+      `),
+    ).toThrow(/UNIQUE constraint failed: projects\.organization_id/)
+    db.close()
+  })
 })
 
 describe('[spec: agents/create-idempotency] [spec: environments/create-idempotency] creation replay migration', () => {

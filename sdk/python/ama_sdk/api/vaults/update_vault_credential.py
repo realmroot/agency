@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.update_vault_credential_request import UpdateVaultCredentialRequest
 from ...models.vault_credential import VaultCredential
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -20,9 +21,13 @@ def _get_kwargs(
     credential_id: str,
     *,
     body: UpdateVaultCredentialRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -100,6 +105,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateVaultCredentialRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Update or revoke vault credential metadata
@@ -109,6 +115,7 @@ def sync_detailed(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        x_ama_project_id (str | Unset):
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -124,6 +131,7 @@ def sync_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -139,6 +147,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateVaultCredentialRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | VaultCredential | None:
     """ Update or revoke vault credential metadata
@@ -148,6 +157,7 @@ def sync(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        x_ama_project_id (str | Unset):
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -164,6 +174,7 @@ def sync(
 credential_id=credential_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -173,6 +184,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateVaultCredentialRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VaultCredential]:
     """ Update or revoke vault credential metadata
@@ -182,6 +194,7 @@ async def asyncio_detailed(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        x_ama_project_id (str | Unset):
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -197,6 +210,7 @@ async def asyncio_detailed(
         vault_id=vault_id,
 credential_id=credential_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -212,6 +226,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateVaultCredentialRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | VaultCredential | None:
     """ Update or revoke vault credential metadata
@@ -221,6 +236,7 @@ async def asyncio(
     Args:
         vault_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000007.
         credential_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000008.
+        x_ama_project_id (str | Unset):
         body (UpdateVaultCredentialRequest):
 
     Raises:
@@ -237,5 +253,6 @@ async def asyncio(
 credential_id=credential_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

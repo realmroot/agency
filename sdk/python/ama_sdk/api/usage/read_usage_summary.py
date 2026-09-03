@@ -22,11 +22,16 @@ def _get_kwargs(
     group_by: ReadUsageSummaryGroupBy | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
 
-    
+
+
+
 
     params: dict[str, Any] = {}
 
@@ -57,6 +62,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -90,6 +96,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -111,6 +124,7 @@ def sync_detailed(
     group_by: ReadUsageSummaryGroupBy | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | UsageSummary]:
     """ Read aggregated usage
@@ -121,6 +135,7 @@ def sync_detailed(
         group_by (ReadUsageSummaryGroupBy | Unset):  Example: provider.
         from_ (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -135,6 +150,7 @@ def sync_detailed(
         group_by=group_by,
 from_=from_,
 to=to,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -150,6 +166,7 @@ def sync(
     group_by: ReadUsageSummaryGroupBy | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | UsageSummary | None:
     """ Read aggregated usage
@@ -160,6 +177,7 @@ def sync(
         group_by (ReadUsageSummaryGroupBy | Unset):  Example: provider.
         from_ (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,6 +193,7 @@ def sync(
 group_by=group_by,
 from_=from_,
 to=to,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -184,6 +203,7 @@ async def asyncio_detailed(
     group_by: ReadUsageSummaryGroupBy | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | UsageSummary]:
     """ Read aggregated usage
@@ -194,6 +214,7 @@ async def asyncio_detailed(
         group_by (ReadUsageSummaryGroupBy | Unset):  Example: provider.
         from_ (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -208,6 +229,7 @@ async def asyncio_detailed(
         group_by=group_by,
 from_=from_,
 to=to,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -223,6 +245,7 @@ async def asyncio(
     group_by: ReadUsageSummaryGroupBy | Unset = UNSET,
     from_: datetime.datetime | Unset = UNSET,
     to: datetime.datetime | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | UsageSummary | None:
     """ Read aggregated usage
@@ -233,6 +256,7 @@ async def asyncio(
         group_by (ReadUsageSummaryGroupBy | Unset):  Example: provider.
         from_ (datetime.datetime | Unset):  Example: 2026-05-01T00:00:00.000Z.
         to (datetime.datetime | Unset):  Example: 2026-05-31T23:59:59.999Z.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -248,5 +272,6 @@ async def asyncio(
 group_by=group_by,
 from_=from_,
 to=to,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

@@ -34,6 +34,13 @@ export class OidcError extends Error {
   }
 }
 
+export class ProjectSelectionError extends Error {
+  constructor() {
+    super('Project not found')
+    this.name = 'ProjectSelectionError'
+  }
+}
+
 interface CachedOidcMetadata {
   issuer: string
   jwksUri: string
@@ -192,7 +199,7 @@ export async function upsertProjectForClaims(
   const organizationId = organizationIdForClaims(claims)
   const projectName = DEFAULT_PROJECT_NAME
 
-  if (requestedProjectId) {
+  if (requestedProjectId !== undefined) {
     const requestedProject = await db
       .select()
       .from(projects)
@@ -201,6 +208,7 @@ export async function upsertProjectForClaims(
     if (requestedProject) {
       return { id: requestedProject.id, name: requestedProject.name, organizationId: requestedProject.organizationId }
     }
+    throw new ProjectSelectionError()
   }
 
   let project = await db
@@ -209,21 +217,21 @@ export async function upsertProjectForClaims(
     .where(and(eq(projects.organizationId, organizationId), eq(projects.name, projectName)))
     .orderBy(asc(projects.createdAt), asc(projects.id))
     .get()
-  project ??= await db
-    .select()
-    .from(projects)
-    .where(eq(projects.organizationId, organizationId))
-    .orderBy(asc(projects.createdAt), asc(projects.id))
-    .get()
   if (!project) {
-    project = {
+    const candidate = {
       id: newPrimaryKey(),
       organizationId,
       name: projectName,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
-    await db.insert(projects).values(project)
+    await db.insert(projects).values(candidate).onConflictDoNothing()
+    project = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.organizationId, organizationId), eq(projects.name, projectName)))
+      .get()
+    if (!project) throw new Error('Default project could not be resolved after creation')
   }
   return { id: project.id, name: project.name, organizationId: project.organizationId }
 }

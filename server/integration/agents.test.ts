@@ -316,6 +316,66 @@ describe('[CF] /api/v1/agents', () => {
     expect(unarchivedUpdateRes.status).toBe(200)
   })
 
+  it('[spec: agents/api-archive] archives a persisted legacy agent without validating its runtime fields', async () => {
+    const authorization = await signIn()
+    const createdRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(agentBody('Legacy archive target')),
+    })
+    const created = (await createdRes.json()) as { metadata: { uid: string } }
+    await env.DB.prepare('UPDATE agents SET subagents = ? WHERE id = ?')
+      .bind(
+        JSON.stringify([
+          {
+            name: 'Maya Lin',
+            bio: 'Legacy persisted sub-agent.',
+            instructions: 'Review the work.',
+            modelPreferences: {},
+          },
+        ]),
+        created.metadata.uid,
+      )
+      .run()
+
+    const archiveRes = await jsonFetch(`/api/v1/agents/${created.metadata.uid}`, authorization, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: true }),
+    })
+
+    expect(archiveRes.status).toBe(200)
+    const archived = (await archiveRes.json()) as {
+      metadata: Record<string, unknown>
+      spec: { subagents: Array<Record<string, unknown>> }
+      status: Record<string, unknown>
+    }
+    expect(archived).toMatchObject({
+      metadata: { uid: created.metadata.uid, archivedAt: expect.any(String) },
+      spec: {
+        subagents: [
+          {
+            name: 'Maya Lin',
+            description: 'Legacy persisted sub-agent.',
+            systemPrompt: 'Review the work.',
+            model: null,
+            allowedTools: [],
+            skills: [],
+            mcpConnectors: [],
+          },
+        ],
+      },
+      status: { phase: 'archived' },
+    })
+    expect(Object.keys(archived.spec.subagents[0])).toEqual([
+      'name',
+      'description',
+      'systemPrompt',
+      'model',
+      'allowedTools',
+      'skills',
+      'mcpConnectors',
+    ])
+  })
+
   it('lists agents with pagination, search, archived, and date filters within the project [spec: agents/api-pagination] [spec: api-contracts/pagination] [spec: api-contracts/date-filters]', async () => {
     const authorization = await signIn()
     const createAlphaRes = await jsonFetch('/api/v1/agents', authorization, {
