@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
-const skillsRoot = path.join(projectRoot, 'docs', 'agent-skills')
+const skillsRoot = path.join(projectRoot, 'skills')
 const publishRoot = path.join(projectRoot, 'public', '.well-known', 'agent-skills')
 const verifyOnly = process.argv.includes('--check')
 
@@ -44,7 +44,7 @@ function buildArtifact(directoryName) {
   const skillRoot = path.join(skillsRoot, directoryName)
   const metadata = readMetadata(readFileSync(path.join(skillRoot, 'SKILL.md'), 'utf8'), directoryName)
   if (metadata.name !== directoryName) {
-    throw new Error(`docs/agent-skills/${directoryName}/SKILL.md name must match its directory.`)
+    throw new Error(`skills/${directoryName}/SKILL.md name must match its directory.`)
   }
 
   const archive = gzipSync(
@@ -73,16 +73,16 @@ function listFiles(directory, prefix = '') {
 function readMetadata(markdown, directoryName) {
   const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---\n/)
   if (!frontmatter) {
-    throw new Error(`docs/agent-skills/${directoryName}/SKILL.md must start with YAML frontmatter.`)
+    throw new Error(`skills/${directoryName}/SKILL.md must start with YAML frontmatter.`)
   }
   const name = frontmatter[1].match(/^name:\s*(.+)$/m)?.[1]?.trim()
   const description = frontmatter[1].match(/^description:\s*(.+)$/m)?.[1]?.trim()
   if (!name || !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(name) || name.includes('--')) {
-    throw new Error(`docs/agent-skills/${directoryName}/SKILL.md has an invalid Agent Skill name.`)
+    throw new Error(`skills/${directoryName}/SKILL.md has an invalid Agent Skill name.`)
   }
   if (!description || description.length > 1024) {
     throw new Error(
-      `docs/agent-skills/${directoryName}/SKILL.md must have a description between 1 and 1024 characters.`,
+      `skills/${directoryName}/SKILL.md must have a description between 1 and 1024 characters.`,
     )
   }
   return { name, description }

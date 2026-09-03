@@ -96,7 +96,7 @@ describe('[spec: api-contracts/agent-skills] Agent Skills Discovery artifacts', 
     expect(check.stderr).toBe('')
     expect(check.status).toBe(0)
 
-    const skillsRoot = path.resolve('docs/agent-skills')
+    const skillsRoot = path.resolve('skills')
     const publishRoot = path.resolve('public/.well-known/agent-skills')
     const skillNames = readdirSync(skillsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && listFiles(path.join(skillsRoot, entry.name)).includes('SKILL.md'))
@@ -143,7 +143,7 @@ describe('[spec: api-contracts/agent-skills] Agent Skills Discovery artifacts', 
       cpSync('scripts/build-agent-skills.mjs', path.join(temporaryRoot, 'scripts/build-agent-skills.mjs'), {
         recursive: true,
       })
-      cpSync('docs/agent-skills', path.join(temporaryRoot, 'docs/agent-skills'), { recursive: true })
+      cpSync('skills', path.join(temporaryRoot, 'skills'), { recursive: true })
       cpSync('public/.well-known/agent-skills', path.join(temporaryRoot, 'public/.well-known/agent-skills'), {
         recursive: true,
       })

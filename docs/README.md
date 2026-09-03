@@ -5,7 +5,9 @@ The repository documentation is organized by purpose:
 - [`adr/`](adr/) records accepted architecture decisions, their context, and
   their consequences.
 - [`infra/`](infra/) contains deployment and operational guidance.
-- [`agent-skills/`](agent-skills/) contains Agent-facing operating instructions.
+
+Installable Agent-facing operating instructions live in the repository-level
+[`skills/`](../skills/) directory.
 
 ## Normative content ownership
 
