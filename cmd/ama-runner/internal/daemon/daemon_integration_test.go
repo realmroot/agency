@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	runnerruntime "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 	"github.com/samber/lo"
 )
 

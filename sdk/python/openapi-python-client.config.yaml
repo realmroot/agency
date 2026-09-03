@@ -1,7 +1,7 @@
-# Keep the importable top-level package as `ama_sdk` so it matches
-# [tool.hatch.build.targets.wheel] packages = ["ama_sdk"] in pyproject.toml.
-package_name_override: ama_sdk
-project_name_override: any-managed-agents-sdk
+# Keep the importable top-level package as `enbor_sdk` so it matches
+# [tool.hatch.build.targets.wheel] packages = ["enbor_sdk"] in pyproject.toml.
+package_name_override: enbor_sdk
+project_name_override: enbor-sdk
 # Disable post-generation formatting hooks so output is byte-deterministic
 # regardless of whether ruff is installed (keeps `openapi:check` stable in CI).
 post_hooks: []

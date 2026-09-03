@@ -2,7 +2,7 @@ module github.com/saltbo/any-managed-agents/cmd/ama-runner
 
 go 1.24.0
 
-require github.com/saltbo/any-managed-agents/sdk/go v0.0.0
+require github.com/realmroot/agency/sdk/go v0.0.0
 
 require (
 	github.com/coder/websocket v1.8.14
@@ -31,4 +31,4 @@ require (
 	golang.org/x/text v0.32.0 // indirect
 )
 
-replace github.com/saltbo/any-managed-agents/sdk/go => ../../sdk/go
+replace github.com/realmroot/agency/sdk/go => ../../sdk/go

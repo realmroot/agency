@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 )
 
 // fakeOpener is a simple Opener that returns a pre-created channel.

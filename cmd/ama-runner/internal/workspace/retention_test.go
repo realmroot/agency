@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/session"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"

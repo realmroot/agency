@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 	"github.com/samber/lo"
 )
 

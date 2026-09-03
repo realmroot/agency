@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 	runnerauth "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/auth"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
@@ -11,7 +12,6 @@ import (
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sys/host"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/workspace"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/pkg/version"
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
 	"github.com/samber/lo"
 	"log/slog"
 	"os"

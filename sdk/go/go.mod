@@ -1,4 +1,4 @@
-module github.com/saltbo/any-managed-agents/sdk/go
+module github.com/realmroot/agency/sdk/go
 
 go 1.24.0
 

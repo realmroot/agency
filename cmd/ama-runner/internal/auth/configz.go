@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	sdkama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	sdkama "github.com/realmroot/agency/sdk/go/enbor"
 )
 
 type RunnerOidcSettings struct {

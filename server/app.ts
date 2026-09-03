@@ -147,10 +147,10 @@ export function createApp() {
   const openApiConfig: Parameters<typeof routes.getOpenAPIDocument>[0] = {
     openapi: '3.0.0',
     info: {
-      title: 'Any Managed Agents API',
+      title: 'Enbor API',
       version: '1.0.0',
       description:
-        'Realmroot-native control-plane API for Any Managed Agents. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted.',
+        'Realmroot-native control-plane API for Enbor. Direct clients use a Realmroot access token in their registered Bearer or DPoP presentation mode, and every protected operation requires an exact resource scope. Internal browser-session endpoints are intentionally omitted.',
     },
     servers: [{ url: '/' }],
   }
@@ -168,7 +168,7 @@ export function createApp() {
   routes.get(
     '/api/docs',
     Scalar({
-      pageTitle: 'Any Managed Agents API Reference',
+      pageTitle: 'Enbor API Reference',
       url: '/api/v1/openapi.json',
     }),
   )

@@ -1,0 +1,97 @@
+name: Enbor SDK release
+
+on:
+  push:
+    tags:
+      - "enbor-sdk-v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.30.2
+          run_install: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@realmroot"
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.25"
+          cache: true
+          cache-dependency-path: sdk/go/go.sum
+
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#enbor-sdk-v}"
+          VERSION="$version" node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+
+          const version = process.env.VERSION
+          const npmPackage = JSON.parse(readFileSync('sdk/typescript/package.json', 'utf8'))
+          const pythonProject = readFileSync('sdk/python/pyproject.toml', 'utf8')
+          const pythonVersion = pythonProject.match(/^version = "([^"]+)"$/m)?.[1]
+          if (!version || npmPackage.version !== version || pythonVersion !== version) {
+            throw new Error(`Tag, TypeScript, and Python versions must match: tag=${version}, typescript=${npmPackage.version}, python=${pythonVersion}`)
+          }
+          NODE
+
+      - name: Build SDK artifacts
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/sdk/release-artifacts/typescript"
+          pnpm --filter @realmroot/enbor-sdk run build
+          pnpm --filter @realmroot/enbor-sdk pack --pack-destination "$GITHUB_WORKSPACE/sdk/release-artifacts/typescript"
+          uv build sdk/python
+          (cd sdk/go && go test ./...)
+        working-directory: .
+
+      - name: Publish TypeScript SDK to GitHub Packages
+        run: pnpm --filter @realmroot/enbor-sdk publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Go module tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#enbor-sdk-v}"
+          go_tag="sdk/go/v${version}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${go_tag}" >/dev/null 2>&1; then
+            echo "${go_tag} already exists"
+            exit 0
+          fi
+          git tag "$go_tag" "$GITHUB_SHA"
+          git push origin "$go_tag"
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            sdk/openapi.json \
+            sdk/release-artifacts/typescript/*.tgz \
+            sdk/python/dist/* \
+            --title "Enbor SDK v${GITHUB_REF_NAME#enbor-sdk-v}" \
+            --generate-notes

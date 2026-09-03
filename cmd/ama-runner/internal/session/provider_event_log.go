@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	ama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	ama "github.com/realmroot/agency/sdk/go/enbor"
 )
 
 // ProviderEvent is the runner's durable copy of one raw provider SDK stream

@@ -1,4 +1,4 @@
-# oapi-codegen configuration for the AMA Go SDK.
+# oapi-codegen configuration for the Enbor Go SDK.
 #
 # Regenerate with:
 #   cd sdk/go && go generate ./...
@@ -7,15 +7,15 @@
 #
 # oapi-codegen must be installed first:
 #   go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
-package: ama
-output: ama/ama.gen.go
+package: enbor
+output: enbor/enbor.gen.go
 generate:
   models: true
   client: true
 output-options:
   skip-prune: true
   # Keep the generated REST transport under an explicit raw name. The stable Go
-  # facade in ama/client.go owns the public Client type.
+  # facade in enbor/client.go owns the public Client type.
   client-type-name: APIClient
   overlay:
     path: oapi-codegen.overlay.yaml

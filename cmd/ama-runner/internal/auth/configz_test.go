@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	sdkama "github.com/saltbo/any-managed-agents/sdk/go/ama"
+	sdkama "github.com/realmroot/agency/sdk/go/enbor"
 )
 
 func testPublicConfig(issuer string, resource string, runnerClientID string, scopes []string) map[string]any {

@@ -1,4 +1,4 @@
-// Public entry point for @any-managed-agents/sdk.
+// Public entry point for @realmroot/enbor-sdk.
 //
 // Prefer the stable facades: `createAmaClient(...).<resource>.<verb>(...)`
 // for public control-plane calls and `createAmaRunnerClient(...)` for runner

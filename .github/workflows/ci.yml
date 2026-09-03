@@ -108,7 +108,7 @@ jobs:
       - run: pnpm run lint:escapes
       - run: pnpm run lint:types
       - run: pnpm run typecheck
-      - run: pnpm --filter @any-managed-agents/sdk run typecheck
+      - run: pnpm --filter @realmroot/enbor-sdk run typecheck
 
   application:
     name: Unit, Web, and Contracts
