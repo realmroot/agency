@@ -364,7 +364,7 @@ export function paginateSequenceRows<T extends { sequence: number }>(rows: T[], 
 }
 
 // Content negotiation for collection exports and streams
-// (docs/api-v1-design.md §1.2 rule 6). Returns the first entry of `offered`
+// ([spec: api-contracts/openapi]). Returns the first entry of `offered`
 // that the Accept header allows; JSON wins when the header is absent or
 // matches everything.
 export function negotiateMediaType<const T extends readonly string[]>(

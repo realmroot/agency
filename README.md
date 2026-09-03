@@ -4,7 +4,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OpenAPI](https://img.shields.io/badge/API-OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](docs/product/sdk.md)
+[![OpenAPI](https://img.shields.io/badge/API-OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](sdk/openapi.json)
 
 **The open infrastructure for durable agents.**
 
@@ -39,7 +39,7 @@ Enbor owns:
 - **Durable agent definitions**: identity, instructions, provider and model policy, skills, tools, MCP connectors, memory bindings, governance, and versions.
 - **Execution configuration**: reusable cloud or self-hosted environments, workspace setup, network policy, resource limits, and safe secret references.
 - **Session lifecycle**: immutable agent and environment snapshots, runtime selection, dispatch, persisted events, transcripts, approvals, usage, and audit records.
-- **Developer interfaces**: an OpenAPI-backed control plane, generated SDKs, Realmroot Toolbox integration, and an operational console.
+- **Developer interfaces**: an OpenAPI-backed control plane, generated SDKs, standards-based protected-resource discovery, and an operational console.
 - **Runtime portability**: a canonical session surface across the first-party `ama` runtime and runner-managed integrations such as `claude-code`, `codex`, and `copilot`.
 
 Enbor does not own:
@@ -56,7 +56,7 @@ Agent frameworks answer **how one run executes**. Enbor answers **what the agent
 ```txt
 +-------------------------------------------------------------+
 | Developer Interfaces                                        |
-| Product APIs, generated SDKs, Realmroot Toolbox, console    |
+| Product APIs, generated SDKs, OpenAPI clients, console     |
 +-----------------------------+-------------------------------+
                               |
 +-----------------------------v-------------------------------+
@@ -73,12 +73,12 @@ Agent frameworks answer **how one run executes**. Enbor answers **what the agent
                               |
 +-----------------------------v-------------------------------+
 | Platform Services                                           |
-| Realmroot, Workers, D1, Durable Objects, Sandbox, Secrets,  |
+| OAuth/OIDC, Workers, D1, Durable Objects, Sandbox, Secrets, |
 | Workers AI, provider adapters, and MCP                      |
 +-------------------------------------------------------------+
 ```
 
-Cloudflare provides the serverless substrate for deployment, storage, isolation, and cloud execution. Realmroot provides authentication, stable Agent identity, tenancy, and delegated authority. Enbor provides the durable Agent model and the control and execution planes that downstream products embed.
+Cloudflare provides the serverless substrate for deployment, storage, isolation, and cloud execution. OAuth 2.0 with current security practices and OpenID Connect provide the authentication and tenancy boundary. Enbor defines a provider-neutral Agent Identity contract because no adopted standard Agent identity protocol exists; Realmroot is the current OAuth/OIDC and Agent identity provider. Enbor provides the durable Agent model and the control and execution planes that downstream products embed.
 
 ## How It Relates to Claude Managed Agents
 
@@ -103,10 +103,14 @@ The repository, package, Resource Server, and runtime identifiers currently reta
 
 ## Documentation
 
+This README is a non-normative project overview. Product and API behavior is
+defined only by the Gherkin Features under `spec/`.
+
+- [Documentation Index](docs/README.md) - documentation map and content ownership.
 - [Contributor Guide](CONTRIBUTING.md) - local setup, verification, contribution workflow, and engineering rules.
-- [Product Spec](docs/product/spec.md) - product model, architecture boundary, and acceptance criteria.
-- [Product Decisions](docs/product/decisions.md) - fixed decisions for architecture and scope.
-- [SDK and API Boundary](docs/product/sdk.md) - Realmroot, OpenAPI, and generated SDK usage.
+- [Product and API Specifications](spec/) - normative behavior in Gherkin Features.
+- [Architecture Decision Records](docs/adr/) - accepted architecture decisions, context, and consequences.
+- [Generated OpenAPI](sdk/openapi.json) - exact API paths, methods, and schemas.
 - [Cloudflare Deployment](docs/infra/cloudflare-deploy.md) - Cloudflare resources, OIDC, runtime, and deployment notes.
 
 ## Verification

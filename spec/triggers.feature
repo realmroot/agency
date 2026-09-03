@@ -23,12 +23,14 @@ Feature: Triggers
 
   @triggers/inbox-provisioning @usecase
   Scenario: Maintain one Inbox Subscription for an Inbox trigger
-    Given a Realmroot-bound Agent whose internal Identity id differs from its stable OIDC subject
+    Given a provider-bound Agent whose internal Identity id differs from its stable OIDC subject
     When the trigger is created, paused, resumed, archived, or deleted
-    Then Agency reconciles the Trigger-owned Inbox Subscription through its service identity
+    Then Agency reconciles exactly one Trigger-owned Inbox Subscription through a dedicated OAuth service client
+    And provisioning creates, reads, and deletes the Subscription conditionally with its current ETag
     And the Subscription references the stable OIDC subject rather than the internal Identity id
     And legacy rows use the canonical snapshot subject only as a transition target until remote GET calibrates the registered subject
     And active Subscriptions are reconciled whenever the remote registered subject differs from that target
+    And retries reuse the encrypted callback credential while admission uses only its hash
     And provisioning state includes safe gateway diagnostics without exposing the callback Bearer token
 
   @triggers/lifecycle @usecase
@@ -83,6 +85,8 @@ Feature: Triggers
     Given an active Inbox trigger with a registered callback token and stable OIDC Agent subject
     When Inbox delivers the same subscription event more than once
     Then Agency durably accepts one Trigger Run before acknowledging delivery
+    And a successful 202 response means the receipt is durable rather than the Agent work is complete
+    And the notification stores Message references without copying the Message body
     And a subject transition accepts the registered and persisted target subjects only while provisioning is pending or failed
     And an uncalibrated legacy row with an existing ETag temporarily admits a schema-valid subject until remote GET persists its registration
     And a new Subscription without an ETag never receives that uncalibrated admission
@@ -91,7 +95,7 @@ Feature: Triggers
 
   @triggers/inbox-routing @api
   Scenario: Route Inbox notifications into Sessions by an opaque routing key
-    Given an active Inbox trigger for a Realmroot-bound Agent
+    Given an active Inbox trigger for a provider-bound Agent
     When Inbox delivers notifications with equal, different, and absent routing keys
     Then equal keys share one Session under an atomic route binding
     And a terminal or archived bound Session is atomically replaced without splitting concurrent deliveries
@@ -99,6 +103,7 @@ Feature: Triggers
     And a cloudflare-sandbox Session is reused without runner-channel preflight
     And different keys use different Sessions
     And notifications without a key each create a new Session
+    And the Session prompt contains only event and Message references plus Trigger instructions
     And created routed Sessions record the sixty-second annotation when template metadata omits it and otherwise preserve the template value
     And pre-existing routed Sessions missing that annotation are backfilled atomically without overwriting current metadata
     And preserved zero or invalid annotation metadata still resolves to the shared runtime default

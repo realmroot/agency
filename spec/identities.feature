@@ -1,6 +1,7 @@
 Feature: Identities
-  An Identity is an AMA-managed Realmroot Agent installation with an immutable
-  runtime. Its private state lives only in a dedicated managed Vault.
+  An Identity is an AMA-managed, provider-neutral Agent identity with an immutable
+  runtime. Its safe descriptor is stable across runtimes and its private state lives
+  only in a dedicated managed Vault. Realmroot is the current provider adapter.
 
   @identities/provision @api
   Scenario: Provision a personal Realmroot Agent identity synchronously
@@ -8,7 +9,9 @@ Feature: Identities
     When the user creates an Identity with a username and supported runtime
     Then AMA creates one managed Vault and one Realmroot Agent installation
     And verifies the remote Agent before marking the Identity active
+    And exposes only identity resource id, provider Agent id, issuer, stable subject, username, runtime, and credential reference as its safe descriptor
     And stores complete private state only as an ama.dev/realmroot-agent-state credential
+    And rejects incomplete, hand-authored, or incompatible provider state
 
   @identities/idempotent-resume @usecase
   Scenario: Resume failed provisioning without duplicating identity material
@@ -24,6 +27,7 @@ Feature: Identities
     Then AMA delegates that exact Agent authority to Realmroot and provisions the child Identity
     And the new Identity remains owned and controlled by the same Realmroot User
     And no browser approval or User-token substitution occurs
+    And AMA neither issues provider authority nor proxies provider business API traffic
 
   @identities/installation-identifiers @usecase
   Scenario: Generate standard Realmroot installation identifiers
@@ -58,7 +62,7 @@ Feature: Identities
     Given an Agent version snapshots an Identity and its immutable runtime
     When a Session or Trigger omits runtime
     Then AMA persists the Identity runtime before environment and runner checks
-    And Realmroot-bound Sessions expose their canonical AMA Session id to the runtime
+    And provider-bound Sessions expose their canonical AMA Session id to the runtime
     And an explicit different runtime is rejected with identity_runtime_mismatch
     And an Agent without Identity still requires an explicit runtime
 

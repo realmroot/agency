@@ -10,7 +10,11 @@ Feature: Governance
     Given organization, team, and project policies exist
     When the effective policy is resolved for a caller and their team memberships
     Then levels are ordered organization, applicable teams, then project
-    And policy objects merge so the most restrictive rule wins across levels
+    And deny rules and deny or approval lists form the union of all applicable levels
+    And allow lists intersect while an omitted allow list adds no constraint
+    And false booleans, restrictive states, and deny-by-default remain sticky from broader levels
+    And numeric limits take the minimum and otherwise more-specific scalar values win
+    And nested objects shallow-merge in level order
     And the most specific level is reported as the effective source
 
   @governance/model-budget @domain

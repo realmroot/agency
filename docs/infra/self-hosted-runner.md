@@ -1,8 +1,9 @@
-# Self-Hosted AMA Runner
+# Self-Hosted AMA Runner Operations
 
-`cmd/ama-runner` is Enbor's first self-hosted tool-executor daemon. AMA keeps ownership of the agent loop, work queue, policy decisions, session state, and event storage. The runner leases AMA-owned self-hosted work and reports structured events/results back through the runner protocol API.
-
-The daemon is intentionally not a Pi or PyAgent runtime host. It must not launch local Pi loops, expose runner-local session URLs, or accept unapproved local work.
+This runbook covers installation and operation of `cmd/ama-runner`. It is not a
+product or API specification. Observable Runner behavior is specified in
+[`../../spec/runners.feature`](../../spec/runners.feature) and runtime behavior
+in [`../../spec/runtime.feature`](../../spec/runtime.feature).
 
 ## Build
 
@@ -12,43 +13,26 @@ go test ./...
 go build ./...
 ```
 
-The runner module depends on the repo-local generated Go SDK:
+The module uses the repository-local generated Go SDK. Node.js and any selected
+runtime CLIs (`codex`, `claude`, or `copilot`) must be available on `PATH`.
 
-```go
-require github.com/saltbo/any-managed-agents/sdk/go v0.0.0
-replace github.com/saltbo/any-managed-agents/sdk/go => ../../sdk/go
-```
+Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64.
+Windows arm64 is compile-checked but is not a supported release target.
 
-All AMA API calls go through `sdk/go/ama`. The daemon uses `ama.NewRunner` for runner protocol calls and does not maintain a separate API client outside SDK transport configuration.
+## Authenticate
 
-Release artifacts support Linux and macOS on amd64/arm64 and Windows on amd64. Windows arm64 is compile-checked but is not a supported release target yet.
-
-## Login And Configuration
-
-Authenticate the runner with Realmroot loopback PKCE before starting the daemon. Select the same personal or organization Context that owns the AMA project:
+Authenticate with the configured OAuth 2.0 and OpenID Connect provider before
+starting the daemon. Realmroot is the current provider. Select the personal or
+organization context that owns the AMA project.
 
 ```bash
 ama-runner auth login --api-server "https://ama.example.com"
 ```
 
-The command discovers Realmroot metadata from `/api/v1/configz`, starts a loopback listener at `http://127.0.0.1:49174/oauth/callback`, opens the public-native authorization-code PKCE flow, and stores the short-lived Bearer access token plus rotating refresh credential in the local credential file. Register that exact callback in Realmroot; wildcard ports are unsupported. The command never prints access or refresh tokens.
+The provider registration must allow the runner's fixed loopback redirect URI:
+`http://127.0.0.1:49174/oauth/callback`.
 
-Foreground `run` configuration may be read from `$AMA_RUNNER_CONFIG`, `$XDG_CONFIG_HOME/ama-runner/config.json`, or `$HOME/.config/ama-runner/config.json`. Managed instance definitions are stored separately below `$XDG_CONFIG_HOME/ama-runner/instances` or `$HOME/.config/ama-runner/instances`.
-
-The shared credential file remains `$AMA_RUNNER_CREDENTIALS`, `$XDG_CONFIG_HOME/ama-runner/credentials.json`, or `$HOME/.config/ama-runner/credentials.json`. Saved profiles are keyed by AMA API Server and OIDC account, and refresh writes are serialized so multiple Runner instances can reuse one login safely. Managed instance definitions contain only non-secret configuration and a credential-file reference.
-
-On Windows, Go's native `%APPDATA%` and `%LOCALAPPDATA%` directories provide the equivalent configuration, credential, instance, state, workspace, log, and session-event locations.
-
-Default state and work directories are derived from the normalized AMA API Server and Environment pair:
-
-```text
-<native-state-root>/ama-runner/servers/<api-server-key>/environments/<environment-key>/
-<native-state-root>/ama-runner/servers/<api-server-key>/environments/<environment-key>/work/
-```
-
-The local machine hostname is not part of the key. The normalized API Server origin and Environment id determine the key, so different pairs cannot collide while restarting the same pair reuses its Runner identity, process lock, workspaces, and session event logs.
-
-Create and start a managed Runner instance with:
+## Managed instance
 
 ```bash
 ama-runner start \
@@ -58,7 +42,7 @@ ama-runner start \
   --allow-unsafe-process
 ```
 
-`start` stores the instance, installs it with the native user service manager, starts it immediately, waits for the first successful heartbeat, and prints its stable local instance id. Login startup is disabled by default. Pass `--start-at-login` when creating an instance to opt in. One API Server and Environment pair owns at most one local Runner process.
+Common operator commands:
 
 ```bash
 ama-runner list
@@ -68,13 +52,13 @@ ama-runner restart runner_...
 ama-runner logs --follow runner_...
 ama-runner configure runner_... --max-concurrent 10
 ama-runner configure runner_... --start-at-login=true
-ama-runner configure runner_... --start-at-login=false
 ama-runner remove runner_...
 ```
 
-`list` and `status` report native local process state, AMA control-plane heartbeat state, and the persisted login-startup policy. The login-startup policy can be changed while the Runner is running; it affects the next login without interrupting the current process. Other runtime configuration still requires a stopped Runner. `stop` drains leases and removes the native service registration. `remove` preserves state by default; `remove --purge` explicitly deletes the Runner identity, workspaces, session events, and logs.
+## Foreground instance
 
-Use explicit foreground mode in containers, development shells, or an existing external service manager:
+Use foreground mode in containers, development shells, or when another service
+manager owns the process:
 
 ```bash
 ama-runner run \
@@ -84,11 +68,7 @@ ama-runner run \
   --allow-unsafe-process
 ```
 
-The binary has no implicit foreground root command: `ama-runner --api-server ...` is invalid. Explicit `--state-dir` and `--work-dir` overrides are accepted only by `run`; managed `start` always uses the deterministic instance directories.
-
-This storage change uses a one-time operator data migration. Before installing the new binary, stop the old process and move its API-Server-scoped `runner-state.json`, `runner.lock`, and complete `work` directory into the new directory for its configured Environment. Do not copy only the identity file: the `work` directory is the durable owner of runner-local session JSONL. The new binary reads only the new layout and has no legacy fallback.
-
-Foreground mode on Windows uses the same explicit command and stops with `Ctrl-C`:
+On Windows:
 
 ```powershell
 .\ama-runner.exe run `
@@ -97,9 +77,12 @@ Foreground mode on Windows uses the same explicit command and stops with `Ctrl-C
   --environment-id $env:AMA_ENVIRONMENT_ID
 ```
 
-Node.js and the desired runtime CLIs (`codex`, `claude`, and/or `copilot`) must be installed on `PATH`. The runner resolves Windows `.exe` and `.cmd` launchers through `PATHEXT`.
+## Provider permission policy
 
-The runner accepts provider permission policy through host environment variables. Managed `ama-runner start` installations copy these values into the native user service when the instance is created; foreground `ama-runner run` reads them from its process environment.
+The runner accepts provider permission policy through host environment
+variables. Managed `ama-runner start` installations copy these values into the
+native user service when the instance is created; foreground `ama-runner run`
+reads them from its process environment.
 
 | Variable | Allowed values | Default |
 | --- | --- | --- |
@@ -107,7 +90,8 @@ The runner accepts provider permission policy through host environment variables
 | `AMA_CODEX_APPROVAL_POLICY` | `never`, `on-request`, `untrusted`; deprecated `on-failure` remains accepted for the pinned SDK | `never` |
 | `AMA_CLAUDE_CODE_PERMISSION_MODE` | `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`, `auto` | `bypassPermissions` |
 
-Codex enterprise users can keep the workspace sandbox and send escalations through their configured reviewer:
+Codex enterprise users can keep the workspace sandbox and send escalations
+through their configured reviewer:
 
 ```bash
 AMA_CODEX_SANDBOX_MODE=workspace-write \
@@ -119,67 +103,51 @@ ama-runner start \
   --allow-unsafe-process
 ```
 
-Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For example, a runner can use Claude Code's model-reviewed permission mode with `AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values before provider execution. Session environment variables cannot change these settings because AMA reserves the `AMA_` prefix for runner-owned configuration.
+Claude Code sets its dangerous-skip flag only for `bypassPermissions`. For
+example, a runner can use Claude Code's model-reviewed permission mode with
+`AMA_CLAUDE_CODE_PERMISSION_MODE=auto`. The runner rejects unknown values
+before provider execution. Session environment variables cannot change these
+settings because AMA reserves the `AMA_` prefix for runner-owned configuration.
 
-Timing defaults:
+## Local files
 
-- Lease duration: `60s`
-- Lease renewal interval: `20s`
-- Heartbeat interval: `20s`
-- Poll interval when no work is available: `5s`
-- Max concurrent leases: `5`
+Configuration, credentials, managed-instance definitions, state, workspaces,
+logs, and session events use the platform-native configuration and state roots.
+The following environment variables override the shared defaults where
+supported:
 
-The daemon requires a saved Realmroot Context login. The registered runner client receives short-lived Bearer access tokens and refreshes them through Realmroot; `AMA_TOKEN`, static token overrides, and token-print commands are unsupported.
+- `AMA_RUNNER_CONFIG`
+- `AMA_RUNNER_CREDENTIALS`
+- `XDG_CONFIG_HOME`
 
-The daemon fails fast when the API server, Realmroot Bearer login, environment binding, work directory, timing values, or unsafe adapter acknowledgement is invalid. Runner registration stores only Realmroot subject/client binding metadata; raw access and refresh tokens never reach D1. Runner scopes are limited to registration, work items, leases, and session event upload.
+Do not print, copy into logs, or commit provider access and refresh credentials.
 
-## Local Executor Boundary
+When upgrading from the previous API-Server-only state layout, stop the old
+process and move `runner-state.json`, `runner.lock`, and the complete `work`
+directory into the Environment-specific instance directory before installing
+the new binary. Preserve the complete `work` directory because it contains
+operator recovery data.
 
-The AMA runtime uses the `process-unsafe` adapter on Linux and macOS. It is marked unsafe because it executes commands directly on the host with the configured work directory as the workspace boundary. Windows does not advertise the AMA runtime and cannot receive AMA runtime or standalone sandbox-tool work; it can advertise and run the installed Codex, Claude Code, and Copilot runtimes.
+## Process adapter safety
 
-`process-unsafe` supports approved AMA runtime tool work for:
+`--allow-unsafe-process` permits commands to execute directly on the Runner
+host. Use it only on a trusted host for trusted workloads. Use an isolated
+adapter for untrusted workloads.
 
-- `bash`
-- `read`
-- `write`
-- `edit`
-- `grep`
-- `find`
-- `ls`
-- `fetch`
-- `web_search`
+Install the desired runtime CLIs for the same operating-system account that
+runs the service. Keep AMA control-plane credentials and operator configuration
+outside agent workspaces.
 
-The adapter captures stdout, stderr, exit code, structured output, and errors. File reads/writes are constrained to the configured work directory, including symlink boundary checks. Command cancellation uses context cancellation and process-group termination on Unix-like hosts. Windows runtime cancellation uses a Job Object so the Node bridge and its provider CLI child processes terminate together.
+## Diagnostics
 
-`bash` starts child commands with an explicit minimal environment. AMA control-plane credentials and `AMA_*` runner/operator configuration are not passed to leased commands. `HOME` and temp directories are set to runner-controlled directories inside the configured workspace so host operator config paths are not inherited.
+Start with:
 
-Do not use this adapter for untrusted workloads. Docker/OCI isolation should be added later as a separate adapter behind the same interface.
+```bash
+ama-runner status runner_...
+ama-runner logs --follow runner_...
+```
 
-## Control-Plane Loop
-
-At startup, the daemon:
-
-1. Checks `/api/v1/configz` for an AMA control plane.
-2. Loads the saved Realmroot Bearer Context-login profile.
-3. Registers a runner when no runner id is configured.
-4. Sends an active heartbeat with supported runtimes, models, and adapter metadata.
-
-Self-hosted commands are resolved from the Runner host `PATH` at execution
-time. AMA does not probe or advertise individual command availability. A
-missing command is returned through the normal tool-result error path so the
-Agent can handle it.
-
-5. Lists available work with `GET /api/v1/work-items` and claims it with `POST /api/v1/leases`.
-6. Uploads structured lease events.
-7. Renews active leases while local work is running.
-8. Finishes leases as `completed`, `failed`, or `cancelled`.
-
-`204` lease responses mean no eligible work is available. Authentication failures, runner-token binding failures, unsupported payload protocols, unsupported sandbox backends, and incompatible control planes are fatal.
-
-Current AMA self-hosted session creation queues `session.start` work. The daemon handles that work as a cloud-owned session handoff: it uploads a structured `runner.session.started` event and completes the lease without launching Pi/PyAgent locally. Approved AMA runtime tool payloads are the only work items that enter the local process adapter.
-
-## Cancellation Status
-
-The daemon cancels local work and reports `cancelled` when its local process receives cancellation. It also cancels local work if a lease renewal fails, because a `409` means the lease no longer owns the work item.
-
-The current API does not yet expose a control-plane initiated cancellation signal for an already running self-hosted lease. Operators should treat that as a known API gap: AMA can accept runner-sent `cancelled` lease updates, but the runner cannot poll a first-class cancellation resource yet.
+Verify the configured API Server, Environment, provider login, runtime CLI
+availability, writable state/work directories, and host clock. Consult the live
+OpenAPI document for protocol shapes rather than adding endpoint documentation
+to this runbook.

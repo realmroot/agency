@@ -128,6 +128,8 @@ Feature: Runtime
     When the runtime initializes sandbox workspace metadata and dispatches sandbox work
     Then tools absent from a non-empty allow-list are rejected
     And an agent with no explicit allow-list is granted the full sandbox toolset
+    And the process adapter supports bash, read, write, edit, grep, find, ls, fetch, and web_search
+    And sandbox commands receive a runner-controlled home and temporary directory without control-plane credentials
 
   # ── Session lifecycle over AMA endpoints (api: cooperative close) ──
 
