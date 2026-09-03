@@ -265,7 +265,7 @@ jobs:
               --platform "linux/$platform" \
               --load \
               --tag "enbor-runner:ci-$platform" \
-              --file cmd/ama-runner/Dockerfile.goreleaser \
+              --file cmd/ama-runner/Dockerfile.runner \
               "$context"
             docker run --rm --platform "linux/$platform" "enbor-runner:ci-$platform" version --json | grep -Fq '"name":"enbor-runner"'
           done

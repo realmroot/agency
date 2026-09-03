@@ -52,7 +52,7 @@ dockers_v2:
   - id: enbor-runner
     ids:
       - enbor-runner
-    dockerfile: cmd/ama-runner/Dockerfile.goreleaser
+    dockerfile: cmd/ama-runner/Dockerfile.runner
     images:
       - ghcr.io/realmroot/enbor-runner
     tags:
