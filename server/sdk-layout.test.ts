@@ -28,9 +28,9 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
       name: '@realmroot/enbor-sdk',
       private: false,
       publishConfig: { registry: 'https://npm.pkg.github.com' },
-      repository: { url: 'https://github.com/realmroot/agency.git', directory: 'sdk/typescript' },
+      repository: { url: 'https://github.com/realmroot/enbor.git', directory: 'sdk/typescript' },
     })
-    expect(readFileSync('sdk/go/go.mod', 'utf8')).toMatch(/^module github\.com\/realmroot\/agency\/sdk\/go/m)
+    expect(readFileSync('sdk/go/go.mod', 'utf8')).toMatch(/^module github\.com\/realmroot\/enbor\/sdk\/go/m)
     expect(readFileSync('sdk/python/pyproject.toml', 'utf8')).toMatch(/^name = "enbor-sdk"/m)
     expect(existsSync('sdk/python/enbor_sdk/__init__.py')).toBe(true)
   })

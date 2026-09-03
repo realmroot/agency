@@ -1,4 +1,4 @@
-module github.com/realmroot/agency/sdk/go
+module github.com/realmroot/enbor/sdk/go
 
 go 1.24.0
 

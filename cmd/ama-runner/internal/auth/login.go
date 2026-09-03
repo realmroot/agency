@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	sdkama "github.com/realmroot/agency/sdk/go/enbor"
+	sdkama "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 )
 

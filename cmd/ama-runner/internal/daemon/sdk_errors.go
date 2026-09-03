@@ -3,7 +3,7 @@ package daemon
 import (
 	"net/http"
 
-	ama "github.com/realmroot/agency/sdk/go/enbor"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 func IsClaimRaceError(err error) bool {

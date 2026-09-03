@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	sdkama "github.com/realmroot/agency/sdk/go/enbor"
+	sdkama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 type RunnerOidcSettings struct {

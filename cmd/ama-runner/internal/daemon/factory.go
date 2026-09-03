@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	sdkama "github.com/realmroot/agency/sdk/go/enbor"
+	sdkama "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerauth "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/auth"
 	runnerconfig "github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/config"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"

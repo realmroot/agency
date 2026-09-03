@@ -1,6 +1,6 @@
 # Enbor
 
-[![CI](https://github.com/realmroot/agency/actions/workflows/ci.yml/badge.svg)](https://github.com/realmroot/agency/actions/workflows/ci.yml)
+[![CI](https://github.com/realmroot/enbor/actions/workflows/ci.yml/badge.svg)](https://github.com/realmroot/enbor/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -99,9 +99,9 @@ Enbor is early-stage software. The repository currently contains the Cloudflare 
 
 The project is moving toward a release where developers can define and version agents, configure reusable environments, start sessions across supported runtimes, inspect persisted events, and embed those capabilities in their own products.
 
-The generated SDK distributions use the Enbor name. Repository, Resource Server,
-and runtime protocol identifiers retain their existing `agency` and `AMA` names
-until their separately versioned migrations are complete.
+The repository and generated SDK distributions use the Enbor name. Resource
+Server and runtime protocol identifiers retain their existing `agency` and `AMA`
+names until their separately versioned migrations are complete.
 
 ## Install Enbor Runner
 

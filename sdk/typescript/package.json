@@ -19,7 +19,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/realmroot/agency.git",
+    "url": "https://github.com/realmroot/enbor.git",
     "directory": "sdk/typescript"
   },
   "publishConfig": {

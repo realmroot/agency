@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	ama "github.com/realmroot/agency/sdk/go/enbor"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/protocol"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/runtime"
 	"github.com/saltbo/any-managed-agents/cmd/ama-runner/internal/sandbox"

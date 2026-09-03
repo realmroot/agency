@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	ama "github.com/realmroot/agency/sdk/go/enbor"
+	ama "github.com/realmroot/enbor/sdk/go/enbor"
 )
 
 func TestParseWorkPayloadAcceptsSessionStart(t *testing.T) {
