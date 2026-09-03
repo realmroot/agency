@@ -32,6 +32,16 @@ Feature: Environments
     And changing only name or description does not create a new version
     And deletion removes the environment from product APIs without a restore path
 
+  @environments/delete-runners @api
+  Scenario: Delete an environment and its idle runners atomically
+    Given an environment has associated runners and unrelated runners may exist
+    When the user deletes the environment
+    Then the environment and every associated idle runner are soft-deleted with one timestamp
+    And their tombstones remain in storage but disappear from product APIs
+    And unrelated runners remain live
+    But any associated runner load or active lease rejects the whole deletion without partial tombstones
+    And concurrent runner registration or re-registration cannot leave a live runner under the deleted environment
+
   # ── API contract (api: assembled server, real D1, OpenAPI) ──
 
   @environments/api-crud @api

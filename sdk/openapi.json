@@ -10372,7 +10372,7 @@
           "Environments"
         ],
         "summary": "Delete an environment",
-        "description": "Soft-deletes the environment. The retained tombstone cannot be restored through the API.",
+        "description": "Soft-deletes the environment and its associated idle Runners atomically. The retained tombstones cannot be restored through the API. Deletion is rejected while an associated Runner has load or an active lease.",
         "security": [
           {
             "oidcAccessToken": [
@@ -10420,6 +10420,16 @@
           },
           "404": {
             "description": "Environment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An associated Runner is busy",
             "content": {
               "application/json": {
                 "schema": {

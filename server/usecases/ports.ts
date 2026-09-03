@@ -397,6 +397,11 @@ export interface UpdateEnvironmentFields {
   currentVersionId: string | null
 }
 
+export type EnvironmentDeleteResult =
+  | { status: 'deleted'; runnerIds: string[] }
+  | { status: 'conflict' }
+  | { status: 'not_found' }
+
 // DB boundary for environments. The only implementation lives in
 // adapters/repos and is the only place drizzle/schema is imported. Repos
 // return parsed records — no JSON strings, no drizzle rows leak past this port.
@@ -417,7 +422,7 @@ export interface EnvironmentRepo {
     createdAt: string,
   ): Promise<{ environment: Environment; version: EnvironmentVersion }>
   update(projectId: string, environmentId: string, fields: UpdateEnvironmentFields, updatedAt: string): Promise<void>
-  delete(projectId: string, environmentId: string, deletedAt: string): Promise<boolean>
+  delete(projectId: string, environmentId: string, deletedAt: string): Promise<EnvironmentDeleteResult>
 
   connectorAvailable(connectorId: string): Promise<boolean>
 }

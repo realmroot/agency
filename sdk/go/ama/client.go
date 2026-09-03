@@ -462,7 +462,7 @@ func (s EnvironmentsService) Delete(ctx context.Context, environmentID string) e
 	if err != nil {
 		return err
 	}
-	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404)
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s EnvironmentsService) ListVersions(ctx context.Context, environmentID string) (*EnvironmentVersionListResponse, error) {

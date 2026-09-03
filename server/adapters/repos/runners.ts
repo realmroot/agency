@@ -17,7 +17,7 @@ import { and, desc, eq, gte, isNull, like, lt, lte, notExists, or, sql } from 'd
 import type { drizzle } from 'drizzle-orm/d1'
 import { environments, leases, runners, vaultCredentials, vaultCredentialVersions } from '../../db/schema'
 import { credentialScopedSecretRef, credentialVersionSecretRef, secretRefIdentity } from '../../domain/vault'
-import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
+import { throwIfDeletedParentConstraint, throwIfDeletedRunnerEnvironmentConstraint } from './soft-delete-constraints'
 
 type Db = ReturnType<typeof drizzle>
 type RunnerRow = typeof runners.$inferSelect
@@ -208,6 +208,7 @@ export function createRunnerRepo(db: Db): RunnerRepo {
       try {
         await db.insert(runners).values(row)
       } catch (error) {
+        throwIfDeletedRunnerEnvironmentConstraint(error)
         throwIfDeletedParentConstraint(error, 'Runner')
         throw error
       }
@@ -219,11 +220,18 @@ export function createRunnerRepo(db: Db): RunnerRepo {
     },
 
     async reregister(projectId, runnerId, input, timestamp) {
-      const updated = await db
-        .update(runners)
-        .set({ ...columnsFromInput(input), updatedAt: timestamp })
-        .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
-        .returning({ id: runners.id })
+      let updated: { id: string }[]
+      try {
+        updated = await db
+          .update(runners)
+          .set({ ...columnsFromInput(input), updatedAt: timestamp })
+          .where(and(eq(runners.id, runnerId), eq(runners.projectId, projectId), isNull(runners.deletedAt)))
+          .returning({ id: runners.id })
+      } catch (error) {
+        throwIfDeletedRunnerEnvironmentConstraint(error)
+        throwIfDeletedParentConstraint(error, 'Runner')
+        throw error
+      }
       if (updated.length === 0) throw new ResourceDeletedDuringMutationError('Runner')
       const row = await findRow(db, projectId, runnerId)
       if (!row) {
