@@ -18,7 +18,7 @@ func acquireStateDirLock(stateDir string) (func(), error) {
 	}
 	lock, err := lockfile.TryAcquire(filepath.Join(stateDir, runnerLockFileName))
 	if errors.Is(err, lockfile.ErrLocked) {
-		return nil, fmt.Errorf("ama-runner is already running with state directory %s; stop the existing process or use a different --state-dir", stateDir)
+		return nil, fmt.Errorf("enbor-runner is already running with state directory %s; stop the existing process or use a different --state-dir", stateDir)
 	}
 	if err != nil {
 		return nil, err

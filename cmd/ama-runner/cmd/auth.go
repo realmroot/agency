@@ -28,7 +28,7 @@ func authCommand(ctx context.Context, stdout io.Writer) *cobra.Command {
 func authLoginCommand(ctx context.Context, stdout io.Writer) *cobra.Command {
 	command := &cobra.Command{
 		Use:           "login",
-		Short:         "Authenticate ama-runner with AMA",
+		Short:         "Authenticate enbor-runner with Enbor",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(command *cobra.Command, _ []string) error {

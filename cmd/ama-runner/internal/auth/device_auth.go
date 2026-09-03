@@ -121,11 +121,11 @@ func LoginWithAuthorizationCode(
 			default:
 			}
 			if result.Err != nil {
-				http.Error(response, "AMA runner authentication failed. You may close this window.", http.StatusBadRequest)
+				http.Error(response, "Enbor Runner authentication failed. You may close this window.", http.StatusBadRequest)
 				return
 			}
 			response.Header().Set("content-type", "text/plain; charset=utf-8")
-			_, _ = io.WriteString(response, "AMA runner authentication complete. You may close this window.\n")
+			_, _ = io.WriteString(response, "Enbor Runner authentication complete. You may close this window.\n")
 		}),
 	}
 	serverError := make(chan error, 1)

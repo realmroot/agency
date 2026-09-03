@@ -101,6 +101,22 @@ The project is moving toward a release where developers can define and version a
 
 The repository, package, Resource Server, and runtime identifiers currently retain their existing `agency`, `any-managed-agents`, and `AMA` names. Their migration is separate from adopting Enbor as the product name.
 
+## Install Enbor Runner
+
+Install the prebuilt `enbor-runner` binary on macOS or Linux with Homebrew:
+
+```bash
+brew install realmroot/tap/enbor-runner
+```
+
+Or run the multi-architecture container image from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/realmroot/enbor-runner:latest
+```
+
+See the [self-hosted Runner guide](docs/infra/self-hosted-runner.md) for authentication, persistent volumes, runtime CLI installation, and complete native and Docker startup commands.
+
 ## Documentation
 
 This README is a non-normative project overview. Product and API behavior is

@@ -12,7 +12,7 @@ func versionCommand(build version.Info, stdout io.Writer) *cobra.Command {
 	var jsonOutput bool
 	command := &cobra.Command{
 		Use:           "version",
-		Short:         "Print ama-runner build metadata",
+		Short:         "Print enbor-runner build metadata",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {

@@ -52,7 +52,7 @@ func TestRunVersionPrintsBuildMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected version output, got %v", err)
 	}
-	if !strings.Contains(output.String(), `"name":"ama-runner"`) || !strings.Contains(output.String(), `"version":"`) {
+	if !strings.Contains(output.String(), `"name":"enbor-runner"`) || !strings.Contains(output.String(), `"version":"`) {
 		t.Fatalf("unexpected version output: %s", output.String())
 	}
 }
@@ -64,7 +64,7 @@ func TestRunRootVersionIgnoresRunnerEnvironmentValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected version output, got %v", err)
 	}
-	if !strings.Contains(output.String(), "ama-runner") {
+	if !strings.Contains(output.String(), "enbor-runner") {
 		t.Fatalf("unexpected version output: %s", output.String())
 	}
 }

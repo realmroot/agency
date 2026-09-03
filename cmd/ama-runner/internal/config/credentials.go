@@ -219,7 +219,7 @@ func loadCredentialProfileByAccountIDUnlocked(path string, apiServer string, acc
 		return nil, nil
 	}
 	if len(profiles) > 1 {
-		return nil, fmt.Errorf("multiple saved accounts for %s; run ama-runner auth switch <account> --api-server %s", strings.TrimRight(apiServer, "/"), strings.TrimRight(apiServer, "/"))
+		return nil, fmt.Errorf("multiple saved accounts for %s; run enbor-runner auth switch <account> --api-server %s", strings.TrimRight(apiServer, "/"), strings.TrimRight(apiServer, "/"))
 	}
 	return validateCredentialProfile(profiles[0])
 }
@@ -332,7 +332,7 @@ func validateCredentialProfile(profile CredentialProfile) (*CredentialProfile, e
 			return nil, err
 		}
 		if !expiresAt.After(time.Now()) && strings.TrimSpace(profile.RefreshToken) == "" {
-			return nil, fmt.Errorf("saved AMA runner token is expired; run ama-runner auth login again")
+			return nil, fmt.Errorf("saved Enbor Runner token is expired; run enbor-runner auth login again")
 		}
 	}
 	return &profile, nil

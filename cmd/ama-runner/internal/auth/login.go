@@ -60,6 +60,6 @@ func Login(ctx context.Context, command LoginCommand, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(output, "ama-runner authenticated for %s; credentials saved to %s\n", result.APIServer, result.CredentialPath)
+	fmt.Fprintf(output, "enbor-runner authenticated for %s; credentials saved to %s\n", result.APIServer, result.CredentialPath)
 	return nil
 }

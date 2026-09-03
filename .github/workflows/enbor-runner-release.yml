@@ -1,0 +1,50 @@
+name: Enbor Runner release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: cmd/ama-runner/go.mod
+          cache-dependency-path: cmd/ama-runner/go.sum
+
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          distribution: goreleaser
+          version: v2.18.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the public container
+        run: |
+          set -euo pipefail
+          image_version="${GITHUB_REF_NAME#v}"
+          docker logout ghcr.io
+          docker image rm "ghcr.io/realmroot/enbor-runner:${image_version}" || true
+          docker pull "ghcr.io/realmroot/enbor-runner:${image_version}"
+          docker run --rm "ghcr.io/realmroot/enbor-runner:${image_version}" version --json | grep -Fq '"name":"enbor-runner"'

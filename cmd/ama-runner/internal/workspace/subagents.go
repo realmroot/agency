@@ -105,7 +105,7 @@ func materializeSubagents(cwd string, runtimeName string, subagents []subagentPr
 			return err
 		}
 	}
-	return ensureGitignoreEntries(cwd, "# agent definitions (managed by AMA runner)", []string{gitignoreEntry})
+	return ensureGitignoreEntries(cwd, "# agent definitions (managed by Enbor Runner)", []string{gitignoreEntry})
 }
 
 func renderClaudeSubagent(agent subagentProfile) string {

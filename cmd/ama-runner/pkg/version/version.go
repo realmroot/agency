@@ -9,7 +9,7 @@ type Info struct {
 
 func Default() Info {
 	return Info{
-		Name:      "ama-runner",
+		Name:      "enbor-runner",
 		Version:   "dev",
 		Commit:    "unknown",
 		BuildDate: "unknown",
