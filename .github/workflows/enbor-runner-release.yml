@@ -40,11 +40,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  verify-public-container:
+    name: Verify public container
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
       - name: Verify the public container
         run: |
           set -euo pipefail
           image_version="${GITHUB_REF_NAME#v}"
-          docker logout ghcr.io
-          docker image rm "ghcr.io/realmroot/enbor-runner:${image_version}" || true
           docker pull "ghcr.io/realmroot/enbor-runner:${image_version}"
           docker run --rm "ghcr.io/realmroot/enbor-runner:${image_version}" version --json | grep -Fq '"name":"enbor-runner"'
