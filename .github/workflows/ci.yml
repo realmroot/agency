@@ -262,6 +262,9 @@ jobs:
           go-version: '1.25'
           cache: true
           cache-dependency-path: cmd/ama-runner/go.sum
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
       - name: Run macOS Enbor Runner tests
         if: runner.os == 'macOS'
         working-directory: cmd/ama-runner
