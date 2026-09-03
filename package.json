@@ -7,9 +7,10 @@
   "packageManager": "pnpm@10.30.2",
   "scripts": {
     "dev": "vite dev",
-    "build": "pnpm run build:skills && vite build",
-    "build:staging": "pnpm run build:skills && CLOUDFLARE_ENV=staging vite build",
+    "build": "pnpm run build:skills && vite build && pnpm run copy:skills",
+    "build:staging": "pnpm run build:skills && CLOUDFLARE_ENV=staging vite build && pnpm run copy:skills",
     "build:skills": "node scripts/build-agent-skills.mjs",
+    "copy:skills": "node scripts/copy-agent-skills-assets.mjs",
     "check:skills": "node scripts/build-agent-skills.mjs --check",
     "deploy": "pnpm run db:migrate:d1:prod && pnpm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",

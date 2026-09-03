@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
@@ -156,6 +156,38 @@ describe('[spec: api-contracts/agent-skills] Agent Skills Discovery artifacts', 
 
       expect(check.status).not.toBe(0)
       expect(check.stderr).toContain('public/.well-known/agent-skills/index.json is stale')
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true })
+    }
+  })
+
+  it('copies the discovery index and archives into the built client assets', () => {
+    const temporaryRoot = mkdtempSync(path.join(tmpdir(), 'enbor-agent-skills-copy-'))
+    try {
+      cpSync('scripts/copy-agent-skills-assets.mjs', path.join(temporaryRoot, 'scripts/copy-agent-skills-assets.mjs'), {
+        recursive: true,
+      })
+      const source = path.join(temporaryRoot, 'public/.well-known/agent-skills')
+      cpSync('public/.well-known/agent-skills', source, { recursive: true })
+      const destination = path.join(temporaryRoot, 'dist/client/.well-known/agent-skills')
+      mkdirSync(destination, { recursive: true })
+      writeFileSync(path.join(destination, 'obsolete.tar.gz'), 'stale')
+
+      const copy = spawnSync(process.execPath, ['scripts/copy-agent-skills-assets.mjs'], {
+        cwd: temporaryRoot,
+        encoding: 'utf8',
+      })
+
+      expect(copy.stderr).toBe('')
+      expect(copy.status).toBe(0)
+      const sourceFiles = listFiles(source)
+      const publishedFiles = listFiles(destination)
+      expect(publishedFiles).toEqual(sourceFiles)
+      expect(publishedFiles).toContain('index.json')
+      expect(publishedFiles.some((name) => name.endsWith('.tar.gz'))).toBe(true)
+      for (const name of sourceFiles) {
+        expect(readFileSync(path.join(destination, name))).toEqual(readFileSync(path.join(source, name)))
+      }
     } finally {
       rmSync(temporaryRoot, { recursive: true, force: true })
     }
