@@ -8,8 +8,8 @@ import {
   listResponseSchema,
   parseListCursor,
 } from '../openapi'
-import type { ProjectRecord } from '../usecases/ports'
-import { createProject, listProjects } from '../usecases/projects'
+import { type ProjectRecord, ProjectReservedNameError } from '../usecases/ports'
+import { createProject, deleteProject, listProjects, updateProject } from '../usecases/projects'
 
 // Mounted at /api/v1/projects (docs/api-v1-design.md §2 Projects).
 
@@ -29,6 +29,13 @@ const CreateProjectSchema = z
     name: z.string().min(1).max(120).openapi({ example: 'Control Plane' }),
   })
   .openapi('CreateProjectRequest')
+
+const UpdateProjectSchema = z
+  .object({
+    name: z.string().min(1).max(120).openapi({ example: 'Research workspace' }),
+  })
+  .strict()
+  .openapi('UpdateProjectRequest')
 
 const ProjectListResponseSchema = listResponseSchema('ProjectListResponse', ProjectSchema)
 
@@ -103,6 +110,10 @@ const createProjectRoute = createRoute({
   responses: {
     201: { description: 'Created project', content: { 'application/json': { schema: ProjectSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'The reserved Default project name cannot be created explicitly',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -118,6 +129,48 @@ const readProjectRoute = createRoute({
     200: { description: 'Project', content: { 'application/json': { schema: ProjectSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Project not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+  },
+})
+
+const deleteProjectRoute = createRoute({
+  method: 'delete',
+  path: '/{projectId}',
+  operationId: 'deleteProject',
+  tags: ['Projects'],
+  summary: 'Delete an empty project',
+  ...AuthenticatedOperation,
+  request: { params: ProjectParamsSchema },
+  responses: {
+    204: { description: 'Project deleted' },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Project not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Project is the default project or still owns resources',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
+  },
+})
+
+const updateProjectRoute = createRoute({
+  method: 'patch',
+  path: '/{projectId}',
+  operationId: 'updateProject',
+  tags: ['Projects'],
+  summary: 'Rename a project',
+  ...AuthenticatedOperation,
+  request: {
+    params: ProjectParamsSchema,
+    body: { required: true, content: { 'application/json': { schema: UpdateProjectSchema } } },
+  },
+  responses: {
+    200: { description: 'Renamed project', content: { 'application/json': { schema: ProjectSchema } } },
+    400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    404: { description: 'Project not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'The Default project is immutable and its name is reserved',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -155,8 +208,15 @@ export function registerProjectRoutes(routes: ProjectRoutes) {
         return auth
       }
       const deps = c.get('deps')
-      const project = await createProject(deps, auth, c.req.valid('json').name)
-      return c.json(serializeProject(project), 201)
+      try {
+        const project = await createProject(deps, auth, c.req.valid('json').name)
+        return c.json(serializeProject(project), 201)
+      } catch (error) {
+        if (error instanceof ProjectReservedNameError) {
+          return c.json(errorBody('conflict', error.message), 409)
+        }
+        throw error
+      }
     })
     .openapi(readProjectRoute, async (c) => {
       const auth = await requireAuthIdentity(c)
@@ -170,6 +230,48 @@ export function registerProjectRoutes(routes: ProjectRoutes) {
         return c.json(errorBody('not_found', 'Project not found'), 404)
       }
       return c.json(serializeProject(project), 200)
+    })
+    .openapi(updateProjectRoute, async (c) => {
+      const auth = await requireAuthIdentity(c)
+      if (auth instanceof Response) {
+        return auth
+      }
+      const deps = c.get('deps')
+      const { projectId } = c.req.valid('param')
+      try {
+        const result = await updateProject(deps, auth, projectId, c.req.valid('json').name)
+        if (result.status === 'not_found') {
+          return c.json(errorBody('not_found', 'Project not found'), 404)
+        }
+        if (result.status === 'default_project') {
+          return c.json(errorBody('conflict', 'Default project cannot be edited'), 409)
+        }
+        return c.json(serializeProject(result.project), 200)
+      } catch (error) {
+        if (error instanceof ProjectReservedNameError) {
+          return c.json(errorBody('conflict', error.message), 409)
+        }
+        throw error
+      }
+    })
+    .openapi(deleteProjectRoute, async (c) => {
+      const auth = await requireAuthIdentity(c)
+      if (auth instanceof Response) {
+        return auth
+      }
+      const deps = c.get('deps')
+      const { projectId } = c.req.valid('param')
+      const result = await deleteProject(deps, auth, projectId)
+      if (result === 'not_found') {
+        return c.json(errorBody('not_found', 'Project not found'), 404)
+      }
+      if (result === 'not_empty') {
+        return c.json(errorBody('conflict', 'Project is not empty'), 409)
+      }
+      if (result === 'default_project') {
+        return c.json(errorBody('conflict', 'Default project cannot be deleted'), 409)
+      }
+      return c.body(null, 204)
     })
 }
 

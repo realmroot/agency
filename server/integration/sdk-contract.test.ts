@@ -214,6 +214,17 @@ describe('[CF] generated SDK contract', () => {
     expect(runner.raw).toBeTruthy()
   })
 
+  it('exposes Project rename through the generated SDK facade [spec: projects/rename]', () => {
+    const projects = resources.facades.public.resources.find(({ name }) => name === 'projects')
+    expect(projects?.methods).toContainEqual({ name: 'update', operationId: 'updateProject' })
+
+    const client = createAmaClient({
+      baseUrl: 'https://example.com',
+      authorize: async () => ({ accessToken: 'token', dpopProof: 'proof' }),
+    })
+    expect((client.projects as unknown as Record<string, unknown>).update).toBeTypeOf('function')
+  })
+
   it('forwards the required Identity idempotency key through the TypeScript facade', async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init)

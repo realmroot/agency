@@ -30,8 +30,13 @@ def _get_kwargs(
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -85,6 +90,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -118,6 +124,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -145,6 +158,7 @@ def sync_detailed(
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -164,6 +178,7 @@ def sync_detailed(
             Example: codex.
         schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
             Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -184,6 +199,7 @@ cursor=cursor,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -205,6 +221,7 @@ def sync(
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -224,6 +241,7 @@ def sync(
             Example: codex.
         schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
             Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -245,6 +263,7 @@ cursor=cursor,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -260,6 +279,7 @@ async def asyncio_detailed(
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[AgentListResponse | ErrorResponse]:
     """ List agents
@@ -279,6 +299,7 @@ async def asyncio_detailed(
             Example: codex.
         schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
             Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -299,6 +320,7 @@ cursor=cursor,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -320,6 +342,7 @@ async def asyncio(
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> AgentListResponse | ErrorResponse | None:
     """ List agents
@@ -339,6 +362,7 @@ async def asyncio(
             Example: codex.
         schedulable (ListAgentsSchedulable | Unset): Filter by current Inbox scheduling readiness.
             Example: true.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -360,5 +384,6 @@ cursor=cursor,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

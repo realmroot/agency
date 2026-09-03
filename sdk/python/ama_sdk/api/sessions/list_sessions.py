@@ -28,11 +28,16 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
     state: ListSessionsState | Unset = UNSET,
     label_selector: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
 
-    
+
+
+
 
     params: dict[str, Any] = {}
 
@@ -77,6 +82,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -110,6 +116,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -136,6 +149,7 @@ def sync_detailed(
     cursor: str | Unset = UNSET,
     state: ListSessionsState | Unset = UNSET,
     label_selector: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionListResponse]:
     """ List sessions
@@ -151,6 +165,7 @@ def sync_detailed(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListSessionsState | Unset):  Example: idle.
         label_selector (str | Unset):  Example: maintainerId=maint_abc123.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -170,6 +185,7 @@ limit=limit,
 cursor=cursor,
 state=state,
 label_selector=label_selector,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -190,6 +206,7 @@ def sync(
     cursor: str | Unset = UNSET,
     state: ListSessionsState | Unset = UNSET,
     label_selector: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionListResponse | None:
     """ List sessions
@@ -205,6 +222,7 @@ def sync(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListSessionsState | Unset):  Example: idle.
         label_selector (str | Unset):  Example: maintainerId=maint_abc123.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -225,6 +243,7 @@ limit=limit,
 cursor=cursor,
 state=state,
 label_selector=label_selector,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -239,6 +258,7 @@ async def asyncio_detailed(
     cursor: str | Unset = UNSET,
     state: ListSessionsState | Unset = UNSET,
     label_selector: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SessionListResponse]:
     """ List sessions
@@ -254,6 +274,7 @@ async def asyncio_detailed(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListSessionsState | Unset):  Example: idle.
         label_selector (str | Unset):  Example: maintainerId=maint_abc123.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -273,6 +294,7 @@ limit=limit,
 cursor=cursor,
 state=state,
 label_selector=label_selector,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -293,6 +315,7 @@ async def asyncio(
     cursor: str | Unset = UNSET,
     state: ListSessionsState | Unset = UNSET,
     label_selector: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | SessionListResponse | None:
     """ List sessions
@@ -308,6 +331,7 @@ async def asyncio(
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
         state (ListSessionsState | Unset):  Example: idle.
         label_selector (str | Unset):  Example: maintainerId=maint_abc123.
+        x_ama_project_id (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -328,5 +352,6 @@ limit=limit,
 cursor=cursor,
 state=state,
 label_selector=label_selector,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

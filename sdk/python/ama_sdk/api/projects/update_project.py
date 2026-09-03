@@ -8,25 +8,20 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
-from ...models.agent import Agent
 from ...models.error_response import ErrorResponse
-from ...models.update_agent_request import UpdateAgentRequest
-from ...types import UNSET, Unset
+from ...models.project import Project
+from ...models.update_project_request import UpdateProjectRequest
 from typing import cast
 
 
 
 def _get_kwargs(
-    agent_id: str,
+    project_id: str,
     *,
-    body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    body: UpdateProjectRequest,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(x_ama_project_id, Unset):
-        headers["X-AMA-Project-ID"] = x_ama_project_id
-
 
 
 
@@ -35,7 +30,7 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
-        "url": "/api/v1/agents/{agent_id}".format(agent_id=quote(str(agent_id), safe=""),),
+        "url": "/api/v1/projects/{project_id}".format(project_id=quote(str(project_id), safe=""),),
     }
 
     _kwargs["json"] = body.to_dict()
@@ -47,9 +42,9 @@ def _get_kwargs(
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Agent | ErrorResponse | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | Project | None:
     if response.status_code == 200:
-        response_200 = Agent.from_dict(response.json())
+        response_200 = Project.from_dict(response.json())
 
 
 
@@ -96,7 +91,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Agent | ErrorResponse]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | Project]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -106,37 +101,30 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
 def sync_detailed(
-    agent_id: str,
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    body: UpdateProjectRequest,
 
-) -> Response[Agent | ErrorResponse]:
-    """ Update an agent
-
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+) -> Response[ErrorResponse | Project]:
+    """ Rename a project
 
     Args:
-        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
-        body (UpdateAgentRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
+        body (UpdateProjectRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Agent | ErrorResponse]
+        Response[ErrorResponse | Project]
      """
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
+        project_id=project_id,
 body=body,
-x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -147,73 +135,59 @@ x_ama_project_id=x_ama_project_id,
     return _build_response(client=client, response=response)
 
 def sync(
-    agent_id: str,
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    body: UpdateProjectRequest,
 
-) -> Agent | ErrorResponse | None:
-    """ Update an agent
-
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+) -> ErrorResponse | Project | None:
+    """ Rename a project
 
     Args:
-        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
-        body (UpdateAgentRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
+        body (UpdateProjectRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Agent | ErrorResponse
+        ErrorResponse | Project
      """
 
 
     return sync_detailed(
-        agent_id=agent_id,
+        project_id=project_id,
 client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
 async def asyncio_detailed(
-    agent_id: str,
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    body: UpdateProjectRequest,
 
-) -> Response[Agent | ErrorResponse]:
-    """ Update an agent
-
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+) -> Response[ErrorResponse | Project]:
+    """ Rename a project
 
     Args:
-        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
-        body (UpdateAgentRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
+        body (UpdateProjectRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Agent | ErrorResponse]
+        Response[ErrorResponse | Project]
      """
 
 
     kwargs = _get_kwargs(
-        agent_id=agent_id,
+        project_id=project_id,
 body=body,
-x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -224,37 +198,30 @@ x_ama_project_id=x_ama_project_id,
     return _build_response(client=client, response=response)
 
 async def asyncio(
-    agent_id: str,
+    project_id: str,
     *,
     client: AuthenticatedClient,
-    body: UpdateAgentRequest,
-    x_ama_project_id: str | Unset = UNSET,
+    body: UpdateProjectRequest,
 
-) -> Agent | ErrorResponse | None:
-    """ Update an agent
-
-     Partial update. Lifecycle transitions use the archived flag: {archived: true} archives, {archived:
-    false} unarchives. Field updates on an archived agent, and Identity rebinding while a live Inbox
-    Trigger exists, are rejected with 409.
+) -> ErrorResponse | Project | None:
+    """ Rename a project
 
     Args:
-        agent_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000002.
-        x_ama_project_id (str | Unset):
-        body (UpdateAgentRequest):
+        project_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000001.
+        body (UpdateProjectRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Agent | ErrorResponse
+        ErrorResponse | Project
      """
 
 
     return (await asyncio_detailed(
-        agent_id=agent_id,
+        project_id=project_id,
 client=client,
 body=body,
-x_ama_project_id=x_ama_project_id,
 
     )).parsed

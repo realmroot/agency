@@ -1070,6 +1070,7 @@ const connectSessionSocketRoute = createRoute({
   method: 'get',
   path: '/{sessionId}/socket',
   operationId: 'connectSessionSocket',
+  'x-cli-ignore': true,
   tags: ['Sessions'],
   summary: 'Open the session browser WebSocket (live events + backfill + input)',
   security: [{ sessionSocketTicket: [] }, { oidcAccessToken: ['sessions:write'] }],

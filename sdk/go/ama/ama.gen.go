@@ -5787,6 +5787,11 @@ type UpdateMemoryStoreRequest struct {
 	Spec     *map[string]interface{} `json:"spec,omitempty"`
 }
 
+// UpdateProjectRequest defines model for UpdateProjectRequest.
+type UpdateProjectRequest struct {
+	Name string `json:"name"`
+}
+
 // UpdateRunnerRequest defines model for UpdateRunnerRequest.
 type UpdateRunnerRequest struct {
 	Archived      *bool                     `json:"archived,omitempty"`
@@ -6148,6 +6153,9 @@ type WriteToolInput struct {
 	Path    string `json:"path"`
 }
 
+// AmaProjectId defines model for AmaProjectId.
+type AmaProjectId = string
+
 // inboxCallbackBearerContextKey is the context key for inboxCallbackBearer security scheme
 type inboxCallbackBearerContextKey string
 
@@ -6175,6 +6183,9 @@ type ListAgentsParams struct {
 
 	// Schedulable Filter by current Inbox scheduling readiness.
 	Schedulable *ListAgentsParamsSchedulable `form:"schedulable,omitempty" json:"schedulable,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListAgentsParamsArchived defines parameters for ListAgents.
@@ -6189,6 +6200,33 @@ type ListAgentsParamsSchedulable string
 // CreateAgentParams defines parameters for CreateAgent.
 type CreateAgentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadAgentParams defines parameters for ReadAgent.
+type ReadAgentParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateAgentParams defines parameters for UpdateAgent.
+type UpdateAgentParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ListAgentVersionsParams defines parameters for ListAgentVersions.
+type ListAgentVersionsParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadAgentVersionParams defines parameters for ReadAgentVersion.
+type ReadAgentVersionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListAuditRecordsParams defines parameters for ListAuditRecords.
@@ -6208,6 +6246,36 @@ type ListAuditRecordsParams struct {
 // ReadAuthConfigParams defines parameters for ReadAuthConfig.
 type ReadAuthConfigParams struct {
 	Organization *string `form:"organization,omitempty" json:"organization,omitempty"`
+}
+
+// ListBudgetsParams defines parameters for ListBudgets.
+type ListBudgetsParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// CreateBudgetParams defines parameters for CreateBudget.
+type CreateBudgetParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteBudgetParams defines parameters for DeleteBudget.
+type DeleteBudgetParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadBudgetParams defines parameters for ReadBudget.
+type ReadBudgetParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateBudgetParams defines parameters for UpdateBudget.
+type UpdateBudgetParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListConnectorsParams defines parameters for ListConnectors.
@@ -6233,6 +6301,9 @@ type ListEnvironmentsParams struct {
 	CreatedTo   *time.Time                      `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                            `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListEnvironmentsParamsArchived defines parameters for ListEnvironments.
@@ -6241,6 +6312,33 @@ type ListEnvironmentsParamsArchived string
 // CreateEnvironmentParams defines parameters for CreateEnvironment.
 type CreateEnvironmentParams struct {
 	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadEnvironmentParams defines parameters for ReadEnvironment.
+type ReadEnvironmentParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateEnvironmentParams defines parameters for UpdateEnvironment.
+type UpdateEnvironmentParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ListEnvironmentVersionsParams defines parameters for ListEnvironmentVersions.
+type ListEnvironmentVersionsParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadEnvironmentVersionParams defines parameters for ReadEnvironmentVersion.
+type ReadEnvironmentVersionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListIdentitiesParams defines parameters for ListIdentities.
@@ -6252,6 +6350,9 @@ type ListIdentitiesParams struct {
 	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                          `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                       `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListIdentitiesParamsArchived defines parameters for ListIdentities.
@@ -6260,6 +6361,21 @@ type ListIdentitiesParamsArchived string
 // CreateIdentityParams defines parameters for CreateIdentity.
 type CreateIdentityParams struct {
 	IdempotencyKey string `json:"idempotency-key"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadIdentityParams defines parameters for ReadIdentity.
+type ReadIdentityParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateIdentityParams defines parameters for UpdateIdentity.
+type UpdateIdentityParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListLeasesParams defines parameters for ListLeases.
@@ -6268,10 +6384,31 @@ type ListLeasesParams struct {
 	State    *ListLeasesParamsState `form:"state,omitempty" json:"state,omitempty"`
 	Limit    *int                   `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor   *string                `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListLeasesParamsState defines parameters for ListLeases.
 type ListLeasesParamsState string
+
+// CreateLeaseParams defines parameters for CreateLease.
+type CreateLeaseParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadLeaseParams defines parameters for ReadLease.
+type ReadLeaseParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateLeaseParams defines parameters for UpdateLease.
+type UpdateLeaseParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListMemoryStoresParams defines parameters for ListMemoryStores.
 type ListMemoryStoresParams struct {
@@ -6282,15 +6419,57 @@ type ListMemoryStoresParams struct {
 	CreatedTo   *time.Time                      `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                            `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListMemoryStoresParamsArchived defines parameters for ListMemoryStores.
 type ListMemoryStoresParamsArchived string
 
+// CreateMemoryStoreParams defines parameters for CreateMemoryStore.
+type CreateMemoryStoreParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadMemoryStoreParams defines parameters for ReadMemoryStore.
+type ReadMemoryStoreParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateMemoryStoreParams defines parameters for UpdateMemoryStore.
+type UpdateMemoryStoreParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
 // ListMemoryStoreMemoriesParams defines parameters for ListMemoryStoreMemories.
 type ListMemoryStoreMemoriesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// CreateMemoryStoreMemoryParams defines parameters for CreateMemoryStoreMemory.
+type CreateMemoryStoreMemoryParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteMemoryStoreMemoryParams defines parameters for DeleteMemoryStoreMemory.
+type DeleteMemoryStoreMemoryParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateMemoryStoreMemoryParams defines parameters for UpdateMemoryStoreMemory.
+type UpdateMemoryStoreMemoryParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListProjectsParams defines parameters for ListProjects.
@@ -6310,6 +6489,9 @@ type ListRunnersParams struct {
 	Cursor        *string                    `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State         *ListRunnersParamsState    `form:"state,omitempty" json:"state,omitempty"`
 	EnvironmentId *string                    `form:"environmentId,omitempty" json:"environmentId,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListRunnersParamsArchived defines parameters for ListRunners.
@@ -6317,6 +6499,42 @@ type ListRunnersParamsArchived string
 
 // ListRunnersParamsState defines parameters for ListRunners.
 type ListRunnersParamsState string
+
+// CreateRunnerParams defines parameters for CreateRunner.
+type CreateRunnerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadRunnerParams defines parameters for ReadRunner.
+type ReadRunnerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateRunnerParams defines parameters for UpdateRunner.
+type UpdateRunnerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ConnectRunnerChannelParams defines parameters for ConnectRunnerChannel.
+type ConnectRunnerChannelParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadRunnerHeartbeatParams defines parameters for ReadRunnerHeartbeat.
+type ReadRunnerHeartbeatParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// PutRunnerHeartbeatParams defines parameters for PutRunnerHeartbeat.
+type PutRunnerHeartbeatParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListSessionsParams defines parameters for ListSessions.
 type ListSessionsParams struct {
@@ -6329,6 +6547,9 @@ type ListSessionsParams struct {
 	Cursor        *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State         *ListSessionsParamsState    `form:"state,omitempty" json:"state,omitempty"`
 	LabelSelector *string                     `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionsParamsArchived defines parameters for ListSessions.
@@ -6336,6 +6557,42 @@ type ListSessionsParamsArchived string
 
 // ListSessionsParamsState defines parameters for ListSessions.
 type ListSessionsParamsState string
+
+// CreateSessionParams defines parameters for CreateSession.
+type CreateSessionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadSessionParams defines parameters for ReadSession.
+type ReadSessionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateSessionParams defines parameters for UpdateSession.
+type UpdateSessionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ListSessionApprovalsParams defines parameters for ListSessionApprovals.
+type ListSessionApprovalsParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadSessionApprovalParams defines parameters for ReadSessionApproval.
+type ReadSessionApprovalParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DecideSessionApprovalParams defines parameters for DecideSessionApproval.
+type DecideSessionApprovalParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListSessionEventsParams defines parameters for ListSessionEvents.
 type ListSessionEventsParams struct {
@@ -6345,6 +6602,9 @@ type ListSessionEventsParams struct {
 	Type        *ListSessionEventsParamsType  `form:"type,omitempty" json:"type,omitempty"`
 	CreatedFrom *time.Time                    `form:"createdFrom,omitempty" json:"createdFrom,omitempty"`
 	CreatedTo   *time.Time                    `form:"createdTo,omitempty" json:"createdTo,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListSessionEventsParamsOrder defines parameters for ListSessionEvents.
@@ -6353,10 +6613,37 @@ type ListSessionEventsParamsOrder string
 // ListSessionEventsParamsType defines parameters for ListSessionEvents.
 type ListSessionEventsParamsType string
 
+// CreateSessionEventsParams defines parameters for CreateSessionEvents.
+type CreateSessionEventsParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
 // ListSessionMessagesParams defines parameters for ListSessionMessages.
 type ListSessionMessagesParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// CreateSessionMessageParams defines parameters for CreateSessionMessage.
+type CreateSessionMessageParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadSessionMessageParams defines parameters for ReadSessionMessage.
+type ReadSessionMessageParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ConnectSessionSocketParams defines parameters for ConnectSessionSocket.
+type ConnectSessionSocketParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggersParams defines parameters for ListTriggers.
@@ -6371,6 +6658,9 @@ type ListTriggersParams struct {
 
 	// Suspend Filter by the operational toggle.
 	Suspend *ListTriggersParamsSuspend `form:"suspend,omitempty" json:"suspend,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggersParamsArchived defines parameters for ListTriggers.
@@ -6378,6 +6668,30 @@ type ListTriggersParamsArchived string
 
 // ListTriggersParamsSuspend defines parameters for ListTriggers.
 type ListTriggersParamsSuspend string
+
+// CreateTriggerParams defines parameters for CreateTrigger.
+type CreateTriggerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// DeleteTriggerParams defines parameters for DeleteTrigger.
+type DeleteTriggerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadTriggerParams defines parameters for ReadTrigger.
+type ReadTriggerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateTriggerParams defines parameters for UpdateTrigger.
+type UpdateTriggerParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListTriggerRunsParams defines parameters for ListTriggerRuns.
 type ListTriggerRunsParams struct {
@@ -6387,10 +6701,25 @@ type ListTriggerRunsParams struct {
 	Limit       *int                        `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                     `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListTriggerRunsParamsState `form:"state,omitempty" json:"state,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListTriggerRunsParamsState defines parameters for ListTriggerRuns.
 type ListTriggerRunsParamsState string
+
+// CreateTriggerRunParams defines parameters for CreateTriggerRun.
+type CreateTriggerRunParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadTriggerRunParams defines parameters for ReadTriggerRun.
+type ReadTriggerRunParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListUsageRecordsParams defines parameters for ListUsageRecords.
 type ListUsageRecordsParams struct {
@@ -6402,6 +6731,15 @@ type ListUsageRecordsParams struct {
 	SessionId  *string    `form:"sessionId,omitempty" json:"sessionId,omitempty"`
 	Limit      *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor     *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadUsageRecordParams defines parameters for ReadUsageRecord.
+type ReadUsageRecordParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParams defines parameters for ReadUsageSummary.
@@ -6409,6 +6747,9 @@ type ReadUsageSummaryParams struct {
 	GroupBy *ReadUsageSummaryParamsGroupBy `form:"groupBy,omitempty" json:"groupBy,omitempty"`
 	From    *time.Time                     `form:"from,omitempty" json:"from,omitempty"`
 	To      *time.Time                     `form:"to,omitempty" json:"to,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ReadUsageSummaryParamsGroupBy defines parameters for ReadUsageSummary.
@@ -6423,10 +6764,31 @@ type ListVaultsParams struct {
 	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultsParamsArchived defines parameters for ListVaults.
 type ListVaultsParamsArchived string
+
+// CreateVaultParams defines parameters for CreateVault.
+type CreateVaultParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadVaultParams defines parameters for ReadVault.
+type ReadVaultParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateVaultParams defines parameters for UpdateVault.
+type UpdateVaultParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListVaultCredentialsParams defines parameters for ListVaultCredentials.
 type ListVaultCredentialsParams struct {
@@ -6436,10 +6798,37 @@ type ListVaultCredentialsParams struct {
 	Limit       *int                             `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                          `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialsParamsState `form:"state,omitempty" json:"state,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialsParamsState defines parameters for ListVaultCredentials.
 type ListVaultCredentialsParamsState string
+
+// CreateVaultCredentialParams defines parameters for CreateVaultCredential.
+type CreateVaultCredentialParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// ReadVaultCredentialParams defines parameters for ReadVaultCredential.
+type ReadVaultCredentialParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateVaultCredentialParams defines parameters for UpdateVaultCredential.
+type UpdateVaultCredentialParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
+
+// UpdateVaultCredentialSecretParams defines parameters for UpdateVaultCredentialSecret.
+type UpdateVaultCredentialSecretParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListVaultCredentialVersionsParams defines parameters for ListVaultCredentialVersions.
 type ListVaultCredentialVersionsParams struct {
@@ -6448,10 +6837,19 @@ type ListVaultCredentialVersionsParams struct {
 	Limit       *int                                    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                                 `form:"cursor,omitempty" json:"cursor,omitempty"`
 	State       *ListVaultCredentialVersionsParamsState `form:"state,omitempty" json:"state,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListVaultCredentialVersionsParamsState defines parameters for ListVaultCredentialVersions.
 type ListVaultCredentialVersionsParamsState string
+
+// ReadVaultCredentialVersionParams defines parameters for ReadVaultCredentialVersion.
+type ReadVaultCredentialVersionParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // ListWorkItemsParams defines parameters for ListWorkItems.
 type ListWorkItemsParams struct {
@@ -6463,10 +6861,19 @@ type ListWorkItemsParams struct {
 	CreatedTo   *time.Time                `form:"createdTo,omitempty" json:"createdTo,omitempty"`
 	Limit       *int                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
 }
 
 // ListWorkItemsParamsState defines parameters for ListWorkItems.
 type ListWorkItemsParamsState string
+
+// ReadWorkItemParams defines parameters for ReadWorkItem.
+type ReadWorkItemParams struct {
+	// XAMAProjectID Selects an AMA project in the authenticated organization. Omit to use the default project.
+	XAMAProjectID *AmaProjectId `json:"X-AMA-Project-ID,omitempty"`
+}
 
 // CreateAgentJSONRequestBody defines body for CreateAgent for application/json ContentType.
 type CreateAgentJSONRequestBody = CreateAgentRequest
@@ -6518,6 +6925,9 @@ type UpdateMemoryStoreMemoryJSONRequestBody = UpdateMemoryStoreMemoryRequest
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
+
+// UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
+type UpdateProjectJSONRequestBody = UpdateProjectRequest
 
 // CreateRunnerJSONRequestBody defines body for CreateRunner for application/json ContentType.
 type CreateRunnerJSONRequestBody = CreateRunnerRequest
@@ -9041,18 +9451,18 @@ type ClientInterface interface {
 	CreateAgent(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgent request
-	ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadAgent(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateAgentWithBody request with any body
-	UpdateAgentWithBody(ctx context.Context, agentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateAgentWithBody(ctx context.Context, agentId string, params *UpdateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateAgent(ctx context.Context, agentId string, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateAgent(ctx context.Context, agentId string, params *UpdateAgentParams, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAgentVersions request
-	ListAgentVersions(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListAgentVersions(ctx context.Context, agentId string, params *ListAgentVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadAgentVersion request
-	ReadAgentVersion(ctx context.Context, agentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadAgentVersion(ctx context.Context, agentId string, version int, params *ReadAgentVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAuditRecords request
 	ListAuditRecords(ctx context.Context, params *ListAuditRecordsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9067,23 +9477,23 @@ type ClientInterface interface {
 	ReadCurrentAuthSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListBudgets request
-	ListBudgets(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListBudgets(ctx context.Context, params *ListBudgetsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateBudgetWithBody request with any body
-	CreateBudgetWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateBudgetWithBody(ctx context.Context, params *CreateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateBudget(ctx context.Context, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateBudget(ctx context.Context, params *CreateBudgetParams, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteBudget request
-	DeleteBudget(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteBudget(ctx context.Context, budgetId string, params *DeleteBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadBudget request
-	ReadBudget(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadBudget(ctx context.Context, budgetId string, params *ReadBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateBudgetWithBody request with any body
-	UpdateBudgetWithBody(ctx context.Context, budgetId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateBudgetWithBody(ctx context.Context, budgetId string, params *UpdateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateBudget(ctx context.Context, budgetId string, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateBudget(ctx context.Context, budgetId string, params *UpdateBudgetParams, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadConfigz request
 	ReadConfigz(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9103,18 +9513,18 @@ type ClientInterface interface {
 	CreateEnvironment(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadEnvironment request
-	ReadEnvironment(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadEnvironment(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateEnvironmentWithBody request with any body
-	UpdateEnvironmentWithBody(ctx context.Context, environmentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateEnvironmentWithBody(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateEnvironment(ctx context.Context, environmentId string, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateEnvironment(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListEnvironmentVersions request
-	ListEnvironmentVersions(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListEnvironmentVersions(ctx context.Context, environmentId string, params *ListEnvironmentVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadEnvironmentVersion request
-	ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, params *ReadEnvironmentVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListIdentities request
 	ListIdentities(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9125,14 +9535,14 @@ type ClientInterface interface {
 	CreateIdentity(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadIdentity request
-	ReadIdentity(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadIdentity(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateIdentityWithBody request with any body
-	UpdateIdentityWithBody(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateIdentityWithBody(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateIdentity(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateIdentity(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateInboxNotificationWithBody request with any body
 	CreateInboxNotificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9143,49 +9553,49 @@ type ClientInterface interface {
 	ListLeases(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateLeaseWithBody request with any body
-	CreateLeaseWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateLeaseWithBody(ctx context.Context, params *CreateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateLease(ctx context.Context, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateLease(ctx context.Context, params *CreateLeaseParams, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadLease request
-	ReadLease(ctx context.Context, leaseId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadLease(ctx context.Context, leaseId string, params *ReadLeaseParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateLeaseWithBody request with any body
-	UpdateLeaseWithBody(ctx context.Context, leaseId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateLeaseWithBody(ctx context.Context, leaseId string, params *UpdateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateLease(ctx context.Context, leaseId string, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateLease(ctx context.Context, leaseId string, params *UpdateLeaseParams, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListMemoryStores request
 	ListMemoryStores(ctx context.Context, params *ListMemoryStoresParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateMemoryStoreWithBody request with any body
-	CreateMemoryStoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateMemoryStoreWithBody(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateMemoryStore(ctx context.Context, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateMemoryStore(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadMemoryStore request
-	ReadMemoryStore(ctx context.Context, storeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadMemoryStore(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateMemoryStoreWithBody request with any body
-	UpdateMemoryStoreWithBody(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateMemoryStoreWithBody(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateMemoryStore(ctx context.Context, storeId string, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateMemoryStore(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListMemoryStoreMemories request
 	ListMemoryStoreMemories(ctx context.Context, storeId string, params *ListMemoryStoreMemoriesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateMemoryStoreMemoryWithBody request with any body
-	CreateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateMemoryStoreMemory(ctx context.Context, storeId string, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateMemoryStoreMemory(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteMemoryStoreMemory request
-	DeleteMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, params *DeleteMemoryStoreMemoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateMemoryStoreMemoryWithBody request with any body
-	UpdateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, memoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProjects request
 	ListProjects(ctx context.Context, params *ListProjectsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9195,8 +9605,16 @@ type ClientInterface interface {
 
 	CreateProject(ctx context.Context, body CreateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteProject request
+	DeleteProject(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReadProject request
 	ReadProject(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProjectWithBody request with any body
+	UpdateProjectWithBody(ctx context.Context, projectId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateProject(ctx context.Context, projectId string, body UpdateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProviders request
 	ListProviders(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9217,113 +9635,113 @@ type ClientInterface interface {
 	ListRunners(ctx context.Context, params *ListRunnersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateRunnerWithBody request with any body
-	CreateRunnerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateRunnerWithBody(ctx context.Context, params *CreateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateRunner(ctx context.Context, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateRunner(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadRunner request
-	ReadRunner(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadRunner(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateRunnerWithBody request with any body
-	UpdateRunnerWithBody(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateRunnerWithBody(ctx context.Context, runnerId string, params *UpdateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateRunner(ctx context.Context, runnerId string, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateRunner(ctx context.Context, runnerId string, params *UpdateRunnerParams, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConnectRunnerChannel request
-	ConnectRunnerChannel(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ConnectRunnerChannel(ctx context.Context, runnerId string, params *ConnectRunnerChannelParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadRunnerHeartbeat request
-	ReadRunnerHeartbeat(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadRunnerHeartbeat(ctx context.Context, runnerId string, params *ReadRunnerHeartbeatParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutRunnerHeartbeatWithBody request with any body
-	PutRunnerHeartbeatWithBody(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutRunnerHeartbeatWithBody(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutRunnerHeartbeat(ctx context.Context, runnerId string, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutRunnerHeartbeat(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessions request
 	ListSessions(ctx context.Context, params *ListSessionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateSessionWithBody request with any body
-	CreateSessionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSessionWithBody(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateSession(ctx context.Context, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSession(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadSession request
-	ReadSession(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadSession(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateSessionWithBody request with any body
-	UpdateSessionWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateSessionWithBody(ctx context.Context, sessionId string, params *UpdateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateSession(ctx context.Context, sessionId string, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateSession(ctx context.Context, sessionId string, params *UpdateSessionParams, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessionApprovals request
-	ListSessionApprovals(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListSessionApprovals(ctx context.Context, sessionId string, params *ListSessionApprovalsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadSessionApproval request
-	ReadSessionApproval(ctx context.Context, sessionId string, approvalId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadSessionApproval(ctx context.Context, sessionId string, approvalId string, params *ReadSessionApprovalParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DecideSessionApprovalWithBody request with any body
-	DecideSessionApprovalWithBody(ctx context.Context, sessionId string, approvalId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DecideSessionApprovalWithBody(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	DecideSessionApproval(ctx context.Context, sessionId string, approvalId string, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DecideSessionApproval(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessionEvents request
 	ListSessionEvents(ctx context.Context, sessionId string, params *ListSessionEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateSessionEventsWithBody request with any body
-	CreateSessionEventsWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSessionEventsWithBody(ctx context.Context, sessionId string, params *CreateSessionEventsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateSessionEvents(ctx context.Context, sessionId string, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSessionEvents(ctx context.Context, sessionId string, params *CreateSessionEventsParams, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessionMessages request
 	ListSessionMessages(ctx context.Context, sessionId string, params *ListSessionMessagesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateSessionMessageWithBody request with any body
-	CreateSessionMessageWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSessionMessageWithBody(ctx context.Context, sessionId string, params *CreateSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateSessionMessage(ctx context.Context, sessionId string, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateSessionMessage(ctx context.Context, sessionId string, params *CreateSessionMessageParams, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadSessionMessage request
-	ReadSessionMessage(ctx context.Context, sessionId string, messageId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadSessionMessage(ctx context.Context, sessionId string, messageId string, params *ReadSessionMessageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConnectSessionSocket request
-	ConnectSessionSocket(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ConnectSessionSocket(ctx context.Context, sessionId string, params *ConnectSessionSocketParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListTriggers request
 	ListTriggers(ctx context.Context, params *ListTriggersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateTriggerWithBody request with any body
-	CreateTriggerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateTriggerWithBody(ctx context.Context, params *CreateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateTrigger(ctx context.Context, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateTrigger(ctx context.Context, params *CreateTriggerParams, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteTrigger request
-	DeleteTrigger(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteTrigger(ctx context.Context, triggerId string, params *DeleteTriggerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadTrigger request
-	ReadTrigger(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadTrigger(ctx context.Context, triggerId string, params *ReadTriggerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateTriggerWithBody request with any body
-	UpdateTriggerWithBody(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateTriggerWithBody(ctx context.Context, triggerId string, params *UpdateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateTrigger(ctx context.Context, triggerId string, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateTrigger(ctx context.Context, triggerId string, params *UpdateTriggerParams, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListTriggerRuns request
 	ListTriggerRuns(ctx context.Context, triggerId string, params *ListTriggerRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateTriggerRunWithBody request with any body
-	CreateTriggerRunWithBody(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateTriggerRunWithBody(ctx context.Context, triggerId string, params *CreateTriggerRunParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateTriggerRun(ctx context.Context, triggerId string, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateTriggerRun(ctx context.Context, triggerId string, params *CreateTriggerRunParams, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadTriggerRun request
-	ReadTriggerRun(ctx context.Context, triggerId string, runId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadTriggerRun(ctx context.Context, triggerId string, runId string, params *ReadTriggerRunParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListUsageRecords request
 	ListUsageRecords(ctx context.Context, params *ListUsageRecordsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadUsageRecord request
-	ReadUsageRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadUsageRecord(ctx context.Context, recordId string, params *ReadUsageRecordParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadUsageSummary request
 	ReadUsageSummary(ctx context.Context, params *ReadUsageSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -9332,50 +9750,50 @@ type ClientInterface interface {
 	ListVaults(ctx context.Context, params *ListVaultsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateVaultWithBody request with any body
-	CreateVaultWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateVaultWithBody(ctx context.Context, params *CreateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateVault(ctx context.Context, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateVault(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadVault request
-	ReadVault(ctx context.Context, vaultId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadVault(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateVaultWithBody request with any body
-	UpdateVaultWithBody(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVaultWithBody(ctx context.Context, vaultId string, params *UpdateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateVault(ctx context.Context, vaultId string, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVault(ctx context.Context, vaultId string, params *UpdateVaultParams, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListVaultCredentials request
 	ListVaultCredentials(ctx context.Context, vaultId string, params *ListVaultCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateVaultCredentialWithBody request with any body
-	CreateVaultCredentialWithBody(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateVaultCredentialWithBody(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateVaultCredential(ctx context.Context, vaultId string, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateVaultCredential(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadVaultCredential request
-	ReadVaultCredential(ctx context.Context, vaultId string, credentialId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadVaultCredential(ctx context.Context, vaultId string, credentialId string, params *ReadVaultCredentialParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateVaultCredentialWithBody request with any body
-	UpdateVaultCredentialWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVaultCredentialWithBody(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateVaultCredential(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVaultCredential(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateVaultCredentialSecretWithBody request with any body
-	UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListVaultCredentialVersions request
 	ListVaultCredentialVersions(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadVaultCredentialVersion request
-	ReadVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, params *ReadVaultCredentialVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkItems request
 	ListWorkItems(ctx context.Context, params *ListWorkItemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReadWorkItem request
-	ReadWorkItem(ctx context.Context, workItemId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ReadWorkItem(ctx context.Context, workItemId string, params *ReadWorkItemParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *APIClient) ListAgents(ctx context.Context, params *ListAgentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9414,8 +9832,8 @@ func (c *APIClient) CreateAgent(ctx context.Context, params *CreateAgentParams, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadAgent(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadAgentRequest(c.Server, agentId)
+func (c *APIClient) ReadAgent(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadAgentRequest(c.Server, agentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9426,8 +9844,8 @@ func (c *APIClient) ReadAgent(ctx context.Context, agentId string, reqEditors ..
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateAgentWithBody(ctx context.Context, agentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateAgentRequestWithBody(c.Server, agentId, contentType, body)
+func (c *APIClient) UpdateAgentWithBody(ctx context.Context, agentId string, params *UpdateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAgentRequestWithBody(c.Server, agentId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9438,8 +9856,8 @@ func (c *APIClient) UpdateAgentWithBody(ctx context.Context, agentId string, con
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateAgent(ctx context.Context, agentId string, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateAgentRequest(c.Server, agentId, body)
+func (c *APIClient) UpdateAgent(ctx context.Context, agentId string, params *UpdateAgentParams, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAgentRequest(c.Server, agentId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9450,8 +9868,8 @@ func (c *APIClient) UpdateAgent(ctx context.Context, agentId string, body Update
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ListAgentVersions(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListAgentVersionsRequest(c.Server, agentId)
+func (c *APIClient) ListAgentVersions(ctx context.Context, agentId string, params *ListAgentVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAgentVersionsRequest(c.Server, agentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9462,8 +9880,8 @@ func (c *APIClient) ListAgentVersions(ctx context.Context, agentId string, reqEd
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadAgentVersion(ctx context.Context, agentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadAgentVersionRequest(c.Server, agentId, version)
+func (c *APIClient) ReadAgentVersion(ctx context.Context, agentId string, version int, params *ReadAgentVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadAgentVersionRequest(c.Server, agentId, version, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9522,8 +9940,8 @@ func (c *APIClient) ReadCurrentAuthSession(ctx context.Context, reqEditors ...Re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ListBudgets(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListBudgetsRequest(c.Server)
+func (c *APIClient) ListBudgets(ctx context.Context, params *ListBudgetsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListBudgetsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9534,8 +9952,8 @@ func (c *APIClient) ListBudgets(ctx context.Context, reqEditors ...RequestEditor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateBudgetWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateBudgetRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateBudgetWithBody(ctx context.Context, params *CreateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateBudgetRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9546,8 +9964,8 @@ func (c *APIClient) CreateBudgetWithBody(ctx context.Context, contentType string
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateBudget(ctx context.Context, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateBudgetRequest(c.Server, body)
+func (c *APIClient) CreateBudget(ctx context.Context, params *CreateBudgetParams, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateBudgetRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9558,8 +9976,8 @@ func (c *APIClient) CreateBudget(ctx context.Context, body CreateBudgetJSONReque
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) DeleteBudget(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteBudgetRequest(c.Server, budgetId)
+func (c *APIClient) DeleteBudget(ctx context.Context, budgetId string, params *DeleteBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteBudgetRequest(c.Server, budgetId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9570,8 +9988,8 @@ func (c *APIClient) DeleteBudget(ctx context.Context, budgetId string, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadBudget(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadBudgetRequest(c.Server, budgetId)
+func (c *APIClient) ReadBudget(ctx context.Context, budgetId string, params *ReadBudgetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadBudgetRequest(c.Server, budgetId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9582,8 +10000,8 @@ func (c *APIClient) ReadBudget(ctx context.Context, budgetId string, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateBudgetWithBody(ctx context.Context, budgetId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateBudgetRequestWithBody(c.Server, budgetId, contentType, body)
+func (c *APIClient) UpdateBudgetWithBody(ctx context.Context, budgetId string, params *UpdateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateBudgetRequestWithBody(c.Server, budgetId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9594,8 +10012,8 @@ func (c *APIClient) UpdateBudgetWithBody(ctx context.Context, budgetId string, c
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateBudget(ctx context.Context, budgetId string, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateBudgetRequest(c.Server, budgetId, body)
+func (c *APIClient) UpdateBudget(ctx context.Context, budgetId string, params *UpdateBudgetParams, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateBudgetRequest(c.Server, budgetId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9678,8 +10096,8 @@ func (c *APIClient) CreateEnvironment(ctx context.Context, params *CreateEnviron
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadEnvironment(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadEnvironmentRequest(c.Server, environmentId)
+func (c *APIClient) ReadEnvironment(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadEnvironmentRequest(c.Server, environmentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9690,8 +10108,8 @@ func (c *APIClient) ReadEnvironment(ctx context.Context, environmentId string, r
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateEnvironmentWithBody(ctx context.Context, environmentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateEnvironmentRequestWithBody(c.Server, environmentId, contentType, body)
+func (c *APIClient) UpdateEnvironmentWithBody(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateEnvironmentRequestWithBody(c.Server, environmentId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9702,8 +10120,8 @@ func (c *APIClient) UpdateEnvironmentWithBody(ctx context.Context, environmentId
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateEnvironment(ctx context.Context, environmentId string, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateEnvironmentRequest(c.Server, environmentId, body)
+func (c *APIClient) UpdateEnvironment(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateEnvironmentRequest(c.Server, environmentId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9714,8 +10132,8 @@ func (c *APIClient) UpdateEnvironment(ctx context.Context, environmentId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ListEnvironmentVersions(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListEnvironmentVersionsRequest(c.Server, environmentId)
+func (c *APIClient) ListEnvironmentVersions(ctx context.Context, environmentId string, params *ListEnvironmentVersionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListEnvironmentVersionsRequest(c.Server, environmentId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9726,8 +10144,8 @@ func (c *APIClient) ListEnvironmentVersions(ctx context.Context, environmentId s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadEnvironmentVersionRequest(c.Server, environmentId, version)
+func (c *APIClient) ReadEnvironmentVersion(ctx context.Context, environmentId string, version int, params *ReadEnvironmentVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadEnvironmentVersionRequest(c.Server, environmentId, version, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9774,8 +10192,8 @@ func (c *APIClient) CreateIdentity(ctx context.Context, params *CreateIdentityPa
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadIdentity(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadIdentityRequest(c.Server, identityId)
+func (c *APIClient) ReadIdentity(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadIdentityRequest(c.Server, identityId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9786,8 +10204,8 @@ func (c *APIClient) ReadIdentity(ctx context.Context, identityId string, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateIdentityWithBody(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequestWithBody(c.Server, identityId, contentType, body)
+func (c *APIClient) UpdateIdentityWithBody(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequestWithBody(c.Server, identityId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9798,8 +10216,8 @@ func (c *APIClient) UpdateIdentityWithBody(ctx context.Context, identityId strin
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequest(c.Server, identityId, body)
+func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequest(c.Server, identityId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9810,8 +10228,8 @@ func (c *APIClient) UpdateIdentity(ctx context.Context, identityId string, body 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(c.Server, identityId, body)
+func (c *APIClient) UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(c.Server, identityId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9858,8 +10276,8 @@ func (c *APIClient) ListLeases(ctx context.Context, params *ListLeasesParams, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateLeaseWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateLeaseRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateLeaseWithBody(ctx context.Context, params *CreateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateLeaseRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9870,8 +10288,8 @@ func (c *APIClient) CreateLeaseWithBody(ctx context.Context, contentType string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateLease(ctx context.Context, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateLeaseRequest(c.Server, body)
+func (c *APIClient) CreateLease(ctx context.Context, params *CreateLeaseParams, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateLeaseRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9882,8 +10300,8 @@ func (c *APIClient) CreateLease(ctx context.Context, body CreateLeaseJSONRequest
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadLease(ctx context.Context, leaseId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadLeaseRequest(c.Server, leaseId)
+func (c *APIClient) ReadLease(ctx context.Context, leaseId string, params *ReadLeaseParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadLeaseRequest(c.Server, leaseId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9894,8 +10312,8 @@ func (c *APIClient) ReadLease(ctx context.Context, leaseId string, reqEditors ..
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateLeaseWithBody(ctx context.Context, leaseId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateLeaseRequestWithBody(c.Server, leaseId, contentType, body)
+func (c *APIClient) UpdateLeaseWithBody(ctx context.Context, leaseId string, params *UpdateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateLeaseRequestWithBody(c.Server, leaseId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9906,8 +10324,8 @@ func (c *APIClient) UpdateLeaseWithBody(ctx context.Context, leaseId string, con
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateLease(ctx context.Context, leaseId string, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateLeaseRequest(c.Server, leaseId, body)
+func (c *APIClient) UpdateLease(ctx context.Context, leaseId string, params *UpdateLeaseParams, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateLeaseRequest(c.Server, leaseId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9930,8 +10348,8 @@ func (c *APIClient) ListMemoryStores(ctx context.Context, params *ListMemoryStor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateMemoryStoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateMemoryStoreRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateMemoryStoreWithBody(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateMemoryStoreRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9942,8 +10360,8 @@ func (c *APIClient) CreateMemoryStoreWithBody(ctx context.Context, contentType s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateMemoryStore(ctx context.Context, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateMemoryStoreRequest(c.Server, body)
+func (c *APIClient) CreateMemoryStore(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateMemoryStoreRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9954,8 +10372,8 @@ func (c *APIClient) CreateMemoryStore(ctx context.Context, body CreateMemoryStor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadMemoryStore(ctx context.Context, storeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadMemoryStoreRequest(c.Server, storeId)
+func (c *APIClient) ReadMemoryStore(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadMemoryStoreRequest(c.Server, storeId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9966,8 +10384,8 @@ func (c *APIClient) ReadMemoryStore(ctx context.Context, storeId string, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateMemoryStoreWithBody(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateMemoryStoreRequestWithBody(c.Server, storeId, contentType, body)
+func (c *APIClient) UpdateMemoryStoreWithBody(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMemoryStoreRequestWithBody(c.Server, storeId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9978,8 +10396,8 @@ func (c *APIClient) UpdateMemoryStoreWithBody(ctx context.Context, storeId strin
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateMemoryStore(ctx context.Context, storeId string, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateMemoryStoreRequest(c.Server, storeId, body)
+func (c *APIClient) UpdateMemoryStore(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMemoryStoreRequest(c.Server, storeId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10002,8 +10420,8 @@ func (c *APIClient) ListMemoryStoreMemories(ctx context.Context, storeId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateMemoryStoreMemoryRequestWithBody(c.Server, storeId, contentType, body)
+func (c *APIClient) CreateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateMemoryStoreMemoryRequestWithBody(c.Server, storeId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10014,8 +10432,8 @@ func (c *APIClient) CreateMemoryStoreMemoryWithBody(ctx context.Context, storeId
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateMemoryStoreMemory(ctx context.Context, storeId string, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateMemoryStoreMemoryRequest(c.Server, storeId, body)
+func (c *APIClient) CreateMemoryStoreMemory(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateMemoryStoreMemoryRequest(c.Server, storeId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10026,8 +10444,8 @@ func (c *APIClient) CreateMemoryStoreMemory(ctx context.Context, storeId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) DeleteMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteMemoryStoreMemoryRequest(c.Server, storeId, memoryId)
+func (c *APIClient) DeleteMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, params *DeleteMemoryStoreMemoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteMemoryStoreMemoryRequest(c.Server, storeId, memoryId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10038,8 +10456,8 @@ func (c *APIClient) DeleteMemoryStoreMemory(ctx context.Context, storeId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, memoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateMemoryStoreMemoryRequestWithBody(c.Server, storeId, memoryId, contentType, body)
+func (c *APIClient) UpdateMemoryStoreMemoryWithBody(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMemoryStoreMemoryRequestWithBody(c.Server, storeId, memoryId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10050,8 +10468,8 @@ func (c *APIClient) UpdateMemoryStoreMemoryWithBody(ctx context.Context, storeId
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateMemoryStoreMemoryRequest(c.Server, storeId, memoryId, body)
+func (c *APIClient) UpdateMemoryStoreMemory(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMemoryStoreMemoryRequest(c.Server, storeId, memoryId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10098,8 +10516,44 @@ func (c *APIClient) CreateProject(ctx context.Context, body CreateProjectJSONReq
 	return c.Client.Do(req)
 }
 
+func (c *APIClient) DeleteProject(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProjectRequest(c.Server, projectId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *APIClient) ReadProject(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadProjectRequest(c.Server, projectId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateProjectWithBody(ctx context.Context, projectId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProjectRequestWithBody(c.Server, projectId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *APIClient) UpdateProject(ctx context.Context, projectId string, body UpdateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProjectRequest(c.Server, projectId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10182,8 +10636,8 @@ func (c *APIClient) ListRunners(ctx context.Context, params *ListRunnersParams, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateRunnerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateRunnerRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateRunnerWithBody(ctx context.Context, params *CreateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateRunnerRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10194,8 +10648,8 @@ func (c *APIClient) CreateRunnerWithBody(ctx context.Context, contentType string
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateRunner(ctx context.Context, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateRunnerRequest(c.Server, body)
+func (c *APIClient) CreateRunner(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateRunnerRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10206,8 +10660,8 @@ func (c *APIClient) CreateRunner(ctx context.Context, body CreateRunnerJSONReque
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadRunner(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadRunnerRequest(c.Server, runnerId)
+func (c *APIClient) ReadRunner(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadRunnerRequest(c.Server, runnerId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10218,8 +10672,8 @@ func (c *APIClient) ReadRunner(ctx context.Context, runnerId string, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateRunnerWithBody(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateRunnerRequestWithBody(c.Server, runnerId, contentType, body)
+func (c *APIClient) UpdateRunnerWithBody(ctx context.Context, runnerId string, params *UpdateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateRunnerRequestWithBody(c.Server, runnerId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10230,8 +10684,8 @@ func (c *APIClient) UpdateRunnerWithBody(ctx context.Context, runnerId string, c
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateRunner(ctx context.Context, runnerId string, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateRunnerRequest(c.Server, runnerId, body)
+func (c *APIClient) UpdateRunner(ctx context.Context, runnerId string, params *UpdateRunnerParams, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateRunnerRequest(c.Server, runnerId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10242,8 +10696,8 @@ func (c *APIClient) UpdateRunner(ctx context.Context, runnerId string, body Upda
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ConnectRunnerChannel(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewConnectRunnerChannelRequest(c.Server, runnerId)
+func (c *APIClient) ConnectRunnerChannel(ctx context.Context, runnerId string, params *ConnectRunnerChannelParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectRunnerChannelRequest(c.Server, runnerId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10254,8 +10708,8 @@ func (c *APIClient) ConnectRunnerChannel(ctx context.Context, runnerId string, r
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadRunnerHeartbeat(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadRunnerHeartbeatRequest(c.Server, runnerId)
+func (c *APIClient) ReadRunnerHeartbeat(ctx context.Context, runnerId string, params *ReadRunnerHeartbeatParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadRunnerHeartbeatRequest(c.Server, runnerId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10266,8 +10720,8 @@ func (c *APIClient) ReadRunnerHeartbeat(ctx context.Context, runnerId string, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) PutRunnerHeartbeatWithBody(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutRunnerHeartbeatRequestWithBody(c.Server, runnerId, contentType, body)
+func (c *APIClient) PutRunnerHeartbeatWithBody(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutRunnerHeartbeatRequestWithBody(c.Server, runnerId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10278,8 +10732,8 @@ func (c *APIClient) PutRunnerHeartbeatWithBody(ctx context.Context, runnerId str
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) PutRunnerHeartbeat(ctx context.Context, runnerId string, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutRunnerHeartbeatRequest(c.Server, runnerId, body)
+func (c *APIClient) PutRunnerHeartbeat(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutRunnerHeartbeatRequest(c.Server, runnerId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10302,8 +10756,8 @@ func (c *APIClient) ListSessions(ctx context.Context, params *ListSessionsParams
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSessionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateSessionWithBody(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10314,8 +10768,8 @@ func (c *APIClient) CreateSessionWithBody(ctx context.Context, contentType strin
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSession(ctx context.Context, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionRequest(c.Server, body)
+func (c *APIClient) CreateSession(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10326,8 +10780,8 @@ func (c *APIClient) CreateSession(ctx context.Context, body CreateSessionJSONReq
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadSession(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadSessionRequest(c.Server, sessionId)
+func (c *APIClient) ReadSession(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadSessionRequest(c.Server, sessionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10338,8 +10792,8 @@ func (c *APIClient) ReadSession(ctx context.Context, sessionId string, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateSessionWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateSessionRequestWithBody(c.Server, sessionId, contentType, body)
+func (c *APIClient) UpdateSessionWithBody(ctx context.Context, sessionId string, params *UpdateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSessionRequestWithBody(c.Server, sessionId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10350,8 +10804,8 @@ func (c *APIClient) UpdateSessionWithBody(ctx context.Context, sessionId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateSession(ctx context.Context, sessionId string, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateSessionRequest(c.Server, sessionId, body)
+func (c *APIClient) UpdateSession(ctx context.Context, sessionId string, params *UpdateSessionParams, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSessionRequest(c.Server, sessionId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10362,8 +10816,8 @@ func (c *APIClient) UpdateSession(ctx context.Context, sessionId string, body Up
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ListSessionApprovals(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListSessionApprovalsRequest(c.Server, sessionId)
+func (c *APIClient) ListSessionApprovals(ctx context.Context, sessionId string, params *ListSessionApprovalsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSessionApprovalsRequest(c.Server, sessionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10374,8 +10828,8 @@ func (c *APIClient) ListSessionApprovals(ctx context.Context, sessionId string, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadSessionApproval(ctx context.Context, sessionId string, approvalId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadSessionApprovalRequest(c.Server, sessionId, approvalId)
+func (c *APIClient) ReadSessionApproval(ctx context.Context, sessionId string, approvalId string, params *ReadSessionApprovalParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadSessionApprovalRequest(c.Server, sessionId, approvalId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10386,8 +10840,8 @@ func (c *APIClient) ReadSessionApproval(ctx context.Context, sessionId string, a
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) DecideSessionApprovalWithBody(ctx context.Context, sessionId string, approvalId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDecideSessionApprovalRequestWithBody(c.Server, sessionId, approvalId, contentType, body)
+func (c *APIClient) DecideSessionApprovalWithBody(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDecideSessionApprovalRequestWithBody(c.Server, sessionId, approvalId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10398,8 +10852,8 @@ func (c *APIClient) DecideSessionApprovalWithBody(ctx context.Context, sessionId
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) DecideSessionApproval(ctx context.Context, sessionId string, approvalId string, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDecideSessionApprovalRequest(c.Server, sessionId, approvalId, body)
+func (c *APIClient) DecideSessionApproval(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDecideSessionApprovalRequest(c.Server, sessionId, approvalId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10422,8 +10876,8 @@ func (c *APIClient) ListSessionEvents(ctx context.Context, sessionId string, par
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSessionEventsWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionEventsRequestWithBody(c.Server, sessionId, contentType, body)
+func (c *APIClient) CreateSessionEventsWithBody(ctx context.Context, sessionId string, params *CreateSessionEventsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionEventsRequestWithBody(c.Server, sessionId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10434,8 +10888,8 @@ func (c *APIClient) CreateSessionEventsWithBody(ctx context.Context, sessionId s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSessionEvents(ctx context.Context, sessionId string, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionEventsRequest(c.Server, sessionId, body)
+func (c *APIClient) CreateSessionEvents(ctx context.Context, sessionId string, params *CreateSessionEventsParams, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionEventsRequest(c.Server, sessionId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10458,8 +10912,8 @@ func (c *APIClient) ListSessionMessages(ctx context.Context, sessionId string, p
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSessionMessageWithBody(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionMessageRequestWithBody(c.Server, sessionId, contentType, body)
+func (c *APIClient) CreateSessionMessageWithBody(ctx context.Context, sessionId string, params *CreateSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionMessageRequestWithBody(c.Server, sessionId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10470,8 +10924,8 @@ func (c *APIClient) CreateSessionMessageWithBody(ctx context.Context, sessionId 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateSessionMessage(ctx context.Context, sessionId string, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateSessionMessageRequest(c.Server, sessionId, body)
+func (c *APIClient) CreateSessionMessage(ctx context.Context, sessionId string, params *CreateSessionMessageParams, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSessionMessageRequest(c.Server, sessionId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10482,8 +10936,8 @@ func (c *APIClient) CreateSessionMessage(ctx context.Context, sessionId string, 
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadSessionMessage(ctx context.Context, sessionId string, messageId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadSessionMessageRequest(c.Server, sessionId, messageId)
+func (c *APIClient) ReadSessionMessage(ctx context.Context, sessionId string, messageId string, params *ReadSessionMessageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadSessionMessageRequest(c.Server, sessionId, messageId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10494,8 +10948,8 @@ func (c *APIClient) ReadSessionMessage(ctx context.Context, sessionId string, me
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ConnectSessionSocket(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewConnectSessionSocketRequest(c.Server, sessionId)
+func (c *APIClient) ConnectSessionSocket(ctx context.Context, sessionId string, params *ConnectSessionSocketParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectSessionSocketRequest(c.Server, sessionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10518,8 +10972,8 @@ func (c *APIClient) ListTriggers(ctx context.Context, params *ListTriggersParams
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateTriggerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateTriggerRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateTriggerWithBody(ctx context.Context, params *CreateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateTriggerRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10530,8 +10984,8 @@ func (c *APIClient) CreateTriggerWithBody(ctx context.Context, contentType strin
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateTrigger(ctx context.Context, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateTriggerRequest(c.Server, body)
+func (c *APIClient) CreateTrigger(ctx context.Context, params *CreateTriggerParams, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateTriggerRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10542,8 +10996,8 @@ func (c *APIClient) CreateTrigger(ctx context.Context, body CreateTriggerJSONReq
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) DeleteTrigger(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteTriggerRequest(c.Server, triggerId)
+func (c *APIClient) DeleteTrigger(ctx context.Context, triggerId string, params *DeleteTriggerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteTriggerRequest(c.Server, triggerId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10554,8 +11008,8 @@ func (c *APIClient) DeleteTrigger(ctx context.Context, triggerId string, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadTrigger(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadTriggerRequest(c.Server, triggerId)
+func (c *APIClient) ReadTrigger(ctx context.Context, triggerId string, params *ReadTriggerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadTriggerRequest(c.Server, triggerId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10566,8 +11020,8 @@ func (c *APIClient) ReadTrigger(ctx context.Context, triggerId string, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateTriggerWithBody(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateTriggerRequestWithBody(c.Server, triggerId, contentType, body)
+func (c *APIClient) UpdateTriggerWithBody(ctx context.Context, triggerId string, params *UpdateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateTriggerRequestWithBody(c.Server, triggerId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10578,8 +11032,8 @@ func (c *APIClient) UpdateTriggerWithBody(ctx context.Context, triggerId string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateTrigger(ctx context.Context, triggerId string, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateTriggerRequest(c.Server, triggerId, body)
+func (c *APIClient) UpdateTrigger(ctx context.Context, triggerId string, params *UpdateTriggerParams, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateTriggerRequest(c.Server, triggerId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10602,8 +11056,8 @@ func (c *APIClient) ListTriggerRuns(ctx context.Context, triggerId string, param
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateTriggerRunWithBody(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateTriggerRunRequestWithBody(c.Server, triggerId, contentType, body)
+func (c *APIClient) CreateTriggerRunWithBody(ctx context.Context, triggerId string, params *CreateTriggerRunParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateTriggerRunRequestWithBody(c.Server, triggerId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10614,8 +11068,8 @@ func (c *APIClient) CreateTriggerRunWithBody(ctx context.Context, triggerId stri
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateTriggerRun(ctx context.Context, triggerId string, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateTriggerRunRequest(c.Server, triggerId, body)
+func (c *APIClient) CreateTriggerRun(ctx context.Context, triggerId string, params *CreateTriggerRunParams, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateTriggerRunRequest(c.Server, triggerId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10626,8 +11080,8 @@ func (c *APIClient) CreateTriggerRun(ctx context.Context, triggerId string, body
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadTriggerRun(ctx context.Context, triggerId string, runId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadTriggerRunRequest(c.Server, triggerId, runId)
+func (c *APIClient) ReadTriggerRun(ctx context.Context, triggerId string, runId string, params *ReadTriggerRunParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadTriggerRunRequest(c.Server, triggerId, runId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10650,8 +11104,8 @@ func (c *APIClient) ListUsageRecords(ctx context.Context, params *ListUsageRecor
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadUsageRecord(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadUsageRecordRequest(c.Server, recordId)
+func (c *APIClient) ReadUsageRecord(ctx context.Context, recordId string, params *ReadUsageRecordParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadUsageRecordRequest(c.Server, recordId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10686,8 +11140,8 @@ func (c *APIClient) ListVaults(ctx context.Context, params *ListVaultsParams, re
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateVaultWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultRequestWithBody(c.Server, contentType, body)
+func (c *APIClient) CreateVaultWithBody(ctx context.Context, params *CreateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVaultRequestWithBody(c.Server, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10698,8 +11152,8 @@ func (c *APIClient) CreateVaultWithBody(ctx context.Context, contentType string,
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateVault(ctx context.Context, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultRequest(c.Server, body)
+func (c *APIClient) CreateVault(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVaultRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10710,8 +11164,8 @@ func (c *APIClient) CreateVault(ctx context.Context, body CreateVaultJSONRequest
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadVault(ctx context.Context, vaultId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadVaultRequest(c.Server, vaultId)
+func (c *APIClient) ReadVault(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadVaultRequest(c.Server, vaultId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10722,8 +11176,8 @@ func (c *APIClient) ReadVault(ctx context.Context, vaultId string, reqEditors ..
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVaultWithBody(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultRequestWithBody(c.Server, vaultId, contentType, body)
+func (c *APIClient) UpdateVaultWithBody(ctx context.Context, vaultId string, params *UpdateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultRequestWithBody(c.Server, vaultId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10734,8 +11188,8 @@ func (c *APIClient) UpdateVaultWithBody(ctx context.Context, vaultId string, con
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVault(ctx context.Context, vaultId string, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultRequest(c.Server, vaultId, body)
+func (c *APIClient) UpdateVault(ctx context.Context, vaultId string, params *UpdateVaultParams, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultRequest(c.Server, vaultId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10758,8 +11212,8 @@ func (c *APIClient) ListVaultCredentials(ctx context.Context, vaultId string, pa
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateVaultCredentialWithBody(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultCredentialRequestWithBody(c.Server, vaultId, contentType, body)
+func (c *APIClient) CreateVaultCredentialWithBody(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVaultCredentialRequestWithBody(c.Server, vaultId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10770,8 +11224,8 @@ func (c *APIClient) CreateVaultCredentialWithBody(ctx context.Context, vaultId s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) CreateVaultCredential(ctx context.Context, vaultId string, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateVaultCredentialRequest(c.Server, vaultId, body)
+func (c *APIClient) CreateVaultCredential(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVaultCredentialRequest(c.Server, vaultId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10782,8 +11236,8 @@ func (c *APIClient) CreateVaultCredential(ctx context.Context, vaultId string, b
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadVaultCredential(ctx context.Context, vaultId string, credentialId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadVaultCredentialRequest(c.Server, vaultId, credentialId)
+func (c *APIClient) ReadVaultCredential(ctx context.Context, vaultId string, credentialId string, params *ReadVaultCredentialParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadVaultCredentialRequest(c.Server, vaultId, credentialId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10794,8 +11248,8 @@ func (c *APIClient) ReadVaultCredential(ctx context.Context, vaultId string, cre
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVaultCredentialWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultCredentialRequestWithBody(c.Server, vaultId, credentialId, contentType, body)
+func (c *APIClient) UpdateVaultCredentialWithBody(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialRequestWithBody(c.Server, vaultId, credentialId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10806,8 +11260,8 @@ func (c *APIClient) UpdateVaultCredentialWithBody(ctx context.Context, vaultId s
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVaultCredential(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultCredentialRequest(c.Server, vaultId, credentialId, body)
+func (c *APIClient) UpdateVaultCredential(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialRequest(c.Server, vaultId, credentialId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10818,8 +11272,8 @@ func (c *APIClient) UpdateVaultCredential(ctx context.Context, vaultId string, c
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultCredentialSecretRequestWithBody(c.Server, vaultId, credentialId, contentType, body)
+func (c *APIClient) UpdateVaultCredentialSecretWithBody(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialSecretRequestWithBody(c.Server, vaultId, credentialId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10830,8 +11284,8 @@ func (c *APIClient) UpdateVaultCredentialSecretWithBody(ctx context.Context, vau
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateVaultCredentialSecretRequest(c.Server, vaultId, credentialId, body)
+func (c *APIClient) UpdateVaultCredentialSecret(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateVaultCredentialSecretRequest(c.Server, vaultId, credentialId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10854,8 +11308,8 @@ func (c *APIClient) ListVaultCredentialVersions(ctx context.Context, vaultId str
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadVaultCredentialVersionRequest(c.Server, vaultId, credentialId, versionId)
+func (c *APIClient) ReadVaultCredentialVersion(ctx context.Context, vaultId string, credentialId string, versionId string, params *ReadVaultCredentialVersionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadVaultCredentialVersionRequest(c.Server, vaultId, credentialId, versionId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10878,8 +11332,8 @@ func (c *APIClient) ListWorkItems(ctx context.Context, params *ListWorkItemsPara
 	return c.Client.Do(req)
 }
 
-func (c *APIClient) ReadWorkItem(ctx context.Context, workItemId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReadWorkItemRequest(c.Server, workItemId)
+func (c *APIClient) ReadWorkItem(ctx context.Context, workItemId string, params *ReadWorkItemParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReadWorkItemRequest(c.Server, workItemId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -11037,6 +11491,21 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
@@ -11090,13 +11559,24 @@ func NewCreateAgentRequestWithBody(server string, params *CreateAgentParams, con
 			req.Header.Set("idempotency-key", headerParam0)
 		}
 
+		if params.XAMAProjectID != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam1)
+		}
+
 	}
 
 	return req, nil
 }
 
 // NewReadAgentRequest generates requests for ReadAgent
-func NewReadAgentRequest(server string, agentId string) (*http.Request, error) {
+func NewReadAgentRequest(server string, agentId string, params *ReadAgentParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11126,22 +11606,37 @@ func NewReadAgentRequest(server string, agentId string) (*http.Request, error) {
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateAgentRequest calls the generic UpdateAgent builder with application/json body
-func NewUpdateAgentRequest(server string, agentId string, body UpdateAgentJSONRequestBody) (*http.Request, error) {
+func NewUpdateAgentRequest(server string, agentId string, params *UpdateAgentParams, body UpdateAgentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateAgentRequestWithBody(server, agentId, "application/json", bodyReader)
+	return NewUpdateAgentRequestWithBody(server, agentId, params, "application/json", bodyReader)
 }
 
 // NewUpdateAgentRequestWithBody generates requests for UpdateAgent with any type of body
-func NewUpdateAgentRequestWithBody(server string, agentId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateAgentRequestWithBody(server string, agentId string, params *UpdateAgentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11173,11 +11668,26 @@ func NewUpdateAgentRequestWithBody(server string, agentId string, contentType st
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewListAgentVersionsRequest generates requests for ListAgentVersions
-func NewListAgentVersionsRequest(server string, agentId string) (*http.Request, error) {
+func NewListAgentVersionsRequest(server string, agentId string, params *ListAgentVersionsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11207,11 +11717,26 @@ func NewListAgentVersionsRequest(server string, agentId string) (*http.Request, 
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadAgentVersionRequest generates requests for ReadAgentVersion
-func NewReadAgentVersionRequest(server string, agentId string, version int) (*http.Request, error) {
+func NewReadAgentVersionRequest(server string, agentId string, version int, params *ReadAgentVersionParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11246,6 +11771,21 @@ func NewReadAgentVersionRequest(server string, agentId string, version int) (*ht
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -11529,7 +12069,7 @@ func NewReadCurrentAuthSessionRequest(server string) (*http.Request, error) {
 }
 
 // NewListBudgetsRequest generates requests for ListBudgets
-func NewListBudgetsRequest(server string) (*http.Request, error) {
+func NewListBudgetsRequest(server string, params *ListBudgetsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -11552,22 +12092,37 @@ func NewListBudgetsRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateBudgetRequest calls the generic CreateBudget builder with application/json body
-func NewCreateBudgetRequest(server string, body CreateBudgetJSONRequestBody) (*http.Request, error) {
+func NewCreateBudgetRequest(server string, params *CreateBudgetParams, body CreateBudgetJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateBudgetRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateBudgetRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateBudgetRequestWithBody generates requests for CreateBudget with any type of body
-func NewCreateBudgetRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateBudgetRequestWithBody(server string, params *CreateBudgetParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -11592,11 +12147,26 @@ func NewCreateBudgetRequestWithBody(server string, contentType string, body io.R
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewDeleteBudgetRequest generates requests for DeleteBudget
-func NewDeleteBudgetRequest(server string, budgetId string) (*http.Request, error) {
+func NewDeleteBudgetRequest(server string, budgetId string, params *DeleteBudgetParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11626,11 +12196,26 @@ func NewDeleteBudgetRequest(server string, budgetId string) (*http.Request, erro
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadBudgetRequest generates requests for ReadBudget
-func NewReadBudgetRequest(server string, budgetId string) (*http.Request, error) {
+func NewReadBudgetRequest(server string, budgetId string, params *ReadBudgetParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11660,22 +12245,37 @@ func NewReadBudgetRequest(server string, budgetId string) (*http.Request, error)
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateBudgetRequest calls the generic UpdateBudget builder with application/json body
-func NewUpdateBudgetRequest(server string, budgetId string, body UpdateBudgetJSONRequestBody) (*http.Request, error) {
+func NewUpdateBudgetRequest(server string, budgetId string, params *UpdateBudgetParams, body UpdateBudgetJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateBudgetRequestWithBody(server, budgetId, "application/json", bodyReader)
+	return NewUpdateBudgetRequestWithBody(server, budgetId, params, "application/json", bodyReader)
 }
 
 // NewUpdateBudgetRequestWithBody generates requests for UpdateBudget with any type of body
-func NewUpdateBudgetRequestWithBody(server string, budgetId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateBudgetRequestWithBody(server string, budgetId string, params *UpdateBudgetParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -11706,6 +12306,21 @@ func NewUpdateBudgetRequestWithBody(server string, budgetId string, contentType 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -12008,6 +12623,21 @@ func NewListEnvironmentsRequest(server string, params *ListEnvironmentsParams) (
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
@@ -12061,13 +12691,24 @@ func NewCreateEnvironmentRequestWithBody(server string, params *CreateEnvironmen
 			req.Header.Set("idempotency-key", headerParam0)
 		}
 
+		if params.XAMAProjectID != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam1)
+		}
+
 	}
 
 	return req, nil
 }
 
 // NewReadEnvironmentRequest generates requests for ReadEnvironment
-func NewReadEnvironmentRequest(server string, environmentId string) (*http.Request, error) {
+func NewReadEnvironmentRequest(server string, environmentId string, params *ReadEnvironmentParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12097,22 +12738,37 @@ func NewReadEnvironmentRequest(server string, environmentId string) (*http.Reque
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateEnvironmentRequest calls the generic UpdateEnvironment builder with application/json body
-func NewUpdateEnvironmentRequest(server string, environmentId string, body UpdateEnvironmentJSONRequestBody) (*http.Request, error) {
+func NewUpdateEnvironmentRequest(server string, environmentId string, params *UpdateEnvironmentParams, body UpdateEnvironmentJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateEnvironmentRequestWithBody(server, environmentId, "application/json", bodyReader)
+	return NewUpdateEnvironmentRequestWithBody(server, environmentId, params, "application/json", bodyReader)
 }
 
 // NewUpdateEnvironmentRequestWithBody generates requests for UpdateEnvironment with any type of body
-func NewUpdateEnvironmentRequestWithBody(server string, environmentId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateEnvironmentRequestWithBody(server string, environmentId string, params *UpdateEnvironmentParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12144,11 +12800,26 @@ func NewUpdateEnvironmentRequestWithBody(server string, environmentId string, co
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewListEnvironmentVersionsRequest generates requests for ListEnvironmentVersions
-func NewListEnvironmentVersionsRequest(server string, environmentId string) (*http.Request, error) {
+func NewListEnvironmentVersionsRequest(server string, environmentId string, params *ListEnvironmentVersionsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12178,11 +12849,26 @@ func NewListEnvironmentVersionsRequest(server string, environmentId string) (*ht
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadEnvironmentVersionRequest generates requests for ReadEnvironmentVersion
-func NewReadEnvironmentVersionRequest(server string, environmentId string, version int) (*http.Request, error) {
+func NewReadEnvironmentVersionRequest(server string, environmentId string, version int, params *ReadEnvironmentVersionParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12217,6 +12903,21 @@ func NewReadEnvironmentVersionRequest(server string, environmentId string, versi
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -12333,6 +13034,21 @@ func NewListIdentitiesRequest(server string, params *ListIdentitiesParams) (*htt
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
@@ -12384,13 +13100,24 @@ func NewCreateIdentityRequestWithBody(server string, params *CreateIdentityParam
 
 		req.Header.Set("idempotency-key", headerParam0)
 
+		if params.XAMAProjectID != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam1)
+		}
+
 	}
 
 	return req, nil
 }
 
 // NewReadIdentityRequest generates requests for ReadIdentity
-func NewReadIdentityRequest(server string, identityId string) (*http.Request, error) {
+func NewReadIdentityRequest(server string, identityId string, params *ReadIdentityParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12420,33 +13147,48 @@ func NewReadIdentityRequest(server string, identityId string) (*http.Request, er
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateIdentityRequest calls the generic UpdateIdentity builder with application/json body
-func NewUpdateIdentityRequest(server string, identityId string, body UpdateIdentityJSONRequestBody) (*http.Request, error) {
+func NewUpdateIdentityRequest(server string, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateIdentityRequestWithBody(server, identityId, "application/json", bodyReader)
+	return NewUpdateIdentityRequestWithBody(server, identityId, params, "application/json", bodyReader)
 }
 
 // NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody calls the generic UpdateIdentity builder with application/merge-patch+json body
-func NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(server string, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody) (*http.Request, error) {
+func NewUpdateIdentityRequestWithApplicationMergePatchPlusJSONBody(server string, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateIdentityRequestWithBody(server, identityId, "application/merge-patch+json", bodyReader)
+	return NewUpdateIdentityRequestWithBody(server, identityId, params, "application/merge-patch+json", bodyReader)
 }
 
 // NewUpdateIdentityRequestWithBody generates requests for UpdateIdentity with any type of body
-func NewUpdateIdentityRequestWithBody(server string, identityId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateIdentityRequestWithBody(server string, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12477,6 +13219,21 @@ func NewUpdateIdentityRequestWithBody(server string, identityId string, contentT
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -12608,22 +13365,37 @@ func NewListLeasesRequest(server string, params *ListLeasesParams) (*http.Reques
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateLeaseRequest calls the generic CreateLease builder with application/json body
-func NewCreateLeaseRequest(server string, body CreateLeaseJSONRequestBody) (*http.Request, error) {
+func NewCreateLeaseRequest(server string, params *CreateLeaseParams, body CreateLeaseJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateLeaseRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateLeaseRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateLeaseRequestWithBody generates requests for CreateLease with any type of body
-func NewCreateLeaseRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateLeaseRequestWithBody(server string, params *CreateLeaseParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -12648,11 +13420,26 @@ func NewCreateLeaseRequestWithBody(server string, contentType string, body io.Re
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadLeaseRequest generates requests for ReadLease
-func NewReadLeaseRequest(server string, leaseId string) (*http.Request, error) {
+func NewReadLeaseRequest(server string, leaseId string, params *ReadLeaseParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12682,22 +13469,37 @@ func NewReadLeaseRequest(server string, leaseId string) (*http.Request, error) {
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateLeaseRequest calls the generic UpdateLease builder with application/json body
-func NewUpdateLeaseRequest(server string, leaseId string, body UpdateLeaseJSONRequestBody) (*http.Request, error) {
+func NewUpdateLeaseRequest(server string, leaseId string, params *UpdateLeaseParams, body UpdateLeaseJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateLeaseRequestWithBody(server, leaseId, "application/json", bodyReader)
+	return NewUpdateLeaseRequestWithBody(server, leaseId, params, "application/json", bodyReader)
 }
 
 // NewUpdateLeaseRequestWithBody generates requests for UpdateLease with any type of body
-func NewUpdateLeaseRequestWithBody(server string, leaseId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateLeaseRequestWithBody(server string, leaseId string, params *UpdateLeaseParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12728,6 +13530,21 @@ func NewUpdateLeaseRequestWithBody(server string, leaseId string, contentType st
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -12843,22 +13660,37 @@ func NewListMemoryStoresRequest(server string, params *ListMemoryStoresParams) (
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateMemoryStoreRequest calls the generic CreateMemoryStore builder with application/json body
-func NewCreateMemoryStoreRequest(server string, body CreateMemoryStoreJSONRequestBody) (*http.Request, error) {
+func NewCreateMemoryStoreRequest(server string, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateMemoryStoreRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateMemoryStoreRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateMemoryStoreRequestWithBody generates requests for CreateMemoryStore with any type of body
-func NewCreateMemoryStoreRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateMemoryStoreRequestWithBody(server string, params *CreateMemoryStoreParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -12883,11 +13715,26 @@ func NewCreateMemoryStoreRequestWithBody(server string, contentType string, body
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadMemoryStoreRequest generates requests for ReadMemoryStore
-func NewReadMemoryStoreRequest(server string, storeId string) (*http.Request, error) {
+func NewReadMemoryStoreRequest(server string, storeId string, params *ReadMemoryStoreParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12917,22 +13764,37 @@ func NewReadMemoryStoreRequest(server string, storeId string) (*http.Request, er
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateMemoryStoreRequest calls the generic UpdateMemoryStore builder with application/json body
-func NewUpdateMemoryStoreRequest(server string, storeId string, body UpdateMemoryStoreJSONRequestBody) (*http.Request, error) {
+func NewUpdateMemoryStoreRequest(server string, storeId string, params *UpdateMemoryStoreParams, body UpdateMemoryStoreJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateMemoryStoreRequestWithBody(server, storeId, "application/json", bodyReader)
+	return NewUpdateMemoryStoreRequestWithBody(server, storeId, params, "application/json", bodyReader)
 }
 
 // NewUpdateMemoryStoreRequestWithBody generates requests for UpdateMemoryStore with any type of body
-func NewUpdateMemoryStoreRequestWithBody(server string, storeId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateMemoryStoreRequestWithBody(server string, storeId string, params *UpdateMemoryStoreParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -12963,6 +13825,21 @@ func NewUpdateMemoryStoreRequestWithBody(server string, storeId string, contentT
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -13037,22 +13914,37 @@ func NewListMemoryStoreMemoriesRequest(server string, storeId string, params *Li
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateMemoryStoreMemoryRequest calls the generic CreateMemoryStoreMemory builder with application/json body
-func NewCreateMemoryStoreMemoryRequest(server string, storeId string, body CreateMemoryStoreMemoryJSONRequestBody) (*http.Request, error) {
+func NewCreateMemoryStoreMemoryRequest(server string, storeId string, params *CreateMemoryStoreMemoryParams, body CreateMemoryStoreMemoryJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateMemoryStoreMemoryRequestWithBody(server, storeId, "application/json", bodyReader)
+	return NewCreateMemoryStoreMemoryRequestWithBody(server, storeId, params, "application/json", bodyReader)
 }
 
 // NewCreateMemoryStoreMemoryRequestWithBody generates requests for CreateMemoryStoreMemory with any type of body
-func NewCreateMemoryStoreMemoryRequestWithBody(server string, storeId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateMemoryStoreMemoryRequestWithBody(server string, storeId string, params *CreateMemoryStoreMemoryParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13084,11 +13976,26 @@ func NewCreateMemoryStoreMemoryRequestWithBody(server string, storeId string, co
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewDeleteMemoryStoreMemoryRequest generates requests for DeleteMemoryStoreMemory
-func NewDeleteMemoryStoreMemoryRequest(server string, storeId string, memoryId string) (*http.Request, error) {
+func NewDeleteMemoryStoreMemoryRequest(server string, storeId string, memoryId string, params *DeleteMemoryStoreMemoryParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13125,22 +14032,37 @@ func NewDeleteMemoryStoreMemoryRequest(server string, storeId string, memoryId s
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateMemoryStoreMemoryRequest calls the generic UpdateMemoryStoreMemory builder with application/json body
-func NewUpdateMemoryStoreMemoryRequest(server string, storeId string, memoryId string, body UpdateMemoryStoreMemoryJSONRequestBody) (*http.Request, error) {
+func NewUpdateMemoryStoreMemoryRequest(server string, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, body UpdateMemoryStoreMemoryJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateMemoryStoreMemoryRequestWithBody(server, storeId, memoryId, "application/json", bodyReader)
+	return NewUpdateMemoryStoreMemoryRequestWithBody(server, storeId, memoryId, params, "application/json", bodyReader)
 }
 
 // NewUpdateMemoryStoreMemoryRequestWithBody generates requests for UpdateMemoryStoreMemory with any type of body
-func NewUpdateMemoryStoreMemoryRequestWithBody(server string, storeId string, memoryId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateMemoryStoreMemoryRequestWithBody(server string, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13178,6 +14100,21 @@ func NewUpdateMemoryStoreMemoryRequestWithBody(server string, storeId string, me
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -13288,6 +14225,40 @@ func NewCreateProjectRequestWithBody(server string, contentType string, body io.
 	return req, nil
 }
 
+// NewDeleteProjectRequest generates requests for DeleteProject
+func NewDeleteProjectRequest(server string, projectId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "projectId", projectId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/projects/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewReadProjectRequest generates requests for ReadProject
 func NewReadProjectRequest(server string, projectId string) (*http.Request, error) {
 	var err error
@@ -13318,6 +14289,53 @@ func NewReadProjectRequest(server string, projectId string) (*http.Request, erro
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewUpdateProjectRequest calls the generic UpdateProject builder with application/json body
+func NewUpdateProjectRequest(server string, projectId string, body UpdateProjectJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateProjectRequestWithBody(server, projectId, "application/json", bodyReader)
+}
+
+// NewUpdateProjectRequestWithBody generates requests for UpdateProject with any type of body
+func NewUpdateProjectRequestWithBody(server string, projectId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "projectId", projectId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/projects/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -13606,22 +14624,37 @@ func NewListRunnersRequest(server string, params *ListRunnersParams) (*http.Requ
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateRunnerRequest calls the generic CreateRunner builder with application/json body
-func NewCreateRunnerRequest(server string, body CreateRunnerJSONRequestBody) (*http.Request, error) {
+func NewCreateRunnerRequest(server string, params *CreateRunnerParams, body CreateRunnerJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateRunnerRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateRunnerRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateRunnerRequestWithBody generates requests for CreateRunner with any type of body
-func NewCreateRunnerRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateRunnerRequestWithBody(server string, params *CreateRunnerParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -13646,11 +14679,26 @@ func NewCreateRunnerRequestWithBody(server string, contentType string, body io.R
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadRunnerRequest generates requests for ReadRunner
-func NewReadRunnerRequest(server string, runnerId string) (*http.Request, error) {
+func NewReadRunnerRequest(server string, runnerId string, params *ReadRunnerParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13680,22 +14728,37 @@ func NewReadRunnerRequest(server string, runnerId string) (*http.Request, error)
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateRunnerRequest calls the generic UpdateRunner builder with application/json body
-func NewUpdateRunnerRequest(server string, runnerId string, body UpdateRunnerJSONRequestBody) (*http.Request, error) {
+func NewUpdateRunnerRequest(server string, runnerId string, params *UpdateRunnerParams, body UpdateRunnerJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateRunnerRequestWithBody(server, runnerId, "application/json", bodyReader)
+	return NewUpdateRunnerRequestWithBody(server, runnerId, params, "application/json", bodyReader)
 }
 
 // NewUpdateRunnerRequestWithBody generates requests for UpdateRunner with any type of body
-func NewUpdateRunnerRequestWithBody(server string, runnerId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateRunnerRequestWithBody(server string, runnerId string, params *UpdateRunnerParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13727,11 +14790,26 @@ func NewUpdateRunnerRequestWithBody(server string, runnerId string, contentType 
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewConnectRunnerChannelRequest generates requests for ConnectRunnerChannel
-func NewConnectRunnerChannelRequest(server string, runnerId string) (*http.Request, error) {
+func NewConnectRunnerChannelRequest(server string, runnerId string, params *ConnectRunnerChannelParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13761,11 +14839,26 @@ func NewConnectRunnerChannelRequest(server string, runnerId string) (*http.Reque
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadRunnerHeartbeatRequest generates requests for ReadRunnerHeartbeat
-func NewReadRunnerHeartbeatRequest(server string, runnerId string) (*http.Request, error) {
+func NewReadRunnerHeartbeatRequest(server string, runnerId string, params *ReadRunnerHeartbeatParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13795,22 +14888,37 @@ func NewReadRunnerHeartbeatRequest(server string, runnerId string) (*http.Reques
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewPutRunnerHeartbeatRequest calls the generic PutRunnerHeartbeat builder with application/json body
-func NewPutRunnerHeartbeatRequest(server string, runnerId string, body PutRunnerHeartbeatJSONRequestBody) (*http.Request, error) {
+func NewPutRunnerHeartbeatRequest(server string, runnerId string, params *PutRunnerHeartbeatParams, body PutRunnerHeartbeatJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPutRunnerHeartbeatRequestWithBody(server, runnerId, "application/json", bodyReader)
+	return NewPutRunnerHeartbeatRequestWithBody(server, runnerId, params, "application/json", bodyReader)
 }
 
 // NewPutRunnerHeartbeatRequestWithBody generates requests for PutRunnerHeartbeat with any type of body
-func NewPutRunnerHeartbeatRequestWithBody(server string, runnerId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutRunnerHeartbeatRequestWithBody(server string, runnerId string, params *PutRunnerHeartbeatParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13841,6 +14949,21 @@ func NewPutRunnerHeartbeatRequestWithBody(server string, runnerId string, conten
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -13980,22 +15103,37 @@ func NewListSessionsRequest(server string, params *ListSessionsParams) (*http.Re
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateSessionRequest calls the generic CreateSession builder with application/json body
-func NewCreateSessionRequest(server string, body CreateSessionJSONRequestBody) (*http.Request, error) {
+func NewCreateSessionRequest(server string, params *CreateSessionParams, body CreateSessionJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateSessionRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateSessionRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateSessionRequestWithBody generates requests for CreateSession with any type of body
-func NewCreateSessionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateSessionRequestWithBody(server string, params *CreateSessionParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -14020,11 +15158,26 @@ func NewCreateSessionRequestWithBody(server string, contentType string, body io.
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadSessionRequest generates requests for ReadSession
-func NewReadSessionRequest(server string, sessionId string) (*http.Request, error) {
+func NewReadSessionRequest(server string, sessionId string, params *ReadSessionParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14054,22 +15207,37 @@ func NewReadSessionRequest(server string, sessionId string) (*http.Request, erro
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateSessionRequest calls the generic UpdateSession builder with application/json body
-func NewUpdateSessionRequest(server string, sessionId string, body UpdateSessionJSONRequestBody) (*http.Request, error) {
+func NewUpdateSessionRequest(server string, sessionId string, params *UpdateSessionParams, body UpdateSessionJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateSessionRequestWithBody(server, sessionId, "application/json", bodyReader)
+	return NewUpdateSessionRequestWithBody(server, sessionId, params, "application/json", bodyReader)
 }
 
 // NewUpdateSessionRequestWithBody generates requests for UpdateSession with any type of body
-func NewUpdateSessionRequestWithBody(server string, sessionId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateSessionRequestWithBody(server string, sessionId string, params *UpdateSessionParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14101,11 +15269,26 @@ func NewUpdateSessionRequestWithBody(server string, sessionId string, contentTyp
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewListSessionApprovalsRequest generates requests for ListSessionApprovals
-func NewListSessionApprovalsRequest(server string, sessionId string) (*http.Request, error) {
+func NewListSessionApprovalsRequest(server string, sessionId string, params *ListSessionApprovalsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14135,11 +15318,26 @@ func NewListSessionApprovalsRequest(server string, sessionId string) (*http.Requ
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadSessionApprovalRequest generates requests for ReadSessionApproval
-func NewReadSessionApprovalRequest(server string, sessionId string, approvalId string) (*http.Request, error) {
+func NewReadSessionApprovalRequest(server string, sessionId string, approvalId string, params *ReadSessionApprovalParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14176,22 +15374,37 @@ func NewReadSessionApprovalRequest(server string, sessionId string, approvalId s
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewDecideSessionApprovalRequest calls the generic DecideSessionApproval builder with application/json body
-func NewDecideSessionApprovalRequest(server string, sessionId string, approvalId string, body DecideSessionApprovalJSONRequestBody) (*http.Request, error) {
+func NewDecideSessionApprovalRequest(server string, sessionId string, approvalId string, params *DecideSessionApprovalParams, body DecideSessionApprovalJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewDecideSessionApprovalRequestWithBody(server, sessionId, approvalId, "application/json", bodyReader)
+	return NewDecideSessionApprovalRequestWithBody(server, sessionId, approvalId, params, "application/json", bodyReader)
 }
 
 // NewDecideSessionApprovalRequestWithBody generates requests for DecideSessionApproval with any type of body
-func NewDecideSessionApprovalRequestWithBody(server string, sessionId string, approvalId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewDecideSessionApprovalRequestWithBody(server string, sessionId string, approvalId string, params *DecideSessionApprovalParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14229,6 +15442,21 @@ func NewDecideSessionApprovalRequestWithBody(server string, sessionId string, ap
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -14351,22 +15579,37 @@ func NewListSessionEventsRequest(server string, sessionId string, params *ListSe
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateSessionEventsRequest calls the generic CreateSessionEvents builder with application/json body
-func NewCreateSessionEventsRequest(server string, sessionId string, body CreateSessionEventsJSONRequestBody) (*http.Request, error) {
+func NewCreateSessionEventsRequest(server string, sessionId string, params *CreateSessionEventsParams, body CreateSessionEventsJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateSessionEventsRequestWithBody(server, sessionId, "application/json", bodyReader)
+	return NewCreateSessionEventsRequestWithBody(server, sessionId, params, "application/json", bodyReader)
 }
 
 // NewCreateSessionEventsRequestWithBody generates requests for CreateSessionEvents with any type of body
-func NewCreateSessionEventsRequestWithBody(server string, sessionId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateSessionEventsRequestWithBody(server string, sessionId string, params *CreateSessionEventsParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14397,6 +15640,21 @@ func NewCreateSessionEventsRequestWithBody(server string, sessionId string, cont
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -14471,22 +15729,37 @@ func NewListSessionMessagesRequest(server string, sessionId string, params *List
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateSessionMessageRequest calls the generic CreateSessionMessage builder with application/json body
-func NewCreateSessionMessageRequest(server string, sessionId string, body CreateSessionMessageJSONRequestBody) (*http.Request, error) {
+func NewCreateSessionMessageRequest(server string, sessionId string, params *CreateSessionMessageParams, body CreateSessionMessageJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateSessionMessageRequestWithBody(server, sessionId, "application/json", bodyReader)
+	return NewCreateSessionMessageRequestWithBody(server, sessionId, params, "application/json", bodyReader)
 }
 
 // NewCreateSessionMessageRequestWithBody generates requests for CreateSessionMessage with any type of body
-func NewCreateSessionMessageRequestWithBody(server string, sessionId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateSessionMessageRequestWithBody(server string, sessionId string, params *CreateSessionMessageParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14518,11 +15791,26 @@ func NewCreateSessionMessageRequestWithBody(server string, sessionId string, con
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadSessionMessageRequest generates requests for ReadSessionMessage
-func NewReadSessionMessageRequest(server string, sessionId string, messageId string) (*http.Request, error) {
+func NewReadSessionMessageRequest(server string, sessionId string, messageId string, params *ReadSessionMessageParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14559,11 +15847,26 @@ func NewReadSessionMessageRequest(server string, sessionId string, messageId str
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewConnectSessionSocketRequest generates requests for ConnectSessionSocket
-func NewConnectSessionSocketRequest(server string, sessionId string) (*http.Request, error) {
+func NewConnectSessionSocketRequest(server string, sessionId string, params *ConnectSessionSocketParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14591,6 +15894,21 @@ func NewConnectSessionSocketRequest(server string, sessionId string) (*http.Requ
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -14719,22 +16037,37 @@ func NewListTriggersRequest(server string, params *ListTriggersParams) (*http.Re
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateTriggerRequest calls the generic CreateTrigger builder with application/json body
-func NewCreateTriggerRequest(server string, body CreateTriggerJSONRequestBody) (*http.Request, error) {
+func NewCreateTriggerRequest(server string, params *CreateTriggerParams, body CreateTriggerJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateTriggerRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateTriggerRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateTriggerRequestWithBody generates requests for CreateTrigger with any type of body
-func NewCreateTriggerRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateTriggerRequestWithBody(server string, params *CreateTriggerParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -14759,11 +16092,26 @@ func NewCreateTriggerRequestWithBody(server string, contentType string, body io.
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewDeleteTriggerRequest generates requests for DeleteTrigger
-func NewDeleteTriggerRequest(server string, triggerId string) (*http.Request, error) {
+func NewDeleteTriggerRequest(server string, triggerId string, params *DeleteTriggerParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14793,11 +16141,26 @@ func NewDeleteTriggerRequest(server string, triggerId string) (*http.Request, er
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadTriggerRequest generates requests for ReadTrigger
-func NewReadTriggerRequest(server string, triggerId string) (*http.Request, error) {
+func NewReadTriggerRequest(server string, triggerId string, params *ReadTriggerParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14827,22 +16190,37 @@ func NewReadTriggerRequest(server string, triggerId string) (*http.Request, erro
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateTriggerRequest calls the generic UpdateTrigger builder with application/json body
-func NewUpdateTriggerRequest(server string, triggerId string, body UpdateTriggerJSONRequestBody) (*http.Request, error) {
+func NewUpdateTriggerRequest(server string, triggerId string, params *UpdateTriggerParams, body UpdateTriggerJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateTriggerRequestWithBody(server, triggerId, "application/json", bodyReader)
+	return NewUpdateTriggerRequestWithBody(server, triggerId, params, "application/json", bodyReader)
 }
 
 // NewUpdateTriggerRequestWithBody generates requests for UpdateTrigger with any type of body
-func NewUpdateTriggerRequestWithBody(server string, triggerId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateTriggerRequestWithBody(server string, triggerId string, params *UpdateTriggerParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -14873,6 +16251,21 @@ func NewUpdateTriggerRequestWithBody(server string, triggerId string, contentTyp
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -14995,22 +16388,37 @@ func NewListTriggerRunsRequest(server string, triggerId string, params *ListTrig
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateTriggerRunRequest calls the generic CreateTriggerRun builder with application/json body
-func NewCreateTriggerRunRequest(server string, triggerId string, body CreateTriggerRunJSONRequestBody) (*http.Request, error) {
+func NewCreateTriggerRunRequest(server string, triggerId string, params *CreateTriggerRunParams, body CreateTriggerRunJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateTriggerRunRequestWithBody(server, triggerId, "application/json", bodyReader)
+	return NewCreateTriggerRunRequestWithBody(server, triggerId, params, "application/json", bodyReader)
 }
 
 // NewCreateTriggerRunRequestWithBody generates requests for CreateTriggerRun with any type of body
-func NewCreateTriggerRunRequestWithBody(server string, triggerId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateTriggerRunRequestWithBody(server string, triggerId string, params *CreateTriggerRunParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15042,11 +16450,26 @@ func NewCreateTriggerRunRequestWithBody(server string, triggerId string, content
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadTriggerRunRequest generates requests for ReadTriggerRun
-func NewReadTriggerRunRequest(server string, triggerId string, runId string) (*http.Request, error) {
+func NewReadTriggerRunRequest(server string, triggerId string, runId string, params *ReadTriggerRunParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15081,6 +16504,21 @@ func NewReadTriggerRunRequest(server string, triggerId string, runId string) (*h
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -15221,11 +16659,26 @@ func NewListUsageRecordsRequest(server string, params *ListUsageRecordsParams) (
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadUsageRecordRequest generates requests for ReadUsageRecord
-func NewReadUsageRecordRequest(server string, recordId string) (*http.Request, error) {
+func NewReadUsageRecordRequest(server string, recordId string, params *ReadUsageRecordParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15253,6 +16706,21 @@ func NewReadUsageRecordRequest(server string, recordId string) (*http.Request, e
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -15331,6 +16799,21 @@ func NewReadUsageSummaryRequest(server string, params *ReadUsageSummaryParams) (
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -15447,22 +16930,37 @@ func NewListVaultsRequest(server string, params *ListVaultsParams) (*http.Reques
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateVaultRequest calls the generic CreateVault builder with application/json body
-func NewCreateVaultRequest(server string, body CreateVaultJSONRequestBody) (*http.Request, error) {
+func NewCreateVaultRequest(server string, params *CreateVaultParams, body CreateVaultJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateVaultRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateVaultRequestWithBody(server, params, "application/json", bodyReader)
 }
 
 // NewCreateVaultRequestWithBody generates requests for CreateVault with any type of body
-func NewCreateVaultRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateVaultRequestWithBody(server string, params *CreateVaultParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -15487,11 +16985,26 @@ func NewCreateVaultRequestWithBody(server string, contentType string, body io.Re
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadVaultRequest generates requests for ReadVault
-func NewReadVaultRequest(server string, vaultId string) (*http.Request, error) {
+func NewReadVaultRequest(server string, vaultId string, params *ReadVaultParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15521,22 +17034,37 @@ func NewReadVaultRequest(server string, vaultId string) (*http.Request, error) {
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateVaultRequest calls the generic UpdateVault builder with application/json body
-func NewUpdateVaultRequest(server string, vaultId string, body UpdateVaultJSONRequestBody) (*http.Request, error) {
+func NewUpdateVaultRequest(server string, vaultId string, params *UpdateVaultParams, body UpdateVaultJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateVaultRequestWithBody(server, vaultId, "application/json", bodyReader)
+	return NewUpdateVaultRequestWithBody(server, vaultId, params, "application/json", bodyReader)
 }
 
 // NewUpdateVaultRequestWithBody generates requests for UpdateVault with any type of body
-func NewUpdateVaultRequestWithBody(server string, vaultId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateVaultRequestWithBody(server string, vaultId string, params *UpdateVaultParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15567,6 +17095,21 @@ func NewUpdateVaultRequestWithBody(server string, vaultId string, contentType st
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -15689,22 +17232,37 @@ func NewListVaultCredentialsRequest(server string, vaultId string, params *ListV
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewCreateVaultCredentialRequest calls the generic CreateVaultCredential builder with application/json body
-func NewCreateVaultCredentialRequest(server string, vaultId string, body CreateVaultCredentialJSONRequestBody) (*http.Request, error) {
+func NewCreateVaultCredentialRequest(server string, vaultId string, params *CreateVaultCredentialParams, body CreateVaultCredentialJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateVaultCredentialRequestWithBody(server, vaultId, "application/json", bodyReader)
+	return NewCreateVaultCredentialRequestWithBody(server, vaultId, params, "application/json", bodyReader)
 }
 
 // NewCreateVaultCredentialRequestWithBody generates requests for CreateVaultCredential with any type of body
-func NewCreateVaultCredentialRequestWithBody(server string, vaultId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateVaultCredentialRequestWithBody(server string, vaultId string, params *CreateVaultCredentialParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15736,11 +17294,26 @@ func NewCreateVaultCredentialRequestWithBody(server string, vaultId string, cont
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadVaultCredentialRequest generates requests for ReadVaultCredential
-func NewReadVaultCredentialRequest(server string, vaultId string, credentialId string) (*http.Request, error) {
+func NewReadVaultCredentialRequest(server string, vaultId string, credentialId string, params *ReadVaultCredentialParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15777,22 +17350,37 @@ func NewReadVaultCredentialRequest(server string, vaultId string, credentialId s
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateVaultCredentialRequest calls the generic UpdateVaultCredential builder with application/json body
-func NewUpdateVaultCredentialRequest(server string, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody) (*http.Request, error) {
+func NewUpdateVaultCredentialRequest(server string, vaultId string, credentialId string, params *UpdateVaultCredentialParams, body UpdateVaultCredentialJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateVaultCredentialRequestWithBody(server, vaultId, credentialId, "application/json", bodyReader)
+	return NewUpdateVaultCredentialRequestWithBody(server, vaultId, credentialId, params, "application/json", bodyReader)
 }
 
 // NewUpdateVaultCredentialRequestWithBody generates requests for UpdateVaultCredential with any type of body
-func NewUpdateVaultCredentialRequestWithBody(server string, vaultId string, credentialId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateVaultCredentialRequestWithBody(server string, vaultId string, credentialId string, params *UpdateVaultCredentialParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15831,22 +17419,37 @@ func NewUpdateVaultCredentialRequestWithBody(server string, vaultId string, cred
 
 	req.Header.Add("Content-Type", contentType)
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewUpdateVaultCredentialSecretRequest calls the generic UpdateVaultCredentialSecret builder with application/json body
-func NewUpdateVaultCredentialSecretRequest(server string, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody) (*http.Request, error) {
+func NewUpdateVaultCredentialSecretRequest(server string, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, body UpdateVaultCredentialSecretJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateVaultCredentialSecretRequestWithBody(server, vaultId, credentialId, "application/json", bodyReader)
+	return NewUpdateVaultCredentialSecretRequestWithBody(server, vaultId, credentialId, params, "application/json", bodyReader)
 }
 
 // NewUpdateVaultCredentialSecretRequestWithBody generates requests for UpdateVaultCredentialSecret with any type of body
-func NewUpdateVaultCredentialSecretRequestWithBody(server string, vaultId string, credentialId string, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateVaultCredentialSecretRequestWithBody(server string, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -15884,6 +17487,21 @@ func NewUpdateVaultCredentialSecretRequestWithBody(server string, vaultId string
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -16001,11 +17619,26 @@ func NewListVaultCredentialVersionsRequest(server string, vaultId string, creden
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadVaultCredentialVersionRequest generates requests for ReadVaultCredentialVersion
-func NewReadVaultCredentialVersionRequest(server string, vaultId string, credentialId string, versionId string) (*http.Request, error) {
+func NewReadVaultCredentialVersionRequest(server string, vaultId string, credentialId string, versionId string, params *ReadVaultCredentialVersionParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -16047,6 +17680,21 @@ func NewReadVaultCredentialVersionRequest(server string, vaultId string, credent
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -16187,11 +17835,26 @@ func NewListWorkItemsRequest(server string, params *ListWorkItemsParams) (*http.
 		return nil, err
 	}
 
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
+	}
+
 	return req, nil
 }
 
 // NewReadWorkItemRequest generates requests for ReadWorkItem
-func NewReadWorkItemRequest(server string, workItemId string) (*http.Request, error) {
+func NewReadWorkItemRequest(server string, workItemId string, params *ReadWorkItemParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -16219,6 +17882,21 @@ func NewReadWorkItemRequest(server string, workItemId string) (*http.Request, er
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XAMAProjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-AMA-Project-ID", *params.XAMAProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-AMA-Project-ID", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -16276,18 +17954,18 @@ type ClientWithResponsesInterface interface {
 	CreateAgentWithResponse(ctx context.Context, params *CreateAgentParams, body CreateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateAgentResponse, error)
 
 	// ReadAgentWithResponse request
-	ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
+	ReadAgentWithResponse(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error)
 
 	// UpdateAgentWithBodyWithResponse request with any body
-	UpdateAgentWithBodyWithResponse(ctx context.Context, agentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error)
+	UpdateAgentWithBodyWithResponse(ctx context.Context, agentId string, params *UpdateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error)
 
-	UpdateAgentWithResponse(ctx context.Context, agentId string, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error)
+	UpdateAgentWithResponse(ctx context.Context, agentId string, params *UpdateAgentParams, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error)
 
 	// ListAgentVersionsWithResponse request
-	ListAgentVersionsWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ListAgentVersionsResponse, error)
+	ListAgentVersionsWithResponse(ctx context.Context, agentId string, params *ListAgentVersionsParams, reqEditors ...RequestEditorFn) (*ListAgentVersionsResponse, error)
 
 	// ReadAgentVersionWithResponse request
-	ReadAgentVersionWithResponse(ctx context.Context, agentId string, version int, reqEditors ...RequestEditorFn) (*ReadAgentVersionResponse, error)
+	ReadAgentVersionWithResponse(ctx context.Context, agentId string, version int, params *ReadAgentVersionParams, reqEditors ...RequestEditorFn) (*ReadAgentVersionResponse, error)
 
 	// ListAuditRecordsWithResponse request
 	ListAuditRecordsWithResponse(ctx context.Context, params *ListAuditRecordsParams, reqEditors ...RequestEditorFn) (*ListAuditRecordsResponse, error)
@@ -16302,23 +17980,23 @@ type ClientWithResponsesInterface interface {
 	ReadCurrentAuthSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadCurrentAuthSessionResponse, error)
 
 	// ListBudgetsWithResponse request
-	ListBudgetsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBudgetsResponse, error)
+	ListBudgetsWithResponse(ctx context.Context, params *ListBudgetsParams, reqEditors ...RequestEditorFn) (*ListBudgetsResponse, error)
 
 	// CreateBudgetWithBodyWithResponse request with any body
-	CreateBudgetWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error)
+	CreateBudgetWithBodyWithResponse(ctx context.Context, params *CreateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error)
 
-	CreateBudgetWithResponse(ctx context.Context, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error)
+	CreateBudgetWithResponse(ctx context.Context, params *CreateBudgetParams, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error)
 
 	// DeleteBudgetWithResponse request
-	DeleteBudgetWithResponse(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*DeleteBudgetResponse, error)
+	DeleteBudgetWithResponse(ctx context.Context, budgetId string, params *DeleteBudgetParams, reqEditors ...RequestEditorFn) (*DeleteBudgetResponse, error)
 
 	// ReadBudgetWithResponse request
-	ReadBudgetWithResponse(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*ReadBudgetResponse, error)
+	ReadBudgetWithResponse(ctx context.Context, budgetId string, params *ReadBudgetParams, reqEditors ...RequestEditorFn) (*ReadBudgetResponse, error)
 
 	// UpdateBudgetWithBodyWithResponse request with any body
-	UpdateBudgetWithBodyWithResponse(ctx context.Context, budgetId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error)
+	UpdateBudgetWithBodyWithResponse(ctx context.Context, budgetId string, params *UpdateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error)
 
-	UpdateBudgetWithResponse(ctx context.Context, budgetId string, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error)
+	UpdateBudgetWithResponse(ctx context.Context, budgetId string, params *UpdateBudgetParams, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error)
 
 	// ReadConfigzWithResponse request
 	ReadConfigzWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ReadConfigzResponse, error)
@@ -16338,18 +18016,18 @@ type ClientWithResponsesInterface interface {
 	CreateEnvironmentWithResponse(ctx context.Context, params *CreateEnvironmentParams, body CreateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateEnvironmentResponse, error)
 
 	// ReadEnvironmentWithResponse request
-	ReadEnvironmentWithResponse(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error)
+	ReadEnvironmentWithResponse(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error)
 
 	// UpdateEnvironmentWithBodyWithResponse request with any body
-	UpdateEnvironmentWithBodyWithResponse(ctx context.Context, environmentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error)
+	UpdateEnvironmentWithBodyWithResponse(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error)
 
-	UpdateEnvironmentWithResponse(ctx context.Context, environmentId string, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error)
+	UpdateEnvironmentWithResponse(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error)
 
 	// ListEnvironmentVersionsWithResponse request
-	ListEnvironmentVersionsWithResponse(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*ListEnvironmentVersionsResponse, error)
+	ListEnvironmentVersionsWithResponse(ctx context.Context, environmentId string, params *ListEnvironmentVersionsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentVersionsResponse, error)
 
 	// ReadEnvironmentVersionWithResponse request
-	ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error)
+	ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, params *ReadEnvironmentVersionParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error)
 
 	// ListIdentitiesWithResponse request
 	ListIdentitiesWithResponse(ctx context.Context, params *ListIdentitiesParams, reqEditors ...RequestEditorFn) (*ListIdentitiesResponse, error)
@@ -16360,14 +18038,14 @@ type ClientWithResponsesInterface interface {
 	CreateIdentityWithResponse(ctx context.Context, params *CreateIdentityParams, body CreateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIdentityResponse, error)
 
 	// ReadIdentityWithResponse request
-	ReadIdentityWithResponse(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error)
+	ReadIdentityWithResponse(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error)
 
 	// UpdateIdentityWithBodyWithResponse request with any body
-	UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+	UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
 
-	UpdateIdentityWithResponse(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+	UpdateIdentityWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
 
-	UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
+	UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error)
 
 	// CreateInboxNotificationWithBodyWithResponse request with any body
 	CreateInboxNotificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateInboxNotificationResponse, error)
@@ -16378,49 +18056,49 @@ type ClientWithResponsesInterface interface {
 	ListLeasesWithResponse(ctx context.Context, params *ListLeasesParams, reqEditors ...RequestEditorFn) (*ListLeasesResponse, error)
 
 	// CreateLeaseWithBodyWithResponse request with any body
-	CreateLeaseWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error)
+	CreateLeaseWithBodyWithResponse(ctx context.Context, params *CreateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error)
 
-	CreateLeaseWithResponse(ctx context.Context, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error)
+	CreateLeaseWithResponse(ctx context.Context, params *CreateLeaseParams, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error)
 
 	// ReadLeaseWithResponse request
-	ReadLeaseWithResponse(ctx context.Context, leaseId string, reqEditors ...RequestEditorFn) (*ReadLeaseResponse, error)
+	ReadLeaseWithResponse(ctx context.Context, leaseId string, params *ReadLeaseParams, reqEditors ...RequestEditorFn) (*ReadLeaseResponse, error)
 
 	// UpdateLeaseWithBodyWithResponse request with any body
-	UpdateLeaseWithBodyWithResponse(ctx context.Context, leaseId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error)
+	UpdateLeaseWithBodyWithResponse(ctx context.Context, leaseId string, params *UpdateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error)
 
-	UpdateLeaseWithResponse(ctx context.Context, leaseId string, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error)
+	UpdateLeaseWithResponse(ctx context.Context, leaseId string, params *UpdateLeaseParams, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error)
 
 	// ListMemoryStoresWithResponse request
 	ListMemoryStoresWithResponse(ctx context.Context, params *ListMemoryStoresParams, reqEditors ...RequestEditorFn) (*ListMemoryStoresResponse, error)
 
 	// CreateMemoryStoreWithBodyWithResponse request with any body
-	CreateMemoryStoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
+	CreateMemoryStoreWithBodyWithResponse(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
 
-	CreateMemoryStoreWithResponse(ctx context.Context, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
+	CreateMemoryStoreWithResponse(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error)
 
 	// ReadMemoryStoreWithResponse request
-	ReadMemoryStoreWithResponse(ctx context.Context, storeId string, reqEditors ...RequestEditorFn) (*ReadMemoryStoreResponse, error)
+	ReadMemoryStoreWithResponse(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*ReadMemoryStoreResponse, error)
 
 	// UpdateMemoryStoreWithBodyWithResponse request with any body
-	UpdateMemoryStoreWithBodyWithResponse(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error)
+	UpdateMemoryStoreWithBodyWithResponse(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error)
 
-	UpdateMemoryStoreWithResponse(ctx context.Context, storeId string, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error)
+	UpdateMemoryStoreWithResponse(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error)
 
 	// ListMemoryStoreMemoriesWithResponse request
 	ListMemoryStoreMemoriesWithResponse(ctx context.Context, storeId string, params *ListMemoryStoreMemoriesParams, reqEditors ...RequestEditorFn) (*ListMemoryStoreMemoriesResponse, error)
 
 	// CreateMemoryStoreMemoryWithBodyWithResponse request with any body
-	CreateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error)
+	CreateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error)
 
-	CreateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error)
+	CreateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error)
 
 	// DeleteMemoryStoreMemoryWithResponse request
-	DeleteMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreMemoryResponse, error)
+	DeleteMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, params *DeleteMemoryStoreMemoryParams, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreMemoryResponse, error)
 
 	// UpdateMemoryStoreMemoryWithBodyWithResponse request with any body
-	UpdateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, memoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error)
+	UpdateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error)
 
-	UpdateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error)
+	UpdateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error)
 
 	// ListProjectsWithResponse request
 	ListProjectsWithResponse(ctx context.Context, params *ListProjectsParams, reqEditors ...RequestEditorFn) (*ListProjectsResponse, error)
@@ -16430,8 +18108,16 @@ type ClientWithResponsesInterface interface {
 
 	CreateProjectWithResponse(ctx context.Context, body CreateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProjectResponse, error)
 
+	// DeleteProjectWithResponse request
+	DeleteProjectWithResponse(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*DeleteProjectResponse, error)
+
 	// ReadProjectWithResponse request
 	ReadProjectWithResponse(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*ReadProjectResponse, error)
+
+	// UpdateProjectWithBodyWithResponse request with any body
+	UpdateProjectWithBodyWithResponse(ctx context.Context, projectId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProjectResponse, error)
+
+	UpdateProjectWithResponse(ctx context.Context, projectId string, body UpdateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProjectResponse, error)
 
 	// ListProvidersWithResponse request
 	ListProvidersWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListProvidersResponse, error)
@@ -16452,113 +18138,113 @@ type ClientWithResponsesInterface interface {
 	ListRunnersWithResponse(ctx context.Context, params *ListRunnersParams, reqEditors ...RequestEditorFn) (*ListRunnersResponse, error)
 
 	// CreateRunnerWithBodyWithResponse request with any body
-	CreateRunnerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error)
+	CreateRunnerWithBodyWithResponse(ctx context.Context, params *CreateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error)
 
-	CreateRunnerWithResponse(ctx context.Context, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error)
+	CreateRunnerWithResponse(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error)
 
 	// ReadRunnerWithResponse request
-	ReadRunnerWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error)
+	ReadRunnerWithResponse(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error)
 
 	// UpdateRunnerWithBodyWithResponse request with any body
-	UpdateRunnerWithBodyWithResponse(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error)
+	UpdateRunnerWithBodyWithResponse(ctx context.Context, runnerId string, params *UpdateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error)
 
-	UpdateRunnerWithResponse(ctx context.Context, runnerId string, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error)
+	UpdateRunnerWithResponse(ctx context.Context, runnerId string, params *UpdateRunnerParams, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error)
 
 	// ConnectRunnerChannelWithResponse request
-	ConnectRunnerChannelWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ConnectRunnerChannelResponse, error)
+	ConnectRunnerChannelWithResponse(ctx context.Context, runnerId string, params *ConnectRunnerChannelParams, reqEditors ...RequestEditorFn) (*ConnectRunnerChannelResponse, error)
 
 	// ReadRunnerHeartbeatWithResponse request
-	ReadRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ReadRunnerHeartbeatResponse, error)
+	ReadRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, params *ReadRunnerHeartbeatParams, reqEditors ...RequestEditorFn) (*ReadRunnerHeartbeatResponse, error)
 
 	// PutRunnerHeartbeatWithBodyWithResponse request with any body
-	PutRunnerHeartbeatWithBodyWithResponse(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error)
+	PutRunnerHeartbeatWithBodyWithResponse(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error)
 
-	PutRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error)
+	PutRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error)
 
 	// ListSessionsWithResponse request
 	ListSessionsWithResponse(ctx context.Context, params *ListSessionsParams, reqEditors ...RequestEditorFn) (*ListSessionsResponse, error)
 
 	// CreateSessionWithBodyWithResponse request with any body
-	CreateSessionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
+	CreateSessionWithBodyWithResponse(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
 
-	CreateSessionWithResponse(ctx context.Context, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
+	CreateSessionWithResponse(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error)
 
 	// ReadSessionWithResponse request
-	ReadSessionWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ReadSessionResponse, error)
+	ReadSessionWithResponse(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*ReadSessionResponse, error)
 
 	// UpdateSessionWithBodyWithResponse request with any body
-	UpdateSessionWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error)
+	UpdateSessionWithBodyWithResponse(ctx context.Context, sessionId string, params *UpdateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error)
 
-	UpdateSessionWithResponse(ctx context.Context, sessionId string, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error)
+	UpdateSessionWithResponse(ctx context.Context, sessionId string, params *UpdateSessionParams, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error)
 
 	// ListSessionApprovalsWithResponse request
-	ListSessionApprovalsWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ListSessionApprovalsResponse, error)
+	ListSessionApprovalsWithResponse(ctx context.Context, sessionId string, params *ListSessionApprovalsParams, reqEditors ...RequestEditorFn) (*ListSessionApprovalsResponse, error)
 
 	// ReadSessionApprovalWithResponse request
-	ReadSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, reqEditors ...RequestEditorFn) (*ReadSessionApprovalResponse, error)
+	ReadSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, params *ReadSessionApprovalParams, reqEditors ...RequestEditorFn) (*ReadSessionApprovalResponse, error)
 
 	// DecideSessionApprovalWithBodyWithResponse request with any body
-	DecideSessionApprovalWithBodyWithResponse(ctx context.Context, sessionId string, approvalId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error)
+	DecideSessionApprovalWithBodyWithResponse(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error)
 
-	DecideSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error)
+	DecideSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error)
 
 	// ListSessionEventsWithResponse request
 	ListSessionEventsWithResponse(ctx context.Context, sessionId string, params *ListSessionEventsParams, reqEditors ...RequestEditorFn) (*ListSessionEventsResponse, error)
 
 	// CreateSessionEventsWithBodyWithResponse request with any body
-	CreateSessionEventsWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error)
+	CreateSessionEventsWithBodyWithResponse(ctx context.Context, sessionId string, params *CreateSessionEventsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error)
 
-	CreateSessionEventsWithResponse(ctx context.Context, sessionId string, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error)
+	CreateSessionEventsWithResponse(ctx context.Context, sessionId string, params *CreateSessionEventsParams, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error)
 
 	// ListSessionMessagesWithResponse request
 	ListSessionMessagesWithResponse(ctx context.Context, sessionId string, params *ListSessionMessagesParams, reqEditors ...RequestEditorFn) (*ListSessionMessagesResponse, error)
 
 	// CreateSessionMessageWithBodyWithResponse request with any body
-	CreateSessionMessageWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error)
+	CreateSessionMessageWithBodyWithResponse(ctx context.Context, sessionId string, params *CreateSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error)
 
-	CreateSessionMessageWithResponse(ctx context.Context, sessionId string, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error)
+	CreateSessionMessageWithResponse(ctx context.Context, sessionId string, params *CreateSessionMessageParams, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error)
 
 	// ReadSessionMessageWithResponse request
-	ReadSessionMessageWithResponse(ctx context.Context, sessionId string, messageId string, reqEditors ...RequestEditorFn) (*ReadSessionMessageResponse, error)
+	ReadSessionMessageWithResponse(ctx context.Context, sessionId string, messageId string, params *ReadSessionMessageParams, reqEditors ...RequestEditorFn) (*ReadSessionMessageResponse, error)
 
 	// ConnectSessionSocketWithResponse request
-	ConnectSessionSocketWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ConnectSessionSocketResponse, error)
+	ConnectSessionSocketWithResponse(ctx context.Context, sessionId string, params *ConnectSessionSocketParams, reqEditors ...RequestEditorFn) (*ConnectSessionSocketResponse, error)
 
 	// ListTriggersWithResponse request
 	ListTriggersWithResponse(ctx context.Context, params *ListTriggersParams, reqEditors ...RequestEditorFn) (*ListTriggersResponse, error)
 
 	// CreateTriggerWithBodyWithResponse request with any body
-	CreateTriggerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error)
+	CreateTriggerWithBodyWithResponse(ctx context.Context, params *CreateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error)
 
-	CreateTriggerWithResponse(ctx context.Context, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error)
+	CreateTriggerWithResponse(ctx context.Context, params *CreateTriggerParams, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error)
 
 	// DeleteTriggerWithResponse request
-	DeleteTriggerWithResponse(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*DeleteTriggerResponse, error)
+	DeleteTriggerWithResponse(ctx context.Context, triggerId string, params *DeleteTriggerParams, reqEditors ...RequestEditorFn) (*DeleteTriggerResponse, error)
 
 	// ReadTriggerWithResponse request
-	ReadTriggerWithResponse(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*ReadTriggerResponse, error)
+	ReadTriggerWithResponse(ctx context.Context, triggerId string, params *ReadTriggerParams, reqEditors ...RequestEditorFn) (*ReadTriggerResponse, error)
 
 	// UpdateTriggerWithBodyWithResponse request with any body
-	UpdateTriggerWithBodyWithResponse(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error)
+	UpdateTriggerWithBodyWithResponse(ctx context.Context, triggerId string, params *UpdateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error)
 
-	UpdateTriggerWithResponse(ctx context.Context, triggerId string, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error)
+	UpdateTriggerWithResponse(ctx context.Context, triggerId string, params *UpdateTriggerParams, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error)
 
 	// ListTriggerRunsWithResponse request
 	ListTriggerRunsWithResponse(ctx context.Context, triggerId string, params *ListTriggerRunsParams, reqEditors ...RequestEditorFn) (*ListTriggerRunsResponse, error)
 
 	// CreateTriggerRunWithBodyWithResponse request with any body
-	CreateTriggerRunWithBodyWithResponse(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error)
+	CreateTriggerRunWithBodyWithResponse(ctx context.Context, triggerId string, params *CreateTriggerRunParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error)
 
-	CreateTriggerRunWithResponse(ctx context.Context, triggerId string, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error)
+	CreateTriggerRunWithResponse(ctx context.Context, triggerId string, params *CreateTriggerRunParams, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error)
 
 	// ReadTriggerRunWithResponse request
-	ReadTriggerRunWithResponse(ctx context.Context, triggerId string, runId string, reqEditors ...RequestEditorFn) (*ReadTriggerRunResponse, error)
+	ReadTriggerRunWithResponse(ctx context.Context, triggerId string, runId string, params *ReadTriggerRunParams, reqEditors ...RequestEditorFn) (*ReadTriggerRunResponse, error)
 
 	// ListUsageRecordsWithResponse request
 	ListUsageRecordsWithResponse(ctx context.Context, params *ListUsageRecordsParams, reqEditors ...RequestEditorFn) (*ListUsageRecordsResponse, error)
 
 	// ReadUsageRecordWithResponse request
-	ReadUsageRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadUsageRecordResponse, error)
+	ReadUsageRecordWithResponse(ctx context.Context, recordId string, params *ReadUsageRecordParams, reqEditors ...RequestEditorFn) (*ReadUsageRecordResponse, error)
 
 	// ReadUsageSummaryWithResponse request
 	ReadUsageSummaryWithResponse(ctx context.Context, params *ReadUsageSummaryParams, reqEditors ...RequestEditorFn) (*ReadUsageSummaryResponse, error)
@@ -16567,50 +18253,50 @@ type ClientWithResponsesInterface interface {
 	ListVaultsWithResponse(ctx context.Context, params *ListVaultsParams, reqEditors ...RequestEditorFn) (*ListVaultsResponse, error)
 
 	// CreateVaultWithBodyWithResponse request with any body
-	CreateVaultWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
+	CreateVaultWithBodyWithResponse(ctx context.Context, params *CreateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
 
-	CreateVaultWithResponse(ctx context.Context, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
+	CreateVaultWithResponse(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error)
 
 	// ReadVaultWithResponse request
-	ReadVaultWithResponse(ctx context.Context, vaultId string, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error)
+	ReadVaultWithResponse(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error)
 
 	// UpdateVaultWithBodyWithResponse request with any body
-	UpdateVaultWithBodyWithResponse(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error)
+	UpdateVaultWithBodyWithResponse(ctx context.Context, vaultId string, params *UpdateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error)
 
-	UpdateVaultWithResponse(ctx context.Context, vaultId string, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error)
+	UpdateVaultWithResponse(ctx context.Context, vaultId string, params *UpdateVaultParams, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error)
 
 	// ListVaultCredentialsWithResponse request
 	ListVaultCredentialsWithResponse(ctx context.Context, vaultId string, params *ListVaultCredentialsParams, reqEditors ...RequestEditorFn) (*ListVaultCredentialsResponse, error)
 
 	// CreateVaultCredentialWithBodyWithResponse request with any body
-	CreateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error)
+	CreateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error)
 
-	CreateVaultCredentialWithResponse(ctx context.Context, vaultId string, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error)
+	CreateVaultCredentialWithResponse(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error)
 
 	// ReadVaultCredentialWithResponse request
-	ReadVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, reqEditors ...RequestEditorFn) (*ReadVaultCredentialResponse, error)
+	ReadVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, params *ReadVaultCredentialParams, reqEditors ...RequestEditorFn) (*ReadVaultCredentialResponse, error)
 
 	// UpdateVaultCredentialWithBodyWithResponse request with any body
-	UpdateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error)
+	UpdateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error)
 
-	UpdateVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error)
+	UpdateVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error)
 
 	// UpdateVaultCredentialSecretWithBodyWithResponse request with any body
-	UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
+	UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
 
-	UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
+	UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error)
 
 	// ListVaultCredentialVersionsWithResponse request
 	ListVaultCredentialVersionsWithResponse(ctx context.Context, vaultId string, credentialId string, params *ListVaultCredentialVersionsParams, reqEditors ...RequestEditorFn) (*ListVaultCredentialVersionsResponse, error)
 
 	// ReadVaultCredentialVersionWithResponse request
-	ReadVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*ReadVaultCredentialVersionResponse, error)
+	ReadVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, params *ReadVaultCredentialVersionParams, reqEditors ...RequestEditorFn) (*ReadVaultCredentialVersionResponse, error)
 
 	// ListWorkItemsWithResponse request
 	ListWorkItemsWithResponse(ctx context.Context, params *ListWorkItemsParams, reqEditors ...RequestEditorFn) (*ListWorkItemsResponse, error)
 
 	// ReadWorkItemWithResponse request
-	ReadWorkItemWithResponse(ctx context.Context, workItemId string, reqEditors ...RequestEditorFn) (*ReadWorkItemResponse, error)
+	ReadWorkItemWithResponse(ctx context.Context, workItemId string, params *ReadWorkItemParams, reqEditors ...RequestEditorFn) (*ReadWorkItemResponse, error)
 }
 
 type ListAgentsResponse struct {
@@ -16620,6 +18306,7 @@ type ListAgentsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -16653,6 +18340,7 @@ type CreateAgentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
 }
 
@@ -16949,6 +18637,7 @@ type ListBudgetsResponse struct {
 	JSON200      *BudgetListResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -16982,6 +18671,7 @@ type CreateBudgetResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -17210,6 +18900,7 @@ type ListEnvironmentsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -17243,6 +18934,7 @@ type CreateEnvironmentResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
 }
 
@@ -17412,6 +19104,7 @@ type ListIdentitiesResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -17445,6 +19138,7 @@ type CreateIdentityResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
 	JSON502      *ErrorResponse
 }
@@ -17580,6 +19274,7 @@ type ListLeasesResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -17716,6 +19411,7 @@ type ListMemoryStoresResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -17749,6 +19445,7 @@ type CreateMemoryStoreResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18017,6 +19714,7 @@ type CreateProjectResponse struct {
 	JSON201      *Project
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON409      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18037,6 +19735,39 @@ func (r CreateProjectResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r CreateProjectResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteProjectResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProjectResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProjectResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteProjectResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18070,6 +19801,41 @@ func (r ReadProjectResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ReadProjectResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateProjectResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Project
+	JSON400      *ErrorResponse
+	JSON401      *ErrorResponse
+	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProjectResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProjectResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateProjectResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -18245,6 +20011,7 @@ type ListRunnersResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18278,6 +20045,7 @@ type CreateRunnerResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 	JSON409      *ErrorResponse
 }
 
@@ -18482,6 +20250,7 @@ type ListSessionsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -18922,6 +20691,7 @@ type ListTriggersResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19195,6 +20965,7 @@ type ListUsageRecordsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19261,6 +21032,7 @@ type ReadUsageSummaryResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19294,6 +21066,7 @@ type ListVaultsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19327,6 +21100,7 @@ type CreateVaultResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19666,6 +21440,7 @@ type ListWorkItemsResponse struct {
 	JSON400      *ErrorResponse
 	JSON401      *ErrorResponse
 	JSON403      *ErrorResponse
+	JSON404      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -19753,8 +21528,8 @@ func (c *ClientWithResponses) CreateAgentWithResponse(ctx context.Context, param
 }
 
 // ReadAgentWithResponse request returning *ReadAgentResponse
-func (c *ClientWithResponses) ReadAgentWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error) {
-	rsp, err := c.ReadAgent(ctx, agentId, reqEditors...)
+func (c *ClientWithResponses) ReadAgentWithResponse(ctx context.Context, agentId string, params *ReadAgentParams, reqEditors ...RequestEditorFn) (*ReadAgentResponse, error) {
+	rsp, err := c.ReadAgent(ctx, agentId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19762,16 +21537,16 @@ func (c *ClientWithResponses) ReadAgentWithResponse(ctx context.Context, agentId
 }
 
 // UpdateAgentWithBodyWithResponse request with arbitrary body returning *UpdateAgentResponse
-func (c *ClientWithResponses) UpdateAgentWithBodyWithResponse(ctx context.Context, agentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error) {
-	rsp, err := c.UpdateAgentWithBody(ctx, agentId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateAgentWithBodyWithResponse(ctx context.Context, agentId string, params *UpdateAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error) {
+	rsp, err := c.UpdateAgentWithBody(ctx, agentId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateAgentResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateAgentWithResponse(ctx context.Context, agentId string, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error) {
-	rsp, err := c.UpdateAgent(ctx, agentId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateAgentWithResponse(ctx context.Context, agentId string, params *UpdateAgentParams, body UpdateAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAgentResponse, error) {
+	rsp, err := c.UpdateAgent(ctx, agentId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19779,8 +21554,8 @@ func (c *ClientWithResponses) UpdateAgentWithResponse(ctx context.Context, agent
 }
 
 // ListAgentVersionsWithResponse request returning *ListAgentVersionsResponse
-func (c *ClientWithResponses) ListAgentVersionsWithResponse(ctx context.Context, agentId string, reqEditors ...RequestEditorFn) (*ListAgentVersionsResponse, error) {
-	rsp, err := c.ListAgentVersions(ctx, agentId, reqEditors...)
+func (c *ClientWithResponses) ListAgentVersionsWithResponse(ctx context.Context, agentId string, params *ListAgentVersionsParams, reqEditors ...RequestEditorFn) (*ListAgentVersionsResponse, error) {
+	rsp, err := c.ListAgentVersions(ctx, agentId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19788,8 +21563,8 @@ func (c *ClientWithResponses) ListAgentVersionsWithResponse(ctx context.Context,
 }
 
 // ReadAgentVersionWithResponse request returning *ReadAgentVersionResponse
-func (c *ClientWithResponses) ReadAgentVersionWithResponse(ctx context.Context, agentId string, version int, reqEditors ...RequestEditorFn) (*ReadAgentVersionResponse, error) {
-	rsp, err := c.ReadAgentVersion(ctx, agentId, version, reqEditors...)
+func (c *ClientWithResponses) ReadAgentVersionWithResponse(ctx context.Context, agentId string, version int, params *ReadAgentVersionParams, reqEditors ...RequestEditorFn) (*ReadAgentVersionResponse, error) {
+	rsp, err := c.ReadAgentVersion(ctx, agentId, version, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19833,8 +21608,8 @@ func (c *ClientWithResponses) ReadCurrentAuthSessionWithResponse(ctx context.Con
 }
 
 // ListBudgetsWithResponse request returning *ListBudgetsResponse
-func (c *ClientWithResponses) ListBudgetsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBudgetsResponse, error) {
-	rsp, err := c.ListBudgets(ctx, reqEditors...)
+func (c *ClientWithResponses) ListBudgetsWithResponse(ctx context.Context, params *ListBudgetsParams, reqEditors ...RequestEditorFn) (*ListBudgetsResponse, error) {
+	rsp, err := c.ListBudgets(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19842,16 +21617,16 @@ func (c *ClientWithResponses) ListBudgetsWithResponse(ctx context.Context, reqEd
 }
 
 // CreateBudgetWithBodyWithResponse request with arbitrary body returning *CreateBudgetResponse
-func (c *ClientWithResponses) CreateBudgetWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error) {
-	rsp, err := c.CreateBudgetWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateBudgetWithBodyWithResponse(ctx context.Context, params *CreateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error) {
+	rsp, err := c.CreateBudgetWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateBudgetResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateBudgetWithResponse(ctx context.Context, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error) {
-	rsp, err := c.CreateBudget(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateBudgetWithResponse(ctx context.Context, params *CreateBudgetParams, body CreateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBudgetResponse, error) {
+	rsp, err := c.CreateBudget(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19859,8 +21634,8 @@ func (c *ClientWithResponses) CreateBudgetWithResponse(ctx context.Context, body
 }
 
 // DeleteBudgetWithResponse request returning *DeleteBudgetResponse
-func (c *ClientWithResponses) DeleteBudgetWithResponse(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*DeleteBudgetResponse, error) {
-	rsp, err := c.DeleteBudget(ctx, budgetId, reqEditors...)
+func (c *ClientWithResponses) DeleteBudgetWithResponse(ctx context.Context, budgetId string, params *DeleteBudgetParams, reqEditors ...RequestEditorFn) (*DeleteBudgetResponse, error) {
+	rsp, err := c.DeleteBudget(ctx, budgetId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19868,8 +21643,8 @@ func (c *ClientWithResponses) DeleteBudgetWithResponse(ctx context.Context, budg
 }
 
 // ReadBudgetWithResponse request returning *ReadBudgetResponse
-func (c *ClientWithResponses) ReadBudgetWithResponse(ctx context.Context, budgetId string, reqEditors ...RequestEditorFn) (*ReadBudgetResponse, error) {
-	rsp, err := c.ReadBudget(ctx, budgetId, reqEditors...)
+func (c *ClientWithResponses) ReadBudgetWithResponse(ctx context.Context, budgetId string, params *ReadBudgetParams, reqEditors ...RequestEditorFn) (*ReadBudgetResponse, error) {
+	rsp, err := c.ReadBudget(ctx, budgetId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19877,16 +21652,16 @@ func (c *ClientWithResponses) ReadBudgetWithResponse(ctx context.Context, budget
 }
 
 // UpdateBudgetWithBodyWithResponse request with arbitrary body returning *UpdateBudgetResponse
-func (c *ClientWithResponses) UpdateBudgetWithBodyWithResponse(ctx context.Context, budgetId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error) {
-	rsp, err := c.UpdateBudgetWithBody(ctx, budgetId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateBudgetWithBodyWithResponse(ctx context.Context, budgetId string, params *UpdateBudgetParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error) {
+	rsp, err := c.UpdateBudgetWithBody(ctx, budgetId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateBudgetResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateBudgetWithResponse(ctx context.Context, budgetId string, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error) {
-	rsp, err := c.UpdateBudget(ctx, budgetId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateBudgetWithResponse(ctx context.Context, budgetId string, params *UpdateBudgetParams, body UpdateBudgetJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateBudgetResponse, error) {
+	rsp, err := c.UpdateBudget(ctx, budgetId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19947,8 +21722,8 @@ func (c *ClientWithResponses) CreateEnvironmentWithResponse(ctx context.Context,
 }
 
 // ReadEnvironmentWithResponse request returning *ReadEnvironmentResponse
-func (c *ClientWithResponses) ReadEnvironmentWithResponse(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error) {
-	rsp, err := c.ReadEnvironment(ctx, environmentId, reqEditors...)
+func (c *ClientWithResponses) ReadEnvironmentWithResponse(ctx context.Context, environmentId string, params *ReadEnvironmentParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentResponse, error) {
+	rsp, err := c.ReadEnvironment(ctx, environmentId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19956,16 +21731,16 @@ func (c *ClientWithResponses) ReadEnvironmentWithResponse(ctx context.Context, e
 }
 
 // UpdateEnvironmentWithBodyWithResponse request with arbitrary body returning *UpdateEnvironmentResponse
-func (c *ClientWithResponses) UpdateEnvironmentWithBodyWithResponse(ctx context.Context, environmentId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error) {
-	rsp, err := c.UpdateEnvironmentWithBody(ctx, environmentId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateEnvironmentWithBodyWithResponse(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error) {
+	rsp, err := c.UpdateEnvironmentWithBody(ctx, environmentId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateEnvironmentResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateEnvironmentWithResponse(ctx context.Context, environmentId string, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error) {
-	rsp, err := c.UpdateEnvironment(ctx, environmentId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateEnvironmentWithResponse(ctx context.Context, environmentId string, params *UpdateEnvironmentParams, body UpdateEnvironmentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateEnvironmentResponse, error) {
+	rsp, err := c.UpdateEnvironment(ctx, environmentId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19973,8 +21748,8 @@ func (c *ClientWithResponses) UpdateEnvironmentWithResponse(ctx context.Context,
 }
 
 // ListEnvironmentVersionsWithResponse request returning *ListEnvironmentVersionsResponse
-func (c *ClientWithResponses) ListEnvironmentVersionsWithResponse(ctx context.Context, environmentId string, reqEditors ...RequestEditorFn) (*ListEnvironmentVersionsResponse, error) {
-	rsp, err := c.ListEnvironmentVersions(ctx, environmentId, reqEditors...)
+func (c *ClientWithResponses) ListEnvironmentVersionsWithResponse(ctx context.Context, environmentId string, params *ListEnvironmentVersionsParams, reqEditors ...RequestEditorFn) (*ListEnvironmentVersionsResponse, error) {
+	rsp, err := c.ListEnvironmentVersions(ctx, environmentId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -19982,8 +21757,8 @@ func (c *ClientWithResponses) ListEnvironmentVersionsWithResponse(ctx context.Co
 }
 
 // ReadEnvironmentVersionWithResponse request returning *ReadEnvironmentVersionResponse
-func (c *ClientWithResponses) ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error) {
-	rsp, err := c.ReadEnvironmentVersion(ctx, environmentId, version, reqEditors...)
+func (c *ClientWithResponses) ReadEnvironmentVersionWithResponse(ctx context.Context, environmentId string, version int, params *ReadEnvironmentVersionParams, reqEditors ...RequestEditorFn) (*ReadEnvironmentVersionResponse, error) {
+	rsp, err := c.ReadEnvironmentVersion(ctx, environmentId, version, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20017,8 +21792,8 @@ func (c *ClientWithResponses) CreateIdentityWithResponse(ctx context.Context, pa
 }
 
 // ReadIdentityWithResponse request returning *ReadIdentityResponse
-func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, identityId string, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error) {
-	rsp, err := c.ReadIdentity(ctx, identityId, reqEditors...)
+func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, identityId string, params *ReadIdentityParams, reqEditors ...RequestEditorFn) (*ReadIdentityResponse, error) {
+	rsp, err := c.ReadIdentity(ctx, identityId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20026,24 +21801,24 @@ func (c *ClientWithResponses) ReadIdentityWithResponse(ctx context.Context, iden
 }
 
 // UpdateIdentityWithBodyWithResponse request with arbitrary body returning *UpdateIdentityResponse
-func (c *ClientWithResponses) UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentityWithBody(ctx, identityId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateIdentityWithBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentityWithBody(ctx, identityId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateIdentityResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateIdentityWithResponse(ctx context.Context, identityId string, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentity(ctx, identityId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateIdentityWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentity(ctx, identityId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateIdentityResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
-	rsp, err := c.UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx, identityId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateIdentityWithApplicationMergePatchPlusJSONBodyWithResponse(ctx context.Context, identityId string, params *UpdateIdentityParams, body UpdateIdentityApplicationMergePatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateIdentityResponse, error) {
+	rsp, err := c.UpdateIdentityWithApplicationMergePatchPlusJSONBody(ctx, identityId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20077,16 +21852,16 @@ func (c *ClientWithResponses) ListLeasesWithResponse(ctx context.Context, params
 }
 
 // CreateLeaseWithBodyWithResponse request with arbitrary body returning *CreateLeaseResponse
-func (c *ClientWithResponses) CreateLeaseWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error) {
-	rsp, err := c.CreateLeaseWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateLeaseWithBodyWithResponse(ctx context.Context, params *CreateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error) {
+	rsp, err := c.CreateLeaseWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateLeaseResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateLeaseWithResponse(ctx context.Context, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error) {
-	rsp, err := c.CreateLease(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateLeaseWithResponse(ctx context.Context, params *CreateLeaseParams, body CreateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateLeaseResponse, error) {
+	rsp, err := c.CreateLease(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20094,8 +21869,8 @@ func (c *ClientWithResponses) CreateLeaseWithResponse(ctx context.Context, body 
 }
 
 // ReadLeaseWithResponse request returning *ReadLeaseResponse
-func (c *ClientWithResponses) ReadLeaseWithResponse(ctx context.Context, leaseId string, reqEditors ...RequestEditorFn) (*ReadLeaseResponse, error) {
-	rsp, err := c.ReadLease(ctx, leaseId, reqEditors...)
+func (c *ClientWithResponses) ReadLeaseWithResponse(ctx context.Context, leaseId string, params *ReadLeaseParams, reqEditors ...RequestEditorFn) (*ReadLeaseResponse, error) {
+	rsp, err := c.ReadLease(ctx, leaseId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20103,16 +21878,16 @@ func (c *ClientWithResponses) ReadLeaseWithResponse(ctx context.Context, leaseId
 }
 
 // UpdateLeaseWithBodyWithResponse request with arbitrary body returning *UpdateLeaseResponse
-func (c *ClientWithResponses) UpdateLeaseWithBodyWithResponse(ctx context.Context, leaseId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error) {
-	rsp, err := c.UpdateLeaseWithBody(ctx, leaseId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateLeaseWithBodyWithResponse(ctx context.Context, leaseId string, params *UpdateLeaseParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error) {
+	rsp, err := c.UpdateLeaseWithBody(ctx, leaseId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateLeaseResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateLeaseWithResponse(ctx context.Context, leaseId string, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error) {
-	rsp, err := c.UpdateLease(ctx, leaseId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateLeaseWithResponse(ctx context.Context, leaseId string, params *UpdateLeaseParams, body UpdateLeaseJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateLeaseResponse, error) {
+	rsp, err := c.UpdateLease(ctx, leaseId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20129,16 +21904,16 @@ func (c *ClientWithResponses) ListMemoryStoresWithResponse(ctx context.Context, 
 }
 
 // CreateMemoryStoreWithBodyWithResponse request with arbitrary body returning *CreateMemoryStoreResponse
-func (c *ClientWithResponses) CreateMemoryStoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error) {
-	rsp, err := c.CreateMemoryStoreWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateMemoryStoreWithBodyWithResponse(ctx context.Context, params *CreateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error) {
+	rsp, err := c.CreateMemoryStoreWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateMemoryStoreResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateMemoryStoreWithResponse(ctx context.Context, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error) {
-	rsp, err := c.CreateMemoryStore(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateMemoryStoreWithResponse(ctx context.Context, params *CreateMemoryStoreParams, body CreateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreResponse, error) {
+	rsp, err := c.CreateMemoryStore(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20146,8 +21921,8 @@ func (c *ClientWithResponses) CreateMemoryStoreWithResponse(ctx context.Context,
 }
 
 // ReadMemoryStoreWithResponse request returning *ReadMemoryStoreResponse
-func (c *ClientWithResponses) ReadMemoryStoreWithResponse(ctx context.Context, storeId string, reqEditors ...RequestEditorFn) (*ReadMemoryStoreResponse, error) {
-	rsp, err := c.ReadMemoryStore(ctx, storeId, reqEditors...)
+func (c *ClientWithResponses) ReadMemoryStoreWithResponse(ctx context.Context, storeId string, params *ReadMemoryStoreParams, reqEditors ...RequestEditorFn) (*ReadMemoryStoreResponse, error) {
+	rsp, err := c.ReadMemoryStore(ctx, storeId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20155,16 +21930,16 @@ func (c *ClientWithResponses) ReadMemoryStoreWithResponse(ctx context.Context, s
 }
 
 // UpdateMemoryStoreWithBodyWithResponse request with arbitrary body returning *UpdateMemoryStoreResponse
-func (c *ClientWithResponses) UpdateMemoryStoreWithBodyWithResponse(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error) {
-	rsp, err := c.UpdateMemoryStoreWithBody(ctx, storeId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateMemoryStoreWithBodyWithResponse(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error) {
+	rsp, err := c.UpdateMemoryStoreWithBody(ctx, storeId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateMemoryStoreResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateMemoryStoreWithResponse(ctx context.Context, storeId string, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error) {
-	rsp, err := c.UpdateMemoryStore(ctx, storeId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateMemoryStoreWithResponse(ctx context.Context, storeId string, params *UpdateMemoryStoreParams, body UpdateMemoryStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreResponse, error) {
+	rsp, err := c.UpdateMemoryStore(ctx, storeId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20181,16 +21956,16 @@ func (c *ClientWithResponses) ListMemoryStoreMemoriesWithResponse(ctx context.Co
 }
 
 // CreateMemoryStoreMemoryWithBodyWithResponse request with arbitrary body returning *CreateMemoryStoreMemoryResponse
-func (c *ClientWithResponses) CreateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error) {
-	rsp, err := c.CreateMemoryStoreMemoryWithBody(ctx, storeId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error) {
+	rsp, err := c.CreateMemoryStoreMemoryWithBody(ctx, storeId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateMemoryStoreMemoryResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error) {
-	rsp, err := c.CreateMemoryStoreMemory(ctx, storeId, body, reqEditors...)
+func (c *ClientWithResponses) CreateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, params *CreateMemoryStoreMemoryParams, body CreateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMemoryStoreMemoryResponse, error) {
+	rsp, err := c.CreateMemoryStoreMemory(ctx, storeId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20198,8 +21973,8 @@ func (c *ClientWithResponses) CreateMemoryStoreMemoryWithResponse(ctx context.Co
 }
 
 // DeleteMemoryStoreMemoryWithResponse request returning *DeleteMemoryStoreMemoryResponse
-func (c *ClientWithResponses) DeleteMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreMemoryResponse, error) {
-	rsp, err := c.DeleteMemoryStoreMemory(ctx, storeId, memoryId, reqEditors...)
+func (c *ClientWithResponses) DeleteMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, params *DeleteMemoryStoreMemoryParams, reqEditors ...RequestEditorFn) (*DeleteMemoryStoreMemoryResponse, error) {
+	rsp, err := c.DeleteMemoryStoreMemory(ctx, storeId, memoryId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20207,16 +21982,16 @@ func (c *ClientWithResponses) DeleteMemoryStoreMemoryWithResponse(ctx context.Co
 }
 
 // UpdateMemoryStoreMemoryWithBodyWithResponse request with arbitrary body returning *UpdateMemoryStoreMemoryResponse
-func (c *ClientWithResponses) UpdateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, memoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error) {
-	rsp, err := c.UpdateMemoryStoreMemoryWithBody(ctx, storeId, memoryId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateMemoryStoreMemoryWithBodyWithResponse(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error) {
+	rsp, err := c.UpdateMemoryStoreMemoryWithBody(ctx, storeId, memoryId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateMemoryStoreMemoryResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error) {
-	rsp, err := c.UpdateMemoryStoreMemory(ctx, storeId, memoryId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateMemoryStoreMemoryWithResponse(ctx context.Context, storeId string, memoryId string, params *UpdateMemoryStoreMemoryParams, body UpdateMemoryStoreMemoryJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMemoryStoreMemoryResponse, error) {
+	rsp, err := c.UpdateMemoryStoreMemory(ctx, storeId, memoryId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20249,6 +22024,15 @@ func (c *ClientWithResponses) CreateProjectWithResponse(ctx context.Context, bod
 	return ParseCreateProjectResponse(rsp)
 }
 
+// DeleteProjectWithResponse request returning *DeleteProjectResponse
+func (c *ClientWithResponses) DeleteProjectWithResponse(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*DeleteProjectResponse, error) {
+	rsp, err := c.DeleteProject(ctx, projectId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProjectResponse(rsp)
+}
+
 // ReadProjectWithResponse request returning *ReadProjectResponse
 func (c *ClientWithResponses) ReadProjectWithResponse(ctx context.Context, projectId string, reqEditors ...RequestEditorFn) (*ReadProjectResponse, error) {
 	rsp, err := c.ReadProject(ctx, projectId, reqEditors...)
@@ -20256,6 +22040,23 @@ func (c *ClientWithResponses) ReadProjectWithResponse(ctx context.Context, proje
 		return nil, err
 	}
 	return ParseReadProjectResponse(rsp)
+}
+
+// UpdateProjectWithBodyWithResponse request with arbitrary body returning *UpdateProjectResponse
+func (c *ClientWithResponses) UpdateProjectWithBodyWithResponse(ctx context.Context, projectId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProjectResponse, error) {
+	rsp, err := c.UpdateProjectWithBody(ctx, projectId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProjectResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateProjectWithResponse(ctx context.Context, projectId string, body UpdateProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProjectResponse, error) {
+	rsp, err := c.UpdateProject(ctx, projectId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProjectResponse(rsp)
 }
 
 // ListProvidersWithResponse request returning *ListProvidersResponse
@@ -20313,16 +22114,16 @@ func (c *ClientWithResponses) ListRunnersWithResponse(ctx context.Context, param
 }
 
 // CreateRunnerWithBodyWithResponse request with arbitrary body returning *CreateRunnerResponse
-func (c *ClientWithResponses) CreateRunnerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error) {
-	rsp, err := c.CreateRunnerWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateRunnerWithBodyWithResponse(ctx context.Context, params *CreateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error) {
+	rsp, err := c.CreateRunnerWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateRunnerResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateRunnerWithResponse(ctx context.Context, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error) {
-	rsp, err := c.CreateRunner(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateRunnerWithResponse(ctx context.Context, params *CreateRunnerParams, body CreateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRunnerResponse, error) {
+	rsp, err := c.CreateRunner(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20330,8 +22131,8 @@ func (c *ClientWithResponses) CreateRunnerWithResponse(ctx context.Context, body
 }
 
 // ReadRunnerWithResponse request returning *ReadRunnerResponse
-func (c *ClientWithResponses) ReadRunnerWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error) {
-	rsp, err := c.ReadRunner(ctx, runnerId, reqEditors...)
+func (c *ClientWithResponses) ReadRunnerWithResponse(ctx context.Context, runnerId string, params *ReadRunnerParams, reqEditors ...RequestEditorFn) (*ReadRunnerResponse, error) {
+	rsp, err := c.ReadRunner(ctx, runnerId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20339,16 +22140,16 @@ func (c *ClientWithResponses) ReadRunnerWithResponse(ctx context.Context, runner
 }
 
 // UpdateRunnerWithBodyWithResponse request with arbitrary body returning *UpdateRunnerResponse
-func (c *ClientWithResponses) UpdateRunnerWithBodyWithResponse(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error) {
-	rsp, err := c.UpdateRunnerWithBody(ctx, runnerId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateRunnerWithBodyWithResponse(ctx context.Context, runnerId string, params *UpdateRunnerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error) {
+	rsp, err := c.UpdateRunnerWithBody(ctx, runnerId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateRunnerResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateRunnerWithResponse(ctx context.Context, runnerId string, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error) {
-	rsp, err := c.UpdateRunner(ctx, runnerId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateRunnerWithResponse(ctx context.Context, runnerId string, params *UpdateRunnerParams, body UpdateRunnerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRunnerResponse, error) {
+	rsp, err := c.UpdateRunner(ctx, runnerId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20356,8 +22157,8 @@ func (c *ClientWithResponses) UpdateRunnerWithResponse(ctx context.Context, runn
 }
 
 // ConnectRunnerChannelWithResponse request returning *ConnectRunnerChannelResponse
-func (c *ClientWithResponses) ConnectRunnerChannelWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ConnectRunnerChannelResponse, error) {
-	rsp, err := c.ConnectRunnerChannel(ctx, runnerId, reqEditors...)
+func (c *ClientWithResponses) ConnectRunnerChannelWithResponse(ctx context.Context, runnerId string, params *ConnectRunnerChannelParams, reqEditors ...RequestEditorFn) (*ConnectRunnerChannelResponse, error) {
+	rsp, err := c.ConnectRunnerChannel(ctx, runnerId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20365,8 +22166,8 @@ func (c *ClientWithResponses) ConnectRunnerChannelWithResponse(ctx context.Conte
 }
 
 // ReadRunnerHeartbeatWithResponse request returning *ReadRunnerHeartbeatResponse
-func (c *ClientWithResponses) ReadRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, reqEditors ...RequestEditorFn) (*ReadRunnerHeartbeatResponse, error) {
-	rsp, err := c.ReadRunnerHeartbeat(ctx, runnerId, reqEditors...)
+func (c *ClientWithResponses) ReadRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, params *ReadRunnerHeartbeatParams, reqEditors ...RequestEditorFn) (*ReadRunnerHeartbeatResponse, error) {
+	rsp, err := c.ReadRunnerHeartbeat(ctx, runnerId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20374,16 +22175,16 @@ func (c *ClientWithResponses) ReadRunnerHeartbeatWithResponse(ctx context.Contex
 }
 
 // PutRunnerHeartbeatWithBodyWithResponse request with arbitrary body returning *PutRunnerHeartbeatResponse
-func (c *ClientWithResponses) PutRunnerHeartbeatWithBodyWithResponse(ctx context.Context, runnerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error) {
-	rsp, err := c.PutRunnerHeartbeatWithBody(ctx, runnerId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) PutRunnerHeartbeatWithBodyWithResponse(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error) {
+	rsp, err := c.PutRunnerHeartbeatWithBody(ctx, runnerId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParsePutRunnerHeartbeatResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error) {
-	rsp, err := c.PutRunnerHeartbeat(ctx, runnerId, body, reqEditors...)
+func (c *ClientWithResponses) PutRunnerHeartbeatWithResponse(ctx context.Context, runnerId string, params *PutRunnerHeartbeatParams, body PutRunnerHeartbeatJSONRequestBody, reqEditors ...RequestEditorFn) (*PutRunnerHeartbeatResponse, error) {
+	rsp, err := c.PutRunnerHeartbeat(ctx, runnerId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20400,16 +22201,16 @@ func (c *ClientWithResponses) ListSessionsWithResponse(ctx context.Context, para
 }
 
 // CreateSessionWithBodyWithResponse request with arbitrary body returning *CreateSessionResponse
-func (c *ClientWithResponses) CreateSessionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error) {
-	rsp, err := c.CreateSessionWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionWithBodyWithResponse(ctx context.Context, params *CreateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error) {
+	rsp, err := c.CreateSessionWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateSessionResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateSessionWithResponse(ctx context.Context, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error) {
-	rsp, err := c.CreateSession(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionWithResponse(ctx context.Context, params *CreateSessionParams, body CreateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionResponse, error) {
+	rsp, err := c.CreateSession(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20417,8 +22218,8 @@ func (c *ClientWithResponses) CreateSessionWithResponse(ctx context.Context, bod
 }
 
 // ReadSessionWithResponse request returning *ReadSessionResponse
-func (c *ClientWithResponses) ReadSessionWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ReadSessionResponse, error) {
-	rsp, err := c.ReadSession(ctx, sessionId, reqEditors...)
+func (c *ClientWithResponses) ReadSessionWithResponse(ctx context.Context, sessionId string, params *ReadSessionParams, reqEditors ...RequestEditorFn) (*ReadSessionResponse, error) {
+	rsp, err := c.ReadSession(ctx, sessionId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20426,16 +22227,16 @@ func (c *ClientWithResponses) ReadSessionWithResponse(ctx context.Context, sessi
 }
 
 // UpdateSessionWithBodyWithResponse request with arbitrary body returning *UpdateSessionResponse
-func (c *ClientWithResponses) UpdateSessionWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error) {
-	rsp, err := c.UpdateSessionWithBody(ctx, sessionId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateSessionWithBodyWithResponse(ctx context.Context, sessionId string, params *UpdateSessionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error) {
+	rsp, err := c.UpdateSessionWithBody(ctx, sessionId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateSessionResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateSessionWithResponse(ctx context.Context, sessionId string, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error) {
-	rsp, err := c.UpdateSession(ctx, sessionId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateSessionWithResponse(ctx context.Context, sessionId string, params *UpdateSessionParams, body UpdateSessionJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSessionResponse, error) {
+	rsp, err := c.UpdateSession(ctx, sessionId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20443,8 +22244,8 @@ func (c *ClientWithResponses) UpdateSessionWithResponse(ctx context.Context, ses
 }
 
 // ListSessionApprovalsWithResponse request returning *ListSessionApprovalsResponse
-func (c *ClientWithResponses) ListSessionApprovalsWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ListSessionApprovalsResponse, error) {
-	rsp, err := c.ListSessionApprovals(ctx, sessionId, reqEditors...)
+func (c *ClientWithResponses) ListSessionApprovalsWithResponse(ctx context.Context, sessionId string, params *ListSessionApprovalsParams, reqEditors ...RequestEditorFn) (*ListSessionApprovalsResponse, error) {
+	rsp, err := c.ListSessionApprovals(ctx, sessionId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20452,8 +22253,8 @@ func (c *ClientWithResponses) ListSessionApprovalsWithResponse(ctx context.Conte
 }
 
 // ReadSessionApprovalWithResponse request returning *ReadSessionApprovalResponse
-func (c *ClientWithResponses) ReadSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, reqEditors ...RequestEditorFn) (*ReadSessionApprovalResponse, error) {
-	rsp, err := c.ReadSessionApproval(ctx, sessionId, approvalId, reqEditors...)
+func (c *ClientWithResponses) ReadSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, params *ReadSessionApprovalParams, reqEditors ...RequestEditorFn) (*ReadSessionApprovalResponse, error) {
+	rsp, err := c.ReadSessionApproval(ctx, sessionId, approvalId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20461,16 +22262,16 @@ func (c *ClientWithResponses) ReadSessionApprovalWithResponse(ctx context.Contex
 }
 
 // DecideSessionApprovalWithBodyWithResponse request with arbitrary body returning *DecideSessionApprovalResponse
-func (c *ClientWithResponses) DecideSessionApprovalWithBodyWithResponse(ctx context.Context, sessionId string, approvalId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error) {
-	rsp, err := c.DecideSessionApprovalWithBody(ctx, sessionId, approvalId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) DecideSessionApprovalWithBodyWithResponse(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error) {
+	rsp, err := c.DecideSessionApprovalWithBody(ctx, sessionId, approvalId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseDecideSessionApprovalResponse(rsp)
 }
 
-func (c *ClientWithResponses) DecideSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error) {
-	rsp, err := c.DecideSessionApproval(ctx, sessionId, approvalId, body, reqEditors...)
+func (c *ClientWithResponses) DecideSessionApprovalWithResponse(ctx context.Context, sessionId string, approvalId string, params *DecideSessionApprovalParams, body DecideSessionApprovalJSONRequestBody, reqEditors ...RequestEditorFn) (*DecideSessionApprovalResponse, error) {
+	rsp, err := c.DecideSessionApproval(ctx, sessionId, approvalId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20487,16 +22288,16 @@ func (c *ClientWithResponses) ListSessionEventsWithResponse(ctx context.Context,
 }
 
 // CreateSessionEventsWithBodyWithResponse request with arbitrary body returning *CreateSessionEventsResponse
-func (c *ClientWithResponses) CreateSessionEventsWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error) {
-	rsp, err := c.CreateSessionEventsWithBody(ctx, sessionId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionEventsWithBodyWithResponse(ctx context.Context, sessionId string, params *CreateSessionEventsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error) {
+	rsp, err := c.CreateSessionEventsWithBody(ctx, sessionId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateSessionEventsResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateSessionEventsWithResponse(ctx context.Context, sessionId string, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error) {
-	rsp, err := c.CreateSessionEvents(ctx, sessionId, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionEventsWithResponse(ctx context.Context, sessionId string, params *CreateSessionEventsParams, body CreateSessionEventsJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionEventsResponse, error) {
+	rsp, err := c.CreateSessionEvents(ctx, sessionId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20513,16 +22314,16 @@ func (c *ClientWithResponses) ListSessionMessagesWithResponse(ctx context.Contex
 }
 
 // CreateSessionMessageWithBodyWithResponse request with arbitrary body returning *CreateSessionMessageResponse
-func (c *ClientWithResponses) CreateSessionMessageWithBodyWithResponse(ctx context.Context, sessionId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error) {
-	rsp, err := c.CreateSessionMessageWithBody(ctx, sessionId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionMessageWithBodyWithResponse(ctx context.Context, sessionId string, params *CreateSessionMessageParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error) {
+	rsp, err := c.CreateSessionMessageWithBody(ctx, sessionId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateSessionMessageResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateSessionMessageWithResponse(ctx context.Context, sessionId string, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error) {
-	rsp, err := c.CreateSessionMessage(ctx, sessionId, body, reqEditors...)
+func (c *ClientWithResponses) CreateSessionMessageWithResponse(ctx context.Context, sessionId string, params *CreateSessionMessageParams, body CreateSessionMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSessionMessageResponse, error) {
+	rsp, err := c.CreateSessionMessage(ctx, sessionId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20530,8 +22331,8 @@ func (c *ClientWithResponses) CreateSessionMessageWithResponse(ctx context.Conte
 }
 
 // ReadSessionMessageWithResponse request returning *ReadSessionMessageResponse
-func (c *ClientWithResponses) ReadSessionMessageWithResponse(ctx context.Context, sessionId string, messageId string, reqEditors ...RequestEditorFn) (*ReadSessionMessageResponse, error) {
-	rsp, err := c.ReadSessionMessage(ctx, sessionId, messageId, reqEditors...)
+func (c *ClientWithResponses) ReadSessionMessageWithResponse(ctx context.Context, sessionId string, messageId string, params *ReadSessionMessageParams, reqEditors ...RequestEditorFn) (*ReadSessionMessageResponse, error) {
+	rsp, err := c.ReadSessionMessage(ctx, sessionId, messageId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20539,8 +22340,8 @@ func (c *ClientWithResponses) ReadSessionMessageWithResponse(ctx context.Context
 }
 
 // ConnectSessionSocketWithResponse request returning *ConnectSessionSocketResponse
-func (c *ClientWithResponses) ConnectSessionSocketWithResponse(ctx context.Context, sessionId string, reqEditors ...RequestEditorFn) (*ConnectSessionSocketResponse, error) {
-	rsp, err := c.ConnectSessionSocket(ctx, sessionId, reqEditors...)
+func (c *ClientWithResponses) ConnectSessionSocketWithResponse(ctx context.Context, sessionId string, params *ConnectSessionSocketParams, reqEditors ...RequestEditorFn) (*ConnectSessionSocketResponse, error) {
+	rsp, err := c.ConnectSessionSocket(ctx, sessionId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20557,16 +22358,16 @@ func (c *ClientWithResponses) ListTriggersWithResponse(ctx context.Context, para
 }
 
 // CreateTriggerWithBodyWithResponse request with arbitrary body returning *CreateTriggerResponse
-func (c *ClientWithResponses) CreateTriggerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error) {
-	rsp, err := c.CreateTriggerWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateTriggerWithBodyWithResponse(ctx context.Context, params *CreateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error) {
+	rsp, err := c.CreateTriggerWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateTriggerResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateTriggerWithResponse(ctx context.Context, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error) {
-	rsp, err := c.CreateTrigger(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateTriggerWithResponse(ctx context.Context, params *CreateTriggerParams, body CreateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerResponse, error) {
+	rsp, err := c.CreateTrigger(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20574,8 +22375,8 @@ func (c *ClientWithResponses) CreateTriggerWithResponse(ctx context.Context, bod
 }
 
 // DeleteTriggerWithResponse request returning *DeleteTriggerResponse
-func (c *ClientWithResponses) DeleteTriggerWithResponse(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*DeleteTriggerResponse, error) {
-	rsp, err := c.DeleteTrigger(ctx, triggerId, reqEditors...)
+func (c *ClientWithResponses) DeleteTriggerWithResponse(ctx context.Context, triggerId string, params *DeleteTriggerParams, reqEditors ...RequestEditorFn) (*DeleteTriggerResponse, error) {
+	rsp, err := c.DeleteTrigger(ctx, triggerId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20583,8 +22384,8 @@ func (c *ClientWithResponses) DeleteTriggerWithResponse(ctx context.Context, tri
 }
 
 // ReadTriggerWithResponse request returning *ReadTriggerResponse
-func (c *ClientWithResponses) ReadTriggerWithResponse(ctx context.Context, triggerId string, reqEditors ...RequestEditorFn) (*ReadTriggerResponse, error) {
-	rsp, err := c.ReadTrigger(ctx, triggerId, reqEditors...)
+func (c *ClientWithResponses) ReadTriggerWithResponse(ctx context.Context, triggerId string, params *ReadTriggerParams, reqEditors ...RequestEditorFn) (*ReadTriggerResponse, error) {
+	rsp, err := c.ReadTrigger(ctx, triggerId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20592,16 +22393,16 @@ func (c *ClientWithResponses) ReadTriggerWithResponse(ctx context.Context, trigg
 }
 
 // UpdateTriggerWithBodyWithResponse request with arbitrary body returning *UpdateTriggerResponse
-func (c *ClientWithResponses) UpdateTriggerWithBodyWithResponse(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error) {
-	rsp, err := c.UpdateTriggerWithBody(ctx, triggerId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateTriggerWithBodyWithResponse(ctx context.Context, triggerId string, params *UpdateTriggerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error) {
+	rsp, err := c.UpdateTriggerWithBody(ctx, triggerId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateTriggerResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateTriggerWithResponse(ctx context.Context, triggerId string, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error) {
-	rsp, err := c.UpdateTrigger(ctx, triggerId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateTriggerWithResponse(ctx context.Context, triggerId string, params *UpdateTriggerParams, body UpdateTriggerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTriggerResponse, error) {
+	rsp, err := c.UpdateTrigger(ctx, triggerId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20618,16 +22419,16 @@ func (c *ClientWithResponses) ListTriggerRunsWithResponse(ctx context.Context, t
 }
 
 // CreateTriggerRunWithBodyWithResponse request with arbitrary body returning *CreateTriggerRunResponse
-func (c *ClientWithResponses) CreateTriggerRunWithBodyWithResponse(ctx context.Context, triggerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error) {
-	rsp, err := c.CreateTriggerRunWithBody(ctx, triggerId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateTriggerRunWithBodyWithResponse(ctx context.Context, triggerId string, params *CreateTriggerRunParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error) {
+	rsp, err := c.CreateTriggerRunWithBody(ctx, triggerId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateTriggerRunResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateTriggerRunWithResponse(ctx context.Context, triggerId string, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error) {
-	rsp, err := c.CreateTriggerRun(ctx, triggerId, body, reqEditors...)
+func (c *ClientWithResponses) CreateTriggerRunWithResponse(ctx context.Context, triggerId string, params *CreateTriggerRunParams, body CreateTriggerRunJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateTriggerRunResponse, error) {
+	rsp, err := c.CreateTriggerRun(ctx, triggerId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20635,8 +22436,8 @@ func (c *ClientWithResponses) CreateTriggerRunWithResponse(ctx context.Context, 
 }
 
 // ReadTriggerRunWithResponse request returning *ReadTriggerRunResponse
-func (c *ClientWithResponses) ReadTriggerRunWithResponse(ctx context.Context, triggerId string, runId string, reqEditors ...RequestEditorFn) (*ReadTriggerRunResponse, error) {
-	rsp, err := c.ReadTriggerRun(ctx, triggerId, runId, reqEditors...)
+func (c *ClientWithResponses) ReadTriggerRunWithResponse(ctx context.Context, triggerId string, runId string, params *ReadTriggerRunParams, reqEditors ...RequestEditorFn) (*ReadTriggerRunResponse, error) {
+	rsp, err := c.ReadTriggerRun(ctx, triggerId, runId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20653,8 +22454,8 @@ func (c *ClientWithResponses) ListUsageRecordsWithResponse(ctx context.Context, 
 }
 
 // ReadUsageRecordWithResponse request returning *ReadUsageRecordResponse
-func (c *ClientWithResponses) ReadUsageRecordWithResponse(ctx context.Context, recordId string, reqEditors ...RequestEditorFn) (*ReadUsageRecordResponse, error) {
-	rsp, err := c.ReadUsageRecord(ctx, recordId, reqEditors...)
+func (c *ClientWithResponses) ReadUsageRecordWithResponse(ctx context.Context, recordId string, params *ReadUsageRecordParams, reqEditors ...RequestEditorFn) (*ReadUsageRecordResponse, error) {
+	rsp, err := c.ReadUsageRecord(ctx, recordId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20680,16 +22481,16 @@ func (c *ClientWithResponses) ListVaultsWithResponse(ctx context.Context, params
 }
 
 // CreateVaultWithBodyWithResponse request with arbitrary body returning *CreateVaultResponse
-func (c *ClientWithResponses) CreateVaultWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error) {
-	rsp, err := c.CreateVaultWithBody(ctx, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateVaultWithBodyWithResponse(ctx context.Context, params *CreateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error) {
+	rsp, err := c.CreateVaultWithBody(ctx, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateVaultResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateVaultWithResponse(ctx context.Context, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error) {
-	rsp, err := c.CreateVault(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateVaultWithResponse(ctx context.Context, params *CreateVaultParams, body CreateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultResponse, error) {
+	rsp, err := c.CreateVault(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20697,8 +22498,8 @@ func (c *ClientWithResponses) CreateVaultWithResponse(ctx context.Context, body 
 }
 
 // ReadVaultWithResponse request returning *ReadVaultResponse
-func (c *ClientWithResponses) ReadVaultWithResponse(ctx context.Context, vaultId string, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error) {
-	rsp, err := c.ReadVault(ctx, vaultId, reqEditors...)
+func (c *ClientWithResponses) ReadVaultWithResponse(ctx context.Context, vaultId string, params *ReadVaultParams, reqEditors ...RequestEditorFn) (*ReadVaultResponse, error) {
+	rsp, err := c.ReadVault(ctx, vaultId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20706,16 +22507,16 @@ func (c *ClientWithResponses) ReadVaultWithResponse(ctx context.Context, vaultId
 }
 
 // UpdateVaultWithBodyWithResponse request with arbitrary body returning *UpdateVaultResponse
-func (c *ClientWithResponses) UpdateVaultWithBodyWithResponse(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error) {
-	rsp, err := c.UpdateVaultWithBody(ctx, vaultId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultWithBodyWithResponse(ctx context.Context, vaultId string, params *UpdateVaultParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error) {
+	rsp, err := c.UpdateVaultWithBody(ctx, vaultId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateVaultResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateVaultWithResponse(ctx context.Context, vaultId string, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error) {
-	rsp, err := c.UpdateVault(ctx, vaultId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultWithResponse(ctx context.Context, vaultId string, params *UpdateVaultParams, body UpdateVaultJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultResponse, error) {
+	rsp, err := c.UpdateVault(ctx, vaultId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20732,16 +22533,16 @@ func (c *ClientWithResponses) ListVaultCredentialsWithResponse(ctx context.Conte
 }
 
 // CreateVaultCredentialWithBodyWithResponse request with arbitrary body returning *CreateVaultCredentialResponse
-func (c *ClientWithResponses) CreateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error) {
-	rsp, err := c.CreateVaultCredentialWithBody(ctx, vaultId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error) {
+	rsp, err := c.CreateVaultCredentialWithBody(ctx, vaultId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseCreateVaultCredentialResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateVaultCredentialWithResponse(ctx context.Context, vaultId string, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error) {
-	rsp, err := c.CreateVaultCredential(ctx, vaultId, body, reqEditors...)
+func (c *ClientWithResponses) CreateVaultCredentialWithResponse(ctx context.Context, vaultId string, params *CreateVaultCredentialParams, body CreateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVaultCredentialResponse, error) {
+	rsp, err := c.CreateVaultCredential(ctx, vaultId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20749,8 +22550,8 @@ func (c *ClientWithResponses) CreateVaultCredentialWithResponse(ctx context.Cont
 }
 
 // ReadVaultCredentialWithResponse request returning *ReadVaultCredentialResponse
-func (c *ClientWithResponses) ReadVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, reqEditors ...RequestEditorFn) (*ReadVaultCredentialResponse, error) {
-	rsp, err := c.ReadVaultCredential(ctx, vaultId, credentialId, reqEditors...)
+func (c *ClientWithResponses) ReadVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, params *ReadVaultCredentialParams, reqEditors ...RequestEditorFn) (*ReadVaultCredentialResponse, error) {
+	rsp, err := c.ReadVaultCredential(ctx, vaultId, credentialId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20758,16 +22559,16 @@ func (c *ClientWithResponses) ReadVaultCredentialWithResponse(ctx context.Contex
 }
 
 // UpdateVaultCredentialWithBodyWithResponse request with arbitrary body returning *UpdateVaultCredentialResponse
-func (c *ClientWithResponses) UpdateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error) {
-	rsp, err := c.UpdateVaultCredentialWithBody(ctx, vaultId, credentialId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultCredentialWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error) {
+	rsp, err := c.UpdateVaultCredentialWithBody(ctx, vaultId, credentialId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateVaultCredentialResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error) {
-	rsp, err := c.UpdateVaultCredential(ctx, vaultId, credentialId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultCredentialWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialParams, body UpdateVaultCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialResponse, error) {
+	rsp, err := c.UpdateVaultCredential(ctx, vaultId, credentialId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20775,16 +22576,16 @@ func (c *ClientWithResponses) UpdateVaultCredentialWithResponse(ctx context.Cont
 }
 
 // UpdateVaultCredentialSecretWithBodyWithResponse request with arbitrary body returning *UpdateVaultCredentialSecretResponse
-func (c *ClientWithResponses) UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
-	rsp, err := c.UpdateVaultCredentialSecretWithBody(ctx, vaultId, credentialId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultCredentialSecretWithBodyWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
+	rsp, err := c.UpdateVaultCredentialSecretWithBody(ctx, vaultId, credentialId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateVaultCredentialSecretResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
-	rsp, err := c.UpdateVaultCredentialSecret(ctx, vaultId, credentialId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateVaultCredentialSecretWithResponse(ctx context.Context, vaultId string, credentialId string, params *UpdateVaultCredentialSecretParams, body UpdateVaultCredentialSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateVaultCredentialSecretResponse, error) {
+	rsp, err := c.UpdateVaultCredentialSecret(ctx, vaultId, credentialId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20801,8 +22602,8 @@ func (c *ClientWithResponses) ListVaultCredentialVersionsWithResponse(ctx contex
 }
 
 // ReadVaultCredentialVersionWithResponse request returning *ReadVaultCredentialVersionResponse
-func (c *ClientWithResponses) ReadVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, reqEditors ...RequestEditorFn) (*ReadVaultCredentialVersionResponse, error) {
-	rsp, err := c.ReadVaultCredentialVersion(ctx, vaultId, credentialId, versionId, reqEditors...)
+func (c *ClientWithResponses) ReadVaultCredentialVersionWithResponse(ctx context.Context, vaultId string, credentialId string, versionId string, params *ReadVaultCredentialVersionParams, reqEditors ...RequestEditorFn) (*ReadVaultCredentialVersionResponse, error) {
+	rsp, err := c.ReadVaultCredentialVersion(ctx, vaultId, credentialId, versionId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20819,8 +22620,8 @@ func (c *ClientWithResponses) ListWorkItemsWithResponse(ctx context.Context, par
 }
 
 // ReadWorkItemWithResponse request returning *ReadWorkItemResponse
-func (c *ClientWithResponses) ReadWorkItemWithResponse(ctx context.Context, workItemId string, reqEditors ...RequestEditorFn) (*ReadWorkItemResponse, error) {
-	rsp, err := c.ReadWorkItem(ctx, workItemId, reqEditors...)
+func (c *ClientWithResponses) ReadWorkItemWithResponse(ctx context.Context, workItemId string, params *ReadWorkItemParams, reqEditors ...RequestEditorFn) (*ReadWorkItemResponse, error) {
+	rsp, err := c.ReadWorkItem(ctx, workItemId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -20869,6 +22670,13 @@ func ParseListAgentsResponse(rsp *http.Response) (*ListAgentsResponse, error) {
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -20915,6 +22723,13 @@ func ParseCreateAgentResponse(rsp *http.Response) (*CreateAgentResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest ErrorResponse
@@ -21335,6 +23150,13 @@ func ParseListBudgetsResponse(rsp *http.Response) (*ListBudgetsResponse, error) 
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -21381,6 +23203,13 @@ func ParseCreateBudgetResponse(rsp *http.Response) (*CreateBudgetResponse, error
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -21690,6 +23519,13 @@ func ParseListEnvironmentsResponse(rsp *http.Response) (*ListEnvironmentsRespons
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -21736,6 +23572,13 @@ func ParseCreateEnvironmentResponse(rsp *http.Response) (*CreateEnvironmentRespo
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest ErrorResponse
@@ -22000,6 +23843,13 @@ func ParseListIdentitiesResponse(rsp *http.Response) (*ListIdentitiesResponse, e
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -22046,6 +23896,13 @@ func ParseCreateIdentityResponse(rsp *http.Response) (*CreateIdentityResponse, e
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest ErrorResponse
@@ -22255,6 +24112,13 @@ func ParseListLeasesResponse(rsp *http.Response) (*ListLeasesResponse, error) {
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -22472,6 +24336,13 @@ func ParseListMemoryStoresResponse(rsp *http.Response) (*ListMemoryStoresRespons
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -22518,6 +24389,13 @@ func ParseCreateMemoryStoreResponse(rsp *http.Response) (*CreateMemoryStoreRespo
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -22923,6 +24801,60 @@ func ParseCreateProjectResponse(rsp *http.Response) (*CreateProjectResponse, err
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProjectResponse parses an HTTP response from a DeleteProjectWithResponse call
+func ParseDeleteProjectResponse(rsp *http.Response) (*DeleteProjectResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProjectResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -22969,6 +24901,67 @@ func ParseReadProjectResponse(rsp *http.Response) (*ReadProjectResponse, error) 
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProjectResponse parses an HTTP response from a UpdateProjectWithResponse call
+func ParseUpdateProjectResponse(rsp *http.Response) (*UpdateProjectResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProjectResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Project
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -23231,6 +25224,13 @@ func ParseListRunnersResponse(rsp *http.Response) (*ListRunnersResponse, error) 
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -23277,6 +25277,13 @@ func ParseCreateRunnerResponse(rsp *http.Response) (*CreateRunnerResponse, error
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
 		var dest ErrorResponse
@@ -23601,6 +25608,13 @@ func ParseListSessionsResponse(rsp *http.Response) (*ListSessionsResponse, error
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -24293,6 +26307,13 @@ func ParseListTriggersResponse(rsp *http.Response) (*ListTriggersResponse, error
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -24732,6 +26753,13 @@ func ParseListUsageRecordsResponse(rsp *http.Response) (*ListUsageRecordsRespons
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	case rsp.StatusCode == 200:
 		// Content-type (text/csv) unsupported
 
@@ -24829,6 +26857,13 @@ func ParseReadUsageSummaryResponse(rsp *http.Response) (*ReadUsageSummaryRespons
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -24876,6 +26911,13 @@ func ParseListVaultsResponse(rsp *http.Response) (*ListVaultsResponse, error) {
 		}
 		response.JSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -24922,6 +26964,13 @@ func ParseCreateVaultResponse(rsp *http.Response) (*CreateVaultResponse, error) 
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
@@ -25455,6 +27504,13 @@ func ParseListWorkItemsResponse(rsp *http.Response) (*ListWorkItemsResponse, err
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

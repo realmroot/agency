@@ -140,10 +140,11 @@ function collectOperations(document) {
   for (const [operationPath, methods] of Object.entries(document.paths)) {
     for (const [httpMethod, operation] of Object.entries(methods)) {
       if (!operation.operationId) continue
-      const parameters = operation.parameters ?? []
+      const parameters = (operation.parameters ?? []).map((parameter) => resolveParameter(document, parameter))
       const pathParams = parameters.filter((param) => param.in === 'path')
       const queryParams = parameters.filter((param) => param.in === 'query')
-      const headerParams = parameters.filter((param) => param.in === 'header')
+      const generatedHeaderParams = parameters.filter((param) => param.in === 'header')
+      const headerParams = generatedHeaderParams.filter((param) => param.name.toLowerCase() !== 'x-ama-project-id')
       const bodyType = requestBodyType(operation)
       const success = successResponse(operation)
       result.set(operation.operationId, {
@@ -154,6 +155,7 @@ function collectOperations(document) {
         pathParams,
         queryParams,
         headerParams,
+        hasGeneratedRequestParams: queryParams.length > 0 || generatedHeaderParams.length > 0,
         bodyType,
         success,
         errorStatuses: Object.keys(operation.responses ?? {}).filter((status) => Number(status) >= 400),
@@ -161,6 +163,15 @@ function collectOperations(document) {
     }
   }
   return result
+}
+
+function resolveParameter(document, parameter) {
+  if (!parameter.$ref) return parameter
+  const prefix = '#/components/parameters/'
+  if (!parameter.$ref.startsWith(prefix)) throw new Error(`Unsupported OpenAPI parameter reference: ${parameter.$ref}`)
+  const resolved = document.components?.parameters?.[parameter.$ref.slice(prefix.length)]
+  if (!resolved) throw new Error(`Missing OpenAPI parameter reference: ${parameter.$ref}`)
+  return resolved
 }
 
 function requestBodyType(operation) {
@@ -600,14 +611,12 @@ function generateGoMethod(serviceName, method) {
   }
   const rawName = `${pascal(operation.id)}WithResponse`
   const pathArgs = operation.pathParams.map((param) => `${goParamName(param.name)} ${goScalarType(param.schema)}`)
-  const requestParamsArg =
-    operation.queryParams.length > 0 || operation.headerParams.length > 0
-      ? `params *${pascal(operation.id)}Params`
-      : undefined
+  const facadeHasRequestParams = operation.queryParams.length > 0 || operation.headerParams.length > 0
+  const requestParamsArg = facadeHasRequestParams ? `params *${pascal(operation.id)}Params` : undefined
   const bodyArg = operation.bodyType ? `body ${operation.bodyType}` : undefined
   const args = ['ctx context.Context', ...pathArgs, requestParamsArg, bodyArg].filter(Boolean).join(', ')
   const rawArgs = ['ctx', ...operation.pathParams.map((param) => goParamName(param.name))]
-  if (operation.queryParams.length > 0 || operation.headerParams.length > 0) rawArgs.push('params')
+  if (operation.hasGeneratedRequestParams) rawArgs.push(facadeHasRequestParams ? 'params' : 'nil')
   if (operation.bodyType) rawArgs.push('body')
   const errors = operation.errorStatuses.map((status) => `response.JSON${status}`).join(', ')
   const returnType = operation.success.empty ? 'error' : `(*${operation.success.type}, error)`
@@ -634,7 +643,7 @@ function generateGoMethod(serviceName, method) {
 function generateGoCreateRawEventsMethod(serviceName) {
   const operation = operations.get('createSessionEvents')
   const errors = operation.errorStatuses.map((status) => `response.JSON${status}`).join(', ')
-  return `func (s ${serviceName}) CreateRawEvents(ctx context.Context, sessionID string, events []JSON) (*SessionEventsAccepted, error) {\n\tbody, err := json.Marshal(struct {\n\t\tEvents []JSON \`json:"events"\`\n\t}{Events: events})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresponse, err := s.client.raw.CreateSessionEventsWithBodyWithResponse(\n\t\tctx,\n\t\tsessionID,\n\t\t"application/json",\n\t\tbytes.NewReader(body),\n\t)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})\n}\n`
+  return `func (s ${serviceName}) CreateRawEvents(ctx context.Context, sessionID string, events []JSON) (*SessionEventsAccepted, error) {\n\tbody, err := json.Marshal(struct {\n\t\tEvents []JSON \`json:"events"\`\n\t}{Events: events})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresponse, err := s.client.raw.CreateSessionEventsWithBodyWithResponse(\n\t\tctx,\n\t\tsessionID,\n\t\tnil,\n\t\t"application/json",\n\t\tbytes.NewReader(body),\n\t)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn unwrap(response.StatusCode(), response.Body, response.${operation.success.field}${errors ? `, ${errors}` : ''})\n}\n`
 }
 
 function goResourceName(name) {

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_http_trigger_run_request import CreateHttpTriggerRunRequest
 from ...models.error_response import ErrorResponse
 from ...models.trigger_run import TriggerRun
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     trigger_id: str,
     *,
     body: CreateHttpTriggerRunRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -105,6 +110,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateHttpTriggerRunRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TriggerRun]:
     """ Create an HTTP trigger run
@@ -114,6 +120,7 @@ def sync_detailed(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -129,6 +136,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         trigger_id=trigger_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -143,6 +151,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateHttpTriggerRunRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | TriggerRun | None:
     """ Create an HTTP trigger run
@@ -152,6 +161,7 @@ def sync(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -168,6 +178,7 @@ def sync(
         trigger_id=trigger_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -176,6 +187,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateHttpTriggerRunRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TriggerRun]:
     """ Create an HTTP trigger run
@@ -185,6 +197,7 @@ async def asyncio_detailed(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -200,6 +213,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         trigger_id=trigger_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -214,6 +228,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateHttpTriggerRunRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | TriggerRun | None:
     """ Create an HTTP trigger run
@@ -223,6 +238,7 @@ async def asyncio(
 
     Args:
         trigger_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000c.
+        x_ama_project_id (str | Unset):
         body (CreateHttpTriggerRunRequest):  Example: {'customer': {'name': 'Ada'}, 'ticketId':
             'T-123'}.
 
@@ -239,5 +255,6 @@ async def asyncio(
         trigger_id=trigger_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

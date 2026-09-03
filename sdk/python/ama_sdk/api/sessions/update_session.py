@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.session import Session
 from ...models.update_session_request import UpdateSessionRequest
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     session_id: str,
     *,
     body: UpdateSessionRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -105,6 +110,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateSessionRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Session]:
     r""" Update a session
@@ -114,6 +120,7 @@ def sync_detailed(
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (UpdateSessionRequest):
 
     Raises:
@@ -128,6 +135,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         session_id=session_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -142,6 +150,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateSessionRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Session | None:
     r""" Update a session
@@ -151,6 +160,7 @@ def sync(
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (UpdateSessionRequest):
 
     Raises:
@@ -166,6 +176,7 @@ def sync(
         session_id=session_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -174,6 +185,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateSessionRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Session]:
     r""" Update a session
@@ -183,6 +195,7 @@ async def asyncio_detailed(
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (UpdateSessionRequest):
 
     Raises:
@@ -197,6 +210,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         session_id=session_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -211,6 +225,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateSessionRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Session | None:
     r""" Update a session
@@ -220,6 +235,7 @@ async def asyncio(
 
     Args:
         session_id (str):  Example: 0195f5d6-7c20-7000-8000-00000000000e.
+        x_ama_project_id (str | Unset):
         body (UpdateSessionRequest):
 
     Raises:
@@ -235,5 +251,6 @@ async def asyncio(
         session_id=session_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

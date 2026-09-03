@@ -290,7 +290,7 @@ func (s ProjectsService) Create(ctx context.Context, body CreateProjectRequest) 
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON401, response.JSON403, response.JSON409)
 }
 
 func (s ProjectsService) Get(ctx context.Context, projectID string) (*Project, error) {
@@ -299,6 +299,22 @@ func (s ProjectsService) Get(ctx context.Context, projectID string) (*Project, e
 		return nil, err
 	}
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
+}
+
+func (s ProjectsService) Update(ctx context.Context, projectID string, body UpdateProjectRequest) (*Project, error) {
+	response, err := s.client.raw.UpdateProjectWithResponse(ctx, projectID, body)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
+func (s ProjectsService) Delete(ctx context.Context, projectID string) error {
+	response, err := s.client.raw.DeleteProjectWithResponse(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	return unwrapEmpty(response.StatusCode(), response.Body, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 type AgentsService struct {
@@ -310,7 +326,7 @@ func (s AgentsService) List(ctx context.Context, params *ListAgentsParams) (*Age
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s AgentsService) Create(ctx context.Context, body CreateAgentRequest) (*Agent, error) {
@@ -322,11 +338,11 @@ func (s AgentsService) CreateWithParams(ctx context.Context, params *CreateAgent
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s AgentsService) Get(ctx context.Context, agentID string) (*Agent, error) {
-	response, err := s.client.raw.ReadAgentWithResponse(ctx, agentID)
+	response, err := s.client.raw.ReadAgentWithResponse(ctx, agentID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +350,7 @@ func (s AgentsService) Get(ctx context.Context, agentID string) (*Agent, error) 
 }
 
 func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAgentRequest) (*Agent, error) {
-	response, err := s.client.raw.UpdateAgentWithResponse(ctx, agentID, body)
+	response, err := s.client.raw.UpdateAgentWithResponse(ctx, agentID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +358,7 @@ func (s AgentsService) Update(ctx context.Context, agentID string, body UpdateAg
 }
 
 func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*AgentVersionListResponse, error) {
-	response, err := s.client.raw.ListAgentVersionsWithResponse(ctx, agentID)
+	response, err := s.client.raw.ListAgentVersionsWithResponse(ctx, agentID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +366,7 @@ func (s AgentsService) ListVersions(ctx context.Context, agentID string) (*Agent
 }
 
 func (s AgentsService) GetVersion(ctx context.Context, agentID string, version int) (*AgentVersion, error) {
-	response, err := s.client.raw.ReadAgentVersionWithResponse(ctx, agentID, version)
+	response, err := s.client.raw.ReadAgentVersionWithResponse(ctx, agentID, version, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +382,7 @@ func (s IdentitiesService) List(ctx context.Context, params *ListIdentitiesParam
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s IdentitiesService) Create(ctx context.Context, params *CreateIdentityParams, body CreateIdentityRequest) (*Identity, error) {
@@ -374,11 +390,11 @@ func (s IdentitiesService) Create(ctx context.Context, params *CreateIdentityPar
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409, response.JSON502)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409, response.JSON502)
 }
 
 func (s IdentitiesService) Get(ctx context.Context, identityID string) (*Identity, error) {
-	response, err := s.client.raw.ReadIdentityWithResponse(ctx, identityID)
+	response, err := s.client.raw.ReadIdentityWithResponse(ctx, identityID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +402,7 @@ func (s IdentitiesService) Get(ctx context.Context, identityID string) (*Identit
 }
 
 func (s IdentitiesService) Archive(ctx context.Context, identityID string, body UpdateIdentityRequest) (*Identity, error) {
-	response, err := s.client.raw.UpdateIdentityWithResponse(ctx, identityID, body)
+	response, err := s.client.raw.UpdateIdentityWithResponse(ctx, identityID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +418,7 @@ func (s EnvironmentsService) List(ctx context.Context, params *ListEnvironmentsP
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s EnvironmentsService) Create(ctx context.Context, body CreateEnvironmentRequest) (*Environment, error) {
@@ -414,11 +430,11 @@ func (s EnvironmentsService) CreateWithParams(ctx context.Context, params *Creat
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s EnvironmentsService) Get(ctx context.Context, environmentID string) (*Environment, error) {
-	response, err := s.client.raw.ReadEnvironmentWithResponse(ctx, environmentID)
+	response, err := s.client.raw.ReadEnvironmentWithResponse(ctx, environmentID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +442,7 @@ func (s EnvironmentsService) Get(ctx context.Context, environmentID string) (*En
 }
 
 func (s EnvironmentsService) Update(ctx context.Context, environmentID string, body UpdateEnvironmentRequest) (*Environment, error) {
-	response, err := s.client.raw.UpdateEnvironmentWithResponse(ctx, environmentID, body)
+	response, err := s.client.raw.UpdateEnvironmentWithResponse(ctx, environmentID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +450,7 @@ func (s EnvironmentsService) Update(ctx context.Context, environmentID string, b
 }
 
 func (s EnvironmentsService) ListVersions(ctx context.Context, environmentID string) (*EnvironmentVersionListResponse, error) {
-	response, err := s.client.raw.ListEnvironmentVersionsWithResponse(ctx, environmentID)
+	response, err := s.client.raw.ListEnvironmentVersionsWithResponse(ctx, environmentID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +458,7 @@ func (s EnvironmentsService) ListVersions(ctx context.Context, environmentID str
 }
 
 func (s EnvironmentsService) GetVersion(ctx context.Context, environmentID string, version int) (*EnvironmentVersion, error) {
-	response, err := s.client.raw.ReadEnvironmentVersionWithResponse(ctx, environmentID, version)
+	response, err := s.client.raw.ReadEnvironmentVersionWithResponse(ctx, environmentID, version, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -502,19 +518,19 @@ func (s RunnersService) List(ctx context.Context, params *ListRunnersParams) (*R
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s RunnersService) Create(ctx context.Context, body CreateRunnerRequest) (*Runner, error) {
-	response, err := s.client.raw.CreateRunnerWithResponse(ctx, body)
+	response, err := s.client.raw.CreateRunnerWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s RunnersService) Get(ctx context.Context, runnerID string) (*Runner, error) {
-	response, err := s.client.raw.ReadRunnerWithResponse(ctx, runnerID)
+	response, err := s.client.raw.ReadRunnerWithResponse(ctx, runnerID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +538,7 @@ func (s RunnersService) Get(ctx context.Context, runnerID string) (*Runner, erro
 }
 
 func (s RunnersService) Update(ctx context.Context, runnerID string, body UpdateRunnerRequest) (*Runner, error) {
-	response, err := s.client.raw.UpdateRunnerWithResponse(ctx, runnerID, body)
+	response, err := s.client.raw.UpdateRunnerWithResponse(ctx, runnerID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -534,23 +550,23 @@ type BudgetsService struct {
 }
 
 func (s BudgetsService) List(ctx context.Context) (*BudgetListResponse, error) {
-	response, err := s.client.raw.ListBudgetsWithResponse(ctx)
+	response, err := s.client.raw.ListBudgetsWithResponse(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s BudgetsService) Create(ctx context.Context, body CreateBudgetRequest) (*Budget, error) {
-	response, err := s.client.raw.CreateBudgetWithResponse(ctx, body)
+	response, err := s.client.raw.CreateBudgetWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s BudgetsService) Get(ctx context.Context, budgetID string) (*Budget, error) {
-	response, err := s.client.raw.ReadBudgetWithResponse(ctx, budgetID)
+	response, err := s.client.raw.ReadBudgetWithResponse(ctx, budgetID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +574,7 @@ func (s BudgetsService) Get(ctx context.Context, budgetID string) (*Budget, erro
 }
 
 func (s BudgetsService) Update(ctx context.Context, budgetID string, body UpdateBudgetRequest) (*Budget, error) {
-	response, err := s.client.raw.UpdateBudgetWithResponse(ctx, budgetID, body)
+	response, err := s.client.raw.UpdateBudgetWithResponse(ctx, budgetID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -566,7 +582,7 @@ func (s BudgetsService) Update(ctx context.Context, budgetID string, body Update
 }
 
 func (s BudgetsService) Delete(ctx context.Context, budgetID string) error {
-	response, err := s.client.raw.DeleteBudgetWithResponse(ctx, budgetID)
+	response, err := s.client.raw.DeleteBudgetWithResponse(ctx, budgetID, nil)
 	if err != nil {
 		return err
 	}
@@ -622,11 +638,11 @@ func (s TriggersService) List(ctx context.Context, params *ListTriggersParams) (
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s TriggersService) Create(ctx context.Context, body CreateTriggerRequest) (*Trigger, error) {
-	response, err := s.client.raw.CreateTriggerWithResponse(ctx, body)
+	response, err := s.client.raw.CreateTriggerWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +650,7 @@ func (s TriggersService) Create(ctx context.Context, body CreateTriggerRequest) 
 }
 
 func (s TriggersService) Get(ctx context.Context, triggerID string) (*Trigger, error) {
-	response, err := s.client.raw.ReadTriggerWithResponse(ctx, triggerID)
+	response, err := s.client.raw.ReadTriggerWithResponse(ctx, triggerID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -642,7 +658,7 @@ func (s TriggersService) Get(ctx context.Context, triggerID string) (*Trigger, e
 }
 
 func (s TriggersService) Update(ctx context.Context, triggerID string, body UpdateTriggerRequest) (*Trigger, error) {
-	response, err := s.client.raw.UpdateTriggerWithResponse(ctx, triggerID, body)
+	response, err := s.client.raw.UpdateTriggerWithResponse(ctx, triggerID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -650,7 +666,7 @@ func (s TriggersService) Update(ctx context.Context, triggerID string, body Upda
 }
 
 func (s TriggersService) Delete(ctx context.Context, triggerID string) error {
-	response, err := s.client.raw.DeleteTriggerWithResponse(ctx, triggerID)
+	response, err := s.client.raw.DeleteTriggerWithResponse(ctx, triggerID, nil)
 	if err != nil {
 		return err
 	}
@@ -666,7 +682,7 @@ func (s TriggersService) ListRuns(ctx context.Context, triggerID string, params 
 }
 
 func (s TriggersService) CreateRun(ctx context.Context, triggerID string, body CreateHttpTriggerRunRequest) (*TriggerRun, error) {
-	response, err := s.client.raw.CreateTriggerRunWithResponse(ctx, triggerID, body)
+	response, err := s.client.raw.CreateTriggerRunWithResponse(ctx, triggerID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +690,7 @@ func (s TriggersService) CreateRun(ctx context.Context, triggerID string, body C
 }
 
 func (s TriggersService) GetRun(ctx context.Context, triggerID string, runID string) (*TriggerRun, error) {
-	response, err := s.client.raw.ReadTriggerRunWithResponse(ctx, triggerID, runID)
+	response, err := s.client.raw.ReadTriggerRunWithResponse(ctx, triggerID, runID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -690,11 +706,11 @@ func (s SessionsService) List(ctx context.Context, params *ListSessionsParams) (
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s SessionsService) Create(ctx context.Context, body CreateSessionRequest) (*Session, error) {
-	response, err := s.client.raw.CreateSessionWithResponse(ctx, body)
+	response, err := s.client.raw.CreateSessionWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -702,7 +718,7 @@ func (s SessionsService) Create(ctx context.Context, body CreateSessionRequest) 
 }
 
 func (s SessionsService) Get(ctx context.Context, sessionID string) (*Session, error) {
-	response, err := s.client.raw.ReadSessionWithResponse(ctx, sessionID)
+	response, err := s.client.raw.ReadSessionWithResponse(ctx, sessionID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -710,7 +726,7 @@ func (s SessionsService) Get(ctx context.Context, sessionID string) (*Session, e
 }
 
 func (s SessionsService) Update(ctx context.Context, sessionID string, body UpdateSessionRequest) (*Session, error) {
-	response, err := s.client.raw.UpdateSessionWithResponse(ctx, sessionID, body)
+	response, err := s.client.raw.UpdateSessionWithResponse(ctx, sessionID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +746,7 @@ func (s SessionsService) ListMessages(ctx context.Context, sessionID string, par
 }
 
 func (s SessionsService) CreateMessage(ctx context.Context, sessionID string, body CreateSessionMessageRequest) (*SessionMessage, error) {
-	response, err := s.client.raw.CreateSessionMessageWithResponse(ctx, sessionID, body)
+	response, err := s.client.raw.CreateSessionMessageWithResponse(ctx, sessionID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -738,7 +754,7 @@ func (s SessionsService) CreateMessage(ctx context.Context, sessionID string, bo
 }
 
 func (s SessionsService) GetMessage(ctx context.Context, sessionID string, messageID string) (*SessionMessage, error) {
-	response, err := s.client.raw.ReadSessionMessageWithResponse(ctx, sessionID, messageID)
+	response, err := s.client.raw.ReadSessionMessageWithResponse(ctx, sessionID, messageID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -754,7 +770,7 @@ func (s SessionsService) ListEvents(ctx context.Context, sessionID string, param
 }
 
 func (s SessionsService) ListApprovals(ctx context.Context, sessionID string) (*SessionApprovalListResponse, error) {
-	response, err := s.client.raw.ListSessionApprovalsWithResponse(ctx, sessionID)
+	response, err := s.client.raw.ListSessionApprovalsWithResponse(ctx, sessionID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -762,7 +778,7 @@ func (s SessionsService) ListApprovals(ctx context.Context, sessionID string) (*
 }
 
 func (s SessionsService) GetApproval(ctx context.Context, sessionID string, approvalID string) (*SessionApproval, error) {
-	response, err := s.client.raw.ReadSessionApprovalWithResponse(ctx, sessionID, approvalID)
+	response, err := s.client.raw.ReadSessionApprovalWithResponse(ctx, sessionID, approvalID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -770,7 +786,7 @@ func (s SessionsService) GetApproval(ctx context.Context, sessionID string, appr
 }
 
 func (s SessionsService) DecideApproval(ctx context.Context, sessionID string, approvalID string, body SessionApprovalDecisionRequest) (*SessionApproval, error) {
-	response, err := s.client.raw.DecideSessionApprovalWithResponse(ctx, sessionID, approvalID, body)
+	response, err := s.client.raw.DecideSessionApprovalWithResponse(ctx, sessionID, approvalID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -786,19 +802,19 @@ func (s MemoryStoresService) List(ctx context.Context, params *ListMemoryStoresP
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s MemoryStoresService) Create(ctx context.Context, body CreateMemoryStoreRequest) (*MemoryStore, error) {
-	response, err := s.client.raw.CreateMemoryStoreWithResponse(ctx, body)
+	response, err := s.client.raw.CreateMemoryStoreWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s MemoryStoresService) Get(ctx context.Context, storeID string) (*MemoryStore, error) {
-	response, err := s.client.raw.ReadMemoryStoreWithResponse(ctx, storeID)
+	response, err := s.client.raw.ReadMemoryStoreWithResponse(ctx, storeID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -806,7 +822,7 @@ func (s MemoryStoresService) Get(ctx context.Context, storeID string) (*MemorySt
 }
 
 func (s MemoryStoresService) Update(ctx context.Context, storeID string, body UpdateMemoryStoreRequest) (*MemoryStore, error) {
-	response, err := s.client.raw.UpdateMemoryStoreWithResponse(ctx, storeID, body)
+	response, err := s.client.raw.UpdateMemoryStoreWithResponse(ctx, storeID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -822,7 +838,7 @@ func (s MemoryStoresService) ListMemories(ctx context.Context, storeID string, p
 }
 
 func (s MemoryStoresService) CreateMemory(ctx context.Context, storeID string, body CreateMemoryStoreMemoryRequest) (*MemoryStoreMemory, error) {
-	response, err := s.client.raw.CreateMemoryStoreMemoryWithResponse(ctx, storeID, body)
+	response, err := s.client.raw.CreateMemoryStoreMemoryWithResponse(ctx, storeID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +846,7 @@ func (s MemoryStoresService) CreateMemory(ctx context.Context, storeID string, b
 }
 
 func (s MemoryStoresService) UpdateMemory(ctx context.Context, storeID string, memoryID string, body UpdateMemoryStoreMemoryRequest) (*MemoryStoreMemory, error) {
-	response, err := s.client.raw.UpdateMemoryStoreMemoryWithResponse(ctx, storeID, memoryID, body)
+	response, err := s.client.raw.UpdateMemoryStoreMemoryWithResponse(ctx, storeID, memoryID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -838,7 +854,7 @@ func (s MemoryStoresService) UpdateMemory(ctx context.Context, storeID string, m
 }
 
 func (s MemoryStoresService) DeleteMemory(ctx context.Context, storeID string, memoryID string) error {
-	response, err := s.client.raw.DeleteMemoryStoreMemoryWithResponse(ctx, storeID, memoryID)
+	response, err := s.client.raw.DeleteMemoryStoreMemoryWithResponse(ctx, storeID, memoryID, nil)
 	if err != nil {
 		return err
 	}
@@ -854,19 +870,19 @@ func (s VaultsService) List(ctx context.Context, params *ListVaultsParams) (*Vau
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s VaultsService) Create(ctx context.Context, body CreateVaultRequest) (*Vault, error) {
-	response, err := s.client.raw.CreateVaultWithResponse(ctx, body)
+	response, err := s.client.raw.CreateVaultWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s VaultsService) Get(ctx context.Context, vaultID string) (*Vault, error) {
-	response, err := s.client.raw.ReadVaultWithResponse(ctx, vaultID)
+	response, err := s.client.raw.ReadVaultWithResponse(ctx, vaultID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -874,7 +890,7 @@ func (s VaultsService) Get(ctx context.Context, vaultID string) (*Vault, error) 
 }
 
 func (s VaultsService) Update(ctx context.Context, vaultID string, body UpdateVaultRequest) (*Vault, error) {
-	response, err := s.client.raw.UpdateVaultWithResponse(ctx, vaultID, body)
+	response, err := s.client.raw.UpdateVaultWithResponse(ctx, vaultID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -890,7 +906,7 @@ func (s VaultsService) ListCredentials(ctx context.Context, vaultID string, para
 }
 
 func (s VaultsService) CreateCredential(ctx context.Context, vaultID string, body CreateVaultCredentialRequest) (*VaultCredential, error) {
-	response, err := s.client.raw.CreateVaultCredentialWithResponse(ctx, vaultID, body)
+	response, err := s.client.raw.CreateVaultCredentialWithResponse(ctx, vaultID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -898,7 +914,7 @@ func (s VaultsService) CreateCredential(ctx context.Context, vaultID string, bod
 }
 
 func (s VaultsService) GetCredential(ctx context.Context, vaultID string, credentialID string) (*VaultCredential, error) {
-	response, err := s.client.raw.ReadVaultCredentialWithResponse(ctx, vaultID, credentialID)
+	response, err := s.client.raw.ReadVaultCredentialWithResponse(ctx, vaultID, credentialID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -906,7 +922,7 @@ func (s VaultsService) GetCredential(ctx context.Context, vaultID string, creden
 }
 
 func (s VaultsService) UpdateCredential(ctx context.Context, vaultID string, credentialID string, body UpdateVaultCredentialRequest) (*VaultCredential, error) {
-	response, err := s.client.raw.UpdateVaultCredentialWithResponse(ctx, vaultID, credentialID, body)
+	response, err := s.client.raw.UpdateVaultCredentialWithResponse(ctx, vaultID, credentialID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -914,7 +930,7 @@ func (s VaultsService) UpdateCredential(ctx context.Context, vaultID string, cre
 }
 
 func (s VaultsService) UpdateCredentialSecret(ctx context.Context, vaultID string, credentialID string, body UpdateVaultCredentialSecretRequest) (*VaultCredential, error) {
-	response, err := s.client.raw.UpdateVaultCredentialSecretWithResponse(ctx, vaultID, credentialID, body)
+	response, err := s.client.raw.UpdateVaultCredentialSecretWithResponse(ctx, vaultID, credentialID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -930,7 +946,7 @@ func (s VaultsService) ListCredentialVersions(ctx context.Context, vaultID strin
 }
 
 func (s VaultsService) GetCredentialVersion(ctx context.Context, vaultID string, credentialID string, versionID string) (*VaultCredentialVersion, error) {
-	response, err := s.client.raw.ReadVaultCredentialVersionWithResponse(ctx, vaultID, credentialID, versionID)
+	response, err := s.client.raw.ReadVaultCredentialVersionWithResponse(ctx, vaultID, credentialID, versionID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -946,11 +962,11 @@ func (s UsageService) ListRecords(ctx context.Context, params *ListUsageRecordsP
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s UsageService) GetRecord(ctx context.Context, recordID string) (*UsageRecord, error) {
-	response, err := s.client.raw.ReadUsageRecordWithResponse(ctx, recordID)
+	response, err := s.client.raw.ReadUsageRecordWithResponse(ctx, recordID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -962,7 +978,7 @@ func (s UsageService) GetSummary(ctx context.Context, params *ReadUsageSummaryPa
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 type RunnerConfigzService struct {
@@ -986,19 +1002,19 @@ func (s RunnerRunnersService) List(ctx context.Context, params *ListRunnersParam
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s RunnerRunnersService) Create(ctx context.Context, body CreateRunnerRequest) (*Runner, error) {
-	response, err := s.client.raw.CreateRunnerWithResponse(ctx, body)
+	response, err := s.client.raw.CreateRunnerWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON409)
+	return unwrap(response.StatusCode(), response.Body, response.JSON201, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
 }
 
 func (s RunnerRunnersService) Get(ctx context.Context, runnerID string) (*Runner, error) {
-	response, err := s.client.raw.ReadRunnerWithResponse(ctx, runnerID)
+	response, err := s.client.raw.ReadRunnerWithResponse(ctx, runnerID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,7 +1022,7 @@ func (s RunnerRunnersService) Get(ctx context.Context, runnerID string) (*Runner
 }
 
 func (s RunnerRunnersService) Update(ctx context.Context, runnerID string, body UpdateRunnerRequest) (*Runner, error) {
-	response, err := s.client.raw.UpdateRunnerWithResponse(ctx, runnerID, body)
+	response, err := s.client.raw.UpdateRunnerWithResponse(ctx, runnerID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1018,7 +1034,7 @@ func (s RunnerRunnersService) Channel(ctx context.Context, runnerID string) (JSO
 }
 
 func (s RunnerRunnersService) GetHeartbeat(ctx context.Context, runnerID string) (*RunnerHeartbeat, error) {
-	response, err := s.client.raw.ReadRunnerHeartbeatWithResponse(ctx, runnerID)
+	response, err := s.client.raw.ReadRunnerHeartbeatWithResponse(ctx, runnerID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1026,7 +1042,7 @@ func (s RunnerRunnersService) GetHeartbeat(ctx context.Context, runnerID string)
 }
 
 func (s RunnerRunnersService) PutHeartbeat(ctx context.Context, runnerID string, body PutRunnerHeartbeatRequest) (*RunnerHeartbeat, error) {
-	response, err := s.client.raw.PutRunnerHeartbeatWithResponse(ctx, runnerID, body)
+	response, err := s.client.raw.PutRunnerHeartbeatWithResponse(ctx, runnerID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1042,11 +1058,11 @@ func (s RunnerWorkItemsService) List(ctx context.Context, params *ListWorkItemsP
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s RunnerWorkItemsService) Get(ctx context.Context, workItemID string) (*WorkItem, error) {
-	response, err := s.client.raw.ReadWorkItemWithResponse(ctx, workItemID)
+	response, err := s.client.raw.ReadWorkItemWithResponse(ctx, workItemID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1062,11 +1078,11 @@ func (s RunnerLeasesService) List(ctx context.Context, params *ListLeasesParams)
 	if err != nil {
 		return nil, err
 	}
-	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403)
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404)
 }
 
 func (s RunnerLeasesService) Create(ctx context.Context, body CreateLeaseRequest) (*Lease, error) {
-	response, err := s.client.raw.CreateLeaseWithResponse(ctx, body)
+	response, err := s.client.raw.CreateLeaseWithResponse(ctx, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1074,7 +1090,7 @@ func (s RunnerLeasesService) Create(ctx context.Context, body CreateLeaseRequest
 }
 
 func (s RunnerLeasesService) Get(ctx context.Context, leaseID string) (*Lease, error) {
-	response, err := s.client.raw.ReadLeaseWithResponse(ctx, leaseID)
+	response, err := s.client.raw.ReadLeaseWithResponse(ctx, leaseID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1082,7 +1098,7 @@ func (s RunnerLeasesService) Get(ctx context.Context, leaseID string) (*Lease, e
 }
 
 func (s RunnerLeasesService) Update(ctx context.Context, leaseID string, body UpdateLeaseRequest) (*Lease, error) {
-	response, err := s.client.raw.UpdateLeaseWithResponse(ctx, leaseID, body)
+	response, err := s.client.raw.UpdateLeaseWithResponse(ctx, leaseID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1094,7 +1110,7 @@ type RunnerSessionsService struct {
 }
 
 func (s RunnerSessionsService) CreateEvents(ctx context.Context, sessionID string, body CreateSessionEventsRequest) (*SessionEventsAccepted, error) {
-	response, err := s.client.raw.CreateSessionEventsWithResponse(ctx, sessionID, body)
+	response, err := s.client.raw.CreateSessionEventsWithResponse(ctx, sessionID, nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1111,6 +1127,7 @@ func (s RunnerSessionsService) CreateRawEvents(ctx context.Context, sessionID st
 	response, err := s.client.raw.CreateSessionEventsWithBodyWithResponse(
 		ctx,
 		sessionID,
+		nil,
 		"application/json",
 		bytes.NewReader(body),
 	)

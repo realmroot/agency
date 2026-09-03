@@ -154,13 +154,18 @@ async function establishBrowserSession() {
   return sessionCookie!
 }
 
-async function jsonFetch(path: string, authorization?: string, init?: { method?: string; body?: unknown }) {
+async function jsonFetch(
+  path: string,
+  authorization?: string,
+  init?: { method?: string; body?: unknown; headers?: HeadersInit },
+) {
   const method = init?.method ?? (init?.body !== undefined ? 'POST' : 'GET')
   return SELF.fetch(`https://example.com${path}`, {
     method,
     headers: {
       'content-type': 'application/json',
       ...(authorization ? dpopHeaders(authorization, method, path) : {}),
+      ...init?.headers,
     },
     ...(init?.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
   })
@@ -794,6 +799,74 @@ describe('[CF] projects v1', () => {
     await expect(readRes.json()).resolves.toMatchObject({ id: project.id, name: 'Control Plane' })
   })
 
+  it('[spec: projects/rename] renames ordinary projects while protecting tenant and Default boundaries', async () => {
+    const tenantA = await signInUser('project_rename_tenant_a')
+    const initialProjects = await jsonFetch('/api/v1/projects', tenantA)
+    const defaultProject = ((await initialProjects.json()) as { data: Array<{ id: string }> }).data[0]!
+    const createRes = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Old workspace name' } })
+    const project = (await createRes.json()) as { id: string; createdAt: string; updatedAt: string }
+
+    const renamedRes = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'New workspace name' },
+    })
+    expect(renamedRes.status).toBe(200)
+    await expect(renamedRes.json()).resolves.toMatchObject({
+      id: project.id,
+      name: 'New workspace name',
+      createdAt: project.createdAt,
+      updatedAt: expect.any(String),
+    })
+    await expect((await jsonFetch(`/api/v1/projects/${project.id}`, tenantA)).json()).resolves.toMatchObject({
+      id: project.id,
+      name: 'New workspace name',
+    })
+
+    const defaultRename = await jsonFetch(`/api/v1/projects/${defaultProject.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'Renamed Default' },
+    })
+    expect(defaultRename.status).toBe(409)
+    await expect(defaultRename.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default project cannot be edited' },
+    })
+
+    const reservedRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'Default' },
+    })
+    expect(reservedRename.status).toBe(409)
+    await expect(reservedRename.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default is a reserved project name' },
+    })
+
+    const invalidRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: '' },
+    })
+    expect(invalidRename.status).toBe(400)
+    await expect(invalidRename.json()).resolves.toMatchObject({ error: { type: 'validation_error' } })
+
+    const missingRename = await jsonFetch('/api/v1/projects/project_missing', tenantA, {
+      method: 'PATCH',
+      body: { name: 'Still missing' },
+    })
+    expect(missingRename.status).toBe(404)
+    await expect(missingRename.json()).resolves.toEqual({
+      error: { type: 'not_found', message: 'Project not found' },
+    })
+
+    const tenantB = await signInUser('project_rename_tenant_b')
+    const concealedRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantB, {
+      method: 'PATCH',
+      body: { name: 'Cross-tenant rename' },
+    })
+    expect(concealedRename.status).toBe(404)
+    await expect(concealedRename.json()).resolves.toEqual({
+      error: { type: 'not_found', message: 'Project not found' },
+    })
+  })
+
   it('returns 404 for unknown projects', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/projects/project_missing', authorization)
@@ -811,6 +884,119 @@ describe('[CF] projects v1', () => {
     const tenantB = await signInUser('proj_tenant_b')
     const res = await jsonFetch(`/api/v1/projects/${project.id}`, tenantB)
     expect(res.status).toBe(404)
+  })
+
+  it('fails closed for invalid project selectors while supporting the query compatibility form [spec: api-contracts/realmroot-toolbox]', async () => {
+    const tenantA = await signInUser('project_selector_tenant_a')
+    const alternateCreate = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Alternate workspace' } })
+    const alternate = (await alternateCreate.json()) as { id: string }
+    const createdAgent = await jsonFetch('/api/v1/agents', tenantA, {
+      body: {
+        metadata: { name: 'Alternate project agent' },
+        spec: { systemPrompt: 'Remain in the selected project.' },
+      },
+      headers: { 'x-ama-project-id': alternate.id },
+    })
+    expect(createdAgent.status).toBe(201)
+    const agent = (await createdAgent.json()) as { metadata: { uid: string } }
+
+    const querySelected = await jsonFetch(
+      `/api/v1/agents?x-ama-project-id=${encodeURIComponent(alternate.id)}`,
+      tenantA,
+    )
+    expect(querySelected.status).toBe(200)
+    await expect(querySelected.json()).resolves.toMatchObject({
+      data: [{ metadata: { uid: agent.metadata.uid } }],
+    })
+
+    for (const response of [
+      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-ama-project-id': 'project_missing' } }),
+      await jsonFetch('/api/v1/agents', tenantA, { headers: { 'x-ama-project-id': '' } }),
+      await jsonFetch('/api/v1/agents?x-ama-project-id=project_missing', tenantA),
+    ]) {
+      expect(response.status).toBe(404)
+      await expect(response.json()).resolves.toEqual({
+        error: { type: 'not_found', message: 'Project not found' },
+      })
+    }
+
+    const tenantB = await signInUser('project_selector_tenant_b')
+    const foreignCreate = await jsonFetch('/api/v1/projects', tenantB, { body: { name: 'Foreign workspace' } })
+    const foreignProject = (await foreignCreate.json()) as { id: string }
+    const concealed = await jsonFetch('/api/v1/agents', tenantA, {
+      headers: { 'x-ama-project-id': foreignProject.id },
+    })
+    expect(concealed.status).toBe(404)
+    await expect(concealed.json()).resolves.toEqual({
+      error: { type: 'not_found', message: 'Project not found' },
+    })
+  })
+
+  it('[spec: projects/delete-empty] deletes only empty projects in the caller organization', async () => {
+    const tenantA = await signInUser('project_delete_tenant_a')
+    const initialProjects = await jsonFetch('/api/v1/projects', tenantA)
+    const defaultProject = ((await initialProjects.json()) as { data: Array<{ id: string }> }).data[0]!
+    const defaultDelete = await jsonFetch(`/api/v1/projects/${defaultProject.id}`, tenantA, { method: 'DELETE' })
+    expect(defaultDelete.status).toBe(409)
+    await expect(defaultDelete.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default project cannot be deleted' },
+    })
+
+    const reservedDefaultCreate = await jsonFetch('/api/v1/projects', tenantA, {
+      body: { name: 'Default' },
+    })
+    expect(reservedDefaultCreate.status).toBe(409)
+    await expect(reservedDefaultCreate.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default is a reserved project name' },
+    })
+
+    const emptyCreate = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Empty workspace' } })
+    const emptyProject = (await emptyCreate.json()) as { id: string }
+
+    const deleted = await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA, { method: 'DELETE' })
+    expect(deleted.status).toBe(204)
+    expect(await deleted.text()).toBe('')
+    expect((await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA)).status).toBe(404)
+    expect((await jsonFetch(`/api/v1/projects/${emptyProject.id}`, tenantA, { method: 'DELETE' })).status).toBe(404)
+
+    const occupiedCreate = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Occupied workspace' } })
+    const occupiedProject = (await occupiedCreate.json()) as { id: string }
+    const now = '2026-09-02T00:00:00.000Z'
+    await env.DB.prepare(`INSERT INTO agents (
+      id, project_id, name, system_prompt, skills, subagents, allowed_tools, mcp_connectors, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, '[]', '[]', '[]', '[]', ?, ?)`)
+      .bind('agent_project_delete_guard', occupiedProject.id, 'Deletion guard', 'Remain attached.', now, now)
+      .run()
+
+    const occupiedDelete = await jsonFetch(`/api/v1/projects/${occupiedProject.id}`, tenantA, { method: 'DELETE' })
+    expect(occupiedDelete.status).toBe(409)
+    await expect(occupiedDelete.json()).resolves.toMatchObject({
+      error: { type: 'conflict', message: 'Project is not empty' },
+    })
+
+    const tenantB = await signInUser('project_delete_tenant_b')
+    expect((await jsonFetch(`/api/v1/projects/${occupiedProject.id}`, tenantB, { method: 'DELETE' })).status).toBe(404)
+  })
+
+  it('ensures exactly one Default before concurrent custom creates in a brand-new organization', async () => {
+    const authorization = await signInUser('project_default_on_create')
+    const [firstCreate, secondCreate] = await Promise.all([
+      jsonFetch('/api/v1/projects', authorization, { body: { name: 'First workspace' } }),
+      jsonFetch('/api/v1/projects', authorization, { body: { name: 'Second workspace' } }),
+    ])
+    expect(firstCreate.status).toBe(201)
+    expect(secondCreate.status).toBe(201)
+    const first = (await firstCreate.json()) as { id: string }
+
+    const stored = await env.DB.prepare(`
+      SELECT name
+      FROM projects
+      WHERE organization_id = (SELECT organization_id FROM projects WHERE id = ?)
+      ORDER BY name
+    `)
+      .bind(first.id)
+      .all<{ name: string }>()
+    expect(stored.results).toEqual([{ name: 'Default' }, { name: 'First workspace' }, { name: 'Second workspace' }])
   })
 
   it('paginates the project list with cursors', async () => {

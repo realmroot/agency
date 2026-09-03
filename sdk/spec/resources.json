@@ -13,7 +13,9 @@
         { "name": "projects", "methods": [
           { "name": "list", "operationId": "listProjects" },
           { "name": "create", "operationId": "createProject" },
-          { "name": "get", "operationId": "readProject" }
+          { "name": "get", "operationId": "readProject" },
+          { "name": "update", "operationId": "updateProject" },
+          { "name": "delete", "operationId": "deleteProject" }
         ] },
         { "name": "agents", "methods": [
           { "name": "list", "operationId": "listAgents" },

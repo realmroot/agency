@@ -20,11 +20,15 @@ def _get_kwargs(
     *,
     body: CreateAgentRequest,
     idempotency_key: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
     if not isinstance(idempotency_key, Unset):
         headers["idempotency-key"] = idempotency_key
+
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
 
 
 
@@ -75,6 +79,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
@@ -102,12 +113,14 @@ def sync_detailed(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
         idempotency_key (str | Unset):
+        x_ama_project_id (str | Unset):
         body (CreateAgentRequest):
 
     Raises:
@@ -122,6 +135,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -136,12 +150,14 @@ def sync(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
         idempotency_key (str | Unset):
+        x_ama_project_id (str | Unset):
         body (CreateAgentRequest):
 
     Raises:
@@ -157,6 +173,7 @@ def sync(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -165,12 +182,14 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[Agent | ErrorResponse]:
     """ Create an agent
 
     Args:
         idempotency_key (str | Unset):
+        x_ama_project_id (str | Unset):
         body (CreateAgentRequest):
 
     Raises:
@@ -185,6 +204,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -199,12 +219,14 @@ async def asyncio(
     client: AuthenticatedClient,
     body: CreateAgentRequest,
     idempotency_key: str | Unset = UNSET,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Agent | ErrorResponse | None:
     """ Create an agent
 
     Args:
         idempotency_key (str | Unset):
+        x_ama_project_id (str | Unset):
         body (CreateAgentRequest):
 
     Raises:
@@ -220,5 +242,6 @@ async def asyncio(
         client=client,
 body=body,
 idempotency_key=idempotency_key,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed

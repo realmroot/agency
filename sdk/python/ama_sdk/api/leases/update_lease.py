@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.lease import Lease
 from ...models.update_lease_request import UpdateLeaseRequest
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     lease_id: str,
     *,
     body: UpdateLeaseRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(x_ama_project_id, Unset):
+        headers["X-AMA-Project-ID"] = x_ama_project_id
+
 
 
 
@@ -105,12 +110,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateLeaseRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Lease]:
     """ Renew or finish a work lease
 
     Args:
         lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
+        x_ama_project_id (str | Unset):
         body (UpdateLeaseRequest):
 
     Raises:
@@ -125,6 +132,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         lease_id=lease_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -139,12 +147,14 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: UpdateLeaseRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Lease | None:
     """ Renew or finish a work lease
 
     Args:
         lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
+        x_ama_project_id (str | Unset):
         body (UpdateLeaseRequest):
 
     Raises:
@@ -160,6 +170,7 @@ def sync(
         lease_id=lease_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     ).parsed
 
@@ -168,12 +179,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: UpdateLeaseRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Lease]:
     """ Renew or finish a work lease
 
     Args:
         lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
+        x_ama_project_id (str | Unset):
         body (UpdateLeaseRequest):
 
     Raises:
@@ -188,6 +201,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         lease_id=lease_id,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )
 
@@ -202,12 +216,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: UpdateLeaseRequest,
+    x_ama_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Lease | None:
     """ Renew or finish a work lease
 
     Args:
         lease_id (str):  Example: 0195f5d6-7c20-7000-8000-000000000013.
+        x_ama_project_id (str | Unset):
         body (UpdateLeaseRequest):
 
     Raises:
@@ -223,5 +239,6 @@ async def asyncio(
         lease_id=lease_id,
 client=client,
 body=body,
+x_ama_project_id=x_ama_project_id,
 
     )).parsed
