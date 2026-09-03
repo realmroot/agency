@@ -15,5 +15,10 @@ dependencies = [
     "websockets>=14.0,<16.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/realmroot/enbor"
+Repository = "https://github.com/realmroot/enbor"
+Issues = "https://github.com/realmroot/enbor/issues"
+
 [tool.hatch.build.targets.wheel]
 packages = ["enbor_sdk"]

@@ -82,13 +82,16 @@ describe('generated SDK layout [spec: api-contracts/sdk-layout]', () => {
     expect(existsSync('src/lib/api.ts')).toBe(false)
   })
 
-  it('publishes versioned Enbor SDK artifacts through GitHub', () => {
+  it('publishes versioned Enbor SDK artifacts through their native channels', () => {
     const workflow = readFileSync('.github/workflows/enbor-sdk-release.yml', 'utf8')
 
     expect(workflow).toContain('enbor-sdk-v*')
     expect(workflow).toContain('packages: write')
+    expect(workflow).toContain('id-token: write')
     expect(workflow).toContain('pnpm --filter @realmroot/enbor-sdk publish')
+    expect(workflow).toContain('pypa/gh-action-pypi-publish@')
+    expect(workflow).toContain('packages-dir: sdk/python/dist/')
     expect(workflow).toMatch(/sdk\/go\/v\$\{version\}/)
-    expect(workflow).toContain('sdk/python/dist/*')
+    expect(workflow).not.toContain('sdk/python/dist/*')
   })
 })

@@ -4,14 +4,26 @@ on:
   push:
     tags:
       - "enbor-sdk-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing SDK version to publish to PyPI
+        required: true
+        default: "0.1.0"
 
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/enbor-sdk
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -43,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#enbor-sdk-v}"
+          version="${RELEASE_VERSION#enbor-sdk-v}"
           VERSION="$version" node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs'
 
@@ -66,15 +78,22 @@ jobs:
         working-directory: .
 
       - name: Publish TypeScript SDK to GitHub Packages
+        if: github.event_name == 'push'
         run: pnpm --filter @realmroot/enbor-sdk publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish Python SDK to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: sdk/python/dist/
+
       - name: Publish Go module tag
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#enbor-sdk-v}"
+          version="${RELEASE_VERSION#enbor-sdk-v}"
           go_tag="sdk/go/v${version}"
           if git ls-remote --exit-code --tags origin "refs/tags/${go_tag}" >/dev/null 2>&1; then
             echo "${go_tag} already exists"
@@ -84,6 +103,7 @@ jobs:
           git push origin "$go_tag"
 
       - name: Publish GitHub release
+        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,6 +112,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             sdk/openapi.json \
             sdk/release-artifacts/typescript/*.tgz \
-            sdk/python/dist/* \
             --title "Enbor SDK v${GITHUB_REF_NAME#enbor-sdk-v}" \
             --generate-notes
