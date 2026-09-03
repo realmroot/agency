@@ -1,8 +1,10 @@
 import {
   IdentityRuntimeMismatchError,
   IdentityRuntimeRequiredError,
+  IdentityRuntimeUnsupportedError,
   resolveIdentityRuntime,
 } from '@server/domain/identity'
+import { runtimeNameForIdentity } from '@server/domain/runtime/driver'
 import type { RuntimeName } from '@server/domain/runtime-catalog'
 import {
   hasSecretMaterial,
@@ -110,9 +112,13 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
   }
   let runtime: RuntimeName
   try {
-    runtime = resolveIdentityRuntime(input.config.template.spec.runtime, agent.spec.identity)
+    runtime = runtimeNameForIdentity(resolveIdentityRuntime(input.config.template.spec.runtime, agent.spec.identity))
   } catch (error) {
-    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+    if (
+      error instanceof IdentityRuntimeMismatchError ||
+      error instanceof IdentityRuntimeRequiredError ||
+      error instanceof IdentityRuntimeUnsupportedError
+    ) {
       throw new TriggerConflictError(error.message, 409, error.code)
     }
     throw error
@@ -272,10 +278,17 @@ export async function updateTrigger(
           : template.spec.runtime
     template = {
       ...template,
-      spec: { ...template.spec, runtime: resolveIdentityRuntime(requestedRuntime, agent.spec.identity) },
+      spec: {
+        ...template.spec,
+        runtime: runtimeNameForIdentity(resolveIdentityRuntime(requestedRuntime, agent.spec.identity)),
+      },
     }
   } catch (error) {
-    if (error instanceof IdentityRuntimeMismatchError || error instanceof IdentityRuntimeRequiredError) {
+    if (
+      error instanceof IdentityRuntimeMismatchError ||
+      error instanceof IdentityRuntimeRequiredError ||
+      error instanceof IdentityRuntimeUnsupportedError
+    ) {
       throw new TriggerConflictError(error.message, 409, error.code)
     }
     throw error

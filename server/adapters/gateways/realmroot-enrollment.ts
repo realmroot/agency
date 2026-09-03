@@ -1,5 +1,4 @@
-import type { IdentityCheckpoint, IdentityDescriptor } from '@server/domain/identity'
-import type { RuntimeName } from '@server/domain/runtime-catalog'
+import type { IdentityCheckpoint, IdentityDescriptor, IdentityRuntime } from '@server/domain/identity'
 import type { Env } from '@server/env'
 import { newPrimaryKey } from '@server/id'
 import type { RealmrootEnrollmentGateway, RealmrootManagementCredential } from '@server/usecases/ports'
@@ -117,7 +116,7 @@ async function initializeState(input: { origin: string; name: string; runtime: s
   } satisfies PrivateState
 }
 
-function identity(value: unknown, expected: { issuer: string; username: string; runtime: RuntimeName }) {
+function identity(value: unknown, expected: { issuer: string; username: string; runtime: IdentityRuntime }) {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Realmroot Agent response is invalid')
   const agent = value as Record<string, unknown>
@@ -143,7 +142,7 @@ function identity(value: unknown, expected: { issuer: string; username: string; 
 async function createRemote(
   config: Configuration,
   state: PrivateState,
-  input: { username: string; name: string; runtime: RuntimeName; credential: RealmrootManagementCredential },
+  input: { username: string; name: string; runtime: IdentityRuntime; credential: RealmrootManagementCredential },
 ) {
   const url = `${new URL(config.issuer).origin}/api/agents`
   const value = await requestJson(url, {

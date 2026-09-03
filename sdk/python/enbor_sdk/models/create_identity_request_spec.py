@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.create_identity_request_spec_runtime import CreateIdentityRequestSpecRuntime
 
 
 
@@ -24,11 +23,12 @@ class CreateIdentityRequestSpec:
     """
         Attributes:
             username (str):
-            runtime (CreateIdentityRequestSpecRuntime):
+            runtime (str): Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a
+                registered AMA runtime driver. Example: codex.
      """
 
     username: str
-    runtime: CreateIdentityRequestSpecRuntime
+    runtime: str
 
 
 
@@ -37,7 +37,7 @@ class CreateIdentityRequestSpec:
     def to_dict(self) -> dict[str, Any]:
         username = self.username
 
-        runtime = self.runtime.value
+        runtime = self.runtime
 
 
         field_dict: dict[str, Any] = {}
@@ -56,10 +56,7 @@ class CreateIdentityRequestSpec:
         d = dict(src_dict)
         username = d.pop("username")
 
-        runtime = CreateIdentityRequestSpecRuntime(d.pop("runtime"))
-
-
-
+        runtime = d.pop("runtime")
 
         create_identity_request_spec = cls(
             username=username,

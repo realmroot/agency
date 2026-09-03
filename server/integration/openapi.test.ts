@@ -77,6 +77,12 @@ function expectJsonErrorResponse(operation: OpenApiOperation, status: string) {
 describe('[CF] OpenAPI documentation', () => {
   it('publishes the generated control-plane OpenAPI document [spec: agents/api-openapi] [spec: environments/api-openapi] [spec: mcp/openapi] [spec: runners/openapi] [spec: triggers/openapi] [spec: api-contracts/openapi] [spec: api-contracts/resource-entities]', async () => {
     const doc = await fetchOpenApi()
+    const identityRuntime = doc.components?.schemas?.IdentityRuntime as
+      | { type?: string; pattern?: string; enum?: string[] }
+      | undefined
+
+    expect(identityRuntime).toMatchObject({ type: 'string', pattern: '^[a-z0-9][a-z0-9._-]{0,63}$' })
+    expect(identityRuntime).not.toHaveProperty('enum')
 
     expect(doc.openapi).toBe('3.0.0')
     expect(doc.servers).toEqual([{ url: 'https://ama.tftt.cc' }])

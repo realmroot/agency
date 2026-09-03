@@ -114,6 +114,8 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
     'codex',
     'claude-code',
     'copilot',
+    'hermes',
+    'antigravity',
   ] as const)('[spec: identities/provision] accepts a Realmroot state object enrolled with AGENT=%s', (runtime) => {
     const state = JSON.stringify({
       version: 18,
@@ -135,12 +137,12 @@ describe('[spec: vaults/credential-create] validateSecretData', () => {
     })
   })
 
-  it('[spec: identities/provision] rejects unsupported Realmroot runtimes', () => {
+  it('[spec: identities/provision] rejects invalid Realmroot runtime identifiers', () => {
     expect(
       validateSecretData('ama.dev/realmroot-agent-state', {
-        'state.json': JSON.stringify(realmrootState({ runtime: 'unknown-runtime' })),
+        'state.json': JSON.stringify(realmrootState({ runtime: '../invalid' })),
       }),
-    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state contains an unsupported runtime.' })
+    ).toEqual({ 'stringData.state.json': 'Realmroot Agent state contains an invalid runtime.' })
   })
 
   it('rejects missing, unsafe, empty, and extra data keys', () => {

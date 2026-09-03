@@ -1,3 +1,4 @@
+import { isRuntimeName } from '@ama/runtime-contracts/runtime-names'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlarmClock } from 'lucide-react'
 import type { FormEvent } from 'react'
@@ -148,10 +149,11 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
         ? current.environmentId
         : environments[0]?.metadata.uid || ''
       const identityRuntime = agents.find((agent) => agent.metadata.uid === nextAgentId)?.spec.identity?.runtime
+      const supportedIdentityRuntime = isRuntimeName(identityRuntime) ? identityRuntime : undefined
       if (
         current.agentId === nextAgentId &&
         current.environmentId === nextEnvironmentId &&
-        (!identityRuntime || current.runtime === identityRuntime)
+        (!supportedIdentityRuntime || current.runtime === supportedIdentityRuntime)
       ) {
         return current
       }
@@ -159,7 +161,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
         ...current,
         agentId: nextAgentId,
         environmentId: nextEnvironmentId,
-        ...(identityRuntime ? { runtime: identityRuntime } : {}),
+        ...(supportedIdentityRuntime ? { runtime: supportedIdentityRuntime } : {}),
       }
     })
   }, [agents, environments, open])
@@ -218,7 +220,11 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
                   onValueChange={(agentId) => {
                     const identityRuntime = agents.find((agent) => agent.metadata.uid === agentId)?.spec.identity
                       ?.runtime
-                    setForm({ ...form, agentId, ...(identityRuntime ? { runtime: identityRuntime } : {}) })
+                    setForm({
+                      ...form,
+                      agentId,
+                      ...(isRuntimeName(identityRuntime) ? { runtime: identityRuntime } : {}),
+                    })
                   }}
                 >
                   <SelectTrigger id="trigger-agent" className="w-full">

@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.identity_descriptor_type_0_runtime import IdentityDescriptorType0Runtime
 
 
 
@@ -30,7 +29,8 @@ class IdentityDescriptorType0:
             subject (str): Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values;
                 legacy opaque snapshot values remain readable. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
             username (str):  Example: researcher.
-            runtime (IdentityDescriptorType0Runtime):
+            runtime (str): Canonical runtime identifier asserted by Realmroot. Binding to an Agent additionally requires a
+                registered AMA runtime driver. Example: codex.
      """
 
     identity_id: str
@@ -38,7 +38,7 @@ class IdentityDescriptorType0:
     issuer: str
     subject: str
     username: str
-    runtime: IdentityDescriptorType0Runtime
+    runtime: str
 
 
 
@@ -55,7 +55,7 @@ class IdentityDescriptorType0:
 
         username = self.username
 
-        runtime = self.runtime.value
+        runtime = self.runtime
 
 
         field_dict: dict[str, Any] = {}
@@ -86,10 +86,7 @@ class IdentityDescriptorType0:
 
         username = d.pop("username")
 
-        runtime = IdentityDescriptorType0Runtime(d.pop("runtime"))
-
-
-
+        runtime = d.pop("runtime")
 
         identity_descriptor_type_0 = cls(
             identity_id=identity_id,

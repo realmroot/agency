@@ -3,6 +3,7 @@ import {
   type IdentityDescriptor,
   IdentityRuntimeMismatchError,
   IdentityRuntimeRequiredError,
+  isIdentityRuntime,
   resolveIdentityRuntime,
 } from './identity'
 
@@ -17,6 +18,11 @@ const descriptor: IdentityDescriptor = {
 }
 
 describe('Identity runtime resolution', () => {
+  it('accepts canonical runtime identifiers independently of AMA drivers', () => {
+    expect(['hermes', 'antigravity', 'custom.runtime_1'].every(isIdentityRuntime)).toBe(true)
+    expect(['', '.invalid', 'Uppercase', 'path/runtime', 'a'.repeat(65)].some(isIdentityRuntime)).toBe(false)
+  })
+
   it('requires an explicit runtime without an Identity', () => {
     expect(() => resolveIdentityRuntime(undefined, null)).toThrow(IdentityRuntimeRequiredError)
     expect(() => resolveIdentityRuntime(undefined, null)).toThrow('Runtime is required')

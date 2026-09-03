@@ -25,6 +25,7 @@ Feature: Agents
     When the agent is created or updated
     Then a new Agent Version stores only the safe Identity descriptor and immutable runtime
     And changing or removing Identity creates another Agent Version
+    And an Identity whose runtime has no registered AMA driver is rejected without being bound
 
   @agents/inbox-identity-rebind @usecase
   Scenario: Keep a live Inbox Trigger bound to one mailbox identity

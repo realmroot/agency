@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { runtimeDriver, runtimeDriverName, runtimePlacement } from './driver'
+import { runtimeDriver, runtimeDriverName, runtimeNameForIdentity, runtimePlacement } from './driver'
 
 describe('[spec: runtime/driver-select] runtime drivers', () => {
   it('selects supported runtime drivers and rejects unknown names', () => {
@@ -14,6 +14,12 @@ describe('[spec: runtime/driver-select] runtime drivers', () => {
       cloudProtocol: null,
     })
     expect(() => runtimeDriver('unknown' as never)).toThrow('Unsupported runtime driver: unknown')
+  })
+
+  it('rejects an Identity runtime that has no registered driver', () => {
+    expect(() => runtimeNameForIdentity('hermes')).toThrow(
+      'Identity runtime is not supported by this AMA deployment: hermes.',
+    )
   })
 
   it('names cloud and self-hosted runtime drivers canonically', () => {

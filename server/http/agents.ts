@@ -1,4 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
+import { IdentityRuntimeSchema } from '@server/contracts/identity-contracts'
 import {
   ResourceCreateMetadataSchema,
   ResourceMetadataSchema,
@@ -13,6 +14,7 @@ import {
   type AgentVersion,
   defaultAllowedTools,
 } from '@server/domain/agent'
+import { IdentityRuntimeUnsupportedError } from '@server/domain/identity'
 import { requireAuth } from '../auth/session'
 import {
   AuthenticatedOperation,
@@ -98,7 +100,7 @@ const IdentityDescriptorSchema = z
       example: '019ff41a-7da6-708f-8b05-44d4d0373685',
     }),
     username: z.string().openapi({ example: 'researcher' }),
-    runtime: z.enum(['ama', 'codex', 'claude-code', 'copilot']),
+    runtime: IdentityRuntimeSchema,
   })
   .strict()
   .openapi('IdentityDescriptor')
@@ -295,7 +297,10 @@ const createAgentRoute = createRoute({
     201: { description: 'Created agent', content: { 'application/json': { schema: AgentSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
-    409: { description: 'Identity already bound', content: { 'application/json': { schema: ErrorResponseSchema } } },
+    409: {
+      description: 'Identity already bound or its runtime has no registered AMA driver',
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+    },
   },
 })
 
@@ -332,7 +337,7 @@ const updateAgentRoute = createRoute({
     401: { description: 'Authentication required', content: { 'application/json': { schema: ErrorResponseSchema } } },
     404: { description: 'Agent not found', content: { 'application/json': { schema: ErrorResponseSchema } } },
     409: {
-      description: 'A live Inbox Trigger prevents the requested update',
+      description: 'A live Inbox Trigger, existing binding, or unsupported Identity runtime prevents the update',
       content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
@@ -665,6 +670,9 @@ function validationOr(c: Parameters<Parameters<AgentRoutes['openapi']>[1]>[0], e
     return c.json(domainValidation(error.message, error.fields), 400)
   }
   if (error instanceof IdentityAlreadyBoundError) {
+    return c.json({ error: { type: error.code, message: error.message } }, 409)
+  }
+  if (error instanceof IdentityRuntimeUnsupportedError) {
     return c.json({ error: { type: error.code, message: error.message } }, 409)
   }
   if (error instanceof CreationIdempotencyConflictError) {

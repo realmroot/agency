@@ -269,6 +269,60 @@ describe('irreversible resource soft-delete migration', () => {
   })
 })
 
+describe('[spec: identities/provision] open Identity runtime migration', () => {
+  it('preserves existing bindings while accepting canonical runtimes outside the AMA driver catalog', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec('PRAGMA foreign_keys = ON')
+    applyThrough(db, '0039_environment_runner_lifecycle.sql')
+    db.exec(`
+      INSERT INTO projects (id, organization_id, name, created_at, updated_at)
+      VALUES ('project_identity_runtime', 'org_1', 'Identity runtimes', '2026-01-01', '2026-01-01');
+      INSERT INTO identities (
+        id, project_id, organization_id, name, username, runtime, state, vault_id,
+        idempotency_key_hash, request_fingerprint, created_at, updated_at
+      ) VALUES (
+        'identity_codex', 'project_identity_runtime', 'org_1', 'Codex', 'codex-worker', 'codex', 'active',
+        'vault_identity', 'key_codex', 'fingerprint_codex', '2026-01-01', '2026-01-01'
+      );
+      INSERT INTO agents (id, project_id, name, system_prompt, identity_id, created_at, updated_at)
+      VALUES ('agent_codex', 'project_identity_runtime', 'Codex worker', 'Work.', 'identity_codex', '2026-01-01', '2026-01-01');
+    `)
+
+    apply(db, '0040_open_identity_runtimes.sql')
+
+    expect(db.prepare("SELECT runtime, bound_agent_id FROM identities WHERE id = 'identity_codex'").get()).toEqual({
+      runtime: 'codex',
+      bound_agent_id: 'agent_codex',
+    })
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    expect(() =>
+      db.exec(`
+        INSERT INTO identities (
+          id, project_id, organization_id, name, username, runtime, state, vault_id,
+          idempotency_key_hash, request_fingerprint, created_at, updated_at
+        ) VALUES (
+          'identity_antigravity', 'project_identity_runtime', 'org_1', 'Antigravity', 'gemini-worker',
+          'antigravity', 'active', 'vault_identity', 'key_antigravity', 'fingerprint_antigravity',
+          '2026-01-01', '2026-01-01'
+        );
+      `),
+    ).not.toThrow()
+    expect(() =>
+      db.exec(`
+        INSERT INTO identities (
+          id, project_id, organization_id, name, username, runtime, state, vault_id,
+          idempotency_key_hash, request_fingerprint, created_at, updated_at
+        ) VALUES (
+          'identity_invalid', 'project_identity_runtime', 'org_1', 'Invalid', 'invalid-worker',
+          '../invalid', 'active', 'vault_identity', 'key_invalid', 'fingerprint_invalid',
+          '2026-01-01', '2026-01-01'
+        );
+      `),
+    ).toThrow(/CHECK constraint failed/)
+    db.close()
+  })
+})
+
 describe('environment Runner lifecycle migration', () => {
   function legacyOrphanFixture(blocker?: 'busy' | 'leased') {
     const db = new DatabaseSync(':memory:')

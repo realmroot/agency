@@ -6,6 +6,7 @@ import {
   validateSkills,
   validateSubagents,
 } from '@server/domain/agent'
+import { runtimeNameForIdentity } from '@server/domain/runtime/driver'
 import { creationDigest, creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import {
@@ -59,6 +60,7 @@ async function selectedIdentity(deps: Deps, auth: AuthScope, identityRef: string
   if (identity.status.boundAgentId && identity.status.boundAgentId !== agentId) {
     throw new IdentityAlreadyBoundError()
   }
+  runtimeNameForIdentity(identity.status.descriptor.runtime)
   return identity.status.descriptor
 }
 

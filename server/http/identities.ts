@@ -1,6 +1,7 @@
 import { createRoute, type OpenAPIHono, z } from '@hono/zod-openapi'
 import { requireAuth } from '@server/auth/session'
 import { webSessionAccessToken } from '@server/auth/web-session'
+import { IdentityRuntimeSchema } from '@server/contracts/identity-contracts'
 import {
   ResourceCreateMetadataSchema,
   ResourceMetadataSchema,
@@ -28,7 +29,6 @@ import { requestId } from './request-context'
 
 type Routes = OpenAPIHono<DepsEnv>
 
-const RuntimeSchema = z.enum(['ama', 'codex', 'claude-code', 'copilot'])
 const DescriptorSchema = z
   .object({
     identityId: z.string(),
@@ -42,13 +42,13 @@ const DescriptorSchema = z
         'Stable OIDC subject used for Inbox addressing. New Realmroot subjects are bare UUIDv7 values; legacy opaque snapshot values remain readable.',
     }),
     username: z.string(),
-    runtime: RuntimeSchema,
+    runtime: IdentityRuntimeSchema,
   })
   .openapi('IdentityDescriptor')
 const IdentitySchema = z
   .object({
     metadata: ResourceMetadataSchema,
-    spec: z.object({ username: z.string(), runtime: RuntimeSchema }),
+    spec: z.object({ username: z.string(), runtime: IdentityRuntimeSchema }),
     status: z.object({
       phase: ResourcePhaseSchema,
       state: z.enum(['provisioning', 'active', 'error']),
@@ -69,7 +69,7 @@ const CreateSchema = z
           .min(1)
           .max(80)
           .regex(/^[a-z0-9][a-z0-9-]*$/),
-        runtime: RuntimeSchema,
+        runtime: IdentityRuntimeSchema,
       })
       .strict(),
   })
