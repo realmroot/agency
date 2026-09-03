@@ -1886,6 +1886,8 @@ export type SessionTurnInput = {
 // by the self-hosted runner channel.
 export interface CloudRuntimeLifecycle {
   startCloudSession(input: SandboxRuntimeStartInput): Promise<SandboxRuntimeStartResult>
+  activateCloudSession(input: SandboxRuntimeStartInput): Promise<void>
+  idleCloudSession(sandboxId: string, sleepAfterSeconds: number): Promise<void>
   stopCloudSession(sandboxId: string): Promise<void>
 }
 
@@ -1961,6 +1963,61 @@ export interface SessionOrchestrationStore {
     sessionId: string,
     expected: string | string[],
     fields: SessionUpdate,
+  ): Promise<boolean>
+  acquirePendingStartupLease(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  completeCloudSessionStart(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    fields: SessionUpdate,
+    runtimeMetadata: Record<string, unknown>,
+  ): Promise<boolean>
+  failCloudSessionStart(
+    projectId: string,
+    sessionId: string,
+    expectedStartedAt: string | null,
+    startupId: string,
+    fields: SessionUpdate,
+    runtimeMetadata: Record<string, unknown>,
+  ): Promise<boolean>
+  claimSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  completeSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    closedAt: string,
+  ): Promise<boolean>
+  failSessionClose(
+    projectId: string,
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    message: string,
+    timestamp: string,
+  ): Promise<boolean>
+  claimSessionReopen(projectId: string, sessionId: string, sandboxId: string, startedAt: string): Promise<boolean>
+  acquireIdleTurnLease(
+    projectId: string,
+    sessionId: string,
+    turnId: string,
+    leaseExpiresAt: string,
+    now: string,
   ): Promise<boolean>
   queueSessionWorkWhenState(
     projectId: string,
@@ -2051,12 +2108,20 @@ export interface SessionOrchestrationStore {
 
   // ── watchdog: stalled cloud sessions + leaked sandboxes ──
   markStalledCloudSessions(threshold: string, timestamp: string): Promise<void>
-  markIdleTimedOutSessions(timestamp: string): Promise<void>
   leakedSandboxSessions(
     terminalStates: string[],
     limit: number,
+    closingBefore: string,
   ): Promise<{ id: string; sandboxId: string | null; metadata: string | null }[]>
-  stampSandboxDestroyed(sessionId: string, metadataJson: string): Promise<void>
+  claimSandboxCleanup(
+    sessionId: string,
+    sandboxId: string,
+    cleanupId: string,
+    leaseExpiresAt: string,
+    timestamp: string,
+  ): Promise<boolean>
+  releaseSandboxCleanup(sessionId: string, sandboxId: string, cleanupId: string): Promise<boolean>
+  stampSandboxDestroyed(sessionId: string, sandboxId: string, cleanupId: string, destroyedAt: string): Promise<boolean>
 
   // ── runner session channel (durable object) ──
   channelSession(
@@ -2186,6 +2251,13 @@ export interface SessionRepo {
     fields: { title?: string; metadata?: Record<string, unknown> },
     updatedAt: string,
   ): Promise<Session | null>
+  setMetadataAnnotationIfMissing(
+    projectId: string,
+    sessionId: string,
+    key: string,
+    value: string,
+    updatedAt: string,
+  ): Promise<boolean>
 
   listMessages(query: SessionMessageListQuery): Promise<SessionMessageListPage>
   findMessage(projectId: string, sessionId: string, messageId: string): Promise<SessionMessage | null>

@@ -30,12 +30,14 @@ import {
 import { cloudTurnSystemAuth } from '@server/domain/runtime/system-auth'
 import {
   CONTINUATION_LIMIT_REASON,
+  lifecycleLeaseExpiry,
   MAX_CONTINUATION_DEPTH,
   newTurnId,
   TURN_LEASE_RETRY_DELAY_SECONDS,
   turnLeaseExpiry,
 } from '@server/domain/runtime/turn'
-import { now, RUNTIME_START_TIMEOUT_MS, requestIdFrom, stringify, withTimeout } from '@server/domain/runtime/util'
+import { now, requestIdFrom } from '@server/domain/runtime/util'
+import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import { safeRuntimeError } from '@server/runtime-error'
 import { type AmaEvent, SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
@@ -49,6 +51,7 @@ import type {
   PolicyPort,
   ProviderRepo,
   RuntimeSecretGateway,
+  SandboxRuntimeStartInput,
   SessionOrchestrationStore,
   SessionRow,
 } from '../ports'
@@ -68,6 +71,78 @@ type CreateApprovalGate = (values: {
   sessionMetadata: Record<string, unknown>
   appendEvent: (event: AmaEvent) => Promise<string>
 }) => ToolApprovalGate
+
+function idleTimeoutSeconds(metadataJson: string | null): number | null {
+  const metadata = parseJson<Record<string, unknown>>(metadataJson) ?? {}
+  const annotations = metadata.annotations
+  if (!annotations || typeof annotations !== 'object' || Array.isArray(annotations)) return null
+  const value = Number((annotations as Record<string, unknown>)[AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS])
+  return Number.isInteger(value) && value > 0 ? value : null
+}
+
+async function idleCloudSessionIfConfigured(deps: CloudTurnDeps, auth: AuthScope, session: SessionRow) {
+  if (!session.sandboxId) return
+  const timeoutSeconds = idleTimeoutSeconds(session.metadata)
+  if (timeoutSeconds === null) return
+  try {
+    await deps.cloudRuntime.idleCloudSession(session.sandboxId, timeoutSeconds)
+  } catch (error) {
+    const runtime = safeRuntimeError(error)
+    await deps.audit.record(auth, {
+      action: 'session.runtime.idle',
+      resourceType: 'session',
+      resourceId: session.id,
+      outcome: 'failure',
+      sessionId: session.id,
+      metadata: { sandboxId: session.sandboxId, timeoutSeconds, runtime },
+    })
+  }
+}
+
+export async function activateCloudSessionForTurn(
+  deps: CloudTurnDeps,
+  auth: AuthScope,
+  session: SessionRow,
+  agentSnapshot: AgentSnapshot,
+) {
+  if (!session.sandboxId) return
+  if (!agentSnapshot.provider) throw new Error('Cloud session provider is required')
+  const metadata = parseJson<Record<string, unknown>>(session.metadata) ?? {}
+  if (metadata.sandboxBackend === 'runner-sandbox') return
+  const environmentSnapshot = parseJson<EnvironmentSnapshot>(session.environmentSnapshot)
+  const runtimeConfig =
+    metadata.runtimeConfig && typeof metadata.runtimeConfig === 'object' && !Array.isArray(metadata.runtimeConfig)
+      ? (metadata.runtimeConfig as Record<string, unknown>)
+      : {}
+  const volumes = parseJson<Volume[]>(session.volumes) ?? []
+  const volumeMounts = parseJson<VolumeMount[]>(session.volumeMounts) ?? []
+  const envFrom = parseJson<EnvFromEntry[]>(session.envFrom) ?? []
+  const directEnv = parseJson<Record<string, string>>(session.env) ?? {}
+  const resolvedEnv = await deps.runtimeSecrets.resolveEnv(
+    { organizationId: auth.organization.id, projectId: auth.project.id },
+    envFrom,
+  )
+  const workspaceManifest = await deps.runtimeSecrets.resolveWorkspaceManifest(
+    { organizationId: auth.organization.id, projectId: auth.project.id },
+    volumes,
+    volumeMounts,
+  )
+  const input: SandboxRuntimeStartInput = {
+    sessionId: session.id,
+    sandboxId: session.sandboxId,
+    provider: agentSnapshot.provider,
+    model: agentSnapshot.model,
+    agentSnapshot: agentSnapshotWithWorkspaceContext(agentSnapshot, volumes, volumeMounts),
+    environmentSnapshot: environmentSnapshot ? { ...environmentSnapshot, runtimeConfig } : null,
+    mcpServers: await resolveMcpServers(deps, auth, session.id, agentSnapshot, environmentSnapshot),
+    volumes,
+    volumeMounts,
+    workspaceManifest,
+    env: { ...directEnv, ...resolvedEnv },
+    ...(typeof metadata.runtime === 'string' ? { runtime: metadata.runtime } : {}),
+  }
+  await deps.cloudRuntime.activateCloudSession(input)
+}
 
 export type CloudTurnDeps = {
   sessionOrchestration: SessionOrchestrationStore
@@ -113,6 +188,17 @@ export async function startSessionRuntimeForRow(
   if (!driver.supportsCloudStartup) {
     throw new Error(`Runtime ${runtimeName} does not support cloud session startup`)
   }
+  const startupLeaseId = newTurnId()
+  const startupClaimedAt = now()
+  const startupClaimed = await store.acquirePendingStartupLease(
+    auth.project.id,
+    sessionId,
+    pending.startedAt,
+    startupLeaseId,
+    lifecycleLeaseExpiry(startupClaimedAt),
+    startupClaimedAt,
+  )
+  if (!startupClaimed) return
   try {
     const mcpServers = await resolveMcpServers(deps, auth, sessionId, agentSnapshot, environmentSnapshot)
     const environmentSnapshotWithRuntimeConfig = environmentSnapshot ? { ...environmentSnapshot, runtimeConfig } : null
@@ -129,35 +215,37 @@ export async function startSessionRuntimeForRow(
     if (!agentSnapshot.provider) {
       throw new Error('Cloud session provider is required')
     }
-    const startedRuntime = await withTimeout(
-      deps.cloudRuntime.startCloudSession({
-        sessionId,
-        sandboxId,
-        runtime: runtimeName,
-        provider: agentSnapshot.provider,
-        model: agentSnapshot.model,
-        agentSnapshot: runtimeAgentSnapshot,
-        environmentSnapshot: environmentSnapshotWithRuntimeConfig,
-        mcpServers,
-        volumes: sessionVolumes,
-        volumeMounts: sessionVolumeMounts,
-        workspaceManifest,
-        env,
-      }),
-      RUNTIME_START_TIMEOUT_MS,
-      'Session runtime startup timed out',
+    const launchAt = now()
+    const launchOwned = await store.renewTurnLease(
+      auth.project.id,
+      sessionId,
+      startupLeaseId,
+      lifecycleLeaseExpiry(launchAt),
     )
+    if (!launchOwned) return
+    const startedRuntime = await deps.cloudRuntime.startCloudSession({
+      sessionId,
+      sandboxId,
+      runtime: runtimeName,
+      provider: agentSnapshot.provider,
+      model: agentSnapshot.model,
+      agentSnapshot: runtimeAgentSnapshot,
+      environmentSnapshot: environmentSnapshotWithRuntimeConfig,
+      mcpServers,
+      volumes: sessionVolumes,
+      volumeMounts: sessionVolumeMounts,
+      workspaceManifest,
+      env,
+    })
     const current = await store.findSession(auth.project.id, sessionId)
     if (current?.state !== 'pending') {
-      if (current?.state !== 'idle') {
+      if (!current) {
         await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
       }
       return
     }
     const startedAt = now()
-    const existingMetadata = parseJson<Record<string, unknown>>(pending.metadata) ?? {}
-    const metadata = {
-      ...existingMetadata,
+    const runtimeMetadata = {
       ...startedRuntime.metadata,
       runtimeDriver: runtimeDriverName(runtimeName, 'cloud'),
       runtimeBackend: driver.cloudBackend,
@@ -173,19 +261,31 @@ export async function startSessionRuntimeForRow(
       resumeToken: null,
       runtimeEndpointPath: null,
       state: 'idle',
-      metadata: stringify(metadata),
+      activeTurnId: startupLeaseId,
+      turnLeaseExpiresAt: turnLeaseExpiry(startedAt),
       startedAt,
       closedAt: null,
       updatedAt: startedAt,
     }
-    const recorded = await store.updateSessionWhenState(auth.project.id, sessionId, 'pending', started)
+    const recorded = await store.completeCloudSessionStart(
+      auth.project.id,
+      sessionId,
+      pending.startedAt,
+      startupLeaseId,
+      started,
+      runtimeMetadata,
+    )
     if (!recorded) {
-      // The row left 'pending' between the re-read and this CAS (concurrent stop
-      // or a duplicate session.start). The just-provisioned sandbox is recorded
-      // on no row, so tear it down here — let a teardown error reach the catch.
-      await deps.cloudRuntime.stopCloudSession(sandboxId)
+      const latest = await store.findSession(auth.project.id, sessionId)
+      if (latest && latest.state !== 'idle' && latest.state !== 'running' && latest.state !== 'pending') {
+        await deps.cloudRuntime.stopCloudSession(sandboxId)
+      }
       return
     }
+    const startedSession = await store.findSession(auth.project.id, sessionId)
+    if (!startedSession) throw new Error('Started Session row is required')
+    if (!prompt) await idleCloudSessionIfConfigured(deps, auth, startedSession)
+    await store.releaseTurnLease(auth.project.id, sessionId, startupLeaseId, {})
     await deps.audit.record(auth, {
       action: 'session.runtime.start',
       resourceType: 'session',
@@ -196,17 +296,35 @@ export async function startSessionRuntimeForRow(
       metadata: { sandboxId: startedRuntime.sandboxId },
     })
     if (prompt) {
-      await dispatchPrompt(
-        deps,
-        auth,
-        { ...pending, ...started, stateReason: null, closedAt: null, archivedAt: null },
-        prompt,
-        input.requestId,
-      )
+      await dispatchPrompt(deps, auth, startedSession, prompt, input.requestId)
     }
   } catch (error) {
     const safeError = safeRuntimeError(error)
     const failedAt = now()
+    const failed = await store.failCloudSessionStart(
+      auth.project.id,
+      sessionId,
+      pending.startedAt,
+      startupLeaseId,
+      {
+        state: 'error',
+        stateReason: safeError.message,
+        activeTurnId: null,
+        turnLeaseExpiresAt: null,
+        updatedAt: failedAt,
+      },
+      {
+        runtimeDriver: runtimeDriverName(runtimeName, 'cloud'),
+        runtimeBackend: driver.cloudBackend,
+        error: safeError,
+      },
+    )
+    if (!failed) {
+      if (!(await store.findSession(auth.project.id, sessionId))) {
+        await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
+      }
+      return
+    }
     await deps.cloudRuntime.stopCloudSession(sandboxId).catch(() => undefined)
     await appendRuntimeEvent(deps, {
       auth,
@@ -220,18 +338,6 @@ export async function startSessionRuntimeForRow(
         },
       },
     })
-    const failed = {
-      state: 'error',
-      stateReason: safeError.message,
-      metadata: stringify({
-        ...(parseJson<Record<string, unknown>>(pending.metadata) ?? {}),
-        runtimeDriver: runtimeDriverName(runtimeName, 'cloud'),
-        runtimeBackend: driver.cloudBackend,
-        error: safeError,
-      }),
-      updatedAt: failedAt,
-    }
-    await store.updateSessionWhenState(auth.project.id, sessionId, 'pending', failed)
     await deps.audit.record(auth, {
       action: 'session.runtime.start',
       resourceType: 'session',
@@ -276,6 +382,7 @@ export async function executeCloudSessionTurn(
     const volumes = parseJson<Volume[]>(session.volumes) ?? []
     const volumeMounts = parseJson<VolumeMount[]>(session.volumeMounts) ?? []
     const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(agentSnapshot, volumes, volumeMounts)
+    await activateCloudSessionForTurn(deps, auth, session, agentSnapshot)
     const modelConfig = parseJson<Record<string, unknown>>(session.modelConfig) ?? {}
     const messages = await loadRuntimeMessages(deps, session.id)
     const { provider: turnProvider, model: turnModel } = resolveSessionProviderModel(
@@ -359,6 +466,7 @@ export async function executeCloudSessionTurn(
         state: 'idle',
         updatedAt: now(),
       })
+      await idleCloudSessionIfConfigured(deps, auth, session)
     }
 
     if (result.status === 'paused') {
@@ -382,6 +490,12 @@ export async function executeCloudSessionTurn(
   } catch (error) {
     if (isRuntimeTurnCancelled(error)) {
       if (callbacks?.approvalGate.requiresAction()) {
+        await store.updateSessionWhenState(auth.project.id, session.id, 'running', {
+          state: 'idle',
+          stateReason: 'requires-action',
+          updatedAt: now(),
+        })
+        await idleCloudSessionIfConfigured(deps, auth, session)
         return { ok: true, requiresAction: true }
       }
       return { ok: false, cancelled: true }
@@ -393,6 +507,7 @@ export async function executeCloudSessionTurn(
         stateReason: 'policy-denied',
         updatedAt: now(),
       })
+      await idleCloudSessionIfConfigured(deps, auth, session)
       return { ok: false, cancelled: false, error: safeError }
     }
     await markPromptFailed(deps, auth, session, safeError.message)
@@ -404,7 +519,7 @@ export async function executeCloudSessionTurn(
 // hold (turnId). A paused turn extends the chain — bumping the depth, enforcing
 // the cap, renewing the lease, and enqueuing the next step. Any terminal outcome
 // releases the lease so the next queued turn can claim it.
-async function handleTurnOutcome(
+export async function handleTurnOutcome(
   deps: CloudTurnDeps,
   auth: AuthScope,
   session: SessionRow,
@@ -417,6 +532,7 @@ async function handleTurnOutcome(
   if (outcome.ok && outcome.paused) {
     const depth = await store.incrementContinuationDepth(auth.project.id, session.id, turnId)
     if (depth >= MAX_CONTINUATION_DEPTH) {
+      await idleCloudSessionIfConfigured(deps, auth, session)
       await store.releaseTurnLease(auth.project.id, session.id, turnId, {
         state: 'idle',
         stateReason: CONTINUATION_LIMIT_REASON,

@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const scheduledMocks = vi.hoisted(() => ({
+  markStalledCloudSessions: vi.fn(async () => undefined),
   reconcileInboxSubscriptions: vi.fn(async () => undefined),
 }))
 
@@ -21,14 +22,28 @@ vi.mock('./usecases/providers', () => ({ refreshPlatformCatalog: vi.fn(async () 
 vi.mock('./usecases/runtime', () => ({
   consumeCloudTurnQueueMessage: vi.fn(),
   markCloudTurnDeadLettered: vi.fn(),
-  markIdleTimedOutSessions: vi.fn(async () => undefined),
-  markStalledCloudSessions: vi.fn(async () => undefined),
+  markStalledCloudSessions: scheduledMocks.markStalledCloudSessions,
 }))
 
 import worker from './worker'
 
 describe('Worker scheduled entry', () => {
+  beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.restoreAllMocks())
+
+  it('[spec: runtime/idle-retention] schedules stalled-session recovery without an idle-session closer', async () => {
+    const pending: Promise<unknown>[] = []
+    const ctx = { waitUntil: (promise: Promise<unknown>) => void pending.push(promise) } as ExecutionContext
+
+    worker.scheduled?.(
+      { scheduledTime: Date.parse('2026-08-31T01:01:00.000Z') } as ScheduledController,
+      {} as never,
+      ctx,
+    )
+    await Promise.all(pending)
+
+    expect(scheduledMocks.markStalledCloudSessions).toHaveBeenCalledOnce()
+  })
 
   it('redacts callback and Basic credentials from scheduled failure logs', async () => {
     const callbackToken = 'B'.repeat(43)

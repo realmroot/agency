@@ -268,12 +268,7 @@ export class CloudflareSandboxToolExecutor implements ToolExecutor {
 
   async stop(sandboxId: string) {
     const sandbox = await this.sandbox(sandboxId)
-    try {
-      await sandbox.destroy()
-    } catch {
-      // Teardown idempotency: a double-stop or stopping an already-gone sandbox
-      // must not throw — destroy is best-effort cleanup, not a turn outcome.
-    }
+    await sandbox.destroy()
   }
 
   private async sandbox(sandboxId: string) {

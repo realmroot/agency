@@ -6,6 +6,8 @@ const { getSandboxMock, mockExecutor, mockSandbox, toolExecutorMock } = vi.hoist
     exec: vi.fn(),
     writeFile: vi.fn(),
     setEnvVars: vi.fn(),
+    setSleepAfter: vi.fn(),
+    setKeepAlive: vi.fn(),
   }
   const mockExecutor = {
     execute: vi.fn(),
@@ -28,6 +30,7 @@ vi.mock('./sandbox-tool-executor', () => ({
 }))
 
 import {
+  createRuntimeExecutionAdapters,
   executeRuntimeToolCalls,
   RuntimeTurnCancelledError,
   runSessionTurn,
@@ -46,6 +49,8 @@ describe('session-runtime', () => {
     mockSandbox.exec.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
     mockSandbox.writeFile.mockReset()
     mockSandbox.setEnvVars.mockReset()
+    mockSandbox.setSleepAfter.mockReset()
+    mockSandbox.setKeepAlive.mockReset()
     getSandboxMock.mockClear()
     toolExecutorMock.mockClear()
   })
@@ -1059,7 +1064,8 @@ describe('session-runtime', () => {
         startSessionRuntime({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env, input),
       ]),
     ).resolves.toHaveLength(2)
-    expect(mockSandbox.writeFile).toHaveBeenCalledTimes(2)
+    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path !== '/tmp/.ama-runtime-ready')).toHaveLength(2)
+    expect(mockSandbox.writeFile.mock.calls.filter(([path]) => path === '/tmp/.ama-runtime-ready')).toHaveLength(3)
     expect(remainingStaging.size).toBe(0)
   })
 
@@ -1068,5 +1074,90 @@ describe('session-runtime', () => {
 
     expect(toolExecutorMock).toHaveBeenCalledTimes(1)
     expect(mockExecutor.stop).toHaveBeenCalledWith('sandbox_123')
+  })
+
+  it('[spec: runtime/idle-retention] configures sleep before releasing sandbox keepalive', async () => {
+    const calls: string[] = []
+    mockSandbox.setSleepAfter.mockImplementation(async (duration: string) => {
+      calls.push(`sleep:${duration}`)
+    })
+    mockSandbox.setKeepAlive.mockImplementation(async (keepAlive: boolean) => {
+      calls.push(`keepalive:${keepAlive}`)
+    })
+
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+    await adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)
+
+    expect(getSandboxMock).toHaveBeenCalledWith(expect.anything(), 'sandbox_123', { normalizeId: true })
+    expect(calls).toEqual(['sleep:60s', 'keepalive:false'])
+  })
+
+  it('[spec: runtime/idle-retention] reuses a ready sandbox without rebuilding its runtime workspace', async () => {
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+
+    await adapters.cloudRuntime.activateCloudSession({
+      sessionId: 'session_123',
+      sandboxId: 'sandbox_123',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: { systemPrompt: 'Resume work.' },
+      environmentSnapshot: null,
+      workspaceManifest: { root: '/workspace', mounts: [] },
+      env: { TOKEN: 'resolved' },
+    })
+
+    expect(getSandboxMock).toHaveBeenCalledOnce()
+    expect(getSandboxMock).toHaveBeenCalledWith({}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(mockSandbox.exec).toHaveBeenCalledWith("test -f '/tmp/.ama-runtime-ready'")
+    expect(mockSandbox.setEnvVars).not.toHaveBeenCalled()
+    expect(mockSandbox.writeFile).not.toHaveBeenCalled()
+  })
+
+  it('[spec: runtime/idle-retention] rebuilds a missing runtime in the same sandbox and writes its ready marker', async () => {
+    mockSandbox.exec.mockImplementation(async (command: string) => ({
+      exitCode: command === "test -f '/tmp/.ama-runtime-ready'" ? 1 : 0,
+      stdout: '',
+      stderr: '',
+    }))
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+
+    await adapters.cloudRuntime.activateCloudSession({
+      sessionId: 'session_123',
+      sandboxId: 'sandbox_123',
+      provider: 'workers-ai',
+      model: '@cf/moonshotai/kimi-k2.6',
+      agentSnapshot: { systemPrompt: 'Resume work.' },
+      environmentSnapshot: null,
+      workspaceManifest: { root: '/workspace', mounts: [] },
+      env: { TOKEN: 'resolved' },
+    })
+
+    expect(getSandboxMock).toHaveBeenCalledTimes(2)
+    expect(getSandboxMock).toHaveBeenNthCalledWith(1, {}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(getSandboxMock).toHaveBeenNthCalledWith(2, {}, 'sandbox_123', { keepAlive: true, normalizeId: true })
+    expect(mockSandbox.setEnvVars).toHaveBeenCalledWith({ TOKEN: 'resolved' })
+    expect(mockSandbox.exec).toHaveBeenCalledWith("mkdir -p '/root'", undefined)
+    expect(mockSandbox.writeFile).toHaveBeenCalledWith('/tmp/.ama-runtime-ready', 'ready', { encoding: 'utf-8' })
+  })
+
+  it('[spec: runtime/idle-retention] retries the complete idle operation after a transient keepalive failure', async () => {
+    mockSandbox.setKeepAlive.mockRejectedValueOnce(new Error('transient')).mockResolvedValueOnce(undefined)
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+
+    await adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)
+
+    expect(mockSandbox.setSleepAfter).toHaveBeenCalledTimes(2)
+    expect(mockSandbox.setKeepAlive).toHaveBeenCalledTimes(2)
+  })
+
+  it('[spec: runtime/idle-retention] propagates idle failure after three complete attempts', async () => {
+    const failure = new Error('keepalive unavailable')
+    mockSandbox.setKeepAlive.mockRejectedValue(failure)
+    const adapters = createRuntimeExecutionAdapters({ AMA_RUNTIME_MODE: 'live', SANDBOX: {} } as Env)
+
+    await expect(adapters.cloudRuntime.idleCloudSession('sandbox_123', 60)).rejects.toBe(failure)
+
+    expect(mockSandbox.setSleepAfter).toHaveBeenCalledTimes(3)
+    expect(mockSandbox.setKeepAlive).toHaveBeenCalledTimes(3)
   })
 })

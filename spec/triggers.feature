@@ -99,6 +99,8 @@ Feature: Triggers
     And a cloudflare-sandbox Session is reused without runner-channel preflight
     And different keys use different Sessions
     And notifications without a key each create a new Session
+    And created routed Sessions default to sixty seconds of idle retention unless template metadata explicitly sets another duration, including zero
+    And pre-existing routed Sessions missing that annotation are backfilled atomically without overwriting current metadata or an explicit zero
 
   @triggers/http-serial-dispatch @usecase
   Scenario: Serial HTTP triggers queue different subjects without delaying the active subject

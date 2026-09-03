@@ -1,10 +1,13 @@
 import type { ResourceMetadata } from '@server/domain/resource'
 import { newPrimaryKey } from '@server/id'
+import { AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS } from '@server/metadata-keys'
 import type { Deps } from './deps'
 import { dispatchToReusableSession } from './dispatch-triggers'
 import { inboxTokenHash } from './inbox-subscriptions'
 import type { AuthScope, InboxNotification, RuntimeSessionHandle } from './ports'
 import { createSession } from './runtime/sessions'
+
+const DEFAULT_INBOX_SESSION_IDLE_TIMEOUT_SECONDS = '60'
 
 export class InboxNotificationError extends Error {
   constructor(
@@ -109,6 +112,31 @@ async function dispatchExisting(
   return dispatchToReusableSession(deps, auth, session, prompt, correlationId)
 }
 
+async function ensureInboxIdleTimeout(
+  deps: Deps,
+  projectId: string,
+  session: RuntimeSessionHandle,
+  idleTimeoutSeconds: string,
+) {
+  const annotations = session.metadata.annotations
+  if (
+    annotations &&
+    typeof annotations === 'object' &&
+    !Array.isArray(annotations) &&
+    Object.hasOwn(annotations, AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS)
+  ) {
+    return
+  }
+  const exists = await deps.sessions.setMetadataAnnotationIfMissing(
+    projectId,
+    session.id,
+    AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS,
+    idleTimeoutSeconds,
+    new Date().toISOString(),
+  )
+  if (!exists) throw new Error('Inbox Session is no longer available')
+}
+
 export async function dispatchInboxActivation(deps: Deps, runId: string): Promise<void> {
   const repo = activationRepo(deps)
   const activation = await repo.findActivation(runId)
@@ -125,6 +153,7 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: trigger.spec.template.metadata.labels,
     annotations: {
+      [AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]: DEFAULT_INBOX_SESSION_IDLE_TIMEOUT_SECONDS,
       ...trigger.spec.template.metadata.annotations,
       source: 'inbox-trigger',
       inboxTriggerId: trigger.metadata.uid,
@@ -167,6 +196,12 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
       existing = await existingRouteSession(deps, activation.projectId, sessionId)
     }
     if (existing) {
+      await ensureInboxIdleTimeout(
+        deps,
+        activation.projectId,
+        existing,
+        String(sessionMetadata.annotations[AMA_ANNOTATION_KEY_SESSION_IDLE_TIMEOUT_SECONDS]),
+      )
       const outcome = await dispatchExisting(deps, auth, existing, prompt, activation.run.correlationId)
       if (!outcome.ok) {
         await deps.triggerDispatch.markRunFailed(trigger, activation.run, outcome.message)

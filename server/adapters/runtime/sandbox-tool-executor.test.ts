@@ -237,11 +237,12 @@ describe('tool-executor', () => {
     expect(sandboxMock.destroy).toHaveBeenCalledTimes(1)
   })
 
-  it('does not throw when stop destroy rejects (idempotent teardown)', async () => {
-    sandboxMock.destroy.mockRejectedValue(new Error('sandbox already gone'))
+  it('propagates destroy failure to the lifecycle owner', async () => {
+    const failure = new Error('sandbox destroy unavailable')
+    sandboxMock.destroy.mockRejectedValue(failure)
     const executor = new CloudflareSandboxToolExecutor({ SANDBOX: {} } as Env)
 
-    await expect(executor.stop('sandbox_123')).resolves.toBeUndefined()
+    await expect(executor.stop('sandbox_123')).rejects.toBe(failure)
     expect(sandboxMock.destroy).toHaveBeenCalledTimes(1)
   })
 })
