@@ -1357,6 +1357,10 @@ export interface ProjectListQuery {
 }
 
 export type ProjectDeleteResult = 'deleted' | 'not_found' | 'not_empty' | 'default_project'
+export type ProjectUpdateResult =
+  | { status: 'updated'; project: ProjectRecord }
+  | { status: 'not_found' }
+  | { status: 'default_project' }
 
 export class ProjectReservedNameError extends Error {
   constructor() {
@@ -1374,6 +1378,7 @@ export interface ProjectRepo {
   findDefault(organizationId: string): Promise<ProjectRecord | null>
   ensureDefault(organizationId: string, timestamp: string): Promise<ProjectRecord>
   insert(organizationId: string, name: string, timestamp: string): Promise<ProjectRecord>
+  updateName(organizationId: string, projectId: string, name: string, timestamp: string): Promise<ProjectRecord | null>
   delete(organizationId: string, projectId: string): Promise<ProjectDeleteResult>
 }
 

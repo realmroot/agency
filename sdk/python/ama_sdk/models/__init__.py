@@ -486,6 +486,7 @@ from .update_memory_store_memory_request import UpdateMemoryStoreMemoryRequest
 from .update_memory_store_memory_request_metadata import UpdateMemoryStoreMemoryRequestMetadata
 from .update_memory_store_request import UpdateMemoryStoreRequest
 from .update_memory_store_request_spec import UpdateMemoryStoreRequestSpec
+from .update_project_request import UpdateProjectRequest
 from .update_runner_request import UpdateRunnerRequest
 from .update_runner_request_metadata import UpdateRunnerRequestMetadata
 from .update_runner_request_state import UpdateRunnerRequestState
@@ -1044,6 +1045,7 @@ __all__ = (
     "UpdateMemoryStoreMemoryRequestMetadata",
     "UpdateMemoryStoreRequest",
     "UpdateMemoryStoreRequestSpec",
+    "UpdateProjectRequest",
     "UpdateRunnerRequest",
     "UpdateRunnerRequestMetadata",
     "UpdateRunnerRequestState",

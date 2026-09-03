@@ -703,6 +703,10 @@ export type CreateProjectRequest = {
     name: string;
 };
 
+export type UpdateProjectRequest = {
+    name: string;
+};
+
 export type AgentListResponse = {
     data: Array<Agent>;
     pagination: ListPagination;
@@ -2364,6 +2368,49 @@ export type ReadProjectResponses = {
 };
 
 export type ReadProjectResponse = ReadProjectResponses[keyof ReadProjectResponses];
+
+export type UpdateProjectData = {
+    body: UpdateProjectRequest;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{projectId}';
+};
+
+export type UpdateProjectErrors = {
+    /**
+     * Validation error
+     */
+    400: ErrorResponse;
+    /**
+     * Authentication required
+     */
+    401: ErrorResponse;
+    /**
+     * The Realmroot token lacks the scope required for this resource
+     */
+    403: ErrorResponse;
+    /**
+     * Project not found
+     */
+    404: ErrorResponse;
+    /**
+     * The Default project is immutable and its name is reserved
+     */
+    409: ErrorResponse;
+};
+
+export type UpdateProjectError = UpdateProjectErrors[keyof UpdateProjectErrors];
+
+export type UpdateProjectResponses = {
+    /**
+     * Renamed project
+     */
+    200: Project;
+};
+
+export type UpdateProjectResponse = UpdateProjectResponses[keyof UpdateProjectResponses];
 
 export type ListAgentsData = {
     body?: never;

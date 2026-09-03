@@ -6,6 +6,7 @@ import {
   type ProjectListQuery,
   type ProjectRecord,
   ProjectReservedNameError,
+  type ProjectUpdateResult,
 } from './ports'
 
 // Lists projects in the caller's organization. Every organization always has at
@@ -26,6 +27,20 @@ export async function createProject(deps: Deps, auth: OrgScope, name: string): P
   const timestamp = new Date().toISOString()
   await deps.projects.ensureDefault(auth.organization.id, timestamp)
   return deps.projects.insert(auth.organization.id, name, timestamp)
+}
+
+export async function updateProject(
+  deps: Deps,
+  auth: OrgScope,
+  projectId: string,
+  name: string,
+): Promise<ProjectUpdateResult> {
+  const project = await deps.projects.find(auth.organization.id, projectId)
+  if (!project) return { status: 'not_found' }
+  if (project.name === DEFAULT_PROJECT_NAME) return { status: 'default_project' }
+  if (name === DEFAULT_PROJECT_NAME) throw new ProjectReservedNameError()
+  const updated = await deps.projects.updateName(auth.organization.id, projectId, name, new Date().toISOString())
+  return updated ? { status: 'updated', project: updated } : { status: 'not_found' }
 }
 
 export async function deleteProject(deps: Deps, auth: OrgScope, projectId: string): Promise<ProjectDeleteResult> {

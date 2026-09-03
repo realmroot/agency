@@ -28,7 +28,7 @@ const METHODS = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const EXPECTED_RESTISH_OPERATIONS = {
   Config: ['readConfigz'],
   Auth: ['readAuthConfig'],
-  Projects: ['listProjects', 'createProject', 'deleteProject'],
+  Projects: ['listProjects', 'createProject', 'updateProject', 'deleteProject'],
   Agents: ['listAgents', 'createAgent'],
   Environments: ['listEnvironments', 'createEnvironment'],
   Sessions: ['listSessions', 'createSession'],
@@ -759,6 +759,22 @@ describe('[CF] OpenAPI documentation', () => {
       listSessionEvents: 'list-session-events',
       readAgentVersion: 'read-agent-version',
     })
+  })
+
+  it('publishes project rename for OpenAPI and Toolbox [spec: projects/rename]', async () => {
+    const doc = await fetchOpenApi()
+    const operation = doc.paths['/api/v1/projects/{projectId}'].patch
+
+    expect(operation).toMatchObject({
+      operationId: 'updateProject',
+      'x-cli-name': 'update-project',
+      tags: ['Projects'],
+    })
+    expect(operation.requestBody?.content?.['application/json']).toBeTruthy()
+    expect(Object.keys(operation.responses ?? {})).toEqual(expect.arrayContaining(['200', '400', '401', '404', '409']))
+    expectJsonErrorResponse(operation, '400')
+    expectJsonErrorResponse(operation, '404')
+    expectJsonErrorResponse(operation, '409')
   })
 
   it('serves interactive API docs', async () => {

@@ -24,6 +24,17 @@ Feature: Projects
     And a project with any associated resource is rejected as a conflict
     And a project in another organization remains concealed
 
+  @projects/rename @api
+  Scenario: Rename an ordinary project
+    Given a caller has an ordinary project in the current organization
+    When the caller renames that project through the Projects API or generated SDK
+    Then the updated Project is returned and the new name persists
+    And the system-owned "Default" project cannot be edited
+    And no ordinary project can be renamed to the reserved exact name "Default"
+    And unknown and foreign-organization projects remain concealed as not found
+    And an empty project name is rejected as invalid
+    And Toolbox exposes the operation as "update-project"
+
   # ── External product as substrate (e2e: real SDK + Worker + D1) ──
   # Native Playwright e2e specs execute these scenarios for real through `pnpm run e2e`.
 

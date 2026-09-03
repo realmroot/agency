@@ -92,6 +92,16 @@ export function createProjectRepo(db: Db): ProjectRepo {
       return recordFrom(row)
     },
 
+    async updateName(organizationId, projectId, name, timestamp) {
+      const row = await db
+        .update(projects)
+        .set({ name, updatedAt: timestamp })
+        .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
+        .returning()
+        .get()
+      return row ? recordFrom(row) : null
+    },
+
     async delete(organizationId, projectId) {
       try {
         const deleted = await db

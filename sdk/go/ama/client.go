@@ -301,6 +301,14 @@ func (s ProjectsService) Get(ctx context.Context, projectID string) (*Project, e
 	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON401, response.JSON403, response.JSON404)
 }
 
+func (s ProjectsService) Update(ctx context.Context, projectID string, body UpdateProjectRequest) (*Project, error) {
+	response, err := s.client.raw.UpdateProjectWithResponse(ctx, projectID, body)
+	if err != nil {
+		return nil, err
+	}
+	return unwrap(response.StatusCode(), response.Body, response.JSON200, response.JSON400, response.JSON401, response.JSON403, response.JSON404, response.JSON409)
+}
+
 func (s ProjectsService) Delete(ctx context.Context, projectID string) error {
 	response, err := s.client.raw.DeleteProjectWithResponse(ctx, projectID)
 	if err != nil {

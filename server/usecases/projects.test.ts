@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Deps } from './deps'
 import { type AuthScope, type ProjectRecord, ProjectReservedNameError } from './ports'
-import { createProject, deleteProject, listProjects } from './projects'
+import { createProject, deleteProject, listProjects, updateProject } from './projects'
 
 const auth: AuthScope = {
   organization: { id: 'org_1', name: 'Org' },
@@ -28,6 +28,7 @@ function fakeDeps(repo: Partial<Deps['projects']> = {}): Deps {
     findDefault: async () => null,
     ensureDefault: async () => projectRecord(),
     insert: async (_org, name, timestamp) => projectRecord({ name, createdAt: timestamp, updatedAt: timestamp }),
+    updateName: async () => null,
     delete: async () => 'not_found',
     ...repo,
   }
@@ -131,5 +132,72 @@ describe('deleteProject', () => {
 
     expect(result).toBe('default_project')
     expect(remove).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateProject [spec: projects/rename]', () => {
+  it('renames an ordinary project within the caller organization', async () => {
+    const updated = projectRecord({ id: 'project_2', name: 'Renamed workspace', updatedAt: '2026-02-01T00:00:00.000Z' })
+    const updateName = vi.fn(async () => updated)
+
+    const result = await updateProject(
+      fakeDeps({
+        find: async () => projectRecord({ id: 'project_2', name: 'Workspace' }),
+        findDefault: async () => projectRecord({ id: 'project_1' }),
+        updateName,
+      }),
+      auth,
+      'project_2',
+      'Renamed workspace',
+    )
+
+    expect(result).toEqual({ status: 'updated', project: updated })
+    expect(updateName).toHaveBeenCalledWith('org_1', 'project_2', 'Renamed workspace', expect.any(String))
+  })
+
+  it('protects the system Default project from editing', async () => {
+    const updateName = vi.fn(async () => projectRecord())
+
+    const result = await updateProject(
+      fakeDeps({ find: async () => projectRecord(), findDefault: async () => projectRecord(), updateName }),
+      auth,
+      'project_1',
+      'Renamed Default',
+    )
+
+    expect(result).toEqual({ status: 'default_project' })
+    expect(updateName).not.toHaveBeenCalled()
+  })
+
+  it('rejects the reserved Default name for an ordinary project', async () => {
+    const updateName = vi.fn(async () => projectRecord())
+
+    await expect(
+      updateProject(
+        fakeDeps({
+          find: async () => projectRecord({ id: 'project_2', name: 'Workspace' }),
+          findDefault: async () => projectRecord({ id: 'project_1' }),
+          updateName,
+        }),
+        auth,
+        'project_2',
+        'Default',
+      ),
+    ).rejects.toBeInstanceOf(ProjectReservedNameError)
+    expect(updateName).not.toHaveBeenCalled()
+  })
+
+  it('conceals an unknown project without updating', async () => {
+    const updateName = vi.fn(async () => projectRecord())
+
+    const result = await updateProject(
+      fakeDeps({ find: async () => null, updateName }),
+      auth,
+      'project_missing',
+      'Name',
+    )
+
+    expect(result).toEqual({ status: 'not_found' })
+    expect(updateName).not.toHaveBeenCalled()
   })
 })

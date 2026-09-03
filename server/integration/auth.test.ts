@@ -799,6 +799,74 @@ describe('[CF] projects v1', () => {
     await expect(readRes.json()).resolves.toMatchObject({ id: project.id, name: 'Control Plane' })
   })
 
+  it('[spec: projects/rename] renames ordinary projects while protecting tenant and Default boundaries', async () => {
+    const tenantA = await signInUser('project_rename_tenant_a')
+    const initialProjects = await jsonFetch('/api/v1/projects', tenantA)
+    const defaultProject = ((await initialProjects.json()) as { data: Array<{ id: string }> }).data[0]!
+    const createRes = await jsonFetch('/api/v1/projects', tenantA, { body: { name: 'Old workspace name' } })
+    const project = (await createRes.json()) as { id: string; createdAt: string; updatedAt: string }
+
+    const renamedRes = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'New workspace name' },
+    })
+    expect(renamedRes.status).toBe(200)
+    await expect(renamedRes.json()).resolves.toMatchObject({
+      id: project.id,
+      name: 'New workspace name',
+      createdAt: project.createdAt,
+      updatedAt: expect.any(String),
+    })
+    await expect((await jsonFetch(`/api/v1/projects/${project.id}`, tenantA)).json()).resolves.toMatchObject({
+      id: project.id,
+      name: 'New workspace name',
+    })
+
+    const defaultRename = await jsonFetch(`/api/v1/projects/${defaultProject.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'Renamed Default' },
+    })
+    expect(defaultRename.status).toBe(409)
+    await expect(defaultRename.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default project cannot be edited' },
+    })
+
+    const reservedRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: 'Default' },
+    })
+    expect(reservedRename.status).toBe(409)
+    await expect(reservedRename.json()).resolves.toEqual({
+      error: { type: 'conflict', message: 'Default is a reserved project name' },
+    })
+
+    const invalidRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantA, {
+      method: 'PATCH',
+      body: { name: '' },
+    })
+    expect(invalidRename.status).toBe(400)
+    await expect(invalidRename.json()).resolves.toMatchObject({ error: { type: 'validation_error' } })
+
+    const missingRename = await jsonFetch('/api/v1/projects/project_missing', tenantA, {
+      method: 'PATCH',
+      body: { name: 'Still missing' },
+    })
+    expect(missingRename.status).toBe(404)
+    await expect(missingRename.json()).resolves.toEqual({
+      error: { type: 'not_found', message: 'Project not found' },
+    })
+
+    const tenantB = await signInUser('project_rename_tenant_b')
+    const concealedRename = await jsonFetch(`/api/v1/projects/${project.id}`, tenantB, {
+      method: 'PATCH',
+      body: { name: 'Cross-tenant rename' },
+    })
+    expect(concealedRename.status).toBe(404)
+    await expect(concealedRename.json()).resolves.toEqual({
+      error: { type: 'not_found', message: 'Project not found' },
+    })
+  })
+
   it('returns 404 for unknown projects', async () => {
     const authorization = await signIn()
     const res = await jsonFetch('/api/v1/projects/project_missing', authorization)

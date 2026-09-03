@@ -53,6 +53,7 @@ from .api.projects import create_project as create_project_api
 from .api.projects import delete_project as delete_project_api
 from .api.projects import list_projects as list_projects_api
 from .api.projects import read_project as read_project_api
+from .api.projects import update_project as update_project_api
 from .api.providers import list_models as list_models_api
 from .api.providers import list_provider_models as list_provider_models_api
 from .api.providers import list_providers as list_providers_api
@@ -390,6 +391,9 @@ class _ProjectsResource:
 
     def get(self, project_id: str) -> Any:
         return _unwrap(read_project_api.sync_detailed(project_id=project_id, client=self._client))
+
+    def update(self, project_id: str, body: Any) -> Any:
+        return _unwrap(update_project_api.sync_detailed(project_id=project_id, client=self._client, body=body))
 
     def delete(self, project_id: str) -> Any:
         return _unwrap(delete_project_api.sync_detailed(project_id=project_id, client=self._client))
