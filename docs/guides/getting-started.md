@@ -5,6 +5,12 @@ Session. It is a non-normative integration guide; the generated
 [OpenAPI document](../../sdk/openapi.json) defines exact API shapes, and the
 [product Features](../../spec/) define observable behavior.
 
+This guide follows the application-SDK path. If an Agent should operate a live
+Enbor deployment for you, first read
+[Choose an Integration Path](choosing-an-integration-path.md) and use the
+`enbor-realmroot-toolbox` Skill instead of copying SDK credentials into the
+Agent prompt.
+
 ## Choose an Execution Model
 
 Enbor separates durable Agent configuration from the place where a Session

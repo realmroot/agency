@@ -6,7 +6,7 @@
       "type": "archive",
       "description": "Operate Enbor using its Agent Identity, with Realmroot as the current identity provider, controller-approved scopes, and the published OpenAPI contract.",
       "url": "/.well-known/agent-skills/enbor-realmroot-toolbox.tar.gz",
-      "digest": "sha256:b22b97f8a0e908abacdb0acd1d423f4e2ad7f77ba8ccd8cc9b71afc7a33b2515"
+      "digest": "sha256:c27acea9853d7063b815c22b2ec8eb570233561ce9002f5636c1e0b04423ada4"
     }
   ]
 }

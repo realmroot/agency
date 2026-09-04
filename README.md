@@ -158,6 +158,7 @@ defined only by the Gherkin Features under `spec/`.
 
 - [Documentation Index](docs/README.md) - documentation map and content ownership.
 - [Getting Started](docs/guides/getting-started.md) - choose an execution model and complete the first SDK workflow.
+- [Choose an Integration Path](docs/guides/choosing-an-integration-path.md) - decide when to use Context7, an SDK, the Enbor Skill, or Realmroot Toolbox.
 - [SDK Guide](sdk/README.md) - shared SDK concepts and language-specific guides.
 - [Contributor Guide](CONTRIBUTING.md) - local setup, verification, contribution workflow, and engineering rules.
 - [Product and API Specifications](spec/) - normative behavior in Gherkin Features.
