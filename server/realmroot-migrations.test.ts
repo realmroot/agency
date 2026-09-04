@@ -299,6 +299,121 @@ describe('[spec: runtime/enbor-contract-cutover] Enbor contract migration', () =
   })
 })
 
+describe('[spec: agents/subagent-references] Agent sub-agent reference migration', () => {
+  it('promotes embedded definitions to identityless Agents while preserving existing Session snapshots', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0041_enbor_contract.sql')
+    const legacySubagents = [
+      {
+        name: 'a/b',
+        description: 'Reviews proposed changes.',
+        systemPrompt: 'Review carefully.',
+        model: 'claude-sonnet',
+        skills: ['enbor@review'],
+        allowedTools: ['read', 'grep'],
+        mcpConnectors: ['github'],
+      },
+      {
+        name: 'a-b',
+        description: 'Checks the release.',
+        systemPrompt: 'Check release readiness.',
+        model: null,
+        skills: [],
+        allowedTools: ['read'],
+        mcpConnectors: [],
+      },
+    ]
+    db.exec(`
+      INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+        VALUES ('project_1','org_1','Project','2026-01-01','2026-01-01');
+    `)
+    db.prepare(`INSERT INTO agents (
+      id,project_id,name,system_prompt,subagents,current_version_id,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?)`).run(
+      'agent_parent',
+      'project_1',
+      'Parent',
+      'Coordinate work.',
+      JSON.stringify(legacySubagents),
+      'agentver_parent',
+      '2026-01-01',
+      '2026-01-01',
+    )
+    db.prepare(`INSERT INTO agent_versions (
+      id,agent_id,project_id,version,system_prompt,subagents,created_at
+    ) VALUES (?,?,?,?,?,?,?)`).run(
+      'agentver_parent',
+      'agent_parent',
+      'project_1',
+      1,
+      'Coordinate work.',
+      JSON.stringify(legacySubagents),
+      '2026-01-01',
+    )
+    db.prepare(`INSERT INTO sessions (
+      id,agent_id,organization_id,agent_version_id,agent_snapshot,project_id,durable_object_name,state,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+      'session_existing',
+      'agent_parent',
+      'org_1',
+      'agentver_parent',
+      JSON.stringify({ id: 'agentver_parent', subagents: legacySubagents }),
+      'project_1',
+      'session-do-existing',
+      'stopped',
+      '2026-01-01',
+      '2026-01-01',
+    )
+
+    apply(db, '0042_agent_subagent_references.sql')
+
+    const agentIds = ['migrated-subagent-agentver_parent-0', 'migrated-subagent-agentver_parent-1'] as const
+    const versionIds = [
+      'migrated-subagent-version-agentver_parent-0',
+      'migrated-subagent-version-agentver_parent-1',
+    ] as const
+    const parent = db.prepare('SELECT subagents FROM agents WHERE id = ?').get('agent_parent') as {
+      subagents: string
+    }
+    const parentVersion = db.prepare('SELECT subagents FROM agent_versions WHERE id = ?').get('agentver_parent') as {
+      subagents: string
+    }
+    const expectedReferences = [
+      { agentId: agentIds[0], name: 'a/b' },
+      { agentId: agentIds[1], name: 'a-b' },
+    ]
+    expect(JSON.parse(parent.subagents)).toEqual(expectedReferences)
+    expect(JSON.parse(parentVersion.subagents)).toEqual(expectedReferences)
+
+    expect(
+      db
+        .prepare('SELECT name,identity_id,identity_snapshot,subagents,current_version_id FROM agents WHERE id = ?')
+        .get(agentIds[0]),
+    ).toEqual({
+      name: 'a/b',
+      identity_id: null,
+      identity_snapshot: null,
+      subagents: '[]',
+      current_version_id: versionIds[0],
+    })
+
+    const session = db.prepare('SELECT agent_snapshot FROM sessions WHERE id = ?').get('session_existing') as {
+      agent_snapshot: string
+    }
+    expect(JSON.parse(session.agent_snapshot).subagents).toEqual(
+      legacySubagents.map((legacySubagent, index) => ({
+        ...legacySubagent,
+        agentId: agentIds[index],
+        agentVersionId: versionIds[index],
+        version: 1,
+        name: legacySubagent.name,
+        provider: null,
+      })),
+    )
+    db.close()
+  })
+})
+
 describe('[spec: projects/lifecycle] default Project naming migration', () => {
   it('renames stored default Projects without changing custom Projects', () => {
     const db = new DatabaseSync(':memory:')

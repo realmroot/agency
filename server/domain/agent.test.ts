@@ -65,44 +65,36 @@ describe('[spec: agents/validation] validateSkills', () => {
 
 describe('[spec: agents/validation] validateSubagents', () => {
   const subagent = {
+    agentId: 'agent_reviewer',
     name: 'reviewer',
-    description: 'Reviews the work.',
-    systemPrompt: 'Review the work.',
-    model: null,
-    allowedTools: ['read'],
-    skills: [],
-    mcpConnectors: [],
   }
 
-  it('requires stable sub-agent names, descriptions, and system prompts', () => {
+  it('requires stable names and Agent resource references', () => {
     expect(validateSubagents([{ ...subagent, name: 'has space' }])).toMatchObject({ subagents: expect.any(String) })
-    expect(validateSubagents([{ ...subagent, description: '' }])).toEqual({
-      subagents: 'Sub-agent description is required: reviewer',
-    })
-    expect(validateSubagents([{ ...subagent, systemPrompt: '' }])).toEqual({
-      subagents: 'Sub-agent system prompt is required: reviewer',
+    expect(validateSubagents([{ ...subagent, agentId: ' ' }])).toEqual({
+      subagents: 'Sub-agent must reference an Agent resource: reviewer',
     })
     expect(validateSubagents([subagent])).toBeNull()
+    expect(
+      validateSubagents([
+        { agentId: 'agent_slash', name: 'a/b' },
+        { agentId: 'agent_dash', name: 'a-b' },
+      ]),
+    ).toBeNull()
   })
 
-  it('rejects duplicate sub-agent names', () => {
-    expect(validateSubagents([subagent, { ...subagent, model: 'qa' }])).toEqual({
+  it('rejects duplicate names and Agent references', () => {
+    expect(validateSubagents([subagent, { ...subagent, agentId: 'agent_qa' }])).toEqual({
       subagents: 'Sub-agent is configured more than once: reviewer',
     })
-  })
-
-  it('rejects invalid sub-agent tools and skills', () => {
-    expect(validateSubagents([{ ...subagent, allowedTools: ['repo.delete'] }])).toEqual({
-      subagents: 'Tool is not supported by the Enbor runtime: repo.delete',
-    })
-    expect(validateSubagents([{ ...subagent, skills: ['missing-style'] }])).toEqual({
-      subagents: 'Skill must be a stable <source>@<skill> reference: missing-style',
+    expect(validateSubagents([subagent, { ...subagent, name: 'quality-reviewer' }])).toEqual({
+      subagents: 'Agent is referenced as a sub-agent more than once: agent_reviewer',
     })
   })
 
-  it('rejects secret material inside sub-agents', () => {
-    expect(validateSubagents([{ ...subagent, systemPrompt: 'raw-secret-token' }])).toEqual({
-      subagents: 'Secret material must be stored in a vault.',
+  it('[spec: agents/subagent-references] rejects a self-reference', () => {
+    expect(validateSubagents([{ agentId: 'agent_parent', name: 'self' }], 'agent_parent')).toEqual({
+      subagents: 'An Agent cannot reference itself as a sub-agent.',
     })
   })
 })

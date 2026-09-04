@@ -7,13 +7,7 @@ import {
   ResourceUpdateMetadataSchema,
   serializeResource,
 } from '@server/contracts/resource-contracts'
-import {
-  type Agent,
-  type AgentSpec,
-  type AgentSubagent,
-  type AgentVersion,
-  defaultAllowedTools,
-} from '@server/domain/agent'
+import { type Agent, type AgentSpec, type AgentVersion, defaultAllowedTools } from '@server/domain/agent'
 import { IdentityRuntimeUnsupportedError } from '@server/domain/identity'
 import { requireAuth } from '../auth/session'
 import {
@@ -37,47 +31,19 @@ import { requestId } from './request-context'
 
 type AgentRoutes = OpenAPIHono<DepsEnv>
 
-const SubagentSchema = z
+const SubagentReferenceSchema = z
   .object({
-    name: z.string().min(1).max(80).openapi({ example: 'reviewer' }),
-    description: z.string().openapi({ example: 'Reviews proposed changes for correctness and risk.' }),
-    systemPrompt: z.string().openapi({ example: 'Review the proposed changes and report risks.' }),
-    model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
-    allowedTools: z.array(z.string()).openapi({ example: ['read', 'grep'] }),
-    skills: z.array(z.string()).openapi({ example: ['enbor@code-review'] }),
-    mcpConnectors: z.array(z.string()).openapi({ example: ['github'] }),
+    agentId: z.string().min(1).max(160).openapi({
+      description: 'Existing Agent resource in the same project.',
+      example: '0195f5d6-7c20-7000-8000-000000000005',
+    }),
+    name: z.string().min(1).max(80).openapi({
+      description: 'Stable runtime alias used to address the referenced Agent as a sub-agent.',
+      example: 'reviewer',
+    }),
   })
   .strict()
-  .openapi('AgentSubagent')
-
-const SubagentInputSchema = z
-  .object({
-    name: z.string().min(1).max(80).openapi({ example: 'reviewer' }),
-    description: z.string().trim().min(1).max(1000).openapi({
-      example: 'Reviews proposed changes for correctness and risk.',
-    }),
-    systemPrompt: z.string().trim().min(1).max(8000).openapi({
-      example: 'Review the proposed changes and report risks.',
-    }),
-    model: z.string().min(1).nullable().optional().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
-    allowedTools: z
-      .array(z.string().min(1).max(120))
-      .max(100)
-      .optional()
-      .openapi({ example: ['read', 'grep'] }),
-    skills: z
-      .array(z.string().min(1).max(256))
-      .max(100)
-      .optional()
-      .openapi({ example: ['enbor@code-review'] }),
-    mcpConnectors: z
-      .array(z.string().min(1).max(120))
-      .max(50)
-      .optional()
-      .openapi({ example: ['github'] }),
-  })
-  .strict()
-  .openapi('AgentSubagentInput')
+  .openapi('AgentSubagentReference')
 
 const AllowedToolsSchema = z.array(z.string().min(1).max(120)).openapi({
   example: ['read', 'bash', 'edit'],
@@ -111,16 +77,11 @@ const AgentSpecSchema = z
     provider: z.string().nullable().openapi({ example: 'workers-ai' }),
     model: z.string().nullable().openapi({ example: '@cf/moonshotai/kimi-k2.6' }),
     skills: z.array(z.string()).openapi({ example: ['enbor@code-review'] }),
-    subagents: z.array(SubagentSchema).openapi({
+    subagents: z.array(SubagentReferenceSchema).openapi({
       example: [
         {
+          agentId: '0195f5d6-7c20-7000-8000-000000000005',
           name: 'reviewer',
-          description: 'Reviews proposed changes for correctness and risk.',
-          systemPrompt: 'Review the proposed changes and report risks.',
-          model: null,
-          allowedTools: ['read', 'grep'],
-          skills: ['enbor@code-review'],
-          mcpConnectors: ['github'],
         },
       ],
     }),
@@ -177,16 +138,14 @@ const AgentPayloadSchema = z
           .optional()
           .openapi({ example: ['enbor@code-review'] }),
         subagents: z
-          .array(SubagentInputSchema)
+          .array(SubagentReferenceSchema)
           .max(50)
           .optional()
           .openapi({
             example: [
               {
+                agentId: '0195f5d6-7c20-7000-8000-000000000005',
                 name: 'reviewer',
-                description: 'Reviews proposed changes for correctness and risk.',
-                systemPrompt: 'Review the proposed changes and report risks.',
-                allowedTools: ['read', 'grep'],
               },
             ],
           }),
@@ -572,7 +531,7 @@ function patchFromBody(body: z.infer<typeof UpdateAgentSchema>): UpdateAgentPatc
     ...(spec?.provider !== undefined ? { provider: spec.provider } : {}),
     ...(spec?.model !== undefined ? { model: spec.model } : {}),
     ...(spec?.skills !== undefined ? { skills: spec.skills } : {}),
-    ...(spec?.subagents !== undefined ? { subagents: normalizeSubagents(spec.subagents) } : {}),
+    ...(spec?.subagents !== undefined ? { subagents: spec.subagents } : {}),
     ...(spec?.allowedTools !== undefined ? { allowedTools: spec.allowedTools } : {}),
     ...(spec?.mcpConnectors !== undefined ? { mcpConnectors: spec.mcpConnectors } : {}),
     ...(spec?.identityRef !== undefined ? { identityRef: spec.identityRef } : {}),
@@ -586,22 +545,10 @@ function specFromPayload(body: z.infer<typeof AgentPayloadSchema>): Omit<AgentSp
     provider: spec.provider ?? null,
     model: spec.model ?? null,
     skills: spec.skills ?? [],
-    subagents: normalizeSubagents(spec.subagents ?? []),
+    subagents: spec.subagents ?? [],
     allowedTools: spec.allowedTools ?? defaultAllowedTools(),
     mcpConnectors: spec.mcpConnectors ?? [],
   }
-}
-
-function normalizeSubagents(subagents: z.infer<typeof SubagentInputSchema>[]): AgentSpec['subagents'] {
-  return subagents.map((subagent) => ({
-    name: subagent.name,
-    description: subagent.description,
-    systemPrompt: subagent.systemPrompt,
-    model: subagent.model ?? null,
-    allowedTools: subagent.allowedTools ?? defaultAllowedTools(),
-    skills: subagent.skills ?? [],
-    mcpConnectors: subagent.mcpConnectors ?? [],
-  }))
 }
 
 function serializeAgent(agent: Agent) {
@@ -610,7 +557,6 @@ function serializeAgent(agent: Agent) {
     ...resource,
     spec: {
       ...resource.spec,
-      subagents: serializeSubagents(resource.spec.subagents),
       identity: publicIdentity(resource.spec.identity),
     },
   }
@@ -622,31 +568,9 @@ function serializeAgentVersion(version: AgentVersion) {
     ...resource,
     spec: {
       ...resource.spec,
-      subagents: serializeSubagents(resource.spec.subagents),
       identity: publicIdentity(resource.spec.identity),
     },
   }
-}
-
-function serializeSubagents(subagents: AgentSpec['subagents']): AgentSpec['subagents'] {
-  return subagents.map((subagent) => {
-    const legacy = subagent as AgentSubagent & { bio?: unknown; instructions?: unknown }
-    return {
-      name: typeof legacy.name === 'string' ? legacy.name : '',
-      description:
-        typeof legacy.description === 'string' ? legacy.description : typeof legacy.bio === 'string' ? legacy.bio : '',
-      systemPrompt:
-        typeof legacy.systemPrompt === 'string'
-          ? legacy.systemPrompt
-          : typeof legacy.instructions === 'string'
-            ? legacy.instructions
-            : '',
-      model: typeof legacy.model === 'string' ? legacy.model : null,
-      allowedTools: Array.isArray(legacy.allowedTools) ? legacy.allowedTools : [],
-      skills: Array.isArray(legacy.skills) ? legacy.skills : [],
-      mcpConnectors: Array.isArray(legacy.mcpConnectors) ? legacy.mcpConnectors : [],
-    }
-  })
 }
 
 function publicIdentity(identity: Agent['spec']['identity']) {

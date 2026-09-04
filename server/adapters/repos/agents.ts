@@ -1,4 +1,4 @@
-import type { Agent, AgentSpec, AgentSubagent, AgentVersion } from '@server/domain/agent'
+import type { Agent, AgentSpec, AgentSubagentReference, AgentVersion } from '@server/domain/agent'
 import { DEFAULT_CONNECTORS } from '@server/domain/connector'
 import type { IdentityDescriptor } from '@server/domain/identity'
 import { resourceMetadata, resourcePhase } from '@server/domain/resource'
@@ -49,7 +49,7 @@ function specFromRow(row: AgentRow | AgentVersionRow): AgentSpec {
     provider: row.providerId,
     model: row.model,
     skills: parseJson<string[]>(row.skills),
-    subagents: parseJson<AgentSubagent[]>(row.subagents),
+    subagents: parseJson<AgentSubagentReference[]>(row.subagents),
     allowedTools: parseJson<string[]>(row.allowedTools),
     mcpConnectors: parseJson<string[]>(row.mcpConnectors),
     identity: row.identitySnapshot ? parseJson<IdentityDescriptor>(row.identitySnapshot) : null,

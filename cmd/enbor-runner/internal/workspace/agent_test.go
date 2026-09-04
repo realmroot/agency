@@ -13,7 +13,10 @@ func TestAgentSnapshotHelpersFilterAndFormatValues(t *testing.T) {
 	snapshot := map[string]any{
 		"skills": []any{" review ", "", 42, "triage"},
 		"subagents": []any{
-			map[string]any{"name": " reviewer ", "description": " Reviews code "},
+			map[string]any{
+				"name": " reviewer ", "description": " Reviews code ",
+				"skills": []any{"enbor@code-review", "triage"},
+			},
 			map[string]any{"description": "missing name"},
 			"invalid",
 		},
@@ -21,7 +24,7 @@ func TestAgentSnapshotHelpersFilterAndFormatValues(t *testing.T) {
 	if got := agentStringArray(snapshot["skills"]); strings.Join(got, ",") != "review,triage" {
 		t.Fatalf("unexpected string array %v", got)
 	}
-	if got := agentSkillRefs(snapshot); strings.Join(got, ",") != "review,triage" {
+	if got := agentSkillRefs(snapshot); strings.Join(got, ",") != "review,triage,enbor@code-review" {
 		t.Fatalf("unexpected skill refs %v", got)
 	}
 	if got := agentSubagentSummaries(snapshot["subagents"]); strings.Join(got, ",") != "@reviewer (Reviews code)" {

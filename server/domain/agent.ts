@@ -7,20 +7,15 @@ export interface AgentSpec {
   provider: string | null
   model: string | null
   skills: string[]
-  subagents: AgentSubagent[]
+  subagents: AgentSubagentReference[]
   allowedTools: string[]
   mcpConnectors: string[]
   identity: IdentityDescriptor | null
 }
 
-export interface AgentSubagent {
+export interface AgentSubagentReference {
+  agentId: string
   name: string
-  description: string
-  systemPrompt: string
-  model: string | null
-  allowedTools: string[]
-  skills: string[]
-  mcpConnectors: string[]
 }
 
 export interface Agent {
@@ -121,8 +116,9 @@ export function validateSkills(skills: string[]): FieldErrors | null {
   return null
 }
 
-export function validateSubagents(subagents: AgentSubagent[]): FieldErrors | null {
+export function validateSubagents(subagents: AgentSubagentReference[], parentAgentId?: string): FieldErrors | null {
   const names = new Set<string>()
+  const agentIds = new Set<string>()
   for (const subagent of subagents) {
     if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,79}$/.test(subagent.name)) {
       return { subagents: `Sub-agent name must be a stable identifier: ${subagent.name}` }
@@ -131,23 +127,16 @@ export function validateSubagents(subagents: AgentSubagent[]): FieldErrors | nul
       return { subagents: `Sub-agent is configured more than once: ${subagent.name}` }
     }
     names.add(subagent.name)
-    if (!subagent.description.trim()) {
-      return { subagents: `Sub-agent description is required: ${subagent.name}` }
+    if (!subagent.agentId.trim()) {
+      return { subagents: `Sub-agent must reference an Agent resource: ${subagent.name}` }
     }
-    if (!subagent.systemPrompt.trim()) {
-      return { subagents: `Sub-agent system prompt is required: ${subagent.name}` }
+    if (subagent.agentId === parentAgentId) {
+      return { subagents: 'An Agent cannot reference itself as a sub-agent.' }
     }
-    const toolsError = validateAllowedTools(subagent.allowedTools)
-    if (toolsError) {
-      return { subagents: Object.values(toolsError)[0] ?? 'Sub-agent allowed tools are invalid.' }
+    if (agentIds.has(subagent.agentId)) {
+      return { subagents: `Agent is referenced as a sub-agent more than once: ${subagent.agentId}` }
     }
-    const skillsError = validateSkills(subagent.skills)
-    if (skillsError) {
-      return { subagents: Object.values(skillsError)[0] ?? 'Sub-agent skills are invalid.' }
-    }
-    if (hasSecretMaterial(subagent)) {
-      return { subagents: 'Secret material must be stored in a vault.' }
-    }
+    agentIds.add(subagent.agentId)
   }
   return null
 }

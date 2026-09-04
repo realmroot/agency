@@ -739,20 +739,21 @@ export type AgentSpec = {
     provider: string | null;
     model: string | null;
     skills: Array<string>;
-    subagents: Array<AgentSubagent>;
+    subagents: Array<AgentSubagentReference>;
     allowedTools: Array<string>;
     mcpConnectors: Array<string>;
     identity: IdentityDescriptor;
 };
 
-export type AgentSubagent = {
+export type AgentSubagentReference = {
+    /**
+     * Existing Agent resource in the same project.
+     */
+    agentId: string;
+    /**
+     * Stable runtime alias used to address the referenced Agent as a sub-agent.
+     */
     name: string;
-    description: string;
-    systemPrompt: string;
-    model: string | null;
-    allowedTools: Array<string>;
-    skills: Array<string>;
-    mcpConnectors: Array<string>;
 };
 
 export type IdentityDescriptor = {
@@ -794,7 +795,7 @@ export type CreateAgentRequest = {
         provider?: string | null;
         model?: string | null;
         skills?: Array<string>;
-        subagents?: Array<AgentSubagentInput>;
+        subagents?: Array<AgentSubagentReference>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
         identityRef?: string | null;
@@ -806,16 +807,6 @@ export type ResourceCreateMetadata = {
     description?: string | null;
 };
 
-export type AgentSubagentInput = {
-    name: string;
-    description: string;
-    systemPrompt: string;
-    model?: string | null;
-    allowedTools?: Array<string>;
-    skills?: Array<string>;
-    mcpConnectors?: Array<string>;
-};
-
 export type UpdateAgentRequest = {
     metadata?: ResourceUpdateMetadata;
     spec?: {
@@ -823,7 +814,7 @@ export type UpdateAgentRequest = {
         provider?: string | null;
         model?: string | null;
         skills?: Array<string>;
-        subagents?: Array<AgentSubagentInput>;
+        subagents?: Array<AgentSubagentReference>;
         allowedTools?: Array<string>;
         mcpConnectors?: Array<string>;
         identityRef?: string | null;
@@ -1730,9 +1721,13 @@ export type SessionAgentSnapshot = {
 };
 
 export type SessionSubagent = {
+    agentId: string;
+    agentVersionId: string;
+    version: number;
     name: string;
     description: string;
     systemPrompt: string;
+    provider: string | null;
     model: string | null;
     allowedTools: Array<string>;
     skills: Array<string>;

@@ -22,7 +22,9 @@ const {
   resolveSessionProviderIdMock,
   validateRuntimeProviderModelMock,
   resolveSessionProviderConfigMock,
+  agentSubagentReferencesMock,
   createAgentSnapshotMock,
+  createSessionSubagentSnapshotMock,
   createEnvironmentSnapshotMock,
   insertSessionMock,
   insertWorkItemMock,
@@ -49,7 +51,29 @@ const {
   resolveSessionProviderIdMock: vi.fn(async () => 'anthropic'),
   validateRuntimeProviderModelMock: vi.fn(async () => true),
   resolveSessionProviderConfigMock: vi.fn(async () => ({ ok: true, config: null })),
-  createAgentSnapshotMock: vi.fn(() => ({ id: 'agentver_1', providerId: 'anthropic', model: '@cf/x' })),
+  agentSubagentReferencesMock: vi.fn((..._args: unknown[]): Array<{ agentId: string; name: string }> => []),
+  createAgentSnapshotMock: vi.fn(
+    (..._args: unknown[]): Record<string, unknown> => ({
+      id: 'agentver_1',
+      providerId: 'anthropic',
+      model: '@cf/x',
+    }),
+  ),
+  createSessionSubagentSnapshotMock: vi.fn(
+    (agent: { id: string }, version: { id: string; version: number }, name: string) => ({
+      agentId: agent.id,
+      agentVersionId: version.id,
+      version: version.version,
+      name,
+      description: 'Reviews work.',
+      systemPrompt: 'Review carefully.',
+      provider: null,
+      model: null,
+      allowedTools: ['read'],
+      skills: ['enbor@review'],
+      mcpConnectors: ['github'],
+    }),
+  ),
   createEnvironmentSnapshotMock: vi.fn(() => ({ id: 'envver_1', hostingMode: 'cloud', runtimeConfig: {} })),
   insertSessionMock: vi.fn<(row: SessionInsert) => Promise<void>>(async () => undefined),
   insertWorkItemMock: vi.fn<(row: WorkItemInsert) => Promise<void>>(async () => undefined),
@@ -76,7 +100,9 @@ vi.mock('./provisioning', async (importOriginal) => ({
 
 vi.mock('@server/domain/runtime/session-snapshot', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@server/domain/runtime/session-snapshot')>()),
+  agentSubagentReferences: agentSubagentReferencesMock,
   createAgentSnapshot: createAgentSnapshotMock,
+  createSessionSubagentSnapshot: createSessionSubagentSnapshotMock,
   createEnvironmentSnapshot: createEnvironmentSnapshotMock,
 }))
 
@@ -151,6 +177,9 @@ const auth: AuthScope = {
 
 describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
   beforeEach(() => {
+    agentSubagentReferencesMock.mockReset()
+    agentSubagentReferencesMock.mockReturnValue([])
+    createSessionSubagentSnapshotMock.mockClear()
     enqueueCloudTurnMock.mockReset()
     cloudTurnsRunInlineMock.mockReturnValue(false)
     recordAuditMock.mockReset()
@@ -227,6 +256,58 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
       (call) => (call[3] as { state?: string }).state === 'error',
     )
     expect(reconcile).toBeUndefined()
+  })
+
+  it('[spec: agents/subagent-references] resolves each reference to its current version before snapshotting the session', async () => {
+    const parentVersion = { id: 'agentver_parent', providerId: 'anthropic', model: '@cf/x' }
+    const reviewerVersion = { id: 'agentver_reviewer_2', version: 2 }
+    findAgentMock.mockImplementation(async (_projectId, agentId) =>
+      agentId === 'agent_parent'
+        ? { id: 'agent_parent', currentVersionId: parentVersion.id, archivedAt: null }
+        : {
+            id: 'agent_reviewer',
+            name: 'Reviewer',
+            description: 'Reviews work.',
+            currentVersionId: reviewerVersion.id,
+            deletedAt: null,
+          },
+    )
+    findAgentVersionMock.mockImplementation(async (agentId, versionId) =>
+      agentId === 'agent_parent' && versionId === parentVersion.id ? parentVersion : reviewerVersion,
+    )
+    agentSubagentReferencesMock.mockReturnValueOnce([{ agentId: 'agent_reviewer', name: 'reviewer' }])
+    createAgentSnapshotMock.mockImplementationOnce((_version, subagents) => ({
+      id: parentVersion.id,
+      provider: 'anthropic',
+      model: '@cf/x',
+      identity: null,
+      subagents,
+    }))
+    enqueueCloudTurnMock.mockResolvedValue(undefined)
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_parent',
+      'env_1',
+      { runtime: 'enbor', prompt: 'Coordinate review' },
+      null,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(findAgentVersionMock).toHaveBeenCalledWith('agent_reviewer', 'agentver_reviewer_2')
+    expect(createSessionSubagentSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'agent_reviewer' }),
+      reviewerVersion,
+      'reviewer',
+    )
+    expect(createAgentSnapshotMock).toHaveBeenCalledWith(parentVersion, [
+      expect.objectContaining({
+        agentId: 'agent_reviewer',
+        agentVersionId: 'agentver_reviewer_2',
+        name: 'reviewer',
+      }),
+    ])
   })
 
   it('rejects sessions without a prompt before creating any rows', async () => {
@@ -343,7 +424,7 @@ describe('createSessionForAgent — environment resolution', () => {
     )
 
     expect(result.ok).toBe(true)
-    expect(createAgentSnapshotMock).toHaveBeenCalledWith(expect.objectContaining({ providerId: null }))
+    expect(createAgentSnapshotMock).toHaveBeenCalledWith(expect.objectContaining({ providerId: null }), [])
     expect(evaluateProviderPolicyForSessionMock).not.toHaveBeenCalled()
     expect(JSON.parse(insertSessionMock.mock.calls[0]?.[0].modelConfig ?? 'null')).toEqual({})
     expect(insertSessionMock.mock.calls[0]?.[0].modelProvider).toBeNull()

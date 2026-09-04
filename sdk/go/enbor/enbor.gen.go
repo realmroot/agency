@@ -3099,14 +3099,14 @@ type AgentListResponse struct {
 
 // AgentSpec defines model for AgentSpec.
 type AgentSpec struct {
-	AllowedTools  []string            `json:"allowedTools"`
-	Identity      *IdentityDescriptor `json:"identity"`
-	McpConnectors []string            `json:"mcpConnectors"`
-	Model         *string             `json:"model"`
-	Provider      *string             `json:"provider"`
-	Skills        []string            `json:"skills"`
-	Subagents     []AgentSubagent     `json:"subagents"`
-	SystemPrompt  string              `json:"systemPrompt"`
+	AllowedTools  []string                 `json:"allowedTools"`
+	Identity      *IdentityDescriptor      `json:"identity"`
+	McpConnectors []string                 `json:"mcpConnectors"`
+	Model         *string                  `json:"model"`
+	Provider      *string                  `json:"provider"`
+	Skills        []string                 `json:"skills"`
+	Subagents     []AgentSubagentReference `json:"subagents"`
+	SystemPrompt  string                   `json:"systemPrompt"`
 }
 
 // AgentStatus defines model for AgentStatus.
@@ -3119,26 +3119,13 @@ type AgentStatus struct {
 	Version     int  `json:"version"`
 }
 
-// AgentSubagent defines model for AgentSubagent.
-type AgentSubagent struct {
-	AllowedTools  []string `json:"allowedTools"`
-	Description   string   `json:"description"`
-	McpConnectors []string `json:"mcpConnectors"`
-	Model         *string  `json:"model"`
-	Name          string   `json:"name"`
-	Skills        []string `json:"skills"`
-	SystemPrompt  string   `json:"systemPrompt"`
-}
+// AgentSubagentReference defines model for AgentSubagentReference.
+type AgentSubagentReference struct {
+	// AgentId Existing Agent resource in the same project.
+	AgentId string `json:"agentId"`
 
-// AgentSubagentInput defines model for AgentSubagentInput.
-type AgentSubagentInput struct {
-	AllowedTools  *[]string `json:"allowedTools,omitempty"`
-	Description   string    `json:"description"`
-	McpConnectors *[]string `json:"mcpConnectors,omitempty"`
-	Model         *string   `json:"model,omitempty"`
-	Name          string    `json:"name"`
-	Skills        *[]string `json:"skills,omitempty"`
-	SystemPrompt  string    `json:"systemPrompt"`
+	// Name Stable runtime alias used to address the referenced Agent as a sub-agent.
+	Name string `json:"name"`
 }
 
 // AgentVersion defines model for AgentVersion.
@@ -3335,14 +3322,14 @@ type ConnectorToolApprovalMode string
 type CreateAgentRequest struct {
 	Metadata ResourceCreateMetadata `json:"metadata"`
 	Spec     struct {
-		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
-		IdentityRef   *string               `json:"identityRef,omitempty"`
-		McpConnectors *[]string             `json:"mcpConnectors,omitempty"`
-		Model         *string               `json:"model,omitempty"`
-		Provider      *string               `json:"provider,omitempty"`
-		Skills        *[]string             `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput `json:"subagents,omitempty"`
-		SystemPrompt  string                `json:"systemPrompt"`
+		AllowedTools  *[]string                 `json:"allowedTools,omitempty"`
+		IdentityRef   *string                   `json:"identityRef,omitempty"`
+		McpConnectors *[]string                 `json:"mcpConnectors,omitempty"`
+		Model         *string                   `json:"model,omitempty"`
+		Provider      *string                   `json:"provider,omitempty"`
+		Skills        *[]string                 `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentReference `json:"subagents,omitempty"`
+		SystemPrompt  string                    `json:"systemPrompt"`
 	} `json:"spec"`
 }
 
@@ -5259,13 +5246,17 @@ type SessionStatusPhase string
 
 // SessionSubagent defines model for SessionSubagent.
 type SessionSubagent struct {
-	AllowedTools  []string `json:"allowedTools"`
-	Description   string   `json:"description"`
-	McpConnectors []string `json:"mcpConnectors"`
-	Model         *string  `json:"model"`
-	Name          string   `json:"name"`
-	Skills        []string `json:"skills"`
-	SystemPrompt  string   `json:"systemPrompt"`
+	AgentId        string   `json:"agentId"`
+	AgentVersionId string   `json:"agentVersionId"`
+	AllowedTools   []string `json:"allowedTools"`
+	Description    string   `json:"description"`
+	McpConnectors  []string `json:"mcpConnectors"`
+	Model          *string  `json:"model"`
+	Name           string   `json:"name"`
+	Provider       *string  `json:"provider"`
+	Skills         []string `json:"skills"`
+	SystemPrompt   string   `json:"systemPrompt"`
+	Version        int      `json:"version"`
 }
 
 // SessionUpdateMetadata defines model for SessionUpdateMetadata.
@@ -5472,14 +5463,14 @@ type TurnPayload struct {
 type UpdateAgentRequest struct {
 	Metadata *ResourceUpdateMetadata `json:"metadata,omitempty"`
 	Spec     *struct {
-		AllowedTools  *[]string             `json:"allowedTools,omitempty"`
-		IdentityRef   *string               `json:"identityRef,omitempty"`
-		McpConnectors *[]string             `json:"mcpConnectors,omitempty"`
-		Model         *string               `json:"model,omitempty"`
-		Provider      *string               `json:"provider,omitempty"`
-		Skills        *[]string             `json:"skills,omitempty"`
-		Subagents     *[]AgentSubagentInput `json:"subagents,omitempty"`
-		SystemPrompt  *string               `json:"systemPrompt,omitempty"`
+		AllowedTools  *[]string                 `json:"allowedTools,omitempty"`
+		IdentityRef   *string                   `json:"identityRef,omitempty"`
+		McpConnectors *[]string                 `json:"mcpConnectors,omitempty"`
+		Model         *string                   `json:"model,omitempty"`
+		Provider      *string                   `json:"provider,omitempty"`
+		Skills        *[]string                 `json:"skills,omitempty"`
+		Subagents     *[]AgentSubagentReference `json:"subagents,omitempty"`
+		SystemPrompt  *string                   `json:"systemPrompt,omitempty"`
 	} `json:"spec,omitempty"`
 }
 

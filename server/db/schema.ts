@@ -169,7 +169,7 @@ export const agents = sqliteTable(
     providerId: text('provider_id').references(() => providers.id),
     model: text('model'),
     skills: text('skills').notNull().default('[]'),
-    // JSON value-object array of AgentSubagent descriptors.
+    // JSON array of named references to existing Agent resources.
     subagents: text('subagents').notNull().default('[]'),
     allowedTools: text('allowed_tools').notNull().default('[]'),
     // JSON array of connector slugs. Resolved against the platform MCP catalog

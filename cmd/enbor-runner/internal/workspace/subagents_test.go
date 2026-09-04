@@ -18,7 +18,7 @@ func reviewerSnapshot() map[string]any {
 				"systemPrompt":  "Be strict about error handling.",
 				"model":         "gpt-5.3-codex",
 				"allowedTools":  []any{"read", "grep", "web_search"},
-				"skills":        []any{"enbor@code-review"},
+				"skills":        []any{},
 				"mcpConnectors": []any{"github"},
 			},
 		},

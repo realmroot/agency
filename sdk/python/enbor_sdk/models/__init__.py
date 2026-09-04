@@ -4,8 +4,7 @@ from .agent import Agent
 from .agent_list_response import AgentListResponse
 from .agent_spec import AgentSpec
 from .agent_status import AgentStatus
-from .agent_subagent import AgentSubagent
-from .agent_subagent_input import AgentSubagentInput
+from .agent_subagent_reference import AgentSubagentReference
 from .agent_version import AgentVersion
 from .agent_version_list_response import AgentVersionListResponse
 from .agent_version_status import AgentVersionStatus
@@ -551,8 +550,7 @@ __all__ = (
     "AgentListResponse",
     "AgentSpec",
     "AgentStatus",
-    "AgentSubagent",
-    "AgentSubagentInput",
+    "AgentSubagentReference",
     "AgentVersion",
     "AgentVersionListResponse",
     "AgentVersionStatus",

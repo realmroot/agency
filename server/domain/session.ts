@@ -1,5 +1,4 @@
 import type { SessionEvent } from '@shared/session-events'
-import type { AgentSubagent } from './agent'
 import type {
   EnvironmentNetworking,
   EnvironmentPackages,
@@ -114,11 +113,25 @@ export interface SessionAgentSnapshot {
   provider: string | null
   model: string | null
   skills: string[]
-  subagents: AgentSubagent[]
+  subagents: SessionSubagentSnapshot[]
   allowedTools: string[]
   mcpConnectors: string[]
   identity: IdentityDescriptor | null
   createdAt: string
+}
+
+export interface SessionSubagentSnapshot {
+  agentId: string
+  agentVersionId: string
+  version: number
+  name: string
+  description: string
+  systemPrompt: string
+  provider: string | null
+  model: string | null
+  allowedTools: string[]
+  skills: string[]
+  mcpConnectors: string[]
 }
 
 export interface SessionEnvironmentSnapshot {
