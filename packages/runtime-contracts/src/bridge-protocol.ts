@@ -73,6 +73,7 @@ export const RuntimeBridgeInventoryMessageSchema = z
     requestId: z.string(),
     env: StringMapSchema,
     includeUsage: z.boolean().optional(),
+    usageOnly: z.boolean().optional(),
   })
   .strict()
 

@@ -32,7 +32,7 @@ func (b Bridge) Run(ctx context.Context, request Request, write EventWriter) (JS
 	if request.Runtime == "" {
 		return nil, fmt.Errorf("runtime is required")
 	}
-	nodePath, err := resolveNodeExecutable(ctx)
+	nodePath, err := resolveNodeExecutable(ctx, request.WorkDir)
 	if err != nil {
 		return nil, fmt.Errorf("%s runtime requires Node.js with a working executable: %w", request.Runtime, err)
 	}
@@ -167,6 +167,14 @@ func (b Bridge) commandContext(ctx context.Context) (context.Context, context.Ca
 }
 
 func (b Bridge) Inventory(ctx context.Context, includeUsage bool) (*InventorySnapshot, error) {
+	return b.inventory(ctx, includeUsage, false)
+}
+
+func (b Bridge) Usage(ctx context.Context) (*InventorySnapshot, error) {
+	return b.inventory(ctx, true, true)
+}
+
+func (b Bridge) inventory(ctx context.Context, includeUsage bool, usageOnly bool) (*InventorySnapshot, error) {
 	hostHome, err := os.UserHomeDir()
 	if err != nil || hostHome == "" {
 		return nil, fmt.Errorf("host home directory is unavailable")
@@ -177,6 +185,7 @@ func (b Bridge) Inventory(ctx context.Context, includeUsage bool) (*InventorySna
 		RequestID:    requestID,
 		Env:          map[string]string{"ENBOR_RUNTIME_BRIDGE_HOST_HOME": hostHome},
 		IncludeUsage: includeUsage,
+		UsageOnly:    usageOnly,
 	}, runtimesTimeout)
 	if err != nil {
 		return nil, err
@@ -189,7 +198,12 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	if err != nil {
 		return nil, err
 	}
-	nodePath, err := resolveNodeExecutable(ctx)
+	probeDir, err := os.MkdirTemp("", "enbor-runner-inventory-")
+	if err != nil {
+		return nil, fmt.Errorf("create runtime inventory directory: %w", err)
+	}
+	defer os.RemoveAll(probeDir)
+	nodePath, err := resolveNodeExecutable(ctx, probeDir)
 	if err != nil {
 		return nil, fmt.Errorf("node is required to run the runtime bridge and must be working: %w", err)
 	}
@@ -197,6 +211,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, nodePath, bridgePath)
 	cmd.WaitDelay = runtimeBridgePipeWaitDelay
+	cmd.Dir = probeDir
 	cmd.Env = os.Environ()
 	stdinWriter, err := cmd.StdinPipe()
 	if err != nil {
@@ -230,7 +245,7 @@ func (b Bridge) bridgeRequest(ctx context.Context, requestID string, request any
 	return protocol.readResult(reader, requestID, noop, nil, nil)
 }
 
-func resolveNodeExecutable(ctx context.Context) (string, error) {
+func resolveNodeExecutable(ctx context.Context, workDir string) (string, error) {
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		return "", err
@@ -239,6 +254,7 @@ func resolveNodeExecutable(ctx context.Context) (string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, nodeExecutableProbeTimeout)
 	defer cancel()
 	probe := exec.CommandContext(probeCtx, nodePath, "-p", "process.execPath")
+	probe.Dir = workDir
 	probe.Env = os.Environ()
 	output, err := probe.Output()
 	if err != nil {

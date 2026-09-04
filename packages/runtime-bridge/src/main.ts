@@ -1,17 +1,16 @@
 import { stdin, stdout } from 'node:process'
 import { createInterface } from 'node:readline'
 import { assertEnborRuntimeEvent } from './events/enbor'
-import { resolveCliPath } from './host/cli'
+import { collectRuntimeInventory } from './inventory'
 import {
   bridgeError,
   createResumeTokenWatcher,
   type EnborRuntimeEvent,
   type RuntimeBridgeInputMessage,
   type RuntimeBridgeOutputMessage,
-  type RuntimeInventoryEntry,
 } from './protocol'
-import { getProvider, listProviders } from './providers/registry'
-import { isE2eBridgeTest, probeFailureStatus, runE2eBridgeTest, TEST_MODE_RUNTIME_MODELS } from './run-modes'
+import { getProvider } from './providers/registry'
+import { isE2eBridgeTest, runE2eBridgeTest } from './run-modes'
 import { createRuntimeControlQueue } from './runtime-controls'
 
 type ActiveRun = {
@@ -96,68 +95,7 @@ async function run(request: Extract<RuntimeBridgeInputMessage, { type: 'run' }>)
 }
 
 async function inventory(request: Extract<RuntimeBridgeInputMessage, { type: 'inventory' }>) {
-  const runtimes: RuntimeInventoryEntry[] = []
-  const bridgeTestMode = process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === '1'
-  for (const provider of listProviders()) {
-    const installed = bridgeTestMode || Boolean(resolveCliPath(provider.binary))
-    if (!installed) {
-      runtimes.push({
-        runtime: provider.name,
-        binary: provider.binary,
-        installed: false,
-        fallbackModels: provider.fallbackModels,
-        models: [],
-        status: 'missing',
-        detail: `${provider.binary} CLI not found on PATH`,
-      })
-      continue
-    }
-    let models: string[] = []
-    let status = 'ready'
-    let detail = 'host CLI is available'
-    try {
-      if (bridgeTestMode) {
-        models = TEST_MODE_RUNTIME_MODELS[provider.name] ?? []
-        detail = 'deterministic bridge test runtime'
-      } else {
-        models = provider.listModels ? ((await provider.listModels({ env: request.env })) ?? []) : []
-        if (models && models.length > 0) {
-          detail = `host CLI enumerated ${models.length} models`
-        } else {
-          status = 'unauthenticated'
-          detail = 'host CLI exposed no models; authenticate the runtime CLI'
-        }
-      }
-    } catch (err) {
-      status = probeFailureStatus(err instanceof Error ? err.message : String(err))
-      detail = 'host model enumeration failed'
-    }
-
-    let usageWindows = null
-    let limitedDetail: string | null = null
-    if (request.includeUsage && provider.fetchUsage && !bridgeTestMode) {
-      try {
-        usageWindows = await provider.fetchUsage({ env: request.env })
-      } catch {
-        usageWindows = null
-      }
-      if ((!usageWindows || usageWindows.length === 0) && provider.usageUnavailableDetail) {
-        limitedDetail = provider.usageUnavailableDetail
-      }
-    }
-
-    runtimes.push({
-      runtime: provider.name,
-      binary: provider.binary,
-      installed: true,
-      fallbackModels: provider.fallbackModels,
-      models,
-      status,
-      detail,
-      ...(usageWindows ? { usageWindows } : {}),
-      ...(limitedDetail ? { limitedDetail } : {}),
-    })
-  }
+  const runtimes = await collectRuntimeInventory(request)
   write({ type: 'result', requestId: request.requestId, result: { runtimes } })
 }
 

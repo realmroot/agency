@@ -218,6 +218,36 @@ func TestInventoryRefreshUsageUsesBridgeInventory(t *testing.T) {
 	}
 }
 
+// [spec: runners/heartbeat]
+func TestInventoryRefreshUsageDoesNotLoadRuntimeCatalog(t *testing.T) {
+	usageCalls := 0
+	inv := &Inventory{
+		Load: func(context.Context, bool) (*InventorySnapshot, error) {
+			t.Fatal("usage refresh must not enumerate the runtime catalog")
+			return nil, nil
+		},
+		LoadUsage: func(context.Context) (*InventorySnapshot, error) {
+			usageCalls++
+			return &InventorySnapshot{Runtimes: []InventoryRuntime{{
+				Runtime: "claude-code",
+				UsageWindows: []UsageWindow{{
+					Label:       "5-Hour",
+					Utilization: 50,
+				}},
+			}}}, nil
+		},
+	}
+
+	inv.RefreshUsage(context.Background())
+
+	if usageCalls != 1 {
+		t.Fatalf("expected one usage-only load, got %d", usageCalls)
+	}
+	if got := inv.Usage(); len(got) != 1 || got[0].Runtime != "claude-code" {
+		t.Fatalf("expected usage-only snapshot, got %#v", got)
+	}
+}
+
 func TestInventoryRefreshUsageClearsOnBridgeFailure(t *testing.T) {
 	inv := &Inventory{
 		Load: func(context.Context, bool) (*InventorySnapshot, error) {

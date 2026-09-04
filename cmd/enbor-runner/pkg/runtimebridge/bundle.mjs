@@ -18466,88 +18466,6 @@ function codexNativeExecutable(scriptPath) {
   return void 0;
 }
 
-// packages/runtime-bridge/src/protocol.ts
-function bridgeError(message, code, details) {
-  return { message, ...code ? { code } : {}, ...details !== void 0 ? { details } : {} };
-}
-function createAsyncPushQueue() {
-  const pending = [];
-  let notify = null;
-  let ended = false;
-  const values = (async function* () {
-    while (true) {
-      while (pending.length > 0) {
-        yield pending.shift();
-      }
-      if (ended) {
-        return;
-      }
-      await new Promise((resolve16) => {
-        notify = resolve16;
-      });
-      notify = null;
-    }
-  })();
-  return {
-    values,
-    push(value) {
-      pending.push(value);
-      notify?.();
-    },
-    end() {
-      ended = true;
-      notify?.();
-    }
-  };
-}
-function createResumeTokenWatcher(handle, emit) {
-  let lastToken;
-  return () => {
-    const token = handle.getResumeToken?.();
-    if (token && token !== lastToken) {
-      lastToken = token;
-      emit(token);
-    }
-  };
-}
-function agentSystemPrompt(request3) {
-  const snapshot = request3.agentSnapshot;
-  if (!snapshot || typeof snapshot !== "object") return void 0;
-  const sections = [];
-  const systemPrompt = snapshot.systemPrompt;
-  if (typeof systemPrompt === "string" && systemPrompt.trim()) {
-    sections.push(systemPrompt.trim());
-  }
-  const capabilitySection = agentCapabilitiesSection(snapshot);
-  if (capabilitySection) sections.push(capabilitySection);
-  return sections.length > 0 ? sections.join("\n\n") : void 0;
-}
-function agentCapabilitiesSection(snapshot) {
-  const parts = [];
-  const skills = stringArray(snapshot.skills);
-  if (skills.length > 0) parts.push(`Skills: ${skills.join(", ")}`);
-  const subagents = subagentSummaries(snapshot.subagents);
-  if (subagents.length > 0) parts.push(`Available subagents: ${subagents.join(", ")}`);
-  return parts.length > 0 ? `## Agent Capabilities
-
-${parts.join("\n")}` : void 0;
-}
-function stringArray(value) {
-  return Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim().length > 0) : [];
-}
-function objectValue(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-function subagentSummaries(value) {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    const subagent = objectValue(item);
-    const name = typeof subagent.name === "string" ? subagent.name.trim() : "";
-    const description = typeof subagent.description === "string" ? subagent.description.trim() : "";
-    return name ? [`@${name}${description ? ` (${description})` : ""}`] : [];
-  });
-}
-
 // packages/runtime-bridge/src/providers/claude-code.ts
 import { execSync } from "node:child_process";
 import { readFileSync as readFileSync3 } from "node:fs";
@@ -37874,6 +37792,88 @@ function Z_($, Q) {
     return G[U10] = G.at(-1).replace(/\.jsonl$/, ""), { projectKey: X, sessionId: W, subpath: G.join("/") };
   }
   return null;
+}
+
+// packages/runtime-bridge/src/protocol.ts
+function bridgeError(message, code, details) {
+  return { message, ...code ? { code } : {}, ...details !== void 0 ? { details } : {} };
+}
+function createAsyncPushQueue() {
+  const pending = [];
+  let notify = null;
+  let ended = false;
+  const values = (async function* () {
+    while (true) {
+      while (pending.length > 0) {
+        yield pending.shift();
+      }
+      if (ended) {
+        return;
+      }
+      await new Promise((resolve16) => {
+        notify = resolve16;
+      });
+      notify = null;
+    }
+  })();
+  return {
+    values,
+    push(value) {
+      pending.push(value);
+      notify?.();
+    },
+    end() {
+      ended = true;
+      notify?.();
+    }
+  };
+}
+function createResumeTokenWatcher(handle, emit) {
+  let lastToken;
+  return () => {
+    const token = handle.getResumeToken?.();
+    if (token && token !== lastToken) {
+      lastToken = token;
+      emit(token);
+    }
+  };
+}
+function agentSystemPrompt(request3) {
+  const snapshot = request3.agentSnapshot;
+  if (!snapshot || typeof snapshot !== "object") return void 0;
+  const sections = [];
+  const systemPrompt = snapshot.systemPrompt;
+  if (typeof systemPrompt === "string" && systemPrompt.trim()) {
+    sections.push(systemPrompt.trim());
+  }
+  const capabilitySection = agentCapabilitiesSection(snapshot);
+  if (capabilitySection) sections.push(capabilitySection);
+  return sections.length > 0 ? sections.join("\n\n") : void 0;
+}
+function agentCapabilitiesSection(snapshot) {
+  const parts = [];
+  const skills = stringArray(snapshot.skills);
+  if (skills.length > 0) parts.push(`Skills: ${skills.join(", ")}`);
+  const subagents = subagentSummaries(snapshot.subagents);
+  if (subagents.length > 0) parts.push(`Available subagents: ${subagents.join(", ")}`);
+  return parts.length > 0 ? `## Agent Capabilities
+
+${parts.join("\n")}` : void 0;
+}
+function stringArray(value) {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim().length > 0) : [];
+}
+function objectValue(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function subagentSummaries(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const subagent = objectValue(item);
+    const name = typeof subagent.name === "string" ? subagent.name.trim() : "";
+    const description = typeof subagent.description === "string" ? subagent.description.trim() : "";
+    return name ? [`@${name}${description ? ` (${description})` : ""}`] : [];
+  });
 }
 
 // packages/runtime-bridge/src/providers/cli-host.ts
@@ -218340,6 +218340,77 @@ async function runE2eBridgeTest(request3, state, write2) {
   write2({ type: "result", requestId: request3.requestId, result: { resumeToken: handle.getResumeToken?.() } });
 }
 
+// packages/runtime-bridge/src/inventory.ts
+var defaultDependencies = () => ({
+  providers: listProviders(),
+  resolveCli: resolveCliPath,
+  bridgeTestMode: process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === "1"
+});
+async function collectRuntimeInventory(request3, dependencies = defaultDependencies()) {
+  const runtimes = [];
+  for (const provider of dependencies.providers) {
+    const installed = dependencies.bridgeTestMode || Boolean(dependencies.resolveCli(provider.binary));
+    if (!installed) {
+      runtimes.push({
+        runtime: provider.name,
+        binary: provider.binary,
+        installed: false,
+        fallbackModels: provider.fallbackModels,
+        models: [],
+        status: "missing",
+        detail: `${provider.binary} CLI not found on PATH`
+      });
+      continue;
+    }
+    let models = [];
+    let status = "ready";
+    let detail = "host CLI is available";
+    try {
+      if (request3.usageOnly) {
+        detail = "host CLI usage probe";
+      } else if (dependencies.bridgeTestMode) {
+        models = TEST_MODE_RUNTIME_MODELS[provider.name] ?? [];
+        detail = "deterministic bridge test runtime";
+      } else {
+        models = provider.listModels ? await provider.listModels({ env: request3.env }) ?? [] : [];
+        if (models.length > 0) {
+          detail = `host CLI enumerated ${models.length} models`;
+        } else {
+          status = "unauthenticated";
+          detail = "host CLI exposed no models; authenticate the runtime CLI";
+        }
+      }
+    } catch (err2) {
+      status = probeFailureStatus(err2 instanceof Error ? err2.message : String(err2));
+      detail = "host model enumeration failed";
+    }
+    let usageWindows = null;
+    let limitedDetail = null;
+    if (request3.includeUsage && provider.fetchUsage && !dependencies.bridgeTestMode) {
+      try {
+        usageWindows = await provider.fetchUsage({ env: request3.env });
+      } catch {
+        usageWindows = null;
+      }
+      if ((!usageWindows || usageWindows.length === 0) && provider.usageUnavailableDetail) {
+        limitedDetail = provider.usageUnavailableDetail;
+      }
+    }
+    runtimes.push({
+      runtime: provider.name,
+      binary: provider.binary,
+      installed: true,
+      fallbackModels: provider.fallbackModels,
+      models,
+      status,
+      detail,
+      ...usageWindows ? { usageWindows } : {},
+      ...limitedDetail ? { limitedDetail } : {}
+    });
+  }
+  return runtimes;
+}
+
 // packages/runtime-bridge/src/runtime-controls.ts
 function createRuntimeControlQueue(onPromptRejected) {
   let handle;
@@ -218450,66 +218521,7 @@ async function run(request3) {
   }
 }
 async function inventory(request3) {
-  const runtimes = [];
-  const bridgeTestMode = process.env.ENBOR_RUNTIME_BRIDGE_TEST_MODE === "1";
-  for (const provider of listProviders()) {
-    const installed = bridgeTestMode || Boolean(resolveCliPath(provider.binary));
-    if (!installed) {
-      runtimes.push({
-        runtime: provider.name,
-        binary: provider.binary,
-        installed: false,
-        fallbackModels: provider.fallbackModels,
-        models: [],
-        status: "missing",
-        detail: `${provider.binary} CLI not found on PATH`
-      });
-      continue;
-    }
-    let models = [];
-    let status = "ready";
-    let detail = "host CLI is available";
-    try {
-      if (bridgeTestMode) {
-        models = TEST_MODE_RUNTIME_MODELS[provider.name] ?? [];
-        detail = "deterministic bridge test runtime";
-      } else {
-        models = provider.listModels ? await provider.listModels({ env: request3.env }) ?? [] : [];
-        if (models && models.length > 0) {
-          detail = `host CLI enumerated ${models.length} models`;
-        } else {
-          status = "unauthenticated";
-          detail = "host CLI exposed no models; authenticate the runtime CLI";
-        }
-      }
-    } catch (err2) {
-      status = probeFailureStatus(err2 instanceof Error ? err2.message : String(err2));
-      detail = "host model enumeration failed";
-    }
-    let usageWindows = null;
-    let limitedDetail = null;
-    if (request3.includeUsage && provider.fetchUsage && !bridgeTestMode) {
-      try {
-        usageWindows = await provider.fetchUsage({ env: request3.env });
-      } catch {
-        usageWindows = null;
-      }
-      if ((!usageWindows || usageWindows.length === 0) && provider.usageUnavailableDetail) {
-        limitedDetail = provider.usageUnavailableDetail;
-      }
-    }
-    runtimes.push({
-      runtime: provider.name,
-      binary: provider.binary,
-      installed: true,
-      fallbackModels: provider.fallbackModels,
-      models,
-      status,
-      detail,
-      ...usageWindows ? { usageWindows } : {},
-      ...limitedDetail ? { limitedDetail } : {}
-    });
-  }
+  const runtimes = await collectRuntimeInventory(request3);
   write({ type: "result", requestId: request3.requestId, result: { runtimes } });
 }
 async function control(message) {
