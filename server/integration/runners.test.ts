@@ -153,6 +153,65 @@ describe('[CF] /api/v1/runners', () => {
     })
   })
 
+  it('repairs stale load from unexpired active leases on heartbeat [spec: runners/heartbeat-load-recovery]', async () => {
+    const authorization = await signIn()
+    const runnerAuthorization = asRunnerAuthorization(authorization)
+    const environment = await createSelfHostedEnvironment(authorization)
+    const runnerRes = await jsonFetch('/api/v1/runners', runnerAuthorization, {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Load recovery runner', environmentId: environment.id, maxConcurrent: 3 }),
+    })
+    expect(runnerRes.status).toBe(201)
+    const runner = (await runnerRes.json()) as { id: string }
+    const heartbeat = () =>
+      jsonFetch(`/api/v1/runners/${runner.id}/heartbeat`, runnerAuthorization, {
+        method: 'PUT',
+        body: JSON.stringify({ state: 'active' }),
+      })
+
+    await env.DB.prepare('UPDATE runners SET current_load = 1 WHERE id = ?').bind(runner.id).run()
+    const idleHeartbeat = await heartbeat()
+    expect(idleHeartbeat.status).toBe(200)
+    await expect(idleHeartbeat.json()).resolves.toMatchObject({ runnerId: runner.id, currentLoad: 0 })
+
+    const owner = await env.DB.prepare('SELECT organization_id, project_id FROM runners WHERE id = ?')
+      .bind(runner.id)
+      .first<{ organization_id: string; project_id: string }>()
+    expect(owner).not.toBeNull()
+    const workItemId = crypto.randomUUID()
+    const leaseId = crypto.randomUUID()
+    const timestamp = '2026-09-04T12:00:00.000Z'
+    await env.DB.prepare(
+      `INSERT INTO work_items
+         (id, organization_id, project_id, environment_id, runner_id, type, state, payload,
+          available_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'session.start', 'leased', '{}', ?, ?, ?)`,
+    )
+      .bind(
+        workItemId,
+        owner!.organization_id,
+        owner!.project_id,
+        environment.id,
+        runner.id,
+        timestamp,
+        timestamp,
+        timestamp,
+      )
+      .run()
+    await env.DB.prepare(
+      `INSERT INTO leases
+         (id, work_item_id, runner_id, organization_id, project_id, state, expires_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'active', '2099-01-01T00:00:00.000Z', ?, ?)`,
+    )
+      .bind(leaseId, workItemId, runner.id, owner!.organization_id, owner!.project_id, timestamp, timestamp)
+      .run()
+    await env.DB.prepare('UPDATE runners SET current_load = 7 WHERE id = ?').bind(runner.id).run()
+
+    const busyHeartbeat = await heartbeat()
+    expect(busyHeartbeat.status).toBe(200)
+    await expect(busyHeartbeat.json()).resolves.toMatchObject({ runnerId: runner.id, currentLoad: 1 })
+  })
+
   it('rejects secret refs that are not active vault credentials', async () => {
     const authorization = asRunnerAuthorization(await signIn())
     const res = await jsonFetch('/api/v1/runners', authorization, {

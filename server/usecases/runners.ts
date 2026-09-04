@@ -161,7 +161,7 @@ export async function recordRunnerHeartbeat(
     throw new RunnerValidationError('Runner heartbeat metadata must not contain raw secret material')
   }
   const timestamp = new Date().toISOString()
-  return deps.runners.heartbeat(
+  const updated = await deps.runners.heartbeat(
     projectId,
     runner.id,
     {
@@ -172,4 +172,13 @@ export async function recordRunnerHeartbeat(
     },
     timestamp,
   )
+  if (updated.state === 'active' && updated.environmentId && updated.currentLoad < updated.maxConcurrent) {
+    await deps.runnerChannel.retryAvailableWork({
+      runnerId: updated.id,
+      organizationId: updated.organizationId,
+      projectId: updated.projectId,
+      environmentId: updated.environmentId,
+    })
+  }
+  return updated
 }

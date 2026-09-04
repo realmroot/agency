@@ -13,7 +13,7 @@ import type {
   WorkItemClaimCandidate,
 } from '@server/usecases/ports'
 import { RunnerConflictError } from '@server/usecases/ports'
-import { and, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, max, or, sql } from 'drizzle-orm'
+import { and, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, max, notExists, or, sql } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import {
   leases,
@@ -76,12 +76,15 @@ function memoryStoreSnapshotsFromResult(result: Record<string, unknown> | undefi
   return snapshots
 }
 
-async function replaceMemoryStoreSnapshots(
+async function memoryStoreSnapshotStatements(
   db: Db,
   projectId: string,
+  leaseId: string,
+  settlementId: string,
   snapshots: MemoryStoreSnapshot[],
   updatedAt: string,
 ) {
+  const statements = []
   for (const snapshot of snapshots) {
     const store = await db
       .select({ id: memoryStores.id })
@@ -97,7 +100,7 @@ async function replaceMemoryStoreSnapshots(
     if (!store) {
       continue
     }
-    await db.batch([
+    statements.push(
       db
         .update(memoryStoreMemories)
         .set({ deletedAt: updatedAt, updatedAt })
@@ -106,27 +109,54 @@ async function replaceMemoryStoreSnapshots(
             eq(memoryStoreMemories.projectId, projectId),
             eq(memoryStoreMemories.storeId, snapshot.storeId),
             isNull(memoryStoreMemories.deletedAt),
+            exists(
+              db
+                .select({ id: leases.id })
+                .from(leases)
+                .where(and(eq(leases.id, leaseId), eq(leases.settlementId, settlementId))),
+            ),
           ),
         ),
+    )
+    statements.push(
       ...snapshot.memories.map((memory) =>
-        db.insert(memoryStoreMemories).values({
-          id: newPrimaryKey(),
-          projectId,
-          storeId: snapshot.storeId,
-          path: memory.path,
-          content: memory.content,
-          metadata: '{}',
-          deletedAt: null,
-          createdAt: updatedAt,
-          updatedAt,
-        }),
+        db.insert(memoryStoreMemories).select(
+          db
+            .select({
+              id: sql<string>`${newPrimaryKey()}`.as('id'),
+              storeId: sql<string>`${snapshot.storeId}`.as('store_id'),
+              projectId: sql<string>`${projectId}`.as('project_id'),
+              path: sql<string>`${memory.path}`.as('path'),
+              content: sql<string>`${memory.content}`.as('content'),
+              metadata: sql<string>`'{}'`.as('metadata'),
+              deletedAt: sql<string | null>`null`.as('deleted_at'),
+              createdAt: sql<string>`${updatedAt}`.as('created_at'),
+              updatedAt: sql<string>`${updatedAt}`.as('updated_at'),
+            })
+            .from(leases)
+            .where(and(eq(leases.id, leaseId), eq(leases.settlementId, settlementId))),
+        ),
       ),
+    )
+    statements.push(
       db
         .update(memoryStores)
         .set({ updatedAt })
-        .where(and(eq(memoryStores.id, snapshot.storeId), eq(memoryStores.projectId, projectId))),
-    ])
+        .where(
+          and(
+            eq(memoryStores.id, snapshot.storeId),
+            eq(memoryStores.projectId, projectId),
+            exists(
+              db
+                .select({ id: leases.id })
+                .from(leases)
+                .where(and(eq(leases.id, leaseId), eq(leases.settlementId, settlementId))),
+            ),
+          ),
+        ),
+    )
   }
+  return statements
 }
 
 function recordFrom(lease: LeaseRow): LeaseRecord {
@@ -482,24 +512,6 @@ export function createLeaseRepo(db: Db): LeaseRepo {
     },
 
     async claim(input: ClaimLeaseInput, timestamp) {
-      const reserved = await db
-        .update(runners)
-        .set({ currentLoad: sql`${runners.currentLoad} + 1`, updatedAt: timestamp })
-        .where(
-          and(
-            eq(runners.id, input.runnerId),
-            eq(runners.projectId, input.projectId),
-            isNull(runners.deletedAt),
-            eq(runners.state, 'active'),
-            gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
-            lt(runners.currentLoad, runners.maxConcurrent),
-          ),
-        )
-        .returning({ id: runners.id })
-        .get()
-      if (!reserved) {
-        return 'at_capacity'
-      }
       const lease = {
         id: newPrimaryKey(),
         workItemId: input.workItemId,
@@ -510,6 +522,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         expiresAt: new Date(Date.now() + input.leaseDurationSeconds * 1000).toISOString(),
         renewedAt: null,
         resumeToken: null,
+        settlementId: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       } satisfies typeof leases.$inferInsert
@@ -549,7 +562,50 @@ export function createLeaseRepo(db: Db): LeaseRepo {
             ),
         ),
       )
-      const [claimedRows, _startedSessions, insertedLeases] = await db.batch([
+      const activeLeaseCount = sql<number>`(
+        select count(*)
+        from ${leases}
+        where ${leases.runnerId} = ${input.runnerId}
+          and ${leases.projectId} = ${input.projectId}
+          and ${leases.state} = 'active'
+          and ${leases.expiresAt} > ${timestamp}
+      )`
+      const [insertedLeases, claimedRows, _startedSessions] = await db.batch([
+        db
+          .insert(leases)
+          .select(
+            db
+              .select({
+                id: sql<string>`${lease.id}`.as('id'),
+                workItemId: sql<string>`${lease.workItemId}`.as('work_item_id'),
+                runnerId: sql<string>`${lease.runnerId}`.as('runner_id'),
+                organizationId: sql<string>`${lease.organizationId}`.as('organization_id'),
+                projectId: sql<string>`${lease.projectId}`.as('project_id'),
+                state: sql<string>`${lease.state}`.as('state'),
+                expiresAt: sql<string>`${lease.expiresAt}`.as('expires_at'),
+                renewedAt: sql<string | null>`${lease.renewedAt}`.as('renewed_at'),
+                resumeToken: sql<string | null>`${lease.resumeToken}`.as('resume_token'),
+                settlementId: sql<string | null>`${lease.settlementId}`.as('settlement_id'),
+                createdAt: sql<string>`${lease.createdAt}`.as('created_at'),
+                updatedAt: sql<string>`${lease.updatedAt}`.as('updated_at'),
+              })
+              .from(runners)
+              .innerJoin(workItems, and(eq(workItems.id, input.workItemId), eq(workItems.projectId, input.projectId)))
+              .where(
+                and(
+                  eq(runners.id, input.runnerId),
+                  eq(runners.projectId, input.projectId),
+                  isNull(runners.deletedAt),
+                  eq(runners.state, 'active'),
+                  gte(runners.lastHeartbeatAt, runnerHeartbeatStaleBefore()),
+                  sql`${activeLeaseCount} < ${runners.maxConcurrent}`,
+                  eq(workItems.state, 'available'),
+                  lte(workItems.availableAt, timestamp),
+                  liveSession,
+                ),
+              ),
+          )
+          .returning({ id: leases.id }),
         db
           .update(workItems)
           .set({
@@ -566,6 +622,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
               eq(workItems.state, 'available'),
               lte(workItems.availableAt, timestamp),
               liveSession,
+              sql`changes() = 1`,
             ),
           )
           .returning({ id: workItems.id, sessionId: workItems.sessionId }),
@@ -599,44 +656,36 @@ export function createLeaseRepo(db: Db): LeaseRepo {
             ),
           ),
         db
-          .insert(leases)
-          .select(
-            db
-              .select({
-                id: sql<string>`${lease.id}`.as('id'),
-                workItemId: sql<string>`${lease.workItemId}`.as('work_item_id'),
-                runnerId: sql<string>`${lease.runnerId}`.as('runner_id'),
-                organizationId: sql<string>`${lease.organizationId}`.as('organization_id'),
-                projectId: sql<string>`${lease.projectId}`.as('project_id'),
-                state: sql<string>`${lease.state}`.as('state'),
-                expiresAt: sql<string>`${lease.expiresAt}`.as('expires_at'),
-                renewedAt: sql<string | null>`${lease.renewedAt}`.as('renewed_at'),
-                resumeToken: sql<string | null>`${lease.resumeToken}`.as('resume_token'),
-                createdAt: sql<string>`${lease.createdAt}`.as('created_at'),
-                updatedAt: sql<string>`${lease.updatedAt}`.as('updated_at'),
-              })
-              .from(workItems)
-              .where(
-                and(
-                  eq(workItems.id, input.workItemId),
-                  eq(workItems.projectId, input.projectId),
-                  eq(workItems.state, 'leased'),
-                  eq(workItems.runnerId, input.runnerId),
-                  eq(workItems.leaseId, lease.id),
-                  claimedSessionIsRunning,
-                ),
+          .update(runners)
+          .set({ currentLoad: activeLeaseCount, updatedAt: timestamp })
+          .where(
+            and(
+              eq(runners.id, input.runnerId),
+              eq(runners.projectId, input.projectId),
+              exists(
+                db
+                  .select({ id: workItems.id })
+                  .from(workItems)
+                  .where(
+                    and(
+                      eq(workItems.id, input.workItemId),
+                      eq(workItems.state, 'leased'),
+                      eq(workItems.runnerId, input.runnerId),
+                      eq(workItems.leaseId, lease.id),
+                      claimedSessionIsRunning,
+                    ),
+                  ),
               ),
-          )
-          .returning({ id: leases.id }),
+            ),
+          ),
       ])
+      if (insertedLeases.length === 0) {
+        const candidate = await findWorkItemRow(db, input.projectId, input.workItemId)
+        return candidate?.state === 'available' && candidate.availableAt <= timestamp ? 'at_capacity' : 'work_item_lost'
+      }
       const claimed = claimedRows[0]
       if (!claimed) {
-        await releaseRunnerLoad(db, input.projectId, input.runnerId, timestamp)
-        return 'work_item_lost'
-      }
-      if (insertedLeases.length === 0) {
-        await releaseRunnerLoad(db, input.projectId, input.runnerId, timestamp)
-        throw new Error('Claimed work item did not create its lease')
+        throw new Error('Created lease did not claim its work item')
       }
       return { lease: recordFrom(lease as LeaseRow), sessionId: claimed.sessionId }
     },
@@ -684,7 +733,9 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         return null
       }
       const resumeToken = resumeTokenFromFinishInput(input)
-      await bindSessionResumeToken(db, input, workItem, resumeToken, timestamp)
+      if (input.state === 'active' || input.state === 'interrupted') {
+        await bindSessionResumeToken(db, input, workItem, resumeToken, timestamp)
+      }
       if (input.state === 'active') {
         const expiresAt =
           input.expiresAt ??
@@ -744,21 +795,61 @@ export function createLeaseRepo(db: Db): LeaseRepo {
         )
       } else {
         // Completion: the lease ends and its outcome lands on the work item —
-        // the leases table carries no result/error columns.
-        if (input.state === 'completed') {
-          await replaceMemoryStoreSnapshots(
-            db,
-            input.projectId,
-            memoryStoreSnapshotsFromResult(input.result),
-            timestamp,
-          )
+        // the leases table carries no result/error columns. The durable terminal
+        // state, runner capacity, and Session projection commit atomically so a
+        // transient D1 failure cannot leave a completed lease looking active.
+        const settlementId = newPrimaryKey()
+        const runtime = runtimeFromPayload(workItem)
+        const providerResumeToken =
+          workItem.sessionId && resumeToken && runtime && runtimeUsesProviderAssignedSessionId(runtime)
+            ? resumeToken
+            : null
+        if (workItem.sessionId && resumeToken && runtime && !runtimeUsesProviderAssignedSessionId(runtime)) {
+          if (resumeToken !== workItem.sessionId) {
+            throw new RunnerConflictError(
+              `Runtime ${runtime} must use Enbor session ${workItem.sessionId} as its resume token; got ${resumeToken}`,
+            )
+          }
         }
+        if (providerResumeToken && workItem.sessionId) {
+          const boundSession = await db
+            .select({ resumeToken: sessions.resumeToken })
+            .from(sessions)
+            .where(
+              and(
+                eq(sessions.id, workItem.sessionId),
+                eq(sessions.projectId, input.projectId),
+                isNull(sessions.deletedAt),
+              ),
+            )
+            .get()
+          if (!boundSession) {
+            throw new RunnerConflictError(`Unable to bind Enbor session ${workItem.sessionId} to resume token`)
+          }
+          if (boundSession.resumeToken && boundSession.resumeToken !== providerResumeToken) {
+            throw new RunnerConflictError(
+              `Enbor session ${workItem.sessionId} is already bound to resume token ${runtime}:${boundSession.resumeToken}`,
+            )
+          }
+        }
+        const memoryStatements =
+          input.state === 'completed'
+            ? await memoryStoreSnapshotStatements(
+                db,
+                input.projectId,
+                input.leaseId,
+                settlementId,
+                memoryStoreSnapshotsFromResult(input.result),
+                timestamp,
+              )
+            : []
         const result = input.result ? stringify(input.result) : null
         const error = input.error ? stringify(input.error) : null
-        const completedWorkItem = await db
+        const terminalWorkState = input.state === 'completed' ? 'succeeded' : input.state
+        const completedWorkItemStatement = db
           .update(workItems)
           .set({
-            state: input.state === 'completed' ? 'succeeded' : input.state,
+            state: terminalWorkState,
             result,
             error,
             updatedAt: timestamp,
@@ -769,23 +860,119 @@ export function createLeaseRepo(db: Db): LeaseRepo {
               eq(workItems.state, 'leased'),
               eq(workItems.leaseId, lease.id),
               eq(workItems.runnerId, lease.runnerId),
+              exists(
+                db
+                  .select({ id: leases.id })
+                  .from(leases)
+                  .where(
+                    and(
+                      eq(leases.id, lease.id),
+                      eq(leases.projectId, input.projectId),
+                      eq(leases.workItemId, workItem.id),
+                      eq(leases.runnerId, lease.runnerId),
+                      eq(leases.state, 'active'),
+                      gt(leases.expiresAt, timestamp),
+                    ),
+                  ),
+              ),
+              providerResumeToken && workItem.sessionId
+                ? exists(
+                    db
+                      .select({ id: sessions.id })
+                      .from(sessions)
+                      .where(
+                        and(
+                          eq(sessions.id, workItem.sessionId),
+                          eq(sessions.projectId, input.projectId),
+                          isNull(sessions.deletedAt),
+                          or(isNull(sessions.resumeToken), eq(sessions.resumeToken, providerResumeToken)),
+                        ),
+                      ),
+                  )
+                : undefined,
             ),
           )
           .returning({ id: workItems.id })
-          .get()
-        if (!completedWorkItem) {
-          return null
-        }
-        await db
+        const completedLeaseStatement = db
           .update(leases)
           .set({
             state: input.state,
+            settlementId,
             updatedAt: timestamp,
             ...(resumeToken ? { resumeToken } : {}),
           })
-          .where(and(eq(leases.id, input.leaseId), eq(leases.state, 'active')))
-        await releaseRunnerLoad(db, input.projectId, lease.runnerId, timestamp)
-        if (workItem.sessionId && !(await hasNewerActiveSessionWork(db, input.projectId, workItem))) {
+          .where(
+            and(
+              eq(leases.id, input.leaseId),
+              eq(leases.state, 'active'),
+              sql`changes() = 1`,
+              exists(
+                db
+                  .select({ id: workItems.id })
+                  .from(workItems)
+                  .where(
+                    and(
+                      eq(workItems.id, workItem.id),
+                      eq(workItems.state, terminalWorkState),
+                      eq(workItems.leaseId, lease.id),
+                      eq(workItems.runnerId, lease.runnerId),
+                      eq(workItems.updatedAt, timestamp),
+                    ),
+                  ),
+              ),
+            ),
+          )
+        const releaseRunnerStatement = db
+          .update(runners)
+          .set({ currentLoad: sql`max(0, ${runners.currentLoad} - 1)`, updatedAt: timestamp })
+          .where(
+            and(
+              eq(runners.id, lease.runnerId),
+              eq(runners.projectId, input.projectId),
+              sql`changes() = 1`,
+              exists(
+                db
+                  .select({ id: leases.id })
+                  .from(leases)
+                  .where(
+                    and(
+                      eq(leases.id, input.leaseId),
+                      eq(leases.state, input.state),
+                      eq(leases.settlementId, settlementId),
+                    ),
+                  ),
+              ),
+            ),
+          )
+        const bindResumeTokenStatement =
+          providerResumeToken && workItem.sessionId
+            ? db
+                .update(sessions)
+                .set({ resumeToken: providerResumeToken, updatedAt: timestamp })
+                .where(
+                  and(
+                    eq(sessions.id, workItem.sessionId),
+                    eq(sessions.projectId, input.projectId),
+                    isNull(sessions.deletedAt),
+                    sql`changes() = 1`,
+                    or(isNull(sessions.resumeToken), eq(sessions.resumeToken, providerResumeToken)),
+                    exists(
+                      db
+                        .select({ id: leases.id })
+                        .from(leases)
+                        .where(
+                          and(
+                            eq(leases.id, input.leaseId),
+                            eq(leases.state, input.state),
+                            eq(leases.settlementId, settlementId),
+                          ),
+                        ),
+                    ),
+                  ),
+                )
+            : null
+        let sessionStatement = null
+        if (workItem.sessionId) {
           const activeChannel = await db
             .select({ id: sessionChannels.id })
             .from(sessionChannels)
@@ -822,7 +1009,7 @@ export function createLeaseRepo(db: Db): LeaseRepo {
             eq(sessions.state, 'pending'),
             eq(sessions.stateReason, 'waiting-for-runner-recovery'),
           )
-          await db
+          sessionStatement = db
             .update(sessions)
             .set(sessionUpdate)
             .where(
@@ -833,8 +1020,44 @@ export function createLeaseRepo(db: Db): LeaseRepo {
                 activeChannel
                   ? or(eq(sessions.state, 'running'), pendingRecoveryForAcceptedChannel)
                   : or(eq(sessions.state, 'running'), pendingWithoutAcceptedChannel),
+                exists(
+                  db
+                    .select({ id: leases.id })
+                    .from(leases)
+                    .where(
+                      and(
+                        eq(leases.id, input.leaseId),
+                        eq(leases.state, input.state),
+                        eq(leases.settlementId, settlementId),
+                      ),
+                    ),
+                ),
+                notExists(
+                  db
+                    .select({ id: workItems.id })
+                    .from(workItems)
+                    .where(
+                      and(
+                        eq(workItems.projectId, input.projectId),
+                        eq(workItems.sessionId, workItem.sessionId),
+                        inArray(workItems.state, ['available', 'leased']),
+                        gt(workItems.createdAt, workItem.createdAt),
+                      ),
+                    ),
+                ),
               ),
             )
+        }
+        const coreStatements = [completedWorkItemStatement, completedLeaseStatement, releaseRunnerStatement] as const
+        const [completedWorkItems] = sessionStatement
+          ? bindResumeTokenStatement
+            ? await db.batch([...coreStatements, bindResumeTokenStatement, ...memoryStatements, sessionStatement])
+            : await db.batch([...coreStatements, ...memoryStatements, sessionStatement])
+          : bindResumeTokenStatement
+            ? await db.batch([...coreStatements, bindResumeTokenStatement, ...memoryStatements])
+            : await db.batch([...coreStatements, ...memoryStatements])
+        if (completedWorkItems.length === 0) {
+          return null
         }
       }
       return this.find(input.projectId, input.leaseId)

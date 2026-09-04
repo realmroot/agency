@@ -1,6 +1,9 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
+import { createLeaseRepo } from '@server/adapters/repos/leases'
+import { createRunnerRepo } from '@server/adapters/repos/runners'
 import { createRuntimeOrchestrationRepoFromBinding } from '@server/adapters/repos/runtime-orchestration'
+import { createDb } from '@server/db/client'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { asRunnerAuthorization, dpopHeaders, seedPlatformProvider, setupOidcProvider, signIn } from './auth'
 
@@ -304,6 +307,323 @@ describe('[CF] /api/v1/leases', () => {
       metadata: { uid: session.id },
       status: { phase: 'idle', reason: null },
     })
+  })
+
+  it('rolls back the complete transition when releasing runner load fails [issue #158]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const memoryStoreRes = await jsonFetch('/api/v1/memory-stores', authorization, {
+      method: 'POST',
+      body: JSON.stringify(createResourceBody({ name: `Atomic rollback memory ${crypto.randomUUID()}` })),
+    })
+    expect(memoryStoreRes.status).toBe(201)
+    const memoryStore = (await memoryStoreRes.json()) as { metadata: { uid: string } }
+    const memoryStoreId = memoryStore.metadata.uid
+    const memoryPath = 'atomic-rollback.md'
+    const memoryRes = await jsonFetch(`/api/v1/memory-stores/${memoryStoreId}/memories`, authorization, {
+      method: 'POST',
+      body: JSON.stringify({ path: memoryPath, content: 'original memory\n' }),
+    })
+    expect(memoryRes.status).toBe(201)
+    const runner = await registerActiveRunner(authorization, environment.id, { runtimeNames: ['codex'] })
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
+      runtime: 'codex',
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `enbor://memories/${memoryStoreId}` }],
+      volumeMounts: [
+        { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
+      ],
+    })
+    const workItem = await availableWorkItem(authorization, session.id)
+    const claimRes = await claimLease(authorization, workItem.id, runner.id)
+    expect(claimRes.status).toBe(201)
+    const lease = (await claimRes.json()) as { id: string }
+
+    const readState = async () => ({
+      workItem: await env.DB.prepare('SELECT state, runner_id, lease_id, result, error FROM work_items WHERE id = ?')
+        .bind(workItem.id)
+        .first(),
+      lease: await env.DB.prepare('SELECT state, resume_token FROM leases WHERE id = ?').bind(lease.id).first(),
+      runner: await env.DB.prepare('SELECT current_load FROM runners WHERE id = ?').bind(runner.id).first(),
+      session: await env.DB.prepare('SELECT state, state_reason, resume_token FROM sessions WHERE id = ?')
+        .bind(session.id)
+        .first(),
+      memories: (
+        await env.DB.prepare(
+          'SELECT path, content, deleted_at FROM memory_store_memories WHERE store_id = ? ORDER BY id',
+        )
+          .bind(memoryStoreId)
+          .all()
+      ).results,
+    })
+    const before = await readState()
+    expect(before).toEqual({
+      workItem: { state: 'leased', runner_id: runner.id, lease_id: lease.id, result: null, error: null },
+      lease: { state: 'active', resume_token: null },
+      runner: { current_load: 1 },
+      session: { state: 'running', state_reason: null, resume_token: null },
+      memories: [{ path: memoryPath, content: 'original memory\n', deleted_at: null }],
+    })
+
+    const triggerName = 'issue_158_abort_target_runner_update'
+    await env.DB.prepare(`DROP TRIGGER IF EXISTS ${triggerName}`).run()
+    await env.DB.prepare(
+      `CREATE TRIGGER ${triggerName}
+       BEFORE UPDATE ON runners
+       WHEN OLD.id = '${runner.id}'
+       BEGIN
+         SELECT RAISE(ABORT, 'issue 158 injected runner update failure');
+       END`,
+    ).run()
+    try {
+      let patchFailed = false
+      try {
+        const finishRes = await runnerJsonFetch(`/api/v1/leases/${lease.id}`, authorization, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            state: 'completed',
+            resumeToken: 'codex-thread-rollback',
+            result: {
+              ok: true,
+              memoryStores: [
+                {
+                  memoryRef: `enbor://memories/${memoryStoreId}`,
+                  memories: [{ path: memoryPath, content: 'replacement memory\n' }],
+                },
+              ],
+            },
+          }),
+        })
+        patchFailed = !finishRes.ok
+      } catch {
+        patchFailed = true
+      }
+
+      expect(patchFailed).toBe(true)
+      await expect(readState()).resolves.toEqual(before)
+    } finally {
+      await env.DB.prepare(`DROP TRIGGER IF EXISTS ${triggerName}`).run()
+    }
+  })
+
+  it('does not partially finish a lease at its expiry timestamp [spec: runners/lease-lifecycle]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const memoryStoreRes = await jsonFetch('/api/v1/memory-stores', authorization, {
+      method: 'POST',
+      body: JSON.stringify(createResourceBody({ name: `Expiry fence memory ${crypto.randomUUID()}` })),
+    })
+    expect(memoryStoreRes.status).toBe(201)
+    const memoryStore = (await memoryStoreRes.json()) as { metadata: { uid: string } }
+    const memoryStoreId = memoryStore.metadata.uid
+    const memoryPath = 'expiry-fence.md'
+    const memoryRes = await jsonFetch(`/api/v1/memory-stores/${memoryStoreId}/memories`, authorization, {
+      method: 'POST',
+      body: JSON.stringify({ path: memoryPath, content: 'before expiry\n' }),
+    })
+    expect(memoryRes.status).toBe(201)
+    const runner = await registerActiveRunner(authorization, environment.id)
+    const session = await createSelfHostedSession(authorization, agent.id, environment.id, {
+      volumes: [{ name: 'memory', type: 'memory', memoryRef: `enbor://memories/${memoryStoreId}` }],
+      volumeMounts: [
+        { name: 'memory', mountPath: `/workspace/.enbor/memory-stores/${memoryStoreId}`, readOnly: false },
+      ],
+    })
+    const workItem = await availableWorkItem(authorization, session.id)
+    const claimRes = await claimLease(authorization, workItem.id, runner.id)
+    expect(claimRes.status).toBe(201)
+    const lease = (await claimRes.json()) as { id: string; expiresAt: string }
+    const scope = await env.DB.prepare('SELECT organization_id, project_id FROM work_items WHERE id = ?')
+      .bind(workItem.id)
+      .first<{ organization_id: string; project_id: string }>()
+    expect(scope).not.toBeNull()
+
+    const before = {
+      workItem: await env.DB.prepare('SELECT state, result, error FROM work_items WHERE id = ?')
+        .bind(workItem.id)
+        .first(),
+      lease: await env.DB.prepare('SELECT state FROM leases WHERE id = ?').bind(lease.id).first(),
+      runner: await env.DB.prepare('SELECT current_load FROM runners WHERE id = ?').bind(runner.id).first(),
+      session: await env.DB.prepare('SELECT state, state_reason FROM sessions WHERE id = ?').bind(session.id).first(),
+      memories: (
+        await env.DB.prepare(
+          'SELECT path, content, deleted_at FROM memory_store_memories WHERE store_id = ? ORDER BY id',
+        )
+          .bind(memoryStoreId)
+          .all()
+      ).results,
+    }
+    expect(before).toEqual({
+      workItem: { state: 'leased', result: null, error: null },
+      lease: { state: 'active' },
+      runner: { current_load: 1 },
+      session: { state: 'running', state_reason: null },
+      memories: [{ path: memoryPath, content: 'before expiry\n', deleted_at: null }],
+    })
+
+    const finished = await createLeaseRepo(createDb(env)).finish(
+      {
+        organizationId: scope!.organization_id,
+        projectId: scope!.project_id,
+        leaseId: lease.id,
+        state: 'completed',
+        result: {
+          ok: true,
+          memoryStores: [
+            {
+              memoryRef: `enbor://memories/${memoryStoreId}`,
+              memories: [{ path: memoryPath, content: 'after expiry\n' }],
+            },
+          ],
+        },
+      },
+      lease.expiresAt,
+    )
+
+    expect(finished).toBeNull()
+    await expect(
+      Promise.all([
+        env.DB.prepare('SELECT state, result, error FROM work_items WHERE id = ?').bind(workItem.id).first(),
+        env.DB.prepare('SELECT state FROM leases WHERE id = ?').bind(lease.id).first(),
+        env.DB.prepare('SELECT current_load FROM runners WHERE id = ?').bind(runner.id).first(),
+        env.DB.prepare('SELECT state, state_reason FROM sessions WHERE id = ?').bind(session.id).first(),
+        env.DB.prepare('SELECT path, content, deleted_at FROM memory_store_memories WHERE store_id = ? ORDER BY id')
+          .bind(memoryStoreId)
+          .all()
+          .then((result) => result.results),
+      ]),
+    ).resolves.toEqual([before.workItem, before.lease, before.runner, before.session, before.memories])
+  })
+
+  it('[spec: runners/heartbeat-load-recovery] preserves max capacity across concurrent claims and heartbeat repair', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id, { maxConcurrent: 1 })
+    const firstSession = await createSelfHostedSession(authorization, agent.id, environment.id)
+    const secondSession = await createSelfHostedSession(authorization, agent.id, environment.id)
+    const firstWorkItem = await availableWorkItem(authorization, firstSession.id)
+    const secondWorkItem = await availableWorkItem(authorization, secondSession.id)
+    const scope = await env.DB.prepare('SELECT organization_id, project_id FROM work_items WHERE id = ?')
+      .bind(firstWorkItem.id)
+      .first<{ organization_id: string; project_id: string }>()
+    expect(scope).not.toBeNull()
+
+    const db = createDb(env)
+    const leases = createLeaseRepo(db)
+    const runners = createRunnerRepo(db)
+    const timestamp = new Date().toISOString()
+    const [firstClaim, _heartbeat, secondClaim] = await Promise.all([
+      leases.claim(
+        {
+          organizationId: scope!.organization_id,
+          projectId: scope!.project_id,
+          workItemId: firstWorkItem.id,
+          runnerId: runner.id,
+          leaseDurationSeconds: 90,
+        },
+        timestamp,
+      ),
+      runners.heartbeat(
+        scope!.project_id,
+        runner.id,
+        {
+          state: 'active',
+          runtimeUsage: [],
+          runtimes: [
+            {
+              runtime: DEFAULT_ENBOR_RUNNER_CAPABILITY,
+              models: ['@cf/moonshotai/kimi-k2.6'],
+              state: 'ready',
+            },
+          ],
+          metadata: {},
+        },
+        timestamp,
+      ),
+      leases.claim(
+        {
+          organizationId: scope!.organization_id,
+          projectId: scope!.project_id,
+          workItemId: secondWorkItem.id,
+          runnerId: runner.id,
+          leaseDurationSeconds: 90,
+        },
+        timestamp,
+      ),
+    ])
+
+    const claims = [firstClaim, secondClaim]
+    expect(claims.filter((claim) => typeof claim === 'object')).toHaveLength(1)
+    expect(claims.filter((claim) => claim === 'at_capacity')).toHaveLength(1)
+    await expect(
+      env.DB.prepare("SELECT count(*) AS count FROM leases WHERE runner_id = ? AND state = 'active'")
+        .bind(runner.id)
+        .first(),
+    ).resolves.toEqual({ count: 1 })
+    await expect(
+      env.DB.prepare('SELECT current_load FROM runners WHERE id = ?').bind(runner.id).first(),
+    ).resolves.toEqual({ current_load: 1 })
+  })
+
+  it('decrements runner load once when duplicate terminal finishes share a timestamp [issue #158]', async () => {
+    const authorization = await signIn()
+    const environment = await createSelfHostedEnvironment(authorization)
+    const agent = await createAgent(authorization)
+    const runner = await registerActiveRunner(authorization, environment.id, {
+      maxConcurrent: 2,
+      runtimeNames: ['codex'],
+    })
+    const firstSession = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'codex' })
+    const secondSession = await createSelfHostedSession(authorization, agent.id, environment.id, { runtime: 'codex' })
+    const firstWorkItem = await availableWorkItem(authorization, firstSession.id)
+    const secondWorkItem = await availableWorkItem(authorization, secondSession.id)
+    const firstClaim = await claimLease(authorization, firstWorkItem.id, runner.id)
+    const secondClaim = await claimLease(authorization, secondWorkItem.id, runner.id)
+    expect(firstClaim.status).toBe(201)
+    expect(secondClaim.status).toBe(201)
+    const firstLease = (await firstClaim.json()) as { id: string }
+    const secondLease = (await secondClaim.json()) as { id: string }
+    const scope = await env.DB.prepare('SELECT organization_id, project_id FROM work_items WHERE id = ?')
+      .bind(firstWorkItem.id)
+      .first<{ organization_id: string; project_id: string }>()
+    expect(scope).not.toBeNull()
+
+    const repo = createLeaseRepo(createDb(env))
+    const timestamp = new Date().toISOString()
+    const input = {
+      organizationId: scope!.organization_id,
+      projectId: scope!.project_id,
+      leaseId: firstLease.id,
+      state: 'completed' as const,
+    }
+    const winner = await repo.finish({ ...input, result: { ok: true } }, timestamp)
+    const loser = await repo.finish({ ...input, resumeToken: 'codex-thread-loser', result: { ok: false } }, timestamp)
+
+    expect(winner).toMatchObject({ id: firstLease.id, state: 'completed', resumeToken: null })
+    expect(loser).toBeNull()
+    await expect(
+      env.DB.prepare('SELECT current_load FROM runners WHERE id = ?').bind(runner.id).first(),
+    ).resolves.toEqual({ current_load: 1 })
+    await expect(
+      env.DB.prepare('SELECT id, state, resume_token, settlement_id FROM leases WHERE id IN (?, ?) ORDER BY id')
+        .bind(firstLease.id, secondLease.id)
+        .all(),
+    ).resolves.toMatchObject({
+      results: expect.arrayContaining([
+        {
+          id: firstLease.id,
+          state: 'completed',
+          resume_token: null,
+          settlement_id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+        },
+        { id: secondLease.id, state: 'active', resume_token: null, settlement_id: null },
+      ]),
+    })
+    await expect(
+      env.DB.prepare('SELECT resume_token FROM sessions WHERE id = ?').bind(firstSession.id).first(),
+    ).resolves.toEqual({ resume_token: null })
   })
 
   it('does not create an active lease after its Session is deleted or atomically marked closing', async () => {

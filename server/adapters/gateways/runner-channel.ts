@@ -45,6 +45,17 @@ export function createRunnerChannel(
       return response.status === 202
     },
 
+    async retryAvailableWork(input): Promise<void> {
+      const stub = env.RUNNER_POOL.get(env.RUNNER_POOL.idFromName(input.environmentId))
+      const response = await stub.fetch('https://runner-pool/retry', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+      if (!response.ok) {
+        throw new Error(`Runner work retry failed: ${response.status}`)
+      }
+    },
+
     async isAccepted(sessionId: string): Promise<boolean> {
       const stub = await pool(sessionId)
       const response = await stub.fetch('https://runner-pool/status', {

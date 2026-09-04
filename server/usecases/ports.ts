@@ -1783,6 +1783,12 @@ export interface RunnerChannel {
     environmentId: string
     workItemId: string
   }): Promise<boolean>
+  retryAvailableWork(input: {
+    runnerId: string
+    organizationId: string
+    projectId: string
+    environmentId: string
+  }): Promise<void>
   // Whether the session's runner channel DO has an accepted (active) runner.
   isAccepted(sessionId: string): Promise<boolean>
   // Dispatches a command to the runner over the channel; true when accepted.

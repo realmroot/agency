@@ -13,6 +13,8 @@ type RunnerScope = {
   commandAcknowledgement: boolean
 }
 
+type RunnerDispatchScope = Omit<RunnerScope, 'commandAcknowledgement'>
+
 type RunnerConnection = {
   scope: RunnerScope
   socket: WebSocket
@@ -68,6 +70,9 @@ export class RunnerPoolObject implements DurableObject {
     }
     if (url.pathname === '/assign' && request.method === 'POST') {
       return this.assignWork(await request.json())
+    }
+    if (url.pathname === '/retry' && request.method === 'POST') {
+      return this.retryAvailableWork(await request.json())
     }
     if (url.pathname === '/dispatch' && request.method === 'POST') {
       return this.dispatch(await request.json())
@@ -193,7 +198,28 @@ export class RunnerPoolObject implements DurableObject {
     return Response.json(result, { status: result.ok ? 202 : 409 })
   }
 
-  private async dispatchAvailableWork(scope: RunnerScope): Promise<void> {
+  private async retryAvailableWork(body: unknown): Promise<Response> {
+    const scope = body as Partial<RunnerDispatchScope>
+    if (!scope.runnerId || !scope.organizationId || !scope.projectId || !scope.environmentId) {
+      return Response.json({ ok: false, error: 'Invalid runner pool retry request' }, { status: 400 })
+    }
+    const connection = this.runners.get(scope.runnerId)
+    if (connection && connection.scope.environmentId === scope.environmentId) {
+      const runner = await createDeps(this.env).runners.find(scope.projectId, scope.runnerId)
+      if (runner) {
+        connection.assigned = runner.currentLoad
+      }
+    }
+    await this.dispatchAvailableWork({
+      runnerId: scope.runnerId,
+      organizationId: scope.organizationId,
+      projectId: scope.projectId,
+      environmentId: scope.environmentId,
+    })
+    return Response.json({ ok: true }, { status: 202 })
+  }
+
+  private async dispatchAvailableWork(scope: RunnerDispatchScope): Promise<void> {
     const deps = createDeps(this.env)
     const page = await deps.workItems.list({
       projectId: scope.projectId,
