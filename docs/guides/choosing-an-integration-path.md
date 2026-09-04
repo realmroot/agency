@@ -30,8 +30,8 @@ Question or task
 
 ## Use Context7 for Knowledge
 
-Context7 indexes the Enbor overview, adoption guides, SDK guides, and the Enbor
-Realmroot Toolbox Skill. Use library id `/realmroot/enbor` for questions such
+Context7 indexes the Enbor overview, adoption guides, SDK guides, and the
+`operate-enbor` Skill. Use library id `/realmroot/enbor` for questions such
 as:
 
 - What problem does Enbor solve?
