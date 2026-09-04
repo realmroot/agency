@@ -15,6 +15,7 @@ import { errorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/query-keys'
 
 const EMPTY_RESOURCES: never[] = []
+const AUTOMATIC_ENVIRONMENT = 'automatic'
 
 const INTERVAL_UNITS = {
   minutes: 60,
@@ -28,7 +29,7 @@ interface TriggerFormState {
   type: 'scheduled' | 'http' | 'inbox'
   name: string
   agentId: string
-  environmentId: string
+  environmentId: string | null
   runtime: RuntimeName
   promptTemplate: string
   intervalValue: string
@@ -40,7 +41,7 @@ const emptyTrigger: TriggerFormState = {
   type: 'scheduled',
   name: '',
   agentId: '',
-  environmentId: '',
+  environmentId: null,
   runtime: 'enbor',
   promptTemplate: '',
   intervalValue: '1',
@@ -104,7 +105,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
     ? 'Loading environments.'
     : environments.length === 0
       ? 'No active environments exist in the current project.'
-      : 'Select the hosting and policy environment for dispatched sessions.'
+      : 'Automatic placement selects a compatible environment when the trigger runs. Pin one only when required.'
   const createTrigger = useMutation({
     mutationFn: () =>
       api.createTrigger({
@@ -147,7 +148,7 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
       const nextAgentId = current.agentId || agents[0]?.metadata.uid || ''
       const nextEnvironmentId = environments.some((environment) => environment.metadata.uid === current.environmentId)
         ? current.environmentId
-        : environments[0]?.metadata.uid || ''
+        : null
       const identityRuntime = agents.find((agent) => agent.metadata.uid === nextAgentId)?.spec.identity?.runtime
       const supportedIdentityRuntime = isRuntimeName(identityRuntime) ? identityRuntime : undefined
       if (
@@ -174,7 +175,6 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
   const canSubmit = Boolean(
     form.name.trim() &&
       form.agentId &&
-      form.environmentId &&
       form.promptTemplate.trim() &&
       (form.type !== 'scheduled' || form.intervalValue.trim()) &&
       (form.type !== 'inbox' || selectedAgent?.spec.identity),
@@ -245,14 +245,17 @@ export function CreateTriggerSheet({ open, onOpenChange }: { open: boolean; onOp
               <Field>
                 <FieldLabel htmlFor="trigger-environment">Environment</FieldLabel>
                 <Select
-                  value={form.environmentId}
-                  onValueChange={(environmentId) => setForm({ ...form, environmentId })}
+                  value={form.environmentId ?? AUTOMATIC_ENVIRONMENT}
+                  onValueChange={(environmentId) =>
+                    setForm({ ...form, environmentId: environmentId === AUTOMATIC_ENVIRONMENT ? null : environmentId })
+                  }
                 >
                   <SelectTrigger id="trigger-environment" className="w-full">
-                    <SelectValue placeholder="Select an environment" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent position="popper">
                     <SelectGroup>
+                      <SelectItem value={AUTOMATIC_ENVIRONMENT}>Automatic placement</SelectItem>
                       {environments.map((environment) => (
                         <SelectItem key={environment.metadata.uid} value={environment.metadata.uid}>
                           {environment.metadata.name}

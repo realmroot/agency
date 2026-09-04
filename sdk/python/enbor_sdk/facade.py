@@ -569,8 +569,11 @@ class _TriggersResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_triggers_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_trigger_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_trigger_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, trigger_id: str) -> Any:
         return _unwrap(read_trigger_api.sync_detailed(trigger_id=trigger_id, client=self._client))

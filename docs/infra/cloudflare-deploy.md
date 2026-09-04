@@ -9,10 +9,10 @@ through Cloudflare Workers Builds.
 
 ## Required Cloudflare resources
 
-- Workers project: `enbor`
+- Workers project: `any-managed-agents` (the public product and hostname remain Enbor)
 - Workers AI binding: `AI`
 - Cloudflare Sandbox container binding: `SANDBOX`
-- Production D1 database: `enbor-db`
+- Production D1 database: `any-managed-agents-db`
 - Staging D1 database: `enbor-db-staging-v2`
 - Container image built from this repository's `Dockerfile`
 
@@ -123,8 +123,13 @@ pnpm run db:migrate:d1:prod
 
 ## One-way infrastructure cutover
 
-The Enbor rename changes physical Worker, Queue, R2, and secret binding names.
-Treat it as a maintenance-window migration, not as an ordinary rolling deploy.
+The public Enbor rename has not moved the production Worker, Queue, R2, or
+secret bindings to new physical names. Keep deploying the legacy physical
+resources declared in `wrangler.toml`; changing those names creates empty
+resources without the production secrets and encrypted-data continuity.
+
+A future physical-resource rename must be treated as a maintenance-window
+migration, not as an ordinary rolling deploy.
 There is no dual-read or protocol compatibility period.
 
 For each environment, in staging first and then production:
@@ -135,10 +140,18 @@ For each environment, in staging first and then production:
 2. Export the D1 database and record the existing R2 object count before any
    write. The D1 database keeps its UUID and is renamed in place; do not create
    an empty replacement database.
-3. Create the four Enbor queues and the Enbor Session-events bucket named in
-   `wrangler.toml`. Copy every legacy Session-events object with a one-off Worker
-   bound to both buckets, then compare source/destination object counts and a
-   deterministic key-and-size manifest before continuing.
+3. Create the target resources for the environment being rehearsed. Staging
+   uses `enbor-cloud-turns-staging`, `enbor-cloud-turns-staging-dlq`,
+   `enbor-trigger-dispatches-staging`,
+   `enbor-trigger-dispatches-staging-dlq`, and the
+   `enbor-session-events-staging` bucket. Production uses
+   `enbor-cloud-turns`, `enbor-cloud-turns-dlq`,
+   `enbor-trigger-dispatches`, `enbor-trigger-dispatches-dlq`, and the
+   `enbor-session-events` bucket. The production targets intentionally differ
+   from the active legacy names in `wrangler.toml`. Copy every legacy
+   Session-events object with a one-off Worker bound to both buckets, then
+   compare source/destination object counts and a deterministic key-and-size
+   manifest before continuing.
 4. Preserve encrypted Vault data. An encryption binding cannot be renamed and
    Cloudflare never reveals its value. Before removing the legacy binding,
    deploy a one-off migration version of the existing Worker with both the old

@@ -188,6 +188,52 @@ describe('[CF] /api/v1/triggers', () => {
     vi.unstubAllGlobals()
   })
 
+  it('replays Trigger creation by Idempotency-Key and rejects a conflicting payload [spec: triggers/create]', async () => {
+    const authorization = await signIn()
+    const agent = await createAgent(authorization)
+    const environment = await createEnvironment(authorization)
+    const body = createResourceBody(
+      { name: 'Idempotent heartbeat' },
+      {
+        source: { type: 'schedule', schedule: { type: 'interval', intervalSeconds: 3600 } },
+        nextDueAt: '2026-05-26T12:00:00.000Z',
+        template: {
+          metadata: { labels: {}, annotations: {} },
+          spec: {
+            agentId: agent.id,
+            environmentId: environment.id,
+            runtime: 'enbor',
+            promptTemplate: 'Run scheduled work.',
+            env: {},
+            envFrom: [],
+            volumes: [],
+            volumeMounts: [],
+          },
+        },
+      },
+    )
+    const create = (requestBody: unknown) =>
+      jsonFetch('/api/v1/triggers', authorization, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': 'create-trigger-once' },
+        body: JSON.stringify(requestBody),
+      })
+
+    const firstResponse = await create(body)
+    expect(firstResponse.status).toBe(201)
+    const first = (await firstResponse.json()) as { metadata: { uid: string } }
+
+    const replayResponse = await create(body)
+    expect(replayResponse.status).toBe(201)
+    await expect(replayResponse.json()).resolves.toMatchObject({ metadata: { uid: first.metadata.uid } })
+
+    const conflictResponse = await create({ ...body, metadata: { name: 'Different heartbeat' } })
+    expect(conflictResponse.status).toBe(409)
+    await expect(conflictResponse.json()).resolves.toMatchObject({
+      error: { type: 'idempotency_conflict' },
+    })
+  })
+
   it('creates, lists, reads, updates, pauses, deletes, and audits triggers [spec: triggers/api-crud]', async () => {
     const authorization = await signIn()
     const agent = await createAgent(authorization)

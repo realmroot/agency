@@ -107,7 +107,7 @@ export declare function createEnborClient(config: EnborClientConfig): {
     };
     triggers: {
         list: (query?: types.ListTriggersData["query"]) => Promise<types.TriggerListResponse>;
-        create: (body: types.CreateTriggerRequest) => Promise<types.Trigger>;
+        create: (body: types.CreateTriggerRequest, idempotencyKey?: string) => Promise<types.Trigger>;
         get: (triggerId: string) => Promise<types.Trigger>;
         update: (triggerId: string, body: types.UpdateTriggerRequest) => Promise<types.Trigger>;
         delete: (triggerId: string) => Promise<void>;

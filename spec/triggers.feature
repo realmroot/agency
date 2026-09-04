@@ -1,7 +1,7 @@
 Feature: Triggers
   Heartbeat-driven schedules and authenticated HTTP requests wake agents by
   creating sessions with initial prompts. A trigger snapshots its agent,
-  environment, runtime, prompt template, and trigger source; scheduled triggers
+  optional environment pin, runtime, prompt template, and trigger source; scheduled triggers
   use a local heartbeat dispatcher, while HTTP triggers render prompt variables
   from the request that creates the run.
 
@@ -9,10 +9,11 @@ Feature: Triggers
 
   @triggers/create @usecase
   Scenario: Create a trigger from usable references
-    Given a signed-in user with an active agent and environment
-    When the user creates a scheduled trigger with a prompt template and schedule
+    Given a signed-in user with an active agent
+    When the user creates a scheduled trigger with a prompt template, schedule, and optional environment pin
     Then the trigger is stored active with a derived next-due time when omitted
     And a missing agent or deleted environment is rejected before storing
+    And retrying the same request with the same Idempotency-Key does not create another trigger
 
   @triggers/http-create @usecase
   Scenario: Create an HTTP trigger from usable references

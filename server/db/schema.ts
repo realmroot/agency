@@ -668,6 +668,8 @@ export const triggers = sqliteTable(
       enum: ['pending', 'active', 'inactive', 'error'],
     }),
     inboxProvisioningError: text('inbox_provisioning_error'),
+    creationKeyHash: text('creation_key_hash'),
+    creationFingerprint: text('creation_fingerprint'),
     metadata: text('metadata').notNull().default('{}'),
     // Nullable audit pointer with no FK — there is no users table in this D1 schema.
     // Realmroot identity references survive user-record deletion.
@@ -693,6 +695,7 @@ export const triggers = sqliteTable(
       sql`(${table.triggerType} = 'inbox' and ${table.inboxSubscriptionId} is not null and ${table.inboxCallbackTokenHash} is not null and ${table.inboxCallbackTokenCiphertext} is not null and ${table.inboxProvisioningState} is not null) or (${table.triggerType} != 'inbox' and ${table.inboxSubscriptionId} is null and ${table.inboxCallbackTokenHash} is null and ${table.inboxCallbackTokenCiphertext} is null and ${table.inboxSubscriptionEtag} is null and ${table.inboxRegisteredAgentSubject} is null and ${table.inboxTransitionTargetSubject} is null and ${table.inboxProvisioningState} is null and ${table.inboxProvisioningError} is null)`,
     ),
     uniqueIndex('idx_triggers_inbox_subscription').on(table.inboxSubscriptionId),
+    uniqueIndex('idx_triggers_project_creation_idempotency').on(table.projectId, table.creationKeyHash),
   ],
 )
 

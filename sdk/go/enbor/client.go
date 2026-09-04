@@ -666,7 +666,11 @@ func (s TriggersService) List(ctx context.Context, params *ListTriggersParams) (
 }
 
 func (s TriggersService) Create(ctx context.Context, body CreateTriggerRequest) (*Trigger, error) {
-	response, err := s.client.raw.CreateTriggerWithResponse(ctx, nil, body)
+	return s.CreateWithParams(ctx, nil, body)
+}
+
+func (s TriggersService) CreateWithParams(ctx context.Context, params *CreateTriggerParams, body CreateTriggerRequest) (*Trigger, error) {
+	response, err := s.client.raw.CreateTriggerWithResponse(ctx, params, body)
 	if err != nil {
 		return nil, err
 	}

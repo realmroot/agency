@@ -1,4 +1,4 @@
-name = "enbor"
+name = "any-managed-agents"
 main = "./server/worker.ts"
 compatibility_date = "2026-05-07"
 compatibility_flags = ["nodejs_compat"]
@@ -43,42 +43,42 @@ simple = { limit = 100, period = 60 }
 
 [[queues.producers]]
 binding = "CLOUD_TURNS"
-queue = "enbor-cloud-turns"
+queue = "ama-cloud-turns"
 
 [[queues.producers]]
 binding = "TRIGGER_DISPATCHES"
-queue = "enbor-trigger-dispatches"
+queue = "ama-trigger-dispatches"
 
 [[queues.consumers]]
-queue = "enbor-cloud-turns"
+queue = "ama-cloud-turns"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "enbor-cloud-turns-dlq"
+dead_letter_queue = "ama-cloud-turns-dlq"
 
 # A cloud turn that keeps failing (infra / DB / queue errors) lands here after
 # max_retries instead of being silently dropped, stranding the session. The DLQ
 # consumer marks the session errored so clients recover. Provision the queue with
-# `wrangler queues create enbor-cloud-turns-dlq` before deploying.
+# `wrangler queues create ama-cloud-turns-dlq` before deploying.
 [[queues.consumers]]
-queue = "enbor-cloud-turns-dlq"
+queue = "ama-cloud-turns-dlq"
 max_batch_size = 1
 max_retries = 1
 
 [[queues.consumers]]
-queue = "enbor-trigger-dispatches"
+queue = "ama-trigger-dispatches"
 max_batch_size = 1
 max_retries = 5
-dead_letter_queue = "enbor-trigger-dispatches-dlq"
+dead_letter_queue = "ama-trigger-dispatches-dlq"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "enbor-db"
+database_name = "any-managed-agents-db"
 database_id = "1b821d59-c74b-47e4-9af3-3d83de81dc1c"
 migrations_dir = "./migrations"
 
 [[r2_buckets]]
 binding = "SESSION_EVENTS"
-bucket_name = "enbor-session-events"
+bucket_name = "ama-session-events"
 
 [[durable_objects.bindings]]
 name = "SANDBOX"
@@ -125,7 +125,7 @@ new_sqlite_classes = ["RunnerPoolObject"]
 
 [[containers]]
 class_name = "Sandbox"
-name = "enbor-sandbox"
+name = "any-managed-agents-sandbox"
 image = "./Dockerfile"
 max_instances = 20
 
@@ -137,6 +137,7 @@ enabled = true
 head_sampling_rate = 0.05
 
 [env.staging]
+name = "enbor-staging"
 routes = [
   { pattern = "enbor-staging.realmroot.dev", custom_domain = true },
 ]

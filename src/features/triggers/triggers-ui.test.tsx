@@ -539,7 +539,7 @@ describe('[spec: triggers/actions] useTriggerActions', () => {
 // ─── CreateTriggerSheet ──────────────────────────────────────────────────────
 
 describe('[spec: triggers/create] CreateTriggerSheet', () => {
-  it('posts the trigger with the required fields when the form is submitted', async () => {
+  it('defaults to Automatic placement and posts a null environment pin', async () => {
     let postedBody: Record<string, unknown> | null = null
     server.use(
       http.get('*/api/v1/agents', () => HttpResponse.json(listEnvelope([agent()]))),
@@ -564,7 +564,10 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
     fireEvent.change(screen.getByLabelText('Prompt template'), { target: { value: 'Research the latest offers.' } })
     fireEvent.change(screen.getByLabelText('Interval value'), { target: { value: '6' } })
 
-    // The submit enables only once the agent/environment selects auto-fill from the loaded lists.
+    const environmentSelect = screen.getByRole('combobox', { name: 'Environment' })
+    await waitFor(() => expect(environmentSelect).toHaveTextContent('Automatic placement'))
+
+    // The agent auto-fills from the loaded list; an environment pin is optional.
     const submitButton = screen.getByRole('button', { name: /create trigger/i })
     await waitFor(() => expect((submitButton as HTMLButtonElement).disabled).toBe(false))
 
@@ -579,7 +582,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
         template: {
           spec: {
             agentId: 'agent_1',
-            environmentId: 'env_1',
+            environmentId: null,
             runtime: 'enbor',
             promptTemplate: 'Research the latest offers.',
           },
