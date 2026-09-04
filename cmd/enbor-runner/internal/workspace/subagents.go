@@ -31,11 +31,15 @@ func agentSubagentProfiles(agentSnapshot map[string]any) []subagentProfile {
 		if !ok {
 			return subagentProfile{}, false
 		}
+		model := snapshotString(entry["model"])
+		if provider := snapshotString(entry["provider"]); provider != "" {
+			model = strings.TrimPrefix(model, provider+"/")
+		}
 		return subagentProfile{
 			Name:          snapshotString(entry["name"]),
 			Description:   snapshotString(entry["description"]),
 			SystemPrompt:  snapshotString(entry["systemPrompt"]),
-			Model:         snapshotString(entry["model"]),
+			Model:         model,
 			AllowedTools:  snapshotStringArray(entry["allowedTools"]),
 			Skills:        snapshotStringArray(entry["skills"]),
 			MCPConnectors: snapshotStringArray(entry["mcpConnectors"]),

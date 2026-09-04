@@ -87,6 +87,33 @@ func TestAgentSubagentProfilesFiltersInvalidSnapshotItems(t *testing.T) {
 	}
 }
 
+func TestAgentSubagentProfilesStripsOnlySelectedProviderPrefixFromModel(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider any
+		model    any
+		want     string
+	}{
+		{name: "qualified openai model", provider: "openai", model: "openai/openai-gpt", want: "openai-gpt"},
+		{name: "runtime-native model", provider: "openai", model: "openai-gpt", want: "openai-gpt"},
+		{name: "foreign slash model", provider: "openai", model: "vendor/openai-gpt", want: "vendor/openai-gpt"},
+		{name: "workers ai model", provider: "workers-ai", model: "@cf/meta/llama-3.3", want: "@cf/meta/llama-3.3"},
+		{name: "null selection", provider: nil, model: nil, want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := map[string]any{"name": "reviewer", "provider": tt.provider, "model": tt.model}
+			profiles := agentSubagentProfiles(map[string]any{"subagents": []any{entry}})
+			if len(profiles) != 1 || profiles[0].Model != tt.want {
+				t.Fatalf("model projection = %#v, want %q", profiles, tt.want)
+			}
+			if entry["provider"] != tt.provider || entry["model"] != tt.model {
+				t.Fatalf("snapshot entry was mutated: %#v", entry)
+			}
+		})
+	}
+}
+
 func TestPrepareAgentWorkspaceWritesCopilotCommonSubagentDefinition(t *testing.T) {
 	cwd := t.TempDir()
 	if err := (&Workspace{Cwd: cwd}).PrepareAgent(context.Background(), "copilot", reviewerSnapshot()); err != nil {

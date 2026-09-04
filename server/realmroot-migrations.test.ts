@@ -387,7 +387,9 @@ describe('[spec: agents/subagent-references] Agent sub-agent reference migration
 
     expect(
       db
-        .prepare('SELECT name,identity_id,identity_snapshot,subagents,current_version_id FROM agents WHERE id = ?')
+        .prepare(
+          'SELECT name,identity_id,identity_snapshot,subagents,current_version_id,deleted_at FROM agents WHERE id = ?',
+        )
         .get(agentIds[0]),
     ).toEqual({
       name: 'a/b',
@@ -395,6 +397,7 @@ describe('[spec: agents/subagent-references] Agent sub-agent reference migration
       identity_snapshot: null,
       subagents: '[]',
       current_version_id: versionIds[0],
+      deleted_at: null,
     })
 
     const session = db.prepare('SELECT agent_snapshot FROM sessions WHERE id = ?').get('session_existing') as {
@@ -410,6 +413,70 @@ describe('[spec: agents/subagent-references] Agent sub-agent reference migration
         provider: null,
       })),
     )
+    db.close()
+  })
+
+  it.each([
+    {
+      condition: 'deleted parent in an active project',
+      parentDeletedAt: '2026-01-02',
+      projectDeletedAt: null,
+      expectedDeletedAt: '2026-01-02',
+    },
+    {
+      condition: 'deleted project',
+      parentDeletedAt: null,
+      projectDeletedAt: '2026-01-03',
+      expectedDeletedAt: '2026-01-03',
+    },
+  ])('promotes an embedded child of a $condition as a tombstone', ({
+    parentDeletedAt,
+    projectDeletedAt,
+    expectedDeletedAt,
+  }) => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0041_enbor_contract.sql')
+    db.exec(`
+        INSERT INTO projects (id,organization_id,name,created_at,updated_at)
+          VALUES ('project_deleted_case','org_1','Project','2026-01-01','2026-01-01');
+      `)
+    db.prepare(`INSERT INTO agents (
+        id,project_id,name,system_prompt,subagents,current_version_id,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?)`).run(
+      'agent_deleted_case',
+      'project_deleted_case',
+      'Parent',
+      'Coordinate work.',
+      JSON.stringify([{ name: 'reviewer', systemPrompt: 'Review carefully.' }]),
+      'agentver_deleted_case',
+      '2026-01-01',
+      '2026-01-01',
+    )
+    db.prepare(`INSERT INTO agent_versions (
+        id,agent_id,project_id,version,system_prompt,subagents,created_at
+      ) VALUES (?,?,?,?,?,?,?)`).run(
+      'agentver_deleted_case',
+      'agent_deleted_case',
+      'project_deleted_case',
+      1,
+      'Coordinate work.',
+      JSON.stringify([{ name: 'reviewer', systemPrompt: 'Review carefully.' }]),
+      '2026-01-01',
+    )
+    if (parentDeletedAt) {
+      db.prepare('UPDATE agents SET deleted_at = ? WHERE id = ?').run(parentDeletedAt, 'agent_deleted_case')
+    }
+    if (projectDeletedAt) {
+      db.prepare('UPDATE projects SET deleted_at = ? WHERE id = ?').run(projectDeletedAt, 'project_deleted_case')
+    }
+
+    expect(() => apply(db, '0042_agent_subagent_references.sql')).not.toThrow()
+    expect(
+      db.prepare('SELECT deleted_at FROM agents WHERE id = ?').get('migrated-subagent-agentver_deleted_case-0'),
+    ).toEqual({ deleted_at: expectedDeletedAt })
+    expect(db.prepare('SELECT deleted_at FROM agents WHERE id = ?').get('agent_deleted_case')).toEqual({
+      deleted_at: expectedDeletedAt,
+    })
     db.close()
   })
 })

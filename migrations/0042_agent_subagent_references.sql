@@ -40,8 +40,11 @@ SELECT
   coalesce(json_extract(legacy.`definition`, '$.skills'), '[]'), '[]',
   coalesce(json_extract(legacy.`definition`, '$.allowedTools'), '[]'),
   coalesce(json_extract(legacy.`definition`, '$.mcpConnectors'), '[]'),
-  NULL, NULL, NULL, legacy.`agent_version_id`, legacy.`created_at`, legacy.`created_at`
-FROM `__legacy_agent_subagents_0042` legacy;--> statement-breakpoint
+  NULL, NULL, coalesce(parent.`deleted_at`, project.`deleted_at`),
+  legacy.`agent_version_id`, legacy.`created_at`, legacy.`created_at`
+FROM `__legacy_agent_subagents_0042` legacy
+JOIN `agents` parent ON parent.`id` = legacy.`source_agent_id`
+JOIN `projects` project ON project.`id` = legacy.`project_id`;--> statement-breakpoint
 
 INSERT INTO `agent_versions` (
   `id`, `agent_id`, `project_id`, `version`, `system_prompt`, `provider_id`, `model`,
@@ -108,7 +111,10 @@ SET `subagents` = coalesce((
 WHERE json_array_length(`subagents`) > 0;--> statement-breakpoint
 
 UPDATE `agents`
-SET `subagents` = coalesce((
+SET `deleted_at` = coalesce(`deleted_at`, (
+  SELECT project.`deleted_at` FROM `projects` project WHERE project.`id` = `agents`.`project_id`
+)),
+`subagents` = coalesce((
   SELECT version.`subagents`
   FROM `agent_versions` version
   WHERE version.`id` = `agents`.`current_version_id`
