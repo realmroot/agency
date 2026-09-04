@@ -36,6 +36,7 @@ Feature: Runtime
     And child work shares the turn budget and resumes without repeating completed tools
     And approval resumes the pending delegation with results in the owning conversation
     And fresh tool calls have Session-unique identifiers while continuation keeps recorded identifiers
+    And an empty provider response fails explicitly instead of completing with a fabricated empty answer
     And an unknown alias is rejected without starting child work
 
   @runtime/idle-retention @usecase

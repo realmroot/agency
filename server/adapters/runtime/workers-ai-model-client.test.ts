@@ -432,6 +432,8 @@ describe('workersAiModelClient — response mapping (providerAssistantMessage)',
     expect(toolCalls).toHaveLength(1)
     expect(toolCalls[0]).toMatchObject({ type: 'toolCall', id: 'call_abc', name: 'bash' })
     expect(result.stopReason).toBe('toolUse')
+    expect(result.content).toHaveLength(1)
+    expect(aiRun).toHaveBeenCalledOnce()
   })
 
   it('falls back to record.response when choices is absent', async () => {
@@ -452,14 +454,36 @@ describe('workersAiModelClient — response mapping (providerAssistantMessage)',
     expect(result.content).toEqual([{ type: 'text', text: 'text field' }])
   })
 
-  it('returns an empty text block when the response has no extractable content', async () => {
+  it('rejects an empty completion instead of reporting successful final output [spec: runtime/turn]', async () => {
     const aiRun = vi.fn().mockResolvedValue({ choices: [{ message: { role: 'assistant', content: '' } }] })
     const client = workersAiModelClient(makeEnv(aiRun))
 
-    const result = await client.complete(model, context)
+    await expect(client.complete(model, context)).rejects.toBeInstanceOf(ProviderCallError)
+    expect(aiRun).toHaveBeenCalledOnce()
+  })
 
-    expect(result.content).toEqual([{ type: 'text', text: '' }])
-    expect(result.stopReason).toBe('stop')
+  it.each([
+    { label: 'whitespace-only', message: { content: ' \n\t ' } },
+    { label: 'reasoning-only', message: { content: null, reasoning_content: 'PRIVATE_REASONING_SENTINEL' } },
+    { label: 'kimi-reasoning-only', message: { content: null, reasoning: 'PRIVATE_REASONING_SENTINEL' } },
+    {
+      label: 'reasoning-block-only',
+      message: { content: [{ type: 'reasoning', text: 'PRIVATE_REASONING_SENTINEL' }] },
+    },
+  ])('rejects $label output without retries or leaking provider content [spec: runtime/turn]', async ({ message }) => {
+    const aiRun = vi.fn().mockResolvedValue({
+      choices: [{ message: { role: 'assistant', ...message }, finish_reason: 'stop' }],
+      usage: { completion_tokens: 324 },
+      debug: 'PRIVATE_PROVIDER_PAYLOAD',
+    })
+    const client = workersAiModelClient(makeEnv(aiRun))
+    const error = await client.complete(model, context).catch((failure: unknown) => failure)
+    expect(error).toBeInstanceOf(ProviderCallError)
+    expect(error).toMatchObject({ normalized: { retryable: false } })
+    const exposed = `${String(error)} ${JSON.stringify(error)}`
+    expect(exposed).not.toContain('PRIVATE_REASONING_SENTINEL')
+    expect(exposed).not.toContain('PRIVATE_PROVIDER_PAYLOAD')
+    expect(aiRun).toHaveBeenCalledOnce()
   })
 
   it('extracts usage from the provider response', async () => {
@@ -533,16 +557,15 @@ describe('workersAiModelClient — response mapping (providerAssistantMessage)',
     const result = await client.complete(model, context)
 
     expect(result.content.filter((b) => b.type === 'toolCall')).toHaveLength(0)
+    expect(result.stopReason).toBe('stop')
   })
 
-  it('handles null raw response gracefully (providerAssistantMessage null record path)', async () => {
+  it('rejects a null provider response instead of fabricating an empty final answer [spec: runtime/turn]', async () => {
     const aiRun = vi.fn().mockResolvedValue(null)
     const client = workersAiModelClient(makeEnv(aiRun))
 
-    const result = await client.complete(model, context)
-
-    // null raw → record=null → no text → textContent(null)→'' → empty text block
-    expect(result.content).toEqual([{ type: 'text', text: '' }])
+    await expect(client.complete(model, context)).rejects.toBeInstanceOf(ProviderCallError)
+    expect(aiRun).toHaveBeenCalledOnce()
   })
 })
 
@@ -581,7 +604,7 @@ describe('workersAiModelClient — tool_call edge cases', () => {
     expect(toolCall).toMatchObject({ name: 'bash' })
   })
 
-  it('ignores tool_call entries without a stable id', async () => {
+  it('rejects a completion whose only tool call lacks a stable id [spec: runtime/turn]', async () => {
     const aiRun = vi.fn().mockResolvedValue({
       choices: [
         {
@@ -596,9 +619,8 @@ describe('workersAiModelClient — tool_call edge cases', () => {
     const env = { RUNTIME_MODE: 'live', AI: { run: aiRun } } as unknown as Env
     const client = workersAiModelClient(env)
 
-    const result = await client.complete(model, context)
-
-    expect(result.content.some((block) => block.type === 'toolCall')).toBe(false)
+    await expect(client.complete(model, context)).rejects.toBeInstanceOf(ProviderCallError)
+    expect(aiRun).toHaveBeenCalledOnce()
   })
 
   it('returns empty object when tool_call function.arguments is null', async () => {
