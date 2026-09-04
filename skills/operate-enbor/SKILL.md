@@ -1,9 +1,9 @@
 ---
-name: enbor-realmroot-toolbox
-description: Operate Enbor using its Agent Identity, with Realmroot as the current identity provider, controller-approved scopes, and the published OpenAPI contract.
+name: operate-enbor
+description: Operate a live Enbor deployment using Agent Identity, controller-approved access, and current API discovery through Realmroot Toolbox.
 ---
 
-# Enbor Realmroot Toolbox
+# Operate Enbor
 
 Use this skill for terminal automation against Enbor. Enbor Agent Identity has no
 standard protocol today; Realmroot is its current identity provider. Enbor's
@@ -31,7 +31,7 @@ deployment. For the public deployment and Codex:
 
 ```bash
 npx skills add https://enbor.realmroot.dev \
-  --skill enbor-realmroot-toolbox \
+  --skill operate-enbor \
   --agent codex \
   --global
 ```
@@ -58,8 +58,8 @@ Use the exact operation, scope, fields, and command published by discovery. For
 mutations, confirm identifiers and inspect the generated request body before
 sending it. Do not copy discovered operations into Markdown documentation.
 
-Typical Agent requests are phrased as outcomes, for example: “Use the Enbor
-Realmroot Toolbox Skill to list the Agents in this Project” or “Start a Session
+Typical Agent requests are phrased as outcomes, for example: “Use the
+`operate-enbor` Skill to list the Agents in this Project” or “Start a Session
 for this Agent and verify its resulting state.” The Skill must translate the
 outcome into live discovery; it must not guess an operation name from memory or
 from Context7 snippets.

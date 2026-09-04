@@ -66,5 +66,5 @@ then open the guide for your language.
 The SDK is the right interface for application code. When an Agent needs to
 operate a live Enbor deployment on a user's behalf, follow
 [Choose an Integration Path](../docs/guides/choosing-an-integration-path.md)
-and use the `enbor-realmroot-toolbox` Skill so identity, authorization, and
+and use the `operate-enbor` Skill so identity, authorization, and
 operation discovery remain outside application examples.

@@ -8,7 +8,7 @@ Session. It is a non-normative integration guide; the generated
 This guide follows the application-SDK path. If an Agent should operate a live
 Enbor deployment for you, first read
 [Choose an Integration Path](choosing-an-integration-path.md) and use the
-`enbor-realmroot-toolbox` Skill instead of copying SDK credentials into the
+`operate-enbor` Skill instead of copying SDK credentials into the
 Agent prompt.
 
 ## Choose an Execution Model

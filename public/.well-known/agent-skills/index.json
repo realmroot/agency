@@ -2,11 +2,11 @@
   "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
   "skills": [
     {
-      "name": "enbor-realmroot-toolbox",
+      "name": "operate-enbor",
       "type": "archive",
-      "description": "Operate Enbor using its Agent Identity, with Realmroot as the current identity provider, controller-approved scopes, and the published OpenAPI contract.",
-      "url": "/.well-known/agent-skills/enbor-realmroot-toolbox.tar.gz",
-      "digest": "sha256:c27acea9853d7063b815c22b2ec8eb570233561ce9002f5636c1e0b04423ada4"
+      "description": "Operate a live Enbor deployment using Agent Identity, controller-approved access, and current API discovery through Realmroot Toolbox.",
+      "url": "/.well-known/agent-skills/operate-enbor.tar.gz",
+      "digest": "sha256:9c32ed252b00ecdfe05f82411b1e1de4e244325010020d9fd88269301169f8e7"
     }
   ]
 }

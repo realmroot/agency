@@ -10,7 +10,7 @@ integration without duplicating the normative product contract.
 | --- | --- | --- |
 | Understand Enbor or find an integration example | Context7 library `/realmroot/enbor` | Retrieves relevant project and SDK documentation |
 | Build Enbor into an application | TypeScript, Go, or Python SDK | Provides typed application APIs |
-| Ask an Agent to inspect or change live Enbor resources | `enbor-realmroot-toolbox` Skill | Gives the Agent the required operating policy |
+| Ask an Agent to inspect or change live Enbor resources | `operate-enbor` Skill | Gives the Agent the required operating policy |
 | Authenticate, discover current operations, and execute them | Realmroot Toolbox | Uses Agent identity and the live Enbor contract |
 | Inspect exact paths and schemas | Generated OpenAPI document | Remains the exact API contract |
 
@@ -66,7 +66,7 @@ required.
 
 ## Use the Skill for Agent-Operated Enbor
 
-Use the `enbor-realmroot-toolbox` Skill when the user asks an Agent to perform
+Use the `operate-enbor` Skill when the user asks an Agent to perform
 an outcome against a live Enbor deployment, such as inspecting Agents, starting
 a Session, or checking its resulting state.
 
@@ -74,7 +74,7 @@ Install the Skill from the public Enbor deployment for Codex:
 
 ```bash
 npx skills add https://enbor.realmroot.dev \
-  --skill enbor-realmroot-toolbox \
+  --skill operate-enbor \
   --agent codex \
   --global
 ```
@@ -87,12 +87,12 @@ and post-operation verification.
 Ask for the outcome rather than embedding guessed API commands:
 
 ```text
-Use the enbor-realmroot-toolbox Skill to list the Agents in the selected Enbor
+Use the operate-enbor Skill to list the Agents in the selected Enbor
 Project.
 ```
 
 ```text
-Use the enbor-realmroot-toolbox Skill to start a Session for this Agent and
+Use the operate-enbor Skill to start a Session for this Agent and
 verify the resulting Session state.
 ```
 
@@ -120,7 +120,7 @@ A task can legitimately use both paths:
 1. Query `/realmroot/enbor` through Context7 to understand the resource model
    and retrieve the relevant SDK pattern.
 2. Implement and verify the application code locally.
-3. Load the `enbor-realmroot-toolbox` Skill before touching a live deployment.
+3. Load the `operate-enbor` Skill before touching a live deployment.
 4. Let Toolbox discover the current operation and request only the required
    authority.
 5. Execute the operation and read the affected resource again to verify it.
@@ -133,5 +133,5 @@ produce correct code and plans; the Skill and Toolbox govern live execution.
 - Product behavior: [`spec/*.feature`](../../spec/)
 - Exact API shape: [generated OpenAPI](../../sdk/openapi.json)
 - Application usage: [SDK guides](../../sdk/README.md)
-- Agent operating policy: [`enbor-realmroot-toolbox` Skill](../../skills/enbor-realmroot-toolbox/SKILL.md)
+- Agent operating policy: [`operate-enbor` Skill](../../skills/operate-enbor/SKILL.md)
 - Task-relevant retrieval: Context7 library `/realmroot/enbor`

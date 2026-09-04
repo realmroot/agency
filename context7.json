@@ -16,7 +16,7 @@
     "Use Enbor as infrastructure behind an agent product, not as an end-user agent application.",
     "Prefer the stable SDK resource facades over generated low-level operations.",
     "Use the SDK guides for integration patterns and the generated OpenAPI document for exact schemas.",
-    "For live Enbor operations, use the enbor-realmroot-toolbox Skill and discover the current operation through Realmroot Toolbox.",
+    "For live Enbor operations, use the operate-enbor Skill and discover the current operation through Realmroot Toolbox.",
     "Context7 provides knowledge; it does not authenticate to Enbor or execute operations.",
     "Always configure the Enbor Project id when calling project-scoped resources.",
     "Never put Realmroot access tokens in Agent configuration, Session prompts, or committed source files."
