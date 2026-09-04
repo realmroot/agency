@@ -2,9 +2,14 @@
 
 The repository documentation is organized by purpose:
 
+- [`guides/`](guides/) contains non-normative developer guides for adopting
+  and integrating Enbor.
 - [`adr/`](adr/) records accepted architecture decisions, their context, and
   their consequences.
 - [`infra/`](infra/) contains deployment and operational guidance.
+
+SDK installation, authentication, and usage examples live under
+[`../sdk/`](../sdk/).
 
 Installable Agent-facing operating instructions live in the repository-level
 [`skills/`](../skills/) directory.
