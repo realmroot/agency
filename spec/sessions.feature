@@ -146,6 +146,7 @@ Feature: Sessions
     Given a session exists in cloud or self-hosted hosting
     When a browser opens the session socket
     Then the Console exchanges its Bearer credential for a short-lived single-use socket ticket after auth and tenancy checks
+    And the ticket exchange uses the Console's selected project
     And the request upgrades without placing the Realmroot access token in the URL or WebSocket protocols
     And non-WebSocket requests are rejected instead of returning runtime discovery metadata
 

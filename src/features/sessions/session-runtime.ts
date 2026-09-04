@@ -2,6 +2,7 @@ import type { SessionSocketClientMessage } from '@enbor/runtime-contracts/sessio
 import type { EnborSessionEventType } from '@shared/session-events'
 import type { SessionEvent } from '@/lib/enborrpc'
 import { getAuthHeaders } from '@/lib/oidc'
+import { getSelectedProjectId } from '@/lib/project-selection'
 
 export type SessionRuntimeConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 export type SessionRuntimeRunState = 'idle' | 'running' | 'error'
@@ -97,9 +98,13 @@ export function sessionRuntimeReducer(state: SessionRuntimeState, action: Sessio
 
 export async function sessionSocketConnection(socketPath: string) {
   const url = new URL(socketPath, window.location.href)
+  const projectId = getSelectedProjectId()
   const ticketResponse = await fetch(`${url.pathname.replace(/\/socket$/, '/socket-tickets')}`, {
     method: 'POST',
-    headers: await getAuthHeaders(),
+    headers: {
+      ...(await getAuthHeaders()),
+      ...(projectId ? { 'x-enbor-project-id': projectId } : {}),
+    },
   })
   if (!ticketResponse.ok) throw new Error(`Session socket ticket request failed with HTTP ${ticketResponse.status}`)
   const { ticket } = (await ticketResponse.json()) as { ticket?: string }
