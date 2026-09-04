@@ -706,7 +706,7 @@ describe('[spec: triggers/create] CreateTriggerSheet', () => {
     environmentSelect.focus()
     fireEvent.pointerDown(environmentSelect, { button: 0, ctrlKey: false, pointerId: 2, pointerType: 'mouse' })
     fireEvent.mouseDown(environmentSelect)
-    expect(await screen.findByText('No options')).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: 'Automatic placement' })).toBeInTheDocument()
   })
 
   it('toasts an error when the create mutation fails', async () => {
