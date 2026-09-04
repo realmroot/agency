@@ -107,6 +107,7 @@ Feature: Triggers
     And different keys use different Sessions
     And notifications without a key each create a new Session
     And the Session prompt contains the tenant Context id, event and Message references, and Trigger instructions
+    And personal tenant storage prefixes are not exposed while organization Context ids pass through unchanged
     And created routed Sessions record the sixty-second annotation when template metadata omits it and otherwise preserve the template value
     And pre-existing routed Sessions missing that annotation are backfilled atomically without overwriting current metadata
     And preserved zero or invalid annotation metadata still resolves to the shared runtime default
