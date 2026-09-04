@@ -121,41 +121,6 @@ pnpm run db:migrate:d1:staging
 pnpm run db:migrate:d1:prod
 ```
 
-### Agent sub-agent reference cutover
-
-Migration `0042_agent_subagent_references.sql` is a one-way persisted-contract
-change: it replaces embedded sub-agent definitions with Agent resource
-references. Do not ship the release containing this migration through the
-ordinary rolling `pnpm run deploy` command.
-
-Perform this release in a maintenance window, in staging before production:
-
-1. Stop routing public traffic to the Worker, disable trigger dispatch, and
-   wait for the cloud-turn and trigger-dispatch queues and active leases to
-   drain to zero.
-2. Export D1 and retain the export together with the currently deployed Worker
-   version as the rollback pair.
-3. Build the release, apply the D1 migration, and deploy that exact build while
-   traffic remains stopped:
-
-   ```bash
-   pnpm run build:staging
-   pnpm run db:migrate:d1:staging
-   wrangler deploy --env staging
-
-   pnpm run build
-   pnpm run db:migrate:d1:prod
-   wrangler deploy
-   ```
-
-4. Verify an Agent read, Agent create/update with a `{ agentId, name }`
-   sub-agent reference, Session creation, and Session-event replay before
-   restoring traffic and trigger dispatch.
-
-If migration or verification fails, keep traffic stopped. Restore the D1
-export and the prior Worker version together; never roll back only one side of
-this persisted-contract cutover.
-
 ## One-way infrastructure cutover
 
 The public Enbor rename has not moved the production Worker, Queue, R2, or
