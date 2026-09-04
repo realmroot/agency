@@ -80,6 +80,81 @@ function fixture() {
 }
 
 describe('cloud subagent execution [spec: runtime/subagent-execution]', () => {
+  it('executes a fresh delegation after a new prompt even when the provider reuses a persisted tool-call id', async () => {
+    const { input, events, calls } = fixture()
+    const complete = input.modelClient.complete
+    input.modelClient.complete = async (selectedModel, context, signal) => {
+      const message = await complete(selectedModel, context, signal)
+      if (context.systemPrompt === 'parent instructions' && context.messages.at(-1)?.role === 'user') {
+        return assistantMessage(
+          selectedModel,
+          [
+            {
+              type: 'toolCall',
+              id: 'delegate_1',
+              name: 'agent',
+              arguments: { subagentName: 'researcher', prompt: 'research this' },
+            },
+          ],
+          'toolUse',
+          ZERO_USAGE,
+        )
+      }
+      return message
+    }
+    expect(await runTurn(input)).toEqual({ status: 'idle' })
+    const conversation = runtimeConversationFromEvents(events.map((event) => ({ payload: event })))
+    expect(await runTurn({ ...input, ...conversation, prompt: 'research again' })).toEqual({ status: 'idle' })
+    expect(calls.filter((call) => call.context.systemPrompt === 'child instructions')).toHaveLength(4)
+    expect(input.executor.execute).toHaveBeenCalledTimes(2)
+    const parentResults = runtimeConversationFromEvents(events.map((event) => ({ payload: event }))).messages.filter(
+      (message) => message.role === 'toolResult',
+    )
+    expect(parentResults).toHaveLength(2)
+    expect(new Set(parentResults.map((message) => message.toolCallId)).size).toBe(2)
+    const childIds = vi.mocked(input.executor.execute).mock.calls.map(([request]) => request.toolCallId)
+    expect(new Set(childIds).size).toBe(2)
+  })
+
+  it('assigns distinct execution and policy identities when sibling delegations reuse a child provider tool-call id', async () => {
+    const { input, events } = fixture()
+    const complete = input.modelClient.complete
+    input.modelClient.complete = async (selectedModel, context, signal) => {
+      const message = await complete(selectedModel, context, signal)
+      if (context.systemPrompt === 'parent instructions' && message.stopReason === 'toolUse') {
+        return {
+          ...message,
+          content: [
+            ...message.content,
+            {
+              type: 'toolCall',
+              id: 'delegate_2',
+              name: 'agent',
+              arguments: { subagentName: 'researcher', prompt: 'independent research' },
+            },
+          ],
+        }
+      }
+      return message
+    }
+    expect(await runTurn(input)).toEqual({ status: 'idle' })
+    const executions = vi.mocked(input.executor.execute).mock.calls.map(([request]) => request)
+    expect(executions).toHaveLength(2)
+    expect(new Set(executions.map((request) => request.toolCallId)).size).toBe(2)
+    const policyIds = vi
+      .mocked(input.policy.approve)
+      .mock.calls.map(([request]) => request)
+      .filter((request) => request.toolName === 'read')
+      .map((request) => request.toolCallId)
+    expect(policyIds).toEqual(executions.map((request) => request.toolCallId))
+    const conversation = runtimeConversationFromEvents(events.map((event) => ({ payload: event })))
+    expect(Object.keys(conversation.subagentMessages)).toEqual(['delegate_1', 'delegate_2'])
+    for (const messages of Object.values(conversation.subagentMessages)) {
+      expect(messages.filter((message) => message.role === 'toolResult')).toHaveLength(1)
+      expect(messages.at(-1)).toMatchObject({ role: 'assistant', content: text('child final answer') })
+    }
+  })
+
   it('defers later parent tools when a child pauses and executes each pending tool once on resume', async () => {
     const { input, events } = fixture()
     const complete = input.modelClient.complete

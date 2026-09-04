@@ -54,6 +54,7 @@ import type {
   TurnLiveness,
 } from './ports'
 import { subagentTools } from './subagent-tools'
+import { persistedToolCallIds, reserveToolCallIds } from './tool-call-ids'
 import { reduceTurnStatus, type TurnStatus } from './turn-status'
 
 // runtimeMessagesFromEvents moved to ./transcript; re-exported here for the
@@ -248,6 +249,7 @@ function createTurnStreamFn(
     markPaused: () => void
     engineSignal: AbortSignal
     terminalStatus: () => TurnStatus
+    toolCallIds: Set<string>
   },
 ) {
   return (model: Model<string>, context: Context, options?: StreamOptions) => {
@@ -283,7 +285,7 @@ function createTurnStreamFn(
         await ensureTurnActive(signal, () => values.liveness.ensureActive())
         const message = await modelClient.complete(model, context, signal)
         await ensureTurnActive(signal, () => values.liveness.ensureActive())
-        emitAssistantMessage(stream, message)
+        emitAssistantMessage(stream, reserveToolCallIds(message, values.toolCallIds))
       } catch (error) {
         if (isRuntimeTurnCancelled(error)) {
           values.markCancelled()
@@ -570,7 +572,13 @@ function resolveTurnResult(status: TurnStatus): TurnEngineResult {
   }
 }
 
-export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult> {
+export async function runTurn(
+  input: TurnEngineInput,
+  toolCallIds = persistedToolCallIds([
+    ...(input.messages ?? []),
+    ...Object.values(input.subagentMessages ?? {}).flat(),
+  ]),
+): Promise<TurnEngineResult> {
   const controller = new AbortController()
   const abortFromParent = () => controller.abort()
   // Link an external cancellation source (session stop / client disconnect) to
@@ -614,10 +622,15 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
           liveness: input.liveness,
           engineSignal: controller.signal,
         }),
-        ...subagentTools({ ...input, policy }, runTurn, controller.signal, () => {
-          status = reduceTurnStatus(status, { type: 'pause' })
-          controller.abort()
-        }),
+        ...subagentTools(
+          { ...input, policy },
+          (child) => runTurn(child, toolCallIds),
+          controller.signal,
+          () => {
+            status = reduceTurnStatus(status, { type: 'pause' })
+            controller.abort()
+          },
+        ),
       ],
       messages: input.messages ?? [],
     },
@@ -635,6 +648,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
       },
       engineSignal: controller.signal,
       terminalStatus: () => status,
+      toolCallIds,
     }),
     toolExecution: 'sequential',
     sessionId: input.sessionId,
