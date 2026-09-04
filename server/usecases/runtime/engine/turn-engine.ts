@@ -589,12 +589,14 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   let status: TurnStatus = { kind: 'idle' }
   let providerError: RuntimeProviderError | null = null
   let policyFailure: string | null = null
+  let requiresAction = false
   const policy: ToolPolicyGate = {
     approve: async (toolCall) => {
       if (status.kind === 'failed') throw new RuntimePolicyDeniedError(status.message)
       if (status.kind !== 'idle') throw new RuntimeTurnCancelledError()
       const decision = await input.policy.approve(toolCall)
       if (!decision.allowed) policyFailure = decision.reason ?? 'Tool call blocked by Enbor policy'
+      if (decision.requiresAction) requiresAction = true
       return decision
     },
   }
@@ -643,7 +645,9 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   agent.subscribe(async (event: AgentEvent) => {
     // Everything after a pause is filler from the synthetic paused message;
     // completed turns are already persisted and the continuation rebuilds them.
-    if (status.kind === 'paused' || status.kind === 'failed') {
+    const deniedToolResult =
+      status.kind === 'failed' && !requiresAction && event.type === 'message_end' && event.message.role === 'toolResult'
+    if (status.kind === 'paused' || (status.kind === 'failed' && !deniedToolResult)) {
       return
     }
     try {

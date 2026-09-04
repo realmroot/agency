@@ -125,7 +125,7 @@ describe('cloud subagent execution [spec: runtime/subagent-execution]', () => {
     let approved = false
     input.policy.approve = vi.fn(async (request) =>
       request.toolName === 'read' && !approved
-        ? { allowed: false, reason: 'read approval required' }
+        ? { allowed: false, reason: 'read approval required', requiresAction: true }
         : { allowed: true },
     )
     await expect(runTurn(input)).rejects.toThrow('read approval required')
@@ -171,7 +171,9 @@ describe('cloud subagent execution [spec: runtime/subagent-execution]', () => {
     const { input, events, calls } = fixture()
     let approved = false
     input.policy.approve = vi.fn(async (request) =>
-      request.toolName === 'agent' && !approved ? { allowed: false, reason: 'approval required' } : { allowed: true },
+      request.toolName === 'agent' && !approved
+        ? { allowed: false, reason: 'approval required', requiresAction: true }
+        : { allowed: true },
     )
     await expect(runTurn(input)).rejects.toThrow('approval required')
     expect(input.executor.execute).not.toHaveBeenCalled()
@@ -301,7 +303,7 @@ describe('cloud subagent execution [spec: runtime/subagent-execution]', () => {
   })
 
   it('enforces policy before starting a child', async () => {
-    const { input, calls } = fixture()
+    const { input, calls, events } = fixture()
     input.policy.approve = vi.fn(async () => ({ allowed: false, reason: 'delegation blocked' }))
     await expect(runTurn(input)).rejects.toThrow('delegation blocked')
     expect(input.policy.approve).toHaveBeenCalledWith(
@@ -309,6 +311,13 @@ describe('cloud subagent execution [spec: runtime/subagent-execution]', () => {
     )
     expect(calls.every((call) => call.context.systemPrompt === 'parent instructions')).toBe(true)
     expect(input.executor.execute).not.toHaveBeenCalled()
+    const results = events.flatMap((event) =>
+      event.type === 'message.completed'
+        ? event.payload.message.content.filter((block) => block.type === 'tool_result')
+        : [],
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ toolCallId: 'delegate_1', error: { message: 'delegation blocked' } })
   })
 
   it('cancels an in-flight child when the parent signal aborts', async () => {

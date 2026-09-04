@@ -33,6 +33,7 @@ export type RuntimeToolPolicyInput = {
 export type RuntimeToolPolicyDecision = {
   allowed: boolean
   reason?: string
+  requiresAction?: boolean
 }
 
 // ── Ports (formalize the SessionTurnInput inline callbacks) ───────────────────

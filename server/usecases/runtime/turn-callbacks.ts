@@ -52,7 +52,7 @@ export interface SessionTurnCallbacks {
     toolCallId: string
     toolName: string
     input: Record<string, unknown>
-  }) => Promise<{ allowed: boolean; reason?: string }>
+  }) => Promise<{ allowed: boolean; reason?: string; requiresAction?: boolean }>
   approvalGate: ToolApprovalGate
   wasPolicyDenied: () => boolean
 }

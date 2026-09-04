@@ -148,7 +148,7 @@ export function createToolApprovalGate(
         stateReason: 'requires-action',
         updatedAt: now(),
       })
-      return { allowed: false, reason: 'Tool call requires user approval' }
+      return { allowed: false, reason: 'Tool call requires user approval', requiresAction: true }
     },
   }
 }
