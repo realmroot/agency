@@ -20,8 +20,8 @@ import {
 } from '../openapi'
 import { dispatchHttpTrigger } from '../usecases/dispatch-triggers'
 import {
-  type EnvFromEntry,
   CreationIdempotencyConflictError,
+  type EnvFromEntry,
   ResourceDeletedDuringMutationError,
   TriggerConflictError,
   TriggerProvisioningError,

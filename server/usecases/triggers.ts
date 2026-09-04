@@ -14,8 +14,8 @@ import {
   type TriggerSessionTemplate,
 } from '@server/domain/trigger'
 import { newPrimaryKey } from '@server/id'
-import type { Deps } from './deps'
 import { creationDigest, creationFingerprint } from './creation-idempotency'
+import type { Deps } from './deps'
 import { initialInboxProvisioning, reconcileInboxSubscription, removeInboxSubscription } from './inbox-subscriptions'
 import {
   type AuthScope,
