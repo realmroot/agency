@@ -60,7 +60,7 @@ import type {
 } from '../ports'
 import type { ToolApprovalGate } from './approval-gate'
 import { isRuntimePolicyDenied, isRuntimeTurnCancelled } from './engine/errors'
-import { appendRuntimeEvent, appendUserPromptEvent, loadRuntimeMessages, markPromptFailed } from './events'
+import { appendRuntimeEvent, appendUserPromptEvent, loadRuntimeConversation, markPromptFailed } from './events'
 import { mcpConnectorIds, resolveMcpServers } from './provisioning'
 import { buildSessionTurnCallbacks, type SessionTurnCallbacks } from './turn-callbacks'
 
@@ -366,8 +366,8 @@ function isRuntimeUserMessageEvent(event: EnborEvent) {
   if (event.type !== 'message.started' && event.type !== 'message.updated' && event.type !== 'message.completed') {
     return false
   }
-  const payload = event.payload as { message?: { role?: unknown } }
-  return payload.message?.role === 'user'
+  const payload = event.payload as { message?: { role?: unknown; parentToolCallId?: string } }
+  return payload.message?.role === 'user' && !payload.message.parentToolCallId
 }
 
 export async function executeCloudSessionTurn(
@@ -389,7 +389,7 @@ export async function executeCloudSessionTurn(
     const runtimeAgentSnapshot = agentSnapshotWithWorkspaceContext(agentSnapshot, volumes, volumeMounts)
     await activateCloudSessionForTurn(deps, auth, session, agentSnapshot)
     const modelConfig = parseJson<Record<string, unknown>>(session.modelConfig) ?? {}
-    const messages = await loadRuntimeMessages(deps, session.id)
+    const { messages, subagentMessages } = await loadRuntimeConversation(deps, session.id)
     const { provider: turnProvider, model: turnModel } = resolveSessionProviderModel(
       session,
       agentSnapshot,
@@ -450,6 +450,7 @@ export async function executeCloudSessionTurn(
       ...(work.prompt !== undefined ? { prompt: work.prompt } : {}),
       ...(work.continuation ? { continuation: true } : {}),
       messages,
+      subagentMessages,
       ...(deps.cloudTurnQueue.runsInline()
         ? {}
         : { shouldPause: () => Date.now() - startedAt > CLOUD_TURN_SOFT_BUDGET_MS }),
