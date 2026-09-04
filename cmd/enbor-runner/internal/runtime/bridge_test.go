@@ -71,23 +71,41 @@ func TestResolveNodeExecutableUsesRuntimeManagerTarget(t *testing.T) {
 		t.Skip("shell shim fixture is Unix-only")
 	}
 	dir := t.TempDir()
+	workDir := t.TempDir()
+	probePWDPath := filepath.Join(dir, "probe-pwd")
+	t.Setenv("ENBOR_TEST_NODE_PWD_PATH", probePWDPath)
 	actualNode := filepath.Join(dir, "actual-node")
 	if err := os.WriteFile(actualNode, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	shimNode := filepath.Join(dir, "node")
-	shim := "#!/bin/sh\nif [ \"$1\" = \"-p\" ]; then\n  printf '%s\\n' '" + actualNode + "'\n  exit 0\nfi\nexit 1\n"
+	shim := "#!/bin/sh\nif [ \"$1\" = \"-p\" ]; then\n  pwd > \"$ENBOR_TEST_NODE_PWD_PATH\"\n  printf '%s\\n' '" + actualNode + "'\n  exit 0\nfi\nexit 1\n"
 	if err := os.WriteFile(shimNode, []byte(shim), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)
 
-	resolved, err := resolveNodeExecutable(context.Background())
+	resolved, err := resolveNodeExecutable(context.Background(), workDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resolved != actualNode {
 		t.Fatalf("expected runtime manager target %q, got %q", actualNode, resolved)
+	}
+	probePWD, err := os.ReadFile(probePWDPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolvedProbePWD, err := filepath.EvalSymlinks(strings.TrimSpace(string(probePWD)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolvedWorkDir, err := filepath.EvalSymlinks(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolvedProbePWD != resolvedWorkDir {
+		t.Fatalf("expected node executable probe cwd %q, got %q", resolvedWorkDir, resolvedProbePWD)
 	}
 }
 
@@ -302,6 +320,51 @@ echo '{"type":"result","requestId":"inventory","result":{"runtimes":[{"runtime":
 	if len(snapshot.Runtimes) != 1 || snapshot.Runtimes[0].Runtime != "codex" || !snapshot.Runtimes[0].Installed ||
 		len(snapshot.Runtimes[0].UsageWindows) != 1 {
 		t.Fatalf("unexpected inventory snapshot: %#v", snapshot)
+	}
+}
+
+// [spec: runners/heartbeat]
+func TestRuntimeBridgeInventoryUsesControlledWorkingDirectory(t *testing.T) {
+	callerWorkDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	installFakeNode(t, `#!/bin/sh
+echo '{"type":"ready"}'
+IFS= read -r request
+printf '{"type":"result","requestId":"inventory","result":{"runtimes":[{"runtime":"codex","binary":"codex","installed":true,"models":[],"fallbackModels":["gpt-5"],"status":"ready","detail":"%s"}]}}\n' "$PWD"
+`)
+
+	snapshot, err := (Bridge{}).Inventory(context.Background(), false)
+	if err != nil {
+		t.Fatalf("expected inventory success, got %v", err)
+	}
+	bridgeWorkDir := snapshot.Runtimes[0].Detail
+	if bridgeWorkDir == string(filepath.Separator) || bridgeWorkDir == callerWorkDir {
+		t.Fatalf("expected inventory bridge to use a controlled working directory, got %q", bridgeWorkDir)
+	}
+	if !strings.HasPrefix(filepath.Base(bridgeWorkDir), "enbor-runner-inventory-") {
+		t.Fatalf("expected runner-owned inventory working directory, got %q", bridgeWorkDir)
+	}
+}
+
+// [spec: runners/heartbeat]
+func TestRuntimeBridgeUsageRequestsUsageWithoutModelInventory(t *testing.T) {
+	installFakeNode(t, `#!/bin/sh
+echo '{"type":"ready"}'
+IFS= read -r request
+case "$request" in
+  *'"includeUsage":true'*'"usageOnly":true'*)
+    echo '{"type":"result","requestId":"inventory","result":{"runtimes":[]}}'
+    ;;
+  *)
+    echo '{"type":"error","requestId":"inventory","error":{"message":"usage request would enumerate models"}}'
+    ;;
+esac
+`)
+
+	if _, err := (Bridge{}).Usage(context.Background()); err != nil {
+		t.Fatalf("expected usage-only bridge request, got %v", err)
 	}
 }
 

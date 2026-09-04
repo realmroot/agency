@@ -28,8 +28,13 @@ describe('RuntimeBridgeInputMessageSchema', () => {
       }).success,
     ).toBe(true)
     expect(
-      RuntimeBridgeInputMessageSchema.safeParse({ type: 'inventory', requestId: 'inv_1', env: {}, includeUsage: true })
-        .success,
+      RuntimeBridgeInputMessageSchema.safeParse({
+        type: 'inventory',
+        requestId: 'inv_1',
+        env: {},
+        includeUsage: true,
+        usageOnly: true,
+      }).success,
     ).toBe(true)
     expect(
       RuntimeBridgeControlMessageSchema.safeParse({ type: 'send', requestId: 'run_1', message: 'continue' }).success,

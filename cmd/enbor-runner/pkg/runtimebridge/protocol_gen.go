@@ -188,6 +188,7 @@ type RuntimeBridgeInventoryMessage struct {
 	IncludeUsage bool                              `json:"includeUsage,omitempty"`
 	RequestID    string                            `json:"requestId"`
 	Type         RuntimeBridgeInventoryMessageType `json:"type"`
+	UsageOnly    bool                              `json:"usageOnly,omitempty"`
 }
 
 // RuntimeBridgeInventoryMessageType defines model for RuntimeBridgeInventoryMessage.Type.

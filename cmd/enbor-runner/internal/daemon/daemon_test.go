@@ -2115,33 +2115,39 @@ func externalRuntimeSessionStartLease(runtimeName string, provider string, model
 	return work
 }
 
-func TestHeartbeatRefreshesRuntimesFromBridge(t *testing.T) {
+// [spec: runners/heartbeat]
+func TestHeartbeatUsesPreloadedRuntimeInventoryWithoutLoading(t *testing.T) {
 	client := &fakeEnborServer{}
 	daemon := testDaemon(client, &fakeAdapter{})
-	daemon.RuntimeCatalog = runtimesFor(runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"))
-	if err := daemon.heartbeat(context.Background()); err != nil {
-		t.Fatalf("expected heartbeat success, got %v", err)
+	loadCalls := 0
+	daemon.RuntimeCatalog = &runtime.Inventory{
+		Load: func(context.Context, bool) (*runtime.InventorySnapshot, error) {
+			loadCalls++
+			return &runtime.InventorySnapshot{Runtimes: []runtime.InventoryRuntime{
+				runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"),
+			}}, nil
+		},
 	}
-	first := heartbeatRuntimes(client.heartbeats[0])
-	if !lo.ContainsBy(first, func(entry enbor.RunnerRuntime) bool { return entry.Runtime == "codex" }) {
-		t.Fatalf("expected codex runtime, got %v", first)
+	preloaded := daemon.refreshRuntimes()
+	if loadCalls != 1 || !lo.ContainsBy(preloaded, func(entry runtime.RunnerRuntime) bool { return entry.Runtime == "codex" }) {
+		t.Fatalf("expected startup to preload codex once, calls=%d inventory=%v", loadCalls, preloaded)
 	}
-	if lo.ContainsBy(first, func(entry enbor.RunnerRuntime) bool {
-		return entry.Runtime == "claude-code" || entry.Runtime == "copilot"
-	}) {
-		t.Fatalf("expected missing CLIs to be excluded, got %v", first)
+	loadCalls = 0
+
+	for range 2 {
+		if err := daemon.heartbeat(context.Background()); err != nil {
+			t.Fatalf("expected heartbeat success, got %v", err)
+		}
 	}
 
-	daemon.RuntimeCatalog = runtimesFor(
-		runtimeEntry("codex", true, []string{"gpt-5.3-codex"}, nil, "ready", "", "ready"),
-		runtimeEntry("claude-code", true, []string{"claude-sonnet-4-6"}, nil, "ready", "", "ready"),
-	)
-	if err := daemon.heartbeat(context.Background()); err != nil {
-		t.Fatalf("expected heartbeat success, got %v", err)
+	if loadCalls != 0 {
+		t.Fatalf("expected heartbeat to reuse preloaded inventory without loading, got %d loads", loadCalls)
 	}
-	second := heartbeatRuntimes(client.heartbeats[1])
-	if !lo.ContainsBy(second, func(entry enbor.RunnerRuntime) bool { return entry.Runtime == "claude-code" }) {
-		t.Fatalf("expected claude-code runtime after installing the CLI, got %v", second)
+	for _, heartbeat := range client.heartbeats {
+		inventory := heartbeatRuntimes(heartbeat)
+		if !lo.ContainsBy(inventory, func(entry enbor.RunnerRuntime) bool { return entry.Runtime == "codex" }) {
+			t.Fatalf("expected cached codex runtime, got %v", inventory)
+		}
 	}
 }
 

@@ -15,6 +15,7 @@ const runtimeUsageRefreshInterval = 5 * time.Minute
 type Inventory struct {
 	RuntimeBridge Bridge
 	Load          func(ctx context.Context, includeUsage bool) (*InventorySnapshot, error)
+	LoadUsage     func(ctx context.Context) (*InventorySnapshot, error)
 
 	usageMu            sync.Mutex
 	runtimeUsage       []RuntimeUsage
@@ -79,7 +80,7 @@ func (inv *Inventory) Usage() []RuntimeUsage {
 }
 
 func (inv *Inventory) RefreshUsage(ctx context.Context) {
-	snapshot, err := inv.load(ctx, true)
+	snapshot, err := inv.loadUsage(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			return
@@ -89,6 +90,16 @@ func (inv *Inventory) RefreshUsage(ctx context.Context) {
 		return
 	}
 	inv.SetUsageSnapshot(usageSnapshotFromInventory(snapshot))
+}
+
+func (inv *Inventory) loadUsage(ctx context.Context) (*InventorySnapshot, error) {
+	if inv.LoadUsage != nil {
+		return inv.LoadUsage(ctx)
+	}
+	if inv.Load != nil {
+		return inv.Load(ctx, true)
+	}
+	return inv.RuntimeBridge.Usage(ctx)
 }
 
 func (inv *Inventory) RunUsageCollector(ctx context.Context) {

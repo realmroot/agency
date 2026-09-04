@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"fmt"
-	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	runnerauth "github.com/realmroot/enbor/cmd/enbor-runner/internal/auth"
 	runnerconfig "github.com/realmroot/enbor/cmd/enbor-runner/internal/config"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/runtime"
@@ -12,6 +11,7 @@ import (
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/sys/host"
 	"github.com/realmroot/enbor/cmd/enbor-runner/internal/workspace"
 	"github.com/realmroot/enbor/cmd/enbor-runner/pkg/version"
+	enbor "github.com/realmroot/enbor/sdk/go/enbor"
 	"github.com/samber/lo"
 	"log/slog"
 	"os"
@@ -102,6 +102,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	// before the first heartbeat so the control plane and the local lease guard
 	// start from the same runtime state.
 	d.refreshRuntimeUsage(ctx)
+	d.refreshRuntimes()
 	if err := d.heartbeatOrRecover(ctx); err != nil {
 		if ctx.Err() != nil && d.RunnerID != "" {
 			_ = d.sendOfflineHeartbeat(context.Background())
@@ -234,6 +235,7 @@ func (d *Daemon) RunOnce(ctx context.Context) error {
 		return err
 	}
 	d.refreshRuntimeUsage(ctx)
+	d.refreshRuntimes()
 	if err := d.heartbeatOrRecover(ctx); err != nil {
 		return err
 	}
@@ -465,7 +467,7 @@ func (d *Daemon) heartbeat(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	runtimes := d.refreshRuntimes()
+	runtimes := d.currentRuntimes()
 	build := d.buildInfo()
 	hostInfo := host.Current()
 	_, err = d.Client.Runners.PutHeartbeat(ctx, d.RunnerID, enbor.PutRunnerHeartbeatRequest{

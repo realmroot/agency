@@ -162,6 +162,7 @@ function bridgeInventoryMessageSchema() {
   const schema = openApiSchema(RuntimeBridgeInventoryMessageSchema)
   setPropertyGoName(schema, 'requestId', 'RequestID')
   setPropertyGoName(schema, 'includeUsage', 'IncludeUsage')
+  setPropertyGoName(schema, 'usageOnly', 'UsageOnly')
   setPropertyEnumNames(schema, 'type', ['BridgeMessageTypeInventory'])
   return schema
 }

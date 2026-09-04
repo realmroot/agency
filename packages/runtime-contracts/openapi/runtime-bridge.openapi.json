@@ -188,6 +188,10 @@
           "includeUsage": {
             "type": "boolean",
             "x-go-name": "IncludeUsage"
+          },
+          "usageOnly": {
+            "type": "boolean",
+            "x-go-name": "UsageOnly"
           }
         },
         "required": [
