@@ -50,7 +50,7 @@ function inboxTrigger(subscriptionPhase: 'pending' | 'active' | 'inactive' | 'er
   }
 }
 
-function activation(routingKeyHash: string | null): PendingInboxActivation {
+function activation(routingKeyHash: string | null, organizationId = 'org_1'): PendingInboxActivation {
   return {
     run: {
       id: 'run_1',
@@ -59,7 +59,7 @@ function activation(routingKeyHash: string | null): PendingInboxActivation {
       metadata: {},
     },
     triggerId: 'trigger_1',
-    organizationId: 'org_1',
+    organizationId,
     projectId: 'project_1',
     projectName: 'Project',
     notification: {
@@ -368,7 +368,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
   })
 
   it('owns the first atomic route reservation and creates the reserved Session', async () => {
-    const fake = deps()
+    const fake = deps({ activation: activation('route_hash', 'user:user_1') })
     await dispatchInboxActivation(fake.value, 'run_1')
     expect(fake.reserve).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -381,7 +381,14 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
     expect(createSession).toHaveBeenCalledWith(
       fake.value,
       expect.anything(),
-      expect.objectContaining({ options: expect.objectContaining({ id: 'session_reserved' }) }),
+      expect.objectContaining({
+        options: expect.objectContaining({
+          id: 'session_reserved',
+          prompt: expect.stringContaining(
+            'realmroot toolbox agent-inbox message show message_1 --context user_1 --json',
+          ),
+        }),
+      }),
     )
     expect(fake.marks.dispatched).toHaveBeenCalledWith(
       expect.anything(),
@@ -399,7 +406,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       fake.value,
       expect.anything(),
       existing,
-      expect.stringContaining('message_1'),
+      expect.stringContaining('realmroot toolbox agent-inbox message show message_1 --context org_1 --json'),
       'inbox:event_1',
     )
     expect(createSession).not.toHaveBeenCalled()

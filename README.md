@@ -28,6 +28,38 @@ Agent definition -> immutable version -> Session
 
 This gives agent product developers one canonical place to manage durable definitions, execution environments, runtime sessions, events, policy, credentials, memory, usage, and audit history.
 
+## When to Use Enbor
+
+Use Enbor when agents are part of a product or operating environment and need
+to outlive one model call or one local process. It is a good fit when you need
+one or more of the following:
+
+- stable Agent identity and versioned configuration across many Sessions;
+- a consistent Session API across cloud and self-hosted execution;
+- portability between the `enbor`, `claude-code`, `codex`, and `copilot`
+  runtimes;
+- durable events, transcripts, approvals, usage records, and audit history;
+- reusable Environments, credentials, memory, tools, skills, and governance;
+- infrastructure that a downstream product can embed behind its own user
+  experience.
+
+Enbor is usually unnecessary for a one-off prompt, a local chatbot with no
+durable state, or an application that only needs to call one model provider
+directly.
+
+## Common Use Cases
+
+- **Managed coding agents:** run coding work through different agent runtimes
+  while retaining one durable Agent definition and Session history.
+- **Agent products:** provide the control and execution plane behind a
+  customer-facing product without coupling Enbor to that product's workflow.
+- **Self-hosted execution:** dispatch Sessions to customer-controlled Runners
+  while the Enbor control plane retains lifecycle and event ownership.
+- **Governed agents:** apply identity, policy, approval, budget, credential,
+  memory, and audit controls consistently across runtimes.
+- **Long-running automation:** create Sessions from schedules or external
+  events and inspect their results through one canonical API.
+
 ## The Name
 
 `Enbor` means the trunk of a tree in Basque: the durable structure that remains while branches grow and change. An Enbor Agent plays the same role. Sessions branch from a stable, versioned definition while its capabilities, policy, and memory can evolve without losing the Agent's identity.
@@ -125,6 +157,9 @@ This README is a non-normative project overview. Product and API behavior is
 defined only by the Gherkin Features under `spec/`.
 
 - [Documentation Index](docs/README.md) - documentation map and content ownership.
+- [Getting Started](docs/guides/getting-started.md) - choose an execution model and complete the first SDK workflow.
+- [Choose an Integration Path](docs/guides/choosing-an-integration-path.md) - decide when to use Context7, an SDK, the Enbor Skill, or Realmroot Toolbox.
+- [SDK Guide](sdk/README.md) - shared SDK concepts and language-specific guides.
 - [Contributor Guide](CONTRIBUTING.md) - local setup, verification, contribution workflow, and engineering rules.
 - [Product and API Specifications](spec/) - normative behavior in Gherkin Features.
 - [Architecture Decision Records](docs/adr/) - accepted architecture decisions, context, and consequences.

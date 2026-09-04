@@ -1,0 +1,26 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/realmroot/enbor",
+  "public_key": "pk_mjSE5UJM6ZCUlI3DDcskH",
+  "projectTitle": "Enbor",
+  "description": "Open-source, self-hostable control and execution plane for durable, multi-runtime agents.",
+  "branch": "main",
+  "folders": ["docs/guides", "sdk", "skills"],
+  "excludeFolders": [
+    "sdk/spec",
+    "sdk/typescript/src",
+    "sdk/python/enbor_sdk",
+    "sdk/python/tests",
+    "sdk/go/enbor"
+  ],
+  "excludeFiles": [],
+  "rules": [
+    "Use Enbor as infrastructure behind an agent product, not as an end-user agent application.",
+    "Prefer the stable SDK resource facades over generated low-level operations.",
+    "Use the SDK guides for integration patterns and the generated OpenAPI document for exact schemas.",
+    "For live Enbor operations, use the operate-enbor Skill and discover the current operation through Realmroot Toolbox.",
+    "Context7 provides knowledge; it does not authenticate to Enbor or execute operations.",
+    "Always configure the Enbor Project id when calling project-scoped resources.",
+    "Never put Realmroot access tokens in Agent configuration, Session prompts, or committed source files."
+  ]
+}

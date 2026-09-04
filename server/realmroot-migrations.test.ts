@@ -796,6 +796,30 @@ describe('[spec: agents/create-idempotency] [spec: environments/create-idempoten
   })
 })
 
+describe('[issue #158] lease settlement migration', () => {
+  it('adds a nullable settlement identity for existing lease rows', () => {
+    const db = new DatabaseSync(':memory:')
+    applyThrough(db, '0042_trigger_creation_idempotency.sql')
+
+    expect(
+      (db.prepare('PRAGMA table_info(leases)').all() as Array<{ name: string }>).map(({ name }) => name),
+    ).not.toContain('settlement_id')
+
+    apply(db, '0043_lease_settlement_id.sql')
+
+    expect(
+      (
+        db.prepare('PRAGMA table_info(leases)').all() as Array<{
+          name: string
+          notnull: number
+          dflt_value: string | null
+        }>
+      ).find(({ name }) => name === 'settlement_id'),
+    ).toMatchObject({ name: 'settlement_id', notnull: 0, dflt_value: null })
+    db.close()
+  })
+})
+
 describe('[spec: agents/realmroot-binding] Realmroot schema migrations', () => {
   it('keeps browser authorization attempts free of D1 client-key rate-limit state', () => {
     const db = new DatabaseSync(':memory:')

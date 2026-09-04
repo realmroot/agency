@@ -904,6 +904,7 @@ export const leases = sqliteTable(
     expiresAt: text('expires_at').notNull(),
     renewedAt: text('renewed_at'),
     resumeToken: text('resume_token'),
+    settlementId: text('settlement_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
