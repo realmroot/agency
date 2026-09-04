@@ -125,7 +125,7 @@ function providerAssistantMessage(model: Model<string>, raw: unknown) {
     choice?.message && typeof choice.message === 'object' ? (choice.message as Record<string, unknown>) : null
   const content: AssistantMessage['content'] = []
   const text = textContent(message?.content ?? record?.response ?? record?.text ?? raw)
-  if (text) {
+  if (text.trim()) {
     content.push({ type: 'text', text })
   }
   const toolCalls = Array.isArray(message?.tool_calls) ? message.tool_calls : []
@@ -147,10 +147,17 @@ function providerAssistantMessage(model: Model<string>, raw: unknown) {
       arguments: parseToolArguments(fn.arguments ?? call.arguments),
     })
   }
+  if (!content.length) {
+    throw new ProviderCallError({
+      category: 'unknown',
+      message: 'Provider returned no assistant text or valid tool calls.',
+      retryable: false,
+    })
+  }
   return assistantMessage(
     model,
-    content.length ? content : [{ type: 'text', text: '' }],
-    toolCalls.length ? 'toolUse' : 'stop',
+    content,
+    content.some((block) => block.type === 'toolCall') ? 'toolUse' : 'stop',
     usageFromProvider(model.provider, record),
   )
 }
@@ -345,7 +352,7 @@ export function workersAiModelClient(env: Env): ModelClient {
             ),
           )
         } catch (error) {
-          if (isRuntimeTurnCancelled(error)) {
+          if (isRuntimeTurnCancelled(error) || (error instanceof ProviderCallError && !error.normalized.retryable)) {
             throw error
           }
           lastError =
