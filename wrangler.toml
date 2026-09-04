@@ -137,7 +137,7 @@ enabled = true
 head_sampling_rate = 0.05
 
 [env.staging]
-name = "enbor-staging"
+name = "any-managed-agents-staging"
 routes = [
   { pattern = "enbor-staging.realmroot.dev", custom_domain = true },
 ]
@@ -218,7 +218,7 @@ class_name = "RunnerPoolObject"
 
 [[env.staging.containers]]
 class_name = "Sandbox"
-name = "enbor-staging-sandbox"
+name = "any-managed-agents-staging-sandbox"
 image = "./Dockerfile"
 max_instances = 20
 

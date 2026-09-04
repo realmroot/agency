@@ -5,6 +5,7 @@ describe('deployment environment example', () => {
   it('keeps deployment names explicit while production remains on legacy physical resources', () => {
     const wrangler = readFileSync('wrangler.toml', 'utf8')
     const production = wrangler.split('\n[env.staging]')[0]
+    const staging = wrangler.split('\n[env.staging]')[1]?.split('\n[env.e2e]')[0]
 
     expect(production).toMatch(/^name = "any-managed-agents"$/m)
     expect(production).toContain('queue = "ama-cloud-turns"')
@@ -16,7 +17,8 @@ describe('deployment environment example', () => {
     expect(production).toMatch(/^name = "any-managed-agents-sandbox"$/m)
     expect(production).toContain('`wrangler queues create ama-cloud-turns-dlq`')
     expect(production).not.toContain('`wrangler queues create enbor-cloud-turns-dlq`')
-    expect(wrangler).toMatch(/^\[env\.staging\]\nname = "enbor-staging"$/m)
+    expect(staging).toMatch(/^name = "any-managed-agents-staging"$/m)
+    expect(staging).toMatch(/^name = "any-managed-agents-staging-sandbox"$/m)
   })
 
   it('uses the canonical Realmroot OIDC issuer path', () => {
