@@ -260,4 +260,50 @@ describe('recordRunnerHeartbeat', () => {
     const updated = await recordRunnerHeartbeat(fakeDeps(), 'project_1', runnerRecord({ state: 'offline' }), {})
     expect(updated.state).toBe('active')
   })
+
+  it('retries available work for the exact active runner scope when heartbeat reports spare capacity', async () => {
+    const retryAvailableWork = vi.fn()
+    const updated = runnerRecord({
+      id: 'runner_ready',
+      organizationId: 'org_ready',
+      projectId: 'project_ready',
+      environmentId: 'env_ready',
+      state: 'active',
+      currentLoad: 1,
+      maxConcurrent: 2,
+    })
+    const deps = {
+      ...fakeDeps({ heartbeat: async () => updated }),
+      runnerChannel: { retryAvailableWork },
+    } as unknown as Deps
+
+    await recordRunnerHeartbeat(deps, 'project_1', runnerRecord(), {})
+
+    expect(retryAvailableWork).toHaveBeenCalledOnce()
+    expect(retryAvailableWork).toHaveBeenCalledWith({
+      runnerId: 'runner_ready',
+      organizationId: 'org_ready',
+      projectId: 'project_ready',
+      environmentId: 'env_ready',
+    })
+  })
+
+  it.each([
+    { boundary: 'non-active state', updated: { state: 'draining' as const, environmentId: 'env_1' } },
+    { boundary: 'no environment', updated: { state: 'active' as const, environmentId: null } },
+    {
+      boundary: 'at capacity',
+      updated: { state: 'active' as const, environmentId: 'env_1', currentLoad: 1, maxConcurrent: 1 },
+    },
+  ])('does not retry available work at the $boundary boundary', async ({ updated }) => {
+    const retryAvailableWork = vi.fn()
+    const deps = {
+      ...fakeDeps({ heartbeat: async () => runnerRecord(updated) }),
+      runnerChannel: { retryAvailableWork },
+    } as unknown as Deps
+
+    await recordRunnerHeartbeat(deps, 'project_1', runnerRecord(), {})
+
+    expect(retryAvailableWork).not.toHaveBeenCalled()
+  })
 })

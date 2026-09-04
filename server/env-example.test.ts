@@ -2,6 +2,24 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 describe('deployment environment example', () => {
+  it('uses the configured D1 binding for every migration-bearing script', () => {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> }
+    const { scripts } = packageJson
+
+    expect(scripts['db:migrate:d1']).toBe('wrangler d1 migrations apply DB --local')
+    expect(scripts['db:migrate:d1:staging']).toBe('wrangler d1 migrations apply DB --remote --env staging')
+    expect(scripts['db:migrate:d1:prod']).toBe('wrangler d1 migrations apply DB --remote')
+    expect(scripts.deploy).toContain('pnpm run db:migrate:d1:prod')
+    expect(scripts['e2e:server']).toContain('wrangler d1 migrations apply DB --local --env e2e')
+
+    const migrationCommands = Object.values(scripts).filter((command) => command.includes('d1 migrations apply'))
+    expect(migrationCommands).not.toHaveLength(0)
+    for (const command of migrationCommands) {
+      expect(command).toMatch(/\bd1 migrations apply DB\b/)
+      expect(command).not.toMatch(/\bd1 migrations apply (?:enbor-db|enbor-db-staging-v2)\b/)
+    }
+  })
+
   it('keeps deployment names explicit while production remains on legacy physical resources', () => {
     const wrangler = readFileSync('wrangler.toml', 'utf8')
     const production = wrangler.split('\n[env.staging]')[0]

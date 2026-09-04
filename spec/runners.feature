@@ -84,6 +84,13 @@ Feature: Runners
     And it cannot satisfy runtime availability or claim new work while its heartbeat is stale
     And a fresh heartbeat makes the same runner active again without re-registration
 
+  @runners/heartbeat-load-recovery @api
+  Scenario: Repair stale runner load while heartbeating
+    Given a runner load counter differs from its unexpired active leases
+    When the runner sends its next heartbeat
+    Then Enbor replaces the counter with the active lease count
+    And an online runner with restored capacity retries available work in its environment
+
   # ── Work queue and leases (api: assembled server, channel, lifecycle) ──
 
   @runners/queue-work @api

@@ -287,6 +287,14 @@ export function createRunnerRepo(db: Db): RunnerRepo {
         .update(runners)
         .set({
           state: fields.state as RunnerStateColumn,
+          currentLoad: sql<number>`(
+            select count(*)
+            from ${leases}
+            where ${leases.runnerId} = ${runnerId}
+              and ${leases.projectId} = ${projectId}
+              and ${leases.state} = 'active'
+              and ${leases.expiresAt} > ${timestamp}
+          )`,
           runtimeUsage: stringify(fields.runtimeUsage),
           runtimes: stringify(fields.runtimes),
           metadata: stringify(fields.metadata),

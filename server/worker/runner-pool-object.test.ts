@@ -96,6 +96,20 @@ function dispatch(pool: RunnerPoolObject, requestId?: string, options: { session
   )
 }
 
+function retryAvailableWork(pool: RunnerPoolObject) {
+  return pool.fetch(
+    new Request('https://runner-pool.test/retry', {
+      method: 'POST',
+      body: JSON.stringify({
+        runnerId: 'runner_1',
+        organizationId: 'org_1',
+        projectId: 'project_1',
+        environmentId: 'env_1',
+      }),
+    }),
+  )
+}
+
 function requestSandbox(pool: RunnerPoolObject, sessionId = 'session_1') {
   return pool.fetch(
     new Request('https://runner-pool.test/request', {
@@ -199,6 +213,92 @@ describe('RunnerPoolObject session command acknowledgement [spec: runners/live-p
     vi.useRealTimers()
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  it('[spec: runners/heartbeat-load-recovery] retries available work on an existing connection after capacity recovers', async () => {
+    const { pool, internals, connection, socket } = createPool(true)
+    const workItem = {
+      id: 'work_available',
+      organizationId: 'org_1',
+      projectId: 'project_1',
+      sessionId: 'session_2',
+      environmentId: 'env_1',
+      runnerId: null,
+      leaseId: null,
+      type: 'session.start',
+      state: 'available',
+      priority: 0,
+      attempts: 0,
+      maxAttempts: 3,
+      payload: { type: 'session.start', runtimeRequirement: { runtime: 'enbor' } },
+      result: null,
+      error: null,
+      availableAt: '2020-01-01T00:00:00.000Z',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    }
+    createDepsMock.mockReturnValue({
+      runners: {
+        find: vi.fn().mockResolvedValue({
+          id: 'runner_1',
+          organizationId: 'org_1',
+          projectId: 'project_1',
+          name: 'Runner',
+          environmentId: 'env_1',
+          secretRef: null,
+          authMode: 'realmroot',
+          state: 'active',
+          currentLoad: 0,
+          maxConcurrent: 1,
+          runtimeUsage: [],
+          runtimes: [{ runtime: 'enbor', models: [], state: 'ready' }],
+          metadata: {},
+          oidcSubject: 'runner-subject',
+          oidcClientId: 'runner-client',
+          lastHeartbeatAt: '2020-01-01T00:00:00.000Z',
+          deletedAt: null,
+          createdAt: '2020-01-01T00:00:00.000Z',
+          updatedAt: '2020-01-01T00:00:00.000Z',
+        }),
+      },
+      workItems: {
+        list: vi.fn().mockResolvedValue({ rows: [workItem], hasMore: false }),
+        find: vi.fn().mockResolvedValue({ ...workItem, runnerId: 'runner_1', state: 'leased' }),
+        rawPayload: vi.fn().mockResolvedValue(workItem.payload),
+      },
+      leases: {
+        expireStale: vi.fn().mockResolvedValue(0),
+        claimCandidate: vi.fn().mockResolvedValue({
+          state: 'available',
+          availableAt: workItem.availableAt,
+          environmentId: 'env_1',
+          sessionId: 'session_2',
+          rawPayload: workItem.payload,
+        }),
+        claim: vi.fn().mockResolvedValue({
+          lease: {
+            id: 'lease_2',
+            workItemId: workItem.id,
+            runnerId: 'runner_1',
+            state: 'active',
+            expiresAt: '2099-01-01T00:00:00.000Z',
+            renewedAt: null,
+            resumeToken: null,
+            createdAt: '2020-01-01T00:00:00.000Z',
+            updatedAt: '2020-01-01T00:00:00.000Z',
+          },
+          sessionId: 'session_2',
+        }),
+      },
+    })
+
+    expect(connection.assigned).toBe(1)
+    const response = await retryAvailableWork(pool)
+
+    expect(response.status).toBe(202)
+    await vi.waitFor(() => expect(socket.sent).toContainEqual(expect.objectContaining({ type: 'work.assigned' })))
+    expect(internals.runners.get('runner_1')).toBe(connection)
+    expect(connection.assigned).toBe(1)
   })
 
   it('[spec: runners/enbor-sandbox-channel] rejects live events forged for a session owned by another runner', async () => {

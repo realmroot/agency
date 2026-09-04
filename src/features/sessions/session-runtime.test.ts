@@ -907,13 +907,38 @@ describe('sessionSocketConnection', () => {
     const connection = await sessionSocketConnection('/api/v1/sessions/s1/socket')
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/sessions/s1/socket-tickets', {
       method: 'POST',
-      headers: { authorization: 'Bearer test_token_xyz' },
+      headers: {
+        authorization: 'Bearer test_token_xyz',
+        'x-enbor-project-id': 'project_test',
+      },
     })
     expect(connection.url).toContain('/api/v1/sessions/s1/socket')
     expect(connection.url.startsWith('wss:')).toBe(true)
     expect(connection.url).not.toContain('test_token_xyz')
     expect(connection.protocols).toEqual(['enbor-ticket', `enbor-ticket.${ticket}`])
     expect(connection.protocols.join(',')).not.toContain('test_token_xyz')
+  })
+
+  it('sends the selected project with Console auth when exchanging a socket ticket [issue #159]', async () => {
+    stubWindowLocation('https://example.com/app')
+    window.localStorage.setItem('enbor:selected-project-id', 'project_agent_kanban')
+    vi.spyOn(oidcModule, 'getAuthHeaders').mockResolvedValue({ authorization: 'Bearer test_token_xyz' })
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ticket: 'p'.repeat(43) }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      await sessionSocketConnection('/api/v1/sessions/s1/socket')
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/sessions/s1/socket-tickets', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test_token_xyz',
+          'x-enbor-project-id': 'project_agent_kanban',
+        },
+      })
+    } finally {
+      window.localStorage.removeItem('enbor:selected-project-id')
+    }
   })
 
   it('uses ws: protocol for http: origins', async () => {
