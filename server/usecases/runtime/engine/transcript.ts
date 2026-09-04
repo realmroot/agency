@@ -4,7 +4,7 @@
 // context. Lives apart from the engine loop because it is a distinct concern with
 // its own boundary (it parses persisted/queued JSON).
 import type { AgentMessage } from '@earendil-works/pi-agent-core'
-import type { ImageContent, TextContent } from '@earendil-works/pi-ai'
+import type { ImageContent, TextContent, ToolCall } from '@earendil-works/pi-ai'
 import type { Message, MessageContentBlock, ToolResultValueContentBlock } from '@shared/session-events'
 
 const ZERO_USAGE = {
@@ -47,9 +47,11 @@ function textFromContent(blocks: MessageContentBlock[]) {
     .join('')
 }
 
-function piTextContentBlocks(blocks: MessageContentBlock[]): TextContent[] {
-  return blocks.flatMap((block): TextContent[] => {
+function piAssistantContentBlocks(blocks: MessageContentBlock[]): Array<TextContent | ToolCall> {
+  return blocks.flatMap((block): Array<TextContent | ToolCall> => {
     if (block.type === 'text') return [{ type: 'text' as const, text: block.text }]
+    if (block.type === 'tool_call')
+      return [{ type: 'toolCall', id: block.toolCall.id, name: block.toolCall.name, arguments: block.toolCall.input }]
     return []
   })
 }
@@ -72,12 +74,17 @@ function agentMessageFromEnborMessage(message: Message): AgentMessage | null {
   if (message.role === 'assistant') {
     return {
       role: 'assistant',
-      content: piTextContentBlocks(message.content),
+      content: piAssistantContentBlocks(message.content),
       api: 'enbor',
       provider: 'enbor',
       model: 'enbor',
       usage: ZERO_USAGE,
-      stopReason: message.stopReason === 'aborted' || message.stopReason === 'error' ? message.stopReason : 'stop',
+      stopReason:
+        message.stopReason === 'aborted' || message.stopReason === 'error'
+          ? message.stopReason
+          : message.content.some((block) => block.type === 'tool_call')
+            ? 'toolUse'
+            : 'stop',
       timestamp,
     }
   }
@@ -132,7 +139,14 @@ function eventCore(event: {
 export function runtimeMessagesFromEvents(
   events: Array<{ type?: string; payload: string | Record<string, unknown> }>,
 ): AgentMessage[] {
+  return runtimeConversationFromEvents(events).messages
+}
+
+export function runtimeConversationFromEvents(
+  events: Array<{ type?: string; payload: string | Record<string, unknown> }>,
+) {
   const messageEndMessages: AgentMessage[] = []
+  const subagentMessages: Record<string, AgentMessage[]> = {}
   for (const event of events) {
     const core = eventCore(event)
     if (!core) {
@@ -143,10 +157,37 @@ export function runtimeMessagesFromEvents(
     }
     const enborMessage = enborMessageFromValue(core.payload.message)
     const message = enborMessage ? agentMessageFromEnborMessage(enborMessage) : null
-    if (!message) {
+    if (!message) continue
+    if (
+      enborMessage?.parentToolCallId &&
+      !(
+        enborMessage.role === 'tool' &&
+        enborMessage.content.some(
+          (block) => block.type === 'tool_result' && block.toolCallId === enborMessage.parentToolCallId,
+        )
+      )
+    ) {
+      const childMessages = subagentMessages[enborMessage.parentToolCallId] ?? []
+      childMessages.push(message)
+      subagentMessages[enborMessage.parentToolCallId] = childMessages
       continue
     }
     messageEndMessages.push(message)
   }
-  return messageEndMessages
+  return { messages: messageEndMessages, subagentMessages }
+}
+
+export function toolCallParentFromEvents(
+  events: Array<{ type?: string; payload: string | Record<string, unknown> }>,
+  toolCallId: string,
+): string | undefined {
+  for (const event of events) {
+    const core = eventCore(event)
+    if (core?.type !== 'message.completed') continue
+    const message = enborMessageFromValue(core.payload.message)
+    if (message?.content.some((block) => block.type === 'tool_call' && block.toolCall.id === toolCallId)) {
+      return message.parentToolCallId
+    }
+  }
+  return undefined
 }

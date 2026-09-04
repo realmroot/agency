@@ -1888,6 +1888,7 @@ export type SessionTurnInput = {
   prompt?: string
   continuation?: boolean
   messages?: AgentMessage[]
+  subagentMessages?: Record<string, AgentMessage[]>
   // Checked before each model call after the first; returning true pauses the run.
   shouldPause?: () => boolean
   ensureActive?: () => Promise<void>

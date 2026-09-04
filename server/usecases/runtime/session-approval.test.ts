@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SessionOrchestrationStore } from '../ports'
+import type { EventStore, SessionOrchestrationStore } from '../ports'
 
 const { activateCloudSessionForTurnMock, executeCloudSessionTurnMock } = vi.hoisted(() => ({
   activateCloudSessionForTurnMock: vi.fn(async () => undefined),
@@ -20,12 +20,20 @@ const auth = {
   project: { id: 'proj_1' },
 } as never
 
-function fixture(options: { acquired?: boolean; inline?: boolean; executeFailure?: Error } = {}) {
+function fixture(
+  options: {
+    acquired?: boolean
+    inline?: boolean
+    executeFailure?: Error
+    toolName?: string
+    events?: Awaited<ReturnType<EventStore['eventStream']>>
+  } = {},
+) {
   const pendingApproval = {
     id: 'approval_1',
     toolCallId: 'tool_call_1',
-    toolName: 'bash',
-    input: { command: 'pwd' },
+    toolName: options.toolName ?? 'bash',
+    input: options.toolName === 'agent' ? { subagentName: 'researcher', prompt: 'research this' } : { command: 'pwd' },
     requestedAt: '2026-09-03T00:00:00.000Z',
     relatedEventIds: ['event_request'],
   }
@@ -58,7 +66,7 @@ function fixture(options: { acquired?: boolean; inline?: boolean; executeFailure
   )
   const releaseTurnLease = vi.fn<SessionOrchestrationStore['releaseTurnLease']>(async () => true)
   const enqueue = vi.fn(async () => undefined)
-  const appendEvent = vi.fn(async () => 'event_1')
+  const appendEvent = vi.fn<EventStore['appendEvent']>(async () => 'event_1')
   const audit = { record: vi.fn(async () => undefined) }
   const upsertApproval = vi.fn(async () => undefined)
   const updateSession = vi.fn(async () => undefined)
@@ -72,7 +80,7 @@ function fixture(options: { acquired?: boolean; inline?: boolean; executeFailure
       acquireIdleTurnLease,
       releaseTurnLease,
     },
-    sessionEventStore: { appendEvent },
+    sessionEventStore: { appendEvent, eventStream: vi.fn(async () => options.events ?? []) },
     audit,
     sandboxExecutor: { executeTool },
     cloudTurnQueue: { runsInline: () => options.inline ?? false, enqueue },
@@ -94,6 +102,48 @@ function fixture(options: { acquired?: boolean; inline?: boolean; executeFailure
 
 describe('session approval continuation', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('[spec: runtime/subagent-execution] approving delegation resumes the parent without a sandbox agent call or fabricated final result', async () => {
+    const f = fixture({ toolName: 'agent' })
+    await expect(
+      decideSessionApproval(f.deps, auth, f.session.id, f.pendingApproval.id, { decision: 'approve' }),
+    ).resolves.toMatchObject({ ok: true })
+    expect(f.executeTool).not.toHaveBeenCalled()
+    expect(f.enqueue).toHaveBeenCalledWith(expect.objectContaining({ type: 'session.step' }))
+    expect(
+      f.appendEvent.mock.calls
+        .map(([, event]) => event)
+        .filter((event) => JSON.stringify(event).includes('tool_result')),
+    ).toEqual([])
+  })
+
+  it('[spec: runtime/subagent-execution] records an approved child sandbox result in its child conversation', async () => {
+    const f = fixture({
+      events: [
+        {
+          type: 'message.completed',
+          payload: JSON.stringify({
+            message: {
+              id: 'child_call',
+              role: 'assistant',
+              parentToolCallId: 'delegate_1',
+              content: [
+                { type: 'tool_call', toolCall: { id: 'tool_call_1', name: 'bash', input: { command: 'pwd' } } },
+              ],
+            },
+          }),
+        },
+      ],
+    })
+    await decideSessionApproval(f.deps, auth, f.session.id, f.pendingApproval.id, { decision: 'approve' })
+    const recorded = f.appendEvent.mock.calls
+      .map(([, event]) => event)
+      .find((event) => JSON.stringify(event).includes('tool_result'))
+    expect(recorded).toBeDefined()
+    expect(JSON.stringify(recorded)).toContain('"parentToolCallId":"delegate_1"')
+    expect(f.executeTool).toHaveBeenCalledOnce()
+    expect(f.enqueue).toHaveBeenCalledOnce()
+  })
 
   it('[spec: runtime/idle-retention] executes an approved tool inside one acquired lease and queues that turn id', async () => {
     const f = fixture()

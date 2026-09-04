@@ -22,6 +22,7 @@ import type { AuthScope, SessionSandboxExecutor } from '../ports'
 import { writeSessionApprovalState } from './approval-gate'
 import type { CloudTurnDeps } from './cloud-turn'
 import { activateCloudSessionForTurn, executeCloudSessionTurn, handleTurnOutcome } from './cloud-turn'
+import { toolCallParentFromEvents } from './engine/transcript'
 import { appendRuntimeEvent } from './events'
 
 type SessionRuntimeError = {
@@ -166,10 +167,13 @@ export async function decideSessionApproval(
       updatedAt: decidedAt,
     }
     await store.upsertApproval(approvalRow, decidedAt)
-    let resultOutput: Record<string, unknown>
+    let resultOutput: Record<string, unknown> | undefined
     let resultIsError = false
     if (approved && body.result) {
       resultOutput = body.result
+    } else if (approved && pending.toolName === 'agent') {
+      // Delegation is cloud-owned. Resume its pending call after recording the
+      // grant instead of dispatching it to the sandbox or fabricating a result.
     } else if (approved) {
       if (!isEnborSandboxToolName(pending.toolName)) {
         throw new Error(`Unsupported approved sandbox tool: ${pending.toolName}`)
@@ -195,36 +199,42 @@ export async function decideSessionApproval(
       resultOutput = { denied: true, reason: body.reason ?? 'Tool call denied by the user' }
       resultIsError = true
     }
-    const resultText =
-      typeof resultOutput.stdout === 'string' || typeof resultOutput.stderr === 'string'
-        ? [resultOutput.stdout, resultOutput.stderr]
-            .filter((value): value is string => typeof value === 'string' && value.length > 0)
-            .join('\n')
-        : JSON.stringify(resultOutput)
-    await appendRuntimeEvent(deps, {
-      auth,
-      sessionId: session.id,
-      event: {
-        type: 'message.completed',
-        payload: {
-          message: {
-            id: crypto.randomUUID(),
-            role: 'tool',
-            parentToolCallId: pending.toolCallId,
-            content: [
-              {
-                type: 'tool_result',
-                toolCallId: pending.toolCallId,
-                result: { content: [{ type: 'text', text: resultText }], structuredContent: resultOutput },
-                ...(resultIsError
-                  ? { error: { message: resultText || 'Tool execution failed', details: resultOutput } }
-                  : {}),
-              },
-            ],
+    if (resultOutput) {
+      const parentToolCallId = toolCallParentFromEvents(
+        await deps.sessionEventStore.eventStream(session.id),
+        pending.toolCallId,
+      )
+      const resultText =
+        typeof resultOutput.stdout === 'string' || typeof resultOutput.stderr === 'string'
+          ? [resultOutput.stdout, resultOutput.stderr]
+              .filter((value): value is string => typeof value === 'string' && value.length > 0)
+              .join('\n')
+          : JSON.stringify(resultOutput)
+      await appendRuntimeEvent(deps, {
+        auth,
+        sessionId: session.id,
+        event: {
+          type: 'message.completed',
+          payload: {
+            message: {
+              id: crypto.randomUUID(),
+              role: 'tool',
+              parentToolCallId: parentToolCallId ?? pending.toolCallId,
+              content: [
+                {
+                  type: 'tool_result',
+                  toolCallId: pending.toolCallId,
+                  result: { content: [{ type: 'text', text: resultText }], structuredContent: resultOutput },
+                  ...(resultIsError
+                    ? { error: { message: resultText || 'Tool execution failed', details: resultOutput } }
+                    : {}),
+                },
+              ],
+            },
           },
         },
-      },
-    })
+      })
+    }
     const resumed = await store.findSession(auth.project.id, session.id)
     if (!resumed) {
       throw new Error('Session row is required after approval decision')

@@ -53,6 +53,7 @@ import type {
   TurnEngineResult,
   TurnLiveness,
 } from './ports'
+import { subagentTools } from './subagent-tools'
 import { reduceTurnStatus, type TurnStatus } from './turn-status'
 
 // runtimeMessagesFromEvents moved to ./transcript; re-exported here for the
@@ -246,6 +247,7 @@ function createTurnStreamFn(
     budget?: TurnBudget
     markPaused: () => void
     engineSignal: AbortSignal
+    terminalStatus: () => TurnStatus
   },
 ) {
   return (model: Model<string>, context: Context, options?: StreamOptions) => {
@@ -253,6 +255,20 @@ function createTurnStreamFn(
     const stream = createAssistantMessageEventStream()
     queueMicrotask(async () => {
       try {
+        const terminal = values.terminalStatus()
+        if (terminal.kind !== 'idle') {
+          emitAssistantMessage(
+            stream,
+            assistantMessage(
+              model,
+              [],
+              terminal.kind === 'failed' ? 'error' : 'aborted',
+              ZERO_USAGE,
+              terminal.kind === 'failed' ? terminal.message : 'Paused for continuation',
+            ),
+          )
+          return
+        }
         if (signal.aborted) {
           emitAssistantMessage(stream, assistantMessage(model, [], 'aborted', ZERO_USAGE, CANCELLATION_REASON))
           return
@@ -556,6 +572,7 @@ function resolveTurnResult(status: TurnStatus): TurnEngineResult {
 
 export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult> {
   const controller = new AbortController()
+  const abortFromParent = () => controller.abort()
   // Link an external cancellation source (session stop / client disconnect) to
   // the engine controller so it aborts the in-flight agent loop. Additive: when
   // no signal is supplied the engine still relies on the cooperative liveness
@@ -564,7 +581,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
     if (input.signal.aborted) {
       controller.abort()
     } else {
-      input.signal.addEventListener('abort', () => controller.abort(), { once: true })
+      input.signal.addEventListener('abort', abortFromParent, { once: true })
     }
   }
   const { model } = input
@@ -572,27 +589,36 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   let status: TurnStatus = { kind: 'idle' }
   let providerError: RuntimeProviderError | null = null
   let policyFailure: string | null = null
+  let requiresAction = false
+  const policy: ToolPolicyGate = {
+    approve: async (toolCall) => {
+      if (status.kind === 'failed') throw new RuntimePolicyDeniedError(status.message)
+      if (status.kind !== 'idle') throw new RuntimeTurnCancelledError()
+      const decision = await input.policy.approve(toolCall)
+      if (!decision.allowed) policyFailure = decision.reason ?? 'Tool call blocked by Enbor policy'
+      if (decision.requiresAction) requiresAction = true
+      return decision
+    },
+  }
   const agent = new Agent({
     initialState: {
       systemPrompt: runtimeSystemPrompt(input.agentSnapshot),
       model,
-      tools: runtimeTools(input.executor, {
-        sessionId: input.sessionId,
-        sandboxId: input.sandboxId,
-        agentSnapshot: input.agentSnapshot,
-        policy: {
-          approve: async (toolCall) => {
-            const decision = await input.policy.approve(toolCall)
-            if (!decision.allowed) {
-              policyFailure = decision.reason ?? 'Tool call blocked by Enbor policy'
-            }
-            return decision
-          },
-        },
-        toolResults: input.toolResults,
-        liveness: input.liveness,
-        engineSignal: controller.signal,
-      }),
+      tools: [
+        ...runtimeTools(input.executor, {
+          sessionId: input.sessionId,
+          sandboxId: input.sandboxId,
+          agentSnapshot: input.agentSnapshot,
+          policy,
+          toolResults: input.toolResults,
+          liveness: input.liveness,
+          engineSignal: controller.signal,
+        }),
+        ...subagentTools({ ...input, policy }, runTurn, controller.signal, () => {
+          status = reduceTurnStatus(status, { type: 'pause' })
+          controller.abort()
+        }),
+      ],
       messages: input.messages ?? [],
     },
     streamFn: createTurnStreamFn(input.modelClient, {
@@ -608,6 +634,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
         status = reduceTurnStatus(status, { type: 'pause' })
       },
       engineSignal: controller.signal,
+      terminalStatus: () => status,
     }),
     toolExecution: 'sequential',
     sessionId: input.sessionId,
@@ -618,7 +645,9 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   agent.subscribe(async (event: AgentEvent) => {
     // Everything after a pause is filler from the synthetic paused message;
     // completed turns are already persisted and the continuation rebuilds them.
-    if (status.kind === 'paused') {
+    const deniedToolResult =
+      status.kind === 'failed' && !requiresAction && event.type === 'message_end' && event.message.role === 'toolResult'
+    if (status.kind === 'paused' || (status.kind === 'failed' && !deniedToolResult)) {
       return
     }
     try {
@@ -636,6 +665,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
     if (policyEventFailure) {
       policyFailure = null
       status = reduceTurnStatus(status, { type: 'fail', message: policyEventFailure })
+      return
     } else if (eventFailure) {
       status = reduceTurnStatus(
         status,
@@ -672,6 +702,43 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
   try {
     await ensureTurnActive(controller.signal, () => input.liveness.ensureActive())
     if (input.continuation) {
+      // A delegation can yield while its caller is still awaiting a result.
+      // Re-enter the exact pending call, with its persisted child conversation.
+      const messages = agent.state.messages
+      let lastAssistantIndex = messages.length - 1
+      while (lastAssistantIndex >= 0 && messages[lastAssistantIndex]?.role !== 'assistant') lastAssistantIndex--
+      const lastAssistant = messages[lastAssistantIndex]
+      if (lastAssistant?.role === 'assistant') {
+        for (const call of lastAssistant.content) {
+          if (
+            call.type !== 'toolCall' ||
+            messages
+              .slice(lastAssistantIndex + 1)
+              .some((message) => message.role === 'toolResult' && message.toolCallId === call.id)
+          )
+            continue
+          const tool = agent.state.tools.find((candidate) => candidate.name === call.name)
+          if (!tool) throw new Error(`Cannot resume unavailable tool: ${call.name}`)
+          let result: AgentToolResult<unknown>
+          try {
+            result = await tool.execute(call.id, call.arguments, controller.signal)
+          } catch (error) {
+            if (status.kind !== 'idle') return resolveTurnResult(status)
+            throw error
+          }
+          const message: AgentMessage = {
+            role: 'toolResult',
+            toolCallId: call.id,
+            toolName: call.name,
+            content: result.content,
+            details: result.details,
+            isError: false,
+            timestamp: Date.now(),
+          }
+          await input.sink.emit({ type: 'message.completed', payload: { message: enborMessage(message) } })
+          agent.state.messages = [...agent.state.messages, message]
+        }
+      }
       await agent.continue()
     } else {
       if (typeof input.prompt !== 'string') {
@@ -689,6 +756,7 @@ export async function runTurn(input: TurnEngineInput): Promise<TurnEngineResult>
     }
     throw error
   } finally {
+    input.signal?.removeEventListener('abort', abortFromParent)
     agent.abort()
   }
 }

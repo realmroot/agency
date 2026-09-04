@@ -33,6 +33,7 @@ export type RuntimeToolPolicyInput = {
 export type RuntimeToolPolicyDecision = {
   allowed: boolean
   reason?: string
+  requiresAction?: boolean
 }
 
 // ── Ports (formalize the SessionTurnInput inline callbacks) ───────────────────
@@ -89,6 +90,8 @@ export type TurnEngineInput = {
   // The fully-resolved model object (host builds it; the engine never resolves
   // provider/model defaults).
   model: Model<string>
+  // Host-owned resolution for an explicitly selected child model.
+  resolveModel?: (modelId: string) => Model<string>
   // Display labels for the usage / runtime.error events.
   providerLabel: string
   modelLabel: string
@@ -97,6 +100,7 @@ export type TurnEngineInput = {
   prompt?: string
   continuation?: boolean
   messages?: AgentMessage[]
+  subagentMessages?: Record<string, AgentMessage[]>
   sink: RuntimeEventSink
   policy: ToolPolicyGate
   toolResults: ToolResultResolver

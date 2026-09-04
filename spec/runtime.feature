@@ -23,6 +23,20 @@ Feature: Runtime
     Then model output is produced and tool calls are dispatched through the executor
     And the next turn context is reconstructed from persisted canonical events
 
+  @runtime/subagent-execution @usecase
+  Scenario: Execute a referenced subagent within the parent Session
+    Given a Session snapshot contains resolved subagent versions
+    When the parent invokes a configured subagent by its alias
+    Then the child runs with its own prompt, model selection, and allowed tools
+    And the child has no independent identity or nested subagents
+    And child work obeys the parent Session policy and cancellation
+    And child messages reference the parent tool call without completing the parent turn
+    And the parent receives the child result without inheriting its conversation
+    And continuation preserves parent tool calls and results but excludes child conversations
+    And child work shares the turn budget and resumes without repeating completed tools
+    And approval resumes the pending delegation with results in the owning conversation
+    And an unknown alias is rejected without starting child work
+
   @runtime/idle-retention @usecase
   Scenario: Retain an idle cloud Session while allowing its sandbox to sleep
     Given a cloud Session has a sandbox and an optional positive idle retention duration

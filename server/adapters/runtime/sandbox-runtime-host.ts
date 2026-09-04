@@ -114,6 +114,7 @@ export type SessionTurnInput = {
   prompt?: string
   continuation?: boolean
   messages?: AgentMessage[]
+  subagentMessages?: Record<string, AgentMessage[]>
   // Checked before each model call after the first; returning true pauses the run.
   shouldPause?: () => boolean
   ensureActive?: () => Promise<void>
@@ -689,11 +690,13 @@ export async function runSessionTurn(
     sandboxId: input.sandboxId,
     model,
     providerLabel: provider,
+    resolveModel: runtimeModel,
     modelLabel: modelId,
     agentSnapshot: input.agentSnapshot,
     ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
     ...(input.continuation ? { continuation: true } : {}),
     ...(input.messages ? { messages: input.messages } : {}),
+    ...(input.subagentMessages ? { subagentMessages: input.subagentMessages } : {}),
     sink: { emit: (event) => input.onEvent(event) },
     policy: { approve: input.approveToolCall ?? (async () => ({ allowed: true })) },
     toolResults: { resolve: input.resolveToolResult ?? (async () => null) },
