@@ -337,7 +337,7 @@ export function createEnborClient(config: EnborClientConfig) {
 
     triggers: {
       list: (query?: types.ListTriggersData['query']) => unwrap(ops.listTriggers({ client, query })),
-      create: (body: types.CreateTriggerRequest) => unwrap(ops.createTrigger({ client, body })),
+      create: (body: types.CreateTriggerRequest, idempotencyKey?: string) => unwrap(ops.createTrigger({ client, body, headers: { "idempotency-key": idempotencyKey } })),
       get: (triggerId: string) => unwrap(ops.readTrigger({ client, path: { triggerId } })),
       update: (triggerId: string, body: types.UpdateTriggerRequest) => unwrap(ops.updateTrigger({ client, path: { triggerId }, body })),
       delete: (triggerId: string) => unwrap(ops.deleteTrigger({ client, path: { triggerId } })),

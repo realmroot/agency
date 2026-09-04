@@ -1,9 +1,10 @@
 import type { Agent } from '@server/domain/agent'
 import { resourceMetadata } from '@server/domain/resource'
 import type { Trigger } from '@server/domain/trigger'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
-import { type AuthScope, type TriggerConfig, TriggerValidationError } from './ports'
+import { type AuthScope, CreationIdempotencyConflictError, type TriggerConfig, TriggerValidationError } from './ports'
 import { createTrigger, deleteTrigger, updateTrigger } from './triggers'
 
 const auth: AuthScope = {
@@ -79,6 +80,7 @@ function fakeDeps(repo: Partial<Deps['triggers']> = {}): Deps {
   const triggers: Deps['triggers'] = {
     list: async () => ({ rows: [], hasMore: false }),
     find: async () => null,
+    findCreation: async () => null,
     insert: async (input, timestamp) =>
       triggerRecord({
         metadata: {
@@ -180,6 +182,61 @@ describe('[spec: triggers/create] createTrigger', () => {
     })
     expect(trigger.spec.template.spec.agentId).toBe('agent_1')
     expect(trigger.status.nextDueAt).toBe('2026-05-26T12:00:00.000Z')
+  })
+
+  it('replays an existing creation with the same idempotency key and request without inserting', async () => {
+    const config = baseConfig()
+    const replay = triggerRecord({ metadata: { uid: 'trigger_replay' } })
+    const fingerprint = await creationFingerprint(config)
+    const insert = vi.fn(async () => triggerRecord())
+    const deps = fakeDeps({
+      findCreation: async () => ({ fingerprint, trigger: replay }),
+      insert,
+    })
+
+    await expect(createTrigger(deps, auth, { config, idempotencyKey: 'create-trigger-once' })).resolves.toBe(replay)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('replays a scheduled creation when omitted nextDueAt would derive a different retry time', async () => {
+    let creation: { trigger: Trigger; fingerprint: string } | null = null
+    const insert = vi.fn(async (input: Parameters<Deps['triggers']['insert']>[0]) => {
+      const trigger = triggerRecord({ status: { nextDueAt: input.config.nextDueAt } })
+      creation = { trigger, fingerprint: input.creationFingerprint as string }
+      return trigger
+    })
+    const deps = fakeDeps({
+      findCreation: async () => creation,
+      insert,
+    })
+    const config = baseConfig({ nextDueAt: null })
+
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime('2026-09-03T10:00:00.000Z')
+      const first = await createTrigger(deps, auth, { config, idempotencyKey: 'scheduled-trigger-once' })
+      vi.setSystemTime('2026-09-03T10:05:00.000Z')
+      const replay = await createTrigger(deps, auth, { config, idempotencyKey: 'scheduled-trigger-once' })
+
+      expect(replay).toBe(first)
+      expect(insert).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rejects reuse of an idempotency key for a different Trigger request', async () => {
+    const fingerprint = await creationFingerprint(baseConfig())
+    const deps = fakeDeps({
+      findCreation: async () => ({ fingerprint, trigger: triggerRecord() }),
+    })
+
+    await expect(
+      createTrigger(deps, auth, {
+        config: baseConfig({ name: 'Different heartbeat' }),
+        idempotencyKey: 'reused-trigger-key',
+      }),
+    ).rejects.toBeInstanceOf(CreationIdempotencyConflictError)
   })
 
   it.each([

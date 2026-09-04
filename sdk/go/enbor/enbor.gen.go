@@ -6412,6 +6412,8 @@ type ListTriggersParamsSuspend string
 
 // CreateTriggerParams defines parameters for CreateTrigger.
 type CreateTriggerParams struct {
+	IdempotencyKey *string `json:"idempotency-key,omitempty"`
+
 	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
 	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
@@ -16029,15 +16031,26 @@ func NewCreateTriggerRequestWithBody(server string, params *CreateTriggerParams,
 
 	if params != nil {
 
-		if params.XEnborProjectID != nil {
+		if params.IdempotencyKey != nil {
 			var headerParam0 string
 
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "idempotency-key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
 			if err != nil {
 				return nil, err
 			}
 
-			req.Header.Set("X-Enbor-Project-ID", headerParam0)
+			req.Header.Set("idempotency-key", headerParam0)
+		}
+
+		if params.XEnborProjectID != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithOptions("simple", false, "X-Enbor-Project-ID", *params.XEnborProjectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Enbor-Project-ID", headerParam1)
 		}
 
 	}

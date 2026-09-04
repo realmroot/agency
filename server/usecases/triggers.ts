@@ -14,9 +14,16 @@ import {
   type TriggerSessionTemplate,
 } from '@server/domain/trigger'
 import { newPrimaryKey } from '@server/id'
+import { creationDigest, creationFingerprint } from './creation-idempotency'
 import type { Deps } from './deps'
 import { initialInboxProvisioning, reconcileInboxSubscription, removeInboxSubscription } from './inbox-subscriptions'
-import { type AuthScope, type TriggerConfig, TriggerConflictError, TriggerValidationError } from './ports'
+import {
+  type AuthScope,
+  CreationIdempotencyConflictError,
+  type TriggerConfig,
+  TriggerConflictError,
+  TriggerValidationError,
+} from './ports'
 
 // Raw secrets must be stored as secret references, so trigger metadata, resource
 // volumes, and plain env are rejected when they carry secret-like material.
@@ -65,6 +72,7 @@ async function assertReferencesUsable(deps: Deps, projectId: string, agentId: st
 }
 
 export interface CreateTriggerInputDto {
+  idempotencyKey?: string
   config: Omit<TriggerConfig, 'nextDueAt' | 'template'> & {
     nextDueAt: string | null
     template: Omit<TriggerSessionTemplate, 'spec'> & {
@@ -94,6 +102,17 @@ function normalizeScheduleConfig(config: CreateTriggerInputDto['config']) {
 }
 
 export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTriggerInputDto): Promise<Trigger> {
+  const requestFingerprint = input.idempotencyKey ? await creationFingerprint(input.config) : undefined
+  const keyHash = input.idempotencyKey ? await creationDigest(input.idempotencyKey) : undefined
+  if (keyHash && requestFingerprint) {
+    const replay = await deps.triggers.findCreation(auth.project.id, keyHash)
+    if (replay) {
+      if (replay.fingerprint !== requestFingerprint) throw new CreationIdempotencyConflictError()
+      return replay.trigger.spec.source.type === 'inbox'
+        ? reconcileInboxSubscription(deps, replay.trigger)
+        : replay.trigger
+    }
+  }
   rejectSecretMaterial({
     templateMetadata: input.config.template.metadata,
     volumes: input.config.template.spec.volumes,
@@ -126,11 +145,13 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
 
   const timestamp = new Date().toISOString()
   const timing = normalizeScheduleConfig(input.config)
-  const config: TriggerConfig = {
-    name: input.config.name,
-    source: timing.source,
-    suspend: input.config.suspend,
+  const requestedConfig: TriggerConfig = {
+    ...input.config,
     template: { ...input.config.template, spec: { ...input.config.template.spec, runtime } },
+  }
+  const config: TriggerConfig = {
+    ...requestedConfig,
+    source: timing.source,
     nextDueAt: timing.nextDueAt,
   }
   const triggerId = newPrimaryKey()
@@ -143,10 +164,17 @@ export async function createTrigger(deps: Deps, auth: AuthScope, input: CreateTr
       config,
       createdByUserId: auth.user.id,
       inboxProvisioning: inbox?.fields ?? null,
+      ...(keyHash && requestFingerprint ? { creationKeyHash: keyHash, creationFingerprint: requestFingerprint } : {}),
     },
     timestamp,
   )
-  return inbox ? reconcileInboxSubscription(deps, trigger, inbox.token) : trigger
+  return inbox
+    ? reconcileInboxSubscription(
+        deps,
+        trigger,
+        trigger.status.subscription?.id === inbox.fields.subscriptionId ? inbox.token : undefined,
+      )
+    : trigger
 }
 
 export interface UpdateTriggerPatch {

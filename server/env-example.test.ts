@@ -2,6 +2,23 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 describe('deployment environment example', () => {
+  it('keeps deployment names explicit while production remains on legacy physical resources', () => {
+    const wrangler = readFileSync('wrangler.toml', 'utf8')
+    const production = wrangler.split('\n[env.staging]')[0]
+
+    expect(production).toMatch(/^name = "any-managed-agents"$/m)
+    expect(production).toContain('queue = "ama-cloud-turns"')
+    expect(production).toContain('dead_letter_queue = "ama-cloud-turns-dlq"')
+    expect(production).toContain('queue = "ama-trigger-dispatches"')
+    expect(production).toContain('dead_letter_queue = "ama-trigger-dispatches-dlq"')
+    expect(production).toContain('database_name = "any-managed-agents-db"')
+    expect(production).toContain('bucket_name = "ama-session-events"')
+    expect(production).toMatch(/^name = "any-managed-agents-sandbox"$/m)
+    expect(production).toContain('`wrangler queues create ama-cloud-turns-dlq`')
+    expect(production).not.toContain('`wrangler queues create enbor-cloud-turns-dlq`')
+    expect(wrangler).toMatch(/^\[env\.staging\]\nname = "enbor-staging"$/m)
+  })
+
   it('uses the canonical Realmroot OIDC issuer path', () => {
     const envExample = readFileSync('.env.example', 'utf8')
     expect(envExample).toMatch(/^OIDC_ISSUER=https:\/\/id\.realmroot\.dev\/api\/auth$/m)

@@ -13898,6 +13898,21 @@
             ]
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          },
+          {
+            "$ref": "#/components/parameters/EnborProjectId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -13980,12 +13995,7 @@
             }
           }
         },
-        "x-cli-name": "create-trigger",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/EnborProjectId"
-          }
-        ]
+        "x-cli-name": "create-trigger"
       },
       "get": {
         "operationId": "listTriggers",

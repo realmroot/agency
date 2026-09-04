@@ -1079,6 +1079,8 @@ export interface CreateTriggerInput {
   config: TriggerConfig
   createdByUserId: string | null
   inboxProvisioning: InboxProvisioningFields | null
+  creationKeyHash?: string
+  creationFingerprint?: string
 }
 
 export interface UpdateTriggerFields {
@@ -1102,6 +1104,7 @@ export interface InboxProvisioningFields {
 export interface TriggerRepo {
   list(query: TriggerListQuery): Promise<ListPageResult<Trigger>>
   find(projectId: string, triggerId: string): Promise<Trigger | null>
+  findCreation(projectId: string, creationKeyHash: string): Promise<{ trigger: Trigger; fingerprint: string } | null>
   insert(input: CreateTriggerInput, timestamp: string): Promise<Trigger>
   update(projectId: string, triggerId: string, fields: UpdateTriggerFields, updatedAt: string): Promise<Trigger>
   // Hard-deletes the trigger and its runs (the only FK to triggers.id). Returns

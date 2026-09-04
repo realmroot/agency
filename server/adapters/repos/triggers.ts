@@ -10,7 +10,7 @@ import type {
   TriggerRunListQuery,
   UpdateTriggerFields,
 } from '@server/usecases/ports'
-import { ResourceDeletedDuringMutationError } from '@server/usecases/ports'
+import { CreationIdempotencyConflictError, ResourceDeletedDuringMutationError } from '@server/usecases/ports'
 import { and, desc, eq, gte, isNull, like, lt, lte, or } from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, environments, triggerRuns, triggers } from '../../db/schema'
@@ -116,6 +116,17 @@ function runRecordFrom(row: RunRow): TriggerRun {
   }
 }
 
+async function findCreation(db: Db, projectId: string, creationKeyHash: string) {
+  const row = await db
+    .select()
+    .from(triggers)
+    .where(and(eq(triggers.projectId, projectId), eq(triggers.creationKeyHash, creationKeyHash)))
+    .get()
+  if (!row?.creationFingerprint) return null
+  if (row.deletedAt) throw new CreationIdempotencyConflictError('Idempotency-Key belongs to a deleted Trigger')
+  return { trigger: recordFrom(row), fingerprint: row.creationFingerprint }
+}
+
 function configColumns(config: CreateTriggerInput['config']) {
   const schedule = config.source.type === 'schedule' ? config.source.schedule : null
   return {
@@ -178,6 +189,10 @@ export function createTriggerRepo(db: Db): TriggerRepo {
       return row ? recordFrom(row) : null
     },
 
+    async findCreation(projectId, creationKeyHash) {
+      return findCreation(db, projectId, creationKeyHash)
+    },
+
     async insert(input: CreateTriggerInput, timestamp) {
       const row = {
         id: input.id,
@@ -197,12 +212,21 @@ export function createTriggerRepo(db: Db): TriggerRepo {
         inboxProvisioningError: input.inboxProvisioning?.errorMessage ?? null,
         createdAt: timestamp,
         updatedAt: timestamp,
+        creationKeyHash: input.creationKeyHash ?? null,
+        creationFingerprint: input.creationFingerprint ?? null,
         ...configColumns(input.config),
       }
       try {
         await db.insert(triggers).values(row)
       } catch (error) {
         throwIfDeletedParentConstraint(error, 'Trigger')
+        if (input.creationKeyHash && input.creationFingerprint) {
+          const replay = await findCreation(db, input.projectId, input.creationKeyHash)
+          if (replay) {
+            if (replay.fingerprint !== input.creationFingerprint) throw new CreationIdempotencyConflictError()
+            return replay.trigger
+          }
+        }
         throw error
       }
       return recordFrom(row)

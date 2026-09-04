@@ -1,6 +1,6 @@
 {
   "name": "@realmroot/enbor-sdk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "description": "Generated TypeScript SDK for the Enbor control-plane API",
   "license": "Apache-2.0",

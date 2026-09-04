@@ -127,6 +127,7 @@ function deps(bound = true) {
     triggers: {
       agentUsable: vi.fn(async () => null),
       environmentUsable: vi.fn(async () => null),
+      findCreation: vi.fn(async () => null),
       insert,
       update,
       find: vi.fn(async () => current),
@@ -174,6 +175,37 @@ describe('[spec: triggers/inbox-provisioning] Trigger orchestration', () => {
       expect.any(String),
     )
     expect(reconcileInboxSubscription).toHaveBeenCalledWith(fake, created, 'callback-token')
+  })
+
+  it('reconciles an idempotency-race winner from its stored callback token', async () => {
+    const fake = deps()
+    const winner = {
+      ...record(),
+      metadata: { ...record().metadata, uid: 'trigger_winner' },
+      status: {
+        ...record().status,
+        subscription: {
+          id: 'sub_fedcba9876543210fedcba9876543210',
+          phase: 'active' as const,
+          errorMessage: null,
+        },
+      },
+    }
+    vi.mocked(fake.triggers.insert).mockResolvedValue(winner)
+
+    await createTrigger(fake, auth, {
+      idempotencyKey: 'concurrent-inbox-create',
+      config: {
+        name: 'Inbox trigger',
+        source: { type: 'inbox' },
+        suspend: false,
+        template: record().spec.template,
+        nextDueAt: null,
+      },
+    })
+
+    expect(initialInboxProvisioning).toHaveBeenCalledWith(fake)
+    expect(reconcileInboxSubscription).toHaveBeenCalledWith(fake, winner, undefined)
   })
 
   it('enters, maintains, and leaves Inbox lifecycle through updates', async () => {

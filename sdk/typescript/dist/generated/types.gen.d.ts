@@ -4103,6 +4103,7 @@ export type ListTriggersResponse = ListTriggersResponses[keyof ListTriggersRespo
 export type CreateTriggerData = {
     body: CreateTriggerRequest;
     headers?: {
+        'idempotency-key'?: string;
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */

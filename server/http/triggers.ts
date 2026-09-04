@@ -20,6 +20,7 @@ import {
 } from '../openapi'
 import { dispatchHttpTrigger } from '../usecases/dispatch-triggers'
 import {
+  CreationIdempotencyConflictError,
   type EnvFromEntry,
   ResourceDeletedDuringMutationError,
   TriggerConflictError,
@@ -284,7 +285,10 @@ const createRouteDefinition = createRoute({
   tags: ['Triggers'],
   summary: 'Create a trigger',
   ...AuthenticatedOperation,
-  request: { body: { required: true, content: { 'application/json': { schema: CreateTriggerSchema } } } },
+  request: {
+    headers: z.object({ 'idempotency-key': z.string().min(8).max(200).optional() }),
+    body: { required: true, content: { 'application/json': { schema: CreateTriggerSchema } } },
+  },
   responses: {
     201: { description: 'Created trigger', content: { 'application/json': { schema: TriggerSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
@@ -432,6 +436,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
   return routes
     .openapi(createRouteDefinition, async (c) => {
       const body = c.req.valid('json')
+      const headers = c.req.valid('header')
       const deps = c.get('deps')
       const auth = await requireAuth(c)
       if (auth instanceof Response) {
@@ -441,6 +446,7 @@ export function registerTriggerRoutes(routes: TriggerRoutes) {
       try {
         const spec = body.spec
         const trigger = await createTrigger(deps, scope, {
+          ...(headers['idempotency-key'] ? { idempotencyKey: headers['idempotency-key'] } : {}),
           config: {
             name: body.metadata.name,
             source:
@@ -763,6 +769,9 @@ function serializeTriggerRun(run: TriggerRun): z.infer<typeof TriggerRunSchema> 
 }
 
 function conflictOrValidation(c: Parameters<Parameters<TriggerRoutes['openapi']>[1]>[0], error: unknown) {
+  if (error instanceof CreationIdempotencyConflictError) {
+    return c.json(errorBody('idempotency_conflict', error.message), 409)
+  }
   if (error instanceof TriggerValidationError) {
     return c.json(errorBody('validation_error', error.message, { fields: error.fields }), 400)
   }
