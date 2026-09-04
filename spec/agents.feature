@@ -19,6 +19,16 @@ Feature: Agents
     Then a new immutable version is snapshotted and becomes current
     And sessions created before the change keep the version 1 snapshot
 
+  @agents/subagent-references @usecase
+  Scenario: Compose an agent from existing agents
+    Given reusable agents exist in the same project
+    When an agent references them as named sub-agents
+    Then the parent stores only sub-agent resource references
+    And a session snapshots each referenced agent's current version without its Identity or nested sub-agents
+    And missing, deleted, foreign-project, self, and duplicate sub-agent references are rejected
+    And runner sub-agent models omit only their selected provider prefix
+    And migration of embedded definitions preserves deleted Agent and Project tombstones
+
   @agents/identity-binding @usecase
   Scenario: Snapshot an optional Identity binding
     Given an agent selects an active Identity from the same project

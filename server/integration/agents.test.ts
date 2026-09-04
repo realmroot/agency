@@ -117,6 +117,17 @@ describe('[CF] /api/v1/agents', () => {
 
   it('creates, reads, updates, versions, and deletes project-scoped agents [spec: agents/api-crud] [spec: agents/api-delete]', async () => {
     const authorization = await signIn()
+    const reviewerRes = await jsonFetch('/api/v1/agents', authorization, {
+      method: 'POST',
+      body: JSON.stringify(
+        agentBody('Reusable reviewer', {
+          systemPrompt: 'Review the proposed changes and report risks.',
+          allowedTools: ['read', 'grep'],
+        }),
+      ),
+    })
+    expect(reviewerRes.status).toBe(201)
+    const reviewer = (await reviewerRes.json()) as { metadata: { uid: string } }
 
     const createRes = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
@@ -127,10 +138,8 @@ describe('[CF] /api/v1/agents', () => {
           allowedTools: ['read', 'fetch'],
           subagents: [
             {
+              agentId: reviewer.metadata.uid,
               name: 'reviewer',
-              description: 'Reviews proposed changes for correctness and risk.',
-              systemPrompt: 'Review the proposed changes and report risks.',
-              allowedTools: ['read', 'grep'],
             },
           ],
           mcpConnectors: ['github'],
@@ -167,13 +176,8 @@ describe('[CF] /api/v1/agents', () => {
         allowedTools: ['read', 'fetch'],
         subagents: [
           {
+            agentId: reviewer.metadata.uid,
             name: 'reviewer',
-            description: 'Reviews proposed changes for correctness and risk.',
-            systemPrompt: 'Review the proposed changes and report risks.',
-            model: null,
-            allowedTools: ['read', 'grep'],
-            skills: [],
-            mcpConnectors: [],
           },
         ],
         mcpConnectors: ['github'],
@@ -915,7 +919,7 @@ describe('[CF] /api/v1/agents', () => {
     })
   })
 
-  it('rejects blocked tools, invalid skills, raw secrets, and cross-project reads', async () => {
+  it('rejects blocked tools, invalid skills, embedded subagents, raw secrets, and cross-project reads', async () => {
     const authorization = await signIn()
 
     const invalidSkillRes = await jsonFetch('/api/v1/agents', authorization, {
@@ -936,24 +940,38 @@ describe('[CF] /api/v1/agents', () => {
       error: { details: { fields: { mcpConnectors: expect.any(String) } } },
     })
 
-    const rawSecretMetadataRes = await jsonFetch('/api/v1/agents', authorization, {
+    const embeddedSubagentRes = await jsonFetch('/api/v1/agents', authorization, {
       method: 'POST',
       body: JSON.stringify(
-        agentBody('Raw secret agent', {
+        agentBody('Embedded subagent agent', {
           subagents: [
             {
               name: 'secret-reviewer',
               description: 'Reviews secret-looking prompts.',
-              systemPrompt: 'raw-secret',
+              systemPrompt: 'Review carefully.',
               allowedTools: ['read'],
             },
           ],
         }),
       ),
     })
-    expect(rawSecretMetadataRes.status).toBe(400)
-    await expect(rawSecretMetadataRes.json()).resolves.toMatchObject({
-      error: { details: { fields: { subagents: expect.any(String) } } },
+    expect(embeddedSubagentRes.status).toBe(400)
+    await expect(embeddedSubagentRes.json()).resolves.toMatchObject({
+      error: {
+        type: 'validation_error',
+        message: 'Invalid request',
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'invalid_type',
+            path: ['spec', 'subagents', 0, 'agentId'],
+          }),
+          expect.objectContaining({
+            code: 'unrecognized_keys',
+            path: ['spec', 'subagents', 0],
+            keys: expect.arrayContaining(['description', 'systemPrompt', 'allowedTools']),
+          }),
+        ]),
+      },
     })
 
     const rawSecretSkillRes = await jsonFetch('/api/v1/agents', authorization, {

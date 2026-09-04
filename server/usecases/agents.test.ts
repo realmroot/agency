@@ -268,48 +268,34 @@ describe('[spec: agents/create] createAgent', () => {
     ).rejects.toMatchObject({ fields: { skills: expect.any(String) } })
   })
 
-  it('rejects invalid sub-agent definitions', async () => {
-    await expect(
-      createAgent(fakeDeps(), auth, {
-        name: 'x',
-        description: null,
-        spec: spec({
-          subagents: [
-            {
-              name: 'has space',
-              description: 'Reviews the work.',
-              systemPrompt: 'Review the work.',
-              model: null,
-              allowedTools: ['read'],
-              skills: [],
-              mcpConnectors: [],
-            },
-          ],
-        }),
+  it('[spec: agents/subagent-references] stores only named references to active Agents in the project', async () => {
+    const referenced = agentRecord({ metadata: { uid: 'agent_reviewer', name: 'Reviewer' } })
+    const created = await createAgent(
+      fakeDeps({
+        repo: { find: async (_projectId, agentId) => (agentId === referenced.metadata.uid ? referenced : null) },
       }),
-    ).rejects.toMatchObject({ fields: { subagents: expect.any(String) } })
+      auth,
+      {
+        name: 'Parent',
+        description: null,
+        spec: spec({ subagents: [{ agentId: 'agent_reviewer', name: 'reviewer' }] }),
+      },
+    )
+
+    expect(created.spec.subagents).toEqual([{ agentId: 'agent_reviewer', name: 'reviewer' }])
   })
 
-  it('rejects unavailable sub-agent MCP connectors', async () => {
+  it.each([
+    ['missing or foreign-project', null],
+    ['deleted', agentRecord({ metadata: { uid: 'agent_reviewer', deletedAt: '2026-01-02T00:00:00.000Z' } })],
+  ])('[spec: agents/subagent-references] rejects a %s sub-agent reference', async (_condition, referenced) => {
     await expect(
-      createAgent(fakeDeps({ repo: { connectorAvailable: async () => false } }), auth, {
-        name: 'x',
+      createAgent(fakeDeps({ repo: { find: async () => referenced } }), auth, {
+        name: 'Parent',
         description: null,
-        spec: spec({
-          subagents: [
-            {
-              name: 'reviewer',
-              description: 'Reviews the work.',
-              systemPrompt: 'Review the work.',
-              model: null,
-              allowedTools: ['read'],
-              skills: [],
-              mcpConnectors: ['missing-connector'],
-            },
-          ],
-        }),
+        spec: spec({ subagents: [{ agentId: 'agent_reviewer', name: 'reviewer' }] }),
       }),
-    ).rejects.toMatchObject({ fields: { subagents: expect.stringContaining('MCP connector') } })
+    ).rejects.toMatchObject({ fields: { subagents: expect.stringContaining('active Agent') } })
   })
 })
 
@@ -592,6 +578,14 @@ describe('[spec: agents/identity-binding] [spec: identities/lifetime-binding] Id
 })
 
 describe('[spec: agents/update] updateAgent', () => {
+  it('[spec: agents/subagent-references] rejects referencing the Agent being updated as its own sub-agent', async () => {
+    await expect(
+      updateAgent(fakeDeps(), auth, agentRecord(), {
+        subagents: [{ agentId: 'agent_1', name: 'self' }],
+      }),
+    ).rejects.toMatchObject({ fields: { subagents: 'An Agent cannot reference itself as a sub-agent.' } })
+  })
+
   it('snapshots a new version when a runtime field changes', async () => {
     const inserted: AgentSpec[] = []
     const deps = fakeDeps({

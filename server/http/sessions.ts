@@ -56,9 +56,13 @@ const JsonObjectSchema = z.record(z.string(), z.unknown())
 const SessionEnvironmentJsonObjectSchema = JsonObjectSchema.openapi('SessionEnvironmentJsonObject')
 const SessionSubagentSchema = z
   .object({
+    agentId: z.string(),
+    agentVersionId: z.string(),
+    version: z.number().int(),
     name: z.string(),
     description: z.string(),
     systemPrompt: z.string(),
+    provider: z.string().nullable(),
     model: z.string().nullable(),
     allowedTools: z.array(z.string()),
     skills: z.array(z.string()),

@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.agent_subagent import AgentSubagent
+  from ..models.agent_subagent_reference import AgentSubagentReference
   from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
 
 
@@ -30,9 +30,8 @@ class AgentSpec:
             provider (None | str):  Example: workers-ai.
             model (None | str):  Example: @cf/moonshotai/kimi-k2.6.
             skills (list[str]):  Example: ['enbor@code-review'].
-            subagents (list[AgentSubagent]):  Example: [{'name': 'reviewer', 'description': 'Reviews proposed changes for
-                correctness and risk.', 'systemPrompt': 'Review the proposed changes and report risks.', 'model': None,
-                'allowedTools': ['read', 'grep'], 'skills': ['enbor@code-review'], 'mcpConnectors': ['github']}].
+            subagents (list[AgentSubagentReference]):  Example: [{'agentId': '0195f5d6-7c20-7000-8000-000000000005', 'name':
+                'reviewer'}].
             allowed_tools (list[str]):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str]):  Example: ['github'].
             identity (IdentityDescriptorType0 | None):
@@ -42,7 +41,7 @@ class AgentSpec:
     provider: None | str
     model: None | str
     skills: list[str]
-    subagents: list[AgentSubagent]
+    subagents: list[AgentSubagentReference]
     allowed_tools: list[str]
     mcp_connectors: list[str]
     identity: IdentityDescriptorType0 | None
@@ -53,7 +52,7 @@ class AgentSpec:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_subagent import AgentSubagent
+        from ..models.agent_subagent_reference import AgentSubagentReference
         from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
         system_prompt = self.system_prompt
 
@@ -108,7 +107,7 @@ class AgentSpec:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_subagent import AgentSubagent
+        from ..models.agent_subagent_reference import AgentSubagentReference
         from ..models.identity_descriptor_type_0 import IdentityDescriptorType0
         d = dict(src_dict)
         system_prompt = d.pop("systemPrompt")
@@ -135,7 +134,7 @@ class AgentSpec:
         subagents = []
         _subagents = d.pop("subagents")
         for subagents_item_data in (_subagents):
-            subagents_item = AgentSubagent.from_dict(subagents_item_data)
+            subagents_item = AgentSubagentReference.from_dict(subagents_item_data)
 
 
 

@@ -73,16 +73,15 @@ func agentSubagentSummaries(value any) []string {
 }
 
 func agentSkillRefs(agentSnapshot map[string]any) []string {
-	raw, ok := agentSnapshot["skills"].([]any)
-	if !ok {
-		return nil
-	}
-	return lo.FilterMap(raw, func(value any, _ int) (string, bool) {
-		if skill, ok := value.(string); ok && strings.TrimSpace(skill) != "" {
-			return strings.TrimSpace(skill), true
+	refs := agentStringArray(agentSnapshot["skills"])
+	if raw, ok := agentSnapshot["subagents"].([]any); ok {
+		for _, value := range raw {
+			if subagent, ok := value.(map[string]any); ok {
+				refs = append(refs, agentStringArray(subagent["skills"])...)
+			}
 		}
-		return "", false
-	})
+	}
+	return lo.Uniq(refs)
 }
 
 func installAgentSkill(ctx context.Context, cwd string, runtimeName string, ref string) error {

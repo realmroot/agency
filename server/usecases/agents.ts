@@ -1,7 +1,7 @@
 import {
   type Agent,
   type AgentSpec,
-  type AgentSubagent,
+  type AgentSubagentReference,
   validateAllowedTools,
   validateSkills,
   validateSubagents,
@@ -18,7 +18,7 @@ import {
 
 // Validates the agent spec against sibling resources and secret-material rules.
 // Throws AgentValidationError on the first failure.
-async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
+async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec, parentAgentId?: string) {
   if (!config.systemPrompt.trim()) {
     throw new AgentValidationError('Invalid agent configuration', { systemPrompt: 'System prompt is required.' })
   }
@@ -30,7 +30,7 @@ async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
   if (skillsError) {
     throw new AgentValidationError('Invalid agent configuration', skillsError)
   }
-  const subagentsError = validateSubagents(config.subagents)
+  const subagentsError = validateSubagents(config.subagents, parentAgentId)
   if (subagentsError) {
     throw new AgentValidationError('Invalid agent configuration', subagentsError)
   }
@@ -42,9 +42,13 @@ async function validateConfig(deps: Deps, auth: AuthScope, config: AgentSpec) {
   if (connectorError) {
     throw new AgentValidationError('Invalid agent configuration', connectorError)
   }
-  const subagentConnectorError = await validateSubagentMcpConnectors(deps, auth.project.id, config.subagents)
-  if (subagentConnectorError) {
-    throw new AgentValidationError('Invalid agent configuration', subagentConnectorError)
+  for (const subagent of config.subagents) {
+    const referenced = await deps.agents.find(auth.project.id, subagent.agentId)
+    if (!referenced || referenced.metadata.deletedAt) {
+      throw new AgentValidationError('Invalid agent configuration', {
+        subagents: `Sub-agent must reference an active Agent in the selected project: ${subagent.agentId}`,
+      })
+    }
   }
 }
 
@@ -86,16 +90,6 @@ async function validateMcpConnectors(deps: Deps, _projectId: string, connectorId
   for (const connectorId of connectorIds) {
     if (!(await deps.agents.connectorAvailable(connectorId))) {
       return { mcpConnectors: `MCP connector is not available in the platform catalog: ${connectorId}` }
-    }
-  }
-  return null
-}
-
-async function validateSubagentMcpConnectors(deps: Deps, projectId: string, subagents: AgentSpec['subagents']) {
-  for (const subagent of subagents) {
-    const connectorError = await validateMcpConnectors(deps, projectId, subagent.mcpConnectors)
-    if (connectorError) {
-      return { subagents: `Sub-agent MCP connector is not available: ${subagent.name}` }
     }
   }
   return null
@@ -180,7 +174,7 @@ export interface UpdateAgentPatch {
   provider?: string | null
   model?: string | null
   skills?: string[]
-  subagents?: AgentSubagent[]
+  subagents?: AgentSubagentReference[]
   allowedTools?: string[]
   mcpConnectors?: string[]
   identityRef?: string | null
@@ -215,7 +209,7 @@ export async function updateAgent(
     identity: nextIdentity,
   }
   if (hasFieldUpdates) {
-    await validateConfig(deps, auth, next)
+    await validateConfig(deps, auth, next, agent.metadata.uid)
   }
 
   const updatedAt = new Date().toISOString()

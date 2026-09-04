@@ -12,7 +12,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.agent_subagent_input import AgentSubagentInput
+  from ..models.agent_subagent_reference import AgentSubagentReference
 
 
 
@@ -30,9 +30,8 @@ class UpdateAgentRequestSpec:
             provider (None | str | Unset):  Example: workers-ai.
             model (None | str | Unset):  Example: @cf/moonshotai/kimi-k2.6.
             skills (list[str] | Unset):  Example: ['enbor@code-review'].
-            subagents (list[AgentSubagentInput] | Unset):  Example: [{'name': 'reviewer', 'description': 'Reviews proposed
-                changes for correctness and risk.', 'systemPrompt': 'Review the proposed changes and report risks.',
-                'allowedTools': ['read', 'grep']}].
+            subagents (list[AgentSubagentReference] | Unset):  Example: [{'agentId': '0195f5d6-7c20-7000-8000-000000000005',
+                'name': 'reviewer'}].
             allowed_tools (list[str] | Unset):  Example: ['read', 'bash', 'edit'].
             mcp_connectors (list[str] | Unset):  Example: ['github'].
             identity_ref (None | str | Unset):  Example: 0195f5d6-7c20-7000-8000-000000000004.
@@ -42,7 +41,7 @@ class UpdateAgentRequestSpec:
     provider: None | str | Unset = UNSET
     model: None | str | Unset = UNSET
     skills: list[str] | Unset = UNSET
-    subagents: list[AgentSubagentInput] | Unset = UNSET
+    subagents: list[AgentSubagentReference] | Unset = UNSET
     allowed_tools: list[str] | Unset = UNSET
     mcp_connectors: list[str] | Unset = UNSET
     identity_ref: None | str | Unset = UNSET
@@ -52,7 +51,7 @@ class UpdateAgentRequestSpec:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_subagent_input import AgentSubagentInput
+        from ..models.agent_subagent_reference import AgentSubagentReference
         system_prompt = self.system_prompt
 
         provider: None | str | Unset
@@ -128,7 +127,7 @@ class UpdateAgentRequestSpec:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_subagent_input import AgentSubagentInput
+        from ..models.agent_subagent_reference import AgentSubagentReference
         d = dict(src_dict)
         system_prompt = d.pop("systemPrompt", UNSET)
 
@@ -156,11 +155,11 @@ class UpdateAgentRequestSpec:
 
 
         _subagents = d.pop("subagents", UNSET)
-        subagents: list[AgentSubagentInput] | Unset = UNSET
+        subagents: list[AgentSubagentReference] | Unset = UNSET
         if _subagents is not UNSET:
             subagents = []
             for subagents_item_data in _subagents:
-                subagents_item = AgentSubagentInput.from_dict(subagents_item_data)
+                subagents_item = AgentSubagentReference.from_dict(subagents_item_data)
 
 
 

@@ -1,5 +1,5 @@
 import type { AgentVersionRow, EnvironmentVersionRow } from '@shared/runtime-rows'
-import type { AgentSubagent } from '../agent'
+import type { AgentSubagentReference } from '../agent'
 import {
   defaultEnvironmentPackages,
   type EnvironmentNetworking,
@@ -7,6 +7,7 @@ import {
   type EnvironmentVariable,
 } from '../environment'
 import type { IdentityDescriptor } from '../identity'
+import type { SessionSubagentSnapshot } from '../session'
 import { workspaceSystemPromptBlock } from '../workspace'
 import type { Volume, VolumeMount } from './execution-inputs'
 
@@ -26,7 +27,31 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-export function createAgentSnapshot(row: AgentVersionRow) {
+export function agentSubagentReferences(row: AgentVersionRow) {
+  return JSON.parse(row.subagents) as AgentSubagentReference[]
+}
+
+export function createSessionSubagentSnapshot(
+  agent: { id: string; name: string; description: string | null },
+  version: AgentVersionRow,
+  name: string,
+): SessionSubagentSnapshot {
+  return {
+    agentId: agent.id,
+    agentVersionId: version.id,
+    version: version.version,
+    name,
+    description: agent.description ?? agent.name,
+    systemPrompt: version.systemPrompt,
+    provider: version.providerId,
+    model: version.model,
+    skills: JSON.parse(version.skills) as string[],
+    allowedTools: JSON.parse(version.allowedTools) as string[],
+    mcpConnectors: JSON.parse(version.mcpConnectors) as string[],
+  }
+}
+
+export function createAgentSnapshot(row: AgentVersionRow, subagents: SessionSubagentSnapshot[] = []) {
   return {
     id: row.id,
     agentId: row.agentId,
@@ -36,7 +61,7 @@ export function createAgentSnapshot(row: AgentVersionRow) {
     provider: row.providerId,
     model: row.model,
     skills: JSON.parse(row.skills) as string[],
-    subagents: JSON.parse(row.subagents) as AgentSubagent[],
+    subagents,
     allowedTools: JSON.parse(row.allowedTools) as string[],
     mcpConnectors: JSON.parse(row.mcpConnectors) as string[],
     identity: row.identitySnapshot ? (JSON.parse(row.identitySnapshot) as IdentityDescriptor) : null,

@@ -2833,24 +2833,12 @@
           "subagents": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AgentSubagent"
+              "$ref": "#/components/schemas/AgentSubagentReference"
             },
             "example": [
               {
-                "name": "reviewer",
-                "description": "Reviews proposed changes for correctness and risk.",
-                "systemPrompt": "Review the proposed changes and report risks.",
-                "model": null,
-                "allowedTools": [
-                  "read",
-                  "grep"
-                ],
-                "skills": [
-                  "enbor@code-review"
-                ],
-                "mcpConnectors": [
-                  "github"
-                ]
+                "agentId": "0195f5d6-7c20-7000-8000-000000000005",
+                "name": "reviewer"
               }
             ]
           },
@@ -2891,65 +2879,27 @@
           "identity"
         ]
       },
-      "AgentSubagent": {
+      "AgentSubagentReference": {
         "type": "object",
         "properties": {
+          "agentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "description": "Existing Agent resource in the same project.",
+            "example": "0195f5d6-7c20-7000-8000-000000000005"
+          },
           "name": {
             "type": "string",
             "minLength": 1,
             "maxLength": 80,
+            "description": "Stable runtime alias used to address the referenced Agent as a sub-agent.",
             "example": "reviewer"
-          },
-          "description": {
-            "type": "string",
-            "example": "Reviews proposed changes for correctness and risk."
-          },
-          "systemPrompt": {
-            "type": "string",
-            "example": "Review the proposed changes and report risks."
-          },
-          "model": {
-            "type": "string",
-            "nullable": true,
-            "example": "@cf/moonshotai/kimi-k2.6"
-          },
-          "allowedTools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "read",
-              "grep"
-            ]
-          },
-          "skills": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "enbor@code-review"
-            ]
-          },
-          "mcpConnectors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "github"
-            ]
           }
         },
         "required": [
-          "name",
-          "description",
-          "systemPrompt",
-          "model",
-          "allowedTools",
-          "skills",
-          "mcpConnectors"
+          "agentId",
+          "name"
         ],
         "additionalProperties": false
       },
@@ -3081,18 +3031,13 @@
               "subagents": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/AgentSubagentInput"
+                  "$ref": "#/components/schemas/AgentSubagentReference"
                 },
                 "maxItems": 50,
                 "example": [
                   {
-                    "name": "reviewer",
-                    "description": "Reviews proposed changes for correctness and risk.",
-                    "systemPrompt": "Review the proposed changes and report risks.",
-                    "allowedTools": [
-                      "read",
-                      "grep"
-                    ]
+                    "agentId": "0195f5d6-7c20-7000-8000-000000000005",
+                    "name": "reviewer"
                   }
                 ]
               },
@@ -3165,78 +3110,6 @@
           "name": "Research assistant"
         }
       },
-      "AgentSubagentInput": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80,
-            "example": "reviewer"
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 1000,
-            "example": "Reviews proposed changes for correctness and risk."
-          },
-          "systemPrompt": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 8000,
-            "example": "Review the proposed changes and report risks."
-          },
-          "model": {
-            "type": "string",
-            "nullable": true,
-            "minLength": 1,
-            "example": "@cf/moonshotai/kimi-k2.6"
-          },
-          "allowedTools": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "maxItems": 100,
-            "example": [
-              "read",
-              "grep"
-            ]
-          },
-          "skills": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "maxItems": 100,
-            "example": [
-              "enbor@code-review"
-            ]
-          },
-          "mcpConnectors": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 120
-            },
-            "maxItems": 50,
-            "example": [
-              "github"
-            ]
-          }
-        },
-        "required": [
-          "name",
-          "description",
-          "systemPrompt"
-        ],
-        "additionalProperties": false
-      },
       "UpdateAgentRequest": {
         "type": "object",
         "properties": {
@@ -3279,18 +3152,13 @@
               "subagents": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/AgentSubagentInput"
+                  "$ref": "#/components/schemas/AgentSubagentReference"
                 },
                 "maxItems": 50,
                 "example": [
                   {
-                    "name": "reviewer",
-                    "description": "Reviews proposed changes for correctness and risk.",
-                    "systemPrompt": "Review the proposed changes and report risks.",
-                    "allowedTools": [
-                      "read",
-                      "grep"
-                    ]
+                    "agentId": "0195f5d6-7c20-7000-8000-000000000005",
+                    "name": "reviewer"
                   }
                 ]
               },
@@ -7143,6 +7011,15 @@
       "SessionSubagent": {
         "type": "object",
         "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "agentVersionId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -7151,6 +7028,10 @@
           },
           "systemPrompt": {
             "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
           },
           "model": {
             "type": "string",
@@ -7176,9 +7057,13 @@
           }
         },
         "required": [
+          "agentId",
+          "agentVersionId",
+          "version",
           "name",
           "description",
           "systemPrompt",
+          "provider",
           "model",
           "allowedTools",
           "skills",

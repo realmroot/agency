@@ -75,6 +75,29 @@ function expectJsonErrorResponse(operation: OpenApiOperation, status: string) {
 }
 
 describe('[CF] OpenAPI documentation', () => {
+  it('[spec: agents/subagent-references] publishes Agent references and expanded Session snapshot shapes', async () => {
+    const doc = await fetchOpenApi()
+
+    expect(schemaProperties(doc, 'AgentSubagentReference')).toEqual(['agentId', 'name'])
+    expect(doc.components?.schemas).not.toHaveProperty('AgentSubagent')
+    expect(doc.components?.schemas).not.toHaveProperty('AgentSubagentInput')
+    expect(schemaProperties(doc, 'SessionSubagent')).toEqual(
+      expect.arrayContaining([
+        'agentId',
+        'agentVersionId',
+        'version',
+        'name',
+        'description',
+        'systemPrompt',
+        'provider',
+        'model',
+        'allowedTools',
+        'skills',
+        'mcpConnectors',
+      ]),
+    )
+  })
+
   it('publishes the generated control-plane OpenAPI document [spec: agents/api-openapi] [spec: environments/api-openapi] [spec: mcp/openapi] [spec: runners/openapi] [spec: triggers/openapi] [spec: api-contracts/openapi] [spec: api-contracts/resource-entities]', async () => {
     const doc = await fetchOpenApi()
     const identityRuntime = doc.components?.schemas?.IdentityRuntime as

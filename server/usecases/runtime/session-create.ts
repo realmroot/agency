@@ -34,8 +34,10 @@ import type {
 import {
   type AgentSnapshot,
   agentSnapshotWithWorkspaceContext,
+  agentSubagentReferences,
   createAgentSnapshot,
   createEnvironmentSnapshot,
+  createSessionSubagentSnapshot,
   type EnvironmentSnapshot,
   normalizeEnvironmentSnapshot,
   parseJson,
@@ -50,6 +52,7 @@ import { safeRuntimeError } from '@server/runtime-error'
 import { SESSION_DO_EVENT_STORE } from '@shared/session-events'
 import type {
   AgentRow,
+  AgentVersionRow,
   AuthScope,
   RunnerChannel,
   SessionCreateOptions,
@@ -330,6 +333,30 @@ async function currentAgentVersion(store: SessionOrchestrationStore, agent: Agen
     return null
   }
   return store.findAgentVersion(agent.id, agent.currentVersionId)
+}
+
+async function sessionSubagentSnapshots(
+  store: SessionOrchestrationStore,
+  projectId: string,
+  parentAgentId: string,
+  version: AgentVersionRow,
+) {
+  const snapshots = []
+  for (const reference of agentSubagentReferences(version)) {
+    if (reference.agentId === parentAgentId) {
+      return { error: 'An Agent cannot reference itself as a sub-agent' } as const
+    }
+    const agent = await store.findAgent(projectId, reference.agentId)
+    if (!agent || agent.deletedAt || !agent.currentVersionId) {
+      return { error: `Referenced sub-agent is deleted or unavailable: ${reference.agentId}` } as const
+    }
+    const agentVersion = await store.findAgentVersion(agent.id, agent.currentVersionId)
+    if (!agentVersion) {
+      return { error: `Referenced sub-agent has no current version: ${reference.agentId}` } as const
+    }
+    snapshots.push(createSessionSubagentSnapshot(agent, agentVersion, reference.name))
+  }
+  return { snapshots } as const
 }
 
 function sessionPrompt(prompt: string) {
@@ -624,7 +651,11 @@ export async function createSessionForAgent(
     throw new Error('Agent current version is required')
   }
   const providerId = agentVersion.providerId
-  const agentSnapshot = createAgentSnapshot(agentVersion)
+  const resolvedSubagents = await sessionSubagentSnapshots(store, auth.project.id, agent.id, agentVersion)
+  if ('error' in resolvedSubagents) {
+    return { ok: false, error: { status: 409, code: 'conflict', message: resolvedSubagents.error } }
+  }
+  const agentSnapshot = createAgentSnapshot(agentVersion, resolvedSubagents.snapshots)
   let runtime: RuntimeName
   try {
     runtime = runtimeNameForIdentity(resolveIdentityRuntime(options.runtime, agentSnapshot.identity))

@@ -1,6 +1,13 @@
+import type { AgentVersionRow } from '@shared/runtime-rows'
 import { describe, expect, it } from 'vitest'
 import { normalizeWorkspaceSpec, workspaceSpec } from '../workspace'
-import { type AgentSnapshot, agentSnapshotWithWorkspaceContext } from './session-snapshot'
+import {
+  type AgentSnapshot,
+  agentSnapshotWithWorkspaceContext,
+  agentSubagentReferences,
+  createAgentSnapshot,
+  createSessionSubagentSnapshot,
+} from './session-snapshot'
 
 function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
   return {
@@ -20,6 +27,59 @@ function agentSnapshot(overrides: Partial<AgentSnapshot> = {}): AgentSnapshot {
     ...overrides,
   }
 }
+
+function agentVersion(overrides: Partial<AgentVersionRow> = {}): AgentVersionRow {
+  return {
+    id: 'agentver_reviewer_2',
+    agentId: 'agent_reviewer',
+    projectId: 'project_1',
+    version: 2,
+    systemPrompt: 'Review carefully.',
+    providerId: 'anthropic',
+    model: 'claude-sonnet',
+    skills: '["enbor@review"]',
+    subagents: '[{"agentId":"agent_nested","name":"nested"}]',
+    allowedTools: '["read","grep"]',
+    mcpConnectors: '["github"]',
+    identityId: 'identity_reviewer',
+    identitySnapshot: '{"identityId":"identity_reviewer","credentialRef":"enbor://vaults/secret"}',
+    createdAt: '2026-06-25T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+describe('[spec: agents/subagent-references] session sub-agent snapshots', () => {
+  it('reads only named Agent references from a parent version', () => {
+    expect(
+      agentSubagentReferences(agentVersion({ subagents: '[{"agentId":"agent_reviewer","name":"reviewer"}]' })),
+    ).toEqual([{ agentId: 'agent_reviewer', name: 'reviewer' }])
+  })
+
+  it('projects the referenced current version without its Identity or nested sub-agents', () => {
+    const subagent = createSessionSubagentSnapshot(
+      { id: 'agent_reviewer', name: 'Reviewer', description: null },
+      agentVersion(),
+      'reviewer',
+    )
+
+    expect(subagent).toEqual({
+      agentId: 'agent_reviewer',
+      agentVersionId: 'agentver_reviewer_2',
+      version: 2,
+      name: 'reviewer',
+      description: 'Reviewer',
+      systemPrompt: 'Review carefully.',
+      provider: 'anthropic',
+      model: 'claude-sonnet',
+      skills: ['enbor@review'],
+      allowedTools: ['read', 'grep'],
+      mcpConnectors: ['github'],
+    })
+    expect(subagent).not.toHaveProperty('identity')
+    expect(subagent).not.toHaveProperty('subagents')
+    expect(createAgentSnapshot(agentVersion(), [subagent]).subagents).toEqual([subagent])
+  })
+})
 
 describe('[spec: sessions/memory-store-resources] memory store volumes', () => {
   it('accepts managed memory store volumes and rejects unsafe mounts', () => {
