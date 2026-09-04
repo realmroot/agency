@@ -94,7 +94,7 @@ function activationPrompt(
   contextId: string,
   notification: Omit<InboxNotification, 'routingKey'>,
 ) {
-  return `${instructions.trim()}\n\nInbox notification:\n- contextId: ${contextId}\n- eventId: ${notification.eventId}\n- type: ${notification.type}\n- messageId: ${notification.messageId}\n- occurredAt: ${notification.occurredAt}\n\nUse Realmroot Toolbox with your Agent identity and the exact Context id above to read the complete Inbox Message before acting:\nrealmroot toolbox get agent-inbox/messages/${notification.messageId} --context ${contextId} --json`
+  return `${instructions.trim()}\n\nInbox notification:\n- contextId: ${contextId}\n- eventId: ${notification.eventId}\n- type: ${notification.type}\n- messageId: ${notification.messageId}\n- occurredAt: ${notification.occurredAt}\n\nUse Realmroot Toolbox with your Agent identity and the exact Context id above to read the complete Inbox Message before acting:\nrealmroot toolbox agent-inbox message show ${notification.messageId} --context ${contextId} --json`
 }
 
 async function existingRouteSession(deps: Deps, projectId: string, sessionId: string) {

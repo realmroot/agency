@@ -385,7 +385,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
         options: expect.objectContaining({
           id: 'session_reserved',
           prompt: expect.stringContaining(
-            'realmroot toolbox get agent-inbox/messages/message_1 --context org_1 --json',
+            'realmroot toolbox agent-inbox message show message_1 --context org_1 --json',
           ),
         }),
       }),
@@ -406,7 +406,7 @@ describe('[spec: triggers/inbox-routing] Inbox Activation Session routing', () =
       fake.value,
       expect.anything(),
       existing,
-      expect.stringContaining('realmroot toolbox get agent-inbox/messages/message_1 --context org_1 --json'),
+      expect.stringContaining('realmroot toolbox agent-inbox message show message_1 --context org_1 --json'),
       'inbox:event_1',
     )
     expect(createSession).not.toHaveBeenCalled()
