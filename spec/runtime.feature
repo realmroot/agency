@@ -35,6 +35,7 @@ Feature: Runtime
     And continuation preserves parent tool calls and results but excludes child conversations
     And child work shares the turn budget and resumes without repeating completed tools
     And approval resumes the pending delegation with results in the owning conversation
+    And fresh tool calls have Session-unique identifiers while continuation keeps recorded identifiers
     And an unknown alias is rejected without starting child work
 
   @runtime/idle-retention @usecase
