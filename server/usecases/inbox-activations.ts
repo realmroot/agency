@@ -89,8 +89,12 @@ function activationAuth(activation: { organizationId: string; projectId: string;
   }
 }
 
-function activationPrompt(instructions: string, notification: Omit<InboxNotification, 'routingKey'>) {
-  return `${instructions.trim()}\n\nInbox notification:\n- eventId: ${notification.eventId}\n- type: ${notification.type}\n- messageId: ${notification.messageId}\n- occurredAt: ${notification.occurredAt}\n\nUse Realmroot Toolbox with your Agent identity to read the complete Inbox Message before acting.`
+function activationPrompt(
+  instructions: string,
+  contextId: string,
+  notification: Omit<InboxNotification, 'routingKey'>,
+) {
+  return `${instructions.trim()}\n\nInbox notification:\n- contextId: ${contextId}\n- eventId: ${notification.eventId}\n- type: ${notification.type}\n- messageId: ${notification.messageId}\n- occurredAt: ${notification.occurredAt}\n\nUse Realmroot Toolbox with your Agent identity and the exact Context id above to read the complete Inbox Message before acting:\nrealmroot toolbox agent-inbox message show ${notification.messageId} --context ${contextId} --json`
 }
 
 async function existingRouteSession(deps: Deps, projectId: string, sessionId: string) {
@@ -150,7 +154,11 @@ export async function dispatchInboxActivation(deps: Deps, runId: string): Promis
     return
   }
 
-  const prompt = activationPrompt(trigger.spec.template.spec.promptTemplate, activation.notification)
+  const prompt = activationPrompt(
+    trigger.spec.template.spec.promptTemplate,
+    activation.organizationId,
+    activation.notification,
+  )
   const sessionMetadata: Pick<ResourceMetadata, 'labels' | 'annotations'> = {
     labels: trigger.spec.template.metadata.labels,
     annotations: {
