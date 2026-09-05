@@ -3,7 +3,12 @@ import { parseJson } from '@server/domain/runtime/session-snapshot'
 import { runtimesSupport } from '@server/domain/runtime-catalog'
 import { secretRefIdentity, vaultIdFromRef } from '@server/domain/vault'
 import { newPrimaryKey } from '@server/id'
-import type { ConnectorRecord, RunnerRuntime, SessionOrchestrationStore } from '@server/usecases/ports'
+import type {
+  CloudTurnQueueStartMessage,
+  ConnectorRecord,
+  RunnerRuntime,
+  SessionOrchestrationStore,
+} from '@server/usecases/ports'
 import type {
   AgentRow,
   AgentVersionRow,
@@ -215,7 +220,7 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         .where(isNotNull(sessionCreations.cloudStart))
         .orderBy(asc(sessionCreations.createdAt), asc(sessionCreations.sessionId))
         .limit(limit)
-      return rows.map((row) => JSON.parse(row.payload!))
+      return rows.map((row) => JSON.parse(row.payload!) as CloudTurnQueueStartMessage)
     },
 
     async acknowledgeCloudSessionCreation(projectId, sessionId) {
