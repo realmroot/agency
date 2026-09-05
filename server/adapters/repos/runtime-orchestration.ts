@@ -30,6 +30,7 @@ import {
   runners,
   sessionApprovals,
   sessionChannels,
+  sessionCreations,
   sessionEvents,
   sessions,
   vaultCredentials,
@@ -171,6 +172,57 @@ export function createRuntimeOrchestrationRepo(db: Db): SessionOrchestrationStor
         throwIfDeletedParentConstraint(error, 'Session')
         throw error
       }
+    },
+
+    async findSessionCreation(projectId, keyHash) {
+      return (
+        (await db
+          .select({ sessionId: sessionCreations.sessionId, fingerprint: sessionCreations.fingerprint })
+          .from(sessionCreations)
+          .where(and(eq(sessionCreations.projectId, projectId), eq(sessionCreations.keyHash, keyHash)))
+          .get()) ?? null
+      )
+    },
+
+    async insertSessionCreation(row, creation) {
+      const statements = [
+        db.insert(sessions).values(persistedSessionWrite(row) as SessionInsertColumns),
+        db.insert(sessionCreations).values({
+          sessionId: row.id,
+          projectId: row.projectId,
+          keyHash: creation.keyHash,
+          fingerprint: creation.fingerprint,
+          cloudStart: creation.cloudStart ? JSON.stringify(creation.cloudStart) : null,
+          createdAt: row.createdAt,
+        }),
+      ] as const
+      try {
+        if (creation.workItem) {
+          await db.batch([...statements, db.insert(workItems).values(creation.workItem as WorkItemInsertColumns)])
+        } else {
+          await db.batch([...statements])
+        }
+      } catch (error) {
+        throwIfDeletedParentConstraint(error, 'Session')
+        throw error
+      }
+    },
+
+    async pendingCloudSessionCreations(limit) {
+      const rows = await db
+        .select({ payload: sessionCreations.cloudStart })
+        .from(sessionCreations)
+        .where(isNotNull(sessionCreations.cloudStart))
+        .orderBy(asc(sessionCreations.createdAt), asc(sessionCreations.sessionId))
+        .limit(limit)
+      return rows.map((row) => JSON.parse(row.payload!))
+    },
+
+    async acknowledgeCloudSessionCreation(projectId, sessionId) {
+      await db
+        .update(sessionCreations)
+        .set({ cloudStart: null })
+        .where(and(eq(sessionCreations.projectId, projectId), eq(sessionCreations.sessionId, sessionId)))
     },
 
     async updateSession(projectId: string, sessionId: string, fields: SessionUpdate): Promise<void> {

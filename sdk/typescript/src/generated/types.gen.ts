@@ -5018,6 +5018,7 @@ export type ListSessionsResponse = ListSessionsResponses[keyof ListSessionsRespo
 export type CreateSessionData = {
     body: CreateSessionRequest;
     headers?: {
+        'idempotency-key'?: string;
         /**
          * Selects an Enbor project in the authenticated organization. Omit to use the default project.
          */

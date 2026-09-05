@@ -1006,7 +1006,10 @@ const createSessionRoute = createRoute({
   tags: ['Sessions'],
   summary: 'Create a session',
   ...AuthenticatedOperation,
-  request: { body: { required: true, content: { 'application/json': { schema: CreateSessionSchema } } } },
+  request: {
+    headers: z.object({ 'idempotency-key': z.string().min(8).max(200).optional() }),
+    body: { required: true, content: { 'application/json': { schema: CreateSessionSchema } } },
+  },
   responses: {
     201: { description: 'Created session', content: { 'application/json': { schema: SessionSchema } } },
     400: { description: 'Validation error', content: { 'application/json': { schema: ErrorResponseSchema } } },
@@ -1319,6 +1322,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
   routes.post('/:sessionId/socket-tickets', createSessionSocketTicket)
   return routes
     .openapi(createSessionRoute, async (c) => {
+      const idempotencyKey = c.req.valid('header')['idempotency-key']
       const body = c.req.valid('json')
       const deps = c.get('deps')
       const auth = await requireAuth(c)
@@ -1335,6 +1339,7 @@ export function registerSessionRoutes(routes: SessionRoutes) {
         agentId: spec.agentId,
         ...(spec.environmentId !== undefined ? { environmentId: spec.environmentId } : {}),
         options: {
+          ...(idempotencyKey ? { idempotencyKey } : {}),
           ...(metadata.name !== undefined ? { name: metadata.name } : {}),
           metadata: { labels: metadata.labels ?? {}, annotations: metadata.annotations ?? {} },
           ...(spec.runtime !== undefined ? { runtime: spec.runtime } : {}),

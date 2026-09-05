@@ -5,6 +5,9 @@ const scheduledMocks = vi.hoisted(() => ({
   reconcileInboxSubscriptions: vi.fn(async () => undefined),
 }))
 
+vi.mock('./usecases/runtime/session-creation-recovery', () => ({
+  recoverSessionCreations: vi.fn(async () => undefined),
+}))
 vi.mock('./app', () => ({ createApp: () => ({ fetch: vi.fn() }) }))
 vi.mock('@cloudflare/sandbox', () => ({ Sandbox: class Sandbox {} }))
 vi.mock('./worker/runner-pool-object', () => ({ RunnerPoolObject: class RunnerPoolObject {} }))

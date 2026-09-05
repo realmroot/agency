@@ -50,10 +50,12 @@ import { normalizeWorkspaceSpec, workspaceSpec } from '@server/domain/workspace'
 import { newPrimaryKey } from '@server/id'
 import { safeRuntimeError } from '@server/runtime-error'
 import { SESSION_DO_EVENT_STORE } from '@shared/session-events'
+import { creationDigest, creationFingerprint } from '../creation-idempotency'
 import type {
   AgentRow,
   AgentVersionRow,
   AuthScope,
+  CloudTurnQueueStartMessage,
   RunnerChannel,
   SessionCreateOptions,
   SessionOrchestrationStore,
@@ -595,6 +597,36 @@ export async function createSessionForAgent(
   const store = deps.sessionOrchestration
   const audit = deps.audit
   const policy = deps.policy
+  const { idempotencyKey, ...creationOptions } = options
+  const keyHash = idempotencyKey ? await creationDigest(idempotencyKey) : undefined
+  const fingerprint = keyHash
+    ? await creationFingerprint({ agentId, requestedEnvironmentId, options: creationOptions })
+    : undefined
+  const replay = async (): Promise<CreateSessionResult | null> => {
+    if (!keyHash) return null
+    const existing = await store.findSessionCreation(auth.project.id, keyHash)
+    if (!existing) return null
+    if (existing.fingerprint !== fingerprint) {
+      return {
+        ok: false,
+        error: {
+          status: 409,
+          code: 'idempotency_conflict',
+          message: 'Idempotency-Key was already used for a different Session creation request.',
+        },
+      }
+    }
+    const session = await store.findSession(auth.project.id, existing.sessionId)
+    if (!session) {
+      return {
+        ok: false,
+        error: { status: 409, code: 'idempotency_conflict', message: 'Idempotency-Key belongs to a deleted Session.' },
+      }
+    }
+    return { ok: true, session }
+  }
+  const existing = await replay()
+  if (existing) return existing
   const userPrompt = options.prompt.trim()
   if (!userPrompt) {
     return {
@@ -968,9 +1000,48 @@ export async function createSessionForAgent(
     createdAt: timestamp,
     updatedAt: timestamp,
   } satisfies SessionRow
+  const workValues = {
+    session: pending,
+    agentSnapshot: runtimeAgentSnapshot,
+    environmentSnapshot,
+    runtime,
+    runtimeConfig,
+    env: mergedEnv,
+    envFrom: mergedEnvFrom,
+    volumes: validatedVolumes.volumes,
+    volumeMounts: validatedVolumes.volumeMounts,
+    prompt,
+    requestId: requestIdFrom(requestId),
+  }
+  const durableWork =
+    keyHash && hostingMode === 'self_hosted' ? selfHostedSessionWorkItem(auth, workValues, timestamp) : undefined
+  const cloudStart: CloudTurnQueueStartMessage = {
+    type: 'session.start',
+    sessionId: id,
+    organizationId: auth.organization.id,
+    projectId: auth.project.id,
+    requestId: requestIdFrom(requestId),
+    runtime,
+    runtimeConfig,
+    env: mergedEnv,
+    envFrom: mergedEnvFrom,
+    volumes: validatedVolumes.volumes,
+    volumeMounts: validatedVolumes.volumeMounts,
+    prompt,
+  }
   try {
-    await store.insertSession(pending)
+    if (keyHash && fingerprint) {
+      await store.insertSessionCreation(pending, {
+        keyHash,
+        fingerprint,
+        ...(durableWork ? { workItem: durableWork } : { cloudStart }),
+      })
+    } else {
+      await store.insertSession(pending)
+    }
   } catch (error) {
+    const winner = await replay()
+    if (winner) return winner
     if (error instanceof ResourceDeletedDuringMutationError) {
       return {
         ok: false,
@@ -990,6 +1061,15 @@ export async function createSessionForAgent(
   })
 
   try {
+    if (durableWork) {
+      await deps.runnerChannel.assignWork({
+        organizationId: auth.organization.id,
+        projectId: auth.project.id,
+        environmentId,
+        workItemId: durableWork.id,
+      })
+      return { ok: true, session: pending }
+    }
     if (hostingMode === 'self_hosted') {
       await enqueueSelfHostedSessionWork(deps, auth, {
         session: pending,
@@ -1022,6 +1102,7 @@ export async function createSessionForAgent(
         volumeMounts: validatedVolumes.volumeMounts,
         prompt,
       })
+      if (keyHash) await store.acknowledgeCloudSessionCreation(auth.project.id, id)
       return { ok: true, session: pending }
     }
 
@@ -1038,6 +1119,7 @@ export async function createSessionForAgent(
       volumeMounts: validatedVolumes.volumeMounts,
       prompt,
     })
+    if (keyHash) await store.acknowledgeCloudSessionCreation(auth.project.id, id)
     if (!deps.rereadStartedSession) {
       return { ok: true, session: pending }
     }
@@ -1047,6 +1129,8 @@ export async function createSessionForAgent(
     }
     return { ok: true, session: started }
   } catch (error) {
+    // Durable work remains available to recovery even when the notification or queue send fails.
+    if (keyHash) throw error
     // The row is persisted as 'pending' but the launch step failed (e.g. the
     // queue send threw). Reconcile the orphaned row to 'error' so it is not
     // stranded until the expiry sweep, then report the failure.

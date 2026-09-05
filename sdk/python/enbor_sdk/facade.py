@@ -601,8 +601,11 @@ class _SessionsResource:
     def list(self, **query: Any) -> Any:
         return _unwrap(list_sessions_api.sync_detailed(client=self._client, **query))
 
-    def create(self, body: Any) -> Any:
-        return _unwrap(create_session_api.sync_detailed(client=self._client, body=body))
+    def create(self, body: Any, idempotency_key: str | None = None) -> Any:
+        header_kwargs: dict[str, str] = {}
+        if idempotency_key is not None:
+            header_kwargs["idempotency_key"] = idempotency_key
+        return _unwrap(create_session_api.sync_detailed(client=self._client, body=body, **header_kwargs))
 
     def get(self, session_id: str) -> Any:
         return _unwrap(read_session_api.sync_detailed(session_id=session_id, client=self._client))

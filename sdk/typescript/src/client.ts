@@ -348,7 +348,7 @@ export function createEnborClient(config: EnborClientConfig) {
 
     sessions: {
       list: (query?: types.ListSessionsData['query']) => unwrap(ops.listSessions({ client, query })),
-      create: (body: types.CreateSessionRequest) => unwrap(ops.createSession({ client, body })),
+      create: (body: types.CreateSessionRequest, idempotencyKey?: string) => unwrap(ops.createSession({ client, body, headers: { "idempotency-key": idempotencyKey } })),
       get: (sessionId: string) => unwrap(ops.readSession({ client, path: { sessionId } })),
       update: (sessionId: string, body: types.UpdateSessionRequest) => unwrap(ops.updateSession({ client, path: { sessionId }, body })),
       delete: (sessionId: string) => unwrap(ops.deleteSession({ client, path: { sessionId } })),

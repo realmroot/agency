@@ -528,6 +528,24 @@ export const sessions = sqliteTable(
   ],
 )
 
+// Creation identity survives Session deletion; pending cloud delivery is an outbox.
+export const sessionCreations = sqliteTable(
+  'session_creations',
+  {
+    sessionId: text('session_id')
+      .primaryKey()
+      .references(() => sessions.id),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id),
+    keyHash: text('key_hash').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    cloudStart: text('cloud_start'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_session_creations_project_key').on(table.projectId, table.keyHash)],
+)
+
 export const sessionEvents = sqliteTable(
   'session_events',
   {
