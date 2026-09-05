@@ -310,6 +310,41 @@ describe('createSessionForAgent — launch dispatch failure (H5 FIX 2)', () => {
     ])
   })
 
+  it('[spec: agents/subagent-references] rejects a malformed persisted sub-agent reference before looking up its Agent', async () => {
+    const actual = await vi.importActual<typeof import('@server/domain/runtime/session-snapshot')>(
+      '@server/domain/runtime/session-snapshot',
+    )
+    agentSubagentReferencesMock.mockImplementationOnce((row) =>
+      actual.agentSubagentReferences(row as Parameters<typeof actual.agentSubagentReferences>[0]),
+    )
+    findAgentVersionMock.mockResolvedValueOnce({
+      id: 'agentver_1',
+      model: '@cf/x',
+      providerId: 'anthropic',
+      subagents: JSON.stringify([{ name: 'reviewer', systemPrompt: 'Unmigrated definition' }]),
+    })
+    findAgentMock.mockClear()
+    findAgentMock.mockImplementation(async (_projectId, agentId) => {
+      if (agentId !== 'agent_1') throw new TypeError('Invalid identifier reached the persistence port')
+      return { id: 'agent_1', currentVersionId: 'agentver_1', deletedAt: null }
+    })
+
+    const result = await createSessionForAgent(
+      deps,
+      auth,
+      'agent_1',
+      'env_1',
+      { runtime: 'enbor', prompt: 'Coordinate review' },
+      null,
+    )
+
+    expect(result).toMatchObject({ ok: false, error: { status: 409, code: 'conflict' } })
+    expect(findAgentMock.mock.calls.map(([, agentId]) => agentId)).toEqual(['agent_1'])
+    expect(insertSessionMock).not.toHaveBeenCalled()
+    expect(insertWorkItemMock).not.toHaveBeenCalled()
+    expect(enqueueCloudTurnMock).not.toHaveBeenCalled()
+  })
+
   it('rejects sessions without a prompt before creating any rows', async () => {
     const result = await createSessionForAgent(
       deps,

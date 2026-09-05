@@ -343,6 +343,11 @@ async function sessionSubagentSnapshots(
 ) {
   const snapshots = []
   for (const reference of agentSubagentReferences(version)) {
+    if (typeof reference?.agentId !== 'string' || !reference.agentId.trim()) {
+      return {
+        error: 'Stored sub-agent configuration must reference an Agent resource; apply pending database migrations',
+      } as const
+    }
     if (reference.agentId === parentAgentId) {
       return { error: 'An Agent cannot reference itself as a sub-agent' } as const
     }
