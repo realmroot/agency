@@ -738,7 +738,11 @@ func (s SessionsService) List(ctx context.Context, params *ListSessionsParams) (
 }
 
 func (s SessionsService) Create(ctx context.Context, body CreateSessionRequest) (*Session, error) {
-	response, err := s.client.raw.CreateSessionWithResponse(ctx, nil, body)
+	return s.CreateWithParams(ctx, nil, body)
+}
+
+func (s SessionsService) CreateWithParams(ctx context.Context, params *CreateSessionParams, body CreateSessionRequest) (*Session, error) {
+	response, err := s.client.raw.CreateSessionWithResponse(ctx, params, body)
 	if err != nil {
 		return nil, err
 	}

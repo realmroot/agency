@@ -55,6 +55,24 @@ yet covered by the stable surface.
 
 ## API Contract
 
+### Retrying Session creation
+
+Persist a unique `Idempotency-Key` with the exact Session creation request before
+sending it. Reuse both after a timeout or lost response. Keys are scoped to a
+Project: concurrent requests with the same key and inputs return the same
+Session, while different inputs return HTTP 409. A deleted Session retains its
+key reservation and also returns 409; use a new key for a new execution.
+
+The TypeScript facade accepts the key as the second argument to
+`client.sessions.create(request, key)`. Go exposes `Sessions.CreateWithParams`
+and Python accepts `idempotency_key` in `sessions.create`.
+
+For keyed creation, Enbor commits the Session and its startup work together.
+Runner work remains available after an interrupted notification; cloud startup
+delivery is recovered by the scheduled worker. A successful create or replay
+identifies the Session, but does not prove that its workspace or runtime is
+ready. Observe that Session's state and events separately.
+
 These guides describe integration patterns and deliberately do not duplicate
 the full endpoint catalog. The generated [OpenAPI JSON](openapi.json) remains
 the exact source for paths, request and response schemas, authentication

@@ -404,6 +404,101 @@ describe('[CF] /api/v1/sessions', () => {
     vi.unstubAllGlobals()
   })
 
+  it('replays concurrent creation and rejects changed or deleted requests [spec: sessions/create-idempotency]', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const agent = await createAgent(authorization, { mcpConnectors: [] })
+    const body = {
+      spec: { agentId: agent.id, environmentId: environment.id, runtime: 'enbor' },
+      prompt: 'Create exactly one execution.',
+    }
+    const create = (value = body) =>
+      jsonFetch('/api/v1/sessions', authorization, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': 'session-creation-concurrency' },
+        body: JSON.stringify(value),
+      })
+    const responses = await Promise.all([create(), create(), create()])
+    const ids: string[] = []
+    for (const response of responses) {
+      const text = await response.text()
+      expect(response.status, text).toBe(201)
+      ids.push(JSON.parse(text).metadata.uid)
+    }
+    expect(new Set(ids).size).toBe(1)
+    const sessionId = ids[0]!
+    const count = await env.DB.prepare('SELECT count(*) AS count FROM work_items WHERE session_id = ?')
+      .bind(sessionId)
+      .first<{ count: number }>()
+    expect(count?.count).toBe(1)
+    const conflict = await create({ ...body, prompt: 'A different execution.' })
+    expect(conflict.status).toBe(409)
+    await expect(conflict.json()).resolves.toMatchObject({ error: { type: 'idempotency_conflict' } })
+    await env.DB.prepare('UPDATE sessions SET deleted_at = ? WHERE id = ?')
+      .bind(new Date().toISOString(), sessionId)
+      .run()
+    const deleted = await create()
+    expect(deleted.status).toBe(409)
+    await expect(deleted.json()).resolves.toMatchObject({ error: { type: 'idempotency_conflict' } })
+  })
+
+  it('scopes creation keys to Projects [spec: sessions/create-idempotency]', async () => {
+    const authorization = await signIn()
+    const ids: string[] = []
+    for (let index = 0; index < 2; index++) {
+      const projectId = await createProject(authorization)
+      const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' }, projectId)
+      const agent = await createAgent(authorization, { mcpConnectors: [] }, projectId)
+      const response = await jsonFetch('/api/v1/sessions', authorization, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': 'same-key-different-projects', 'x-enbor-project-id': projectId },
+        body: JSON.stringify({
+          spec: { agentId: agent.id, environmentId: environment.id, runtime: 'enbor' },
+          prompt: 'Project scoped startup.',
+        }),
+      })
+      const text = await response.text()
+      expect(response.status, text).toBe(201)
+      ids.push(JSON.parse(text).metadata.uid)
+    }
+    expect(ids[0]).not.toBe(ids[1])
+  })
+
+  it('rolls back Session creation when startup work cannot commit [spec: sessions/create-idempotency]', async () => {
+    const authorization = await signIn()
+    const environment = await createEnvironment(authorization, { hostingMode: 'self_hosted' })
+    const agent = await createAgent(authorization, { mcpConnectors: [] })
+    const body = {
+      metadata: { name: 'Atomic creation failure' },
+      spec: { agentId: agent.id, environmentId: environment.id, runtime: 'enbor' },
+      prompt: 'Commit startup with the Session.',
+    }
+    const creationsBefore = await env.DB.prepare('SELECT count(*) AS total FROM session_creations').first()
+    await env.DB.exec(
+      "CREATE TRIGGER reject_test_start BEFORE INSERT ON work_items BEGIN SELECT RAISE(ABORT, 'injected startup persistence failure'); END",
+    )
+    try {
+      const response = await jsonFetch('/api/v1/sessions', authorization, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': 'session-atomic-rollback' },
+        body: JSON.stringify(body),
+      })
+      expect(response.status).toBe(500)
+      expect(
+        await env.DB.prepare('SELECT id FROM sessions WHERE title = ?').bind(body.metadata.name).first(),
+      ).toBeNull()
+      expect(await env.DB.prepare('SELECT count(*) AS total FROM session_creations').first()).toEqual(creationsBefore)
+    } finally {
+      await env.DB.exec('DROP TRIGGER reject_test_start')
+    }
+    const retried = await jsonFetch('/api/v1/sessions', authorization, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': 'session-atomic-rollback' },
+      body: JSON.stringify(body),
+    })
+    expect(retried.status).toBe(201)
+  })
+
   it('resolves a runner-capable environment when none is pinned [spec: sessions/create]', async () => {
     const authorization = await signIn()
     const environment = await createEnvironment(authorization, { mcpPolicy: { allowedConnectors: [] } })

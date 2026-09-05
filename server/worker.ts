@@ -13,6 +13,7 @@ import { reconcileInboxSubscriptions } from './usecases/inbox-subscriptions'
 import type { CloudTurnQueueMessage, TriggerDispatchQueueMessage } from './usecases/ports'
 import { refreshPlatformCatalog } from './usecases/providers'
 import { consumeCloudTurnQueueMessage, markCloudTurnDeadLettered, markStalledCloudSessions } from './usecases/runtime'
+import { recoverSessionCreations } from './usecases/runtime/session-creation-recovery'
 
 export { Sandbox } from '@cloudflare/sandbox'
 export { RunnerPoolObject } from './worker/runner-pool-object'
@@ -52,6 +53,9 @@ export default {
         scheduledAt,
       },
     )
+    waitUntilLogged(ctx, 'scheduled.session-creations.failed', recoverSessionCreations(createDeps(env)), {
+      scheduledAt,
+    })
     waitUntilLogged(ctx, 'scheduled.stalled-sessions.failed', markStalledCloudSessions(createDeps(env)), {
       scheduledAt,
     })

@@ -19,10 +19,14 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateSessionRequest,
+    idempotency_key: str | Unset = UNSET,
     x_enbor_project_id: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["idempotency-key"] = idempotency_key
+
     if not isinstance(x_enbor_project_id, Unset):
         headers["X-Enbor-Project-ID"] = x_enbor_project_id
 
@@ -108,12 +112,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateSessionRequest,
+    idempotency_key: str | Unset = UNSET,
     x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Session]:
     """ Create a session
 
     Args:
+        idempotency_key (str | Unset):
         x_enbor_project_id (str | Unset):
         body (CreateSessionRequest):
 
@@ -128,6 +134,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 x_enbor_project_id=x_enbor_project_id,
 
     )
@@ -142,12 +149,14 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateSessionRequest,
+    idempotency_key: str | Unset = UNSET,
     x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Session | None:
     """ Create a session
 
     Args:
+        idempotency_key (str | Unset):
         x_enbor_project_id (str | Unset):
         body (CreateSessionRequest):
 
@@ -163,6 +172,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 x_enbor_project_id=x_enbor_project_id,
 
     ).parsed
@@ -171,12 +181,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateSessionRequest,
+    idempotency_key: str | Unset = UNSET,
     x_enbor_project_id: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | Session]:
     """ Create a session
 
     Args:
+        idempotency_key (str | Unset):
         x_enbor_project_id (str | Unset):
         body (CreateSessionRequest):
 
@@ -191,6 +203,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 x_enbor_project_id=x_enbor_project_id,
 
     )
@@ -205,12 +218,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateSessionRequest,
+    idempotency_key: str | Unset = UNSET,
     x_enbor_project_id: str | Unset = UNSET,
 
 ) -> ErrorResponse | Session | None:
     """ Create a session
 
     Args:
+        idempotency_key (str | Unset):
         x_enbor_project_id (str | Unset):
         body (CreateSessionRequest):
 
@@ -226,6 +241,7 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 x_enbor_project_id=x_enbor_project_id,
 
     )).parsed

@@ -225,6 +225,20 @@ describe('[CF] generated SDK contract', () => {
     expect((client.projects as unknown as Record<string, unknown>).update).toBeTypeOf('function')
   })
 
+  it('forwards the Session creation idempotency key [spec: sessions/create-idempotency]', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      expect(request.headers.get('idempotency-key')).toBe('session-idempotency-1')
+      return Response.json({ metadata: { uid: 'same-session' } }, { status: 201 })
+    })
+    vi.stubGlobal('fetch', fetch)
+    const client = createEnborClient({ baseUrl: 'https://example.com', headers: { authorization: 'Bearer fixture' } })
+    await expect(
+      client.sessions.create({ spec: { agentId: 'agent' }, prompt: 'Start' }, 'session-idempotency-1'),
+    ).resolves.toMatchObject({ metadata: { uid: 'same-session' } })
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
   it('forwards the required Identity idempotency key through the TypeScript facade', async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init)

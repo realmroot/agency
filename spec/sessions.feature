@@ -36,6 +36,17 @@ Feature: Sessions
 	    And repository resources are declared in the deterministic workspace manifest
 	    And raw credentials are rejected from the request body
 
+  @sessions/create-idempotency @api
+  Scenario: Retry one logical Session creation without duplicating execution
+    Given a caller supplies an Idempotency-Key when creating a Session
+    When the same project retries or concurrently submits the same creation
+    Then every successful response identifies the same Session
+    And different inputs using that key are rejected as an idempotency conflict
+    And a deleted Session does not allow its key to create another Session
+    And different projects may use the same key independently
+    And the Session and its durable startup work are committed atomically
+    And cloud startup delivery interrupted after persistence is recovered without another Session
+
   @sessions/runtime-default-model @api
   Scenario: Let the selected runtime choose its default model
     Given an active agent version does not pin a provider or model

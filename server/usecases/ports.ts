@@ -1976,6 +1976,18 @@ export interface SessionOrchestrationStore {
 
   // ── session writes ──
   insertSession(row: SessionInsert): Promise<void>
+  findSessionCreation(projectId: string, keyHash: string): Promise<{ sessionId: string; fingerprint: string } | null>
+  insertSessionCreation(
+    row: SessionInsert,
+    creation: {
+      keyHash: string
+      fingerprint: string
+      workItem?: WorkItemInsert
+      cloudStart?: CloudTurnQueueStartMessage
+    },
+  ): Promise<void>
+  pendingCloudSessionCreations(limit: number): Promise<CloudTurnQueueStartMessage[]>
+  acknowledgeCloudSessionCreation(projectId: string, sessionId: string): Promise<void>
   updateSession(projectId: string, sessionId: string, fields: SessionUpdate): Promise<void>
   updateSessionWhenState(
     projectId: string,
@@ -2349,6 +2361,7 @@ export type PromptDispatchResult =
   | { ok: true; delivery: MessageDelivery; state: MessageState }
 
 export interface SessionCreateOptions {
+  idempotencyKey?: string
   id?: string
   name?: string
   metadata?: Pick<ResourceMetadata, 'labels' | 'annotations'>

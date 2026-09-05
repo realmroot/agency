@@ -110,9 +110,10 @@ pnpm run smoke:real
 
 - Production build command: `pnpm run build`
 - Staging build command: `pnpm run build:staging`
-- Deploy command: managed by Cloudflare Workers Builds
+- Production deploy command: `pnpm run db:migrate:d1:prod && pnpm exec wrangler deploy`
+- Non-production branch command: `npx wrangler versions upload` (uploads a candidate without shifting production traffic)
 - Root directory: repository root
-- Production branch: `master`
+- Production branch: `main`
 
 Apply database migrations before deploy promotion:
 

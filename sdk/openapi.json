@@ -14647,6 +14647,21 @@
             ]
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "idempotency-key",
+            "in": "header"
+          },
+          {
+            "$ref": "#/components/parameters/EnborProjectId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -14719,12 +14734,7 @@
             }
           }
         },
-        "x-cli-name": "create-session",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/EnborProjectId"
-          }
-        ]
+        "x-cli-name": "create-session"
       },
       "get": {
         "operationId": "listSessions",
