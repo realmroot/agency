@@ -26,6 +26,7 @@ Feature: Agents
     Then the parent stores only sub-agent resource references
     And a session snapshots each referenced agent's current version without its Identity or nested sub-agents
     And missing, deleted, foreign-project, self, and duplicate sub-agent references are rejected
+    And persisted sub-agent definitions without an Agent reference reject Session creation before execution is dispatched
     And runner sub-agent models omit only their selected provider prefix
     And migration of embedded definitions preserves deleted Agent and Project tombstones
 
