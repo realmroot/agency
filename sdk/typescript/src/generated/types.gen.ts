@@ -2408,6 +2408,10 @@ export type ListAgentsData = {
         limit?: number;
         cursor?: string;
         /**
+         * Filter by whether an Identity is bound, independently of scheduling readiness.
+         */
+        identityBound?: 'true' | 'false';
+        /**
          * Exact Realmroot Agent actor id bound through the Agent Identity.
          */
         identityAgentId?: string;

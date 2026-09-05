@@ -197,6 +197,7 @@ from .json_content_block_type import JsonContentBlockType
 from .lease import Lease
 from .lease_list_response import LeaseListResponse
 from .lease_state import LeaseState
+from .list_agents_identity_bound import ListAgentsIdentityBound
 from .list_agents_runtime import ListAgentsRuntime
 from .list_agents_schedulable import ListAgentsSchedulable
 from .list_connectors_availability import ListConnectorsAvailability
@@ -743,6 +744,7 @@ __all__ = (
     "Lease",
     "LeaseListResponse",
     "LeaseState",
+    "ListAgentsIdentityBound",
     "ListAgentsRuntime",
     "ListAgentsSchedulable",
     "ListConnectorsAvailability",

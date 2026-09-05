@@ -17,7 +17,22 @@ import {
   IdentityAlreadyBoundError,
   ResourceDeletedDuringMutationError,
 } from '@server/usecases/ports'
-import { and, desc, eq, getTableColumns, gte, inArray, isNull, like, lt, lte, notExists, or, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  lte,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm'
 import type { drizzle } from 'drizzle-orm/d1'
 import { agents, agentVersions, connectors, identities, providers, triggers } from '../../db/schema'
 import { throwIfDeletedParentConstraint } from './soft-delete-constraints'
@@ -260,6 +275,11 @@ export function createAgentRepo(db: Db): AgentRepo {
         isNull(agents.deletedAt),
         identity?.boundAgentId ? eq(agents.id, identity.boundAgentId) : undefined,
         identity ? eq(agents.identityId, identity.id) : undefined,
+        query.identityBound === undefined
+          ? undefined
+          : query.identityBound
+            ? isNotNull(agents.identityId)
+            : isNull(agents.identityId),
         query.runtime
           ? eq(sql<string>`json_extract(${agents.identitySnapshot}, '$.runtime')`, query.runtime)
           : undefined,

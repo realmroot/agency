@@ -91,6 +91,7 @@ export type OrgScope = Pick<AuthScope, 'organization'>
 export interface AgentListQuery {
   projectId: string
   identityAgentId?: string
+  identityBound?: boolean
   runtime?: string
   schedulable?: boolean
   search?: string

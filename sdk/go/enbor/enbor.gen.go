@@ -2748,6 +2748,24 @@ func (e WorkItemState) Valid() bool {
 	}
 }
 
+// Defines values for ListAgentsParamsIdentityBound.
+const (
+	ListAgentsParamsIdentityBoundFalse ListAgentsParamsIdentityBound = "false"
+	ListAgentsParamsIdentityBoundTrue  ListAgentsParamsIdentityBound = "true"
+)
+
+// Valid indicates whether the value is a known member of the ListAgentsParamsIdentityBound enum.
+func (e ListAgentsParamsIdentityBound) Valid() bool {
+	switch e {
+	case ListAgentsParamsIdentityBoundFalse:
+		return true
+	case ListAgentsParamsIdentityBoundTrue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListAgentsParamsRuntime.
 const (
 	ClaudeCode ListAgentsParamsRuntime = "claude-code"
@@ -2954,16 +2972,16 @@ func (e ListSessionEventsParamsType) Valid() bool {
 
 // Defines values for ListTriggersParamsSuspend.
 const (
-	False ListTriggersParamsSuspend = "false"
-	True  ListTriggersParamsSuspend = "true"
+	ListTriggersParamsSuspendFalse ListTriggersParamsSuspend = "false"
+	ListTriggersParamsSuspendTrue  ListTriggersParamsSuspend = "true"
 )
 
 // Valid indicates whether the value is a known member of the ListTriggersParamsSuspend enum.
 func (e ListTriggersParamsSuspend) Valid() bool {
 	switch e {
-	case False:
+	case ListTriggersParamsSuspendFalse:
 		return true
-	case True:
+	case ListTriggersParamsSuspendTrue:
 		return true
 	default:
 		return false
@@ -5910,6 +5928,9 @@ type ListAgentsParams struct {
 	Limit       *int       `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor      *string    `form:"cursor,omitempty" json:"cursor,omitempty"`
 
+	// IdentityBound Filter by whether an Identity is bound, independently of scheduling readiness.
+	IdentityBound *ListAgentsParamsIdentityBound `form:"identityBound,omitempty" json:"identityBound,omitempty"`
+
 	// IdentityAgentId Exact Realmroot Agent actor id bound through the Agent Identity.
 	IdentityAgentId *string `form:"identityAgentId,omitempty" json:"identityAgentId,omitempty"`
 
@@ -5922,6 +5943,9 @@ type ListAgentsParams struct {
 	// XEnborProjectID Selects an Enbor project in the authenticated organization. Omit to use the default project.
 	XEnborProjectID *EnborProjectId `json:"X-Enbor-Project-ID,omitempty"`
 }
+
+// ListAgentsParamsIdentityBound defines parameters for ListAgents.
+type ListAgentsParamsIdentityBound string
 
 // ListAgentsParamsRuntime defines parameters for ListAgents.
 type ListAgentsParamsRuntime string
@@ -11214,6 +11238,18 @@ func NewListAgentsRequest(server string, params *ListAgentsParams) (*http.Reques
 		if params.Cursor != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.IdentityBound != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "identityBound", *params.IdentityBound, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {

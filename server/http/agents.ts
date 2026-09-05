@@ -197,6 +197,14 @@ const AgentVersionParamsSchema = AgentParamsSchema.extend({
 })
 
 const ListQuerySchema = listQuerySchema().extend({
+  identityBound: z
+    .enum(['true', 'false'])
+    .optional()
+    .openapi({
+      param: { name: 'identityBound', in: 'query' },
+      description: 'Filter by whether an Identity is bound, independently of scheduling readiness.',
+      example: 'true',
+    }),
   identityAgentId: RealmrootAgentIdSchema.optional().openapi({
     param: { name: 'identityAgentId', in: 'query' },
     description: 'Exact Realmroot Agent actor id bound through the Agent Identity.',
@@ -370,6 +378,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
         createdFrom,
         createdTo,
         identityAgentId,
+        identityBound,
         runtime,
         schedulable,
         limit = 50,
@@ -384,6 +393,7 @@ export function registerAgentRoutes(routes: AgentRoutes) {
       const page = await deps.agents.list({
         projectId: auth.project.id,
         ...(identityAgentId ? { identityAgentId } : {}),
+        ...(identityBound ? { identityBound: identityBound === 'true' } : {}),
         ...(runtime ? { runtime } : {}),
         ...(schedulable ? { schedulable: schedulable === 'true' } : {}),
         ...(search ? { search } : {}),

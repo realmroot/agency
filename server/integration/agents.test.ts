@@ -387,6 +387,86 @@ describe('[CF] /api/v1/agents', () => {
     })
   })
 
+  it('[spec: agents/identity-bound-filter] filters identity membership before pagination while preserving unavailable bound Agents', async () => {
+    const authorization = await signIn()
+    const ids: string[] = []
+    for (let index = 0; index < 4; index += 1) {
+      const response = await jsonFetch('/api/v1/agents', authorization, {
+        method: 'POST',
+        body: JSON.stringify(agentBody(`Membership ${index}`)),
+      })
+      expect(response.status).toBe(201)
+      const agent = (await response.json()) as { metadata: { uid: string } }
+      ids.push(agent.metadata.uid)
+      await env.DB.prepare('UPDATE agents SET created_at = ? WHERE id = ?')
+        .bind(`2026-01-0${index + 1}T00:00:00.000Z`, agent.metadata.uid)
+        .run()
+      if (index % 2 !== 0) continue
+      const project = await env.DB.prepare('SELECT project_id FROM agents WHERE id = ?')
+        .bind(agent.metadata.uid)
+        .first<{ project_id: string }>()
+      const identityId = `identity_membership_${index}`
+      const subject = `membership-subject-${index}`
+      const now = '2026-01-01T00:00:00.000Z'
+      await env.DB.prepare(`INSERT INTO identities (
+        id,project_id,organization_id,name,username,runtime,state,vault_id,credential_id,remote_agent_id,issuer,subject,
+        idempotency_key_hash,request_fingerprint,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .bind(
+          identityId,
+          project!.project_id,
+          defaultClaims().organizationId,
+          `Identity ${index}`,
+          `membership-${index}`,
+          'codex',
+          'active',
+          `vault_membership_${index}`,
+          `credential_membership_${index}`,
+          subject,
+          'https://id.realmroot.dev/api/auth',
+          subject,
+          `hash_membership_${index}`,
+          `fingerprint_membership_${index}`,
+          now,
+          now,
+        )
+        .run()
+      const bound = await jsonFetch(`/api/v1/agents/${agent.metadata.uid}`, authorization, {
+        method: 'PATCH',
+        body: JSON.stringify({ spec: { identityRef: identityId } }),
+      })
+      expect(bound.status).toBe(200)
+    }
+
+    for (const [filter, expected] of [
+      ['true', [ids[2], ids[0]]],
+      ['false', [ids[3], ids[1]]],
+      [undefined, [...ids].reverse()],
+    ] as const) {
+      const seen: string[] = []
+      let cursor: string | null = null
+      for (let pageIndex = 0; pageIndex < expected.length; pageIndex += 1) {
+        const query = new URLSearchParams({ limit: '1' })
+        if (filter !== undefined) query.set('identityBound', filter)
+        if (cursor) query.set('cursor', cursor)
+        const response = await jsonFetch(`/api/v1/agents?${query}`, authorization)
+        expect(response.status).toBe(200)
+        const page = (await response.json()) as {
+          data: Array<{ metadata: { uid: string }; status: { schedulable: boolean } }>
+          pagination: { hasMore: boolean; nextCursor: string | null }
+        }
+        expect(page.data).toHaveLength(1)
+        seen.push(page.data[0].metadata.uid)
+        if (filter === 'true') expect(page.data[0].status.schedulable).toBe(false)
+        expect(page.pagination.hasMore).toBe(pageIndex < expected.length - 1)
+        cursor = page.pagination.nextCursor
+        if (page.pagination.hasMore) expect(cursor).toEqual(expect.any(String))
+        else expect(cursor).toBeNull()
+      }
+      expect(seen).toEqual(expected)
+    }
+  })
+
   it('resolves the project agent bound to an exact Realmroot actor id [spec: agents/api-identity-lookup]', async () => {
     const authorization = await signIn()
     const createRes = await jsonFetch('/api/v1/agents', authorization, {
