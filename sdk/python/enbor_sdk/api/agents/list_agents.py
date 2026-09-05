@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.agent_list_response import AgentListResponse
 from ...models.error_response import ErrorResponse
+from ...models.list_agents_identity_bound import ListAgentsIdentityBound
 from ...models.list_agents_runtime import ListAgentsRuntime
 from ...models.list_agents_schedulable import ListAgentsSchedulable
 from ...types import UNSET, Unset
@@ -25,6 +26,7 @@ def _get_kwargs(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_bound: ListAgentsIdentityBound | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
@@ -56,6 +58,12 @@ def _get_kwargs(
     params["limit"] = limit
 
     params["cursor"] = cursor
+
+    json_identity_bound: str | Unset = UNSET
+    if not isinstance(identity_bound, Unset):
+        json_identity_bound = identity_bound.value
+
+    params["identityBound"] = json_identity_bound
 
     params["identityAgentId"] = identity_agent_id
 
@@ -146,6 +154,7 @@ def sync_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_bound: ListAgentsIdentityBound | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
@@ -161,6 +170,8 @@ def sync_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_bound (ListAgentsIdentityBound | Unset): Filter by whether an Identity is bound,
+            independently of scheduling readiness. Example: true.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
         runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
@@ -184,6 +195,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_bound=identity_bound,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
@@ -205,6 +217,7 @@ def sync(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_bound: ListAgentsIdentityBound | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
@@ -220,6 +233,8 @@ def sync(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_bound (ListAgentsIdentityBound | Unset): Filter by whether an Identity is bound,
+            independently of scheduling readiness. Example: true.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
         runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
@@ -244,6 +259,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_bound=identity_bound,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
@@ -259,6 +275,7 @@ async def asyncio_detailed(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_bound: ListAgentsIdentityBound | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
@@ -274,6 +291,8 @@ async def asyncio_detailed(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_bound (ListAgentsIdentityBound | Unset): Filter by whether an Identity is bound,
+            independently of scheduling readiness. Example: true.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
         runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
@@ -297,6 +316,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_bound=identity_bound,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,
@@ -318,6 +338,7 @@ async def asyncio(
     created_to: datetime.datetime | Unset = UNSET,
     limit: int | Unset = UNSET,
     cursor: str | Unset = UNSET,
+    identity_bound: ListAgentsIdentityBound | Unset = UNSET,
     identity_agent_id: str | Unset = UNSET,
     runtime: ListAgentsRuntime | Unset = UNSET,
     schedulable: ListAgentsSchedulable | Unset = UNSET,
@@ -333,6 +354,8 @@ async def asyncio(
         limit (int | Unset):  Example: 50.
         cursor (str | Unset):  Example:
             eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTIyVDAwOjAwOjAwLjAwMFoiLCJpZCI6ImFnZW50X2FiYzEyMyJ9.
+        identity_bound (ListAgentsIdentityBound | Unset): Filter by whether an Identity is bound,
+            independently of scheduling readiness. Example: true.
         identity_agent_id (str | Unset): Exact Realmroot Agent actor id bound through the Agent
             Identity. Example: 019ff41a-7da6-708f-8b05-44d4d0373685.
         runtime (ListAgentsRuntime | Unset): Exact runtime of the bound Realmroot Identity.
@@ -357,6 +380,7 @@ created_from=created_from,
 created_to=created_to,
 limit=limit,
 cursor=cursor,
+identity_bound=identity_bound,
 identity_agent_id=identity_agent_id,
 runtime=runtime,
 schedulable=schedulable,

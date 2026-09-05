@@ -9241,6 +9241,21 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter by whether an Identity is bound, independently of scheduling readiness.",
+              "example": "true"
+            },
+            "required": false,
+            "description": "Filter by whether an Identity is bound, independently of scheduling readiness.",
+            "name": "identityBound",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "minLength": 1,
               "maxLength": 160,
               "pattern": "^\\S+$",

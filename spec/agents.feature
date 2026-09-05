@@ -2,6 +2,14 @@ Feature: Agents
   Project-scoped, versioned agent definitions: reusable system prompts, model,
   tools, MCP connectors, sub-agents, and skills that sessions snapshot.
 
+  @agents/identity-bound-filter @api
+  Scenario: Filter Agent definitions by Identity binding
+    Given a project contains Identity-bound and identityless Agent definitions
+    When a caller filters the Agent collection by identityBound
+    Then the filter is applied before pagination independently of scheduling readiness
+    And true selects bound Agents and false selects identityless definitions
+    And omitting the filter preserves the full collection
+
   # ── Definition lifecycle (domain + usecase: business rules, cheapest layer) ──
 
   @agents/create @usecase
